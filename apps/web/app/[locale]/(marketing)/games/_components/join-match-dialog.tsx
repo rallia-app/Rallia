@@ -1,5 +1,9 @@
 'use client';
 
+import { QRCodeSVG } from 'qrcode.react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useEffect } from 'react';
+
 import {
   Dialog,
   DialogContent,
@@ -7,8 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { QRCodeSVG } from 'qrcode.react';
-import { useLocale, useTranslations } from 'next-intl';
+import { appStoreClicked, joinMatchDialogViewed } from '@/lib/analytics';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
@@ -23,9 +26,15 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
   const t = useTranslations('gamesPage.joinDialog');
   const locale = useLocale();
 
-  // Universal link with tracking param — iOS/Android will open the app directly if installed
+  useEffect(() => {
+    if (open && matchId) joinMatchDialogViewed({ match_id: matchId });
+  }, [open, matchId]);
+
+  // Universal link with tracking param — iOS/Android will open the app
+  // directly if installed. UTM tags make the QR-scanned visit attributable
+  // alongside other inbound channels.
   const matchUrl = matchId
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/match/${matchId}?src=qr`
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/match/${matchId}?utm_source=qr&utm_medium=qr&utm_campaign=join_match`
     : '';
 
   return (
@@ -43,7 +52,18 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
           )}
           <p className="text-sm text-muted-foreground text-center">{t('qrHint')}</p>
           <div className="flex items-center gap-3 pt-2">
-            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                appStoreClicked({
+                  store: 'app_store',
+                  placement: 'join_dialog',
+                  ...(matchId ? { match_id: matchId } : {}),
+                })
+              }
+            >
               <img
                 src="/app-store-badge-light.svg"
                 alt="App Store"
@@ -51,7 +71,18 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
               />
               <img src="/app-store-badge.svg" alt="App Store" className="h-10 hidden dark:block" />
             </a>
-            <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                appStoreClicked({
+                  store: 'play_store',
+                  placement: 'join_dialog',
+                  ...(matchId ? { match_id: matchId } : {}),
+                })
+              }
+            >
               <img
                 src="/google-play-badge-light.svg"
                 alt="Google Play"

@@ -5,11 +5,18 @@
  * Features infinite scrolling, search, filters, and empty states.
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer, useRatingScoresForSport } from '@rallia/shared-hooks';
 import { useTranslation } from '../../../hooks';
@@ -21,6 +28,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 import * as Analytics from '../../../services/analytics';
 import { SearchBar } from '../../../components/SearchBar';
 import PlayerCard from './PlayerCard';
+import PlayerCardSkeleton from './PlayerCardSkeleton';
 import { PlayerFiltersBar, type PlayerFilters, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';
 
 interface ThemeColors {
@@ -81,7 +89,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       filters.rating.length > 0 ||
       filters.reputation !== 'all' ||
       filters.certifiedOnly ||
-      filters.availability !== 'all' ||
+      filters.hourRange.minHour !== null ||
+      filters.hourRange.maxHour !== null ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       filters.maxDistance !== 'all' ||
@@ -98,7 +107,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
       rating: filters.rating,
       reputation: filters.reputation,
       certifiedOnly: filters.certifiedOnly,
-      availability: filters.availability,
+      hourRange: filters.hourRange,
       day: filters.day,
       playStyle: filters.playStyle,
       maxDistance: filters.maxDistance,
@@ -276,6 +285,13 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     }
   }, [currentUserId, filters.favorites, filters.blocked]);
 
+  // Only feed favorite/blocked IDs into the query when their respective filter
+  // is active — otherwise toggling a heart would change the query key and
+  // trigger a full refetch on every tap. The UI's heart state reads from
+  // `favoritePlayerIds` directly, so the local toggle still updates instantly.
+  const searchFavoriteIds = filters.favorites ? favoritePlayerIds : undefined;
+  const searchBlockedIds = filters.blocked ? blockedPlayerIds : undefined;
+
   const {
     players,
     isLoading,
@@ -290,12 +306,25 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     currentUserId,
     searchQuery,
     filters: serviceFilters,
-    favoritePlayerIds,
-    blockedPlayerIds,
+    favoritePlayerIds: searchFavoriteIds,
+    blockedPlayerIds: searchBlockedIds,
     enabled: !!sportId,
     latitude: location?.latitude,
     longitude: location?.longitude,
   });
+
+  const isManualRefresh = useRef(false);
+
+  useEffect(() => {
+    if (!isFetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isFetching]);
+
+  const handleRefresh = useCallback(() => {
+    isManualRefresh.current = true;
+    refetch();
+  }, [refetch]);
 
   // Derive reputation display data directly from search results (no extra API calls)
   const getReputationDisplay = useCallback((player: PlayerSearchResult) => {
@@ -427,77 +456,7 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoader}>
-        {[1, 2, 3, 4].map(i => (
-          <View
-            key={i}
-            style={[
-              styles.skeletonCard,
-              {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={styles.skeletonAvatarContainer}>
-              <Skeleton
-                width={48}
-                height={48}
-                circle
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            <View style={styles.skeletonInfoContainer}>
-              <Skeleton
-                width="60%"
-                height={16}
-                borderRadius={4}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-              <View style={styles.skeletonBadgesRow}>
-                <Skeleton
-                  width={64}
-                  height={20}
-                  borderRadius={radiusPixels.full}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-                <Skeleton
-                  width={56}
-                  height={20}
-                  borderRadius={radiusPixels.full}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-              </View>
-              <View style={styles.skeletonLocationRow}>
-                <Skeleton
-                  width={14}
-                  height={14}
-                  borderRadius={7}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-                <Skeleton
-                  width="45%"
-                  height={14}
-                  borderRadius={4}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                  style={{ marginLeft: spacingPixels[1] }}
-                />
-              </View>
-            </View>
-            <Skeleton
-              width={20}
-              height={20}
-              borderRadius={4}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-          </View>
-        ))}
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   };
@@ -516,89 +475,11 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     );
   }
 
-  // Theme-aware skeleton colors
-  const skeletonBg = colors.inputBackground;
-  const skeletonHighlight = colors.border;
-
   // Render loading skeleton for list content only
   const renderListSkeleton = () => (
     <View style={styles.loadingContainer}>
       {[1, 2, 3, 4].map(i => (
-        <View
-          key={i}
-          style={[
-            styles.skeletonCard,
-            {
-              backgroundColor: colors.cardBackground,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* Avatar */}
-          <View style={styles.skeletonAvatarContainer}>
-            <Skeleton
-              width={48}
-              height={48}
-              circle
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-          </View>
-          {/* Info */}
-          <View style={styles.skeletonInfoContainer}>
-            {/* Name */}
-            <Skeleton
-              width="60%"
-              height={16}
-              borderRadius={4}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-            {/* Badges row */}
-            <View style={styles.skeletonBadgesRow}>
-              <Skeleton
-                width={64}
-                height={20}
-                borderRadius={radiusPixels.full}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-              <Skeleton
-                width={56}
-                height={20}
-                borderRadius={radiusPixels.full}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            {/* Location row */}
-            <View style={styles.skeletonLocationRow}>
-              <Skeleton
-                width={14}
-                height={14}
-                borderRadius={7}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-              <Skeleton
-                width="45%"
-                height={14}
-                borderRadius={4}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-                style={{ marginLeft: spacingPixels[1] }}
-              />
-            </View>
-          </View>
-          {/* Chevron */}
-          <Skeleton
-            width={20}
-            height={20}
-            borderRadius={4}
-            backgroundColor={skeletonBg}
-            highlightColor={skeletonHighlight}
-          />
-        </View>
+        <PlayerCardSkeleton key={i} />
       ))}
     </View>
   );
@@ -689,8 +570,8 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
         onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isFetchingNextPage && !isLoading}
-            onRefresh={refetch}
+            refreshing={isFetching && isManualRefresh.current}
+            onRefresh={handleRefresh}
             colors={[colors.primary]}
             tintColor={colors.primary}
           />
@@ -716,7 +597,6 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    paddingTop: spacingPixels[3],
   },
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
@@ -756,35 +636,9 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.md,
   },
   footerLoader: {
-    paddingBottom: spacingPixels[4],
-  },
-  skeletonCard: {
-    flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[3],
-    marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  skeletonAvatarContainer: {
-    marginRight: spacingPixels[3],
-  },
-  skeletonInfoContainer: {
-    flex: 1,
-    marginRight: spacingPixels[2],
-    gap: spacingPixels[0.5],
-  },
-  skeletonBadgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-    marginTop: spacingPixels[0.5],
-  },
-  skeletonLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacingPixels[1],
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
   },
 });
 

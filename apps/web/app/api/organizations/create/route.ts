@@ -27,9 +27,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Validate email format if provided
+    // Validate email format if provided (mirror of validateEmail in
+    // packages/shared-utils — the `.`-excluded middle class avoids the
+    // overlap CodeQL flags as polynomial-ReDoS-prone).
     if (body.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
       if (!emailRegex.test(body.email)) {
         return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
       }

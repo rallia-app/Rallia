@@ -838,11 +838,13 @@ const CardFooter: React.FC<CardFooterProps> = ({
     ctaDisabled = true;
     ctaIcon = 'time-outline';
   } else if (isInvited && !isFull && !isRequestMode) {
-    // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
-    ctaLabel = t('match.cta.acceptInvitation');
+    // Invited (pending status) to direct-join match with spots → opens the
+    // detail sheet where the user can accept, decline, or suggest a different
+    // time, so "Manage" reads more honestly than "Accept" here.
+    ctaLabel = t('match.cta.manageInvitation' as TranslationKey);
     ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
-    ctaIcon = 'checkmark-circle-outline';
+    ctaIcon = 'mail-open-outline';
   } else if (isFull) {
     // Join Waitlist → success green
     ctaLabel = t('match.cta.joinWaitlist');
@@ -1219,16 +1221,19 @@ const MatchCard: React.FC<MatchCardProps> = ({
       ? `${primary[400]}40`
       : `${primary[500]}20`;
 
-  // Tier ribbon badge config — one hue per tier (gold / red / teal)
+  // Tier ribbon badge config — one hue per tier (gold / red / teal).
+  // mostWanted uses the same gold anchor as Home's quick-nav buttons
+  // (accent[500] light / accent[400] dark) instead of accent[600] which
+  // skewed orange.
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
-        bg: isDark ? accent[600] : accent[700],
+        bg: isDark ? accent[400] : accent[500],
       }
     : isReadyToPlay
       ? {
           label: t('match.courtStatus.courtBooked'),
-          bg: isDark ? secondary[500] : secondary[600],
+          bg: secondary[500],
         }
       : isTopPlayer
         ? {
@@ -1237,7 +1242,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 ? 'match.tier.topPlayerPlural'
                 : 'match.tier.topPlayer') as TranslationKey
             ),
-            bg: isDark ? primary[500] : primary[600],
+            bg: primary[500],
           }
         : null;
 

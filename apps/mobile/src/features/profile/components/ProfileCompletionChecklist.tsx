@@ -54,28 +54,7 @@ const ProfileCompletionChecklist: React.FC<ProfileCompletionChecklistProps> = ({
 
   if (loading) return null;
 
-  // Complete state: brief badge
-  if (isComplete) {
-    return (
-      <View style={[styles.section]}>
-        <View
-          style={[
-            styles.completeBadge,
-            { backgroundColor: tierColors.background, borderColor: tierColors.border },
-          ]}
-        >
-          <Ionicons name="checkmark-circle" size={20} color={tierColors.accent} />
-          <Text
-            size="sm"
-            weight="semibold"
-            style={{ color: tierColors.accent, marginLeft: spacingPixels[2] }}
-          >
-            {t('profileCompletion.complete')}
-          </Text>
-        </View>
-      </View>
-    );
-  }
+  if (isComplete) return null;
 
   return (
     <View style={styles.section}>
@@ -218,15 +197,6 @@ const styles = StyleSheet.create({
   },
   checklistLabel: {
     flex: 1,
-  },
-  completeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
   },
 });
 

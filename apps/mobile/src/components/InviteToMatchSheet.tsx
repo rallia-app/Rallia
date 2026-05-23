@@ -8,8 +8,8 @@
 
 import * as React from 'react';
 import { useCallback, useMemo } from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, MatchCard, useToast } from '@rallia/shared-components';
 import {
@@ -301,6 +301,7 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
   return (
     <ActionSheet
       gestureEnabled
+      useBottomSafeAreaPadding={false}
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
@@ -323,23 +324,24 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
           {t('inviteToMatch.subtitle').replace('{name}', targetPlayerName)}
         </Text>
 
-        {/* Content */}
-        {isLoading ? (
-          renderLoadingState()
-        ) : isError ? (
-          renderErrorState()
-        ) : availableMatches.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          <FlatList
-            data={availableMatches}
-            renderItem={renderMatchCard}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            style={styles.list}
-          />
-        )}
+        {/* Content viewport — bounds the FlatList so it can scroll inside the sheet */}
+        <View style={styles.contentViewport}>
+          {isLoading ? (
+            renderLoadingState()
+          ) : isError ? (
+            renderErrorState()
+          ) : availableMatches.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <FlatList
+              data={availableMatches}
+              renderItem={renderMatchCard}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
       </View>
     </ActionSheet>
   );
@@ -354,9 +356,9 @@ export const InviteToMatchSheet = InviteToMatchActionSheet;
 
 const styles = StyleSheet.create({
   sheetBackground: {
+    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
-    maxHeight: '80%',
   },
   handleIndicator: {
     width: spacingPixels[10],
@@ -365,13 +367,17 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   container: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
+    flex: 1,
+    flexDirection: 'column',
+  },
+  contentViewport: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
@@ -384,20 +390,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: fontSizePixels.sm,
-    marginBottom: spacingPixels[4],
-  },
-  list: {
-    overflow: 'visible',
+    paddingHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[3],
   },
   listContent: {
-    overflow: 'visible',
-    paddingBottom: spacingPixels[4],
+    paddingBottom: 0,
   },
-  // Offset the MatchCard's built-in horizontal margin so it aligns in the sheet.
-  // Small positive padding keeps the tier ribbon badge from being clipped by
-  // the ActionSheet's border-radius.
+  // overflow: visible keeps the tier ribbon badge from being clipped.
   cardWrapper: {
-    marginHorizontal: -spacingPixels[2],
     overflow: 'visible',
   },
   inviteButton: {

@@ -52,45 +52,57 @@ export function PreOnboardingScreen() {
   const [discoveryMode, setDiscoveryMode] = useState<'chips' | 'friendCode'>('chips');
   const [referralCode, setReferralCode] = useState('');
 
-  // Sports catalog — fetched once so returning to step 1 is instant.
-  const [sports, setSports] = useState<Sport[]>([]);
-  const [isSportsLoading, setIsSportsLoading] = useState(true);
+  // Sports catalog — render the local fallback immediately so step 1 has no
+  // spinner, then reconcile fallback IDs with real DB IDs in the background.
+  const FALLBACK_SPORTS = useMemo<Sport[]>(
+    () => [
+      { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
+      { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
+    ],
+    []
+  );
+  const [sports, setSports] = useState<Sport[]>(FALLBACK_SPORTS);
+  // Pending catalog fetch — awaited by handleSportsContinue so we hand off
+  // real sport IDs even if the user taps Continue before the fetch resolves.
+  const sportsFetchRef = useRef<Promise<Sport[] | null> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const fetchPromise = (async (): Promise<Sport[] | null> => {
       try {
         const { data, error } = await SportService.getAllSports();
-        if (cancelled) return;
         if (error || !data) {
           if (error) Logger.error('Failed to fetch sports for pre-onboarding', error as Error);
-          setSports([
-            { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-            { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
-          ]);
-        } else {
-          setSports(
-            data
-              .filter((s: DatabaseSport) => s.is_active)
-              .map((s: DatabaseSport) => ({
-                id: s.id,
-                name: s.name,
-                display_name: s.display_name,
-                icon_url: s.icon_url,
-              }))
-          );
+          return null;
         }
+        return data
+          .filter((s: DatabaseSport) => s.is_active)
+          .map((s: DatabaseSport) => ({
+            id: s.id,
+            name: s.name,
+            display_name: s.display_name,
+            icon_url: s.icon_url,
+          }));
       } catch (err) {
-        if (cancelled) return;
         Logger.error('Unexpected error fetching sports', err as Error);
-        setSports([
-          { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-          { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
-        ]);
-      } finally {
-        if (!cancelled) setIsSportsLoading(false);
+        return null;
       }
     })();
+    sportsFetchRef.current = fetchPromise;
+    fetchPromise.then(real => {
+      if (cancelled || !real) return;
+      // Preserve fallback order so keyed Animated.Views don't reorder
+      // mid-entering-animation (which leaves stuck translateY transforms
+      // and causes cards to overlap).
+      const byName = new Map(real.map(s => [s.name, s] as const));
+      const ordered = [
+        ...FALLBACK_SPORTS.map(f => byName.get(f.name) ?? f),
+        ...real.filter(r => !FALLBACK_SPORTS.some(f => f.name === r.name)),
+      ];
+      setSports(ordered);
+      // Swap fallback IDs for real IDs on anything the user already picked.
+      setSelectedSports(prev => prev.map(picked => byName.get(picked.name) ?? picked));
+    });
     return () => {
       cancelled = true;
     };
@@ -196,7 +208,13 @@ export function PreOnboardingScreen() {
   const handleSportsContinue = useCallback(
     async (orderedSports: Sport[]) => {
       mediumHaptic();
-      await setSelectedSportsOrdered(orderedSports);
+      // If the catalog fetch is still in-flight, wait for it so we persist
+      // real DB IDs instead of the fallback placeholders.
+      const real = await (sportsFetchRef.current ?? Promise.resolve(null));
+      const resolved = real
+        ? orderedSports.map(picked => real.find(r => r.name === picked.name) ?? picked)
+        : orderedSports;
+      await setSelectedSportsOrdered(resolved);
       animateToStep(2, 'forward');
     },
     [setSelectedSportsOrdered, animateToStep]
@@ -355,7 +373,6 @@ export function PreOnboardingScreen() {
           <View style={styles.stepSlot}>
             <SportStep
               sports={sports}
-              isSportsLoading={isSportsLoading}
               value={selectedSports}
               onChange={setSelectedSports}
               onContinue={handleSportsContinue}

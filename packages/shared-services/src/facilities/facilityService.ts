@@ -62,6 +62,8 @@ export interface SearchFacilitiesParams {
   membershipRequired?: boolean;
   /** When true, only return facilities considered bookable (external provider, active court_slot, or upcoming one-time availability) */
   hasAvailabilities?: boolean;
+  /** When true, only return facilities with at least one currently-open snapshot slot (slot_start > now() AND is_available = true) */
+  hasOpenSlots?: boolean;
   /** When true, only return facilities favorited by the player */
   favoritesOnly?: boolean;
   /** Filter by organization nature ('public' or 'private') */
@@ -244,6 +246,7 @@ export async function searchFacilitiesNearby(
     hasLighting,
     membershipRequired,
     hasAvailabilities,
+    hasOpenSlots,
     favoritesOnly,
     organizationNature,
     userGender,
@@ -272,6 +275,7 @@ export async function searchFacilitiesNearby(
       p_player_id: playerId || null,
       p_favorites_only: favoritesOnly ?? null,
       p_organization_nature: organizationNature || null,
+      p_has_open_slots: hasOpenSlots ?? null,
     }),
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0
@@ -287,6 +291,7 @@ export async function searchFacilitiesNearby(
           p_has_lighting: hasLighting ?? null,
           p_membership_required: membershipRequired ?? null,
           p_has_availabilities: hasAvailabilities ?? null,
+          p_has_open_slots: hasOpenSlots ?? null,
         })
       : Promise.resolve({ data: null, error: null }),
   ]);

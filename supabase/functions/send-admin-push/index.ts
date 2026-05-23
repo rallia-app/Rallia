@@ -7,7 +7,6 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
 
@@ -238,7 +237,7 @@ async function logPushAttempt(
 }
 
 // Main handler
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',

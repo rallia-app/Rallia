@@ -43,7 +43,15 @@ export const MatchShareQRModal: React.FC<MatchShareQRModalProps> = ({
   const copyResetTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deepLink = useMemo(
-    () => (matchId ? generateMatchDeepLink(matchId, referralCode) : ''),
+    () =>
+      matchId
+        ? generateMatchDeepLink(matchId, referralCode, {
+            utm_source: 'app_share',
+            utm_medium: 'referral',
+            utm_campaign: 'match_share_2026',
+            utm_content: 'qr_modal',
+          })
+        : '',
     [matchId, referralCode]
   );
 

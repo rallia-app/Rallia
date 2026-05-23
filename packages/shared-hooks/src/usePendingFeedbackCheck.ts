@@ -77,7 +77,7 @@ export function usePendingFeedbackCheck(options: UsePendingFeedbackCheckOptions)
     staleTime: Infinity, // Only fetch once per app launch
     gcTime: 0, // Don't cache - we want fresh data on each app launch
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
     refetchOnReconnect: false,
   });
 

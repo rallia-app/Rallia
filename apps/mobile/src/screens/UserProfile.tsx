@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import {
   View,
   StyleSheet,
@@ -25,7 +26,7 @@ import {
   VStack,
   HStack,
 } from '@rallia/shared-components';
-import { supabase, Logger } from '@rallia/shared-services';
+import { supabase, Logger, OnboardingService } from '@rallia/shared-services';
 import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
@@ -49,7 +50,13 @@ import {
   errorHaptic,
   getHumanName,
 } from '@rallia/shared-utils';
-import type { Sport } from '@rallia/shared-types';
+import type { DayEnum, Sport } from '@rallia/shared-types';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '../features/onboarding/components/HourlyAvailabilityGrid';
 import {
   spacingPixels,
   radiusPixels,
@@ -74,29 +81,10 @@ interface SportWithRating extends Sport {
   ratingLabel?: string;
 }
 
-type PeriodKey = 'morning' | 'afternoon' | 'evening';
-
-interface DayPeriods {
-  morning: boolean;
-  afternoon: boolean;
-  evening: boolean;
-}
-
-interface AvailabilityGrid {
-  [key: string]: DayPeriods;
-}
-
-// Types matching PlayerAvailabilitiesOverlay's expectations
-type TimeSlot = 'AM' | 'PM' | 'EVE';
-type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-
-interface DayAvailability {
-  AM: boolean;
-  PM: boolean;
-  EVE: boolean;
-}
-
-type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+// Hourly availability — see HourlyAvailabilityGrid for the data shape.
+// The flat Set of `${day}-${hour}` cell keys flows end-to-end (state,
+// overlay payload, save).
+const MIN_AVAILABILITIES = 6;
 
 const UserProfile = () => {
   const navigation = useAppNavigation();
@@ -126,8 +114,23 @@ const UserProfile = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [allSports, setAllSports] = useState<Sport[]>([]);
   const [loadingAllSports, setLoadingAllSports] = useState(true);
-  const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
+  const [availabilities, setAvailabilities] = useState<HourGrid>(emptyGrid());
+  // Most-recent last_confirmed_at across the player's rows — drives the
+  // staleness banner in the edit overlay.
+  const [availabilityLastConfirmedAt, setAvailabilityLastConfirmedAt] = useState<string | null>(
+    null
+  );
   const [loadingAvailabilities, setLoadingAvailabilities] = useState(true);
+
+  // Auto-open the availability edit overlay when arriving via the Home
+  // "refresh your availability" banner (or any future caller passing
+  // `openSheet: 'availability'`). Waits for the availability rows to load so
+  // the overlay opens with the player's actual schedule prefilled; fires
+  // exactly once per navigation so backgrounding/foregrounding doesn't
+  // re-open it.
+  const route = useRoute<RouteProp<RootStackParamList, 'UserProfile'>>();
+  const shouldAutoOpenAvailabilitySheet = route.params?.openSheet === 'availability';
+  const autoOpenedAvailabilitySheetRef = useRef(false);
   const [reactivateConfirm, setReactivateConfirm] = useState<{
     visible: boolean;
     sport: SportWithRating | null;
@@ -492,7 +495,9 @@ const UserProfile = () => {
     }
   };
 
-  // Fetch only availabilities (used after saving to avoid full screen reload)
+  // Refresh just the availability set (used after the overlay saves so we
+  // don't re-fetch the whole profile). Populates the hour grid one cell per
+  // active row and tracks the freshest last_confirmed_at for the stale UI.
   const refetchAvailabilities = async () => {
     const {
       data: { user },
@@ -505,7 +510,7 @@ const UserProfile = () => {
         (async () =>
           supabase
             .from('player_availability')
-            .select('day, period, is_active')
+            .select('day, hour_of_day, is_active, last_confirmed_at')
             .eq('player_id', user.id)
             .eq('is_active', true))(),
         15000,
@@ -515,23 +520,19 @@ const UserProfile = () => {
         throw availResult.error;
       }
       const availData = availResult.data;
-      const availGrid: AvailabilityGrid = {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false },
-      };
+      const grid: Set<string> = new Set();
+      let mostRecentConfirmedAt: string | null = null;
       (availData || []).forEach(avail => {
-        const day = avail.day as keyof AvailabilityGrid;
-        const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
-        if (availGrid[day] && period in availGrid[day]) {
-          availGrid[day][period] = true;
+        grid.add(cellKey(avail.day, avail.hour_of_day as number));
+        if (
+          avail.last_confirmed_at &&
+          (!mostRecentConfirmedAt || avail.last_confirmed_at > mostRecentConfirmedAt)
+        ) {
+          mostRecentConfirmedAt = avail.last_confirmed_at;
         }
       });
-      setAvailabilities(availGrid);
+      setAvailabilities(grid);
+      setAvailabilityLastConfirmedAt(mostRecentConfirmedAt);
     } catch (error) {
       Logger.error('Failed to fetch availabilities', error as Error);
       toast.error(getNetworkErrorMessage(error));
@@ -567,14 +568,14 @@ const UserProfile = () => {
       }
     };
 
-    // Availabilities
+    // Availabilities — hourly rows straight into the cell-key Set.
     const fetchAvailabilities = async () => {
       try {
         const availResult = await withTimeout(
           (async () =>
             supabase
               .from('player_availability')
-              .select('day, period, is_active')
+              .select('day, hour_of_day, is_active, last_confirmed_at')
               .eq('player_id', user.id)
               .eq('is_active', true))(),
           15000,
@@ -584,23 +585,19 @@ const UserProfile = () => {
           throw availResult.error;
         }
         const availData = availResult.data;
-        const availGrid: AvailabilityGrid = {
-          monday: { morning: false, afternoon: false, evening: false },
-          tuesday: { morning: false, afternoon: false, evening: false },
-          wednesday: { morning: false, afternoon: false, evening: false },
-          thursday: { morning: false, afternoon: false, evening: false },
-          friday: { morning: false, afternoon: false, evening: false },
-          saturday: { morning: false, afternoon: false, evening: false },
-          sunday: { morning: false, afternoon: false, evening: false },
-        };
+        const grid: Set<string> = new Set();
+        let mostRecentConfirmedAt: string | null = null;
         (availData || []).forEach(avail => {
-          const day = avail.day as keyof AvailabilityGrid;
-          const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
-          if (availGrid[day] && period in availGrid[day]) {
-            availGrid[day][period] = true;
+          grid.add(cellKey(avail.day, avail.hour_of_day as number));
+          if (
+            avail.last_confirmed_at &&
+            (!mostRecentConfirmedAt || avail.last_confirmed_at > mostRecentConfirmedAt)
+          ) {
+            mostRecentConfirmedAt = avail.last_confirmed_at;
           }
         });
-        setAvailabilities(availGrid);
+        setAvailabilities(grid);
+        setAvailabilityLastConfirmedAt(mostRecentConfirmedAt);
       } catch (error) {
         Logger.error('Failed to fetch availabilities', error as Error);
         toast.error(getNetworkErrorMessage(error));
@@ -612,185 +609,59 @@ const UserProfile = () => {
     await Promise.all([fetchSports(), fetchAvailabilities()]);
   };
 
-  // Convert DB format to UI format for the overlay
-  const convertToUIFormat = (dbAvailabilities: AvailabilityGrid): WeeklyAvailability => {
-    const dayMap: Record<string, DayOfWeek> = {
-      monday: 'Mon',
-      tuesday: 'Tue',
-      wednesday: 'Wed',
-      thursday: 'Thu',
-      friday: 'Fri',
-      saturday: 'Sat',
-      sunday: 'Sun',
-    };
-
-    // Start with defaults for all days
-    const defaultAvailability: DayAvailability = { AM: false, PM: false, EVE: false };
-    const uiFormat: WeeklyAvailability = {
-      Mon: { ...defaultAvailability },
-      Tue: { ...defaultAvailability },
-      Wed: { ...defaultAvailability },
-      Thu: { ...defaultAvailability },
-      Fri: { ...defaultAvailability },
-      Sat: { ...defaultAvailability },
-      Sun: { ...defaultAvailability },
-    };
-
-    // Override with actual data if available
-    if (dbAvailabilities && Object.keys(dbAvailabilities).length > 0) {
-      Object.keys(dbAvailabilities).forEach(day => {
-        const uiDay = dayMap[day];
-        const dayData = dbAvailabilities[day];
-        if (uiDay && dayData) {
-          uiFormat[uiDay] = {
-            AM: dayData.morning ?? false,
-            PM: dayData.afternoon ?? false,
-            EVE: dayData.evening ?? false,
-          };
-        }
-      });
+  // Persist the hour grid returned by the overlay. Every save is routed
+  // through OnboardingService.saveAvailability, which diff-syncs the
+  // requested cells and stamps last_confirmed_at on every row touched
+  // (including no-op "refresh only" re-saves from the weekly prompt).
+  const handleSaveAvailabilities = async (grid: HourGrid) => {
+    if (grid.size < MIN_AVAILABILITIES) {
+      toast.error(t('alerts.minAvailabilitiesRequired'));
+      return;
     }
 
-    return uiFormat;
-  };
-
-  // Handle saving availabilities from the overlay
-  const handleSaveAvailabilities = async (
-    uiAvailabilities: WeeklyAvailability,
-    privacyShowAvailability: boolean
-  ) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error(t('errors.unauthorized'));
-        return;
-      }
-
-      // Convert UI format back to DB format
-      const dayMap: { [key: string]: string } = {
-        Mon: 'monday',
-        Tue: 'tuesday',
-        Wed: 'wednesday',
-        Thu: 'thursday',
-        Fri: 'friday',
-        Sat: 'saturday',
-        Sun: 'sunday',
-      };
-
-      const timeMap: { [key: string]: string } = {
-        AM: 'morning',
-        PM: 'afternoon',
-        EVE: 'evening',
-      };
-
-      // Delete existing availabilities for this player
-      const deleteResult = await withTimeout(
-        (async () => supabase.from('player_availability').delete().eq('player_id', user.id))(),
-        10000,
-        'Failed to update availability - connection timeout'
-      );
-
-      if (deleteResult.error) throw deleteResult.error;
-
-      // Prepare new availability data
-      const availabilityData: Array<{
-        player_id: string;
-        day: string;
-        period: string;
-        is_active: boolean;
-      }> = [];
-
-      (Object.keys(uiAvailabilities) as DayOfWeek[]).forEach(day => {
-        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).forEach(slot => {
-          if (uiAvailabilities[day][slot]) {
-            availabilityData.push({
-              player_id: user.id,
-              day: dayMap[day],
-              period: timeMap[slot],
-              is_active: true,
-            });
-          }
-        });
+      const availabilityData = Array.from(grid).map(key => {
+        const sepIdx = key.lastIndexOf('-');
+        const day = key.slice(0, sepIdx) as DayEnum;
+        const hour = Number(key.slice(sepIdx + 1));
+        return { day, hour_of_day: hour, is_active: true };
       });
 
-      // Upsert new availabilities (handles duplicates gracefully)
-      if (availabilityData.length > 0) {
-        const insertResult = await withTimeout(
-          (async () =>
-            supabase.from('player_availability').upsert(availabilityData, {
-              onConflict: 'player_id,day,period',
-              ignoreDuplicates: false,
-            }))(),
-          10000,
-          'Failed to save availability - connection timeout'
-        );
+      const { error: saveError } = await OnboardingService.saveAvailability(availabilityData);
+      if (saveError) throw new Error(saveError.message);
 
-        if (insertResult.error) throw insertResult.error;
-      }
-
-      // Save the privacy setting to the player table
-      const privacyResult = await withTimeout(
-        (async () =>
-          supabase
-            .from('player')
-            .update({
-              privacy_show_availability: privacyShowAvailability,
-            })
-            .eq('id', user.id))(),
-        10000,
-        'Failed to save privacy setting - connection timeout'
-      );
-
-      if (privacyResult.error) throw privacyResult.error;
-
-      // Update local state directly from the saved data
-      const dayMapReverse: Record<string, string> = {
-        Mon: 'monday',
-        Tue: 'tuesday',
-        Wed: 'wednesday',
-        Thu: 'thursday',
-        Fri: 'friday',
-        Sat: 'saturday',
-        Sun: 'sunday',
-      };
-      const timeMapReverse: Record<string, PeriodKey> = {
-        AM: 'morning',
-        PM: 'afternoon',
-        EVE: 'evening',
-      };
-      const newGrid: AvailabilityGrid = {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false },
-      };
-      (Object.keys(uiAvailabilities) as DayOfWeek[]).forEach(day => {
-        const dbDay = dayMapReverse[day];
-        (Object.keys(uiAvailabilities[day]) as TimeSlot[]).forEach(slot => {
-          const period = timeMapReverse[slot];
-          if (dbDay && period) {
-            newGrid[dbDay][period] = uiAvailabilities[day][slot];
-          }
-        });
-      });
-      setAvailabilities(newGrid);
+      // Adopt the saved grid into local state (no extra fetch) and refresh
+      // the staleness signal — saveAvailability set last_confirmed_at = NOW().
+      setAvailabilities(new Set(grid));
+      setAvailabilityLastConfirmedAt(new Date().toISOString());
 
       SheetManager.hide('player-availabilities');
-
       toast.success(t('alerts.availabilitiesUpdated'));
-
-      // Refresh completeness so the checklist reflects the new availability count
       profileCompleteness.refetch();
     } catch (error) {
       Logger.error('Failed to save availabilities', error as Error, { playerId: player?.id });
       toast.error(getNetworkErrorMessage(error));
     }
   };
+
+  // Auto-open the availability edit overlay when navigation arrives with
+  // `openSheet: 'availability'`. Waits for the availability rows to load so
+  // the overlay opens prefilled, and guards against re-firing on rerenders.
+  useEffect(() => {
+    if (!shouldAutoOpenAvailabilitySheet) return;
+    if (loadingAvailabilities) return;
+    if (autoOpenedAvailabilitySheetRef.current) return;
+    autoOpenedAvailabilitySheetRef.current = true;
+    SheetManager.show('player-availabilities', {
+      payload: {
+        mode: 'edit',
+        initialData: availabilities,
+        initialLastConfirmedAt: availabilityLastConfirmedAt,
+        onSave: handleSaveAvailabilities,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoOpenAvailabilitySheet, loadingAvailabilities]);
 
   // Handle completeness checklist item actions
   const handleCompletenessAction = useCallback(
@@ -862,8 +733,7 @@ const UserProfile = () => {
           SheetManager.show('player-availabilities', {
             payload: {
               mode: 'edit',
-              initialData: convertToUIFormat(availabilities),
-              initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+              initialData: availabilities,
               onSave: handleSaveAvailabilities,
             },
           });
@@ -881,7 +751,6 @@ const UserProfile = () => {
       refetchProfile,
       refetchPlayer,
       availabilities,
-      convertToUIFormat,
       handleSaveAvailabilities,
     ]
   );
@@ -911,42 +780,36 @@ const UserProfile = () => {
     return handMap[hand] || hand;
   };
 
-  const getDayLabel = (day: string): string => {
-    const key = `onboarding.availabilityStep.days.${day}` as TranslationKey;
-    const translated = t(key);
-    return translated !== key ? translated : day;
-  };
-
-  const getPeriodLabel = (period: PeriodKey): string => {
-    const keyMap = {
-      morning: 'onboarding.availabilityStep.am',
-      afternoon: 'onboarding.availabilityStep.pm',
-      evening: 'onboarding.availabilityStep.eve',
-    } as const;
-    return t(keyMap[period]);
-  };
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
         <CopilotStep
           text={t('tour.profileScreen.picture.description')}
           order={20}
           name="profile_picture"
         >
-          <WalkthroughableView style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+          <WalkthroughableView
+            style={[
+              styles.profileHeader,
+              {
+                backgroundColor: isDark ? primary[950] : primary[50],
+                borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+              },
+            ]}
+          >
             {loadingCore ? (
-              <>
+              <View style={styles.profileTopRow}>
                 <SkeletonAvatar
                   size={spacingPixels[20]}
                   backgroundColor={skeletonBg}
                   highlightColor={skeletonHighlight}
                 />
-                <View style={{ marginTop: 16, alignItems: 'center' }}>
+                <View style={styles.profileIdentity}>
                   <Skeleton
                     width={150}
                     height={18}
@@ -961,97 +824,102 @@ const UserProfile = () => {
                     style={{ marginTop: 8 }}
                   />
                 </View>
-              </>
+              </View>
             ) : (
               <>
-                <View style={styles.profilePicWrapper}>
-                  <View
-                    style={[
-                      styles.profilePicContainer,
-                      { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-                    ]}
-                  >
-                    {profile?.profile_picture_url || newProfileImage ? (
-                      <Image
-                        source={{
-                          uri:
-                            newProfileImage ||
-                            getProfilePictureUrl(profile?.profile_picture_url) ||
-                            '',
+                <View style={styles.profileTopRow}>
+                  <View style={styles.profilePicWrapper}>
+                    <View
+                      style={[
+                        styles.profilePicContainer,
+                        {
+                          borderColor: isDark ? primary[400] : primary[500],
+                          backgroundColor: colors.inputBackground,
+                          shadowColor: isDark ? primary[400] : primary[500],
+                        },
+                      ]}
+                    >
+                      {profile?.profile_picture_url || newProfileImage ? (
+                        <Image
+                          source={{
+                            uri:
+                              newProfileImage ||
+                              getProfilePictureUrl(profile?.profile_picture_url) ||
+                              '',
+                          }}
+                          style={styles.profileImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                      )}
+                      {uploadingImage && (
+                        <View style={styles.uploadingOverlay}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                    {!uploadingImage && (
+                      <TouchableOpacity
+                        style={[styles.profilePicEditBadge, { backgroundColor: colors.primary }]}
+                        onPress={() => {
+                          void lightHaptic();
+                          openPicker();
                         }}
-                        style={styles.profileImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Ionicons name="camera-outline" size={32} color={colors.primary} />
-                    )}
-                    {uploadingImage && (
-                      <View style={styles.uploadingOverlay}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      </View>
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name="camera-outline"
+                          size={14}
+                          color={colors.primaryForeground}
+                        />
+                      </TouchableOpacity>
                     )}
                   </View>
-                  {!uploadingImage && (
-                    <TouchableOpacity
-                      style={[
-                        styles.profilePicEditBadge,
-                        { backgroundColor: colors.primary, borderColor: colors.card },
-                      ]}
-                      onPress={() => {
-                        void lightHaptic();
-                        openPicker();
-                      }}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text style={[styles.profileName, { color: colors.text }]}>
-                  {getHumanName(profile, t('profile.user'))}
-                </Text>
-
-                {/* Coveted Badge */}
-                <CovetedBadge
-                  reputationScore={reputationDisplay?.score}
-                  certificationStatus={primaryRating?.badge_status}
-                  totalEvents={reputationTotalEvents}
-                  isDark={isDark}
-                  isLoading={playerLoading}
-                />
-
-                {/* Rating & Reputation Badges */}
-                <View style={styles.profileBadgesRow}>
-                  <RatingBadge
-                    ratingValue={primaryRating?.value}
-                    ratingLabel={primaryRating?.label}
-                    certificationStatus={primaryRating?.badge_status}
-                    isDark={isDark}
-                    isLoading={playerLoading}
-                    onInfoPress={() =>
-                      SheetManager.show('rating-explainer', {
-                        payload: {
-                          sportName:
-                            primaryRating?.ratingSystemCode === 'dupr' ? 'pickleball' : 'tennis',
-                        },
-                      })
-                    }
-                  />
-                  <ReputationBadge
-                    reputationDisplay={reputationDisplay ?? undefined}
-                    isDark={isDark}
-                    isLoading={playerLoading}
-                    onInfoPress={() => SheetManager.show('reputation-explainer')}
-                  />
-                </View>
-
-                {/* Joined Date */}
-                <View style={styles.joinedContainer}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                  <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-                    {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
-                  </Text>
+                  <View style={styles.profileIdentity}>
+                    <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
+                      {getHumanName(profile, t('profile.user'))}
+                    </Text>
+                    <View style={styles.joinedContainer}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+                        {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
+                      </Text>
+                    </View>
+                    <View style={styles.profileBadgesRow}>
+                      <CovetedBadge
+                        reputationScore={reputationDisplay?.score}
+                        certificationStatus={primaryRating?.badge_status}
+                        totalEvents={reputationTotalEvents}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                      />
+                      <RatingBadge
+                        ratingValue={primaryRating?.value}
+                        ratingLabel={primaryRating?.label}
+                        certificationStatus={primaryRating?.badge_status}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                        onInfoPress={() =>
+                          SheetManager.show('rating-explainer', {
+                            payload: {
+                              sportName:
+                                primaryRating?.ratingSystemCode === 'dupr'
+                                  ? 'pickleball'
+                                  : 'tennis',
+                            },
+                          })
+                        }
+                      />
+                      <ReputationBadge
+                        reputationDisplay={reputationDisplay ?? undefined}
+                        isDark={isDark}
+                        isLoading={playerLoading}
+                        onInfoPress={() => SheetManager.show('reputation-explainer')}
+                      />
+                    </View>
+                  </View>
                 </View>
               </>
             )}
@@ -1570,8 +1438,8 @@ const UserProfile = () => {
                     SheetManager.show('player-availabilities', {
                       payload: {
                         mode: 'edit',
-                        initialData: convertToUIFormat(availabilities),
-                        initialPrivacyShowAvailability: player?.privacy_show_availability ?? true,
+                        initialData: availabilities,
+                        initialLastConfirmedAt: availabilityLastConfirmedAt,
                         onSave: handleSaveAvailabilities,
                       },
                     });
@@ -1586,91 +1454,55 @@ const UserProfile = () => {
               <View
                 style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
-                <View style={styles.gridContainer}>
-                  {[1, 2, 3, 4, 5, 6, 7].map(row => (
-                    <View key={row} style={styles.gridRow}>
-                      <Skeleton
-                        width={40}
-                        height={14}
-                        backgroundColor={skeletonBg}
-                        highlightColor={skeletonHighlight}
-                      />
-                      {[1, 2, 3].map(cell => (
-                        <View key={cell} style={styles.timeSlotWrapper}>
-                          <Skeleton
-                            width="100%"
-                            height={36}
-                            borderRadius={radiusPixels.lg}
-                            backgroundColor={skeletonBg}
-                            highlightColor={skeletonHighlight}
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </View>
+                <Skeleton
+                  width="100%"
+                  height={520}
+                  borderRadius={radiusPixels.md}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
               </View>
             ) : (
-              <View
-                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              // Read-only preview of the player's hourly grid. Wrapped in a
+              // TouchableOpacity that opens the edit overlay — the grid
+              // itself swallows pointer events so the tap goes to the wrapper.
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  SheetManager.show('player-availabilities', {
+                    payload: {
+                      mode: 'edit',
+                      initialData: availabilities,
+                      initialLastConfirmedAt: availabilityLastConfirmedAt,
+                      onSave: handleSaveAvailabilities,
+                    },
+                  });
+                }}
               >
-                {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
-                <View style={styles.gridContainer}>
-                  {/* Header Row */}
-                  <View style={styles.gridRow}>
-                    <View style={styles.dayCell} />
-                    {(['AM', 'PM', 'EVE'] as const).map(slot => {
-                      const labelKey = slot === 'AM' ? 'am' : slot === 'PM' ? 'pm' : 'eve';
-                      return (
-                        <View key={slot} style={styles.headerCell}>
-                          <Text size="xs" weight="semibold" color={colors.textMuted}>
-                            {t(`playerProfile.availability.${labelKey}` as TranslationKey)}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-
-                  {/* Day Rows */}
-                  {Object.keys(availabilities).map(day => (
-                    <View key={day} style={styles.gridRow}>
-                      <View style={styles.dayCell}>
-                        <Text size="sm" weight="medium" color={colors.text}>
-                          {getDayLabel(day)}
-                        </Text>
-                      </View>
-                      {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
-                        <View key={period} style={styles.timeSlotWrapper}>
-                          <View
-                            style={[
-                              styles.timeSlotCell,
-                              {
-                                backgroundColor: colors.inputBackground,
-                              },
-                              availabilities[day]?.[period] && [
-                                styles.timeSlotCellSelected,
-                                { backgroundColor: colors.primary, borderColor: colors.primary },
-                              ],
-                            ]}
-                          >
-                            <Text
-                              size="xs"
-                              weight="semibold"
-                              color={
-                                availabilities[day]?.[period]
-                                  ? colors.primaryForeground
-                                  : colors.textMuted
-                              }
-                            >
-                              {getPeriodLabel(period)}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ))}
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <HourlyAvailabilityGrid
+                    value={availabilities}
+                    // No-op: the wrapper intercepts taps and opens the edit overlay.
+                    onChange={() => {}}
+                    colors={{
+                      text: colors.text,
+                      textSecondary: colors.textSecondary,
+                      textMuted: colors.textMuted,
+                      border: colors.inputBorder,
+                      cellInactive: colors.inputBackground,
+                      cellActive: colors.primary,
+                    }}
+                    t={t}
+                    locale={locale}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
           </WalkthroughableView>
         </CopilotStep>
@@ -1891,9 +1723,6 @@ const UserProfile = () => {
             )}
           </View>
         )}
-
-        {/* Bottom Spacing */}
-        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Reactivate sport confirmation */}
@@ -1951,18 +1780,33 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: spacingPixels[10],
+  },
   headerTitle: {
     fontSize: fontSizePixels.lg,
     fontWeight: fontWeightNumeric.semibold,
   },
   profileHeader: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[6],
+    marginTop: spacingPixels[4],
+    marginHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+  },
+  profileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[4],
+  },
+  profileIdentity: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacingPixels[1],
   },
   profilePicWrapper: {
     position: 'relative',
-    marginBottom: spacingPixels[1],
   },
   profilePicContainer: {
     width: spacingPixels[20],
@@ -1972,6 +1816,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profilePicEditBadge: {
     position: 'absolute',
@@ -1982,8 +1830,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   profileImage: {
     width: spacingPixels[20],
@@ -1993,19 +1839,17 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
-    marginBottom: spacingPixels[1],
   },
   profileBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
   },
   joinedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[1],
   },
   joinedText: {
     fontSize: fontSizePixels.xs,
@@ -2138,7 +1982,8 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
   },
-  // Availability Grid Styles - Same as PlayerAvailabilitiesOverlay
+  // Availability Grid Styles — kept in sync with AvailabilitiesStep and
+  // PlayerAvailabilitiesOverlay so the read/write surfaces feel identical.
   gridContainer: {
     marginTop: spacingPixels[2],
   },
@@ -2148,29 +1993,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayCell: {
-    width: 50, // 12.5 * 4px base unit
+    width: 96,
+    paddingRight: spacingPixels[2],
     justifyContent: 'center',
   },
   headerCell: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  timeSlotWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[1],
+    paddingVertical: spacingPixels[1],
   },
   timeSlotCell: {
-    width: '100%',
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[3],
+    flex: 1,
+    height: 36,
+    borderRadius: radiusPixels.md,
+    marginHorizontal: spacingPixels[1] / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
   },
-  timeSlotCellSelected: {},
+  timeRangeText: {
+    marginTop: 2,
+    lineHeight: 14,
+  },
   uploadingOverlay: {
     position: 'absolute',
     top: 0,

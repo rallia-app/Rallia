@@ -92,7 +92,6 @@ export interface InvitationStat {
   invitationType: InvitationType;
   clicks: number;
   uniqueDevices: number;
-  matchedInstalls: number;
   attributedSignups: number;
   conversionRate: number;
 }
@@ -3005,14 +3004,12 @@ export async function getInvitationStats(days: number = 30): Promise<InvitationS
     return data.map((row: Record<string, unknown>) => {
       const clicks = Number(row.clicks) || 0;
       const uniqueDevices = Number(row.unique_devices) || 0;
-      const matchedInstalls = Number(row.matched_installs) || 0;
       const attributedSignups = Number(row.attributed_signups) || 0;
       const conversionRate = uniqueDevices > 0 ? Math.min(1, attributedSignups / uniqueDevices) : 0;
       return {
         invitationType: String(row.invitation_type) as InvitationType,
         clicks,
         uniqueDevices,
-        matchedInstalls,
         attributedSignups,
         conversionRate,
       };
@@ -3129,17 +3126,29 @@ export async function getUtmSignupStats(days: number = 30): Promise<UtmSignupSta
 /**
  * Period-over-period totals for the UTM KPI strip. `current` is the requested
  * window; `previous` is the equal-length prior window, so deltas are
- * apples-to-apples.
+ * apples-to-apples. `totalSignups` is all profile rows in the window
+ * (attributed + unattributed) — pair with `signups` for an attribution-rate
+ * KPI (`signups / totalSignups`).
  */
 export interface UtmTotalsComparison {
-  current: { signups: number; matchesCreated: number; matchesPlayed: number };
-  previous: { signups: number; matchesCreated: number; matchesPlayed: number };
+  current: {
+    signups: number;
+    totalSignups: number;
+    matchesCreated: number;
+    matchesPlayed: number;
+  };
+  previous: {
+    signups: number;
+    totalSignups: number;
+    matchesCreated: number;
+    matchesPlayed: number;
+  };
 }
 
 export async function getUtmTotalsComparison(days: number = 7): Promise<UtmTotalsComparison> {
   const empty: UtmTotalsComparison = {
-    current: { signups: 0, matchesCreated: 0, matchesPlayed: 0 },
-    previous: { signups: 0, matchesCreated: 0, matchesPlayed: 0 },
+    current: { signups: 0, totalSignups: 0, matchesCreated: 0, matchesPlayed: 0 },
+    previous: { signups: 0, totalSignups: 0, matchesCreated: 0, matchesPlayed: 0 },
   };
   try {
     const { data, error } = await supabase.rpc('get_utm_totals_with_comparison', {
@@ -3153,11 +3162,13 @@ export async function getUtmTotalsComparison(days: number = 7): Promise<UtmTotal
     return {
       current: {
         signups: Number(row.current_signups) || 0,
+        totalSignups: Number(row.current_total_signups) || 0,
         matchesCreated: Number(row.current_matches_created) || 0,
         matchesPlayed: Number(row.current_matches_played) || 0,
       },
       previous: {
         signups: Number(row.previous_signups) || 0,
+        totalSignups: Number(row.previous_total_signups) || 0,
         matchesCreated: Number(row.previous_matches_created) || 0,
         matchesPlayed: Number(row.previous_matches_played) || 0,
       },
@@ -3267,6 +3278,53 @@ export async function resolveInvitationTargets(
   }
 }
 
+// =============================================================================
+// MATCH FILL ANALYTICS
+// =============================================================================
+
+export interface MatchFillPoint {
+  date: string;
+  sportId: string;
+  sportName: string;
+  matchesCreated: number;
+  matchesFilled: number;
+}
+
+export async function getMatchFillAnalytics(
+  startDate: Date,
+  endDate: Date
+): Promise<MatchFillPoint[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_match_fill_analytics', {
+      p_start_date: startDate.toISOString().split('T')[0],
+      p_end_date: endDate.toISOString().split('T')[0],
+    });
+
+    if (error) {
+      // Supabase errors stringify to {} by default — pull the fields out
+      // explicitly so the dev console actually shows what happened.
+      console.error('Error in getMatchFillAnalytics:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      return [];
+    }
+
+    return (data || []).map((row: Record<string, unknown>) => ({
+      date: row.date ? String(row.date).split('T')[0] : '',
+      sportId: row.sport_id as string,
+      sportName: row.sport_name as string,
+      matchesCreated: Number(row.matches_created) || 0,
+      matchesFilled: Number(row.matches_filled) || 0,
+    }));
+  } catch (error) {
+    console.error('Error in getMatchFillAnalytics (thrown):', error);
+    return [];
+  }
+}
+
 export default {
   getRealtimeUserStats,
   getMatchStatistics,
@@ -3323,4 +3381,6 @@ export default {
   getUtmCampaigns,
   createUtmCampaign,
   archiveUtmCampaign,
+  // Match fill analytics
+  getMatchFillAnalytics,
 };

@@ -25,12 +25,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Text } from '@rallia/shared-components';
 import {
-  Text,
   SparklineChart,
   TimeRangeSelector,
   AnalyticsSectionCard,
-} from '@rallia/shared-components';
+} from '@rallia/shared-components/src/charts';
 import {
   useTheme,
   useAdminAnalytics,

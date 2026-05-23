@@ -10,7 +10,7 @@ import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Spinner, Button } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, shadowsNative } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../hooks';
@@ -31,7 +31,6 @@ export interface Sport {
 interface SportStepProps {
   /** Sports catalog, owned by parent so it is fetched once. */
   sports: Sport[];
-  isSportsLoading: boolean;
   /** Currently selected sports, in tap order. Owned by the parent so the
    * selection survives when the step unmounts on back/forward navigation. */
   value: Sport[];
@@ -45,7 +44,6 @@ interface SportStepProps {
 
 export function SportStep({
   sports,
-  isSportsLoading,
   value,
   onChange,
   onContinue,
@@ -54,7 +52,6 @@ export function SportStep({
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
 
-  const isLoading = isSportsLoading;
   const orderedSelection = value;
 
   const toggleSport = useCallback(
@@ -78,11 +75,11 @@ export function SportStep({
   const getSportImage = (sportName: string) => {
     const lowerName = sportName.toLowerCase();
     if (lowerName.includes('tennis')) {
-      return require('../../../assets/images/tennis.jpg');
+      return require('../../../assets/images/tennis.webp');
     } else if (lowerName.includes('pickleball')) {
-      return require('../../../assets/images/pickleball.jpg');
+      return require('../../../assets/images/pickleball.webp');
     }
-    return require('../../../assets/images/tennis.jpg');
+    return require('../../../assets/images/tennis.webp');
   };
 
   const getSelectionOrder = (sportId: string): number | null => {
@@ -113,101 +110,92 @@ export function SportStep({
 
         {/* Sport Cards */}
         <View style={styles.cardsContainer}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <Spinner size="lg" />
-              <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-                {t('sportSelectionOverlay.loading')}
-              </Text>
-            </View>
-          ) : (
-            sports.map((sport, index) => {
-              const selectionOrder = getSelectionOrder(sport.id);
-              const isSelected = selectionOrder !== null;
+          {sports.map((sport, index) => {
+            const selectionOrder = getSelectionOrder(sport.id);
+            const isSelected = selectionOrder !== null;
 
-              return (
-                <Animated.View
-                  key={sport.id}
-                  entering={FadeInDown.delay(150 + index * 100).springify()}
+            return (
+              <Animated.View
+                key={sport.name}
+                entering={FadeInDown.delay(150 + index * 100).springify()}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.sportCard,
+                    isSelected ? styles.sportCardSelected : styles.sportCardUnselected,
+                  ]}
+                  onPress={() => toggleSport(sport)}
+                  activeOpacity={0.85}
                 >
-                  <TouchableOpacity
-                    style={[
-                      styles.sportCard,
-                      isSelected ? styles.sportCardSelected : styles.sportCardUnselected,
-                    ]}
-                    onPress={() => toggleSport(sport)}
-                    activeOpacity={0.85}
-                  >
-                    {/* Sport Image */}
-                    <View style={styles.sportImageContainer}>
-                      <Image
-                        source={getSportImage(sport.name)}
-                        style={styles.sportImage}
-                        resizeMode="cover"
-                      />
-                      {/* Gradient overlay for better text readability */}
-                      <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-                        style={styles.sportImageGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 0, y: 1 }}
-                      />
-                    </View>
+                  {/* Sport Image */}
+                  <View style={styles.sportImageContainer}>
+                    <Image
+                      source={getSportImage(sport.name)}
+                      style={styles.sportImage}
+                      resizeMode="cover"
+                    />
+                    {/* Gradient overlay for better text readability */}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+                      style={styles.sportImageGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                    />
+                  </View>
 
-                    {/* Sport Info */}
-                    <View style={styles.sportInfoContainer}>
-                      <View style={styles.sportNameRow}>
-                        <View style={styles.sportNameWithIcon}>
-                          {sport.name.toLowerCase() === 'pickleball' ? (
-                            <PickleballIcon
-                              width={24}
-                              height={24}
-                              fill={BASE_WHITE}
-                              style={styles.sportNameIcon}
-                            />
-                          ) : (
-                            <TennisIcon
-                              width={24}
-                              height={24}
-                              fill={BASE_WHITE}
-                              style={styles.sportNameIcon}
-                            />
-                          )}
-                          <Text size="xl" weight="bold" color={BASE_WHITE}>
-                            {sport.display_name}
-                          </Text>
-                        </View>
-
-                        {/* Selection indicator */}
-                        {isSelected ? (
-                          <View style={styles.selectionBadge}>
-                            {orderedSelection.length > 1 ? (
-                              <Text size="sm" weight="bold" color={BASE_WHITE}>
-                                {selectionOrder}
-                              </Text>
-                            ) : (
-                              <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
-                            )}
-                          </View>
+                  {/* Sport Info */}
+                  <View style={styles.sportInfoContainer}>
+                    <View style={styles.sportNameRow}>
+                      <View style={styles.sportNameWithIcon}>
+                        {sport.name.toLowerCase() === 'pickleball' ? (
+                          <PickleballIcon
+                            width={24}
+                            height={24}
+                            fill={BASE_WHITE}
+                            style={styles.sportNameIcon}
+                          />
                         ) : (
-                          <View style={styles.addButton}>
-                            <Ionicons name="add-outline" size={22} color={BASE_WHITE} />
-                          </View>
+                          <TennisIcon
+                            width={24}
+                            height={24}
+                            fill={BASE_WHITE}
+                            style={styles.sportNameIcon}
+                          />
                         )}
+                        <Text size="xl" weight="bold" color={BASE_WHITE}>
+                          {sport.display_name}
+                        </Text>
                       </View>
 
-                      {/* Tap to select hint */}
-                      <Text size="xs" color="rgba(255,255,255,0.7)" style={styles.tapHint}>
-                        {isSelected
-                          ? t('sportSelectionOverlay.tapToRemove')
-                          : t('sportSelectionOverlay.tapToSelect')}
-                      </Text>
+                      {/* Selection indicator */}
+                      {isSelected ? (
+                        <View style={styles.selectionBadge}>
+                          {orderedSelection.length > 1 ? (
+                            <Text size="sm" weight="bold" color={BASE_WHITE}>
+                              {selectionOrder}
+                            </Text>
+                          ) : (
+                            <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
+                          )}
+                        </View>
+                      ) : (
+                        <View style={styles.addButton}>
+                          <Ionicons name="add-outline" size={22} color={BASE_WHITE} />
+                        </View>
+                      )}
                     </View>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })
-          )}
+
+                    {/* Tap to select hint */}
+                    <Text size="xs" color="rgba(255,255,255,0.7)" style={styles.tapHint}>
+                      {isSelected
+                        ? t('sportSelectionOverlay.tapToRemove')
+                        : t('sportSelectionOverlay.tapToSelect')}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
         </View>
       </View>
 

@@ -61,12 +61,6 @@ export interface ContestRank {
   totalParticipants: number;
 }
 
-export interface FingerprintMatchResult {
-  code: string;
-  invitation_type: InvitationType;
-  target_id?: string;
-}
-
 // ============================================================================
 // REFERRAL CODE OPERATIONS
 // ============================================================================
@@ -90,8 +84,11 @@ export async function getOrCreateReferralCode(playerId: string): Promise<string>
 /**
  * Get the referral link URL for a code (pure referral, no target)
  */
-export function getReferralLink(referralCode: string): string {
-  return generateInvitationLink({ type: 'referral', referralCode });
+export function getReferralLink(
+  referralCode: string,
+  utm?: import('@rallia/shared-utils').UtmParams
+): string {
+  return generateInvitationLink({ type: 'referral', referralCode, utm });
 }
 
 // ============================================================================
@@ -112,40 +109,6 @@ export async function getReferralStats(playerId: string): Promise<ReferralStats>
   }
 
   return data as ReferralStats;
-}
-
-// ============================================================================
-// FINGERPRINT MATCHING (iOS deferred deep link)
-// ============================================================================
-
-/**
- * Match a device fingerprint to find a pending referral.
- * Returns structured data with the code, invitation type, and target ID.
- */
-export async function matchReferralFingerprint(
-  fingerprint: string,
-  ip: string,
-  playerId: string
-): Promise<FingerprintMatchResult | null> {
-  const { data, error } = await supabase.rpc('match_referral_fingerprint', {
-    p_device_fingerprint: fingerprint,
-    p_ip_address: ip,
-    p_player_id: playerId,
-  });
-
-  if (error) {
-    console.error('Error matching referral fingerprint:', error);
-    throw new Error(error.message);
-  }
-
-  if (!data) return null;
-
-  const result = data as { code: string; invitation_type: string; target_id?: string };
-  return {
-    code: result.code,
-    invitation_type: (result.invitation_type || 'referral') as InvitationType,
-    target_id: result.target_id ?? undefined,
-  };
 }
 
 // ============================================================================

@@ -6,20 +6,33 @@ on:
   push:
     branches: [dev, main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
+
 jobs:
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       src: ${{ steps.filter.outputs.src }}
       deps: ${{ steps.filter.outputs.deps }}
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        with:
+          egress-policy: audit
+
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Detect changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.2
         id: filter
         with:
           filters: |
@@ -39,7 +52,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.deps == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        with:
+          egress-policy: audit
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -49,63 +68,51 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      # Validate package-lock.json only references the official npm registry
+      # over HTTPS — guards against lockfile-injection supply chain attacks.
+      - name: Lint lockfile hosts
+        run: npx --yes lockfile-lint@4 --path package-lock.json --type npm --allowed-hosts npm --validate-https
+
+      - name: Cache node_modules
+        id: nm-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: nm-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
-        run: npm ci
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit --fund=false
+
+      # Verify Sigstore/ECDSA registry signatures on every installed package.
+      # Catches tampered registry artifacts and missing publisher signatures.
+      # Slow (per-package network calls) — run only on push to protected
+      # branches, not on every PR push.
+      - name: Verify package signatures
+        if: github.event_name == 'push'
+        run: npm audit signatures
 
       - name: Check for dependency conflicts
         run: npm run check-deps
 
-  lint:
-    name: Lint
+  validate:
+    name: Lint, Type Check & Test
     needs: changes
     if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-  type-check:
-    name: Type Check
-    needs: changes
-    if: needs.changes.outputs.src == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run TypeScript type checking
-        run: npm run type-check
-
-  test:
-    name: Run Tests
-    needs: changes
-    if: needs.changes.outputs.src == 'true'
-    runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        with:
+          egress-policy: audit
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -115,21 +122,40 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Cache node_modules
+        id: nm-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: nm-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
 
-      - name: Run tests
-        run: npm run test -- -- --passWithNoTests
+      - name: Install dependencies
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit --fund=false
+
+      - name: Run lint, type-check, and tests
+        run: npx turbo run lint type-check test --continue
 
   build-mobile:
     name: Build Mobile App
     needs: changes
-    if: needs.changes.outputs.mobile == 'true'
+    # Full mobile build is heavy; only run on push to protected branches.
+    # PRs are covered by the type-check in the validate job.
+    if: needs.changes.outputs.mobile == 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        with:
+          egress-policy: audit
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -139,8 +165,37 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      - name: Cache node_modules
+        id: nm-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: nm-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
-        run: npm ci
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Build mobile app
         run: npx turbo run build --filter=@rallia/mobile
+
+  # Aggregator job: branch protection should require ONLY this check.
+  # Fails if any upstream job failed or was cancelled. Skipped jobs (via
+  # paths-filter) are treated as success so PRs aren't blocked forever.
+  ci:
+    name: CI
+    if: always()
+    needs: [changes, check-deps, validate, build-mobile]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Verify all jobs passed (or were skipped)
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All required jobs passed or were skipped."

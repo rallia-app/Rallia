@@ -1,4 +1,7 @@
 {
+  "suggestionCard": {
+    "courtsAvailable": "{count} courts available"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -233,7 +236,11 @@
       "booking_cancelled_by_org": "Booking cancelled by facility",
       "membership_approved": "Membership approved",
       "org_announcement": "Announcement",
-      "morning_digest": "Morning Digest"
+      "morning_digest": "Morning Digest",
+      "availability_refresh_reminder": "Availability refresh",
+      "match_time_suggested": "Time change suggested",
+      "match_time_suggestion_accepted": "Time change accepted",
+      "match_time_suggestion_declined": "Time change declined"
     },
     "categories": {
       "match": "Game Notifications",
@@ -462,6 +469,18 @@
       "reimbursement_all_received": {
         "title": "All reimbursements received",
         "body": "Everyone has paid you back for the game."
+      },
+      "match_time_suggested": {
+        "title": "{playerName} suggested {suggestedStartTime}",
+        "body": "{playerName} can't make {sportName} on {matchDate} at the current time — they suggested {suggestedStartTime} instead. Tap to accept or decline."
+      },
+      "match_time_suggestion_accepted": {
+        "title": "Your time change was accepted",
+        "body": "Your {sportName} game on {matchDate} now starts at {suggestedStartTime}."
+      },
+      "match_time_suggestion_declined": {
+        "title": "Time change declined",
+        "body": "Your suggestion for the {sportName} game on {matchDate} wasn't accepted. You can still join at the original time."
       }
     }
   },
@@ -1411,6 +1430,8 @@
       "am": "AM",
       "pm": "PM",
       "eve": "EVE",
+      "showDetails": "Show full schedule",
+      "hideDetails": "Hide details",
       "days": {
         "monday": "Mon",
         "tuesday": "Tue",
@@ -1629,23 +1650,15 @@
     },
     "availabilityStep": {
       "title": "Tell us about your schedule",
-      "subtitle": "Select your availabilities",
-      "am": "AM",
-      "pm": "PM",
-      "eve": "EVE",
-      "minimumSelected": "{count} / {minimum} minimum selected",
-      "selected": "{count} availabilities selected",
+      "presets": {
+        "afterWork": "After work",
+        "weekendsAny": "Weekends",
+        "lunch": "Lunch",
+        "mornings": "Mornings",
+        "clear": "Clear"
+      },
       "saveButton": "Save",
-      "complete": "Complete",
-      "days": {
-        "monday": "Mon",
-        "tuesday": "Tue",
-        "wednesday": "Wed",
-        "thursday": "Thu",
-        "friday": "Fri",
-        "saturday": "Sat",
-        "sunday": "Sun"
-      }
+      "complete": "Complete"
     },
     "validation": {
       "fillRequiredFields": "Please fill in all required fields",
@@ -1711,6 +1724,7 @@
     },
     "suggestions": {
       "title": "Your Top Matches",
+      "sheetTitle": "Personalized suggestions",
       "subtitle": "We found players near you that match your level, schedule, and court preferences",
       "sendInvite": "Send Game Invite",
       "confirmTitle": "Send game invite?",
@@ -1740,7 +1754,9 @@
       "feedEmptyTitle": "No suggestions available",
       "feedEmptySubtitle": "Check back later as more players join.",
       "selectDate": "Select a date",
-      "selectTime": "Select a time"
+      "selectTime": "Select a time",
+      "reassureTitle": "Hand-picked just for you",
+      "reassureMessage": "These players match your level, are free at this time, and play at courts you like. They're hoping someone reaches out — you're not bugging anyone, you'll likely make their day."
     },
     "complete": "Complete",
     "locationStep": {
@@ -1923,7 +1939,9 @@
     "participantStatus": {
       "pending": "Pending",
       "declined": "Declined"
-    }
+    },
+    "suggestDifferentTime": "Suggest a different time",
+    "viewYourSuggestion": "Your suggestion: {time}"
   },
   "ratings": {
     "title": "Ratings",
@@ -2815,6 +2833,12 @@
     "locationRequiredForFacilities": "Location is required to search facilities",
     "favoriteFacilitiesHint": "You can always add or change facilities later"
   },
+  "playerAvailability": {
+    "staleHint": "It's been a while — confirm your availability for the week ahead.",
+    "lastConfirmed": "Last confirmed {ago}",
+    "neverConfirmed": "Not confirmed yet",
+    "confirmCta": "Confirm my week"
+  },
   "playerDirectory": {
     "title": "Player Directory",
     "searchPlaceholder": "Search by name or city...",
@@ -2829,6 +2853,19 @@
     "selectSportDescription": "Choose a sport from the header to view players",
     "chooseSport": "Choose a sport from the header to view players",
     "nearby": "Nearby",
+    "online": "Online",
+    "lastSeenToday": "Today",
+    "lastSeenYesterday": "Yesterday",
+    "lastSeenDaysAgo": "{count} days ago",
+    "dayLetters": {
+      "monday": "M",
+      "tuesday": "T",
+      "wednesday": "W",
+      "thursday": "T",
+      "friday": "F",
+      "saturday": "S",
+      "sunday": "S"
+    },
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
     "favorites": {
@@ -2850,6 +2887,8 @@
       "distanceKm": "{distance} km",
       "availability": "Time",
       "availabilityAll": "All",
+      "availabilityAm": "AM",
+      "availabilityPm": "PM",
       "availabilityMorning": "Morning",
       "availabilityAfternoon": "Afternoon",
       "availabilityEvening": "Evening",
@@ -3111,6 +3150,7 @@
       "join": "Join game",
       "askToJoin": "Request to join",
       "acceptInvitation": "Accept Invitation",
+      "manageInvitation": "Manage invitation",
       "full": "Full",
       "view": "View details",
       "viewResults": "View results",
@@ -3297,7 +3337,36 @@
       "switchToManualConfirmMessage": "Future payments won't go through Stripe — you'll mark each player as paid yourself. Pending payments already in Stripe will still be released to you."
     },
     "switchToStripe": "Switch to Stripe",
-    "trackingOnly": "Tracking payments manually"
+    "trackingOnly": "Tracking payments manually",
+    "timeSuggestion": {
+      "sheetTitle": "Suggest a different time",
+      "sheetSubtitle": "Same day — propose a new start time. The host can accept (which will reschedule the game) or decline.",
+      "currentTime": "Currently: {time}",
+      "newTimeLabel": "Your suggestion",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "e.g. I could play if we start an hour later",
+      "timezoneBanner": "Times shown in match timezone ({tz})",
+      "submit": "Send suggestion",
+      "submitUpdate": "Update suggestion",
+      "withdraw": "Withdraw suggestion",
+      "submitSuccess": "Suggestion sent to host",
+      "withdrawSuccess": "Suggestion withdrawn",
+      "alreadyPending": "You already have a pending suggestion — withdraw it first.",
+      "sameAsCurrent": "That's the current start time — pick something different.",
+      "errorGeneric": "Couldn't send your suggestion. Please try again.",
+      "sectionTitle": "Time suggestions",
+      "sectionEmpty": "No pending suggestions",
+      "suggestedBy": "{name} suggests {time}",
+      "youSuggested": "You suggested {time}",
+      "youSuggestedPending": "Waiting for the host to respond",
+      "accept": "Accept",
+      "decline": "Decline",
+      "acceptConfirmTitle": "Accept this time?",
+      "acceptConfirmBody": "This will reschedule the game to {time} and notify all participants.",
+      "acceptSuccess": "Game rescheduled",
+      "declineSuccess": "Suggestion declined",
+      "errorMatchFull": "The match filled up while this was pending. Free up a spot or decline."
+    }
   },
   "registerMatchScore": {
     "title": "Register score",
@@ -3536,6 +3605,7 @@
     "error": "Error",
     "info": "Info",
     "availabilitiesUpdated": "Your availabilities have been updated!",
+    "minAvailabilitiesRequired": "Please select at least 3 availability slots.",
     "peerRatingRequestsSent": "Peer rating requests sent to {count} player(s)",
     "referenceRequestsSent": "Reference requests sent to {count} player(s)",
     "failedToSendPeerRatingRequests": "Failed to send peer rating requests",
@@ -4145,11 +4215,12 @@
     "justForYou": "Just for you",
     "publicMatches": "Public Games",
     "viewAll": "View All",
-    "myMatches": "My upcoming games",
+    "myMatches": "My games",
     "quickNav": {
       "joinCommunity": "Join a community",
-      "bookCourt": "Book a court",
-      "findGame": "Find a game",
+      "bookCourt": "Reserve a court",
+      "findGame": "Find a game nearby",
+      "browseSuggestions": "Discover suggestions",
       "tournaments": "Join a tournament"
     },
     "myMatchesEmpty": {
@@ -4182,12 +4253,19 @@
       "bannerDescription": "Activate {sportName} to find more matches and players nearby.",
       "activate": "Activate"
     },
+    "availabilityRefreshBanner": {
+      "title": "Time for your weekly check-in 🐿️",
+      "description": "Set your goal and confirm when you're free this week.",
+      "descriptionStreak": "Keep your {count}-week streak going.",
+      "cta": "Start"
+    },
     "header": {
       "ctaButton": "Download",
       "nav": {
         "home": "Home",
         "games": "Games",
         "communities": "Communities",
+        "guides": "Guides",
         "donate": "Support"
       }
     },
@@ -4378,6 +4456,10 @@
         "downloadButton": "Download the App",
         "learnMore": "Learn more"
       },
+      "leadAnswer": {
+        "headline": "What is Rallia?",
+        "body": "Rallia is an iOS and Android app that connects tennis and pickleball players for real, scheduled games. Find courts near you on an interactive map with real-time availability. Rate your level on NTRP or DUPR and get it verified. Create or join open games — set the format, skill level, and cost sharing in a few taps. Every player carries a reliability score, so you can see who tends to show up before you commit."
+      },
       "solutions": {
         "sectionTitle": "The Solution",
         "sectionBadge": "How It Works",
@@ -4416,6 +4498,25 @@
         "step4": {
           "title": "Play & Review",
           "description": "Show up, play, and rate your experience. Build your network of reliable players."
+        }
+      },
+      "explore": {
+        "sectionBadge": "Explore",
+        "sectionTitle": "Dig deeper into Rallia",
+        "games": {
+          "title": "Open games",
+          "description": "Browse upcoming matches near you and join in one tap.",
+          "cta": "See open games"
+        },
+        "communities": {
+          "title": "Communities",
+          "description": "Find clubs and groups for tennis and pickleball in your area.",
+          "cta": "Browse communities"
+        },
+        "guides": {
+          "title": "Guides",
+          "description": "Tips, drills, and how-tos to help you level up your game.",
+          "cta": "Read guides"
         }
       },
       "downloadCta": {
@@ -4754,9 +4855,52 @@
     "description": "The platform that will connect tennis and pickleball players for better games, every time.",
     "quickLinks": "Quick Links",
     "download": "Download the App",
+    "about": "About",
+    "guides": "Guides",
+    "games": "Open Games",
+    "communities": "Communities",
+    "donate": "Support Rallia",
+    "legal": "Legal",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "eula": "EULA",
+    "deleteAccount": "Delete Account",
     "rights": "All rights reserved."
+  },
+  "notFoundPage": {
+    "title": "Page not found",
+    "description": "We couldn't find the page you're looking for. It may have moved or no longer exists.",
+    "backHome": "Back to home",
+    "exploreHeading": "Or explore",
+    "games": "Games",
+    "communities": "Communities",
+    "guides": "Guides"
+  },
+  "cookieConsent": {
+    "title": "We use cookies",
+    "body": "Rallia uses cookies and similar technologies to keep the site working, measure how it's used, and understand which marketing channels send you here. You can accept all, refuse non-essential cookies, or pick by category. You can change your choice anytime from the footer.",
+    "acceptAll": "Accept all",
+    "rejectAll": "Refuse non-essential",
+    "customize": "Customize",
+    "learnMore": "Read our Privacy Policy",
+    "savePreferences": "Save preferences",
+    "footerLink": "Cookie preferences",
+    "preferencesTitle": "Cookie preferences",
+    "preferencesIntro": "Choose which categories of cookies Rallia can use on your device. Under Quebec Law 25, only strictly necessary cookies run before you opt in.",
+    "categories": {
+      "necessary": {
+        "title": "Strictly necessary",
+        "description": "Required to operate the site: authentication, language preference, theme, and remembering your consent choice. Always on."
+      },
+      "analytics": {
+        "title": "Analytics & performance",
+        "description": "Helps us understand how the site is used (PostHog product analytics, Vercel Web Analytics, Sentry session replay). Off until you opt in."
+      },
+      "marketing": {
+        "title": "Marketing & attribution",
+        "description": "Lets us measure which campaigns and referrers bring you to Rallia (first-touch UTM cookie, PostHog visitor ID). Off until you opt in."
+      }
+    }
   },
   "signIn": {
     "title": "Organization Sign In",
@@ -5071,7 +5215,8 @@
       "backToFacilities": "Back to Facilities",
       "creating": "Creating...",
       "createButton": "Create Facility",
-      "error": "Failed to create facility. Please try again."
+      "error": "Failed to create facility. Please try again.",
+      "success": "Facility created successfully"
     },
     "edit": {
       "title": "Edit Facility",
@@ -5118,7 +5263,8 @@
       "organizationLabel": "Organization",
       "selectOrganization": "Select organization",
       "loadingOrganizations": "Loading organizations...",
-      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization."
+      "organizationChangeWarning": "Changing the organization will move this facility and all its courts/contacts to the selected organization.",
+      "success": "Facility updated successfully"
     },
     "facilityTypes": {
       "park": "Park",
@@ -7073,8 +7219,8 @@
         "overview": "Overview",
         "acquisition": "Acquisition",
         "invitations": "Invitations",
-        "engagement": "Engagement",
-        "users": "Users"
+        "users": "Users",
+        "matches": "Matches"
       },
       "links": {
         "builderTitle": "Build a tracked link",
@@ -7106,6 +7252,12 @@
         "campaignsDescription": "Active campaigns. Archive a campaign to hide it from the picker — historical attribution stays.",
         "name": "Name",
         "slug": "Slug",
+        "slugLabel": "Slug",
+        "slugHint": "URL-safe identifier (a–z, 0–9, underscore).",
+        "slugTaken": "A campaign with this slug already exists.",
+        "slugInvalid": "Slug must contain only lowercase letters, digits, and underscores.",
+        "invalidDestination": "Destination must be a valid URL.",
+        "restrictedDestination": "Destination must be on rallia.app.",
         "description": "Description",
         "archive": "Archive",
         "noCampaigns": "No campaigns yet — create one above."
@@ -7117,6 +7269,8 @@
         "signups": "Signups",
         "signupsToday": "Signups today",
         "conversionRate": "Conv. rate",
+        "attributionRate": "Attribution rate",
+        "attributionRateHint": "{attributed} of {total} signups attributed",
         "topCampaign": "Top campaign",
         "topCampaignsTrend": "Landings per day, by campaign",
         "chartHint": "Comparing the top {n} campaigns over the selected window.",
@@ -7571,6 +7725,22 @@
         "scheduling": "Scheduling",
         "injury": "Injury",
         "other": "Other"
+      },
+      "matchesTab": {
+        "title": "Match Activity",
+        "description": "Created vs filled matches over time, broken down by sport.",
+        "totalCreated": "Created",
+        "totalFilled": "Filled",
+        "fillRate": "Fill rate",
+        "avgParticipants": "Avg. participants",
+        "fillRateHint": "{filled} of {created} matches filled",
+        "chartTitle": "Created vs filled per day",
+        "chartHint": "Non-cancelled matches over the selected window, by sport.",
+        "sportBreakdown": "By sport",
+        "noData": "No match data in this window yet.",
+        "created": "Created",
+        "filled": "Filled",
+        "rate": "Fill %"
       }
     },
     "settings": {
@@ -8550,6 +8720,9 @@
       "hasAvailabilities": {
         "label": "Bookable"
       },
+      "hasOpenSlots": {
+        "label": "Slots open"
+      },
       "organizationNature": {
         "label": "Ownership",
         "all": "All",
@@ -8574,7 +8747,8 @@
       "favorite": "Favorite",
       "addedToFavorites": "Added to favorites",
       "removedFromFavorites": "Removed from favorites",
-      "maxReached": "Maximum 3 favorites reached"
+      "maxReached": "Maximum 3 favorites reached",
+      "minimumRequired": "You can't have less than {min} favorite facilities selected for the current sport"
     },
     "badges": {
       "public": "Public",
@@ -9061,85 +9235,6 @@
     "cancelBooking": "Cancel Booking",
     "viewMyBookings": "View My Bookings"
   },
-  "playerInterest": {
-    "title": "Play for Free - Rallia",
-    "hero": {
-      "badge": "Friends & Family",
-      "headline": "Help Us Launch Rallia",
-      "subheadline": "We're looking for our first players to kick things off. Tell us where you play and when you're free — we'll cover the court fees."
-    },
-    "formSection": {
-      "title": "Your Player Profile",
-      "subtitle": "This helps us organize matches at the right facilities and times for you."
-    },
-    "form": {
-      "firstNameLabel": "First name",
-      "firstNamePlaceholder": "Your first name",
-      "lastNameLabel": "Last name",
-      "lastNamePlaceholder": "Your last name",
-      "emailLabel": "Email",
-      "emailPlaceholder": "your.email@example.com",
-      "postalCodeLabel": "Postal code",
-      "postalCodePlaceholder": "e.g., H2X 1Y4",
-      "playsTennisLabel": "Do you play tennis?",
-      "ntrpRatingLabel": "Your NTRP rating",
-      "favoriteTennisFacilityLabel": "Where do you usually play tennis?",
-      "favoriteTennisFacilityPlaceholder": "Search for a facility...",
-      "playsPickleballLabel": "Do you play pickleball?",
-      "duprRatingLabel": "Your DUPR rating",
-      "favoritePickleballFacilityLabel": "Where do you usually play pickleball?",
-      "favoritePickleballFacilityPlaceholder": "Search for a facility...",
-      "facilityCustomHint": "Don't see your facility? Just type its name.",
-      "facilityNoResults": "No facilities found. Type a custom name.",
-      "availabilityTitle": "When can you play?",
-      "availabilityDescription": "Select the times when you're typically free. We'll use this to schedule matches.",
-      "days": {
-        "monday": "Mon",
-        "tuesday": "Tue",
-        "wednesday": "Wed",
-        "thursday": "Thu",
-        "friday": "Fri",
-        "saturday": "Sat",
-        "sunday": "Sun"
-      },
-      "periods": {
-        "morning": "Morning",
-        "afternoon": "Afternoon",
-        "evening": "Evening"
-      },
-      "periodRanges": {
-        "morning": "6am - 12pm",
-        "afternoon": "12pm - 5pm",
-        "evening": "5pm - 9pm"
-      },
-      "availabilityCount": "{count} selected",
-      "submitButton": "Count me in",
-      "submitting": "Submitting..."
-    },
-    "validation": {
-      "atLeastOneSport": "Please select at least one sport.",
-      "tennisRatingRequired": "Please select your NTRP rating.",
-      "pickleballRatingRequired": "Please select your DUPR rating.",
-      "tennisFacilityRequired": "Please enter where you usually play tennis.",
-      "pickleballFacilityRequired": "Please enter where you usually play pickleball.",
-      "availabilityMinimum": "Please select at least 3 availability slots.",
-      "postalCodeInvalid": "Please enter a valid Canadian postal code (e.g., H2X 1Y4)."
-    },
-    "success": {
-      "message": "You're in! We'll reach out soon to get you on the court."
-    },
-    "alreadySubmitted": {
-      "message": "Looks like you've already signed up! We'll be in touch soon."
-    },
-    "error": {
-      "message": "Something went wrong. Please try again."
-    },
-    "trust": {
-      "secure": "Your info stays private",
-      "fast": "Takes 2 minutes",
-      "premium": "Court fees on us"
-    }
-  },
   "communitiesPage": {
     "title": "Discover Communities",
     "subtitle": "Find and join public communities that match your interests.",
@@ -9584,5 +9679,155 @@
     "free_plan": "Free Plan",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service"
+  },
+  "weeklyCheckIn": {
+    "exit": {
+      "title": "Catch you later?",
+      "description": "Ace will check back in next week — your settings won't be saved this time.",
+      "confirm": "Exit for now",
+      "cancel": "Keep going"
+    },
+    "step1": {
+      "bubbleHit": "Hey 👋 Welcome back — you smashed your goal last week. Streak still climbing. 🔥",
+      "bubbleMet": "Hey 👋 Welcome back — you hit all {goal} sessions last week. Streak alive and well. 💪",
+      "bubbleMiss": "Hey 👋 Welcome back — you missed the goal, but not the streak. Let's get back on track. 🌱",
+      "bubbleFirstTime": "Hey 👋 Welcome to your weekly check-in. Let's set you up for a great week of tennis.",
+      "streakTitle": "{count}-week streak",
+      "streakTitleZero": "Start a streak this week",
+      "streakSubtitle": "weeks",
+      "streakSubtitleOne": "week streak",
+      "freezeTooltip": "Streak freezes protect you if you miss a check-in.",
+      "goalsHitLabel": "Goals hit",
+      "recapGoal": "Goal",
+      "recapPlayed": "Played",
+      "cta": "Let's plan this week 🎾"
+    },
+    "step2": {
+      "bubble": "When are you free this week? Tap or drag to paint your slots — I'll work my matchmaking magic around them. ✨",
+      "cta": "Looks good"
+    },
+    "step3": {
+      "bubble": "How many sessions do you want to play this week? I'll keep an eye on the goal. 🎯",
+      "frequencyOption": {
+        "1": "1×",
+        "2": "2×",
+        "3": "3×",
+        "4": "4×",
+        "5plus": "5+×"
+      },
+      "frequencyContextSame": "Same as last week — consistency wins! 🌱",
+      "frequencyContextUp": "Stepping it up from {last} → {current}. I love the ambition! 🔥",
+      "frequencyContextDown": "Dialing back to {current}. Sustainable beats burnout. 💆",
+      "opsLabel": "Make this easier",
+      "autoCreateTitle": "Auto-create open matches",
+      "autoCreateDesc": "Post request-to-join matches at your free times.",
+      "autoInviteTitle": "Auto-invite compatible players",
+      "autoInviteDesc": "Find players at your level nearby and ping them.",
+      "cta": "Set my week"
+    },
+    "step4": {
+      "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🎾",
+      "streakHeroCount": "{count} weeks!",
+      "streakHeroCountOne": "1 week!",
+      "streakHeroSub": "Streak extended · +1",
+      "streakHeroSubMilestone": "Streak milestone · +1 freeze earned ❄️",
+      "summaryGoal": "Goal: {freq}",
+      "summarySlots": "{count} hours confirmed",
+      "summarySlotsOne": "1 hour confirmed",
+      "summaryAutoCreate": "Auto-matching on",
+      "summaryAutoInvite": "Auto-invites on",
+      "cta": "Back to home"
+    }
+  },
+  "seo": {
+    "root": {
+      "title": "Rallia — Tennis & Pickleball Matchmaking, Made Easy",
+      "description": "Rallia turns intent into actual matches. Find tennis and pickleball players near you, browse open games, and join active local communities. Available on iOS and Android.",
+      "ogTitle": "Rallia — Where Rallies Live On",
+      "ogDescription": "Skill-based matchmaking, easier scheduling, and reliability scores for every player. Download Rallia on iOS and Android."
+    },
+    "landing": {
+      "title": "Find Tennis & Pickleball Partners Near You",
+      "description": "Tired of group chats and no-shows? Rallia helps you find tennis and pickleball players at your level, see each one's reliability score, and join games in one tap. Available on iOS and Android.",
+      "ogTitle": "Rallia — Find Your Next Tennis or Pickleball Match",
+      "ogDescription": "Skill-based matchmaking, easier scheduling, and reliability scores so you can see who tends to show up. Download Rallia on iOS and Android."
+    },
+    "games": {
+      "title": "Open Tennis & Pickleball Games Near You",
+      "description": "Browse open tennis and pickleball games happening near you. Join a game in seconds — singles, doubles, all levels, real courts, real players.",
+      "ogTitle": "Open Tennis & Pickleball Games — Join One Now",
+      "ogDescription": "Live list of open games near you. Singles, doubles, all levels. Join in seconds with Rallia."
+    },
+    "communities": {
+      "title": "Tennis & Pickleball Communities",
+      "description": "Find tennis and pickleball communities in your city. Join local groups, meet players at your level, and grow your network — discover communities on Rallia.",
+      "ogTitle": "Find a Local Tennis or Pickleball Community",
+      "ogDescription": "Join active tennis and pickleball communities near you on Rallia."
+    },
+    "guides": {
+      "title": "Tennis & Pickleball Guides",
+      "description": "Tips, drills, etiquette, and rules for tennis and pickleball players. Improve your game with Rallia's player guides.",
+      "ogTitle": "Tennis & Pickleball Guides",
+      "ogDescription": "Tips, drills, and rules from the Rallia community."
+    },
+    "donate": {
+      "title": "Support Rallia",
+      "description": "Help keep Rallia free for tennis and pickleball players. Your contribution funds matchmaking, court partnerships, and the community.",
+      "ogTitle": "Support Rallia",
+      "ogDescription": "Help keep Rallia free for tennis and pickleball players everywhere."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "How Rallia collects, uses, and protects your personal information.",
+      "ogTitle": "Rallia Privacy Policy",
+      "ogDescription": "How Rallia handles your data."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "description": "The terms governing your use of Rallia's tennis and pickleball matchmaking platform.",
+      "ogTitle": "Rallia Terms of Service",
+      "ogDescription": "The terms governing your use of Rallia."
+    },
+    "eula": {
+      "title": "End User License Agreement",
+      "description": "Rallia's End User License Agreement for the mobile application.",
+      "ogTitle": "Rallia EULA",
+      "ogDescription": "End User License Agreement for the Rallia app."
+    },
+    "deleteAccount": {
+      "title": "Delete Your Rallia Account",
+      "description": "Request deletion of your Rallia account and personal data.",
+      "ogTitle": "Delete Your Rallia Account",
+      "ogDescription": "Request deletion of your Rallia account."
+    },
+    "about": {
+      "title": "About Rallia — Tennis & Pickleball Matchmaking, Built by Players",
+      "description": "Rallia turns intent into actual matches. Meet the team behind the app and the mission to make finding tennis and pickleball partners simple again.",
+      "ogTitle": "About Rallia — Built by Players, for Players",
+      "ogDescription": "The mission and the team behind Rallia — turning intent into actual matches."
+    }
+  },
+  "about": {
+    "hero": {
+      "heading": "About Rallia",
+      "subheading": "We turn intent into actual matches. Here's the mission behind the app and the people building it."
+    },
+    "mission": {
+      "heading": "Our Mission",
+      "body1": "Most racquet sport players spend more energy organizing games than playing them. Group chats stall, plans fall through, and games that should be effortless end up on the back burner.",
+      "body2": "Rallia exists to close the gap between wanting to play and actually playing. We help you find tennis and pickleball players at your level, see who tends to show up, and book a game in a few taps — so the time you have for tennis goes to playing tennis."
+    },
+    "story": {
+      "heading": "Why We Built This",
+      "body": "Rallia started because every player we knew kept hitting the same wall: knowing other people who play, knowing courts that exist, and still not being able to lock in a regular game. We built the app we wanted to use — a simple way to surface the right player, at the right level, on the right court, this week."
+    },
+    "team": {
+      "heading": "The Team",
+      "intro": "Rallia is built by a small team of players. We use the app weekly and ship the changes we wish were already in it."
+    },
+    "cta": {
+      "heading": "Get on the court",
+      "body": "Rallia is available on iOS and Android. Set your level, pick your home courts, and start finding games near you."
+    }
   }
 }

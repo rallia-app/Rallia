@@ -3,10 +3,14 @@
  * Fetches, adds, and removes favorites from the player_favorite_facility table
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import { facilityKeys } from './useFacilitySearch';
 
-const MIN_FAVORITES = 2;
+/** Minimum favorites a player must keep per sport. Exported so screens that
+ *  expose an unfavorite affordance can render consistent messaging. */
+export const MIN_FAVORITE_FACILITIES = 3;
 
 export interface FavoriteFacility {
   id: string;
@@ -40,6 +44,9 @@ interface UseFavoriteFacilitiesResult {
   count: number;
   /** Whether minimum favorites requirement is met */
   hasMinimum: boolean;
+  /** True when removing one more favorite would still satisfy the per-sport
+   *  minimum. Callers should gate their unfavorite affordance on this. */
+  canRemoveFavorite: boolean;
   /** @deprecated Use hasMinimum instead */
   isMaxReached: boolean;
   /** Refetch favorites */
@@ -58,6 +65,7 @@ export function useFavoriteFacilities(
   const [favorites, setFavorites] = useState<FavoriteFacility[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
   const fetchFavorites = useCallback(async () => {
     if (!playerId) {
@@ -177,6 +185,9 @@ export function useFavoriteFacilities(
         };
 
         setFavorites(prev => [...prev, newFavorite]);
+        // Refresh any in-flight facility list so the RPC-computed
+        // `is_favorite` flag matches what we just wrote.
+        queryClient.invalidateQueries({ queryKey: facilityKeys.search() });
         return true;
       } catch (err) {
         Logger.error('Failed to add favorite facility', err as Error, {
@@ -186,7 +197,7 @@ export function useFavoriteFacilities(
         return false;
       }
     },
-    [playerId, favorites, sportId]
+    [playerId, favorites, sportId, queryClient]
   );
 
   const removeFavorite = useCallback(
@@ -195,6 +206,10 @@ export function useFavoriteFacilities(
 
       const favoriteToRemove = favorites.find(f => f.facilityId === facilityId);
       if (!favoriteToRemove) return false;
+
+      // Enforce per-sport minimum at the data layer so every entry point
+      // (FacilitiesDirectory, FacilityDetail, Map, …) is protected uniformly.
+      if (favorites.length <= MIN_FAVORITE_FACILITIES) return false;
 
       try {
         // Delete the favorite
@@ -221,13 +236,14 @@ export function useFavoriteFacilities(
         }
 
         setFavorites(remainingFavorites);
+        queryClient.invalidateQueries({ queryKey: facilityKeys.search() });
         return true;
       } catch (err) {
         Logger.error('Failed to remove favorite facility', err as Error, { playerId, facilityId });
         return false;
       }
     },
-    [playerId, favorites]
+    [playerId, favorites, queryClient]
   );
 
   const isFavorite = useCallback(
@@ -245,7 +261,8 @@ export function useFavoriteFacilities(
     removeFavorite,
     isFavorite,
     count: favorites.length,
-    hasMinimum: favorites.length >= MIN_FAVORITES,
+    hasMinimum: favorites.length >= MIN_FAVORITE_FACILITIES,
+    canRemoveFavorite: favorites.length > MIN_FAVORITE_FACILITIES,
     isMaxReached: false,
     refetch: fetchFavorites,
   };

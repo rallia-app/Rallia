@@ -9,7 +9,7 @@ export { PlayerFiltersBar, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';
 export type {
   PlayerFilters,
   GenderFilter,
-  AvailabilityFilter,
+  HourRangeFilter,
   PlayStyleFilter,
   DistanceFilter,
   ReputationFilter,

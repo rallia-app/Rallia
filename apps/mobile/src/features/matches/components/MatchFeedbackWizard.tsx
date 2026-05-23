@@ -223,6 +223,12 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       }
       if (result.allOpponentsRated || currentStep >= totalSteps - 1) {
         // All done - close immediately
+        Analytics.matchFeedbackCompleted({
+          match_id: feedbackData.matchId,
+          sport_id: feedbackData.sportId ?? 'unknown',
+          sport_name: (feedbackData.sportName ?? 'unknown').toLowerCase(),
+          opponent_count: opponents.length,
+        });
         successHaptic();
         toast.success(t('matchFeedback.success'));
         onComplete?.();

@@ -132,6 +132,15 @@ export function opponentFeedbackSubmitted(props: {
   capture('opponent_feedback_submitted', props);
 }
 
+export function matchFeedbackCompleted(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  opponent_count: number;
+}): void {
+  capture('match_feedback_completed', props);
+}
+
 export function matchCreationAbandoned(props: {
   last_step: number;
   duration_seconds: number;
@@ -191,6 +200,18 @@ export function matchSuggestionShown(props: {
   slot_start: string;
   sport_id?: string;
   sport_name?: string;
+  /** Final ranking score the algorithm assigned. */
+  score?: number;
+  /** Per-opponent compat score (RPC output, before per-slot boosts). */
+  player_compatibility?: number;
+  /** Facility-affinity score from the RPC. */
+  facility_affinity?: number;
+  /** Caller↔opponent history score (RPC-provided). */
+  score_history?: number;
+  /** 1-indexed position in the surface's list at the moment of impression. */
+  rank?: number;
+  match_type?: string;
+  match_duration?: string;
 }): void {
   capture('match_suggestion_shown', props);
 }
@@ -203,8 +224,41 @@ export function matchSuggestionInviteSent(props: {
   match_id: string;
   sport_id?: string;
   sport_name?: string;
+  /** Final ranking score the algorithm assigned at impression time. */
+  score?: number;
+  player_compatibility?: number;
+  facility_affinity?: number;
+  score_history?: number;
+  rank?: number;
+  match_type?: string;
+  match_duration?: string;
 }): void {
   capture('match_suggestion_invite_sent', props);
+}
+
+/**
+ * Fires when a user taps the opponent avatar on a suggestion card, opening
+ * the player profile. Strongest available engagement signal between
+ * impression and invite — the user is investigating the opponent enough to
+ * leave the suggestion surface. Dimensions mirror the shown/invite events
+ * so the engagement funnel joins cleanly in PostHog.
+ */
+export function matchSuggestionAvatarTapped(props: {
+  source: SuggestionSource;
+  opponent_id: string;
+  facility_id: string;
+  slot_start: string;
+  sport_id?: string;
+  sport_name?: string;
+  score?: number;
+  player_compatibility?: number;
+  facility_affinity?: number;
+  score_history?: number;
+  rank?: number;
+  match_type?: string;
+  match_duration?: string;
+}): void {
+  capture('match_suggestion_avatar_tapped', props);
 }
 
 export function matchCheckInCompleted(props: { sport_id: string; sport_name: string }): void {
@@ -267,8 +321,12 @@ export function userAcquired(props: {
 
 // ---- Settings ----
 
-export function availabilityScheduleUpdated(): void {
-  capture('availability_schedule_updated');
+export function availabilityScheduleUpdated(props?: {
+  /** True when the user tapped Save without toggling any cell — i.e. just
+   *  refreshing last_confirmed_at in response to the weekly nudge. */
+  was_refresh_only?: boolean;
+}): void {
+  capture('availability_schedule_updated', props);
 }
 
 export function notificationPreferenceChanged(props: {

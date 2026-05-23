@@ -992,7 +992,10 @@ const SportProfile = () => {
           sportId,
           latitude: location?.latitude ?? null,
           longitude: location?.longitude ?? null,
-          initialFacilityIds: favoriteFacilities.map(f => f.facilityId),
+          initialFavorites: favoriteFacilities.map(f => ({
+            id: f.facilityId,
+            name: f.facility.name,
+          })),
           onSave: async (facilityIds: string[]) => {
             try {
               const currentIds = new Set(favoriteFacilities.map(f => f.facilityId));
@@ -1495,7 +1498,10 @@ const SportProfile = () => {
                       sportId,
                       latitude: location?.latitude ?? null,
                       longitude: location?.longitude ?? null,
-                      initialFacilityIds: favoriteFacilities.map(f => f.facilityId),
+                      initialFavorites: favoriteFacilities.map(f => ({
+                        id: f.facilityId,
+                        name: f.facility.name,
+                      })),
                       onSave: async (facilityIds: string[]) => {
                         try {
                           const currentIds = new Set(favoriteFacilities.map(f => f.facilityId));

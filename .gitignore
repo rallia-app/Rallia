@@ -23,6 +23,10 @@ build/
 # MCP
 .mcp.json
 
+# Skills / agents
+.agents/
+skills-lock.json
+
 # Misc
 .DS_Store
 *.pem

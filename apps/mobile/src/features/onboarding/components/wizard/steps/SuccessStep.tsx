@@ -31,6 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { useReferral } from '@rallia/shared-hooks';
+import { getReferralLink } from '@rallia/shared-services';
 import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import * as Analytics from '../../../../../services/analytics';
 import { SearchBar } from '../../../../../components/SearchBar';
@@ -89,7 +90,15 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   const toast = useToast();
   const hasAutoSelected = useRef(false);
 
-  const { referralLink, codeLoading: referralLoading } = useReferral(playerId ?? undefined);
+  const { code: referralCode, codeLoading: referralLoading } = useReferral(playerId ?? undefined);
+  const referralLink = referralCode
+    ? getReferralLink(referralCode, {
+        utm_source: 'app_share',
+        utm_medium: 'referral',
+        utm_campaign: 'onboarding_invite_2026',
+        utm_content: 'success_step',
+      })
+    : undefined;
 
   const {
     permissionStatus,

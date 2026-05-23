@@ -54,7 +54,11 @@ export type NotificationType =
   | 'org_announcement'
   // Match discovery notifications
   | 'match_spot_opened'
-  | 'nearby_match_available';
+  | 'nearby_match_available'
+  // Match time-suggestion (counter-proposal) flow
+  | 'match_time_suggested'
+  | 'match_time_suggestion_accepted'
+  | 'match_time_suggestion_declined';
 
 // Organization notification types (subset for org-specific handling)
 export type OrgNotificationType =
@@ -223,6 +227,11 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   booking_cancelled_by_org: { email: true, push: false, sms: true },
   membership_approved: { email: true, push: false, sms: false },
   org_announcement: { email: true, push: false, sms: false },
+  // Match time suggestion — push always on; email matches the high-signal
+  // invitation defaults so it lands beside them in the recipient's inbox.
+  match_time_suggested: { email: true, push: true, sms: false },
+  match_time_suggestion_accepted: { email: true, push: true, sms: false },
+  match_time_suggestion_declined: { email: false, push: true, sms: false },
 };
 
 /**

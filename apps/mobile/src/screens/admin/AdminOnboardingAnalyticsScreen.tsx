@@ -23,13 +23,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
+import { Text } from '@rallia/shared-components';
 import {
-  Text,
   FunnelChart,
   TimeRangeSelector,
   BarChart,
   LineChart,
-} from '@rallia/shared-components';
+} from '@rallia/shared-components/src/charts';
 import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getOnboardingFunnelRPC,

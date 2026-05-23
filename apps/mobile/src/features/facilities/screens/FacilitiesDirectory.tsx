@@ -3,27 +3,27 @@
  * Displays facilities with search, filtering, and favorites.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   RefreshControl,
-  ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Heading, Skeleton, useToast, Button } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { SearchBar } from '../../matches/components';
 import {
   useFacilitySearch,
   useFavoriteFacilities,
   usePlayer,
   useDebounce,
-  useUpcomingBookings,
   useProfile,
   DEFAULT_FACILITY_FILTERS,
+  MIN_FAVORITE_FACILITIES,
   type FacilityFilters,
 } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
@@ -41,12 +41,9 @@ import { useSport, useUserHomeLocation, useActionsSheet } from '../../../context
 import { useCourtsNavigation } from '../../../navigation/hooks';
 import { useAppNavigation } from '../../../navigation/hooks';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { FacilityCard, FacilityFiltersBar } from '../components';
-import { SportIcon } from '../../../components/SportIcon';
+import { spacingPixels, secondary } from '@rallia/design-system';
+import { FacilityCard, FacilityCardSkeleton, FacilityFiltersBar } from '../components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { FeedbackFAB } from '../../../components/BugReportFAB';
-import { MyBookingCard } from '../../bookings/components';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 
@@ -91,82 +88,17 @@ function EmptyState({ hasActiveSearch, hasLocation, colors, t }: EmptyStateProps
   );
 }
 
-function LoadingSkeleton({
-  colors,
-  isDark,
-}: {
-  colors: ReturnType<typeof useThemeStyles>['colors'];
-  isDark: boolean;
-}) {
-  // Theme-aware skeleton colors
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE'; // neutral[800] : light default
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC'; // neutral[700] : light default
-
+function LoadingSkeleton() {
   return (
     <View style={styles.skeletonContainer}>
-      {/* Facility card skeletons */}
       {[1, 2, 3, 4, 5].map(i => (
-        <View
-          key={i}
-          style={[
-            styles.skeletonCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <View style={styles.skeletonCardContent}>
-            {/* Name skeleton */}
-            <Skeleton
-              width="55%"
-              height={18}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-            {/* Address skeleton */}
-            <View style={styles.skeletonRow}>
-              <Skeleton
-                width={14}
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-                style={{ borderRadius: 7 }}
-              />
-              <Skeleton
-                width="70%"
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-            {/* Distance skeleton */}
-            <View style={styles.skeletonRow}>
-              <Skeleton
-                width={14}
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-                style={{ borderRadius: 7 }}
-              />
-              <Skeleton
-                width={50}
-                height={14}
-                backgroundColor={skeletonBg}
-                highlightColor={skeletonHighlight}
-              />
-            </View>
-          </View>
-          {/* Chevron placeholder */}
-          <Skeleton
-            width={20}
-            height={20}
-            backgroundColor={skeletonBg}
-            highlightColor={skeletonHighlight}
-            style={{ borderRadius: 10, marginLeft: spacingPixels[2] }}
-          />
-        </View>
+        <FacilityCardSkeleton key={i} />
       ))}
     </View>
   );
 }
+
+const keyExtractor = (item: FacilitySearchResult) => item.id;
 
 // =============================================================================
 // MAIN COMPONENT
@@ -195,15 +127,6 @@ export default function FacilitiesDirectory() {
   const { player } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
-  // My Bookings preview data
-  const {
-    bookings: upcomingBookings,
-    isLoading: bookingsLoading,
-    refetch: refetchBookings,
-  } = useUpcomingBookings(session?.user?.id, 5, {
-    enabled: !!session?.user?.id,
-  });
-
   // Home location label for display (full address if available, otherwise postal code)
   const homeLocationLabel = player?.address
     ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
@@ -228,6 +151,7 @@ export default function FacilitiesDirectory() {
       filters.membership !== 'all' ||
       filters.organizationNature !== 'all' ||
       filters.hasAvailabilities ||
+      filters.hasOpenSlots ||
       filters.favoritesOnly
     );
   }, [filters]);
@@ -245,11 +169,14 @@ export default function FacilitiesDirectory() {
     location.longitude !== undefined &&
     !!selectedSport;
 
-  // Fetch facilities (all at once — ~200 total, no need for pagination)
+  // Fetch facilities with server-side pagination
   const {
     facilities,
     isLoading,
     isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     refetch,
     error: queryError,
   } = useFacilitySearch({
@@ -260,13 +187,32 @@ export default function FacilitiesDirectory() {
     filters,
     userGender: player?.gender,
     playerId: player?.id,
-    pageSize: 500,
     enabled: showFacilities,
   });
 
-  // Favorites management
-  const { favorites, isFavorite, addFavorite, removeFavorite, isMaxReached } =
-    useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [isFetchingNextPage, colors.primary]);
+
+  // Favorites mutations. Heart state is read off the RPC row (`is_favorite`)
+  // so the heart and the server-side `favoritesOnly` filter share a single
+  // source of truth — addFavorite/removeFavorite invalidate the search cache
+  // so the RPC re-runs and the flag updates.
+  const { addFavorite, removeFavorite, isMaxReached, canRemoveFavorite } = useFavoriteFacilities(
+    player?.id ?? null,
+    selectedSport?.id
+  );
 
   // Handle facility press
   const handleFacilityPress = useCallback(
@@ -287,9 +233,15 @@ export default function FacilitiesDirectory() {
       }
 
       lightHaptic();
-      const wasAdded = isFavorite(facility.id);
+      const wasAdded = !!facility.is_favorite;
 
       if (wasAdded) {
+        if (!canRemoveFavorite) {
+          toast.info(
+            t('facilitiesTab.favorites.minimumRequired', { min: MIN_FAVORITE_FACILITIES })
+          );
+          return;
+        }
         const success = await removeFavorite(facility.id);
         if (success) {
           toast.success(t('facilitiesTab.favorites.removedFromFavorites'));
@@ -305,7 +257,7 @@ export default function FacilitiesDirectory() {
         }
       }
     },
-    [player?.id, isFavorite, removeFavorite, addFavorite, isMaxReached, t, toast]
+    [player?.id, removeFavorite, addFavorite, isMaxReached, canRemoveFavorite, t, toast]
   );
 
   // Handle slot press - show court selection sheet if multiple courts available
@@ -349,13 +301,15 @@ export default function FacilitiesDirectory() {
     [guardAction, openExternalBooking, selectedSport?.id, selectedSport?.name]
   );
 
-  // Render facility card
+  // Render facility card. onPress now receives the facility so the prop is
+  // stable across all rows (instead of a per-row closure) — combined with
+  // React.memo on FacilityCard this prevents row re-renders.
   const renderFacilityCard = useCallback(
     ({ item }: { item: FacilitySearchResult }) => (
       <FacilityCard
         facility={item}
-        isFavorite={isFavorite(item.id)}
-        onPress={() => handleFacilityPress(item)}
+        isFavorite={!!item.is_favorite}
+        onPress={handleFacilityPress}
         onToggleFavorite={handleToggleFavorite}
         isMaxFavoritesReached={isMaxReached}
         showFavoriteButton={showFavoriteButton}
@@ -367,7 +321,6 @@ export default function FacilitiesDirectory() {
       />
     ),
     [
-      isFavorite,
       handleFacilityPress,
       handleToggleFavorite,
       handleSlotPress,
@@ -380,235 +333,12 @@ export default function FacilitiesDirectory() {
     ]
   );
 
-  // Render My Bookings section
-  const renderMyBookingsSection = useCallback(() => {
-    // Not signed in: show sign-in prompt (aligned with Home screen design)
-    if (!session) {
-      return (
-        <View
-          style={[
-            styles.myBookingsMatchesSection,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={32}
-            color={colors.text}
-            style={styles.myBookingsMatchesSectionIcon}
-          />
-          <Heading level={3}>{t('myBookings.yourBookings')}</Heading>
-          <Text size="sm" color={colors.textMuted} style={styles.myBookingsMatchesSectionSubtitle}>
-            {t('myBookings.signInPrompt')}
-          </Text>
-          <Button
-            variant="primary"
-            onPress={() => {
-              lightHaptic();
-              openSheet();
-            }}
-            style={styles.myBookingsMatchesSectionButton}
-          >
-            {t('auth.signIn')}
-          </Button>
-        </View>
-      );
-    }
-
-    // Signed in but not onboarded: show complete profile prompt (aligned with Home screen design)
-    if (!isOnboarded) {
-      return (
-        <View
-          style={[
-            styles.myBookingsMatchesSection,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={32}
-            color={colors.text}
-            style={styles.myBookingsMatchesSectionIcon}
-          />
-          <Heading level={3}>{t('myBookings.yourBookings')}</Heading>
-          <Text size="sm" color={colors.textMuted} style={styles.myBookingsMatchesSectionSubtitle}>
-            {t('myBookings.onboardingPrompt')}
-          </Text>
-          <Button
-            variant="primary"
-            onPress={() => {
-              lightHaptic();
-              openSheet();
-            }}
-            style={styles.myBookingsMatchesSectionButton}
-          >
-            {t('myBookings.completeProfile')}
-          </Button>
-        </View>
-      );
-    }
-
-    // Onboarded: show bookings list
-    const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-    const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
-
-    return (
-      <View style={styles.myBookingsSection}>
-        {/* Section header */}
-        <View style={styles.myBookingsSectionHeader}>
-          <Text size="xl" weight="bold" color={colors.text}>
-            {t('myBookings.facilitiesSection.title')}
-          </Text>
-          <TouchableOpacity
-            style={styles.viewAllButton}
-            onPress={() => {
-              lightHaptic();
-              rootNavigation.navigate('MyBookings');
-            }}
-            activeOpacity={0.7}
-          >
-            <Text size="base" weight="medium" color={colors.primary}>
-              {t('myBookings.facilitiesSection.viewAll')}
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={colors.primary}
-              style={styles.chevronIcon}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Content */}
-        {bookingsLoading ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.myBookingsScroll}
-          >
-            {[1, 2, 3].map(i => (
-              <View
-                key={i}
-                style={[
-                  styles.myBookingSkeletonCard,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                {/* Facility name */}
-                <Skeleton
-                  width="85%"
-                  height={14}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-                {/* Court row (icon + text) */}
-                <View style={styles.myBookingSkeletonRow}>
-                  <Skeleton
-                    width={12}
-                    height={12}
-                    borderRadius={6}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                  <Skeleton
-                    width="65%"
-                    height={12}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                </View>
-                {/* Date row */}
-                <View style={styles.myBookingSkeletonRow}>
-                  <Skeleton
-                    width={12}
-                    height={12}
-                    borderRadius={6}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                  <Skeleton
-                    width="70%"
-                    height={12}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                </View>
-                {/* Time row */}
-                <View style={styles.myBookingSkeletonRow}>
-                  <Skeleton
-                    width={12}
-                    height={12}
-                    borderRadius={6}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                  <Skeleton
-                    width="55%"
-                    height={12}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                </View>
-                {/* Status badge */}
-                <View style={styles.myBookingSkeletonBadge}>
-                  <Skeleton
-                    width={56}
-                    height={18}
-                    borderRadius={radiusPixels.full}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        ) : upcomingBookings.length === 0 ? (
-          <View style={styles.myBookingsEmpty}>
-            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.myBookingsEmptyText}>
-              {t('myBookings.facilitiesSection.empty.title')}
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.myBookingsScroll}
-          >
-            {upcomingBookings.map(booking => (
-              <MyBookingCard key={booking.id} booking={booking} />
-            ))}
-          </ScrollView>
-        )}
-      </View>
-    );
-  }, [
-    session,
-    isOnboarded,
-    openSheet,
-    selectedSport,
-    bookingsLoading,
-    upcomingBookings,
-    colors,
-    isDark,
-    t,
-    rootNavigation,
-  ]);
-
-  // Full list header: My Bookings, title, search, filters, error, then results info or skeleton
-  const renderListHeader = useCallback(() => {
-    return (
+  // Full list header: title, search, filters, error, then results info or skeleton.
+  // Built as a memoized element (not invoked from ListHeaderComponent) so the
+  // header subtree only rebuilds when its deps actually change.
+  const listHeader = useMemo(
+    () => (
       <>
-        {/* {renderMyBookingsSection()} */}
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text size="xl" weight="bold" color={colors.text}>
             {t('facilitiesTab.title')}
@@ -648,6 +378,7 @@ export default function FacilitiesDirectory() {
           onLocationModeChange={setLocationMode}
           hasHomeLocation={hasHomeLocation}
           homeLocationLabel={homeLocationLabel}
+          showFavoritesFilter={showFavoriteButton}
         />
         {queryError && (
           <View style={[styles.errorContainer, { backgroundColor: colors.card }]}>
@@ -656,32 +387,30 @@ export default function FacilitiesDirectory() {
             </Text>
           </View>
         )}
-        {(isLoading || sportLoading) && <LoadingSkeleton colors={colors} isDark={isDark} />}
-        <View style={styles.headerBottomSpacer} />
+        <View style={styles.filtersBottomSpacer} />
+        {(isLoading || sportLoading) && <LoadingSkeleton />}
       </>
-    );
-  }, [
-    renderMyBookingsSection,
-    colors,
-    t,
-    searchQuery,
-    setSearchQuery,
-    filters,
-    setFilters,
-    handleResetFilters,
-    hasActiveFilters,
-    hasBothLocationOptions,
-    locationMode,
-    setLocationMode,
-    hasHomeLocation,
-    homeLocationLabel,
-    queryError,
-    isLoading,
-    sportLoading,
-    isDark,
-    rootNavigation,
-    location,
-  ]);
+    ),
+    [
+      colors,
+      t,
+      searchQuery,
+      filters,
+      handleResetFilters,
+      hasActiveFilters,
+      hasBothLocationOptions,
+      locationMode,
+      setLocationMode,
+      hasHomeLocation,
+      homeLocationLabel,
+      showFavoriteButton,
+      queryError,
+      isLoading,
+      sportLoading,
+      rootNavigation,
+      location,
+    ]
+  );
 
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
@@ -696,24 +425,33 @@ export default function FacilitiesDirectory() {
     );
   }, [isLoading, hasActiveSearch, location, colors, t]);
 
-  const handleRefresh = useCallback(() => {
-    refetch();
-    if (session?.user?.id) {
-      refetchBookings();
+  const isManualRefresh = useRef(false);
+
+  useEffect(() => {
+    if (!isFetching) {
+      isManualRefresh.current = false;
     }
-  }, [refetch, refetchBookings, session?.user?.id]);
+  }, [isFetching]);
+
+  const handleRefresh = useCallback(() => {
+    isManualRefresh.current = true;
+    refetch();
+  }, [refetch]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <FlatList
         data={facilities}
         renderItem={renderFacilityCard}
-        keyExtractor={item => item.id}
-        ListHeaderComponent={renderListHeader()}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isLoading}
+            refreshing={isFetching && isManualRefresh.current}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
@@ -723,12 +461,18 @@ export default function FacilitiesDirectory() {
           facilities.length === 0 && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
+        // Virtualization tuning — keep the active window small so off-screen
+        // cards unmount and stop competing for the JS thread during scroll.
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        updateCellsBatchingPeriod={50}
       />
-      {/* FAB Container - Bug Report + Map */}
+      {/* FAB Container */}
       <View style={styles.fabContainer}>
-        <FeedbackFAB />
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
+          style={[styles.fab, { backgroundColor: secondary[500] }]}
           onPress={() => {
             lightHaptic();
             rootNavigation.navigate('Map', {
@@ -757,9 +501,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerBottomSpacer: {
-    height: spacingPixels[2],
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -771,10 +512,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[2],
+    paddingBottom: spacingPixels[3],
   },
   listContent: {
-    paddingTop: spacingPixels[2],
+    paddingTop: 0,
     paddingBottom: spacingPixels[4],
   },
   emptyListContent: {
@@ -802,103 +543,22 @@ const styles = StyleSheet.create({
   emptyDescription: {
     textAlign: 'center',
   },
+  // Sits inside the list header below the filters so the gap above the first
+  // card is the same whether the skeleton or the loaded items are rendering.
+  filtersBottomSpacer: {
+    height: spacingPixels[3],
+  },
   skeletonContainer: {
-    paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[4],
   },
-  skeletonCard: {
-    flexDirection: 'row',
+  footerLoader: {
     alignItems: 'center',
-    marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-    padding: spacingPixels[4],
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  skeletonCardContent: {
-    flex: 1,
-    gap: spacingPixels[2],
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[4],
   },
   errorContainer: {
     padding: spacingPixels[4],
     margin: spacingPixels[4],
     borderRadius: 8,
-  },
-  // My Bookings section styles (aligned with My Matches on Home)
-  myBookingsSection: {
-    marginBottom: spacingPixels[2],
-    overflow: 'visible',
-  },
-  myBookingsSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[5],
-  },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  chevronIcon: {
-    marginLeft: spacingPixels[1],
-  },
-  myBookingsScroll: {
-    paddingTop: 10,
-    paddingLeft: spacingPixels[4],
-    paddingRight: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
-    gap: spacingPixels[2],
-  },
-  myBookingSkeletonCard: {
-    width: 160,
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  myBookingSkeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
-  },
-  myBookingSkeletonBadge: {
-    marginTop: spacingPixels[1],
-  },
-  myBookingsEmpty: {
-    padding: spacingPixels[6],
-    marginHorizontal: spacingPixels[4],
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radiusPixels.xl,
-  },
-  myBookingsEmptyText: {
-    marginTop: spacingPixels[2],
-    textAlign: 'center',
-  },
-  myBookingsMatchesSection: {
-    padding: spacingPixels[5],
-    margin: spacingPixels[4],
-    marginTop: spacingPixels[5],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-  },
-  myBookingsMatchesSectionIcon: {
-    marginBottom: spacingPixels[2],
-  },
-  myBookingsMatchesSectionSubtitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  myBookingsMatchesSectionButton: {
-    marginTop: spacingPixels[2],
   },
   fabContainer: {
     position: 'absolute',

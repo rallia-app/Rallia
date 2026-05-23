@@ -5,6 +5,7 @@
  */
 import './src/lib/supabase';
 import { initRevenueCat } from './src/lib/revenuecat';
+
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
 import Mapbox from '@rnmapbox/maps';
@@ -40,7 +41,10 @@ Sentry.init({
 
 // Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
 import { SentryTransport } from '@rallia/shared-services';
-SentryTransport.configure(Sentry);
+import { AppState as RNAppState } from 'react-native';
+SentryTransport.configure(Sentry, {
+  getAppState: () => RNAppState.currentState,
+});
 
 // Global handler for unhandled JS errors outside the React tree
 // (e.g. setTimeout callbacks, event listeners, native module errors)
@@ -79,10 +83,9 @@ SplashScreen.setOptions({ fade: true, duration: 400 });
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
 SystemUI.setBackgroundColorAsync('#fafafa');
-import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AppNavigator from './src/navigation/AppNavigator';
-import { navigationRef } from './src/navigation';
-import { linking } from './src/navigation/linking';
+import { focusManager, QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import {
   ThemeProvider,
   useTheme,
@@ -94,17 +97,21 @@ import {
   usePendingFeedbackCheck,
   useUpdateLastSeen,
   ProfileCompletenessProvider,
-  useTopSuggestions,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
-import { WelcomeTourModal } from './src/components/WelcomeTourModal';
-import { TourCompleteModal } from './src/components/TourCompleteModal';
-import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
+import { ErrorBoundary, ToastProvider, NetworkProvider, useToast } from '@rallia/shared-components';
 import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
 import * as Application from 'expo-application';
-import { Logger } from './src/services/logger';
-import { appOpened, deepLinkOpened } from './src/services/analytics';
+
+import { parseUtmParams, successHaptic, type UtmParams } from '@rallia/shared-utils';
+import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
+import { Sheets } from './src/context/sheets';
+import { getMatchWithDetails, supabase } from '@rallia/shared-services';
+import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
+import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
   useAuth,
@@ -132,21 +139,22 @@ import {
   useTour,
   TourProvider,
 } from './src/context';
-import {
-  usePushNotifications,
-  useEffectiveLocation,
-  useTranslation,
-  type TranslationKey,
-} from './src/hooks';
-import { parseUtmParams, successHaptic, type UtmParams } from '@rallia/shared-utils';
-import { PostHogProvider, posthogClient } from './src/providers/PostHogProvider';
-import { StripeProvider } from '@stripe/stripe-react-native';
-import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
-import { Sheets } from './src/context/sheets';
-import { useToast } from '@rallia/shared-components';
-import { getMatchWithDetails, supabase } from '@rallia/shared-services';
+import { appOpened, deepLinkOpened } from './src/services/analytics';
+import { Logger } from './src/services/logger';
+import { JustForYouPrefetch } from './src/components/JustForYouPrefetch';
+import { TourCompleteModal } from './src/components/TourCompleteModal';
+import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyCheckInAutoOpener';
+import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
+import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
+import { linking } from './src/navigation/linking';
+import { navigationRef } from './src/navigation';
+import AppNavigator from './src/navigation/AppNavigator';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
-import { attemptFirstLaunchAttribution } from './src/utils/referralAttribution';
+import {
+  attemptFirstLaunchAttribution,
+  WEB_DISTINCT_ID_KEY,
+} from './src/utils/referralAttribution';
 
 // Import NativeWind global styles
 // import './global.css';
@@ -170,13 +178,35 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: true,
       // Don't refetch on mount if data is fresh
       refetchOnMount: 'always',
-      // Keep unused data in cache for 5 minutes
-      gcTime: 1000 * 60 * 5,
+      // Keep persisted entries usable for 24h. The persister itself also
+      // enforces a maxAge, but TanStack only restores a query into cache
+      // when gcTime hasn't elapsed, so gcTime must be ≥ the persister's
+      // maxAge for cold-start hydration to actually populate the cache.
+      gcTime: 1000 * 60 * 60 * 24,
       // Retry failed requests once
       retry: 1,
     },
   },
 });
+
+// AsyncStorage-backed persister — cold-start hydration of TanStack Query so
+// Home (and other screens) render real cards instead of skeletons on launch.
+// Custom serialize/deserialize round-trip JS `Date` instances (suggestion
+// slots in the "Just for you" carousel carry them); plain JSON would lose
+// them and crash consumers that call `.getTime()` on the rehydrated value.
+const queryPersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: '@rallia/rq-cache',
+  serialize: serializeQueryCache,
+  deserialize: deserializeQueryCache,
+});
+
+// Bump this string to invalidate every persisted query at once — e.g. after a
+// breaking change to a query key shape or a payload schema.
+// v4: Date-aware serializer added; bust v3 entries so we don't try to rehydrate
+// a payload written before Date markers existed (would no-op safely, but the
+// bust also covers the newly-included `matches/justForYou` shape).
+const QUERY_CACHE_BUSTER = 'v4';
 
 /**
  * Parse match ID from deep link URL.
@@ -284,9 +314,24 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      posthogClient?.identify(user.id, { email: user.email ?? null });
-    }
+    if (!user) return;
+    // Bridge the web visitor's PostHog distinct_id into the authenticated
+    // mobile profile. `alias` merges the anonymous web-side person (which
+    // carries person.utm_source set by web's UtmCapture) into the current
+    // mobile distinct_id; then `identify(user.id)` promotes everything to
+    // the canonical authenticated user id. Sequence matters: alias MUST
+    // run before identify so the merge resolves cleanly.
+    void (async () => {
+      try {
+        const webDid = await AsyncStorage.getItem(WEB_DISTINCT_ID_KEY);
+        if (webDid) {
+          posthogClient?.alias(webDid);
+          await AsyncStorage.removeItem(WEB_DISTINCT_ID_KEY).catch(() => {});
+        }
+      } finally {
+        posthogClient?.identify(user.id, { email: user.email ?? null });
+      }
+    })();
   }, [user]);
 
   // Handle incoming deep link URL
@@ -302,6 +347,25 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
             AsyncStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utmParams)).catch(() => {});
           }
         });
+      }
+
+      // PostHog distinct_id passthrough — when a web visitor taps a Universal
+      // Link (e.g. the Smart App Banner or a /match/[id] link) the URL carries
+      // `?ph_did=<their web distinct_id>`. Persisting this on cold start lets
+      // the post-auth alias merge their pre-install web events into the user.
+      if (isColdStart) {
+        try {
+          const phDid = new URL(url).searchParams.get('ph_did');
+          if (phDid) {
+            AsyncStorage.getItem(WEB_DISTINCT_ID_KEY).then(existing => {
+              if (!existing) {
+                AsyncStorage.setItem(WEB_DISTINCT_ID_KEY, phDid).catch(() => {});
+              }
+            });
+          }
+        } catch {
+          // Malformed URL — ignore.
+        }
       }
 
       const matchId = parseMatchIdFromUrl(url);
@@ -327,7 +391,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 
           if (data?.onboarding_completed) {
             successHaptic();
-            toast.success(t('profile.payments.connectedToast' as TranslationKey));
+            toast.success(t('profile.payments.connectedToast'));
           } else if (attempts < 5) {
             setTimeout(() => checkOnboarding(attempts + 1), 2000);
           }
@@ -404,24 +468,30 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
     }
   }, [userId, isLocaleReady, syncLocaleToDatabase]);
 
-  // Attempt automatic referral attribution on first launch
-  // Android: Parse referral_code from Play Install Referrer
-  // iOS: Match device fingerprint against web invite page visits
+  // Attempt automatic referral attribution on first launch — must run
+  // pre-auth so PENDING_REFERRAL_KEY is populated before DiscoveryStep
+  // checks for it and OnboardingWizard consumes it post-signup.
+  //   Android: Parse referral_code from the Play Install Referrer
+  //   iOS:     Read the rallia_attrib_v1 clipboard handoff token written
+  //            by the marketing /invite landing's Download button
+  // Idempotent — guarded by ATTRIBUTION_ATTEMPTED_KEY in AsyncStorage.
   useEffect(() => {
-    if (userId) {
-      attemptFirstLaunchAttribution(userId).catch(() => {});
-    }
-  }, [userId]);
+    attemptFirstLaunchAttribution().catch(() => {});
+  }, []);
 
   return (
     <UserLocationProvider>
       <LocationModeProvider>
-        <HomeLocationSync userId={userId} />
         <ProfileProvider userId={userId}>
           <PlayerProvider userId={userId}>
+            <HomeLocationSync userId={userId} />
             <SportProvider userId={userId}>
               <SubscriptionProvider>
-                <MatchSuggestionsWarmer />
+                {/* Warms the React Query cache for Home's "Just for you"
+                    carousel as soon as auth + sport + location resolve, so
+                    the heavy RPC overlaps with the splash animation instead
+                    of starting after Home mounts. Renders nothing. */}
+                <JustForYouPrefetch />
                 <SplashGate>
                   <ProfileCompletenessBridge>{children}</ProfileCompletenessBridge>
                 </SplashGate>
@@ -432,30 +502,6 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       </LocationModeProvider>
     </UserLocationProvider>
   );
-}
-
-/**
- * Warms the top-suggestions cache as soon as sport (+player or location) is
- * known, so the Suggestion Sheet and Public Matches suggestion-pad render
- * instantly. Pre-warms the maxItems=15 query (the largest of the surfaces);
- * smaller-cap callers reuse the same cache key when their inputs match.
- */
-function MatchSuggestionsWarmer() {
-  const { player } = usePlayer();
-  const { selectedSport } = useSport();
-  const { location } = useEffectiveLocation();
-
-  useTopSuggestions({
-    playerId: player?.id,
-    sportId: selectedSport?.id,
-    sportName: selectedSport?.name,
-    latitude: !player?.id ? location?.latitude : undefined,
-    longitude: !player?.id ? location?.longitude : undefined,
-    maxItems: 15,
-    enabled: true,
-  });
-
-  return null;
 }
 
 /**
@@ -482,23 +528,45 @@ function ProfileCompletenessBridge({ children }: PropsWithChildren) {
 }
 
 /**
- * HomeLocationSync - Syncs home location to database when user is authenticated.
- * Must be inside UserLocationProvider.
+ * HomeLocationSync - Syncs the AsyncStorage home location to the player row
+ * after sign-in, only when the DB and local values diverge. Skipping the
+ * UPDATE when nothing changed avoids contending with usePushNotifications
+ * (which also UPDATEs the same player row on sign-in) and the statement
+ * timeout that contention occasionally triggers.
+ *
+ * Must be inside UserLocationProvider AND PlayerProvider.
  */
 function HomeLocationSync({ userId }: { userId: string | undefined }) {
-  const { hasHomeLocation, syncToDatabase } = useUserHomeLocation();
+  const { homeLocation, hasHomeLocation, syncToDatabase } = useUserHomeLocation();
+  const { player, loading: playerLoading } = usePlayer();
   const [hasSynced, setHasSynced] = useState(false);
 
-  // Sync home location to database when user is first authenticated
   useEffect(() => {
-    if (userId && hasHomeLocation && !hasSynced) {
-      syncToDatabase(userId).then(success => {
-        if (success) {
-          setHasSynced(true);
-        }
-      });
+    if (!userId || !hasHomeLocation || hasSynced || playerLoading || !player || !homeLocation) {
+      return;
     }
-  }, [userId, hasHomeLocation, hasSynced, syncToDatabase]);
+
+    // Skip the UPDATE when the DB already matches AsyncStorage. The sync runs
+    // unconditionally on every sign-in by design (defensive — covers cases
+    // where the user changed postal code on another device), but in the
+    // common case nothing has drifted and the write is wasted lock contention.
+    const matches =
+      player.latitude === homeLocation.latitude &&
+      player.longitude === homeLocation.longitude &&
+      player.postal_code === homeLocation.postalCode &&
+      player.country === homeLocation.country;
+
+    if (matches) {
+      setHasSynced(true);
+      return;
+    }
+
+    syncToDatabase(userId).then(success => {
+      if (success) {
+        setHasSynced(true);
+      }
+    });
+  }, [userId, hasHomeLocation, hasSynced, playerLoading, player, homeLocation, syncToDatabase]);
 
   return null;
 }
@@ -592,6 +660,15 @@ function PendingFeedbackHandler() {
       });
       // Small delay to ensure the UI is ready
       setTimeout(() => {
+        // Don't open the feedback sheet over the weekly check-in wizard.
+        // The pending feedback persists server-side so it'll be picked up
+        // on the next launch / next Home focus.
+        if (isWeeklyCheckInActive()) {
+          Logger.logUserAction('pending_feedback_suppressed_for_wizard', {
+            matchId: data.matchId,
+          });
+          return;
+        }
         openSheet(data.matchId, data.reviewerId, data.participantId, data.opponents);
       }, 500);
     },
@@ -617,6 +694,15 @@ function DeepLinkHandler() {
     getMatchWithDetails(pendingMatchId).then(match => {
       if (cancelled) return;
       clearPendingDeepLink();
+      // Don't open a match-detail sheet over the weekly check-in wizard;
+      // re-queue handling for after dismissal would be ideal but for now
+      // we simply drop the deep link if the wizard is focused.
+      if (isWeeklyCheckInActive()) {
+        Logger.logUserAction('deep_link_match_suppressed_for_wizard', {
+          matchId: pendingMatchId,
+        });
+        return;
+      }
       if (match) {
         Logger.logUserAction('deep_link_match_opened', { matchId: pendingMatchId });
         openSheet(match as MatchDetailData);
@@ -739,6 +825,7 @@ function AppContent() {
       <SessionExpiryHandler />
       <AccountSuspendedHandler />
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
+      {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}
@@ -781,7 +868,40 @@ function App() {
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <PostHogProvider>
-            <QueryClientProvider client={queryClient}>
+            <PersistQueryClientProvider
+              client={queryClient}
+              persistOptions={{
+                persister: queryPersister,
+                buster: QUERY_CACHE_BUSTER,
+                dehydrateOptions: {
+                  shouldDehydrateQuery: query => {
+                    if (query.state.status !== 'success') return false;
+                    // Skip queries whose payloads contain Date instances —
+                    // JSON persistence turns them into strings and breaks
+                    // consumers that call Date methods on the rehydrated value.
+                    const [root, sub] = query.queryKey;
+                    if (root === 'court-availability') return false;
+                    // Pending-feedback must be re-checked live on every cold
+                    // start — a persisted hit would re-open the sheet for a
+                    // match the user already submitted feedback on.
+                    if (root === 'pendingFeedback') return false;
+                    // `matches/justForYou` is now persisted — the custom
+                    // serializer round-trips Date instances on its suggestion
+                    // slots. `topSuggestions` stays excluded for now (same
+                    // Date hazard, no prefetch counterpart yet).
+                    if (root === 'matches' && sub === 'topSuggestions') {
+                      return false;
+                    }
+                    // Skip queries whose payloads are Set/Map instances —
+                    // JSON serialization turns `new Set([...])` into `{}`,
+                    // and consumers calling .has() on the rehydrated value
+                    // crash with "undefined is not a function".
+                    if (root === 'blockedUserIds' || root === 'favoriteUserIds') return false;
+                    return true;
+                  },
+                },
+              }}
+            >
               <LocaleProvider>
                 <ThemeProvider>
                   <TourProvider>
@@ -820,7 +940,7 @@ function App() {
                   </TourProvider>
                 </ThemeProvider>
               </LocaleProvider>
-            </QueryClientProvider>
+            </PersistQueryClientProvider>
           </PostHogProvider>
         </SafeAreaProvider>
       </ErrorBoundary>

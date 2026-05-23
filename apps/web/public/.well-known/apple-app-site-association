@@ -4,7 +4,7 @@
     "details": [
       {
         "appID": "587DRRMTV8.com.mathisl971.rallia-app",
-        "paths": ["/invite/*", "/*/invite/*", "/match/*", "/*/match/*", "/join/*", "/*/join/*", "/community/join/*", "/*/community/join/*", "/player/*", "/*/player/*", "/games", "/*/games", "/suggestions", "/*/suggestions"]
+        "paths": ["/invite/*", "/*/invite/*", "/match/*", "/*/match/*", "/join/*", "/*/join/*", "/community/join/*", "/*/community/join/*", "/player/*", "/*/player/*", "/games", "/*/games", "/suggestions", "/*/suggestions", "/", "/*/", "/play", "/*/play", "/communities", "/*/communities", "/donate", "/*/donate"]
       }
     ]
   }

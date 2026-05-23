@@ -137,12 +137,18 @@ export function useSuggestionInviteHandler(
             match_id: result.matchId,
             sport_id: sportId,
             sport_name: selectedSport?.id === sportId ? selectedSport?.name : undefined,
+            score: suggestion.score,
+            player_compatibility: suggestion.playerCompatibility,
+            facility_affinity: suggestion.facility.facilityAffinity,
+            score_history: suggestion.scoreHistory,
+            rank: suggestion.rank,
+            match_type: suggestion.matchType,
+            match_duration: suggestion.matchDuration,
           });
         }
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
         queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'topSuggestions'] });
         onSendSuccess?.(payload, key);
       } catch {
         setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
@@ -176,6 +182,7 @@ export function useSuggestionInviteHandler(
       free: t('match.cost.free'),
       competitive: t('match.type.competitive'),
       casual: t('match.type.casual'),
+      courtsAvailable: t('suggestionCard.courtsAvailable'),
     }),
     [t]
   );

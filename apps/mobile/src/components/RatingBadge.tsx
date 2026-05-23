@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 
@@ -30,6 +31,14 @@ interface RatingBadgeProps {
   onInfoPress?: () => void;
 }
 
+function withAlpha(hex: string, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const a = Math.round(clamped * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${hex}${a}`;
+}
+
 const RatingBadge: React.FC<RatingBadgeProps> = ({
   ratingValue,
   ratingLabel,
@@ -41,7 +50,6 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
 }) => {
   const height = size === 'sm' ? 20 : 24;
 
-  // Show skeleton while loading
   if (isLoading) {
     return (
       <Skeleton
@@ -64,17 +72,15 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
       ? CERTIFICATION_BADGE_COLORS[certificationStatus]
       : null;
 
-  const badgeBg = certBadgeColors
-    ? `${certBadgeColors.bg}25`
-    : isDark
-      ? `${primary[400]}30`
-      : `${primary[500]}15`;
+  const accentColor = certBadgeColors ? certBadgeColors.bg : isDark ? primary[400] : primary[500];
 
-  const badgeTextColor = certBadgeColors
-    ? certBadgeColors.bg
-    : isDark
-      ? primary[400]
-      : primary[500];
+  const gradientColors = (
+    isDark
+      ? [withAlpha(accentColor, 0.32), withAlpha(accentColor, 0.5)]
+      : [withAlpha(accentColor, 0.08), withAlpha(accentColor, 0.22)]
+  ) as [string, string];
+
+  const borderColor = isDark ? withAlpha(accentColor, 0.55) : withAlpha(accentColor, 0.3);
 
   const badgeIcon = certBadgeColors
     ? (certBadgeColors.icon as keyof typeof Ionicons.glyphMap)
@@ -83,9 +89,21 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
   const iconSize = size === 'sm' ? 10 : 12;
 
   const badge = (
-    <View style={[styles.badge, { backgroundColor: badgeBg }]}>
-      <Ionicons name={badgeIcon} size={iconSize} color={badgeTextColor} />
-      <Text size="xs" weight="semibold" color={badgeTextColor}>
+    <LinearGradient
+      colors={gradientColors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={[
+        styles.badge,
+        {
+          borderColor,
+          shadowColor: accentColor,
+          shadowOpacity: isDark ? 0 : 0.22,
+        },
+      ]}
+    >
+      <Ionicons name={badgeIcon} size={iconSize} color={accentColor} />
+      <Text size="xs" weight="semibold" color={accentColor} style={styles.label}>
         {ratingDisplay}
       </Text>
       {onInfoPress && (
@@ -95,7 +113,7 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
           color={isDark ? neutral[400] : neutral[500]}
         />
       )}
-    </View>
+    </LinearGradient>
   );
 
   if (onInfoPress) {
@@ -122,6 +140,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[1.5],
     paddingVertical: spacingPixels[0.5],
     borderRadius: radiusPixels.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  label: {
+    letterSpacing: 0.2,
   },
 });
 

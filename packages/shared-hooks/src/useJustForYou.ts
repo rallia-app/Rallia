@@ -1,13 +1,22 @@
 /**
  * useJustForYou Hook
  *
- * TanStack wrapper around `composeJustForYou` from `@rallia/shared-services`.
- * Returns the same `{matches, suggestions}` shape, plus standard query state.
+ * TanStack wrapper around `getJustForYou` from `@rallia/shared-services` — a
+ * single-round-trip RPC that owns scoring + slot expansion + cross-pool dedup
+ * server-side. Anon callers fall through to the legacy `composeJustForYou`
+ * orchestration inside the service wrapper, so the hook API is identical
+ * across both paths.
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { composeJustForYou } from '@rallia/shared-services';
-import type { Scorable, MatchScoringPreferences, SlotSuggestion } from '@rallia/shared-services';
+import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { getJustForYou } from '@rallia/shared-services';
+import type {
+  Scorable,
+  MatchScoringPreferences,
+  SlotSuggestion,
+  JustForYouItem,
+  ComposeJustForYouResult,
+} from '@rallia/shared-services';
 import { useCallback } from 'react';
 
 export const justForYouKeys = {
@@ -38,8 +47,17 @@ export interface UseJustForYouOptions {
   enabled?: boolean;
 }
 
+/** Coordinate rounding precision (~110m). Centralized so prefetch + hook share. */
+function roundCoord(value: number | undefined): number {
+  return Math.round((value ?? 0) * 1000) / 1000;
+}
+
 export interface UseJustForYouResult {
+  /** Ordered (score-desc) merged feed — the canonical output of the composer. */
+  items: JustForYouItem[];
+  /** Matches that made it into `items`. Kept for analytics / dismiss state. */
   matches: Scorable[];
+  /** Suggestions that made it into `items`. Kept for analytics / dismiss state. */
   suggestions: SlotSuggestion[];
   isLoading: boolean;
   isRefetching: boolean;
@@ -60,7 +78,24 @@ function hashPrefs(p: MatchScoringPreferences): string {
   ].join('|');
 }
 
-export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResult {
+/**
+ * Build the React Query options for the "Just for you" carousel. Shared
+ * between {@link useJustForYou} (which spreads it into `useQuery`) and the
+ * mobile app's splash-time prefetch component (which spreads it into
+ * `queryClient.prefetchQuery`), so the query key + queryFn cannot drift
+ * between the two call sites.
+ *
+ * Returns a `queryKey` even when inputs are incomplete (so the prefetch can
+ * still check cache state without crashing). `enabled` reflects the gate.
+ */
+export function justForYouQueryOptions(
+  options: UseJustForYouOptions
+): UseQueryOptions<
+  ComposeJustForYouResult,
+  Error,
+  ComposeJustForYouResult,
+  ReturnType<typeof justForYouKeys.list>
+> {
   const {
     playerId,
     sportId,
@@ -80,30 +115,22 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
   const hasRequired =
     !!sportId && latitude !== undefined && longitude !== undefined && maxDistanceKm !== undefined;
 
-  const queryEnabled = enabled && hasRequired;
   const prefsHash = hashPrefs(scoringPreferences);
 
   const queryKey = justForYouKeys.list({
     playerId: playerId ?? '',
     sportId: sportId ?? '',
-    lat: Math.round((latitude ?? 0) * 1000) / 1000,
-    lng: Math.round((longitude ?? 0) * 1000) / 1000,
+    lat: roundCoord(latitude),
+    lng: roundCoord(longitude),
     maxDistanceKm: maxDistanceKm ?? 0,
     matchLimit,
     prefsHash,
   });
 
-  const {
-    data,
-    isLoading,
-    isRefetching,
-    isError,
-    error,
-    refetch: queryRefetch,
-  } = useQuery({
+  return {
     queryKey,
     queryFn: ({ signal }) =>
-      composeJustForYou({
+      getJustForYou({
         playerId: playerId ?? undefined,
         sportId: sportId!,
         sportName,
@@ -116,21 +143,42 @@ export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResul
         matchLimit,
         signal,
       }),
-    enabled: queryEnabled,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    enabled: enabled && hasRequired,
+    // The RPC scores the full opponent + match pool against the caller and is
+    // the most expensive query on Home. The carousel's value doesn't decay
+    // minute-to-minute — bumping staleTime keeps cold reopens within a 10-min
+    // window instant, and pull-to-refresh still lets the user force a fetch.
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    // Override the global `refetchOnMount: 'always'` so the bumped staleTime
+    // is actually honored on Home remount (back-nav, splash transitions) and
+    // on cold-start hydration from the AsyncStorage persister.
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-  });
+  };
+}
+
+export function useJustForYou(options: UseJustForYouOptions): UseJustForYouResult {
+  const queryOptions = justForYouQueryOptions(options);
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    isError,
+    error,
+    refetch: queryRefetch,
+  } = useQuery(queryOptions);
 
   const refetch = useCallback(async () => {
     await queryRefetch();
   }, [queryRefetch]);
 
   return {
+    items: data?.items ?? [],
     matches: data?.matches ?? [],
     suggestions: data?.suggestions ?? [],
-    isLoading: queryEnabled ? isLoading : false,
+    isLoading: queryOptions.enabled ? isLoading : false,
     isRefetching,
     isError,
     error: error as Error | null,

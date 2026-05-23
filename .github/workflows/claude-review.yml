@@ -1,0 +1,59 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [dev, main]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: >
+      github.event.pull_request.draft == false &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--model claude-opus-4-7 --max-turns 20'
+          prompt: |
+            Review this PR as a senior engineer. Read CLAUDE.md for project
+            conventions before reviewing.
+
+            Two project-specific rules to enforce strictly (these have bitten us):
+
+            1. **Supabase: new `create table public.*` migrations must include
+               BOTH** (a) explicit `grant` statements for `anon`/`authenticated`
+               (default Data API grants are being removed Oct 2026) and
+               (b) `alter table ... enable row level security` plus the
+               corresponding policies. Flag any new public table missing either.
+
+            2. **i18n parity**: any new translation key added to
+               `packages/shared-translations/src/locales/en-US.json` must also
+               exist in `fr-CA.json` (and vice versa), with the same key path.
+               Flag missing/asymmetric keys.
+
+            Otherwise, default senior-review judgment: correctness, real
+            security issues, obvious bugs. Skip style nits — lint handles those.
+
+            Output: inline comments on specific lines for blocking issues, plus
+            one summary comment with verdict (approve / request changes /
+            comment) and 3-5 bullets max. If the PR is clean, say so briefly.

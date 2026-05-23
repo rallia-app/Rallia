@@ -422,6 +422,11 @@ verify_jwt = false
 [functions.recalculate-reputation-decay]
 verify_jwt = false
 
+# SWR snapshot refresh — pg_net invokes with apikey header; auth validated
+# internally via requireSecretApikey().
+[functions.refresh-facility-availability]
+verify_jwt = false
+
 # Client-invoked functions: gateway JWT verification disabled because these
 # functions validate auth internally via supabaseUser.auth.getUser(token).
 # Gateway rejects ES256 tokens issued by current auth server config.

@@ -17,7 +17,8 @@ import DatabaseService, {
   Logger,
   supabase,
 } from '@rallia/shared-services';
-import { usePlayPreferences, useFacilitySearch } from '@rallia/shared-hooks';
+import { useQueryClient } from '@tanstack/react-query';
+import { usePlayPreferences, useFacilitySearch, facilityKeys } from '@rallia/shared-hooks';
 import type { OnboardingRating, FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
@@ -144,6 +145,7 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
   const { t } = useTranslation();
   const sheetRef = useRef<any>(null);
   const didCompleteRef = useRef(false);
+  const queryClient = useQueryClient();
 
   // Step management (1-indexed for display, 0-indexed for animation)
   const [currentStep, setCurrentStep] = useState(1);
@@ -462,6 +464,11 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
           display_order: index + 1,
         }));
         await supabase.from('player_favorite_facility').insert(facilityInserts);
+
+        // Keep the facility-search RPC's `is_favorite` flag in sync so the
+        // heart icon and favoritesOnly filter reflect the new favorites
+        // immediately when the user lands in FacilitiesDirectory.
+        queryClient.invalidateQueries({ queryKey: facilityKeys.search() });
       }
 
       didCompleteRef.current = true;
@@ -484,6 +491,7 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
     userId,
     onComplete,
     t,
+    queryClient,
   ]);
 
   const handleBack = () => {

@@ -1,4 +1,8 @@
-import { PostHog, PostHogProvider as PHProvider } from 'posthog-react-native';
+import {
+  PostHog,
+  PostHogProvider as PHProvider,
+  PostHogSurveyProvider,
+} from 'posthog-react-native';
 
 const isProduction = process.env.EXPO_PUBLIC_APP_ENV === 'production';
 const isEnabled = isProduction && !!process.env.EXPO_PUBLIC_POSTHOG_KEY;
@@ -36,7 +40,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         captureScreens: false,
       }}
     >
-      {children}
+      <PostHogSurveyProvider client={posthogClient}>{children}</PostHogSurveyProvider>
     </PHProvider>
   );
 }

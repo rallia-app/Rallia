@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   SectionList,
@@ -524,6 +524,19 @@ const Notifications: React.FC = () => {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const isManualRefresh = useRef(false);
+
+  useEffect(() => {
+    if (!isFetching) {
+      isManualRefresh.current = false;
+    }
+  }, [isFetching]);
+
+  const handleRefresh = useCallback(() => {
+    isManualRefresh.current = true;
+    refetch();
+  }, [refetch]);
+
   const renderNotificationCard = useCallback(
     ({ item }: { item: Notification }) => (
       <NotificationCard
@@ -694,8 +707,8 @@ const Notifications: React.FC = () => {
             stickySectionHeadersEnabled={false}
             refreshControl={
               <RefreshControl
-                refreshing={isFetching && !isFetchingNextPage}
-                onRefresh={refetch}
+                refreshing={isFetching && isManualRefresh.current}
+                onRefresh={handleRefresh}
                 tintColor={colors.buttonActive}
                 colors={[colors.buttonActive]}
               />

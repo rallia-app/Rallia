@@ -25,7 +25,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, MatchCard } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, accent, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useMapData, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
+import {
+  useMapData,
+  useFavoriteFacilities,
+  usePlayer,
+  MIN_FAVORITE_FACILITIES,
+} from '@rallia/shared-hooks';
+import { useToast } from '@rallia/shared-components';
 import type { MapFacility, MapCustomMatch, FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -80,10 +86,9 @@ const Map = () => {
   const { location } = useEffectiveLocation();
   const { openSheet } = useMatchDetailSheet();
   const { player } = usePlayer();
-  const { isFavorite, addFavorite, removeFavorite, isMaxReached } = useFavoriteFacilities(
-    player?.id ?? null,
-    selectedSport?.id
-  );
+  const toast = useToast();
+  const { isFavorite, addFavorite, removeFavorite, isMaxReached, canRemoveFavorite } =
+    useFavoriteFacilities(player?.id ?? null, selectedSport?.id);
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<Mapbox.Camera>(null);
   const facilitySourceRef = useRef<Mapbox.ShapeSource>(null);
@@ -901,6 +906,14 @@ const Map = () => {
             onToggleFavorite={f => {
               lightHaptic();
               if (isFavorite(f.id)) {
+                if (!canRemoveFavorite) {
+                  toast.info(
+                    t('facilitiesTab.favorites.minimumRequired', {
+                      min: MIN_FAVORITE_FACILITIES,
+                    })
+                  );
+                  return;
+                }
                 removeFavorite(f.id);
               } else if (!isMaxReached) {
                 addFavorite(f);
@@ -948,6 +961,14 @@ const Map = () => {
                   onToggleFavorite={f => {
                     lightHaptic();
                     if (isFavorite(f.id)) {
+                      if (!canRemoveFavorite) {
+                        toast.info(
+                          t('facilitiesTab.favorites.minimumRequired', {
+                            min: MIN_FAVORITE_FACILITIES,
+                          })
+                        );
+                        return;
+                      }
                       removeFavorite(f.id);
                     } else if (!isMaxReached) {
                       addFavorite(f);

@@ -9,6 +9,7 @@ import type {
 import { FeedbackReportActionSheet } from '../components/BugReportSheet';
 import { MatchSuggestionsActionSheet } from '../components/MatchSuggestionsSheet';
 import { MatchInviteConfirmActionSheet } from '../components/MatchInviteConfirmSheet';
+import { SuggestMatchTimeActionSheet } from '../components/SuggestMatchTimeSheet';
 import { CreateCommunityActionSheet } from '../features/communities/components/CreateCommunityModal';
 import { CreateListActionSheet } from '../features/shared-lists/components/CreateListModal';
 import { ShareMatchActionSheet } from '../features/shared-lists/components/ShareMatchModal';
@@ -92,14 +93,10 @@ import {
 } from '../components/explainers';
 // Reimbursement sheets
 import { ChoosePayoutsActionSheet } from '../components/ChoosePayoutsSheet';
-// Define WeeklyAvailability inline to avoid circular dependencies
-type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-interface DayAvailability {
-  AM: boolean;
-  PM: boolean;
-  EVE: boolean;
-}
-type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+// Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
+// cell keys from the hourly 7×17 grid (hours 6..22). Defined inline to keep
+// this declaration free of feature-folder imports.
+type HourGrid = ReadonlySet<string>;
 
 // We extend some of the types here to give us great intellisense
 // across the app for all registered sheets.
@@ -473,10 +470,15 @@ declare module 'react-native-actions-sheet' {
     'player-availabilities': SheetDefinition<{
       payload: {
         mode?: 'onboarding' | 'edit';
-        initialData?: WeeklyAvailability;
-        initialPrivacyShowAvailability?: boolean;
-        onSave?: (availabilities: WeeklyAvailability, privacyShowAvailability: boolean) => void;
-        onContinue?: (availabilities: WeeklyAvailability) => void;
+        initialData?: HourGrid;
+        /**
+         * Most-recent last_confirmed_at across the player's availability rows
+         * (ISO 8601 string). When older than ~14 days or NULL, the overlay
+         * renders a "confirm your week" staleness banner. Edit-mode only.
+         */
+        initialLastConfirmedAt?: string | null;
+        onSave?: (availabilities: HourGrid) => void;
+        onContinue?: (availabilities: HourGrid) => void;
         onBack?: () => void;
         currentStep?: number;
         totalSteps?: number;
@@ -625,7 +627,12 @@ declare module 'react-native-actions-sheet' {
         sportId: string;
         latitude: number | null;
         longitude: number | null;
-        initialFacilityIds: string[];
+        /**
+         * Pre-seeded favorites with id + display name. The sheet uses these
+         * directly so far-away favorites that aren't in the first paginated
+         * page of search results still render as selected.
+         */
+        initialFavorites: { id: string; name: string }[];
         minFavorites?: number;
         onSave?: (facilityIds: string[]) => void;
         onDismiss?: () => void;
@@ -714,6 +721,19 @@ declare module 'react-native-actions-sheet' {
         matchDate: string;
         startTime: string;
         endTime: string;
+      };
+    }>;
+    'suggest-match-time': SheetDefinition<{
+      payload: {
+        matchId: string;
+        matchDate: string;
+        matchTimezone: string;
+        currentStartTime: string; // HH:MM or HH:MM:SS in match.timezone
+        currentEndTime: string;
+        /** Set when the caller already has a pending suggestion (edit mode). */
+        existingSuggestionId?: string;
+        existingSuggestionTime?: string;
+        existingNote?: string;
       };
     }>;
     'report-proof': SheetDefinition<{
@@ -814,6 +834,7 @@ export const Sheets = () => {
         'choose-payouts': ChoosePayoutsActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
+        'suggest-match-time': SuggestMatchTimeActionSheet,
       }}
     />
   );

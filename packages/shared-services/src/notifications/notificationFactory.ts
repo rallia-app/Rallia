@@ -34,6 +34,10 @@ export interface MatchNotificationPayload {
   timeUntil?: string;
   updatedFields?: string[];
   matchDurationMinutes?: number;
+  /** Suggested start time used by match_time_suggestion notifications. */
+  suggestedStartTime?: string;
+  /** Optional free-text note attached to a time suggestion. */
+  suggestionNote?: string;
 }
 
 export interface PlayerNotificationPayload {
@@ -419,6 +423,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   program_payment_due: 'high',
   program_payment_received: 'normal',
   morning_digest: 'low',
+  availability_refresh_reminder: 'low',
 
   // Stripe JIT reimbursement notifications (see supabase/migrations/20260504000001_payouts_notification_enum_values.sql)
   payouts_setup_required: 'high',
@@ -426,6 +431,11 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   payouts_expired_refunded: 'high',
   reimbursement_received: 'normal',
   reimbursement_all_received: 'normal',
+
+  // Match time suggestion (counter-proposals from invitees / participants)
+  match_time_suggested: 'high',
+  match_time_suggestion_accepted: 'high',
+  match_time_suggestion_declined: 'normal',
 };
 
 /**
@@ -499,6 +509,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   program_payment_due: 'Payment Due',
   program_payment_received: 'Payment Received',
   morning_digest: 'Your morning game briefing',
+  availability_refresh_reminder: 'Confirm your week',
 
   // Stripe JIT reimbursement
   payouts_setup_required: 'Reimbursement ready',
@@ -506,6 +517,11 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payouts_expired_refunded: 'Reimbursement could not be completed',
   reimbursement_received: 'Reimbursement received',
   reimbursement_all_received: 'All reimbursements received',
+
+  // Match time suggestion
+  match_time_suggested: 'New time suggested',
+  match_time_suggestion_accepted: 'Your time suggestion was accepted',
+  match_time_suggestion_declined: 'Your time suggestion was declined',
 };
 
 /**
@@ -600,6 +616,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Payment for {programName} is due. Please complete payment to secure your spot.',
   program_payment_received: 'Payment for {programName} has been received. Thank you!',
   morning_digest: 'Upcoming games near you + players to challenge this week.',
+  availability_refresh_reminder:
+    'Refresh your availability so we can suggest matches that actually fit.',
 
   // Stripe JIT reimbursement — body templates use {amount} which the renderer
   // formats from amountCents via Intl.NumberFormat for the recipient's locale.
@@ -610,6 +628,14 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'A reimbursement of {amount} could not be completed and has been refunded.',
   reimbursement_received: 'A player paid {amount} toward your court cost. ✓',
   reimbursement_all_received: 'Everyone has paid! All reimbursements received.',
+
+  // Match time suggestion
+  match_time_suggested:
+    '{playerName} suggested {suggestedStartTime} instead for your {sportName} game on {matchDate}.',
+  match_time_suggestion_accepted:
+    '{hostName} accepted your time change. The {sportName} game on {matchDate} now starts at {suggestedStartTime}.',
+  match_time_suggestion_declined:
+    'Your suggested time for the {sportName} game on {matchDate} was declined.',
 };
 
 /**
@@ -1378,6 +1404,89 @@ export async function notifyReferenceRequestResponded(
 }
 
 /**
+ * Notify the match creator that someone proposed a different start time.
+ * Push priority is `high` so the creator can react before the player gives up.
+ */
+export async function notifyMatchTimeSuggested(
+  hostUserId: string,
+  matchId: string,
+  suggesterName: string,
+  suggestedStartTime: string,
+  matchDate?: string,
+  sportName?: string,
+  suggestionNote?: string
+): Promise<Notification> {
+  // Strip any trailing seconds so HH:MM:SS becomes HH:MM for the body template.
+  const trimmedTime =
+    suggestedStartTime.length > 5 ? suggestedStartTime.slice(0, 5) : suggestedStartTime;
+  return createNotification({
+    type: 'match_time_suggested',
+    userId: hostUserId,
+    targetId: matchId,
+    payload: {
+      matchId,
+      playerName: suggesterName,
+      suggestedStartTime: trimmedTime,
+      matchDate,
+      sportName,
+      suggestionNote,
+    },
+  });
+}
+
+/**
+ * Notify the suggester that the host accepted their time change.
+ * The follow-up `notifyMatchUpdated` broadcast still fires for every other
+ * joined participant via the match-update path.
+ */
+export async function notifyMatchTimeSuggestionAccepted(
+  suggesterUserId: string,
+  matchId: string,
+  newStartTime: string,
+  matchDate?: string,
+  sportName?: string,
+  hostName?: string
+): Promise<Notification> {
+  const trimmedTime = newStartTime.length > 5 ? newStartTime.slice(0, 5) : newStartTime;
+  return createNotification({
+    type: 'match_time_suggestion_accepted',
+    userId: suggesterUserId,
+    targetId: matchId,
+    payload: {
+      matchId,
+      suggestedStartTime: trimmedTime,
+      matchDate,
+      sportName,
+      hostName,
+    },
+  });
+}
+
+/**
+ * Notify the suggester that the host declined their time change. The match
+ * itself was not modified — the suggester can still join the original window.
+ */
+export async function notifyMatchTimeSuggestionDeclined(
+  suggesterUserId: string,
+  matchId: string,
+  matchDate?: string,
+  sportName?: string,
+  hostName?: string
+): Promise<Notification> {
+  return createNotification({
+    type: 'match_time_suggestion_declined',
+    userId: suggesterUserId,
+    targetId: matchId,
+    payload: {
+      matchId,
+      matchDate,
+      sportName,
+      hostName,
+    },
+  });
+}
+
+/**
  * Notification factory object for grouped exports
  */
 export const notificationFactory = {
@@ -1410,6 +1519,11 @@ export const notificationFactory = {
   // Reference requests
   referenceRequestReceived: notifyReferenceRequestReceived,
   referenceRequestResponded: notifyReferenceRequestResponded,
+
+  // Match time suggestion
+  matchTimeSuggested: notifyMatchTimeSuggested,
+  matchTimeSuggestionAccepted: notifyMatchTimeSuggestionAccepted,
+  matchTimeSuggestionDeclined: notifyMatchTimeSuggestionDeclined,
 
   // Utilities
   formatTimeUntil,

@@ -16,6 +16,14 @@ import type {
   MessageWithSender,
 } from './chatTypes';
 
+// Formats a Postgres TIME string ("HH:MM:SS") into a locale-aware time string ("9:00 AM")
+function formatMatchTime(pgTime: string): string {
+  const [hours, minutes] = pgTime.split(':').map(Number);
+  const d = new Date();
+  d.setHours(hours, minutes, 0, 0);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 // Type for the optimized RPC function return
 interface ConversationRPCRow {
   id: string;
@@ -41,6 +49,7 @@ interface ConversationRPCRow {
   network_cover_image_url: string | null;
   match_format: string | null;
   match_date: string | null;
+  match_start_time: string | null;
   match_sport_name: string | null;
 }
 
@@ -99,6 +108,7 @@ export async function getPlayerConversations(
         matchInfo = {
           sport_name: row.match_sport_name,
           match_date: row.match_date || '',
+          start_time: row.match_start_time || null,
           format: (row.match_format as 'singles' | 'doubles') || 'singles',
         };
       }
@@ -543,6 +553,7 @@ interface FilteredConversationRPCRow {
   network_cover_image_url: string | null;
   match_format: string | null;
   match_date: string | null;
+  match_start_time: string | null;
   match_sport_name: string | null;
 }
 
@@ -630,6 +641,7 @@ export async function getPlayerConversationsFiltered(
           matchInfo = {
             sport_name: row.match_sport_name,
             match_date: row.match_date || '',
+            start_time: row.match_start_time || null,
             format: (row.match_format as 'singles' | 'doubles') || 'singles',
           };
         }
@@ -693,17 +705,10 @@ export async function syncMatchConversationTitle(
       return;
     }
 
-    // Get match details including sport name
+    // Get match details including start_time
     const { data: matchData, error: matchError } = await supabase
       .from('match')
-      .select(
-        `
-        id,
-        format,
-        match_date,
-        sport:sport_id (name)
-      `
-      )
+      .select('id, format, match_date, start_time')
       .eq('id', matchId)
       .single();
 
@@ -713,18 +718,18 @@ export async function syncMatchConversationTitle(
     }
 
     // Build new title
-    const sportName = (matchData.sport as { name?: string } | null)?.name || 'Match';
+    const formatLabel = format === 'doubles' ? 'Doubles' : 'Singles';
     const dateStr = matchDate
       ? new Date(matchDate).toLocaleDateString(undefined, {
           month: 'short',
           day: 'numeric',
         })
       : '';
-    const formatLabel = format === 'doubles' ? 'Doubles' : 'Singles';
+    const startTime = matchData.start_time as string | null;
+    const timeStr = startTime ? formatMatchTime(startTime) : '';
 
-    const newTitle = dateStr
-      ? `${sportName} ${formatLabel} - ${dateStr}`
-      : `${sportName} ${formatLabel}`;
+    const datePart = [dateStr, timeStr].filter(Boolean).join(', ');
+    const newTitle = datePart ? `${formatLabel} - ${datePart}` : formatLabel;
 
     // Update conversation title
     await updateConversation(conversation.id, { title: newTitle });

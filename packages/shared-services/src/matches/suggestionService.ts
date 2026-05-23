@@ -49,11 +49,19 @@ interface ScoredMatchup {
   player_compatibility: number;
   facility_affinity: number;
   matchup_score: number;
+  /**
+   * Caller↔opponent history score in [-0.5, +0.5]. Computed in the RPC by
+   * folding past matches, star feedback, favorites, shared networks, etc.
+   * Applied as a 0.5× signed boost to player_compatibility before that
+   * field is returned. Surfaced here so the TS layer can pass it through
+   * to PostHog events for funnel analysis.
+   */
+  score_history: number;
 }
 
 export interface OverlapSlot {
   day: string; // 'monday' .. 'sunday'
-  period: string; // 'morning' | 'afternoon' | 'evening'
+  hour: number; // 6..22 — start hour of the [hour, hour+1) cell
 }
 
 export interface SuggestionFacility {
@@ -69,6 +77,12 @@ export interface SuggestionSlot {
   datetime: Date;
   endDatetime: Date;
   bookingUrl: string | null;
+  /**
+   * Number of distinct courts bookable at this slot, from the facility
+   * availability snapshot. Undefined for slots outside the snapshot horizon
+   * or at facilities that have never been refreshed (cold-start tolerance).
+   */
+  availableCourts?: number;
 }
 
 /** A single (opponent, facility, slot) triplet — one card. */
@@ -92,6 +106,18 @@ export interface SlotSuggestion {
   score: number;
   /** Per-opponent compatibility from the RPC, before per-slot boosts. */
   playerCompatibility: number;
+  /**
+   * Caller↔opponent history score in [-0.5, +0.5]. Pass-through from the
+   * RPC. Surfaces to analytics events so PostHog can break down conversion
+   * by history bucket.
+   */
+  scoreHistory: number;
+  /**
+   * 1-indexed rank within the result list. Populated by `pickTopGlobal`
+   * (and other top-level selectors). Surfaces to analytics so we can
+   * correlate position-in-list with conversion downstream.
+   */
+  rank?: number;
 }
 
 export interface GetMatchSuggestionsParams {
@@ -115,19 +141,23 @@ export interface BusySlot {
   endTime: string;
 }
 
+/**
+ * Per-facility snapshot view passed to `generateFixedHourSlots`. Each key in
+ * `available` is an ISO 8601 UTC `slot_start` for which at least one court
+ * is bookable; the value is the number of distinct courts bookable at that
+ * slot. Presence (not value) drives the hard filter; the count surfaces to
+ * the UI so cards can show "N courts available".
+ */
+export interface FacilitySnapshot {
+  available: Map<string, number>;
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
 /** Lookahead window for slot generation. */
 const DAYS_AHEAD = 7;
-
-/** Fixed candidate hours per period (product spec). */
-const PERIOD_FIXED_HOURS: Record<string, number[]> = {
-  morning: [8, 10],
-  afternoon: [14, 16],
-  evening: [18, 20],
-};
 
 const DAY_NAMES = [
   'sunday',
@@ -138,6 +168,14 @@ const DAY_NAMES = [
   'friday',
   'saturday',
 ] as const;
+
+/**
+ * Snapshot horizon — the same 3-day rolling window the providers cover and
+ * the refresh worker writes. Within this horizon we filter candidate slots
+ * against `facility_availability_snapshot`; beyond it we emit speculatively
+ * (no data to filter against).
+ */
+const SNAPSHOT_HORIZON_DAYS = 3;
 
 // =============================================================================
 // DATE HELPERS
@@ -229,6 +267,77 @@ async function fetchBusySlots(
 }
 
 /**
+ * Loads availability-snapshot data for the given facilities over the
+ * 3-day horizon. Returns two values:
+ *
+ *   - `snapshotByFacility`: facility_id → { available: Set<ISO slot_start> }
+ *     Only present for facilities with at least one ever-refreshed log
+ *     entry; absence in this map means cold start (don't filter that
+ *     facility's slots).
+ *   - `refreshedFacilities`: facility_id Set of every facility that has
+ *     been refreshed at least once (regardless of whether the snapshot
+ *     contains any available rows for it right now).
+ *
+ * Distinguishing "refreshed-but-empty" from "never-refreshed" matters: an
+ * empty refreshed snapshot is a hard "no bookable inventory" signal, while
+ * never-refreshed is just "no data yet, trust the overlap signal."
+ */
+async function fetchFacilitySnapshots(facilityIds: string[]): Promise<{
+  snapshotByFacility: Map<string, FacilitySnapshot>;
+  refreshedFacilities: Set<string>;
+}> {
+  if (facilityIds.length === 0) {
+    return { snapshotByFacility: new Map(), refreshedFacilities: new Set() };
+  }
+
+  const now = new Date();
+  const horizonEnd = new Date(now.getTime() + SNAPSHOT_HORIZON_DAYS * 24 * 60 * 60 * 1000);
+
+  const [snapshotRes, logRes] = await Promise.all([
+    supabase
+      .from('facility_availability_snapshot')
+      .select('facility_id, slot_start, external_court_id')
+      .in('facility_id', facilityIds)
+      .eq('is_available', true)
+      .gte('slot_start', now.toISOString())
+      .lte('slot_start', horizonEnd.toISOString()),
+    supabase.from('facility_refresh_log').select('facility_id').in('facility_id', facilityIds),
+  ]);
+
+  if (snapshotRes.error) {
+    console.warn('[SuggestionService] snapshot fetch error:', snapshotRes.error.message);
+  }
+  if (logRes.error) {
+    console.warn('[SuggestionService] refresh log fetch error:', logRes.error.message);
+  }
+
+  const refreshedFacilities = new Set<string>();
+  for (const row of logRes.data ?? []) {
+    refreshedFacilities.add(row.facility_id as string);
+  }
+
+  const snapshotByFacility = new Map<string, FacilitySnapshot>();
+  for (const fid of refreshedFacilities) {
+    snapshotByFacility.set(fid, { available: new Map() });
+  }
+  // Snapshot rows are unique on (facility_id, external_court_id, slot_start),
+  // so counting rows per (facility_id, slot_start) yields the distinct-court
+  // count without needing a SELECT DISTINCT.
+  for (const row of snapshotRes.data ?? []) {
+    const fid = row.facility_id as string;
+    const iso = new Date(row.slot_start as string).toISOString();
+    let entry = snapshotByFacility.get(fid);
+    if (!entry) {
+      entry = { available: new Map() };
+      snapshotByFacility.set(fid, entry);
+    }
+    entry.available.set(iso, (entry.available.get(iso) ?? 0) + 1);
+  }
+
+  return { snapshotByFacility, refreshedFacilities };
+}
+
+/**
  * Returns the set of opponent IDs the caller has an active pending invite to —
  * i.e. the caller created an upcoming, non-cancelled match and the opponent is
  * a `pending` participant. Used to suppress repeat suggestions for someone the
@@ -278,9 +387,11 @@ async function fetchOpponentsWithPendingInviteFromCaller(
 // =============================================================================
 
 /**
- * For a single (opponent, facility) row, emit one candidate slot per matching
- * (date, fixed-hour) cell across the 7-day window. Returns slots already
- * filtered against the caller's and the opponent's busy windows.
+ * For a single (opponent, facility) row, emit one candidate slot per
+ * (date, hour) cell in the caller↔opponent overlap, across the 7-day window.
+ * Each slot represents a 1-hour booking starting at the hour mark. Returns
+ * slots already filtered against the caller's and the opponent's busy
+ * windows.
  *
  * Exported for unit testing.
  */
@@ -289,34 +400,58 @@ export function generateFixedHourSlots(
   window: { date: Date; key: string }[],
   callerBusy: BusySlot[],
   opponentBusy: BusySlot[],
-  now: Date
+  now: Date,
+  snapshot?: FacilitySnapshot
 ): SuggestionSlot[] {
   if (overlaps.length === 0) return [];
 
-  // Build a Set of "day:period" pairs for O(1) lookup
-  const overlapSet = new Set(overlaps.map(o => `${o.day}:${o.period}`));
+  // Group overlap hours by day for O(1) lookup per (day, hour).
+  const overlapsByDay = new Map<string, Set<number>>();
+  for (const o of overlaps) {
+    let s = overlapsByDay.get(o.day);
+    if (!s) {
+      s = new Set<number>();
+      overlapsByDay.set(o.day, s);
+    }
+    s.add(o.hour);
+  }
 
   const out: SuggestionSlot[] = [];
   const nowMs = now.getTime();
+  const horizonMs = nowMs + SNAPSHOT_HORIZON_DAYS * 24 * 60 * 60 * 1000;
 
   for (const { date, key } of window) {
     const dayName = DAY_NAMES[date.getDay()];
-    for (const period of Object.keys(PERIOD_FIXED_HOURS)) {
-      if (!overlapSet.has(`${dayName}:${period}`)) continue;
-      const hours = PERIOD_FIXED_HOURS[period];
-      for (const h of hours) {
-        const slotStart = new Date(date);
-        slotStart.setHours(h, 0, 0, 0);
-        if (slotStart.getTime() <= nowMs) continue;
-        if (hasTimeConflict(key, h, h + 1, callerBusy)) continue;
-        if (hasTimeConflict(key, h, h + 1, opponentBusy)) continue;
+    const hours = overlapsByDay.get(dayName);
+    if (!hours || hours.size === 0) continue;
 
-        out.push({
-          datetime: slotStart,
-          endDatetime: new Date(slotStart.getTime() + 60 * 60 * 1000),
-          bookingUrl: null,
-        });
+    for (const h of hours) {
+      const slotStart = new Date(date);
+      slotStart.setHours(h, 0, 0, 0);
+      const slotMs = slotStart.getTime();
+      if (slotMs <= nowMs) continue;
+      if (hasTimeConflict(key, h, h + 1, callerBusy)) continue;
+      if (hasTimeConflict(key, h, h + 1, opponentBusy)) continue;
+
+      // Hard filter against the snapshot — only within the 3-day horizon
+      // and only when this facility has been refreshed at least once.
+      // Beyond the horizon (snapshot has no data) we emit speculatively;
+      // for never-refreshed facilities the caller passes `undefined` for
+      // `snapshot` so this block doesn't trigger.
+      let availableCourts: number | undefined;
+      if (snapshot && slotMs < horizonMs) {
+        const iso = slotStart.toISOString();
+        const courtCount = snapshot.available.get(iso);
+        if (!courtCount) continue;
+        availableCourts = courtCount;
       }
+
+      out.push({
+        datetime: slotStart,
+        endDatetime: new Date(slotStart.getTime() + 60 * 60 * 1000),
+        bookingUrl: null,
+        availableCourts,
+      });
     }
   }
   return out;
@@ -355,6 +490,31 @@ interface ComputeTripletsResult {
   triplets: ScoredTriplet[];
   windowKeys: string[];
   aborted: boolean;
+}
+
+/**
+ * Fire-and-forget SWR trigger. Asks `request_facility_refresh` to dispatch
+ * the refresh edge function for any facility in `scored` whose snapshot is
+ * stale. Never awaited and never throws to the caller — refresh failures
+ * are irrelevant to the suggestion response.
+ *
+ * Step 3 is shadow mode: nothing reads the snapshot yet, so the only
+ * observable effect of this call is that `facility_availability_snapshot`
+ * starts filling up with real provider data as users browse suggestions.
+ */
+function triggerSnapshotRefresh(scored: ScoredMatchup[]): void {
+  if (!scored || scored.length === 0) return;
+  const facilityIds = [...new Set(scored.map(r => r.facility_id))].filter(Boolean);
+  if (facilityIds.length === 0) return;
+  // Match the edge function's per-invocation cap. The DB RPC enforces the
+  // same limit defensively; this avoids sending oversized payloads on the
+  // wire.
+  const capped = facilityIds.slice(0, 50);
+  void supabase.rpc('request_facility_refresh', { p_facility_ids: capped }).then(({ error }) => {
+    if (error) {
+      console.warn('[SuggestionService] request_facility_refresh error:', error.message);
+    }
+  });
 }
 
 /**
@@ -411,6 +571,13 @@ async function computeScoredTriplets(
 
   let scored = scoredRows as ScoredMatchup[];
 
+  // ── Step 1a: SWR trigger ────────────────────────────────────────────
+  // Fire-and-forget: ask the DB which facilities surfaced here have a
+  // stale snapshot and dispatch a refresh on the edge worker. No await,
+  // no response handling — the refresh runs out-of-band and the next
+  // request to this facility gets the warm data.
+  triggerSnapshotRefresh(scored);
+
   // ── Step 1b: Drop opponents the caller has already pinged ──────────
   // Anon mode has no caller, so nothing to exclude.
   if (!isAnon) {
@@ -429,13 +596,20 @@ async function computeScoredTriplets(
 
   // ── Step 2: Busy slots for caller + opponents (conflict detection) ──
   const uniqueOpponentIds = [...new Set(scored.map(r => r.opponent_id))];
+  const uniqueFacilityIds = [...new Set(scored.map(r => r.facility_id))].filter(Boolean);
   const allPlayerIds = isAnon ? uniqueOpponentIds : [playerId!, ...uniqueOpponentIds];
   const startDate = window[0].key;
   const endDate = window[window.length - 1].key;
 
-  const busyByPlayer = await fetchBusySlots(allPlayerIds, startDate, endDate);
+  // Parallel: busy slots + snapshot availability. Both are bounded queries
+  // against a known set of ids.
+  const [busyByPlayer, snapshotData] = await Promise.all([
+    fetchBusySlots(allPlayerIds, startDate, endDate),
+    fetchFacilitySnapshots(uniqueFacilityIds),
+  ]);
   if (signal?.aborted) return { triplets: [], windowKeys, aborted: true };
   const callerBusy = isAnon ? [] : (busyByPlayer.get(playerId!) ?? []);
+  const { snapshotByFacility } = snapshotData;
 
   // ── Step 3: Expand RPC rows into candidate triplets ─────────────────
   const now = new Date();
@@ -452,12 +626,17 @@ async function computeScoredTriplets(
 
   for (const row of scored) {
     const opponentBusy = busyByPlayer.get(row.opponent_id) ?? [];
+    // Pass the per-facility snapshot only when the facility has been
+    // refreshed at least once. Absence = cold-start tolerance, emit all
+    // overlap-compatible slots speculatively.
+    const facilitySnapshot = snapshotByFacility.get(row.facility_id);
     const slots = generateFixedHourSlots(
       row.overlapping_days_periods || [],
       window,
       callerBusy,
       opponentBusy,
-      now
+      now,
+      facilitySnapshot
     );
     if (slots.length === 0) continue;
 
@@ -526,7 +705,7 @@ export function pickTopGlobal(
   return [...bestByOpponent.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, maxItems)
-    .map(toSlotSuggestion);
+    .map((t, idx) => ({ ...toSlotSuggestion(t), rank: idx + 1 }));
 }
 
 function toSlotSuggestion(t: {
@@ -558,6 +737,7 @@ function toSlotSuggestion(t: {
     slot: t.slot,
     score: t.score,
     playerCompatibility: Number(r.player_compatibility),
+    scoreHistory: Number(r.score_history ?? 0),
   };
 }
 

@@ -1,19 +1,23 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-
 import { getTranslations } from 'next-intl/server';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { Calendar, CircleDollarSign, Clock, MapPin, Swords, User, Users } from 'lucide-react';
-import Image from 'next/image';
 import { getStorageImageUrl } from '@rallia/shared-utils';
+
 import { getRelativeDateLabel, formatDuration } from '../../games/_components/utils';
+
 import { getMatch } from './_lib/get-match';
+
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { getLandingContext } from '@/lib/landing-attribution';
-import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';
+import { logReferralClick, buildPlayStoreUrl } from '@/lib/referral-tracking';
+import { TrackedStoreBadges } from '@/components/tracked-store-badges';
+import { InviteLandingTracker } from '@/components/invite-landing-tracker';
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -22,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'matchPage' });
 
   if (!match) {
-    return { title: t('notFound') };
+    return { title: t('notFound'), robots: { index: false, follow: false } };
   }
 
   const rawSport = match.sport?.name ?? '';
@@ -52,6 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    robots: { index: false, follow: false },
     openGraph: {
       title,
       description,
@@ -62,24 +67,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
     },
-    other: {
-      'apple-itunes-app': `app-id=6760482014, app-argument=https://rallia.app/${locale}/match/${id}`,
-    },
+    // apple-itunes-app meta is rendered by SmartAppBanner in the marketing
+    // layout — it reads ph_did + UTM cookies client-side so app-argument
+    // carries first-touch attribution into the installed app.
   };
 }
 
-export default async function MatchPage({ params }: Props) {
+export default async function MatchPage({ params, searchParams }: Props) {
   const { id, locale } = await params;
+  const query = await searchParams;
 
   // Attribution: log click and detect platform
-  const { platform, fingerprint, ip, userAgent } = await getLandingContext();
+  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
 
   // Log click for analytics (non-blocking, no referral code)
-  logReferralClick('', fingerprint, ip, userAgent, 'match', id).catch(() => {});
+  logReferralClick('', ip, userAgent, 'match', id, webDistinctId, utm).catch(() => {});
 
   // Android: redirect to Play Store with match ID in install referrer
   if (platform === 'android') {
-    redirect(buildPlayStoreUrl(undefined, 'match', id));
+    redirect(buildPlayStoreUrl(undefined, 'match', id, { webDistinctId, utm }));
   }
 
   const match = await getMatch(id);
@@ -161,6 +167,12 @@ export default async function MatchPage({ params }: Props) {
 
   return (
     <div className="flex flex-col gap-8 py-12 w-full max-w-3xl mx-auto">
+      <InviteLandingTracker
+        surface="match"
+        invitationType="match"
+        platform={platform ?? 'desktop'}
+        targetId={id}
+      />
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">{t('subtitle')}</p>
@@ -299,46 +311,15 @@ export default async function MatchPage({ params }: Props) {
             <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
 
-            <div className="flex gap-4">
-              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
-                <Image
-                  src="/app-store-badge-light.svg"
-                  alt={t('appStore')}
-                  width={120}
-                  height={40}
-                  className="button-scale block dark:hidden"
-                />
-                <Image
-                  src="/app-store-badge.svg"
-                  alt={t('appStore')}
-                  width={120}
-                  height={40}
-                  className="button-scale hidden dark:block"
-                />
-              </a>
-              {platform !== 'ios' ? (
-                <a
-                  href={buildPlayStoreUrl(undefined, 'match', id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Image
-                    src="/google-play-badge-light.svg"
-                    alt={t('googlePlay')}
-                    width={135}
-                    height={40}
-                    className="button-scale block dark:hidden"
-                  />
-                  <Image
-                    src="/google-play-badge.svg"
-                    alt={t('googlePlay')}
-                    width={135}
-                    height={40}
-                    className="button-scale hidden dark:block"
-                  />
-                </a>
-              ) : null}
-            </div>
+            <TrackedStoreBadges
+              placement="match_page"
+              playStoreUrl={buildPlayStoreUrl(undefined, 'match', id, { webDistinctId, utm })}
+              hidePlayStore={platform === 'ios'}
+              appStoreLabel={t('appStore')}
+              playStoreLabel={t('googlePlay')}
+              matchId={id}
+              referral={{ type: 'match', targetId: id }}
+            />
           </div>
         </section>
       </div>

@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      rollout_percentage:
+        description: "Rollout percentage (1-100). Use to ramp up an in-flight canary or ship at full bore."
+        required: false
+        default: "100"
+        type: string
 
 concurrency:
   group: ota-update-production
@@ -16,13 +22,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
-          cache: 'npm'
+          # Avoid deprecated @actions/cache paths (400/422) on setup-node v4.
+          package-manager-cache: false
 
       - name: Install dependencies
         run: npm ci
@@ -32,14 +39,20 @@ jobs:
         with:
           eas-version: '16'
           token: ${{ secrets.EXPO_TOKEN }}
+          # eas-cli install still works; only skips the flaky Actions cache layer.
+          eas-cache: false
 
       - name: Push OTA update
         id: update
-        continue-on-error: true
+        env:
+          DISPATCH_ROLLOUT: ${{ github.event.inputs.rollout_percentage }}
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
+          # Full rollout on main pushes; workflow_dispatch can pass a lower % for canary.
+          ROLLOUT="${DISPATCH_ROLLOUT:-100}"
+          echo "rollout_percentage=$ROLLOUT" >> "$GITHUB_OUTPUT"
           cd apps/mobile
-          eas update --branch production --environment production --message "$COMMIT_MSG"
+          eas update --branch production --environment production --message "$COMMIT_MSG" --rollout-percentage "$ROLLOUT"
 
       - name: Notify Discord
         if: always()
@@ -50,10 +63,11 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           COMMIT_MSG=$(git log -1 --pretty=%s)
 
+          ROLLOUT="${{ steps.update.outputs.rollout_percentage }}"
           if [ "${{ steps.update.outcome }}" = "success" ]; then
             COLOR=3066993
             TITLE="Production OTA Update Published"
-            DESCRIPTION="JS update pushed to \`production\` channel."
+            DESCRIPTION="JS update pushed to \`production\` channel at ${ROLLOUT}% rollout."
           else
             COLOR=15158332
             TITLE="Production OTA Update Failed"

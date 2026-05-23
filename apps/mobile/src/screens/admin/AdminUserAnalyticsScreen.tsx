@@ -22,7 +22,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
 import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { Text, TimeRangeSelector, LineChart, PieChart, BarChart } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
+import {
+  TimeRangeSelector,
+  LineChart,
+  PieChart,
+  BarChart,
+} from '@rallia/shared-components/src/charts';
 import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   getUserGrowthTrend,

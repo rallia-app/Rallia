@@ -67,6 +67,7 @@
     "@rallia/eslint-config": "*",
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "4.1.16",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22",
     "@types/react": "^19.2.0",

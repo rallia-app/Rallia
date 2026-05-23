@@ -11,20 +11,19 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "react": "*",
+    "@react-native-async-storage/async-storage": "*",
     "@tanstack/react-query": "^5.62.0",
-    "react-native": "*",
-    "@react-native-async-storage/async-storage": "*"
+    "react": "*",
+    "react-native": "*"
   },
   "dependencies": {
+    "@rallia/design-system": "*",
     "@rallia/shared-services": "*",
     "@rallia/shared-types": "*",
-    "@rallia/shared-utils": "*",
-    "@rallia/design-system": "*"
+    "@rallia/shared-utils": "*"
   },
   "devDependencies": {
     "@rallia/eslint-config": "*",
-    "@tanstack/react-query": "^5.62.0",
     "typescript": "^5.9.3"
   }
 }

@@ -37,7 +37,7 @@ export function OverviewKpiStrip() {
         label={t('matches')}
         value={matchStats?.totalMatches ?? null}
         loading={matchesLoading}
-        href="/admin/analytics/engagement"
+        href="/admin/analytics/matches"
       />
       <KpiCard
         label={t('utm.signupsToday')}

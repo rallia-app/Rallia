@@ -75,7 +75,7 @@ export const TIER_COLORS = {
   },
   platinum: {
     primary: '#2DD4BF', // teal-400 — premium, distinct from all other tiers
-    background: '#F0FDFA', // teal-50
+    background: '#CCFBF1', // teal-100 — matches saturation of other tier backgrounds
     text: '#134E4A', // teal-900
   },
 } as const;

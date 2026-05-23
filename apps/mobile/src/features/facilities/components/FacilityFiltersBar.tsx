@@ -316,6 +316,7 @@ interface FacilityFiltersBarProps {
   onLocationModeChange?: (mode: LocationMode) => void;
   hasHomeLocation?: boolean;
   homeLocationLabel?: string;
+  showFavoritesFilter?: boolean;
 }
 
 export default function FacilityFiltersBar({
@@ -328,6 +329,7 @@ export default function FacilityFiltersBar({
   onLocationModeChange,
   hasHomeLocation = false,
   homeLocationLabel,
+  showFavoritesFilter = true,
 }: FacilityFiltersBarProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -528,6 +530,10 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, hasAvailabilities: !filters.hasAvailabilities });
   }, [filters, onFiltersChange]);
 
+  const handleHasOpenSlotsToggle = useCallback(() => {
+    onFiltersChange({ ...filters, hasOpenSlots: !filters.hasOpenSlots });
+  }, [filters, onFiltersChange]);
+
   const handleFavoritesOnlyToggle = useCallback(() => {
     onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
   }, [filters, onFiltersChange]);
@@ -545,20 +551,25 @@ export default function FacilityFiltersBar({
       icon?: keyof typeof Ionicons.glyphMap;
       hasDropdown?: boolean;
     }[] = [
+      ...(showFavoritesFilter
+        ? [
+            {
+              key: 'favorites',
+              value: t('facilitiesTab.filters.favorites.label'),
+              isActive: filters.favoritesOnly,
+              onPress: handleFavoritesOnlyToggle,
+              icon: 'heart-outline' as keyof typeof Ionicons.glyphMap,
+              hasDropdown: false,
+            },
+          ]
+        : []),
       {
-        key: 'favorites',
-        value: t('facilitiesTab.filters.favorites.label'),
-        isActive: filters.favoritesOnly,
-        onPress: handleFavoritesOnlyToggle,
-        icon: 'heart-outline',
+        key: 'hasOpenSlots',
+        value: t('facilitiesTab.filters.hasOpenSlots.label'),
+        isActive: filters.hasOpenSlots,
+        onPress: handleHasOpenSlotsToggle,
+        icon: 'flash-outline',
         hasDropdown: false,
-      },
-      {
-        key: 'distance',
-        value: distanceDisplay,
-        isActive: filters.distance !== 'all',
-        onPress: () => setShowDistanceDropdown(true),
-        icon: filters.distance !== 'all' ? 'navigate-outline' : undefined,
       },
       {
         key: 'hasAvailabilities',
@@ -567,6 +578,13 @@ export default function FacilityFiltersBar({
         onPress: handleHasAvailabilitiesToggle,
         icon: 'calendar-outline',
         hasDropdown: false,
+      },
+      {
+        key: 'distance',
+        value: distanceDisplay,
+        isActive: filters.distance !== 'all',
+        onPress: () => setShowDistanceDropdown(true),
+        icon: filters.distance !== 'all' ? 'navigate-outline' : undefined,
       },
       {
         key: 'courtType',
@@ -629,10 +647,12 @@ export default function FacilityFiltersBar({
     orgNatureDisplay,
     handleFavoritesOnlyToggle,
     handleHasAvailabilitiesToggle,
+    handleHasOpenSlotsToggle,
     getCourtTypeIcon,
     getLightingIcon,
     getMembershipIcon,
     getOrgNatureIcon,
+    showFavoritesFilter,
   ]);
 
   return (

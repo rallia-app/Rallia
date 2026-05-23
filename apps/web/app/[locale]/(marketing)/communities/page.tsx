@@ -1,7 +1,21 @@
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import type { Metadata } from 'next';
+import type { Locale } from '@rallia/shared-translations';
 import { getTranslations } from 'next-intl/server';
+
 import CommunityList from './_components/community-list';
 import type { PublicCommunity } from './_components/community-card';
+
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { buildPageMetadata } from '@/lib/seo';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata({ locale, path: '/communities', namespace: 'seo.communities' });
+}
 
 const PAGE_SIZE = 12;
 

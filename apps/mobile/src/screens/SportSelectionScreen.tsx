@@ -349,11 +349,11 @@ export function SportSelectionScreen() {
   const getSportImage = (sportName: string) => {
     const lowerName = sportName.toLowerCase();
     if (lowerName.includes('tennis')) {
-      return require('../../assets/images/tennis.jpg');
+      return require('../../assets/images/tennis.webp');
     } else if (lowerName.includes('pickleball')) {
-      return require('../../assets/images/pickleball.jpg');
+      return require('../../assets/images/pickleball.webp');
     }
-    return require('../../assets/images/tennis.jpg');
+    return require('../../assets/images/tennis.webp');
   };
 
   const getSelectionOrder = (sportId: string): number | null => {
