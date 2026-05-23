@@ -1,4 +1,7 @@
 {
+  "suggestionCard": {
+    "courtsAvailable": "{count} terrains disponibles"
+  },
   "common": {
     "loading": "Chargement...",
     "error": "Erreur",

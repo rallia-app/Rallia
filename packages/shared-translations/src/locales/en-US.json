@@ -1,4 +1,7 @@
 {
+  "suggestionCard": {
+    "courtsAvailable": "{count} courts available"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
