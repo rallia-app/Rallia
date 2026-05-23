@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'matchPage' });
 
   if (!match) {
-    return { title: t('notFound') };
+    return { title: t('notFound'), robots: { index: false, follow: false } };
   }
 
   const rawSport = match.sport?.name ?? '';
@@ -56,6 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    robots: { index: false, follow: false },
     openGraph: {
       title,
       description,

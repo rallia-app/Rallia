@@ -3,71 +3,52 @@
 import { createClient } from '@/lib/supabase/client';
 import { syncLocaleToBackend } from '@/lib/sync-locale';
 import { usePathname } from '@/i18n/navigation';
-import { cn } from '@/lib/utils';
-import { Globe } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useTransition } from 'react';
 import { Button } from './ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 
 const locales = [
-  { code: 'en-US', name: 'English', short: 'EN' },
-  { code: 'fr-CA', name: 'Français', short: 'FR' },
+  { code: 'en-US', short: 'EN', name: 'English' },
+  { code: 'fr-CA', short: 'FR', name: 'Français' },
 ] as const;
 
+type LocaleCode = (typeof locales)[number]['code'];
+
 export default function LocaleToggle() {
-  const locale = useLocale();
+  const locale = useLocale() as LocaleCode;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const supabase = useMemo(() => createClient(), []);
 
-  const handleLocaleChange = (newLocale: string) => {
-    if (newLocale === locale) return;
+  const current = locales.find(l => l.code === locale) ?? locales[0];
+  const next = locales.find(l => l.code !== current.code) ?? locales[1];
 
+  const handleToggle = () => {
     startTransition(async () => {
-      await syncLocaleToBackend(supabase, newLocale);
+      await syncLocaleToBackend(supabase, next.code);
 
       const pathWithoutLocale = pathname.startsWith('/') ? pathname : `/${pathname}`;
       const queryString = searchParams.toString();
       const queryPart = queryString ? `?${queryString}` : '';
-      const newUrl = `/${newLocale}${pathWithoutLocale}${queryPart}`;
+      const newUrl = `/${next.code}${pathWithoutLocale}${queryPart}`;
 
       window.location.href = newUrl;
     });
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground hover:text-foreground"
-          disabled={isPending}
-        >
-          <Globe className="size-4" />
-          <span className="sr-only">Change language</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {locales.map(loc => (
-          <DropdownMenuItem
-            key={loc.code}
-            onClick={() => handleLocaleChange(loc.code)}
-            className={cn('cursor-pointer', locale === loc.code && 'bg-accent font-medium')}
-          >
-            {loc.name}
-            {locale === loc.code && <span className="ml-auto">✓</span>}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 px-2.5 text-xs font-semibold tracking-wide text-muted-foreground hover:text-foreground"
+      disabled={isPending}
+      onClick={handleToggle}
+      aria-label={`Switch language to ${next.name}`}
+      title={`Switch to ${next.name}`}
+    >
+      {current.short}
+    </Button>
   );
 }

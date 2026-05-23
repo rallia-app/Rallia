@@ -8,7 +8,8 @@ export default function Header() {
     <header className="flex w-full max-w-6xl mx-auto my-8 justify-between items-center gap-3 px-8">
       <ThemeLogo href="/" width={120} height={40} />
       <HeaderNav />
-      <div className="flex items-center gap-3">
+      {/* Desktop-only controls; on mobile these live inside the nav panel */}
+      <div className="hidden md:flex items-center gap-3">
         <LocaleToggle />
         <ModeToggle />
       </div>

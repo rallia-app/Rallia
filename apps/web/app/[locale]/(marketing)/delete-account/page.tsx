@@ -1,9 +1,20 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import type { Locale } from '@rallia/shared-translations';
 
-export const metadata: Metadata = {
-  title: 'Delete Account — Rallia',
-  description: 'Learn how to delete your Rallia account and all associated data.',
-};
+import { buildPageMetadata } from '@/lib/seo';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata({
+    locale,
+    path: '/delete-account',
+    namespace: 'seo.deleteAccount',
+  });
+}
 
 export default function DeleteAccountPage() {
   return (
