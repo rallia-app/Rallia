@@ -191,6 +191,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
       CommunityDetail: 'community/:communityId',
       InviteReferral: 'invite-legacy/:referralCode',
 
+      // Weekly check-in wizard — deep link from the Monday push reminder.
+      WeeklyCheckIn: 'weekly-checkin',
+
       // Admin screens - protected by useAdminDeepLinkGuard
       AdminPanel: 'admin',
       AdminDashboard: 'admin/dashboard',

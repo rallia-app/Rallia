@@ -98,6 +98,10 @@ export type RootStackParamList = {
   // Subscription
   Paywall: undefined;
   SubscriptionManagement: undefined;
+
+  // Weekly check-in wizard — modal, full-screen, no gesture dismiss.
+  // Entry points: Home banner CTA, splash-complete auto-opener, push deep link.
+  WeeklyCheckIn: undefined;
 };
 
 // =============================================================================

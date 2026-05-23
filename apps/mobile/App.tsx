@@ -144,6 +144,9 @@ import { Logger } from './src/services/logger';
 import { JustForYouPrefetch } from './src/components/JustForYouPrefetch';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
+import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyCheckInAutoOpener';
+import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
+import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -657,6 +660,15 @@ function PendingFeedbackHandler() {
       });
       // Small delay to ensure the UI is ready
       setTimeout(() => {
+        // Don't open the feedback sheet over the weekly check-in wizard.
+        // The pending feedback persists server-side so it'll be picked up
+        // on the next launch / next Home focus.
+        if (isWeeklyCheckInActive()) {
+          Logger.logUserAction('pending_feedback_suppressed_for_wizard', {
+            matchId: data.matchId,
+          });
+          return;
+        }
         openSheet(data.matchId, data.reviewerId, data.participantId, data.opponents);
       }, 500);
     },
@@ -682,6 +694,15 @@ function DeepLinkHandler() {
     getMatchWithDetails(pendingMatchId).then(match => {
       if (cancelled) return;
       clearPendingDeepLink();
+      // Don't open a match-detail sheet over the weekly check-in wizard;
+      // re-queue handling for after dismissal would be ideal but for now
+      // we simply drop the deep link if the wizard is focused.
+      if (isWeeklyCheckInActive()) {
+        Logger.logUserAction('deep_link_match_suppressed_for_wizard', {
+          matchId: pendingMatchId,
+        });
+        return;
+      }
       if (match) {
         Logger.logUserAction('deep_link_match_opened', { matchId: pendingMatchId });
         openSheet(match as MatchDetailData);
@@ -804,6 +825,7 @@ function AppContent() {
       <SessionExpiryHandler />
       <AccountSuspendedHandler />
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
+      {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}

@@ -77,6 +77,9 @@ import {
   addDeepLinkListener,
 } from '../navigation/deepLinkStore';
 import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
+import { useCheckInContext } from '../features/weekly-checkin/api';
+import { WEEKLY_CHECKIN_ENABLED } from '../features/weekly-checkin/featureFlag';
+import { isWeeklyCheckInActive } from '../features/weekly-checkin/isWizardActive';
 import { LinearGradient } from 'expo-linear-gradient';
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -395,6 +398,12 @@ const Home = () => {
   const { homeLocation } = useUserHomeLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
 
+  // Cached weekly check-in context — read by the availability banner to render
+  // the streak-aware subtitle. WeeklyCheckInAutoOpener also reads it; TanStack
+  // de-dupes so this is a single RPC round-trip on home mount. Gated on the
+  // feature flag so we don't fire the RPC while the wizard is shipped dark.
+  const { data: checkInContext } = useCheckInContext({ enabled: WEEKLY_CHECKIN_ENABLED });
+
   // Keep a ref so the stable processDeepLink callback always reads the latest player
   const playerRef = useRef(player);
   useEffect(() => {
@@ -586,6 +595,14 @@ const Home = () => {
         await incrementOnboardedLaunchCount();
         const show = await shouldShowReferralInvite(hasReferredUser);
         if (show) {
+          // Don't surface the referral invite over the weekly check-in
+          // wizard — the wizard owns the screen when it's presenting.
+          // The launch counter still ticks so this prompt will be eligible
+          // again on the next launch.
+          if (isWeeklyCheckInActive()) {
+            Logger.logUserAction('referral_invite_suppressed_for_wizard');
+            return;
+          }
           await markSheetShown();
           SheetManager.show('referral-invite');
         }
@@ -821,10 +838,14 @@ const Home = () => {
   );
 
   const handleAvailabilityBannerAction = useCallback(() => {
-    // Jump to UserProfile with an explicit "open the availability sheet"
-    // intent. UserProfile waits for its availability rows to load, then auto-
-    // opens the edit overlay prefilled with the player's current schedule.
-    appNavigation.navigate('UserProfile', { openSheet: 'availability' });
+    // Opens the weekly check-in wizard modal. The wizard combines:
+    //   • availability refresh (the original purpose of this banner)
+    //   • weekly frequency goal
+    //   • streak + freeze mechanic
+    //   • opt-ins for auto-create / auto-invite
+    // On submit, last_confirmed_at is bumped and a player_weekly_checkin
+    // row is inserted, so the banner disappears for the rest of the week.
+    appNavigation.navigate('WeeklyCheckIn');
   }, [appNavigation]);
 
   const handleDismissAvailabilityBanner = useCallback(async () => {
@@ -1238,17 +1259,32 @@ const Home = () => {
         }
       });
 
-      // Availability refresh banner — shown when the player's schedule has
-      // gone stale (no confirmation in the last 7 days). Tapping the CTA
-      // jumps to UserProfile where the edit overlay is one tap away.
-      if (availabilityIsStale && !availabilityBannerDismissed) {
+      // Weekly check-in banner — shown when the player hasn't checked in
+      // for the current ISO week (proxy: availability staleness ≥ 7 days,
+      // since the check-in RPC refreshes last_confirmed_at). Tapping the
+      // CTA opens the full-screen weekly-checkin wizard.
+      //
+      // The wizard's discrete × dismissal and this banner's onDismiss share
+      // the AVAILABILITY_BANNER_COOLDOWN_KEY, so dismissing either one
+      // suppresses both for 24h.
+      // Banner CTA navigates into the weekly check-in wizard, so keep it
+      // hidden while the wizard is shipped dark.
+      if (WEEKLY_CHECKIN_ENABLED && availabilityIsStale && !availabilityBannerDismissed) {
+        // Show the streak-aware subtitle when the player has an active streak.
+        // checkInContext is loaded by the auto-opener but we read it here too
+        // (TanStack cache de-dupes the request).
+        const streakCount = checkInContext?.currentStreak ?? 0;
+        const description =
+          streakCount > 0
+            ? t('home.availabilityRefreshBanner.descriptionStreak', { count: streakCount })
+            : t('home.availabilityRefreshBanner.description');
+
         bannerCards.push(
           <HomeBanner
             key="availability-refresh"
             variant="danger"
-            leading={accent => <Ionicons name="time-outline" size={20} color={accent} />}
             title={t('home.availabilityRefreshBanner.title')}
-            description={t('home.availabilityRefreshBanner.description')}
+            description={description}
             primaryAction={{
               label: t('home.availabilityRefreshBanner.cta'),
               onPress: handleAvailabilityBannerAction,
