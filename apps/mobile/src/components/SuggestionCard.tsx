@@ -57,6 +57,8 @@ export interface SuggestionCardLabels {
   free: string;
   competitive: string;
   casual: string;
+  /** Court availability label — `{count}` is replaced with the number of bookable courts. */
+  courtsAvailable: string;
 }
 
 export interface SuggestionCardProps {
@@ -283,6 +285,14 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     defaultChips.push({ key: 'matchType', label: labels.competitive, icon: 'trophy' });
   } else if (defaultMatchType === 'casual') {
     defaultChips.push({ key: 'matchType', label: labels.casual, icon: 'happy' });
+  }
+  const availableCourts = suggestion.slot.availableCourts;
+  if (availableCourts !== undefined && availableCourts > 0) {
+    defaultChips.push({
+      key: 'courts',
+      label: labels.courtsAvailable.replace('{count}', String(availableCourts)),
+      icon: 'tennisball-outline',
+    });
   }
 
   const canSend = inviteState === 'idle' && !disabled;

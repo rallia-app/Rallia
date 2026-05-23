@@ -182,6 +182,7 @@ export function useSuggestionInviteHandler(
       free: t('match.cost.free'),
       competitive: t('match.type.competitive'),
       casual: t('match.type.casual'),
+      courtsAvailable: t('suggestionCard.courtsAvailable'),
     }),
     [t]
   );

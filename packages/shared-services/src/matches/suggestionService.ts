@@ -77,6 +77,12 @@ export interface SuggestionSlot {
   datetime: Date;
   endDatetime: Date;
   bookingUrl: string | null;
+  /**
+   * Number of distinct courts bookable at this slot, from the facility
+   * availability snapshot. Undefined for slots outside the snapshot horizon
+   * or at facilities that have never been refreshed (cold-start tolerance).
+   */
+  availableCourts?: number;
 }
 
 /** A single (opponent, facility, slot) triplet — one card. */
@@ -136,12 +142,14 @@ export interface BusySlot {
 }
 
 /**
- * Per-facility snapshot view passed to `generateFixedHourSlots`. Presence of
- * a key in `available` means at least one court is bookable at that exact
- * `slot_start` (ISO 8601 UTC string).
+ * Per-facility snapshot view passed to `generateFixedHourSlots`. Each key in
+ * `available` is an ISO 8601 UTC `slot_start` for which at least one court
+ * is bookable; the value is the number of distinct courts bookable at that
+ * slot. Presence (not value) drives the hard filter; the count surfaces to
+ * the UI so cards can show "N courts available".
  */
 export interface FacilitySnapshot {
-  available: Set<string>;
+  available: Map<string, number>;
 }
 
 // =============================================================================
@@ -288,7 +296,7 @@ async function fetchFacilitySnapshots(facilityIds: string[]): Promise<{
   const [snapshotRes, logRes] = await Promise.all([
     supabase
       .from('facility_availability_snapshot')
-      .select('facility_id, slot_start')
+      .select('facility_id, slot_start, external_court_id')
       .in('facility_id', facilityIds)
       .eq('is_available', true)
       .gte('slot_start', now.toISOString())
@@ -310,17 +318,20 @@ async function fetchFacilitySnapshots(facilityIds: string[]): Promise<{
 
   const snapshotByFacility = new Map<string, FacilitySnapshot>();
   for (const fid of refreshedFacilities) {
-    snapshotByFacility.set(fid, { available: new Set() });
+    snapshotByFacility.set(fid, { available: new Map() });
   }
+  // Snapshot rows are unique on (facility_id, external_court_id, slot_start),
+  // so counting rows per (facility_id, slot_start) yields the distinct-court
+  // count without needing a SELECT DISTINCT.
   for (const row of snapshotRes.data ?? []) {
     const fid = row.facility_id as string;
     const iso = new Date(row.slot_start as string).toISOString();
     let entry = snapshotByFacility.get(fid);
     if (!entry) {
-      entry = { available: new Set() };
+      entry = { available: new Map() };
       snapshotByFacility.set(fid, entry);
     }
-    entry.available.add(iso);
+    entry.available.set(iso, (entry.available.get(iso) ?? 0) + 1);
   }
 
   return { snapshotByFacility, refreshedFacilities };
@@ -427,14 +438,19 @@ export function generateFixedHourSlots(
       // Beyond the horizon (snapshot has no data) we emit speculatively;
       // for never-refreshed facilities the caller passes `undefined` for
       // `snapshot` so this block doesn't trigger.
+      let availableCourts: number | undefined;
       if (snapshot && slotMs < horizonMs) {
-        if (!snapshot.available.has(slotStart.toISOString())) continue;
+        const iso = slotStart.toISOString();
+        const courtCount = snapshot.available.get(iso);
+        if (!courtCount) continue;
+        availableCourts = courtCount;
       }
 
       out.push({
         datetime: slotStart,
         endDatetime: new Date(slotStart.getTime() + 60 * 60 * 1000),
         bookingUrl: null,
+        availableCourts,
       });
     }
   }

@@ -49,7 +49,6 @@ import {
   useTheme,
   usePlayer,
   useJustForYou,
-  JUST_FOR_YOU_INCLUDE_SUGGESTIONS,
   usePlayerMatches,
   usePlayerSports,
   useRatingScoresForSport,
@@ -925,8 +924,9 @@ const Home = () => {
     ]
   );
 
-  // Just for you: top N nearby matches. Suggestion padding is gated by
-  // JUST_FOR_YOU_INCLUDE_SUGGESTIONS (temporarily off — matches only).
+  // Just for you: top 5 = best matches in the area, padded with suggestions
+  // when matches < 5. Score-ordered, opponent-deduped on the suggestion side,
+  // creator/participant matches filtered out by the composer's exclude set.
   const excludeUserIds = useMemo(
     () => (session?.user?.id ? [session.user.id] : []),
     [session?.user?.id]
@@ -947,7 +947,6 @@ const Home = () => {
     scoringPreferences,
     excludeUserIds,
     matchLimit: 5,
-    includeSuggestions: JUST_FOR_YOU_INCLUDE_SUGGESTIONS,
     // Anon-mode supported by the composer/hook — gate only on the location
     // and sport context that the carousel itself depends on.
     enabled: showNearbySection,
