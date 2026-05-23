@@ -1,15 +1,35 @@
 import { ThemeProvider } from '@/components/theme-provider';
 import { routing } from '@/i18n/routing';
+
 import { getTranslations, type Locale as SharedLocale } from '@rallia/shared-translations';
 import type { Metadata } from 'next';
+import { getTranslations as getServerTranslations } from 'next-intl/server';
 import { Locale, NextIntlClientProvider } from 'next-intl';
 import { Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import './globals.css';
 
-import { Analytics } from '@vercel/analytics/next';
+import { AnalyticsRuntime } from '@/components/consent/analytics-runtime';
+import { ConsentProvider } from '@/components/consent/consent-provider';
+import { ConsentedVercelAnalytics } from '@/components/consent/consented-vercel-analytics';
+import { CookieBanner } from '@/components/consent/cookie-banner';
+import { CookiePreferencesDialog } from '@/components/consent/cookie-preferences-dialog';
+import { ConsentedUtmCapture } from '@/components/consent/consented-utm-capture';
 import { PostHogProvider } from '@/components/posthog-provider';
-import { UtmCapture } from '@/components/utm-capture';
+import {
+  JsonLd,
+  mobileApplicationJsonLd,
+  organizationJsonLd,
+  websiteJsonLd,
+} from '@/components/json-ld';
+import {
+  SITE_NAME,
+  SITE_URL,
+  TWITTER_HANDLE,
+  buildAlternates,
+  ogAlternateLocales,
+  ogLocale,
+} from '@/lib/seo';
 
 // Theme A: Court Classic - Outfit for headlines
 const outfit = Outfit({
@@ -39,56 +59,82 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-export const metadata: Metadata = {
-  title: 'Rallia - Tennis & Pickleball Matchmaking Platform',
-  description:
-    'Download Rallia - the app connecting tennis and pickleball players. Smart matchmaking, instant scheduling, and reliable partners. Available now on iOS and Android.',
-  keywords: [
-    'tennis matchmaking',
-    'pickleball partners',
-    'tennis scheduling',
-    'find tennis partners',
-    'tennis app',
-    'pickleball app',
-    'sports matchmaking',
-    'download',
-  ],
-  authors: [{ name: 'Rallia' }],
-  creator: 'Rallia',
-  metadataBase: new URL('https://rallia.app'),
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://rallia.app',
-    title: 'Rallia - Where Rallies Live On',
-    description:
-      'Download Rallia and find your next tennis or pickleball game. Smart player matching, instant scheduling, and reliable partners.',
-    siteName: 'Rallia',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Rallia - Where Rallies Live On',
-    description:
-      'Download Rallia and find your next tennis or pickleball game. Available now on iOS and Android.',
-    creator: '@rallia',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale: localeParam } = await params;
+  const locale = localeParam as SharedLocale;
+  const t = await getServerTranslations({ locale, namespace: 'seo.root' });
+
+  const title = t('title');
+  const description = t('description');
+  const ogTitle = t('ogTitle');
+  const ogDescription = t('ogDescription');
+
+  return {
+    title: {
+      default: title,
+      template: `%s | ${SITE_NAME}`,
+    },
+    description,
+    applicationName: SITE_NAME,
+    authors: [{ name: SITE_NAME, url: SITE_URL }],
+    creator: SITE_NAME,
+    publisher: SITE_NAME,
+    metadataBase: new URL(SITE_URL),
+    alternates: buildAlternates('', locale),
+    keywords: [
+      'tennis matchmaking',
+      'pickleball partners',
+      'tennis scheduling',
+      'find tennis partners',
+      'tennis app',
+      'pickleball app',
+      'sports matchmaking',
+      'tennis near me',
+      'pickleball near me',
+    ],
+    openGraph: {
+      type: 'website',
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
+      url: `${SITE_URL}/${locale}`,
+      title: ogTitle,
+      description: ogDescription,
+      siteName: SITE_NAME,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription,
+      creator: TWITTER_HANDLE,
+      site: TWITTER_HANDLE,
+    },
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
-  },
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
-  },
-};
+    icons: {
+      icon: '/favicon.ico',
+      shortcut: '/favicon-16x16.png',
+      apple: '/apple-touch-icon.png',
+    },
+    // Plug in once Search Console / Bing verification codes are issued.
+    // verification: {
+    //   google: 'GOOGLE_SITE_VERIFICATION_TOKEN',
+    //   other: { 'msvalidate.01': 'BING_SITE_VERIFICATION_TOKEN' },
+    // },
+  };
+}
 
 export function generateStaticParams() {
   return routing.locales.map(locale => ({ locale }));
@@ -113,23 +159,30 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <head />
+      <head>
+        <JsonLd data={[organizationJsonLd, websiteJsonLd, ...mobileApplicationJsonLd]} />
+      </head>
       <body
         className={`${outfit.variable} ${poppins.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased flex min-h-screen flex-col bg-[var(--primary-50)] dark:bg-[var(--primary-900)]`}
       >
-        <Analytics />
         <PostHogProvider>
-          <UtmCapture />
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <NextIntlClientProvider locale={locale} messages={messages}>
-              {children}
-            </NextIntlClientProvider>
-          </ThemeProvider>
+          <ConsentProvider>
+            <AnalyticsRuntime />
+            <ConsentedVercelAnalytics />
+            <ConsentedUtmCapture />
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <NextIntlClientProvider locale={locale} messages={messages}>
+                {children}
+                <CookieBanner />
+                <CookiePreferencesDialog />
+              </NextIntlClientProvider>
+            </ThemeProvider>
+          </ConsentProvider>
         </PostHogProvider>
       </body>
     </html>

@@ -94,6 +94,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     return {
       title,
       description: t('physicalDescription'),
+      robots: { index: false, follow: false },
       openGraph: { title, description: t('physicalDescription'), type: 'website' },
       twitter: { card: 'summary_large_image', title, description: t('physicalDescription') },
     };
@@ -123,6 +124,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description: t('description'),
+    robots: { index: false, follow: false },
     openGraph: { title, description: t('description'), type: 'website' },
     twitter: { card: 'summary_large_image', title, description: t('description') },
   };

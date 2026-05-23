@@ -1,7 +1,22 @@
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import type { Metadata } from 'next';
+import type { Locale } from '@rallia/shared-translations';
 import { getTranslations } from 'next-intl/server';
+
 import GamesMatchList from './_components/games-match-list';
 import type { PublicMatch } from './_components/public-match-card';
+
+import { JsonLd, sportsEventJsonLd } from '@/components/json-ld';
+import { buildPageMetadata, SITE_URL } from '@/lib/seo';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata({ locale, path: '/games', namespace: 'seo.games' });
+}
 
 const PAGE_SIZE = 12;
 
@@ -38,12 +53,34 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
     .map(id => matchMap.get(id)!) as unknown as PublicMatch[];
 }
 
+function matchesToSportsEvents(matches: PublicMatch[]) {
+  return matches.slice(0, 20).map(m => {
+    const sportName = m.sport?.name ?? 'racquet sport';
+    const capitalized = sportName.charAt(0).toUpperCase() + sportName.slice(1);
+    const location = m.facility?.name ?? m.location_name ?? 'TBD';
+
+    return sportsEventJsonLd({
+      name: `${capitalized} ${m.format === 'doubles' ? 'Doubles' : 'Singles'} Game`,
+      sportName: capitalized,
+      startDate: `${m.match_date}T${m.start_time}`,
+      ...(m.end_time && { endDate: `${m.match_date}T${m.end_time}` }),
+      locationName: location,
+      locationCity: m.facility?.city,
+      latitude: m.facility?.latitude,
+      longitude: m.facility?.longitude,
+      url: `${SITE_URL}/en-US/match/${m.id}`,
+    });
+  });
+}
+
 export default async function GamesPage() {
   const t = await getTranslations('gamesPage');
   const matches = await getInitialMatches();
+  const events = matchesToSportsEvents(matches);
 
   return (
     <div className="flex flex-col w-full gap-8">
+      {events.length > 0 && <JsonLd data={events} />}
       <div className="text-center">
         <h1 className="text-4xl font-bold">{t('title')}</h1>
         <p className="mt-3 text-lg text-muted-foreground">{t('subtitle')}</p>

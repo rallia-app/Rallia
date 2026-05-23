@@ -270,9 +270,9 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
         dateGroups.map(group => (
           <div key={group.date} className="flex flex-col gap-4">
             <h3 className="text-lg font-semibold text-foreground capitalize">{group.label}</h3>
-            <div className="-mx-8 flex gap-6 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pl-8">
+            <div className="-mx-8 flex gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pl-8">
               {group.matches.map(match => (
-                <div key={match.id} className="w-[320px] shrink-0 snap-start">
+                <div key={match.id} className="w-[320px] shrink-0">
                   <PublicMatchCard match={match} onJoin={handleJoin} />
                 </div>
               ))}
