@@ -222,7 +222,7 @@ Deno.serve(async req => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: err instanceof Error ? err.message : String(err),
+        error: 'Internal server error',
         duration_ms: Date.now() - startTime,
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
