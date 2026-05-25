@@ -36,11 +36,14 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as Contacts from 'expo-contacts';
 import { Camera } from 'expo-camera';
+import { getTrackingPermissionsAsync } from 'expo-tracking-transparency';
+import { requestATTAndConfigureMeta } from '../lib/meta';
 
 const BASE_WHITE = '#ffffff';
 
-// Permission types
-type PermissionType = 'notifications' | 'location' | 'photos' | 'contacts' | 'camera';
+// Permission types. `tracking` is iOS-only (App Tracking Transparency, used
+// to gate IDFA collection for Meta ad attribution); Android omits the row.
+type PermissionType = 'notifications' | 'location' | 'photos' | 'contacts' | 'camera' | 'tracking';
 type PermissionStatus = 'granted' | 'denied' | 'undetermined' | 'loading';
 
 interface PermissionInfo {
@@ -60,6 +63,7 @@ const PERMISSION_CONFIG: Record<
   photos: { icon: 'images-outline', color: '#AF52DE' },
   contacts: { icon: 'people-outline', color: '#5856D6' },
   camera: { icon: 'camera-outline', color: '#FF2D55' },
+  tracking: { icon: 'shield-checkmark-outline', color: '#34C759' },
 };
 
 function useColors() {
@@ -200,6 +204,9 @@ const PermissionsScreen: React.FC = () => {
     photos: 'loading',
     contacts: 'loading',
     camera: 'loading',
+    // Tracking is iOS-only — on Android we treat it as 'granted' so the value
+    // never surfaces (the row is filtered out below via Platform check).
+    tracking: Platform.OS === 'ios' ? 'loading' : 'granted',
   });
   const [isRequesting, setIsRequesting] = useState<PermissionType | null>(null);
 
@@ -210,14 +217,21 @@ const PermissionsScreen: React.FC = () => {
   }, []);
 
   const checkAllPermissions = async () => {
-    const [notifStatus, locationStatus, photosStatus, contactsStatus, cameraStatus] =
-      await Promise.all([
-        checkNotificationPermission(),
-        checkLocationPermission(),
-        checkPhotosPermission(),
-        checkContactsPermission(),
-        checkCameraPermission(),
-      ]);
+    const [
+      notifStatus,
+      locationStatus,
+      photosStatus,
+      contactsStatus,
+      cameraStatus,
+      trackingStatus,
+    ] = await Promise.all([
+      checkNotificationPermission(),
+      checkLocationPermission(),
+      checkPhotosPermission(),
+      checkContactsPermission(),
+      checkCameraPermission(),
+      checkTrackingPermission(),
+    ]);
 
     setPermissions({
       notifications: notifStatus,
@@ -225,6 +239,7 @@ const PermissionsScreen: React.FC = () => {
       photos: photosStatus,
       contacts: contactsStatus,
       camera: cameraStatus,
+      tracking: trackingStatus,
     });
   };
 
@@ -273,6 +288,18 @@ const PermissionsScreen: React.FC = () => {
     }
   };
 
+  const checkTrackingPermission = async (): Promise<PermissionStatus> => {
+    // Android has no ATT — return 'granted' so isLoading() flips to false;
+    // the row itself is filtered out in permissionList below.
+    if (Platform.OS !== 'ios') return 'granted';
+    try {
+      const { status } = await getTrackingPermissionsAsync();
+      return mapExpoStatus(status);
+    } catch {
+      return 'undetermined';
+    }
+  };
+
   const mapExpoStatus = (
     status: 'granted' | 'denied' | 'undetermined' | string
   ): PermissionStatus => {
@@ -314,6 +341,18 @@ const PermissionsScreen: React.FC = () => {
           newStatus = mapExpoStatus(status);
           break;
         }
+        case 'tracking': {
+          // Route through meta.ts so the Meta SDK's tracking flags update
+          // alongside the system ATT decision (otherwise the SDK would stay
+          // in tracking-off mode even after grant). On iOS the system prompt
+          // is one-shot per install — if user previously denied, calling
+          // requestATTAndConfigureMeta silently returns 'denied' without
+          // re-prompting. They'd need to tap Settings to flip it back.
+          const result = await requestATTAndConfigureMeta();
+          newStatus =
+            result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'undetermined';
+          break;
+        }
       }
 
       if (newStatus === 'granted') {
@@ -339,17 +378,23 @@ const PermissionsScreen: React.FC = () => {
     }
   }, []);
 
-  const permissionList: PermissionInfo[] = useMemo(
-    () =>
-      (['notifications', 'location', 'photos', 'contacts', 'camera'] as PermissionType[]).map(
-        type => ({
-          type,
-          status: permissions[type],
-          ...PERMISSION_CONFIG[type],
-        })
-      ),
-    [permissions]
-  );
+  const permissionList: PermissionInfo[] = useMemo(() => {
+    // Tracking (ATT) is iOS-only — Android has no equivalent system-level
+    // permission, so we hide the row entirely on Android.
+    const types: PermissionType[] = [
+      'notifications',
+      'location',
+      'photos',
+      'contacts',
+      'camera',
+      ...(Platform.OS === 'ios' ? (['tracking'] as PermissionType[]) : []),
+    ];
+    return types.map(type => ({
+      type,
+      status: permissions[type],
+      ...PERMISSION_CONFIG[type],
+    }));
+  }, [permissions]);
 
   const getPermissionLabel = (type: PermissionType): string => {
     return t(`permissions.types.${type}`);

@@ -5,6 +5,7 @@
  */
 import './src/lib/supabase';
 import { initRevenueCat } from './src/lib/revenuecat';
+import { initMeta, syncMetaTrackingFromExistingATT } from './src/lib/meta';
 
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
@@ -13,6 +14,12 @@ import Mapbox from '@rnmapbox/maps';
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 if (!isRunningInExpoGo()) {
   initRevenueCat();
+  // Init Meta SDK with tracking OFF — it stays gated until the user passes
+  // ATT in TrackingPermissionStep. If ATT is already granted from a prior
+  // session, syncMetaTrackingFromExistingATT flips tracking back on without
+  // re-prompting.
+  initMeta();
+  void syncMetaTrackingFromExistingATT();
 }
 
 // Set up Sentry navigation integration (must be created before Sentry.init)
@@ -142,6 +149,7 @@ import {
   TourProvider,
 } from './src/context';
 import { appOpened, deepLinkOpened } from './src/services/analytics';
+import { fetchDeferredAppLink, setMetaUserId, setMetaUserData } from './src/lib/meta';
 import { Logger } from './src/services/logger';
 import { JustForYouPrefetch } from './src/components/JustForYouPrefetch';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
@@ -332,13 +340,19 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         }
       } finally {
         posthogClient?.identify(user.id, { email: user.email ?? null });
+        // Mirror identify to the Meta SDK for Advanced Matching. The SDK
+        // SHA-256-hashes these locally before they leave the device; we just
+        // hand it the raw values. Improves EMQ (Event Match Quality) for
+        // ATT-opted-in users and gives Meta better lookalike seeds.
+        setMetaUserId(user.id);
+        setMetaUserData({ email: user.email ?? null });
       }
     })();
   }, [user]);
 
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
-    (url: string | null, isColdStart = false) => {
+    (url: string | null, isColdStart = false, source: 'os' | 'meta_deferred' = 'os') => {
       if (!url) return;
       const utmParams = parseUtmParams(url);
 
@@ -377,8 +391,8 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         url.includes('stripe-connect-return') || url.includes('/stripe-connect-return');
 
       if (matchId) {
-        Logger.logNavigation('deep_link_received', { url, matchId });
-        deepLinkOpened({ link_type: 'match', ...utmParams });
+        Logger.logNavigation('deep_link_received', { url, matchId, source });
+        deepLinkOpened({ link_type: 'match', source, ...utmParams });
         setPendingMatchId(matchId);
       } else if (isStripeConnectReturn) {
         // The account.updated webhook may not have fired yet when the user
@@ -400,9 +414,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         };
         checkOnboarding();
       } else if (inviteCode) {
-        deepLinkOpened({ link_type: 'invite', referral_code: inviteCode, ...utmParams });
+        deepLinkOpened({ link_type: 'invite', source, referral_code: inviteCode, ...utmParams });
       } else if (utmParams) {
-        deepLinkOpened({ link_type: 'utm', ...utmParams });
+        deepLinkOpened({ link_type: 'utm', source, ...utmParams });
       }
     },
     [setPendingMatchId, user?.id, toast, t]
@@ -435,6 +449,17 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   useEffect(() => {
     // Handle URL that opened the app (cold start)
     Linking.getInitialURL().then(url => handleDeepLink(url, true));
+
+    // Meta's deferred deep link — populated when the user tapped a Meta ad
+    // whose destination was a deep link, before the app was installed. Fires
+    // exactly once per install; subsequent launches return null. Without an
+    // MMP this is the only mechanism that recovers ad-click → install
+    // context, so we route it through the same handler as a normal cold-start
+    // URL — but tag the source so PostHog can distinguish ad-driven cold
+    // starts from organic ones.
+    fetchDeferredAppLink().then(url => {
+      if (url) handleDeepLink(url, true, 'meta_deferred');
+    });
 
     // Handle URLs while app is running
     const subscription = Linking.addEventListener('url', event => {

@@ -154,7 +154,11 @@ const Paywall: React.FC = () => {
     try {
       const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
       const activeId = Object.keys(customerInfo.entitlements.active)[0] ?? 'unknown';
-      subscriptionStarted({ product_id: selectedPackage.product.identifier });
+      subscriptionStarted({
+        product_id: selectedPackage.product.identifier,
+        price: selectedPackage.product.price,
+        currency: selectedPackage.product.currencyCode,
+      });
       Logger.info('Purchase completed', { activeId });
       navigation.goBack();
     } catch (err) {
