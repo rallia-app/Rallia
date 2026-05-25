@@ -6,13 +6,27 @@
  * 2. Postal code for location (required)
  * 3. Device location permission (skippable)
  * 4. Push notification permission (skippable)
- * 5. Discovery / acquisition channel (skippable)
+ * 5. iOS only — App Tracking Transparency (ATT) permission (skippable)
+ * 6. Discovery / acquisition channel (skippable) — step 5 on Android,
+ *    step 6 on iOS
+ *
+ * On Android the ATT step is omitted entirely (Android doesn't have ATT)
+ * so the wizard is 5 steps. Meta SDK tracking is enabled at app launch
+ * via `initMeta()` for Android.
  *
  * Data is stored in AsyncStorage and synced to database after sign-up.
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, Dimensions, TouchableOpacity } from 'react-native';
+import {
+  Platform,
+  View,
+  StyleSheet,
+  Animated,
+  Easing,
+  Dimensions,
+  TouchableOpacity,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +39,7 @@ import { SportStep, type Sport } from './SportStep';
 import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
 import { NotificationPermissionStep } from './NotificationPermissionStep';
+import { TrackingPermissionStep } from './TrackingPermissionStep';
 import { DiscoveryStep } from './DiscoveryStep';
 import type { PostalCodeLocation } from '@rallia/shared-hooks';
 import { SportService, Logger } from '@rallia/shared-services';
@@ -34,7 +49,15 @@ import { ACQUISITION_CHANNEL_KEY } from '../../navigation/deepLinkStore';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-type WizardStep = 1 | 2 | 3 | 4 | 5;
+// iOS gets an extra step (ATT prompt) between NotificationPermission and
+// Discovery. Android skips it entirely — Meta SDK tracking is enabled at
+// launch since Android has no ATT equivalent.
+const IS_IOS = Platform.OS === 'ios';
+const TOTAL_STEPS = IS_IOS ? 6 : 5;
+const ATT_STEP = 5 as const; // iOS only; slot between NotifPerm and Discovery
+const DISCOVERY_STEP: 5 | 6 = IS_IOS ? 6 : 5;
+
+type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export function PreOnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -235,7 +258,8 @@ export function PreOnboardingScreen() {
     [animateToStep]
   );
 
-  // Step 4: Notification permission complete (or skipped)
+  // Step 4: Notification permission complete (or skipped). Next slot is
+  // either TrackingPerm (iOS, step 5) or Discovery (Android, step 5).
   const handleNotificationContinue = useCallback(
     (_notificationsEnabled: boolean) => {
       mediumHaptic();
@@ -244,7 +268,16 @@ export function PreOnboardingScreen() {
     [animateToStep]
   );
 
-  // Step 5: Discovery channel selected (or skipped)
+  // Step 5 (iOS only): Tracking permission resolved or skipped.
+  const handleTrackingContinue = useCallback(
+    (_trackingGranted: boolean) => {
+      mediumHaptic();
+      animateToStep(6, 'forward');
+    },
+    [animateToStep]
+  );
+
+  // Discovery channel selected (or skipped). Final step: 6 on iOS, 5 on Android.
   const handleDiscoveryContinue = useCallback(
     async (channel: string | null) => {
       if (channel) {
@@ -258,17 +291,12 @@ export function PreOnboardingScreen() {
     [selectedSports, onSportSelectionComplete, setLocationMode]
   );
 
-  // Back navigation
+  // Back navigation — universal (always go to currentStep - 1). Works on both
+  // platforms because Android simply never reaches step 6.
   const handleBack = useCallback(() => {
     mediumHaptic();
-    if (currentStep === 2) {
-      animateToStep(1, 'back');
-    } else if (currentStep === 3) {
-      animateToStep(2, 'back');
-    } else if (currentStep === 4) {
-      animateToStep(3, 'back');
-    } else if (currentStep === 5) {
-      animateToStep(4, 'back');
+    if (currentStep > 1) {
+      animateToStep((currentStep - 1) as WizardStep, 'back');
     }
   }, [currentStep, animateToStep]);
 
@@ -347,7 +375,7 @@ export function PreOnboardingScreen() {
         )}
 
         <View style={styles.progressContainer}>
-          {[1, 2, 3, 4, 5].map(step => (
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(step => (
             <View
               key={step}
               style={[
@@ -365,11 +393,17 @@ export function PreOnboardingScreen() {
         <View style={styles.backButtonPlaceholder} />
       </Animated.View>
 
-      {/* Step Content — horizontal pager. All 5 steps render side-by-side
-          and we slide the row via translateX. No display toggling, no
-          mid-animation state changes, so no Android flash. */}
+      {/* Step Content — horizontal pager. All steps render side-by-side and
+          we slide the row via translateX. No display toggling, no
+          mid-animation state changes, so no Android flash. The TrackingPerm
+          slot is iOS-only; on Android the row has 5 slots instead of 6. */}
       <Animated.View style={[styles.stepViewport, { opacity: fadeAnim }]}>
-        <Animated.View style={[styles.stepRow, { transform: [{ translateX: slideAnim }] }]}>
+        <Animated.View
+          style={[
+            styles.stepRow,
+            { width: SCREEN_WIDTH * TOTAL_STEPS, transform: [{ translateX: slideAnim }] },
+          ]}
+        >
           <View style={styles.stepSlot}>
             <SportStep
               sports={sports}
@@ -402,6 +436,14 @@ export function PreOnboardingScreen() {
               isActive={currentStep === 4}
             />
           </View>
+          {IS_IOS && (
+            <View style={styles.stepSlot}>
+              <TrackingPermissionStep
+                onContinue={handleTrackingContinue}
+                isActive={currentStep === ATT_STEP}
+              />
+            </View>
+          )}
           <View style={styles.stepSlot}>
             <DiscoveryStep
               mode={discoveryMode}
@@ -409,7 +451,7 @@ export function PreOnboardingScreen() {
               code={referralCode}
               onCodeChange={setReferralCode}
               onContinue={handleDiscoveryContinue}
-              isActive={currentStep === 5}
+              isActive={currentStep === DISCOVERY_STEP}
             />
           </View>
         </Animated.View>
@@ -498,7 +540,7 @@ const styles = StyleSheet.create({
   stepRow: {
     flex: 1,
     flexDirection: 'row',
-    width: SCREEN_WIDTH * 5,
+    // width set inline based on platform (SCREEN_WIDTH * TOTAL_STEPS).
   },
   stepSlot: {
     width: SCREEN_WIDTH,

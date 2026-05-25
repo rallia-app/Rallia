@@ -853,7 +853,8 @@
       "location": "Location",
       "photos": "Photos & Media",
       "contacts": "Contacts",
-      "camera": "Camera"
+      "camera": "Camera",
+      "tracking": "Ad Tracking"
     },
     "status": {
       "granted": "Allowed",
@@ -7666,7 +7667,7 @@
         }
       },
       "enable": "Enable Precise Location",
-      "privacyNote": "Your location stays on your device — change this anytime in Settings."
+      "privacyNote": "Change anytime in Settings."
     },
     "notificationPermission": {
       "title": "Stay in the game",
@@ -7691,7 +7692,28 @@
         }
       },
       "enable": "Enable Notifications",
-      "privacyNote": "You can change this anytime in Settings."
+      "privacyNote": "Change anytime in Settings."
+    },
+    "trackingPermission": {
+      "title": "Help us improve Rallia",
+      "subtitle": "Allow tracking so we can match you with better opponents and grow the app based on what actually helps players find games.",
+      "benefits": {
+        "betterMatches": {
+          "title": "Better match suggestions",
+          "description": "We learn which matchups actually convert into great games"
+        },
+        "improveApp": {
+          "title": "Smarter features over time",
+          "description": "We see which tools players use and focus on what matters"
+        },
+        "privacy": {
+          "title": "Always private",
+          "description": "We never sell your data — only use it to make Rallia better"
+        }
+      },
+      "enable": "Allow Tracking",
+      "skip": "Not Now",
+      "privacyNote": "Change anytime in Settings."
     },
     "discovery": {
       "title": "How did you hear about us?",
