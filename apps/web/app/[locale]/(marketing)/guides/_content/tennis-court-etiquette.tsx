@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import type { Guide } from './types';
 
 export const tennisCourtEtiquette: Guide = {
@@ -309,9 +311,9 @@ export const tennisCourtEtiquette: Guide = {
             never quite settle into a regular hitting group end up there because they don’t know
             where to start, not because they’re bad players or bad partners. If that’s you, see our
             guide on{' '}
-            <a href="/en-US/guides/find-tennis-pickleball-partner">
+            <Link href="/en-US/guides/find-tennis-pickleball-partner">
               how to find a tennis or pickleball partner
-            </a>{' '}
+            </Link>{' '}
             for the practical steps.
           </p>
         </>
@@ -646,9 +648,9 @@ export const tennisCourtEtiquette: Guide = {
             trouvent jamais leur groupe régulier de partenaires sont là parce qu’ils ne savent pas
             par où commencer, pas parce qu’ils sont mauvais joueurs ou mauvais partenaires. Si c’est
             ton cas, jette un œil à notre guide sur{' '}
-            <a href="/fr-CA/guides/find-tennis-pickleball-partner">
+            <Link href="/fr-CA/guides/find-tennis-pickleball-partner">
               comment trouver un partenaire de tennis ou de pickleball
-            </a>{' '}
+            </Link>{' '}
             pour les étapes concrètes.
           </p>
         </>
