@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { defaultLocale, locales, type Locale } from '@rallia/shared-translations';
 
-export const SITE_URL = 'https://rallia.app';
+export const SITE_URL = 'https://www.rallia.app';
 export const SITE_NAME = 'Rallia';
 export const TWITTER_HANDLE = '@rallia';
 
