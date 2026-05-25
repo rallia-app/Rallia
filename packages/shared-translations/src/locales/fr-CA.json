@@ -853,7 +853,8 @@
       "location": "Localisation",
       "photos": "Photos et médias",
       "contacts": "Contacts",
-      "camera": "Caméra"
+      "camera": "Caméra",
+      "tracking": "Suivi publicitaire"
     },
     "status": {
       "granted": "Autorisé",
@@ -7666,7 +7667,7 @@
         }
       },
       "enable": "Activer la localisation précise",
-      "privacyNote": "Votre localisation reste sur votre appareil — modifiable à tout moment dans les Réglages."
+      "privacyNote": "Modifiable dans Réglages."
     },
     "notificationPermission": {
       "title": "Restez dans le match",
@@ -7691,7 +7692,28 @@
         }
       },
       "enable": "Activer les notifications",
-      "privacyNote": "Modifiable à tout moment dans les Réglages."
+      "privacyNote": "Modifiable dans Réglages."
+    },
+    "trackingPermission": {
+      "title": "Aidez-nous à améliorer Rallia",
+      "subtitle": "Autorisez le suivi pour qu'on puisse vous proposer de meilleurs adversaires et faire évoluer l'app selon ce qui aide vraiment les joueurs à trouver des matchs.",
+      "benefits": {
+        "betterMatches": {
+          "title": "Meilleures suggestions de matchs",
+          "description": "On apprend quels appariements deviennent vraiment de bons matchs"
+        },
+        "improveApp": {
+          "title": "Fonctions plus intelligentes",
+          "description": "On voit quels outils sont utilisés et on se concentre sur l'essentiel"
+        },
+        "privacy": {
+          "title": "Toujours privé",
+          "description": "On ne vend jamais vos données — uniquement pour améliorer Rallia"
+        }
+      },
+      "enable": "Autoriser le suivi",
+      "skip": "Plus tard",
+      "privacyNote": "Modifiable dans Réglages."
     },
     "discovery": {
       "title": "Comment avez-vous entendu parler de nous?",

@@ -28,6 +28,7 @@ import { supabase } from '../lib/supabase';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
 import { Logger, unregisterPushToken } from '@rallia/shared-services';
 import { posthogClient } from '../providers/PostHogProvider';
+import { clearMetaUser } from '../lib/meta';
 
 // =============================================================================
 // DEMO ACCOUNT FOR APP STORE REVIEW
@@ -568,6 +569,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // the next session and so no auth-keyed query refetches as anon.
       queryClient.clear();
       posthogClient?.reset();
+      // Drop Meta SDK user-id binding so subsequent events aren't attributed
+      // to the signed-out user. Note: the SDK has no public API to clear
+      // previously-set advanced-matching fields (email, etc.); those persist
+      // for the install lifetime until overwritten by the next setMetaUserData
+      // on a new sign-in.
+      clearMetaUser();
       return { success: true };
     } catch (error) {
       Logger.error('Unexpected sign out error', error as Error);
