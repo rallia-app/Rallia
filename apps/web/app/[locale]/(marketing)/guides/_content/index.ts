@@ -3,6 +3,7 @@ import { findTennisPickleballPartner } from './find-tennis-pickleball-partner';
 import { ntrpRatingExplained } from './ntrp-rating-explained';
 import { ntrpVsDuprVsUtr } from './ntrp-vs-dupr-vs-utr';
 import { pickleballRulesBeginners } from './pickleball-rules-beginners';
+import { tennisCourtEtiquette } from './tennis-court-etiquette';
 
 /**
  * Add new guides here. Order controls index-page sort
@@ -13,6 +14,7 @@ const GUIDES: ReadonlyArray<Guide> = [
   ntrpRatingExplained,
   ntrpVsDuprVsUtr,
   pickleballRulesBeginners,
+  tennisCourtEtiquette,
 ];
 
 export function getAllGuides(): ReadonlyArray<Guide> {
