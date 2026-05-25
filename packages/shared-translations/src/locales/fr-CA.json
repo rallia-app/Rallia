@@ -9647,5 +9647,13 @@
       "heading": "Sur le terrain",
       "body": "Rallia est disponible sur iOS et Android. Inscris ton niveau, choisis tes terrains habituels, et commence à trouver des parties près de chez toi."
     }
+  },
+  "update": {
+    "required": {
+      "title": "Mise à jour requise",
+      "description": "Cette version de Rallia n'est plus prise en charge. Mets à jour vers la dernière version pour continuer à jouer.",
+      "versionInfo": "Tu as la version {current} · la version {required} ou plus récente est requise",
+      "cta": "Mettre à jour"
+    }
   }
 }

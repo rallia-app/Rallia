@@ -9647,5 +9647,13 @@
       "heading": "Get on the court",
       "body": "Rallia is available on iOS and Android. Set your level, pick your home courts, and start finding games near you."
     }
+  },
+  "update": {
+    "required": {
+      "title": "Update Required",
+      "description": "This version of Rallia is no longer supported. Update to the latest version to keep playing.",
+      "versionInfo": "You have {current} · {required} or newer is required",
+      "cta": "Update Now"
+    }
   }
 }
