@@ -26,14 +26,28 @@ export const TEAM: ReadonlyArray<TeamMember> = [
     slug: 'mathis-lefranc',
     name: 'Mathis Lefranc',
     jobTitle: {
-      'en-US': 'Founder',
-      'fr-CA': 'Fondateur',
+      'en-US': 'Co-founder',
+      'fr-CA': 'Cofondateur',
     },
     bio: {
       'en-US':
-        'Founder of Rallia. Tennis and pickleball player who got tired of chasing partners through group chats and built the app he wanted to use. Based in Montréal.',
+        'Co-founder of Rallia. Tennis and pickleball player tired of the status quo of chasing partners through group chats. Based in Montréal.',
       'fr-CA':
-        'Fondateur de Rallia. Joueur de tennis et de pickleball fatigué de courir après ses partenaires dans des groupes de discussion — il a construit l’application qu’il voulait utiliser. Basé à Montréal.',
+        'Cofondateur de Rallia. Joueur de tennis et de pickleball fatigué du statu quo de courir après ses partenaires dans des groupes de discussion. Basé à Montréal.',
+    },
+  },
+  {
+    slug: 'jean-de-laure-sonkin',
+    name: 'Jean de Laure Sonkin',
+    jobTitle: {
+      'en-US': 'Co-founder',
+      'fr-CA': 'Cofondateur',
+    },
+    bio: {
+      'en-US':
+        'Co-founder of Rallia. Tennis player who shared the same frustration with the status quo and joined to build a better way.',
+      'fr-CA':
+        'Cofondateur de Rallia. Joueur de tennis qui partageait la même frustration face au statu quo et s’est joint au projet pour bâtir une meilleure façon de faire.',
     },
   },
 ];
