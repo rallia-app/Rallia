@@ -111,6 +111,8 @@ import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
+import { useAppVersionGate } from './src/hooks/useAppVersionGate';
+import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
 import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
@@ -759,6 +761,35 @@ function useOTAUpdate() {
   return isChecking;
 }
 
+/**
+ * UpdateGate — replaces the entire app surface with a blocking "Update Required"
+ * screen when the installed binary is below `app_min_version.min_supported_version`.
+ * Wraps AppContent so the version check runs in parallel with provider init; on
+ * "required" we hide the native splash and render the blocking screen instead of
+ * the navigation tree. Fail-open is enforced inside useAppVersionGate so a
+ * Supabase outage can't lock the install base out.
+ */
+function UpdateGate({ children }: PropsWithChildren) {
+  const gate = useAppVersionGate();
+
+  useEffect(() => {
+    if (gate.status === 'required') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [gate.status]);
+
+  if (gate.status === 'required') {
+    return (
+      <UpdateRequiredScreen
+        storeUrl={gate.storeUrl}
+        currentVersion={gate.currentVersion}
+        requiredVersion={gate.requiredVersion}
+      />
+    );
+  }
+  return <>{children}</>;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   // Splash hide is owned by SplashGate (which lives inside AuthenticatedProviders
@@ -923,7 +954,9 @@ function App() {
                                               }
                                               merchantIdentifier="merchant.com.mathisl971.rallia-app"
                                             >
-                                              <AppContent />
+                                              <UpdateGate>
+                                                <AppContent />
+                                              </UpdateGate>
                                             </StripeProvider>
                                           </FeedbackReportSheetProvider>
                                         </FeedbackSheetProvider>
