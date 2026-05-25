@@ -59,19 +59,6 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
   const BYPASS_COOLDOWN = false;
 
   useEffect(() => {
-    console.log('[weekly-checkin-auto-opener] gate check:', {
-      autoOpened: autoOpenedRef.current,
-      isSplashComplete,
-      isAuthed,
-      isSportSelectionComplete,
-      contextLoaded: !!context,
-      currentStreak: context?.currentStreak,
-      isPendingCheckIn: context?.isPendingCheckIn,
-      welcomeTourDone: isTourCompleted('welcome'),
-      FORCE_SHOW,
-      BYPASS_COOLDOWN,
-    });
-
     if (autoOpenedRef.current) return;
     if (!isSplashComplete) return;
     if (!isAuthed) return;
