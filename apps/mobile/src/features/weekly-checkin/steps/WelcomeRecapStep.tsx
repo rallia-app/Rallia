@@ -13,7 +13,7 @@ import { Button } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 import { MascotBubble } from '../components/MascotBubble';
 import { StreakCard } from '../components/StreakCard';
-import { RecapCard } from '../components/RecapCard';
+import { GoalsCard } from '../components/GoalsCard';
 import type { CheckInContext } from '../api';
 import { useTranslation } from '../../../hooks';
 
@@ -64,11 +64,11 @@ export function WelcomeRecapStep({ context, onContinue }: WelcomeRecapStepProps)
           <StreakCard
             currentStreak={context.currentStreak}
             freezeInventory={context.freezeInventory}
-            goalsHitLast4Weeks={context.goalsHitLast4Weeks}
           />
-          <RecapCard
+          <GoalsCard
             lastWeekGoal={context.lastWeekFrequencyGoal}
             lastWeekPlayed={context.lastWeekSessionsPlayed}
+            goalsHitLast4Weeks={context.goalsHitLast4Weeks}
           />
         </View>
       </ScrollView>

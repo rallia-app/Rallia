@@ -26,7 +26,9 @@ export function FrequencyPills({ value, onChange, previousGoal }: FrequencyPills
   const { colors, isDark } = useThemeStyles();
 
   const contextText = (() => {
-    if (previousGoal == null) return null;
+    // First-time user (no prior goal) → welcoming, low-pressure copy that
+    // encourages picking any number without referencing a past week.
+    if (previousGoal == null) return t('weeklyCheckIn.step3.frequencyContextFirstTime');
     if (value === previousGoal) return t('weeklyCheckIn.step3.frequencyContextSame');
     if (value > previousGoal)
       return t('weeklyCheckIn.step3.frequencyContextUp', {

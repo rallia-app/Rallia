@@ -13,6 +13,7 @@ import { spacingPixels } from '@rallia/design-system';
 import { MascotBubble } from '../components/MascotBubble';
 import { FrequencyPills } from '../components/FrequencyPills';
 import { AutoToggleRow } from '../components/AutoToggleRow';
+import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '../featureFlag';
 import { useTranslation } from '../../../hooks';
 
 interface FrequencyAutoStepProps {
@@ -57,22 +58,26 @@ export function FrequencyAutoStep({
             previousGoal={previousGoal}
           />
 
-          <Text style={[styles.opsLabel, { color: colors.textMuted }]}>
-            {t('weeklyCheckIn.step3.opsLabel' as any)}
-          </Text>
+          {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && (
+            <>
+              <Text style={[styles.opsLabel, { color: colors.textMuted }]}>
+                {t('weeklyCheckIn.step3.opsLabel' as any)}
+              </Text>
 
-          <AutoToggleRow
-            title={t('weeklyCheckIn.step3.autoCreateTitle' as any)}
-            description={t('weeklyCheckIn.step3.autoCreateDesc' as any)}
-            checked={autoCreate}
-            onChange={setAutoCreate}
-          />
-          <AutoToggleRow
-            title={t('weeklyCheckIn.step3.autoInviteTitle' as any)}
-            description={t('weeklyCheckIn.step3.autoInviteDesc' as any)}
-            checked={autoInvite}
-            onChange={setAutoInvite}
-          />
+              <AutoToggleRow
+                title={t('weeklyCheckIn.step3.autoCreateTitle' as any)}
+                description={t('weeklyCheckIn.step3.autoCreateDesc' as any)}
+                checked={autoCreate}
+                onChange={setAutoCreate}
+              />
+              <AutoToggleRow
+                title={t('weeklyCheckIn.step3.autoInviteTitle' as any)}
+                description={t('weeklyCheckIn.step3.autoInviteDesc' as any)}
+                checked={autoInvite}
+                onChange={setAutoInvite}
+              />
+            </>
+          )}
         </View>
       </ScrollView>
 

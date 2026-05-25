@@ -4181,6 +4181,7 @@ export type Database = {
           province: string | null
           push_notifications_enabled: boolean | null
           reputation_score: number
+          timezone: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4210,6 +4211,7 @@ export type Database = {
           province?: string | null
           push_notifications_enabled?: boolean | null
           reputation_score?: number
+          timezone?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4239,6 +4241,7 @@ export type Database = {
           province?: string | null
           push_notifications_enabled?: boolean | null
           reputation_score?: number
+          timezone?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -8725,6 +8728,10 @@ export type Database = {
         Returns: number
       }
       player_activity_score: { Args: { p_player_id: string }; Returns: number }
+      player_current_week_start: {
+        Args: { p_player_id: string }
+        Returns: string
+      }
       player_history_score: {
         Args: { p_caller_id: string; p_opponent_id: string }
         Returns: number
@@ -8732,6 +8739,16 @@ export type Database = {
       player_responsiveness_score: {
         Args: { p_player_id: string; p_window_days?: number }
         Returns: number
+      }
+      players_needing_streak_reset: {
+        Args: never
+        Returns: {
+          current_streak: number
+          freeze_inventory: number
+          last_checkin_week_start: string
+          player_id: string
+          player_last_week: string
+        }[]
       }
       propose_rebuttal_score: {
         Args: {
@@ -8774,8 +8791,10 @@ export type Database = {
           p_auto_create: boolean
           p_auto_invite: boolean
           p_frequency_goal: number
+          p_timezone?: string
         }
         Returns: {
+          freeze_earned: boolean
           freezes: number
           longest_streak: number
           milestone_reached: boolean

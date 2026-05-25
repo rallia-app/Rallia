@@ -56,25 +56,30 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
   // The cooldown is set whenever the user dismisses via "Exit for now", which
   // blocks the auto-opener for 24h. Flip this back to false (or delete) when
   // done iterating.
-  const BYPASS_COOLDOWN = true;
+  const BYPASS_COOLDOWN = false;
 
   useEffect(() => {
+    console.log('[weekly-checkin-auto-opener] gate check:', {
+      autoOpened: autoOpenedRef.current,
+      isSplashComplete,
+      isAuthed,
+      isSportSelectionComplete,
+      contextLoaded: !!context,
+      currentStreak: context?.currentStreak,
+      isPendingCheckIn: context?.isPendingCheckIn,
+      welcomeTourDone: isTourCompleted('welcome'),
+      FORCE_SHOW,
+      BYPASS_COOLDOWN,
+    });
+
     if (autoOpenedRef.current) return;
     if (!isSplashComplete) return;
-
-    // Auth is non-negotiable — even in FORCE_SHOW we can't open the wizard
-    // for a signed-out user because every RPC the wizard runs requires
-    // auth.uid() to be set. Bail before the modal hits the screen.
     if (!isAuthed) return;
 
     if (!FORCE_SHOW) {
       if (!isSportSelectionComplete) return;
       if (!context) return;
       if (!context.isPendingCheckIn) return;
-      // Welcome tour wins on a genuinely fresh install. But if the player
-      // already has a streak (i.e. they've used the app before and the tour
-      // flag just wasn't set on this device), don't block — returning users
-      // shouldn't be held up by a missing local flag.
       const welcomeDone = isTourCompleted('welcome');
       if (!welcomeDone && context.currentStreak === 0) return;
     }
