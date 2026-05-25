@@ -15,6 +15,8 @@ import { useTranslation } from '../../../hooks';
 
 interface AllSetStepProps {
   result: CheckInResult;
+  /** True if the player had no streak before this submit (first-ever check-in). */
+  isFirstEver: boolean;
   frequencyGoal: number;
   hoursConfirmed: number;
   autoCreate: boolean;
@@ -24,6 +26,7 @@ interface AllSetStepProps {
 
 export function AllSetStep({
   result,
+  isFirstEver,
   frequencyGoal,
   hoursConfirmed,
   autoCreate,
@@ -45,6 +48,8 @@ export function AllSetStep({
           <SummaryCard
             newStreak={result.newStreak}
             milestoneReached={result.milestoneReached}
+            freezeEarned={result.freezeEarned}
+            isFirstEver={isFirstEver}
             frequencyGoal={frequencyGoal}
             hoursConfirmed={hoursConfirmed}
             autoCreate={autoCreate}

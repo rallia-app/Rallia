@@ -45,7 +45,10 @@ export interface CheckInResult {
   newStreak: number;
   freezes: number;
   longestStreak: number;
+  /** True iff the new streak landed on a 4-week multiple (achievement). */
   milestoneReached: boolean;
+  /** True iff freezes incremented this call. False when capped at freeze_cap. */
+  freezeEarned: boolean;
 }
 
 export interface RecordCheckInInput {
@@ -191,10 +194,23 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
 
   // 2. Record the check-in. RPC also re-bumps last_confirmed_at (idempotent
   //    with step 1) and runs the Option-C streak math.
+  //
+  // We send the device's IANA timezone on every check-in. The RPC lazily
+  // updates player.timezone with it, so server-side week math (which anchors
+  // to the player's local Monday) stays accurate across travel and
+  // relocation. Falls back to UTC if the device can't resolve a name.
+  let deviceTimezone: string | null = null;
+  try {
+    deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    deviceTimezone = null;
+  }
+
   const { data, error } = await supabase.rpc('record_weekly_checkin', {
     p_frequency_goal: input.frequencyGoal,
     p_auto_create: input.autoCreate,
     p_auto_invite: input.autoInvite,
+    p_timezone: deviceTimezone,
   });
   if (error) throw error;
 
@@ -206,6 +222,7 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
     freezes: row.freezes,
     longestStreak: row.longest_streak,
     milestoneReached: row.milestone_reached,
+    freezeEarned: row.freeze_earned,
   };
 }
 

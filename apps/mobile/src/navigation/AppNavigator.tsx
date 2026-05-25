@@ -1586,7 +1586,7 @@ export default function AppNavigator() {
         component={WeeklyCheckInScreen}
         options={{
           headerShown: false,
-          presentation: 'fullScreenModal',
+          presentation: 'modal',
           gestureEnabled: false, // discrete × is the only dismiss path
         }}
       />

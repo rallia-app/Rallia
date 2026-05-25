@@ -18,7 +18,6 @@ import {
   Animated,
   Dimensions,
   Easing,
-  InteractionManager,
   Pressable,
   StyleSheet,
   View,
@@ -55,18 +54,8 @@ export function WeeklyCheckInScreen() {
   const { colors, isDark } = useThemeStyles();
   const insets = useSafeAreaInsets();
 
-  // Wraps `navigation.goBack()` so that the native fullScreenModal dismissal
-  // doesn't race in-flight Animated/state work. Without this defer, the modal
-  // sometimes pops on iOS but leaves the touch layer stuck — i.e. the rest of
-  // the app appears interactive but doesn't respond to taps until the next
-  // navigation event. This is a known @react-navigation/native-stack issue
-  // (search: "fullScreenModal goBack freezes"). InteractionManager waits for
-  // pending interactions to finish, which gives any closing-animation timers
-  // a clean tick before we tear down the screen.
   const dismissModal = useCallback(() => {
-    InteractionManager.runAfterInteractions(() => {
-      navigation.goBack();
-    });
+    navigation.goBack();
   }, [navigation]);
 
   const wizard = useWeeklyCheckInWizard({
@@ -204,6 +193,12 @@ export function WeeklyCheckInScreen() {
           {wizard.result && (
             <AllSetStep
               result={wizard.result}
+              // First-ever check-in iff both the new streak AND the longest-
+              // ever streak are 1. After a broken streak the player's
+              // longest_streak is preserved (e.g. 5), so re-starting reads as
+              // streak=1, longest=5 — not first-ever. Only a brand-new player
+              // satisfies both === 1.
+              isFirstEver={wizard.result.newStreak === 1 && wizard.result.longestStreak === 1}
               frequencyGoal={wizard.frequencyGoal}
               hoursConfirmed={wizard.availability.size}
               autoCreate={wizard.autoCreate}
