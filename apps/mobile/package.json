@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "expo start",
     "start": "expo start",
+    "eas-build-pre-install": "npm install -g npm@11.15.0 && node scripts/eas-prune-web-only-deps.mjs",
     "update-env-host": "node scripts/update-env-host.mjs",
     "run": "node scripts/update-env-host.mjs && npx expo run",
     "preios": "node scripts/update-env-host.mjs",
