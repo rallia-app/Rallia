@@ -1,0 +1,131 @@
+# .easignore — controls what gets uploaded to EAS Build / EAS Submit workers.
+#
+# IMPORTANT: When this file is present, EAS uses it INSTEAD of .gitignore.
+# That means everything ignored from git also has to be listed here.
+# Keep the first section in sync with .gitignore; add EAS-only exclusions
+# at the bottom.
+
+# ──────────────────────────────────────────────────────────────────────
+# Mirror of .gitignore
+# ──────────────────────────────────────────────────────────────────────
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Next.js
+.next/
+out/
+
+# Testing
+coverage/
+
+# Production
+build/
+
+# MCP
+.mcp.json
+
+# Skills / agents
+.agents/
+skills-lock.json
+
+# Misc
+.DS_Store
+*.pem
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Android build artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+.gradle/
+local.properties
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# iOS build artifacts
+*.ipa
+*.dSYM.zip
+*.dSYM
+Pods/
+*.xcworkspace
+!default.xcworkspace
+*.xcuserdata
+
+# Logs
+logs
+*.log
+.vercel
+
+.cursor/plans
+.claude
+.worktreerc
+
+# Database backup dumps (may contain PII)
+backups/
+
+# ──────────────────────────────────────────────────────────────────────
+# EAS-only exclusions: files not needed to build or submit mobile.
+# npm workspaces requires every workspace's package.json to be present,
+# so we drop the contents of unrelated apps but re-include their
+# package.json (and the prune script reads apps/web/package.json too).
+# ──────────────────────────────────────────────────────────────────────
+
+# apps/web — not needed for mobile build/submit
+apps/web/*
+!apps/web/package.json
+
+# apps/ai-agent — not needed for mobile build/submit
+apps/ai-agent/*
+!apps/ai-agent/package.json
+
+# Docs / specs / repo-level scripts / DB migrations — not needed at build time
+apps/mobile/docs/
+docs/
+specs/
+scripts/
+supabase/
+
+# CI config / editor config — not needed on the EAS worker
+.github/
+.cursor/
