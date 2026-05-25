@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { locales } from '@rallia/shared-translations';
 
-import { getAllGuideSlugs } from '@/app/[locale]/(marketing)/guides/_content';
+import { getAllGuides } from '@/app/[locale]/(marketing)/guides/_content';
 import { SITE_URL } from '@/lib/seo';
 
 type ChangeFreq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
@@ -45,14 +45,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   // Individual guide articles
-  for (const slug of getAllGuideSlugs()) {
-    const path = `/guides/${slug}`;
+  for (const guide of getAllGuides()) {
+    const path = `/guides/${guide.meta.slug}`;
+    const imageUrl = `${SITE_URL}${guide.meta.image.src}`;
     for (const locale of locales) {
       entries.push({
         url: `${SITE_URL}/${locale}${path}`,
         changeFrequency: 'monthly',
         priority: 0.7,
         alternates: alternatesFor(path),
+        images: [imageUrl],
       });
     }
   }
