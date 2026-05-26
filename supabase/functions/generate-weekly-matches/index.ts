@@ -11,16 +11,19 @@
  *     checked in this week with auto_create on →
  *     generate_weekly_matches_for_all_players.
  *
- * All match-creation rules (opt-in gate, one-per-available-day, idempotency,
- * nearest-facility selection) live in the SQL RPCs. This function is a thin,
- * authenticated dispatcher.
+ * Match-creation rules (opt-in gate, one-per-available-day, idempotency,
+ * court-optimized facility) live in the SQL RPCs. For the per-player path, this
+ * function then layers AUTO-INVITE (best-effort): if the host opted into
+ * auto_invite_players, it invites the best-fit compatible opponents
+ * (get_auto_invite_candidates) to each created match and sends them a localized
+ * match_invitation notification. Invite failures never fail generation.
  *
  * Auth: server-to-server only. Callers (DB trigger / pg_cron) must send the
  * secret key in the `apikey` header — validated by requireSecretApikey, which
  * fails closed (500 if unprovisioned, 401 on mismatch). No user-JWT path.
  *
  * ## Response Format
- * Success (200): { success, players_processed, total_matches_created, duration_ms }
+ * Success (200): { success, players_processed, total_matches_created, auto_invites_sent, duration_ms }
  * Error (400):   { success: false, error: "Invalid player_id" }
  * Error (405):   { success: false, error: "Method not allowed" }
  * Error (500):   { success: false, error: "Internal server error", duration_ms }
@@ -52,6 +55,149 @@ interface PlayerGenerationResult {
   player_id: string;
   player_name: string;
   matches_created: number;
+}
+
+/** Row shape returned by generate_weekly_matches_for_player. */
+interface GeneratedMatch {
+  match_id: string;
+  sport_name: string;
+  match_date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM:SS
+  end_time: string;
+  facility_name: string | null;
+}
+
+// =============================================================================
+// AUTO-INVITE
+// Layered onto auto-created matches: invite the best-fit compatible opponents
+// (ranked by get_auto_invite_candidates, which mirrors the suggestion engine's
+// core factors) so the open matches fill. Best-effort — failures here never
+// fail match generation, since the matches themselves are already created.
+// =============================================================================
+
+const INVITES_PER_MATCH = 3;
+const WEEKLY_INVITE_CAP = 5;
+
+async function getUserLocale(userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('profile')
+    .select('preferred_locale')
+    .eq('id', userId)
+    .maybeSingle();
+  return data?.preferred_locale || 'en-US';
+}
+
+function buildInviteText(
+  locale: string,
+  hostName: string,
+  m: GeneratedMatch
+): { title: string; body: string } {
+  const fr = locale.startsWith('fr');
+  const dateStr = new Date(`${m.match_date}T${m.start_time}`).toLocaleDateString(
+    fr ? 'fr-CA' : 'en-US',
+    { weekday: 'short', month: 'short', day: 'numeric' }
+  );
+  const timeStr = ` ${fr ? 'à' : 'at'} ${m.start_time.slice(0, 5)}`;
+  const locStr = m.facility_name ? ` · ${m.facility_name}` : '';
+  // Mirrors notifications.messages.match_invitation copy in shared-translations.
+  return fr
+    ? {
+        title: `${hostName} t'invite à une partie de ${m.sport_name}`,
+        body: `${hostName} veut jouer le ${dateStr}${timeStr}${locStr}. Touche pour accepter.`,
+      }
+    : {
+        title: `${hostName} invited you to a ${m.sport_name} game`,
+        body: `${hostName} wants to play on ${dateStr}${timeStr}${locStr}. Tap to accept.`,
+      };
+}
+
+/** Returns the number of invites sent. Gated on the host's auto_invite_players. */
+async function autoInviteForMatches(hostId: string, matches: GeneratedMatch[]): Promise<number> {
+  if (matches.length === 0) return 0;
+
+  const { data: pref } = await supabase
+    .from('player_check_in_preferences')
+    .select('auto_invite_players')
+    .eq('player_id', hostId)
+    .maybeSingle();
+  if (!pref?.auto_invite_players) return 0;
+
+  const { data: hostProfile } = await supabase
+    .from('profile')
+    .select('display_name, first_name, last_name')
+    .eq('id', hostId)
+    .maybeSingle();
+  const hostName =
+    (hostProfile?.first_name && hostProfile?.last_name
+      ? `${hostProfile.first_name} ${hostProfile.last_name}`
+      : hostProfile?.first_name) ||
+    hostProfile?.display_name ||
+    'A player';
+
+  // One invite per user per generation run: a player invited to an earlier
+  // match is excluded from the rest, so they never get more than one
+  // invitation notification from a single check-in.
+  const invitedThisRun = new Set<string>();
+
+  let invited = 0;
+  for (const m of matches) {
+    const { data: candidates, error: candErr } = await supabase.rpc('get_auto_invite_candidates', {
+      p_match_id: m.match_id,
+      p_max: INVITES_PER_MATCH,
+      p_weekly_cap: WEEKLY_INVITE_CAP,
+      p_exclude: Array.from(invitedThisRun),
+    });
+    if (candErr) {
+      console.warn(`[auto-invite] candidates failed for ${m.match_id}: ${candErr.message}`);
+      continue;
+    }
+    const ids: string[] = (candidates ?? [])
+      .map((c: { player_id: string }) => c.player_id)
+      .filter((pid: string) => !invitedThisRun.has(pid));
+    if (ids.length === 0) continue;
+    ids.forEach(pid => invitedThisRun.add(pid));
+
+    const { error: insErr } = await supabase.from('match_participant').insert(
+      ids.map(pid => ({
+        match_id: m.match_id,
+        player_id: pid,
+        team_number: 2,
+        is_host: false,
+        status: 'pending',
+      }))
+    );
+    if (insErr) {
+      console.warn(`[auto-invite] invite insert failed for ${m.match_id}: ${insErr.message}`);
+      continue;
+    }
+
+    for (const pid of ids) {
+      const locale = await getUserLocale(pid);
+      const { title, body } = buildInviteText(locale, hostName, m);
+      const { error: notifErr } = await supabase.rpc('insert_notification', {
+        p_user_id: pid,
+        p_type: 'match_invitation',
+        p_target_id: m.match_id,
+        p_title: title,
+        p_body: body,
+        p_payload: {
+          matchId: m.match_id,
+          playerName: hostName,
+          sportName: m.sport_name,
+          matchDate: m.match_date,
+        },
+        p_priority: 'normal',
+        p_scheduled_at: null,
+        p_expires_at: null,
+        p_organization_id: null,
+      });
+      if (notifErr) {
+        console.warn(`[auto-invite] notify failed for ${pid}: ${notifErr.message}`);
+      }
+      invited += 1;
+    }
+  }
+  return invited;
 }
 
 // =============================================================================
@@ -105,6 +251,7 @@ Deno.serve(async req => {
   try {
     let playersProcessed = 0;
     let totalMatchesCreated = 0;
+    let autoInvitesSent = 0;
 
     if (specificPlayerId) {
       console.log(`[generate-weekly-matches] player ${specificPlayerId}`);
@@ -116,6 +263,16 @@ Deno.serve(async req => {
 
       playersProcessed = 1;
       totalMatchesCreated = matches?.length ?? 0;
+
+      // Best-effort auto-invite — never fail generation if inviting hiccups.
+      try {
+        autoInvitesSent = await autoInviteForMatches(
+          specificPlayerId,
+          (matches ?? []) as GeneratedMatch[]
+        );
+      } catch (inviteErr) {
+        console.warn('[auto-invite] skipped due to error:', inviteErr);
+      }
     } else {
       console.log('[generate-weekly-matches] all checked-in players');
 
@@ -129,7 +286,7 @@ Deno.serve(async req => {
 
     console.log(
       `[generate-weekly-matches] done: players=${playersProcessed} ` +
-        `matches=${totalMatchesCreated} in ${Date.now() - startTime}ms`
+        `matches=${totalMatchesCreated} invites=${autoInvitesSent} in ${Date.now() - startTime}ms`
     );
 
     return new Response(
@@ -137,6 +294,7 @@ Deno.serve(async req => {
         success: true,
         players_processed: playersProcessed,
         total_matches_created: totalMatchesCreated,
+        auto_invites_sent: autoInvitesSent,
         duration_ms: Date.now() - startTime,
       }),
       { status: 200, headers: JSON_HEADERS }
