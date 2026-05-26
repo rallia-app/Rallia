@@ -16,12 +16,12 @@ import {
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import { getShortName, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -73,6 +73,10 @@ function MessageBubbleComponent({
 
   const isEdited = message.is_edited ?? false;
   const isDeleted = message.deleted_at != null;
+  // Optimistic placeholder not yet confirmed by the server. Its id is a temp
+  // string (not a real UUID), so actions that hit the DB by id (react, edit,
+  // delete, reply) must be disabled until the real row replaces it.
+  const isPending = message.id.startsWith('optimistic-');
 
   // Pan responder for swipe gesture - using useMemo for stable instance
   const panResponder = useMemo(
@@ -86,6 +90,7 @@ function MessageBubbleComponent({
             Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
             gestureState.dx > 0 && // Only swipe right
             !isDeleted &&
+            !isPending &&
             onReplyPress != null
           );
         },
@@ -236,10 +241,11 @@ function MessageBubbleComponent({
 
   const handleLongPress = useCallback(
     (event: { nativeEvent: { pageY: number } }) => {
-      if (isDeleted) return; // Don't allow actions on deleted messages
+      // No actions on deleted or not-yet-confirmed (optimistic) messages
+      if (isDeleted || isPending) return;
       onLongPress?.(event.nativeEvent.pageY);
     },
-    [onLongPress, isDeleted]
+    [onLongPress, isDeleted, isPending]
   );
 
   return (

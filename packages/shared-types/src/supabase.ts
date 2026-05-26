@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_conversation: {
+        Row: {
+          active_at: string
+          conversation_id: string
+          player_id: string
+        }
+        Insert: {
+          active_at?: string
+          conversation_id: string
+          player_id: string
+        }
+        Update: {
+          active_at?: string
+          conversation_id?: string
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_conversation_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_conversation_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin: {
         Row: {
           assigned_at: string
@@ -366,6 +399,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      app_min_version: {
+        Row: {
+          min_supported_version: string
+          platform: string
+          recommended_version: string | null
+          store_url: string
+          updated_at: string
+        }
+        Insert: {
+          min_supported_version: string
+          platform: string
+          recommended_version?: string | null
+          store_url: string
+          updated_at?: string
+        }
+        Update: {
+          min_supported_version?: string
+          platform?: string
+          recommended_version?: string | null
+          store_url?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       availability_block: {
         Row: {
@@ -7185,6 +7242,10 @@ export type Database = {
         Args: { p_latitude: number; p_longitude: number; p_radius_km?: number }
         Returns: boolean
       }
+      clear_active_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       confirm_match_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
@@ -9086,6 +9147,10 @@ export type Database = {
           p_title: string
         }
         Returns: Json
+      }
+      set_active_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
       }
       set_profile_utm: {
         Args: { p_player_id: string; p_utm: Json }

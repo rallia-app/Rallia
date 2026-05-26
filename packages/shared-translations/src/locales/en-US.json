@@ -2044,7 +2044,8 @@
       "clearYourMessagesConfirm": "This will delete all messages you sent in this conversation. This action cannot be undone.",
       "clear": "Clear",
       "messagesDeleted": "{count} message(s) deleted",
-      "failedToClear": "Failed to clear messages. Please try again."
+      "failedToClear": "Failed to clear messages. Please try again.",
+      "failedToSend": "Failed to send message. Please try again."
     },
     "blocked": {
       "title": "You blocked {name}",

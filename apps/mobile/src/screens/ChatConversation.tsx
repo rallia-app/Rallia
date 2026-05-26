@@ -10,15 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-
-import {
-  useThemeStyles,
-  useAuth,
-  useProfile,
-  useTranslation,
-  useNavigateToPlayerProfile,
-  type TranslationKey,
-} from '../hooks';
 import { getCoverImageUrl, lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   useConversation,
@@ -47,6 +38,8 @@ import {
   type ReactionSummary,
   type MessageWithSender,
 } from '@rallia/shared-services';
+import { SheetManager } from 'react-native-actions-sheet';
+
 import {
   ChatHeader,
   MessageList,
@@ -54,13 +47,21 @@ import {
   TypingIndicator,
   ChatSearchBar,
   BlockedUserModal,
-} from '../features/chat';
-import { SheetManager } from 'react-native-actions-sheet';
-import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import type { MessageListRef } from '../features/chat';
-import type { RootStackParamList } from '../navigation/types';
-import * as Analytics from '../services/analytics';
+} from '#/features/chat';
+import {
+  useThemeStyles,
+  useAuth,
+  useProfile,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  useActiveConversation,
+  type TranslationKey,
+} from '#/hooks';
+import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import type { MessageListRef } from '#/features/chat';
+import type { RootStackParamList } from '#/navigation/types';
+import * as Analytics from '#/services/analytics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ChatRouteProp = RouteProp<RootStackParamList, 'ChatConversation'>;
@@ -203,6 +204,9 @@ export default function ChatConversationScreen() {
   // Real-time subscription for reactions
   useReactionsRealtime(conversationId);
 
+  // Suppress new-message notifications for this conversation while it's open
+  useActiveConversation(conversationId);
+
   // Invalidate messages cache and mark as read when entering the conversation
   // This ensures message statuses (sent → read) are fresh from the server
   useEffect(() => {
@@ -288,7 +292,9 @@ export default function ChatConversationScreen() {
     if (messages.length === 0 || !playerId) return;
 
     try {
-      const messageIds = messages.map(m => m.id);
+      // Exclude optimistic placeholders — their temp ids aren't real UUIDs and
+      // can't have reactions yet (they're replaced by the server row on success).
+      const messageIds = messages.map(m => m.id).filter(id => !id.startsWith('optimistic-'));
 
       if (messageIds.length === 0) return;
 
@@ -574,17 +580,24 @@ export default function ChatConversationScreen() {
         conversation_type: conversation?.conversation_type ?? 'unknown',
       });
 
-      sendMessageMutation.mutate({
-        conversation_id: conversationId,
-        sender_id: playerId,
-        content,
-        reply_to_message_id: replyToMessageId,
-      });
+      sendMessageMutation.mutate(
+        {
+          conversation_id: conversationId,
+          sender_id: playerId,
+          content,
+          reply_to_message_id: replyToMessageId,
+        },
+        {
+          onError: () => {
+            toast.error(t('chat.alerts.failedToSend'));
+          },
+        }
+      );
 
       // Clear reply state after sending
       setReplyToMessage(null);
     },
-    [playerId, conversationId, sendMessageMutation, conversation?.conversation_type]
+    [playerId, conversationId, sendMessageMutation, conversation?.conversation_type, toast, t]
   );
 
   const handleReact = useCallback(

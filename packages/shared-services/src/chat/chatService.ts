@@ -56,6 +56,8 @@ export {
   getNetworkByConversationId,
   getConversationUnreadCount,
   getConversationUnreadCountLast7Days,
+  setActiveConversation,
+  clearActiveConversation,
 } from './conversationService';
 
 export type {
