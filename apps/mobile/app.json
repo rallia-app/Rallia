@@ -346,6 +346,9 @@
         "assets/images/**/*.{png,jpg,jpeg,webp}",
         "assets/animations/**/*.json"
       ]
+    },
+    "experiments": {
+      "reactCompiler": true
     }
   }
 }
