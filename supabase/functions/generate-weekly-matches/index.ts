@@ -1,159 +1,156 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+/**
+ * generate-weekly-matches Edge Function
+ *
+ * Creates the open, auto-generated matches that back the weekly check-in's
+ * "auto-create" preference. Two entry points:
+ *
+ *   • Per-player (common path): the AFTER INSERT trigger on
+ *     player_weekly_checkin POSTs `{ player_id }` right after a player's first
+ *     check-in of the week → generate_weekly_matches_for_player.
+ *   • All-players (manual/admin/backfill): an empty body sweeps everyone who
+ *     checked in this week with auto_create on →
+ *     generate_weekly_matches_for_all_players.
+ *
+ * All match-creation rules (opt-in gate, one-per-available-day, idempotency,
+ * nearest-facility selection) live in the SQL RPCs. This function is a thin,
+ * authenticated dispatcher.
+ *
+ * Auth: server-to-server only. Callers (DB trigger / pg_cron) must send the
+ * secret key in the `apikey` header — validated by requireSecretApikey, which
+ * fails closed (500 if unprovisioned, 401 on mismatch). No user-JWT path.
+ *
+ * ## Response Format
+ * Success (200): { success, players_processed, total_matches_created, duration_ms }
+ * Error (400):   { success: false, error: "Invalid player_id" }
+ * Error (405):   { success: false, error: "Method not allowed" }
+ * Error (500):   { success: false, error: "Internal server error", duration_ms }
+ *   — internal error detail is logged server-side, never returned to the caller.
+ */
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// =============================================================================
+// SUPABASE
+// =============================================================================
 
-interface MatchGenerationResult {
+const supabase: SupabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL'),
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+);
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+// RFC 4122 UUID shape — validates the trigger-supplied player_id before it
+// reaches the RPC (whose `uuid` param would otherwise emit a Postgres parse
+// error we don't want to surface).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Row shape returned by generate_weekly_matches_for_all_players. */
+interface PlayerGenerationResult {
   player_id: string;
   player_name: string;
   matches_created: number;
 }
 
-interface GeneratedMatch {
-  match_id: string;
-  match_date: string;
-  start_time: string;
-  end_time: string;
-  sport_name: string;
-  facility_name: string;
-  host_name: string;
-}
+// =============================================================================
+// MAIN
+// =============================================================================
 
 Deno.serve(async req => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, apikey',
+      },
+    });
   }
 
+  // Server-to-server auth: fails closed before any work happens.
   const authError = requireSecretApikey(req);
   if (authError) return authError;
 
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+      status: 405,
+      headers: JSON_HEADERS,
+    });
+  }
+
+  const startTime = Date.now();
+
+  // Optional body: { player_id?: string }. Absent/non-JSON body → all-players
+  // sweep. A present-but-malformed player_id is rejected up front.
+  let specificPlayerId: string | null = null;
   try {
-    // Create Supabase client with service role for admin operations
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Parse request body for options
-    let targetMatchCount = 10;
-    let specificPlayerId: string | null = null;
-
-    if (req.method === 'POST') {
-      try {
-        const body = await req.json();
-        targetMatchCount = body.target_match_count || 10;
-        specificPlayerId = body.player_id || null;
-      } catch {
-        // Body parsing failed, use defaults
-      }
+    const body = await req.json();
+    if (body && typeof body.player_id === 'string') {
+      specificPlayerId = body.player_id;
     }
+  } catch {
+    // No body / not JSON → treat as the all-players sweep.
+  }
 
-    console.log(`[generate-weekly-matches] Starting match generation`);
-    console.log(`[generate-weekly-matches] Target matches per player: ${targetMatchCount}`);
+  if (specificPlayerId !== null && !UUID_RE.test(specificPlayerId)) {
+    return new Response(JSON.stringify({ success: false, error: 'Invalid player_id' }), {
+      status: 400,
+      headers: JSON_HEADERS,
+    });
+  }
 
-    let results: MatchGenerationResult[] = [];
+  try {
+    let playersProcessed = 0;
     let totalMatchesCreated = 0;
 
     if (specificPlayerId) {
-      // Generate for a specific player
-      console.log(`[generate-weekly-matches] Generating for specific player: ${specificPlayerId}`);
+      console.log(`[generate-weekly-matches] player ${specificPlayerId}`);
 
       const { data: matches, error } = await supabase.rpc('generate_weekly_matches_for_player', {
         p_player_id: specificPlayerId,
-        p_target_match_count: targetMatchCount,
       });
+      if (error) throw error;
 
-      if (error) {
-        console.error(`[generate-weekly-matches] Error generating matches for player:`, error);
-        throw error;
-      }
-
-      const matchCount = matches?.length || 0;
-      totalMatchesCreated = matchCount;
-
-      // Get player name
-      const { data: profile } = await supabase
-        .from('profile')
-        .select('display_name')
-        .eq('id', specificPlayerId)
-        .single();
-
-      results = [
-        {
-          player_id: specificPlayerId,
-          player_name: profile?.display_name || 'Unknown',
-          matches_created: matchCount,
-        },
-      ];
-
-      console.log(
-        `[generate-weekly-matches] Created ${matchCount} matches for player ${profile?.display_name}`
-      );
+      playersProcessed = 1;
+      totalMatchesCreated = matches?.length ?? 0;
     } else {
-      // Generate for all players
-      console.log(`[generate-weekly-matches] Generating for all active players`);
+      console.log('[generate-weekly-matches] all checked-in players');
 
-      const { data, error } = await supabase.rpc('generate_weekly_matches_for_all_players', {
-        p_target_match_count_per_player: targetMatchCount,
-      });
+      const { data, error } = await supabase.rpc('generate_weekly_matches_for_all_players');
+      if (error) throw error;
 
-      if (error) {
-        console.error(`[generate-weekly-matches] Error generating matches:`, error);
-        throw error;
-      }
-
-      results = data || [];
-      totalMatchesCreated = results.reduce((sum, r) => sum + r.matches_created, 0);
-
-      console.log(`[generate-weekly-matches] Generated matches for ${results.length} players`);
-      console.log(`[generate-weekly-matches] Total matches created: ${totalMatchesCreated}`);
+      const rows = (data ?? []) as PlayerGenerationResult[];
+      playersProcessed = rows.length;
+      totalMatchesCreated = rows.reduce((sum, r) => sum + (r.matches_created ?? 0), 0);
     }
 
-    // Log summary
-    const summary = {
-      success: true,
-      timestamp: new Date().toISOString(),
-      players_processed: results.length,
-      total_matches_created: totalMatchesCreated,
-      results: results,
-    };
-
-    console.log(`[generate-weekly-matches] Completed successfully:`, JSON.stringify(summary));
-
-    return new Response(JSON.stringify(summary), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    });
-  } catch (error) {
-    console.error(`[generate-weekly-matches] Fatal error:`, error);
+    console.log(
+      `[generate-weekly-matches] done: players=${playersProcessed} ` +
+        `matches=${totalMatchesCreated} in ${Date.now() - startTime}ms`
+    );
 
     return new Response(
       JSON.stringify({
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString(),
+        success: true,
+        players_processed: playersProcessed,
+        total_matches_created: totalMatchesCreated,
+        duration_ms: Date.now() - startTime,
       }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
+      { status: 200, headers: JSON_HEADERS }
+    );
+  } catch (err) {
+    // Log detail server-side; never leak internal/DB error text to the caller.
+    console.error('[generate-weekly-matches] failed:', err);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'Internal server error',
+        duration_ms: Date.now() - startTime,
+      }),
+      { status: 500, headers: JSON_HEADERS }
     );
   }
 });
@@ -161,17 +158,18 @@ Deno.serve(async req => {
 /* To invoke locally:
 
   1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+  2. Make an HTTP request (server-to-server: send the secret key in `apikey`):
 
+  All checked-in players (auto_create only):
   curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/generate-weekly-matches' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
+    --header 'apikey: <SUPABASE_SECRET_KEYS.default>' \
     --header 'Content-Type: application/json' \
-    --data '{"target_match_count": 10}'
+    --data '{}'
 
-  For a specific player:
+  A specific player (what the player_weekly_checkin INSERT trigger sends):
   curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/generate-weekly-matches' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
+    --header 'apikey: <SUPABASE_SECRET_KEYS.default>' \
     --header 'Content-Type: application/json' \
-    --data '{"target_match_count": 10, "player_id": "your-player-uuid"}'
+    --data '{"player_id": "your-player-uuid"}'
 
 */

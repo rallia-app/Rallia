@@ -16,6 +16,7 @@
  */
 import React, { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Logger } from '@rallia/shared-services';
 import { useAuth } from '@rallia/shared-hooks';
 
@@ -99,6 +100,11 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
         }
         if (cancelled) return;
         autoOpenedRef.current = true;
+        // Dismiss any presenting bottom sheet BEFORE navigating, so the wizard
+        // isn't presented behind a sheet (actions-sheets render in native
+        // modals above the nav stack). The wizard also calls hideAll() on mount
+        // as a backstop.
+        void SheetManager.hideAll();
         navigationRef.navigate('WeeklyCheckIn');
       };
       tryNavigate();

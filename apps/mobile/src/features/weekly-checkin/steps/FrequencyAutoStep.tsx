@@ -13,7 +13,10 @@ import { spacingPixels } from '@rallia/design-system';
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import { FrequencyPills } from '#/features/weekly-checkin/components/FrequencyPills';
 import { AutoToggleRow } from '#/features/weekly-checkin/components/AutoToggleRow';
-import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '#/features/weekly-checkin/featureFlag';
+import {
+  WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED,
+  WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED,
+} from '#/features/weekly-checkin/featureFlag';
 import { useTranslation } from '#/hooks';
 
 interface FrequencyAutoStepProps {
@@ -58,24 +61,29 @@ export function FrequencyAutoStep({
             previousGoal={previousGoal}
           />
 
-          {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && (
+          {(WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED ||
+            WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED) && (
             <>
               <Text style={[styles.opsLabel, { color: colors.textMuted }]}>
                 {t('weeklyCheckIn.step3.opsLabel')}
               </Text>
 
-              <AutoToggleRow
-                title={t('weeklyCheckIn.step3.autoCreateTitle')}
-                description={t('weeklyCheckIn.step3.autoCreateDesc')}
-                checked={autoCreate}
-                onChange={setAutoCreate}
-              />
-              <AutoToggleRow
-                title={t('weeklyCheckIn.step3.autoInviteTitle')}
-                description={t('weeklyCheckIn.step3.autoInviteDesc')}
-                checked={autoInvite}
-                onChange={setAutoInvite}
-              />
+              {WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && (
+                <AutoToggleRow
+                  title={t('weeklyCheckIn.step3.autoCreateTitle')}
+                  description={t('weeklyCheckIn.step3.autoCreateDesc')}
+                  checked={autoCreate}
+                  onChange={setAutoCreate}
+                />
+              )}
+              {WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && (
+                <AutoToggleRow
+                  title={t('weeklyCheckIn.step3.autoInviteTitle')}
+                  description={t('weeklyCheckIn.step3.autoInviteDesc')}
+                  checked={autoInvite}
+                  onChange={setAutoInvite}
+                />
+              )}
             </>
           )}
         </View>
