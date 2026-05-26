@@ -431,7 +431,7 @@ const PlayerProfile = () => {
   const [showProofViewer, setShowProofViewer] = useState(false);
 
   // Calculate distance from current user to this player
-  const distanceText = useMemo(() => {
+  const distanceText = ((): string => {
     if (!homeLocation || !player?.latitude || !player?.longitude) return '';
     const R = 6371000; // Earth's radius in meters
     const lat1Rad = (homeLocation.latitude * Math.PI) / 180;
@@ -446,10 +446,10 @@ const PlayerProfile = () => {
     if (meters < 100) return t('playerDirectory.nearby');
     if (meters < 1000) return `${Math.round(meters)} m`;
     return `${(meters / 1000).toFixed(1)} km`;
-  }, [homeLocation, player?.latitude, player?.longitude, t]);
+  })();
 
   // Calendar-day "last active" label — matches PlayerCard semantics exactly.
-  const lastSeenLabel = useMemo(() => {
+  const lastSeenLabel = ((): string | null => {
     if (isOnline || !player?.last_seen_at) return null;
     const seen = new Date(player.last_seen_at);
     const now = new Date();
@@ -461,7 +461,7 @@ const PlayerProfile = () => {
     if (diffDays === 1) return t('playerDirectory.lastSeenYesterday');
     if (diffDays <= 14) return t('playerDirectory.lastSeenDaysAgo', { count: diffDays });
     return null;
-  }, [isOnline, player?.last_seen_at, t]);
+  })();
 
   // Fetch favorite facilities for the player being viewed (separate from main data fetch)
   useEffect(() => {

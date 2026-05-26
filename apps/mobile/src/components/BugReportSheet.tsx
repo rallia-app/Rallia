@@ -386,7 +386,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   // Toggle vote inside the detail view. The mutation updates the shared
   // browse cache, so the list reflects the new state when the user navigates
   // back without an extra refetch.
-  const handleDetailToggleVote = useCallback(() => {
+  const handleDetailToggleVote = () => {
     if (!detailItem) return;
     if (!session?.user?.id) {
       openAuthSheet();
@@ -404,7 +404,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         },
       }
     );
-  }, [detailItem, session?.user?.id, openAuthSheet, toggleFeedbackVote]);
+  };
 
   // Handle category selection — reset fields when switching
   const handleCategorySelect = useCallback(
@@ -540,7 +540,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   }, [selectedCategory, severity, disappointment, selectedPlace]);
 
   // Handle submit
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = async () => {
     if (!isValid || isSubmitting) return;
 
     void lightHaptic();
@@ -596,19 +596,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
     } finally {
       setIsSubmitting(false);
     }
-  }, [
-    isValid,
-    isSubmitting,
-    session?.user?.id,
-    selectedCategory,
-    selectedModule,
-    screenshots,
-    trigger,
-    toast,
-    t,
-    buildSubjectAndMessage,
-    buildMetadata,
-  ]);
+  };
 
   // ─── Render helpers ─────────────────────────────────────────────────────────
 
