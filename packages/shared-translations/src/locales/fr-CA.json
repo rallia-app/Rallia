@@ -7667,7 +7667,7 @@
           "description": "Soyez averti des parties à proximité"
         }
       },
-      "enable": "Activer la localisation précise",
+      "enable": "Continuer",
       "privacyNote": "Modifiable dans Réglages."
     },
     "notificationPermission": {
@@ -7697,7 +7697,7 @@
     },
     "trackingPermission": {
       "title": "Aidez-nous à améliorer Rallia",
-      "subtitle": "Autorisez le suivi pour qu'on puisse vous proposer de meilleurs adversaires et faire évoluer l'app selon ce qui aide vraiment les joueurs à trouver des matchs.",
+      "subtitle": "À l'écran suivant, iOS vous demandera si Rallia peut suivre votre activité. Le partager nous aide à vous proposer de meilleurs adversaires et à créer des fonctions qui aident les joueurs à trouver des matchs.",
       "benefits": {
         "betterMatches": {
           "title": "Meilleures suggestions de matchs",
@@ -7712,9 +7712,8 @@
           "description": "On ne vend jamais vos données — uniquement pour améliorer Rallia"
         }
       },
-      "enable": "Autoriser le suivi",
-      "skip": "Plus tard",
-      "privacyNote": "Modifiable dans Réglages."
+      "enable": "Continuer",
+      "privacyNote": "Vous choisissez à l'écran suivant. Modifiable dans Réglages."
     },
     "discovery": {
       "title": "Comment avez-vous entendu parler de nous?",
