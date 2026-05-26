@@ -686,6 +686,7 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
       Analytics.matchCheckInCompleted({
         sport_id: sportId ?? 'unknown',
         sport_name: sportName ?? 'unknown',
+        is_auto_generated: selectedMatch?.is_auto_generated ?? false,
       });
       checkIn({
         playerId,
@@ -890,20 +891,22 @@ export const MatchDetailSheet: React.FC = () => {
       const sport_id = selectedMatch?.sport?.id ?? 'unknown';
       const sport_name = selectedMatch?.sport?.name ?? 'unknown';
       const match_id = selectedMatch?.id ?? 'unknown';
+      const is_auto_generated = selectedMatch?.is_auto_generated ?? false;
       if (result.status === 'joined') {
-        Analytics.matchJoined({ match_id, sport_id, sport_name });
+        Analytics.matchJoined({ match_id, sport_id, sport_name, is_auto_generated });
         if (selectedMatch && getParticipantInfo(selectedMatch).spotsLeft === 1) {
           Analytics.matchFilled({
             match_id: selectedMatch.id,
             sport_id,
             sport_name,
             format: selectedMatch.format ?? 'unknown',
+            is_auto_generated,
           });
         }
       } else if (result.status === 'waitlisted') {
         Analytics.waitlistJoined({ match_id, sport_id, sport_name });
       } else {
-        Analytics.matchJoinRequested({ match_id, sport_id, sport_name });
+        Analytics.matchJoinRequested({ match_id, sport_id, sport_name, is_auto_generated });
       }
       successHaptic();
       closeSheet();
@@ -940,6 +943,7 @@ export const MatchDetailSheet: React.FC = () => {
       Analytics.matchCancelled({
         sport_id: selectedMatch?.sport?.id ?? 'unknown',
         sport_name: selectedMatch?.sport?.name ?? 'unknown',
+        is_auto_generated: selectedMatch?.is_auto_generated ?? false,
       });
       successHaptic();
       setShowCancelModal(false);
@@ -1538,6 +1542,7 @@ export const MatchDetailSheet: React.FC = () => {
     Analytics.matchDeclined({
       sport_id: selectedMatch?.sport?.id ?? 'unknown',
       sport_name: selectedMatch?.sport?.name ?? 'unknown',
+      is_auto_generated: selectedMatch?.is_auto_generated ?? false,
     });
     declineInvite(playerId);
   }, [playerId, declineInvite, selectedMatch]);
