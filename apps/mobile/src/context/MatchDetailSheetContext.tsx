@@ -85,7 +85,11 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    */
   const openSheet = useCallback(
     (match: MatchDetailData, options?: { onMatchRemoved?: () => void; onDismiss?: () => void }) => {
-      Analytics.matchViewed({ match_id: match.id, source: 'match_card' });
+      Analytics.matchViewed({
+        match_id: match.id,
+        source: 'match_card',
+        is_auto_generated: match.is_auto_generated ?? false,
+      });
       onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
       onDismissRef.current = options?.onDismiss ?? null;
       setSelectedMatch(match);
