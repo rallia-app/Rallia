@@ -7667,7 +7667,7 @@
           "description": "Hear about matches forming nearby"
         }
       },
-      "enable": "Enable Precise Location",
+      "enable": "Continue",
       "privacyNote": "Change anytime in Settings."
     },
     "notificationPermission": {
@@ -7697,7 +7697,7 @@
     },
     "trackingPermission": {
       "title": "Help us improve Rallia",
-      "subtitle": "Allow tracking so we can match you with better opponents and grow the app based on what actually helps players find games.",
+      "subtitle": "On the next screen, iOS will ask whether Rallia can track activity. Sharing it helps us suggest better opponents and build features that help players find games.",
       "benefits": {
         "betterMatches": {
           "title": "Better match suggestions",
@@ -7712,9 +7712,8 @@
           "description": "We never sell your data — only use it to make Rallia better"
         }
       },
-      "enable": "Allow Tracking",
-      "skip": "Not Now",
-      "privacyNote": "Change anytime in Settings."
+      "enable": "Continue",
+      "privacyNote": "You choose on the next screen. Change anytime in Settings."
     },
     "discovery": {
       "title": "How did you hear about us?",
