@@ -6,15 +6,19 @@ import { react } from './react.mjs';
 // React Compiler / Rules of React lint rules. The mobile app enables React
 // Compiler (app.json experiments.reactCompiler); these rules surface the
 // patterns that make the compiler bail out and where manual memoization is
-// still load-bearing. They start at 'warn' for incremental adoption on the
-// existing codebase (~300 pre-existing violations) without breaking lint/CI;
-// ratchet individual rules to 'error' as the violations are burned down.
-// rules-of-hooks stays 'error' since it was already enforced. The react-hooks
-// plugin itself is registered by react().
+// still load-bearing. Rules start at 'warn' for incremental adoption on the
+// existing codebase without breaking lint/CI, and get ratcheted to 'error'
+// once their violations are fully burned down so regressions can't creep back.
+// The react-hooks plugin itself is registered by react().
+const errorRules = new Set([
+  'react-hooks/rules-of-hooks', // already enforced before the compiler
+  'react-hooks/preserve-manual-memoization', // burned down to 0 (2026-05-25)
+  'react-hooks/static-components', // burned down to 0 (2026-05-25)
+]);
 const reactCompilerRules = Object.fromEntries(
   Object.keys(reactHooksPlugin.configs['recommended-latest'].rules).map(name => [
     name,
-    name === 'react-hooks/rules-of-hooks' ? 'error' : 'warn',
+    errorRules.has(name) ? 'error' : 'warn',
   ])
 );
 
