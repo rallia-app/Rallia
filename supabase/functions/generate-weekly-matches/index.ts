@@ -33,6 +33,7 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
+import { captureEvent } from '../_shared/posthog.ts';
 
 // =============================================================================
 // SUPABASE
@@ -194,6 +195,13 @@ async function autoInviteForMatches(hostId: string, matches: GeneratedMatch[]): 
       if (notifErr) {
         console.warn(`[auto-invite] notify failed for ${pid}: ${notifErr.message}`);
       }
+      // Analytics — keyed to the invitee so the invitation→join funnel is
+      // per-recipient; host_id connects it back to the creator.
+      void captureEvent({
+        distinctId: pid,
+        event: 'weekly_match_invite_sent',
+        properties: { match_id: m.match_id, host_id: hostId, sport: m.sport_name },
+      });
       invited += 1;
     }
   }
@@ -273,6 +281,34 @@ Deno.serve(async req => {
       } catch (inviteErr) {
         console.warn('[auto-invite] skipped due to error:', inviteErr);
       }
+
+      // Analytics (host): per-match creation detail + a run summary that pairs
+      // with the client's weekly_checkin_submitted to complete the host funnel.
+      const generated = (matches ?? []) as GeneratedMatch[];
+      for (const m of generated) {
+        void captureEvent({
+          distinctId: specificPlayerId,
+          event: 'weekly_match_created',
+          properties: {
+            match_id: m.match_id,
+            sport: m.sport_name,
+            match_date: m.match_date,
+            start_time: m.start_time,
+            location_type: m.facility_name ? 'facility' : 'tbd',
+            facility_name: m.facility_name,
+            has_facility: !!m.facility_name,
+          },
+        });
+      }
+      void captureEvent({
+        distinctId: specificPlayerId,
+        event: 'weekly_matches_generated',
+        properties: {
+          matches_created: totalMatchesCreated,
+          auto_invites_sent: autoInvitesSent,
+          sports: [...new Set(generated.map(m => m.sport_name))],
+        },
+      });
     } else {
       console.log('[generate-weekly-matches] all checked-in players');
 
