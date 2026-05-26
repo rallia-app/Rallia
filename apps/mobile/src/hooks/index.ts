@@ -16,6 +16,7 @@ export * from './useOpenExternalBooking';
 export * from './usePendingReferenceRequestsCount';
 export * from './useDeviceContacts';
 export * from './useSuggestionInviteHandler';
+export * from './useActiveConversation';
 
 // Group chat hooks
 export * from './groupChat';

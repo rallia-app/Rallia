@@ -2044,7 +2044,8 @@
       "clearYourMessagesConfirm": "Cela supprimera tous les messages que vous avez envoyés dans cette conversation. Cette action est irréversible.",
       "clear": "Effacer",
       "messagesDeleted": "{count} message(s) supprimé(s)",
-      "failedToClear": "Échec de la suppression des messages. Veuillez réessayer."
+      "failedToClear": "Échec de la suppression des messages. Veuillez réessayer.",
+      "failedToSend": "Échec de l'envoi du message. Veuillez réessayer."
     },
     "actions": {
       "conversation": "Conversation",

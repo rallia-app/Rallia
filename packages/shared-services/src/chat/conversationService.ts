@@ -834,3 +834,35 @@ export async function getConversationUnreadCountLast7Days(
     return count || 0;
   }
 }
+
+// ============================================================================
+// ACTIVE CONVERSATION (notification suppression)
+// ============================================================================
+
+/**
+ * Mark the current user as actively viewing a conversation. While active, the
+ * backend suppresses new-message notifications (in-app row + push) for it.
+ * Call on screen focus and periodically (heartbeat) while the screen stays open;
+ * the server treats the active state as valid for 60 seconds.
+ */
+export async function setActiveConversation(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc('set_active_conversation', {
+    p_conversation_id: conversationId,
+  });
+  if (error) {
+    console.error('Error setting active conversation:', error);
+  }
+}
+
+/**
+ * Clear the current user's active conversation so notifications resume.
+ * Call on screen blur and when the app goes to the background.
+ */
+export async function clearActiveConversation(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc('clear_active_conversation', {
+    p_conversation_id: conversationId,
+  });
+  if (error) {
+    console.error('Error clearing active conversation:', error);
+  }
+}
