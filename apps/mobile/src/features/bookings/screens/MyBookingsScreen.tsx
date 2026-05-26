@@ -18,10 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, usePlayerBookingsByTab, usePlayerBookingFilters } from '@rallia/shared-hooks';
 import type { BookingWithDetails, BookingTab } from '@rallia/shared-services';
-import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels } from '@rallia/design-system';
-import { BookingCard, BookingFilterChips, BookingEmptyState } from '../components';
+
+import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
+import { BookingCard, BookingFilterChips, BookingEmptyState } from '#/features/bookings/components';
 
 // =============================================================================
 // HELPER FUNCTIONS

@@ -7,10 +7,8 @@ import React, { useCallback, useState, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text, useToast } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   useRemoveGroupMember,
   usePromoteMember,
@@ -19,7 +17,9 @@ import {
   type GroupMember,
 } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
 
 /**
  * Format a date as relative time or date string for join dates
@@ -130,7 +130,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
         name:
           `${member.player?.profile?.first_name || ''} ${member.player?.profile?.last_name || ''}`.trim() ||
           'Unknown',
-        role: effectiveRole as 'member' | 'moderator',
+        role: effectiveRole,
         isCreator: group.created_by === member.player_id,
         profilePictureUrl: member.player?.profile?.profile_picture_url,
         playerId: member.player_id,

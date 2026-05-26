@@ -11,8 +11,8 @@ import { Text } from '@rallia/shared-components';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { NetworkPulseMoment } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import type { TranslationKey } from '#/hooks';
 
 interface MomentsListProps {
   moments: NetworkPulseMoment[];

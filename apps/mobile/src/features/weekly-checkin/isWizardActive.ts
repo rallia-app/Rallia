@@ -13,7 +13,8 @@
  *     the wizard is dismissed).
  */
 import { useEffect, useState } from 'react';
-import { navigationRef } from '../../navigation';
+
+import { navigationRef } from '#/navigation';
 
 const ROUTE_NAME = 'WeeklyCheckIn';
 

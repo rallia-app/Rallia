@@ -38,7 +38,8 @@ import {
   requestTrackingPermissionsAsync,
   getTrackingPermissionsAsync,
 } from 'expo-tracking-transparency';
-import { Logger } from '../services/logger';
+
+import { Logger } from '#/services/logger';
 
 // Build-time placeholders mirror the fallback values written into app.config.js.
 // Treating them as "not configured" lets us no-op cleanly on a dev machine that

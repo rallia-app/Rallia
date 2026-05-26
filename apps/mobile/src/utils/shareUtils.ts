@@ -7,8 +7,9 @@
 import { Share } from 'react-native';
 import { generateInvitationLink } from '@rallia/shared-services';
 import { buildUtmUrl, formatIntuitiveDateInTimezone, type UtmParams } from '@rallia/shared-utils';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import type { TranslationKey } from '../hooks';
+
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import type { TranslationKey } from '#/hooks';
 
 /**
  * Translation function type for generating localized share messages.
@@ -110,16 +111,16 @@ function buildDatePhrase(
   const result = formatIntuitiveDateInTimezone(dateStr, timezone || 'UTC', locale);
   switch (result.type) {
     case 'today':
-      return t('matchCreation.shareToFacebook.message.datePhraseToday' as TranslationKey);
+      return t('matchCreation.shareToFacebook.message.datePhraseToday');
     case 'tomorrow':
-      return t('matchCreation.shareToFacebook.message.datePhraseTomorrow' as TranslationKey);
+      return t('matchCreation.shareToFacebook.message.datePhraseTomorrow');
     case 'weekday':
-      return t('matchCreation.shareToFacebook.message.datePhraseWeekday' as TranslationKey, {
+      return t('matchCreation.shareToFacebook.message.datePhraseWeekday', {
         weekday: result.label,
       });
     case 'date':
     default:
-      return t('matchCreation.shareToFacebook.message.datePhraseDate' as TranslationKey, {
+      return t('matchCreation.shareToFacebook.message.datePhraseDate', {
         date: result.label,
       });
   }
@@ -162,7 +163,7 @@ export function generateMatchShareMessage(match: MatchDetailData, options: Share
   const extraLines: string[] = [];
 
   if (match.format) {
-    const formatLabel = t(`match.format.${match.format}` as TranslationKey);
+    const formatLabel = t(`match.format.${match.format}`);
     extraLines.push(`👥 ${t('matchDetail.shareFormat', { format: formatLabel })}`);
   }
 
@@ -170,7 +171,7 @@ export function generateMatchShareMessage(match: MatchDetailData, options: Share
     const durationLabel =
       match.duration === 'custom' && match.custom_duration_minutes
         ? `${match.custom_duration_minutes} min`
-        : t(`matchCreation.duration.${match.duration}` as TranslationKey);
+        : t(`matchCreation.duration.${match.duration}`);
     extraLines.push(`⏱ ${t('matchDetail.shareDuration', { duration: durationLabel })}`);
   }
 
@@ -298,7 +299,7 @@ export function generateFacebookPostMessage(match: MatchDetailData, options: Sha
     const durationLabel =
       match.duration === 'custom' && match.custom_duration_minutes
         ? `${match.custom_duration_minutes} min`
-        : t(`matchCreation.duration.${match.duration}` as TranslationKey);
+        : t(`matchCreation.duration.${match.duration}`);
     detailParts.push(
       t('matchCreation.shareToFacebook.message.duration', { duration: durationLabel })
     );

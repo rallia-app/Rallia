@@ -16,8 +16,8 @@ import {
   getNetworkByConversationId,
 } from '@rallia/shared-services';
 
-import { uploadImage } from '../../services/imageUpload';
-import { pickImageWithCropper } from '../../utils/imagePicker';
+import { uploadImage } from '#/services/imageUpload';
+import { pickImageWithCropper } from '#/utils/imagePicker';
 
 interface NetworkInfo {
   id: string;

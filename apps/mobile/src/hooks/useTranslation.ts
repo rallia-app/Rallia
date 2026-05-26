@@ -61,10 +61,10 @@ export function useTranslation(): UseTranslationReturn {
   // The type assertion to TranslationFunction enables autocomplete while accepting any string
   const t = useCallback(
     (key: TranslationKey, options?: TranslationOptions): string => {
-      return i18nextT(key, options) as string;
+      return i18nextT(key, options);
     },
     [i18nextT]
-  ) as TranslationFunction;
+  );
 
   return {
     t,

@@ -22,7 +22,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Mapbox from '@rnmapbox/maps';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, MatchCard } from '@rallia/shared-components';
+import { Text, MatchCard, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, accent, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -31,26 +31,26 @@ import {
   usePlayer,
   MIN_FAVORITE_FACILITIES,
 } from '@rallia/shared-hooks';
-import { useToast } from '@rallia/shared-components';
 import type { MapFacility, MapCustomMatch, FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MapStackParamList } from '../navigation/types';
 import { SheetManager } from 'react-native-actions-sheet';
+
+import type { MapStackParamList } from '#/navigation/types';
 import {
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
   useOpenExternalBooking,
-} from '../hooks';
-import { useSport, useMatchDetailSheet } from '../context';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import { SearchBar } from '../components/SearchBar';
-import { MapMarkerImages } from '../components/map/MapMarkerImages';
-import { facilitiesToGeoJSON, matchesToGeoJSON } from '../components/map/mapGeoJson';
-import { FacilityCard } from '../features/facilities/components';
-import { SportIcon } from '../components/SportIcon';
+} from '#/hooks';
+import { useSport, useMatchDetailSheet } from '#/context';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { SearchBar } from '#/components/SearchBar';
+import { MapMarkerImages } from '#/components/map/MapMarkerImages';
+import { facilitiesToGeoJSON, matchesToGeoJSON } from '#/components/map/mapGeoJson';
+import { FacilityCard } from '#/features/facilities/components';
+import { SportIcon } from '#/components/SportIcon';
 
 /** Pick the feature whose coordinate is closest to the tap point. */
 function pickClosestFeature(features: any[], tapCoord?: { latitude: number; longitude: number }) {
@@ -480,7 +480,7 @@ const Map = () => {
 
   const handleMatchCardPress = useCallback(
     (match: MapCustomMatch) => {
-      openSheet(match as unknown as MatchDetailData);
+      openSheet(match);
     },
     [openSheet]
   );

@@ -15,8 +15,9 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 import type { MatchReportReasonEnum } from '@rallia/shared-types';
 import { REPORT_REASON_ICONS } from '@rallia/shared-types';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '../../../../hooks/useTranslation';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import type { TranslationKey } from '#/hooks/useTranslation';
 
 // =============================================================================
 // CONSTANTS

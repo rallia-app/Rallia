@@ -11,9 +11,9 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { useTour } from '../context/TourContext';
-import { TourId } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
+import { TourId, Logger } from '@rallia/shared-services';
+
+import { useTour } from '#/context/TourContext';
 
 export const TOURS_ENABLED = false;
 

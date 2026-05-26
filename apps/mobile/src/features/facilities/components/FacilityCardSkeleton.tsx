@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
-import { useThemeStyles } from '../../../hooks';
+
+import { useThemeStyles } from '#/hooks';
 
 // Dimensions kept in sync with FacilityCard.tsx — change them together.
 const CARD_HORIZONTAL_MARGIN = spacingPixels[4];

@@ -16,7 +16,8 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
-import { getAvatarColor, getContactInitials } from '../utils/contactDisplay';
+
+import { getAvatarColor, getContactInitials } from '#/utils/contactDisplay';
 
 const BASE_WHITE = '#ffffff';
 

@@ -11,9 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import { TimeRangeSelector, LineChart, BarChart } from '@rallia/shared-components/src/charts';
@@ -26,7 +24,9 @@ import {
   type FeatureAdoption,
   type ScreenAnalytics,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -214,12 +214,10 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.title' as TranslationKey) ||
-              'Engagement Analytics'}
+            {t('admin.analytics.screens.engagement.title') || 'Engagement Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.engagement.subtitle' as TranslationKey) ||
-              'User behavior & feature adoption'}
+            {t('admin.analytics.screens.engagement.subtitle') || 'User behavior & feature adoption'}
           </Text>
         </View>
       </View>
@@ -257,8 +255,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
                 {summaryMetrics.avgSessions.toLocaleString()}
               </Text>
               <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                {t('admin.analytics.screens.engagement.avgSessions' as TranslationKey) ||
-                  'Avg Daily Sessions'}
+                {t('admin.analytics.screens.engagement.avgSessions') || 'Avg Daily Sessions'}
               </Text>
             </View>
 
@@ -270,8 +267,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
                 {formatDuration(summaryMetrics.avgDuration)}
               </Text>
               <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                {t('admin.analytics.screens.engagement.avgDuration' as TranslationKey) ||
-                  'Avg Duration'}
+                {t('admin.analytics.screens.engagement.avgDuration') || 'Avg Duration'}
               </Text>
             </View>
 
@@ -283,8 +279,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
                 {summaryMetrics.avgScreens}
               </Text>
               <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                {t('admin.analytics.screens.engagement.screensPerSession' as TranslationKey) ||
-                  'Screens/Session'}
+                {t('admin.analytics.screens.engagement.screensPerSession') || 'Screens/Session'}
               </Text>
             </View>
 
@@ -296,8 +291,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
                 {summaryMetrics.avgBounceRate}%
               </Text>
               <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                {t('admin.analytics.screens.engagement.bounceRate' as TranslationKey) ||
-                  'Bounce Rate'}
+                {t('admin.analytics.screens.engagement.bounceRate') || 'Bounce Rate'}
               </Text>
             </View>
           </View>
@@ -306,11 +300,10 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         {/* Sessions Trend */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.sessionsTrend' as TranslationKey) ||
-              'Daily Sessions'}
+            {t('admin.analytics.screens.engagement.sessionsTrend') || 'Daily Sessions'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.engagement.sessionsTrendDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.engagement.sessionsTrendDesc') ||
               'Number of user sessions per day'}
           </Text>
           {sessionChartData.length > 0 ? (
@@ -327,7 +320,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -336,11 +329,10 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         {/* Session Duration Trend */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.durationTrend' as TranslationKey) ||
-              'Session Duration'}
+            {t('admin.analytics.screens.engagement.durationTrend') || 'Session Duration'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.engagement.durationTrendDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.engagement.durationTrendDesc') ||
               'Average session duration in minutes'}
           </Text>
           {durationChartData.length > 0 ? (
@@ -357,7 +349,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -366,11 +358,10 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         {/* Feature Adoption */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.featureAdoption' as TranslationKey) ||
-              'Feature Adoption'}
+            {t('admin.analytics.screens.engagement.featureAdoption') || 'Feature Adoption'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.engagement.featureAdoptionDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.engagement.featureAdoptionDesc') ||
               'Percentage of users using each feature'}
           </Text>
           {featureChartData.length > 0 ? (
@@ -405,7 +396,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -414,10 +405,10 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         {/* Most Viewed Screens */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.topScreens' as TranslationKey) || 'Top Screens'}
+            {t('admin.analytics.screens.engagement.topScreens') || 'Top Screens'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.engagement.topScreensDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.engagement.topScreensDesc') ||
               'Most viewed screens by total views'}
           </Text>
           {screenChartData.length > 0 ? (
@@ -433,7 +424,7 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -442,11 +433,10 @@ const AdminEngagementAnalyticsScreen: React.FC = () => {
         {/* Screen Details Table */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.engagement.screenDetails' as TranslationKey) ||
-              'Screen Details'}
+            {t('admin.analytics.screens.engagement.screenDetails') || 'Screen Details'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.engagement.screenDetailsDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.engagement.screenDetailsDesc') ||
               'Detailed screen performance metrics'}
           </Text>
 

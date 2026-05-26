@@ -16,12 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { Logger, tourService, supabase } from '@rallia/shared-services';
-import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
-import { useAppNavigation } from '../navigation/hooks';
-import { useLocale, useFeedbackReportSheet, useSubscription } from '../context';
-import { useAuth, useTranslation } from '../hooks';
+import { useTheme, useAdminStatus, useProfile } from '@rallia/shared-hooks';
 import type { Locale } from '@rallia/shared-translations';
-import { useProfile } from '@rallia/shared-hooks';
 import {
   lightTheme,
   darkTheme,
@@ -32,6 +28,10 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
+
+import { useAppNavigation } from '#/navigation/hooks';
+import { useLocale, useFeedbackReportSheet, useSubscription } from '#/context';
+import { useAuth, useTranslation } from '#/hooks';
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';

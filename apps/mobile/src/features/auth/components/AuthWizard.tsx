@@ -23,10 +23,11 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
-import * as Analytics from '../../../services/analytics';
-import { ThemeLogo } from '../../../components/ThemeLogo';
-import { useAuthWizard } from '../hooks/useAuthWizard';
-import { useSocialAuth } from '../hooks/useSocialAuth';
+import * as Analytics from '#/services/analytics';
+import { ThemeLogo } from '#/components/ThemeLogo';
+import { useAuthWizard } from '#/features/auth/hooks/useAuthWizard';
+import { useSocialAuth } from '#/features/auth/hooks/useSocialAuth';
+
 import { EmailStep } from './steps/EmailStep';
 import { OTPVerificationStep } from './steps/OTPVerificationStep';
 

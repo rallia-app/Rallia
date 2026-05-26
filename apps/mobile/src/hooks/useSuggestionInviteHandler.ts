@@ -14,18 +14,15 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { usePlayerSports } from '@rallia/shared-hooks';
-import { usePlayer } from '@rallia/shared-hooks';
+import { usePlayerSports, usePlayer } from '@rallia/shared-hooks';
+
+import { useActionsSheet, useSport } from '#/context';
+import * as Analytics from '#/services/analytics';
+import type { SuggestionSource } from '#/services/analytics';
+import type { InvitePayload, InviteState, SuggestionCardLabels } from '#/components/SuggestionCard';
+
 import { useAuth } from './useAuth';
 import { useTranslation } from './useTranslation';
-import { useActionsSheet, useSport } from '../context';
-import * as Analytics from '../services/analytics';
-import type { SuggestionSource } from '../services/analytics';
-import type {
-  InvitePayload,
-  InviteState,
-  SuggestionCardLabels,
-} from '../components/SuggestionCard';
 
 export function suggestionSlotKey(
   opponentId: string,

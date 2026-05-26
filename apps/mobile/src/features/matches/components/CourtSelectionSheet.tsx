@@ -12,10 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
-import { useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
 import type { CourtOption } from '@rallia/shared-hooks';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
 
 // =============================================================================
 // COURT ITEM COMPONENT

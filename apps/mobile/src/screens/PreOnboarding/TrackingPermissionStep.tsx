@@ -34,9 +34,10 @@ import {
   shadowsNative,
 } from '@rallia/design-system';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../hooks';
-import * as Analytics from '../../services/analytics';
-import { requestATTAndConfigureMeta } from '../../lib/meta';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import * as Analytics from '#/services/analytics';
+import { requestATTAndConfigureMeta } from '#/lib/meta';
 
 interface TrackingPermissionStepProps {
   /** Called after the user resolves the ATT prompt (granted/denied) or skips. */

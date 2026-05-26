@@ -1,5 +1,4 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-
 import { supabase, Logger } from '@rallia/shared-services';
 
 const RESIZE_BUCKETS = new Set([

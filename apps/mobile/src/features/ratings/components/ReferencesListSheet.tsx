@@ -15,9 +15,9 @@ import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useRatingScoreReferees, type RatingScoreReferee } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 
-import { BaseActionSheet } from '../../../components/BaseActionSheet';
-import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../../../hooks';
-import RatingBadge from '../../../components/RatingBadge';
+import { BaseActionSheet } from '#/components/BaseActionSheet';
+import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '#/hooks';
+import RatingBadge from '#/components/RatingBadge';
 
 function getRefereeFullName(r: RatingScoreReferee): string {
   const name = `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim();

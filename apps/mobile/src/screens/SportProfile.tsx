@@ -4,15 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { useAppNavigation } from '../navigation/hooks';
-import type { RootStackParamList } from '../navigation/types';
 import { Text, Skeleton, useToast, Button } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { usePlayPreferences, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
-import { useSport } from '../context';
-import { useUserLocation } from '../hooks/useUserLocation';
 import {
   spacingPixels,
   radiusPixels,
@@ -20,6 +15,10 @@ import {
   fontWeightNumeric,
   primary,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useSport } from '#/context';
+import { useUserLocation } from '#/hooks/useUserLocation';
 
 // Certification status colors for rating display (theme-aware)
 const getCertificationColors = (
@@ -78,8 +77,13 @@ const getSkillLevelTranslationKey = (
 };
 
 import { selectionHaptic } from '@rallia/shared-utils';
-import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
+
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+
 import { SheetManager } from 'react-native-actions-sheet';
+
+import type { RootStackParamList } from '#/navigation/types';
+import { useAppNavigation } from '#/navigation/hooks';
 
 type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
 
@@ -176,13 +180,13 @@ const SportProfile = () => {
   const [loadingPreferences, setLoadingPreferences] = useState(!hasCachedPrefs);
 
   const [isActive, setIsActive] = useState(
-    hasCachedPrefs ? cachedPrefs!.isActive : isSportInContext
+    hasCachedPrefs ? cachedPrefs.isActive : isSportInContext
   );
   const [playerSportId, setPlayerSportId] = useState<string | null>(
-    hasCachedPrefs ? cachedPrefs!.playerSportId : null
+    hasCachedPrefs ? cachedPrefs.playerSportId : null
   );
   const [playerRatingScoreId, setPlayerRatingScoreId] = useState<string | null>(
-    hasCachedRating ? cachedRating!.playerRatingScoreId || null : null
+    hasCachedRating ? cachedRating.playerRatingScoreId || null : null
   );
   const [ratingInfo, setRatingInfo] = useState<RatingInfo | null>(initialRatingInfo);
   // Total proofs count (all proofs for this sport) - shown in "Rating Proof" button
@@ -190,16 +194,16 @@ const SportProfile = () => {
   // Proofs count at current rating or higher - shown in stats row
   const [currentLevelProofsCount, setCurrentLevelProofsCount] = useState(0);
   const [referencesCount, setReferencesCount] = useState(
-    hasCachedRating ? (cachedRating!.referralsCount ?? 0) : 0
+    hasCachedRating ? (cachedRating.referralsCount ?? 0) : 0
   );
   const [certificationStatus, setCertificationStatus] = useState<
     'self_declared' | 'certified' | 'disputed'
-  >(hasCachedRating ? cachedRating!.badge_status || 'self_declared' : 'self_declared');
+  >(hasCachedRating ? cachedRating.badge_status || 'self_declared' : 'self_declared');
   const [peerEvaluationAverage, setPeerEvaluationAverage] = useState<number | undefined>(
-    hasCachedRating ? (cachedRating!.peerEvaluationAverage ?? undefined) : undefined
+    hasCachedRating ? (cachedRating.peerEvaluationAverage ?? undefined) : undefined
   );
   const [peerEvaluationCount, setPeerEvaluationCount] = useState<number>(
-    hasCachedRating ? (cachedRating!.peerEvaluationCount ?? 0) : 0
+    hasCachedRating ? (cachedRating.peerEvaluationCount ?? 0) : 0
   );
   const [preferences, setPreferences] = useState<PreferencesInfo>({
     matchDuration: cachedPrefs?.matchDuration ?? null,
@@ -489,7 +493,7 @@ const SportProfile = () => {
       const { data: allPlayerRatings, error: fetchError } = ratingsResult;
 
       if (fetchError) {
-        Logger.error('Failed to fetch player ratings', fetchError as Error, { playerId: userId });
+        Logger.error('Failed to fetch player ratings', fetchError, { playerId: userId });
         throw fetchError;
       }
 
@@ -571,7 +575,7 @@ const SportProfile = () => {
             );
 
             if (updateResult.error) {
-              Logger.error('Failed to update rating', updateResult.error as Error, {
+              Logger.error('Failed to update rating', updateResult.error, {
                 ratingId: existingSelfReportedRating.id,
                 ratingScoreId,
               });
@@ -613,7 +617,7 @@ const SportProfile = () => {
           );
 
           if (insertResult.error) {
-            Logger.error('Failed to insert new rating', insertResult.error as Error, {
+            Logger.error('Failed to insert new rating', insertResult.error, {
               ratingScoreId,
               playerId: userId,
             });

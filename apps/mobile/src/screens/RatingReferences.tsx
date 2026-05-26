@@ -41,9 +41,9 @@ import {
   status as statusColors,
 } from '@rallia/design-system';
 
-import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
-import RatingBadge from '../components/RatingBadge';
-import { formatDateShort } from '../utils/dateFormatting';
+import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '#/hooks';
+import RatingBadge from '#/components/RatingBadge';
+import { formatDateShort } from '#/utils/dateFormatting';
 
 type RatingReferencesRouteProp = RouteProp<
   { RatingReferences: RatingReferencesScreenParams },

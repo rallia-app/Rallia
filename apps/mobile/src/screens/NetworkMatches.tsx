@@ -30,11 +30,11 @@ import {
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger } from '@rallia/shared-services';
 
-import { useThemeStyles, useTranslation, useAuth } from '../hooks';
-import { useMatchDetailSheet, useSport } from '../context';
-import { SportIcon } from '../components/SportIcon';
-import type { RootStackParamList } from '../navigation/types';
-import { SearchBar, MatchFiltersBar } from '../features/matches/components';
+import { useThemeStyles, useTranslation, useAuth } from '#/hooks';
+import { useMatchDetailSheet, useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
+import type { RootStackParamList } from '#/navigation/types';
+import { SearchBar, MatchFiltersBar } from '#/features/matches/components';
 
 // =============================================================================
 // TYPES
@@ -180,7 +180,7 @@ export default function NetworkMatchesScreen() {
     (match: NetworkMemberMatch) => {
       void lightHaptic();
       Logger.logUserAction('network_match_pressed', { matchId: match.id, networkId, networkType });
-      openMatchDetail(match as Parameters<typeof openMatchDetail>[0]);
+      openMatchDetail(match);
     },
     [openMatchDetail, networkId, networkType]
   );
@@ -190,9 +190,9 @@ export default function NetworkMatchesScreen() {
     ({ item }: { item: NetworkMemberMatch }) => {
       return (
         <MatchCard
-          match={item as Parameters<typeof MatchCard>[0]['match']}
+          match={item}
           isDark={isDark}
-          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          t={t}
           locale={locale}
           currentPlayerId={playerId}
           sportIcon={
@@ -232,7 +232,7 @@ export default function NetworkMatchesScreen() {
       <EmptyState
         hasActiveFilters={hasActiveFilters}
         colors={colors}
-        t={t as (key: TranslationKey) => string}
+        t={t}
         networkType={networkType}
       />
     );

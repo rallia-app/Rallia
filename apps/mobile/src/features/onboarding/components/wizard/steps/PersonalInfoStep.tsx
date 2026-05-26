@@ -33,12 +33,12 @@ import {
   REFERRAL_CODE_LENGTH,
 } from '@rallia/shared-utils';
 import { GENDER_VALUES } from '@rallia/shared-types';
-import type { TranslationKey } from '@rallia/shared-translations';
-import type { Locale } from '@rallia/shared-translations';
-import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
-import { useLocale } from '../../../../../context';
-import { PENDING_REFERRAL_KEY } from '../../../../../navigation/deepLinkStore';
-import * as Analytics from '../../../../../services/analytics';
+import type { TranslationKey, Locale } from '@rallia/shared-translations';
+
+import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
+import { useLocale } from '#/context';
+import { PENDING_REFERRAL_KEY } from '#/navigation/deepLinkStore';
+import * as Analytics from '#/services/analytics';
 
 interface ThemeColors {
   background: string;
@@ -150,7 +150,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       return 'Date of birth is required';
     }
     if (date > minimumDateOfBirth) {
-      return t('onboarding.validation.minimumAge' as TranslationKey);
+      return t('onboarding.validation.minimumAge');
     }
     return undefined;
   };
@@ -282,7 +282,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
     try {
-      return new Intl.DateTimeFormat(appLocale as Locale, {
+      return new Intl.DateTimeFormat(appLocale, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -340,9 +340,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         )}
       </TouchableOpacity>
       <Text size="sm" color={colors.textSecondary} style={styles.photoLabel}>
-        {formData.profileImage
-          ? t('profile.changePhoto' as TranslationKey)
-          : t('chat.addPhoto' as TranslationKey)}
+        {formData.profileImage ? t('profile.changePhoto') : t('chat.addPhoto')}
       </Text>
 
       {/* First Name */}

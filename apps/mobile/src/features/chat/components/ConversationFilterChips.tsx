@@ -15,9 +15,9 @@ import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTranslation } from '../../../hooks';
-import { lightHaptic } from '../../../utils/haptics';
-import { SportIcon } from '../../../components/SportIcon';
+import { useTranslation } from '#/hooks';
+import { lightHaptic } from '#/utils/haptics';
+import { SportIcon } from '#/components/SportIcon';
 
 // =============================================================================
 // TYPES

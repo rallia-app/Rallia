@@ -15,8 +15,9 @@ import {
   defaultLocale,
   isValidLocale,
 } from '@rallia/shared-translations';
-import { supabase } from '../lib/supabase';
-import { initI18n, changeLanguage, getDeviceLocale } from '../i18n';
+
+import { supabase } from '#/lib/supabase';
+import { initI18n, changeLanguage, getDeviceLocale } from '#/i18n';
 
 const LOCALE_STORAGE_KEY = '@rallia/locale';
 

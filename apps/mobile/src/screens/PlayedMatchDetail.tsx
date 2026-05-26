@@ -10,13 +10,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import type { MatchFormatEnum, MatchTypeEnum } from '@rallia/shared-types';
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useNavigateToPlayerProfile } from '../hooks';
-import { SportIcon } from '../components/SportIcon';
-
 import {
   spacingPixels,
   fontSizePixels,
@@ -24,7 +20,10 @@ import {
   primary,
   status,
 } from '@rallia/design-system';
-import type { RootStackParamList } from '../navigation/types';
+
+import { useThemeStyles, useNavigateToPlayerProfile } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type PlayedMatchDetailRouteProp = RouteProp<RootStackParamList, 'PlayedMatchDetail'>;

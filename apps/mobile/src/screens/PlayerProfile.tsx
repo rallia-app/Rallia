@@ -37,22 +37,7 @@ import {
 } from '@rallia/shared-services';
 import type { ReputationDisplay } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
-import { useSport, useUserHomeLocation } from '../context';
-import { SportIcon } from '../components/SportIcon';
-import {
-  HourlyAvailabilityGrid,
-  cellKey,
-  emptyGrid,
-  type HourGrid,
-} from '../features/onboarding/components/HourlyAvailabilityGrid';
-import RatingBadge from '../components/RatingBadge';
-import ReputationBadge from '../components/ReputationBadge';
-import CovetedBadge from '../components/CovetedBadge';
-import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import * as Analytics from '../services/analytics';
-import type { RootStackParamList } from '../navigation/types';
 import type { Profile, Player } from '@rallia/shared-types';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,10 +51,26 @@ import {
   primary,
   status,
 } from '@rallia/design-system';
-import { formatDateMonthYear } from '../utils/dateFormatting';
-import { CertificationBadge, ProofViewer, type BadgeStatus } from '../features/ratings/components';
-import { useVideoThumbnail } from '../hooks/useVideoThumbnail';
-import { useOgImage } from '../hooks/useOgImage';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useSport, useUserHomeLocation } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import RatingBadge from '#/components/RatingBadge';
+import ReputationBadge from '#/components/ReputationBadge';
+import CovetedBadge from '#/components/CovetedBadge';
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+import * as Analytics from '#/services/analytics';
+import type { RootStackParamList } from '#/navigation/types';
+import { formatDateMonthYear } from '#/utils/dateFormatting';
+import { CertificationBadge, ProofViewer, type BadgeStatus } from '#/features/ratings/components';
+import { useVideoThumbnail } from '#/hooks/useVideoThumbnail';
+import { useOgImage } from '#/hooks/useOgImage';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -752,13 +753,7 @@ const PlayerProfile = () => {
 
       // Process reputation
       if (reputationResult.data && !reputationResult.error) {
-        const rep = reputationResult.data as {
-          reputation_score: number;
-          reputation_tier: string;
-          total_events: number;
-          matches_completed: number;
-          is_public: boolean;
-        };
+        const rep = reputationResult.data;
         const tier = getTierForScore(rep.reputation_score, rep.total_events);
         const tierConfig = getTierConfig(tier);
         setReputationDisplay({
@@ -922,15 +917,7 @@ const PlayerProfile = () => {
 
       // Process sport preferences from player_sport table
       if (sportProfileResult.data) {
-        const spData = sportProfileResult.data as {
-          id: string;
-          is_active: boolean;
-          preferred_match_duration: string | null;
-          preferred_match_type: string | null;
-          preferred_play_style: string | null;
-          preferred_court: string | null;
-          is_primary: boolean;
-        };
+        const spData = sportProfileResult.data;
 
         // Fetch play style and attributes from junction tables (like SportProfile does)
         const [playStyleResult, playAttributesResult] = await Promise.all([
@@ -1000,7 +987,7 @@ const PlayerProfile = () => {
 
       // Process stats
       if (statsResult.error) {
-        Logger.error('Failed to load player stats', statsResult.error as Error, { playerId });
+        Logger.error('Failed to load player stats', statsResult.error, { playerId });
       } else if (statsResult.data) {
         type MatchRow = {
           match_date: string | null;
@@ -1159,23 +1146,22 @@ const PlayerProfile = () => {
 
   // Translated rating title based on skill value
   const getTranslatedRatingTitle = (value: number | null | undefined): string => {
-    if (!value) return t('playerProfile.rating.unrated' as TranslationKey);
-    if (value <= 2.0) return t('playerProfile.rating.beginner' as TranslationKey);
-    if (value <= 3.0) return t('playerProfile.rating.intermediate' as TranslationKey);
-    if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced' as TranslationKey);
-    if (value <= 5.0) return t('playerProfile.rating.advanced' as TranslationKey);
-    return t('playerProfile.rating.professional' as TranslationKey);
+    if (!value) return t('playerProfile.rating.unrated');
+    if (value <= 2.0) return t('playerProfile.rating.beginner');
+    if (value <= 3.0) return t('playerProfile.rating.intermediate');
+    if (value <= 4.0) return t('playerProfile.rating.intermediateAdvanced');
+    if (value <= 5.0) return t('playerProfile.rating.advanced');
+    return t('playerProfile.rating.professional');
   };
 
   // Translated rating description based on skill value
   const getTranslatedRatingDescription = (value: number | null | undefined): string => {
-    if (!value) return t('playerProfile.rating.descriptions.unrated' as TranslationKey);
-    if (value <= 2.0) return t('playerProfile.rating.descriptions.beginner' as TranslationKey);
-    if (value <= 3.0) return t('playerProfile.rating.descriptions.intermediate' as TranslationKey);
-    if (value <= 4.0)
-      return t('playerProfile.rating.descriptions.intermediateAdvanced' as TranslationKey);
-    if (value <= 5.0) return t('playerProfile.rating.descriptions.advanced' as TranslationKey);
-    return t('playerProfile.rating.descriptions.professional' as TranslationKey);
+    if (!value) return t('playerProfile.rating.descriptions.unrated');
+    if (value <= 2.0) return t('playerProfile.rating.descriptions.beginner');
+    if (value <= 3.0) return t('playerProfile.rating.descriptions.intermediate');
+    if (value <= 4.0) return t('playerProfile.rating.descriptions.intermediateAdvanced');
+    if (value <= 5.0) return t('playerProfile.rating.descriptions.advanced');
+    return t('playerProfile.rating.descriptions.professional');
   };
 
   const handleInviteToMatch = useCallback(() => {
@@ -1185,10 +1171,7 @@ const PlayerProfile = () => {
     void SheetManager.show('invite-to-match', {
       payload: {
         playerId,
-        playerName:
-          profile.first_name ||
-          profile.display_name ||
-          t('playerProfile.unknownPlayer' as TranslationKey),
+        playerName: profile.first_name || profile.display_name || t('playerProfile.unknownPlayer'),
       },
     });
   }, [currentUserId, playerId, profile, t]);
@@ -1961,13 +1944,7 @@ const PlayerProfile = () => {
                 <RatingBadge
                   ratingValue={primarySport?.ratingValue}
                   ratingLabel={primarySport?.ratingLabel}
-                  certificationStatus={
-                    primarySport?.badgeStatus as
-                      | 'self_declared'
-                      | 'certified'
-                      | 'disputed'
-                      | undefined
-                  }
+                  certificationStatus={primarySport?.badgeStatus}
                   isDark={isDark}
                   isLoading={loading}
                   onInfoPress={() =>
@@ -2082,7 +2059,7 @@ const PlayerProfile = () => {
                   <Text style={[styles.ratingTitle, { color: colors.text }]}>
                     {primarySport.ratingLabel
                       ? getTranslatedRatingTitle(primarySport.ratingValue)
-                      : t('playerProfile.rating.unrated' as TranslationKey)}
+                      : t('playerProfile.rating.unrated')}
                   </Text>
                   <Text style={[styles.ratingCode, { color: colors.primary }]}>
                     {primarySport.ratingLabel ||
@@ -2124,7 +2101,7 @@ const PlayerProfile = () => {
               {/* Proof Gallery */}
               {(proofsLoading || approvedProofs.length > 0) && (
                 <Text style={[styles.proofGallerySectionTitle, { color: colors.text }]}>
-                  {t('playerProfile.rating.proofGalleryTitle' as TranslationKey)}
+                  {t('playerProfile.rating.proofGalleryTitle')}
                 </Text>
               )}
               {proofsLoading ? (
@@ -2299,7 +2276,7 @@ const PlayerProfile = () => {
           <View style={styles.sectionHeader}>
             <Ionicons name="tennisball-outline" size={18} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.preferredCourts' as TranslationKey)}
+              {t('playerProfile.sections.preferredCourts')}
             </Text>
           </View>
 
@@ -2355,7 +2332,7 @@ const PlayerProfile = () => {
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <Text style={[styles.noFacilitiesText, { color: colors.textMuted }]}>
-                {t('playerProfile.noPreferredCourts' as TranslationKey)}
+                {t('playerProfile.noPreferredCourts')}
               </Text>
             </View>
           )}

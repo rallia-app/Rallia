@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../navigation/types';
 import {
   View,
   StyleSheet,
@@ -15,7 +14,6 @@ import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { useAppNavigation } from '../navigation/hooks';
 import {
   Text,
   Skeleton,
@@ -29,21 +27,8 @@ import {
 import { supabase, Logger, OnboardingService } from '@rallia/shared-services';
 import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
-import { replaceImage } from '../services/imageUpload';
 import {
-  useImagePicker,
-  useThemeStyles,
-  useTranslation,
-  useTourSequence,
-  useSportSetup,
-  type TranslationKey,
-} from '../hooks';
-import { useSport } from '../context';
-import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
-import {
+  getProfilePictureUrl,
   lightHaptic,
   mediumHaptic,
   successHaptic,
@@ -51,12 +36,6 @@ import {
   getHumanName,
 } from '@rallia/shared-utils';
 import type { DayEnum, Sport } from '@rallia/shared-types';
-import {
-  HourlyAvailabilityGrid,
-  cellKey,
-  emptyGrid,
-  type HourGrid,
-} from '../features/onboarding/components/HourlyAvailabilityGrid';
 import {
   spacingPixels,
   radiusPixels,
@@ -67,13 +46,35 @@ import {
   status,
   base,
 } from '@rallia/design-system';
-import { MATCH_REIMBURSEMENT_ENABLED } from '../constants/features';
-import { ConfirmationModal } from '../components/ConfirmationModal';
-import RatingBadge from '../components/RatingBadge';
-import ReputationBadge from '../components/ReputationBadge';
-import CovetedBadge from '../components/CovetedBadge';
-import SportIcon from '../components/SportIcon';
-import ProfileCompletionChecklist from '../features/profile/components/ProfileCompletionChecklist';
+
+import { useAppNavigation } from '#/navigation/hooks';
+import { replaceImage } from '#/services/imageUpload';
+import {
+  useImagePicker,
+  useThemeStyles,
+  useTranslation,
+  useTourSequence,
+  useSportSetup,
+  type TranslationKey,
+} from '#/hooks';
+import { useSport } from '#/context';
+import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+import { formatDate as formatDateUtil, formatDateMonthYear } from '#/utils/dateFormatting';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import type { RootStackParamList } from '#/navigation/types';
+import { MATCH_REIMBURSEMENT_ENABLED } from '#/constants/features';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+import RatingBadge from '#/components/RatingBadge';
+import ReputationBadge from '#/components/ReputationBadge';
+import CovetedBadge from '#/components/CovetedBadge';
+import SportIcon from '#/components/SportIcon';
+import ProfileCompletionChecklist from '#/features/profile/components/ProfileCompletionChecklist';
 
 interface SportWithRating extends Sport {
   isActive: boolean;
@@ -217,7 +218,7 @@ const UserProfile = () => {
       await refetchStripeState();
     } catch {
       errorHaptic();
-      toast.error(t('profile.payments.onboardingError' as TranslationKey));
+      toast.error(t('profile.payments.onboardingError'));
     } finally {
       setStripeOnboarding(false);
     }
@@ -242,7 +243,7 @@ const UserProfile = () => {
       setSwitchingMode(false);
       if (error) {
         errorHaptic();
-        toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+        toast.error(t('profile.payments.modeUpdateError'));
         return;
       }
       successHaptic();
@@ -261,7 +262,7 @@ const UserProfile = () => {
     setSwitchingMode(false);
     if (error) {
       errorHaptic();
-      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      toast.error(t('profile.payments.modeUpdateError'));
       return;
     }
     successHaptic();
@@ -281,7 +282,7 @@ const UserProfile = () => {
     if (error) {
       setSwitchingMode(false);
       errorHaptic();
-      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      toast.error(t('profile.payments.modeUpdateError'));
       return;
     }
     successHaptic();
@@ -745,7 +746,7 @@ const UserProfile = () => {
           });
         } else {
           // Rating or preferences sheets (sport-specific)
-          SheetManager.show(sheet as never);
+          SheetManager.show(sheet);
         }
       }
     },
@@ -1518,7 +1519,7 @@ const UserProfile = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                {t('profile.payments.section' as TranslationKey)}
+                {t('profile.payments.section')}
               </Text>
             </View>
             {stripeAccount === undefined || payoutsMode === null ? (
@@ -1580,7 +1581,7 @@ const UserProfile = () => {
                               color={isDark ? primary[300] : primary[600]}
                             />
                             <Text size="sm" weight="semibold" color={colors.text}>
-                              {t('profile.payments.pendingTitle' as TranslationKey, {
+                              {t('profile.payments.pendingTitle', {
                                 amount: new Intl.NumberFormat(locale, {
                                   style: 'currency',
                                   currency: 'CAD',
@@ -1589,7 +1590,7 @@ const UserProfile = () => {
                             </Text>
                           </HStack>
                           <Text size="xs" color={colors.textMuted}>
-                            {t('profile.payments.pendingBody' as TranslationKey)}
+                            {t('profile.payments.pendingBody')}
                           </Text>
                         </VStack>
                       </Card>
@@ -1601,11 +1602,11 @@ const UserProfile = () => {
                       <HStack spacing={spacingPixels[2]} align="center">
                         <Ionicons name="hand-left-outline" size={20} color={colors.textMuted} />
                         <Text weight="medium" color={colors.text}>
-                          {t('profile.payments.manualMode' as TranslationKey)}
+                          {t('profile.payments.manualMode')}
                         </Text>
                       </HStack>
                       <Text size="sm" color={colors.textMuted}>
-                        {t('profile.payments.manualModeDescription' as TranslationKey)}
+                        {t('profile.payments.manualModeDescription')}
                       </Text>
                       <Button
                         variant="primary"
@@ -1627,7 +1628,7 @@ const UserProfile = () => {
                           background: colors.card,
                         }}
                       >
-                        {t('profile.payments.switchToStripe' as TranslationKey)}
+                        {t('profile.payments.switchToStripe')}
                       </Button>
                     </VStack>
                   ) : stripeAccount?.onboarding_completed ? (
@@ -1640,11 +1641,11 @@ const UserProfile = () => {
                           color={status.success.DEFAULT}
                         />
                         <Text weight="medium" color={colors.text}>
-                          {t('profile.payments.connected' as TranslationKey)}
+                          {t('profile.payments.connected')}
                         </Text>
                       </HStack>
                       <Text size="sm" color={colors.textMuted}>
-                        {t('profile.payments.connectedDescription' as TranslationKey)}
+                        {t('profile.payments.connectedDescription')}
                       </Text>
                       <Button
                         variant="outline"
@@ -1666,14 +1667,14 @@ const UserProfile = () => {
                           background: colors.card,
                         }}
                       >
-                        {t('profile.payments.switchToManual' as TranslationKey)}
+                        {t('profile.payments.switchToManual')}
                       </Button>
                     </VStack>
                   ) : (
                     /* Auto / undecided + not onboarded — original setup prompt with manual escape */
                     <VStack spacing={spacingPixels[3]} align="start">
                       <Text color={colors.textMuted} size="sm">
-                        {t('profile.payments.setupPrompt' as TranslationKey)}
+                        {t('profile.payments.setupPrompt')}
                       </Text>
                       <HStack spacing={spacingPixels[2]} wrap>
                         <Button
@@ -1697,8 +1698,8 @@ const UserProfile = () => {
                           }}
                         >
                           {stripeAccount === null
-                            ? t('profile.payments.connectAccount' as TranslationKey)
-                            : t('profile.payments.continueSetup' as TranslationKey)}
+                            ? t('profile.payments.connectAccount')
+                            : t('profile.payments.continueSetup')}
                         </Button>
                         <Button
                           variant="outline"
@@ -1719,7 +1720,7 @@ const UserProfile = () => {
                             background: colors.card,
                           }}
                         >
-                          {t('profile.payments.useManualInstead' as TranslationKey)}
+                          {t('profile.payments.useManualInstead')}
                         </Button>
                       </HStack>
                     </VStack>
@@ -1750,9 +1751,9 @@ const UserProfile = () => {
         visible={showSwitchToManualConfirm}
         onClose={() => setShowSwitchToManualConfirm(false)}
         onConfirm={handleConfirmSwitchToManual}
-        title={t('profile.payments.switchToManualConfirmTitle' as TranslationKey)}
-        message={t('profile.payments.switchToManualConfirmMessage' as TranslationKey)}
-        confirmLabel={t('profile.payments.switchToManual' as TranslationKey)}
+        title={t('profile.payments.switchToManualConfirmTitle')}
+        message={t('profile.payments.switchToManualConfirmMessage')}
+        confirmLabel={t('profile.payments.switchToManual')}
         cancelLabel={t('common.cancel')}
         isLoading={switchingMode}
       />

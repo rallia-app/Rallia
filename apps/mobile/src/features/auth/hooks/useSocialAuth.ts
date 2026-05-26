@@ -14,11 +14,12 @@ import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
-import { supabase } from '../../../lib/supabase';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { checkOnboardingStatus, getFriendlyErrorMessage } from '../utils';
-import * as Analytics from '../../../services/analytics';
+
+import { supabase } from '#/lib/supabase';
+import { checkOnboardingStatus, getFriendlyErrorMessage } from '#/features/auth/utils';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // TYPES

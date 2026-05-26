@@ -19,15 +19,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { SuggestionCard } from '../../../../../components/SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { SlotSuggestion } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
-import * as Analytics from '../../../../../services/analytics';
-import {
-  suggestionSlotKey,
-  useSuggestionInviteHandler,
-} from '../../../../../hooks/useSuggestionInviteHandler';
+
+import { SuggestionCard } from '#/components/SuggestionCard';
+import * as Analytics from '#/services/analytics';
+import { suggestionSlotKey, useSuggestionInviteHandler } from '#/hooks/useSuggestionInviteHandler';
 
 const BASE_WHITE = '#ffffff';
 const MAX_CARDS = 5;
@@ -160,10 +158,10 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
             <Ionicons name="sparkles" size={32} color={BASE_WHITE} />
           </View>
           <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-            {t('onboarding.suggestions.title' as TranslationKey)}
+            {t('onboarding.suggestions.title')}
           </Text>
           <Text size="base" color={colors.textMuted} style={styles.subtitle}>
-            {t('onboarding.suggestions.subtitle' as TranslationKey)}
+            {t('onboarding.suggestions.subtitle')}
           </Text>
         </Animated.View>
 
@@ -172,17 +170,17 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           <View style={styles.centeredState}>
             <ActivityIndicator size="large" color={colors.buttonActive} />
             <Text size="sm" color={colors.textMuted} style={styles.stateText}>
-              {t('onboarding.suggestions.loading' as TranslationKey)}
+              {t('onboarding.suggestions.loading')}
             </Text>
           </View>
         ) : previewSuggestions.length === 0 ? (
           <View style={styles.centeredState}>
             <Ionicons name="search-outline" size={48} color={colors.textMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.stateText}>
-              {t('onboarding.suggestions.emptyTitle' as TranslationKey)}
+              {t('onboarding.suggestions.emptyTitle')}
             </Text>
             <Text size="sm" color={colors.textMuted}>
-              {t('onboarding.suggestions.emptySubtitle' as TranslationKey)}
+              {t('onboarding.suggestions.emptySubtitle')}
             </Text>
             {onRefresh && (
               <TouchableOpacity
@@ -192,7 +190,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
               >
                 <Ionicons name="refresh-outline" size={18} color={colors.buttonActive} />
                 <Text size="sm" weight="semibold" color={colors.buttonActive}>
-                  {t('common.refresh' as TranslationKey)}
+                  {t('common.refresh')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -243,14 +241,14 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
                 color={colors.buttonTextActive}
                 style={styles.continueText}
               >
-                {t('common.continue' as TranslationKey)}
+                {t('common.continue')}
               </Text>
               <Ionicons name="arrow-forward" size={18} color={colors.buttonTextActive} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={handleSkip} activeOpacity={0.6} style={styles.skipButton}>
               <Text size="sm" color={colors.textMuted} style={styles.skipText}>
-                {t('onboarding.suggestions.exploreLater' as TranslationKey)}
+                {t('onboarding.suggestions.exploreLater')}
               </Text>
             </TouchableOpacity>
           )}

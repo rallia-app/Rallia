@@ -13,8 +13,8 @@ import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-sy
 import { lightHaptic } from '@rallia/shared-utils';
 import type { NetworkPulseLeaderboardEntry } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import type { TranslationKey } from '#/hooks';
 
 import { LeaderboardRow } from './LeaderboardRow';
 

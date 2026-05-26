@@ -20,8 +20,10 @@
  */
 
 import { useMemo, useRef } from 'react';
+
+import { useLocationMode, useUserHomeLocation } from '#/context';
+
 import { useUserLocation } from './useUserLocation';
-import { useLocationMode, useUserHomeLocation } from '../context';
 
 export interface EffectiveLocation {
   latitude: number;

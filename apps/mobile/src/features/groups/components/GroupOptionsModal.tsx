@@ -8,8 +8,9 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface OptionItem {
   id: string;

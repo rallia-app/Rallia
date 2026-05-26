@@ -21,8 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useTheme, useNotificationPreferencesWithActions } from '@rallia/shared-hooks';
-import { useAuth, useTranslation } from '../hooks';
-import * as Analytics from '../services/analytics';
 import {
   lightTheme,
   darkTheme,
@@ -44,6 +42,9 @@ import {
   type DeliveryChannelEnum,
 } from '@rallia/shared-types';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+
+import * as Analytics from '#/services/analytics';
+import { useAuth, useTranslation } from '#/hooks';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {

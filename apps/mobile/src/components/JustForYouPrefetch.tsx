@@ -28,9 +28,9 @@ import {
   useFavoriteFacilities,
   type MatchScoringPreferences,
 } from '@rallia/shared-hooks';
-import { useAuth } from '../context';
-import { useSport } from '../context';
-import { useEffectiveLocation } from '../hooks';
+
+import { useAuth, useSport } from '#/context';
+import { useEffectiveLocation } from '#/hooks';
 
 const MATCH_LIMIT = 5;
 

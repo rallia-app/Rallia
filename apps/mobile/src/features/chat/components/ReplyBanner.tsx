@@ -6,10 +6,10 @@
 import React, { memo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface ReplyBannerProps {
   senderName: string;

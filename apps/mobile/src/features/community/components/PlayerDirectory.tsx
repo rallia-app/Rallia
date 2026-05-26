@@ -19,14 +19,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer, useRatingScoresForSport } from '@rallia/shared-hooks';
-import { useTranslation } from '../../../hooks';
-import { useEffectiveLocation } from '../../../hooks/useEffectiveLocation';
-import { useUserHomeLocation } from '../../../context';
 import type { PlayerSearchResult, ReputationTier } from '@rallia/shared-services';
 import { supabase, Logger, getTierConfig } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
-import * as Analytics from '../../../services/analytics';
-import { SearchBar } from '../../../components/SearchBar';
+
+import { useTranslation } from '#/hooks';
+import { useEffectiveLocation } from '#/hooks/useEffectiveLocation';
+import { useUserHomeLocation } from '#/context';
+import * as Analytics from '#/services/analytics';
+import { SearchBar } from '#/components/SearchBar';
+
 import PlayerCard from './PlayerCard';
 import PlayerCardSkeleton from './PlayerCardSkeleton';
 import { PlayerFiltersBar, type PlayerFilters, DEFAULT_PLAYER_FILTERS } from './PlayerFiltersBar';

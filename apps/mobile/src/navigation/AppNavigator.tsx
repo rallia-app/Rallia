@@ -27,7 +27,6 @@ import { StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CopilotStep } from 'react-native-copilot';
-import { WalkthroughableView } from '../context/TourContext';
 import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 
@@ -37,11 +36,6 @@ import {
   NotificationButton,
   SettingsButton,
 } from '@rallia/shared-components';
-import { useActionsSheet, useSport, useOverlay } from '../context';
-import SportSelector from '../components/SportSelector';
-import TennisIcon from '../../assets/icons/tennis.svg';
-import PickleballIcon from '../../assets/icons/pickleball.svg';
-import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import {
   useUnreadCountForSport,
   useProfile,
@@ -49,77 +43,92 @@ import {
   useOtherSportsUnreadCount,
   useProfileCompleteness,
   chatKeys,
+  useTheme,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
-import { useTheme } from '@rallia/shared-hooks';
-import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
-import ProfileCompletionRing from '../features/profile/components/ProfileCompletionRing';
-import { getTierColors } from '../features/profile/completionTierColors';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   NativeStackNavigationProp,
   NativeStackHeaderProps,
 } from '@react-navigation/native-stack';
+import { getTierColors } from '#/features/profile/completionTierColors';
+import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '#/hooks';
+import ProfileCompletionRing from '#/features/profile/components/ProfileCompletionRing';
+import SportSelector from '#/components/SportSelector';
+import { useActionsSheet, useSport, useOverlay } from '#/context';
+import { WalkthroughableView } from '#/context/TourContext';
 
 // Screens
-import Home from '../screens/Home';
-import Community from '../screens/Community';
-import Chat from '../screens/Chat';
-import ChatConversation from '../screens/ChatConversation';
-import ArchivedChats from '../screens/ArchivedChats';
-import SettingsScreen from '../screens/SettingsScreen';
-import Paywall from '../screens/Paywall';
-import SubscriptionManagement from '../screens/SubscriptionManagement';
-import UserProfile from '../screens/UserProfile';
-import SportProfile from '../screens/SportProfile';
-import RatingProofs from '../screens/RatingProofs';
-import RatingReferences from '../screens/RatingReferences';
-import IncomingReferenceRequests from '../screens/IncomingReferenceRequests';
-import Notifications from '../screens/Notifications';
-import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
-import PermissionsScreen from '../screens/PermissionsScreen';
-import PlayerProfile from '../screens/PlayerProfile';
-import SharedLists from '../screens/SharedLists';
-import SharedListDetail from '../screens/SharedListDetail';
-import Groups from '../screens/Groups';
-import GroupDetail from '../screens/GroupDetail';
-import PreOnboardingScreen from '../screens/PreOnboarding';
-import GroupChatInfo from '../screens/GroupChatInfo';
-import PlayedMatchDetail from '../screens/PlayedMatchDetail';
-import Communities from '../screens/Communities';
-import CommunityDetail from '../screens/CommunityDetail';
-import NetworkMatches from '../screens/NetworkMatches';
-import AdminPanelScreen from '../screens/AdminPanelScreen';
-import AdminDashboardScreen from '../screens/AdminDashboardScreen';
-import AdminUsersScreen from '../screens/AdminUsersScreen';
-import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
-import AdminNetworksScreen from '../screens/AdminNetworksScreen';
-import AdminNetworkDetailScreen from '../screens/AdminNetworkDetailScreen';
-import AdminActivityLogScreen from '../screens/AdminActivityLogScreen';
-import AdminAlertsScreen from '../screens/AdminAlertsScreen';
-import AdminSettingsScreen from '../screens/AdminSettingsScreen';
-import AdminModerationScreen from '../screens/AdminModerationScreen';
+import Home from '#/screens/Home';
+import Community from '#/screens/Community';
+import Chat from '#/screens/Chat';
+import ChatConversation from '#/screens/ChatConversation';
+import ArchivedChats from '#/screens/ArchivedChats';
+import SettingsScreen from '#/screens/SettingsScreen';
+import Paywall from '#/screens/Paywall';
+import SubscriptionManagement from '#/screens/SubscriptionManagement';
+import UserProfile from '#/screens/UserProfile';
+import SportProfile from '#/screens/SportProfile';
+import RatingProofs from '#/screens/RatingProofs';
+import RatingReferences from '#/screens/RatingReferences';
+import IncomingReferenceRequests from '#/screens/IncomingReferenceRequests';
+import Notifications from '#/screens/Notifications';
+import NotificationPreferencesScreen from '#/screens/NotificationPreferencesScreen';
+import PermissionsScreen from '#/screens/PermissionsScreen';
+import PlayerProfile from '#/screens/PlayerProfile';
+import SharedLists from '#/screens/SharedLists';
+import SharedListDetail from '#/screens/SharedListDetail';
+import Groups from '#/screens/Groups';
+import GroupDetail from '#/screens/GroupDetail';
+import PreOnboardingScreen from '#/screens/PreOnboarding';
+import GroupChatInfo from '#/screens/GroupChatInfo';
+import PlayedMatchDetail from '#/screens/PlayedMatchDetail';
+import Communities from '#/screens/Communities';
+import CommunityDetail from '#/screens/CommunityDetail';
+import NetworkMatches from '#/screens/NetworkMatches';
+import AdminPanelScreen from '#/screens/AdminPanelScreen';
+import AdminDashboardScreen from '#/screens/AdminDashboardScreen';
+import AdminUsersScreen from '#/screens/AdminUsersScreen';
+import AdminUserDetailScreen from '#/screens/AdminUserDetailScreen';
+import AdminNetworksScreen from '#/screens/AdminNetworksScreen';
+import AdminNetworkDetailScreen from '#/screens/AdminNetworkDetailScreen';
+import AdminActivityLogScreen from '#/screens/AdminActivityLogScreen';
+import AdminAlertsScreen from '#/screens/AdminAlertsScreen';
+import AdminSettingsScreen from '#/screens/AdminSettingsScreen';
+import AdminModerationScreen from '#/screens/AdminModerationScreen';
 // Phase 2 Analytics Sub-Views
-import AdminOnboardingAnalyticsScreen from '../screens/admin/AdminOnboardingAnalyticsScreen';
-import AdminUserAnalyticsScreen from '../screens/admin/AdminUserAnalyticsScreen';
-import AdminMatchAnalyticsScreen from '../screens/admin/AdminMatchAnalyticsScreen';
+import AdminOnboardingAnalyticsScreen from '#/screens/admin/AdminOnboardingAnalyticsScreen';
+import AdminUserAnalyticsScreen from '#/screens/admin/AdminUserAnalyticsScreen';
+import AdminMatchAnalyticsScreen from '#/screens/admin/AdminMatchAnalyticsScreen';
 // Phase 3 Analytics Sub-Views
-import AdminEngagementAnalyticsScreen from '../screens/admin/AdminEngagementAnalyticsScreen';
-import AdminMessagingAnalyticsScreen from '../screens/admin/AdminMessagingAnalyticsScreen';
+import AdminEngagementAnalyticsScreen from '#/screens/admin/AdminEngagementAnalyticsScreen';
+import AdminMessagingAnalyticsScreen from '#/screens/admin/AdminMessagingAnalyticsScreen';
 // Phase 4 Analytics Sub-Views
-import AdminRatingAnalyticsScreen from '../screens/admin/AdminRatingAnalyticsScreen';
-import AdminModerationAnalyticsScreen from '../screens/admin/AdminModerationAnalyticsScreen';
+import AdminRatingAnalyticsScreen from '#/screens/admin/AdminRatingAnalyticsScreen';
+import AdminModerationAnalyticsScreen from '#/screens/admin/AdminModerationAnalyticsScreen';
 // Phase 5 Analytics Sub-Views
-import AdminCommunityAnalyticsScreen from '../screens/admin/AdminCommunityAnalyticsScreen';
-import AdminSportAnalyticsScreen from '../screens/admin/AdminSportAnalyticsScreen';
-import MapScreen from '../screens/Map';
+import AdminCommunityAnalyticsScreen from '#/screens/admin/AdminCommunityAnalyticsScreen';
+import AdminSportAnalyticsScreen from '#/screens/admin/AdminSportAnalyticsScreen';
+import MapScreen from '#/screens/Map';
 
 // Components
-import { ThemeLogo } from '../components/ThemeLogo';
+import { ThemeLogo } from '#/components/ThemeLogo';
 
 // Types
+import PublicMatches from '#/features/matches/screens/PublicMatches';
+import PlayerMatches from '#/features/matches/screens/PlayerMatches';
+import { FacilitiesDirectory, FacilityDetail } from '#/features/facilities';
+import { MyBookingsScreen, BookingDetailScreen } from '#/features/bookings';
+import { InviteReferralScreen } from '#/screens/InviteReferralScreen';
+import { WeeklyCheckInScreen } from '#/features/weekly-checkin/WeeklyCheckInScreen';
+
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
+import TennisIcon from '../../assets/icons/tennis.svg';
+
+import { useAppNavigation } from './hooks';
 import type {
   RootStackParamList,
   BottomTabParamList,
@@ -129,12 +138,6 @@ import type {
   ChatStackParamList,
   MapStackParamList,
 } from './types';
-import PublicMatches from '../features/matches/screens/PublicMatches';
-import PlayerMatches from '../features/matches/screens/PlayerMatches';
-import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
-import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
-import { InviteReferralScreen } from '../screens/InviteReferralScreen';
-import { WeeklyCheckInScreen } from '../features/weekly-checkin/WeeklyCheckInScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS

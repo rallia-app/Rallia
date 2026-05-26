@@ -8,8 +8,10 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+
 import { useAddScore } from './AddScoreContext';
 import type { MatchExpectation } from './types';
 

@@ -18,6 +18,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import type { DayEnum } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
+
 import { cellKey, ORDERED_DAYS, type HourGrid } from './HourlyAvailabilityGrid';
 
 const WEEKDAYS: DayEnum[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];

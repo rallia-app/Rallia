@@ -20,15 +20,16 @@ import {
   neutral,
   status as statusColors,
 } from '@rallia/design-system';
-import { useSubscription } from '../context/SubscriptionContext';
-import { useAppNavigation } from '../navigation/hooks';
-import { useTranslation } from '../hooks';
-import { PRO_ENTITLEMENT_ID } from '../lib/revenuecat';
+
+import { useSubscription } from '#/context/SubscriptionContext';
+import { useAppNavigation } from '#/navigation/hooks';
+import { useTranslation } from '#/hooks';
+import { PRO_ENTITLEMENT_ID } from '#/lib/revenuecat';
 import {
   restorePurchasesAttempted,
   restorePurchasesSuccess,
   restorePurchasesFailed,
-} from '../services/analytics';
+} from '#/services/analytics';
 
 const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 

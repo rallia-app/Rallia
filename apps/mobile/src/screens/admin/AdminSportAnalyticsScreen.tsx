@@ -12,9 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import { TimeRangeSelector, LineChart } from '@rallia/shared-components/src/charts';
@@ -29,7 +27,9 @@ import {
   type SportGrowthTrend,
   type SportFacilityData,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -280,7 +280,7 @@ export default function AdminSportAnalyticsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('admin.analytics.sections.sports' as TranslationKey) || 'Sports Analytics'}
+          {t('admin.analytics.sections.sports') || 'Sports Analytics'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -323,7 +323,7 @@ export default function AdminSportAnalyticsScreen() {
         {summaryMetrics && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.overview' as TranslationKey) || 'Overview'}
+              {t('admin.analytics.sports.overview') || 'Overview'}
             </Text>
             <View style={styles.metricsGrid}>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -332,7 +332,7 @@ export default function AdminSportAnalyticsScreen() {
                   {summaryMetrics.totalSports || 0}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.sports.totalSports' as TranslationKey) || 'Sports'}
+                  {t('admin.analytics.sports.totalSports') || 'Sports'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -341,7 +341,7 @@ export default function AdminSportAnalyticsScreen() {
                   {(summaryMetrics.totalMatches || 0).toLocaleString()}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.sports.totalMatches' as TranslationKey) || 'Total Matches'}
+                  {t('admin.analytics.sports.totalMatches') || 'Total Matches'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -350,7 +350,7 @@ export default function AdminSportAnalyticsScreen() {
                   {summaryMetrics.totalFacilities || 0}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.sports.facilities' as TranslationKey) || 'Facilities'}
+                  {t('admin.analytics.sports.facilities') || 'Facilities'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -360,7 +360,7 @@ export default function AdminSportAnalyticsScreen() {
                   {(summaryMetrics.avgGrowth || 0).toFixed(1)}%
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.sports.avgGrowth' as TranslationKey) || 'Avg Growth'}
+                  {t('admin.analytics.sports.avgGrowth') || 'Avg Growth'}
                 </Text>
               </View>
             </View>
@@ -371,7 +371,7 @@ export default function AdminSportAnalyticsScreen() {
         {popularityChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.popularity' as TranslationKey) || 'Sport Popularity'}
+              {t('admin.analytics.sports.popularity') || 'Sport Popularity'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.pieChartContainer}>
@@ -388,7 +388,7 @@ export default function AdminSportAnalyticsScreen() {
                           .toLocaleString()}
                       </Text>
                       <Text style={[styles.pieCenterLabel, { color: colors.textSecondary }]}>
-                        {t('admin.analytics.sports.players' as TranslationKey) || 'Players'}
+                        {t('admin.analytics.sports.players') || 'Players'}
                       </Text>
                     </View>
                   )}
@@ -412,8 +412,7 @@ export default function AdminSportAnalyticsScreen() {
         {activityChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.activityComparison' as TranslationKey) ||
-                'Activity Comparison'}
+              {t('admin.analytics.sports.activityComparison') || 'Activity Comparison'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -438,7 +437,7 @@ export default function AdminSportAnalyticsScreen() {
                 isAnimated
               />
               <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-                {t('admin.analytics.sports.matchesBySport' as TranslationKey) || 'Matches by Sport'}
+                {t('admin.analytics.sports.matchesBySport') || 'Matches by Sport'}
               </Text>
             </View>
           </View>
@@ -448,7 +447,7 @@ export default function AdminSportAnalyticsScreen() {
         {growthChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.growthTrends' as TranslationKey) || 'Monthly Match Trend'}
+              {t('admin.analytics.sports.growthTrends') || 'Monthly Match Trend'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.legendRow}>
@@ -475,7 +474,7 @@ export default function AdminSportAnalyticsScreen() {
         {growthRatesChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.growthRates' as TranslationKey) || 'Sport Growth Rates'}
+              {t('admin.analytics.sports.growthRates') || 'Sport Growth Rates'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -503,13 +502,13 @@ export default function AdminSportAnalyticsScreen() {
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: chartColors.secondary }]} />
                   <Text style={[styles.legendText, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.sports.positiveGrowth' as TranslationKey) || 'Positive'}
+                    {t('admin.analytics.sports.positiveGrowth') || 'Positive'}
                   </Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: chartColors.quaternary }]} />
                   <Text style={[styles.legendText, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.sports.negativeGrowth' as TranslationKey) || 'Negative'}
+                    {t('admin.analytics.sports.negativeGrowth') || 'Negative'}
                   </Text>
                 </View>
               </View>
@@ -521,8 +520,7 @@ export default function AdminSportAnalyticsScreen() {
         {facilityChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.facilityUtilization' as TranslationKey) ||
-                'Facility Utilization'}
+              {t('admin.analytics.sports.facilityUtilization') || 'Facility Utilization'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -547,8 +545,7 @@ export default function AdminSportAnalyticsScreen() {
                 isAnimated
               />
               <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-                {t('admin.analytics.sports.utilizationPercent' as TranslationKey) ||
-                  'Utilization %'}
+                {t('admin.analytics.sports.utilizationPercent') || 'Utilization %'}
               </Text>
             </View>
           </View>
@@ -558,7 +555,7 @@ export default function AdminSportAnalyticsScreen() {
         {sportPopularity.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.sportDetails' as TranslationKey) || 'Sport Details'}
+              {t('admin.analytics.sports.sportDetails') || 'Sport Details'}
             </Text>
             <View style={[styles.listCard, { backgroundColor: colors.card }]}>
               {sportPopularity.map((sport, index) => (
@@ -615,7 +612,7 @@ export default function AdminSportAnalyticsScreen() {
         {facilityData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sports.facilityDetails' as TranslationKey) || 'Facility Details'}
+              {t('admin.analytics.sports.facilityDetails') || 'Facility Details'}
             </Text>
             <View style={[styles.listCard, { backgroundColor: colors.card }]}>
               {facilityData.map((facility, index) => (

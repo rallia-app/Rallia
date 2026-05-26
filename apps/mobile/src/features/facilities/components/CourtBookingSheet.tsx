@@ -29,9 +29,10 @@ import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
 
 /**
  * Extended theme colors for the booking sheet
@@ -87,9 +88,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
   const facility = payload?.facility as FacilityWithDetails;
   const slot = payload?.slot as FormattedSlot;
   const courts = useMemo(() => (payload?.courts ?? []) as Court[], [payload?.courts]);
-  const onSuccess = payload?.onSuccess as
-    | ((data: { facilityId: string; courtId: string; courtNumber: number | null }) => void)
-    | undefined;
+  const onSuccess = payload?.onSuccess;
   const onCreateGameFromBooking = payload?.onCreateGameFromBooking as
     | ((data: {
         facility: FacilityWithDetails;

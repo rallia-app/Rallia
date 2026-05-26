@@ -9,11 +9,13 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { BookingWithDetails } from '@rallia/shared-services';
-import { lightHaptic } from '../../../utils/haptics';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { lightHaptic } from '#/utils/haptics';
+
 import BookingStatusBadge from './BookingStatusBadge';
 
 interface MyBookingCardProps {

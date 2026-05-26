@@ -6,10 +6,11 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '@rallia/shared-components';
-import { useTranslation, useThemeStyles } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { BookingStatus } from '@rallia/shared-services';
+
+import { useTranslation, useThemeStyles } from '#/hooks';
 
 interface BookingStatusBadgeProps {
   status: BookingStatus;

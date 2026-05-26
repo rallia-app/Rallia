@@ -13,8 +13,8 @@ import { neutral, primary, radiusPixels, spacingPixels, status } from '@rallia/d
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { NetworkPulseLeaderboardEntry } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import RatingBadge from '../../../../components/RatingBadge';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import RatingBadge from '#/components/RatingBadge';
 
 import { FormLine } from './FormLine';
 

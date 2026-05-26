@@ -15,14 +15,14 @@ import {
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
-import { neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels, neutral } from '@rallia/design-system';
 import {
   createSharedContact,
   updateSharedContact,
   type SharedContact,
 } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 export function AddContactActionSheet({ payload }: SheetProps<'add-contact'>) {
   const listId = payload?.listId ?? '';

@@ -54,6 +54,8 @@ export function base({ tsconfigRootDir } = {}) {
           'warn',
           {
             groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+            pathGroups: [{ pattern: '#/**', group: 'internal', position: 'before' }],
+            pathGroupsExcludedImportTypes: ['builtin'],
             'newlines-between': 'always',
           },
         ],

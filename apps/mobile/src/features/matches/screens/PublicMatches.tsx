@@ -24,20 +24,21 @@ import {
   type UnifiedFeedItem,
 } from '@rallia/shared-hooks';
 import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
+import type { TranslationKey } from '@rallia/shared-translations';
+import { Logger, supabase } from '@rallia/shared-services';
+import { spacingPixels } from '@rallia/design-system';
+
 import {
   useAuth,
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
   useSuggestionInviteHandler,
-} from '../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet, useSport, useUserHomeLocation } from '../../../context';
-import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
-import { Logger, supabase } from '@rallia/shared-services';
-import { spacingPixels } from '@rallia/design-system';
-import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '../components';
-import { FeedItemCard } from '../components/FeedItemCard';
+} from '#/hooks';
+import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
+import { FeedItemCard } from '#/features/matches/components/FeedItemCard';
 
 // =============================================================================
 // HELPER COMPONENTS
@@ -335,13 +336,13 @@ export default function PublicMatches() {
 
     const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map(s => ({
       kind: 'item' as const,
-      key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime()}`,
+      key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
       data: {
         kind: 'suggestion',
-        key: `suggestion:${s.opponentId}:${(s.slot.datetime as Date).getTime()}`,
+        key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
         sortTime: 0,
         data: s,
-      } as UnifiedFeedItem,
+      },
     }));
 
     if (suggestionItems.length === 0) return matchItems;
@@ -406,7 +407,7 @@ export default function PublicMatches() {
           getInviteState={getInviteState}
           onMatchPress={match => {
             Logger.logUserAction('public_match_pressed', { matchId: match.id });
-            openMatchDetail(match as MatchDetailData);
+            openMatchDetail(match);
           }}
           onSendInvite={handleSendInvite}
           sportId={selectedSport?.id}
@@ -441,7 +442,7 @@ export default function PublicMatches() {
       <EmptyState
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
         textMutedColor={colors.textMuted}
-        t={t as (key: TranslationKey) => string}
+        t={t}
       />
     );
   }, [

@@ -27,7 +27,8 @@ import {
   spacingPixels,
   shadowsSemanticNative,
 } from '@rallia/design-system';
-import { useTranslation } from '../../../hooks';
+
+import { useTranslation } from '#/hooks';
 
 interface RecapCardProps {
   lastWeekGoal: number | null;

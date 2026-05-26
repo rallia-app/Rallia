@@ -7,13 +7,13 @@ import React, { useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { SportIcon } from '../../../components/SportIcon';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
 
 export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) {
   const matches = (payload?.matches ?? []) as GroupMatch[];

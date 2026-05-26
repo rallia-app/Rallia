@@ -19,11 +19,12 @@ import {
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic } from '@rallia/shared-utils';
 import { formatInlineSnapshotSlots, type FormattedSlot } from '@rallia/shared-hooks';
-import { useAuth } from '../../../context';
-import { useRequireOnboarding, useThemeStyles } from '../../../hooks';
-import { SportIcon } from '../../../components/SportIcon';
-import * as Analytics from '../../../services/analytics';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+
+import { useAuth } from '#/context';
+import { useRequireOnboarding, useThemeStyles } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+import * as Analytics from '#/services/analytics';
+import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 interface FacilityCardProps {
   facility: FacilitySearchResult;
@@ -395,7 +396,7 @@ function FacilityCard({
               <View style={styles.emptySlots}>
                 <Ionicons name="calendar-clear-outline" size={14} color={mutedColor} />
                 <Text size="xs" color={mutedColor}>
-                  {t('matchCreation.booking.noSlotsAvailable' as TranslationKey)}
+                  {t('matchCreation.booking.noSlotsAvailable')}
                 </Text>
               </View>
             )}

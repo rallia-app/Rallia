@@ -21,16 +21,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@rallia/shared-components';
 import { SheetManager } from 'react-native-actions-sheet';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { withTimeout } from '../../../utils/networkTimeout';
-import { resolveStorageUrl, isPrivateBucketUrl } from '../../../services/imageUpload';
-import ProofViewer from './ProofViewer';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { withTimeout } from '#/utils/networkTimeout';
+import { resolveStorageUrl, isPrivateBucketUrl } from '#/services/imageUpload';
+
+import ProofViewer from './ProofViewer';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Account for parent's padding (spacingPixels[4] * 2) and gap between cards (spacingPixels[2])

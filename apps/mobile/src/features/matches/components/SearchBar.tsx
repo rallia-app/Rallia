@@ -7,8 +7,9 @@
 import React, { useRef } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeStyles } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+
+import { useThemeStyles } from '#/hooks';
 
 const SEARCH_ICON_SIZE = 20;
 const CLEAR_ICON_SIZE = 18;

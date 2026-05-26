@@ -13,7 +13,7 @@ import { Button, SkeletonAvatar, Text } from '@rallia/shared-components';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import { useNetworkPulse, type NetworkPulseLeaderboardEntry } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 import { PulseHero } from './leaderboard/PulseHero';
 import { FormStrip } from './leaderboard/FormStrip';

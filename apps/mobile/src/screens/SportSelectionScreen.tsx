@@ -26,9 +26,10 @@ import { Text, Spinner, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, secondary, neutral } from '@rallia/design-system';
 import { SportService, Logger } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../hooks';
-import { useOverlay, useSport } from '../context';
 import type { Sport as DatabaseSport } from '@rallia/shared-types';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { useOverlay, useSport } from '#/context';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BASE_WHITE = '#ffffff';

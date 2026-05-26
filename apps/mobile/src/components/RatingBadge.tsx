@@ -74,11 +74,9 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
 
   const accentColor = certBadgeColors ? certBadgeColors.bg : isDark ? primary[400] : primary[500];
 
-  const gradientColors = (
-    isDark
-      ? [withAlpha(accentColor, 0.32), withAlpha(accentColor, 0.5)]
-      : [withAlpha(accentColor, 0.08), withAlpha(accentColor, 0.22)]
-  ) as [string, string];
+  const gradientColors: [string, string] = isDark
+    ? [withAlpha(accentColor, 0.32), withAlpha(accentColor, 0.5)]
+    : [withAlpha(accentColor, 0.08), withAlpha(accentColor, 0.22)];
 
   const borderColor = isDark ? withAlpha(accentColor, 0.55) : withAlpha(accentColor, 0.3);
 

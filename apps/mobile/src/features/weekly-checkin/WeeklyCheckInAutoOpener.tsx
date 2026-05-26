@@ -18,14 +18,16 @@ import React, { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '@rallia/shared-services';
 import { useAuth } from '@rallia/shared-hooks';
-import { useOverlay } from '../../context';
-import { useTour } from '../../context/TourContext';
+
+import { useOverlay } from '#/context';
+import { useTour } from '#/context/TourContext';
+import { navigationRef } from '#/navigation';
+
 import { useCheckInContext } from './api';
 import { WEEKLY_CHECKIN_COOLDOWN_KEY } from './useWeeklyCheckInWizard';
 // This component is rendered OUTSIDE the NavigationContainer (next to
 // WelcomeTourModal in AppContent), so we use the container-ref-based API
 // instead of the useNavigation() hook.
-import { navigationRef } from '../../navigation';
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 

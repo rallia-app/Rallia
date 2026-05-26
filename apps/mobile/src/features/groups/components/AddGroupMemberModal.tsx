@@ -7,15 +7,15 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, successHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
 import { useAddGroupMember, usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
+
+import { useSport } from '#/context';
+import { useThemeStyles, useAuth, useTranslation } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
 
 export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-member'>) {
   const groupId = payload?.groupId ?? '';

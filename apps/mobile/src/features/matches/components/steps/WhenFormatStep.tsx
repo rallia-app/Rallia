@@ -26,7 +26,8 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
-import type { TranslationKey } from '../../../../hooks/useTranslation';
+
+import type { TranslationKey } from '#/hooks/useTranslation';
 
 // =============================================================================
 // TIMEZONE DATA

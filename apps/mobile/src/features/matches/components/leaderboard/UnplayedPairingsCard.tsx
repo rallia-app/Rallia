@@ -13,8 +13,8 @@ import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-sy
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { NetworkPulseUnplayedPairing } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import RatingBadge from '../../../../components/RatingBadge';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import RatingBadge from '#/components/RatingBadge';
 
 interface UnplayedPairingsCardProps {
   pairings: NetworkPulseUnplayedPairing[];

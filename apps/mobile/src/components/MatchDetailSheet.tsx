@@ -30,8 +30,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as WebBrowser from 'expo-web-browser';
 import MapView, { Marker } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
-import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
-import { BaseActionSheet } from './BaseActionSheet';
+import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Text,
@@ -74,16 +73,6 @@ import {
   getHumanName,
   getShortName,
 } from '@rallia/shared-utils';
-import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
-import { useActionsSheet } from '../context/ActionsSheetContext';
-import { usePlayerInviteSheet } from '../context/PlayerInviteSheetContext';
-import { useFeedbackSheet } from '../context/FeedbackSheetContext';
-import {
-  useTranslation,
-  usePermissions,
-  useRequireOnboarding,
-  type TranslationKey,
-} from '../hooks';
 import {
   useTheme,
   usePlayer,
@@ -106,20 +95,27 @@ import {
   type MatchTimeSuggestionWithSuggester,
 } from '@rallia/shared-services';
 import { useStripe } from '@stripe/stripe-react-native';
-import { SheetManager } from 'react-native-actions-sheet';
-import { MATCH_REIMBURSEMENT_ENABLED } from '../constants/features';
-import { shareMatch } from '../utils';
-import { openInMaps } from '../utils/openInMaps';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
+import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
+
+import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
+import { useActionsSheet } from '#/context/ActionsSheetContext';
+import { usePlayerInviteSheet } from '#/context/PlayerInviteSheetContext';
+import { useFeedbackSheet } from '#/context/FeedbackSheetContext';
+import { useTranslation, usePermissions, useRequireOnboarding, type TranslationKey } from '#/hooks';
+import { MATCH_REIMBURSEMENT_ENABLED } from '#/constants/features';
+import { openInMaps } from '#/utils/openInMaps';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { useAppNavigation } from '#/navigation';
+import { shareMatch } from '#/utils';
+import * as Analytics from '#/services/analytics';
+import { MatchAvailableCourtsSection } from '#/features/matches/components/MatchAvailableCourtsSection';
+
 import { ConfirmationModal } from './ConfirmationModal';
 import { MatchShareQRModal } from './MatchShareQRModal';
 import { SportIcon } from './SportIcon';
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
-import { useAppNavigation } from '../navigation';
-import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
-import * as Analytics from '../services/analytics';
-import { MatchAvailableCourtsSection } from '../features/matches/components/MatchAvailableCourtsSection';
+import { BaseActionSheet } from './BaseActionSheet';
 
 // Use base.white from design system for consistency
 
@@ -1822,26 +1818,24 @@ export const MatchDetailSheet: React.FC = () => {
       if (guardCode) {
         const hostName = getHumanName(
           selectedMatch.created_by_player?.profile,
-          t('matchDetail.host' as TranslationKey)
+          t('matchDetail.host')
         );
         switch (guardCode) {
           case 'match_not_finished':
             warningHaptic();
-            toast.error(t('matchDetail.payErrors.matchNotFinished' as TranslationKey));
+            toast.error(t('matchDetail.payErrors.matchNotFinished'));
             return;
           case 'match_not_full':
             warningHaptic();
-            toast.error(t('matchDetail.payErrors.matchNotFull' as TranslationKey));
+            toast.error(t('matchDetail.payErrors.matchNotFull'));
             return;
           case 'host_manual_only':
             warningHaptic();
-            toast.error(
-              t('matchDetail.payErrors.hostManualOnly' as TranslationKey, { name: hostName })
-            );
+            toast.error(t('matchDetail.payErrors.hostManualOnly', { name: hostName }));
             return;
           case 'already_paid':
             warningHaptic();
-            toast.error(t('matchDetail.payErrors.alreadyPaid' as TranslationKey));
+            toast.error(t('matchDetail.payErrors.alreadyPaid'));
             return;
           default:
             break;
@@ -1872,17 +1866,17 @@ export const MatchDetailSheet: React.FC = () => {
       const paidAmount = formatCAD(data.amountCents ?? 0, locale);
       const hostNameForToast = getHumanName(
         selectedMatch.created_by_player?.profile,
-        t('matchDetail.host' as TranslationKey)
+        t('matchDetail.host')
       );
       toast.success(
-        t('matchDetail.paymentSuccessWithDetails' as TranslationKey, {
+        t('matchDetail.paymentSuccessWithDetails', {
           amount: paidAmount,
           name: hostNameForToast,
         })
       );
     } catch {
       errorHaptic();
-      toast.error(t('matchDetail.paymentError' as TranslationKey));
+      toast.error(t('matchDetail.paymentError'));
     } finally {
       setIsPaying(false);
     }
@@ -1946,7 +1940,7 @@ export const MatchDetailSheet: React.FC = () => {
 
       if (alreadyPaidViaStripe) {
         errorHaptic();
-        toast.error(t('matchDetail.payErrors.alreadyPaidViaStripe' as TranslationKey));
+        toast.error(t('matchDetail.payErrors.alreadyPaidViaStripe'));
         return;
       }
 
@@ -1967,11 +1961,11 @@ export const MatchDetailSheet: React.FC = () => {
       const amountFormatted = formatCAD(perPlayerCentsForToast, locale);
       toast.success(
         targetName
-          ? t('matchDetail.markedAsPaidWithAmount' as TranslationKey, {
+          ? t('matchDetail.markedAsPaidWithAmount', {
               name: targetName,
               amount: amountFormatted,
             })
-          : t('matchDetail.markedAsPaid' as TranslationKey)
+          : t('matchDetail.markedAsPaid')
       );
     },
     [selectedMatch, playerId, updateSelectedMatch, toast, t, locale]
@@ -1987,7 +1981,7 @@ export const MatchDetailSheet: React.FC = () => {
       await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
     } catch {
       errorHaptic();
-      toast.error(t('profile.payments.onboardingError' as TranslationKey));
+      toast.error(t('profile.payments.onboardingError'));
     }
   }, [toast, t]);
 
@@ -2009,7 +2003,7 @@ export const MatchDetailSheet: React.FC = () => {
         .eq('id', playerId);
       if (dbError) {
         errorHaptic();
-        toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+        toast.error(t('profile.payments.modeUpdateError'));
         return;
       }
       successHaptic();
@@ -2032,7 +2026,7 @@ export const MatchDetailSheet: React.FC = () => {
       .eq('id', playerId);
     if (dbError) {
       errorHaptic();
-      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      toast.error(t('profile.payments.modeUpdateError'));
       return;
     }
     successHaptic();
@@ -2251,9 +2245,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Format label for header
   const formatLabel =
-    match.format === 'doubles'
-      ? t('match.format.doubles' as TranslationKey)
-      : t('match.format.singles' as TranslationKey);
+    match.format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
 
   // Sport display name for header
   const sportDisplayName = match.sport?.display_name || match.sport?.name;
@@ -3972,9 +3964,9 @@ export const MatchDetailSheet: React.FC = () => {
               {(tier === 'topPlayer' || tier === 'mostWanted') && (
                 <Badge
                   label={t(
-                    (match.format === 'doubles'
+                    match.format === 'doubles'
                       ? 'match.tier.topPlayerPlural'
-                      : 'match.tier.topPlayer') as TranslationKey
+                      : 'match.tier.topPlayer'
                   )}
                   bgColor={isDark ? `${primary[400]}30` : `${primary[500]}15`}
                   textColor={isDark ? primary[400] : primary[500]}
@@ -5026,7 +5018,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             <View style={styles.sectionHeader}>
               <Ionicons name="wallet-outline" size={20} color={colors.iconMuted} />
               <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-                {t('matchDetail.matchCost' as TranslationKey)}
+                {t('matchDetail.matchCost')}
               </Text>
             </View>
 
@@ -5118,7 +5110,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                             weight="medium"
                             color={isDark ? status.success.light : status.success.dark}
                           >
-                            {t('matchDetail.youHavePaid' as TranslationKey, {
+                            {t('matchDetail.youHavePaid', {
                               amount: perPlayerCostFormatted,
                             })}
                           </Text>
@@ -5134,7 +5126,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                         >
                           <VStack spacing={spacingPixels[2]} align="start">
                             <Text size="sm" color={colors.textMuted}>
-                              {t('matchDetail.hostManualOnly' as TranslationKey, {
+                              {t('matchDetail.hostManualOnly', {
                                 amount: perPlayerCostFormatted,
                                 name: hostName,
                               })}
@@ -5161,7 +5153,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                                 background: colors.cardBackground,
                               }}
                             >
-                              {t('matchDetail.markAsPaid' as TranslationKey)}
+                              {t('matchDetail.markAsPaid')}
                             </Button>
                           </VStack>
                         </Card>
@@ -5177,7 +5169,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                         >
                           <VStack spacing={spacingPixels[2]} align="start">
                             <Text size="sm" color={colors.textMuted}>
-                              {t('matchDetail.yourShareSubtitle' as TranslationKey, {
+                              {t('matchDetail.yourShareSubtitle', {
                                 name: hostName,
                               })}
                             </Text>
@@ -5203,7 +5195,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                                 background: colors.cardBackground,
                               }}
                             >
-                              {t('matchDetail.payNow' as TranslationKey)}
+                              {t('matchDetail.payNow')}
                             </Button>
                             <HStack spacing={spacingPixels[2]} align="center">
                               {Platform.OS === 'ios' && (
@@ -5213,7 +5205,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                                 <Ionicons name="logo-google" size={14} color={colors.textMuted} />
                               )}
                               <Text size="xs" color={colors.textMuted}>
-                                {t('matchDetail.payNote' as TranslationKey)}
+                                {t('matchDetail.payNote')}
                               </Text>
                             </HStack>
                           </VStack>
@@ -5244,13 +5236,13 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                                     color={isDark ? primary[300] : primary[600]}
                                   />
                                   <Text size="sm" weight="semibold" color={colors.text}>
-                                    {t('matchDetail.payoutsSetupBanner.title' as TranslationKey, {
+                                    {t('matchDetail.payoutsSetupBanner.title', {
                                       amount: formatCAD(pendingFundsCents, locale),
                                     })}
                                   </Text>
                                 </HStack>
                                 <Text size="xs" color={colors.textMuted}>
-                                  {t('matchDetail.payoutsSetupBanner.body' as TranslationKey)}
+                                  {t('matchDetail.payoutsSetupBanner.body')}
                                 </Text>
                                 <Button
                                   variant="primary"
@@ -5270,7 +5262,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                                     background: colors.cardBackground,
                                   }}
                                 >
-                                  {t('matchDetail.payoutsSetupBanner.cta' as TranslationKey)}
+                                  {t('matchDetail.payoutsSetupBanner.cta')}
                                 </Button>
                               </VStack>
                             </Card>
@@ -5295,7 +5287,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                           >
                             <HStack align="center" justify="space-between">
                               <Text size="sm" weight="medium" color={colors.text}>
-                                {t('matchDetail.choosePayouts.prompt' as TranslationKey)}
+                                {t('matchDetail.choosePayouts.prompt')}
                               </Text>
                               <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
                             </HStack>
@@ -5311,13 +5303,13 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                               color={status.success.DEFAULT}
                             />
                             <DSBadge variant="success" size="md">
-                              {t('matchDetail.everyonePaid' as TranslationKey)}
+                              {t('matchDetail.everyonePaid')}
                             </DSBadge>
                           </HStack>
                         ) : (
                           <VStack spacing={spacingPixels[2]}>
                             <Text size="sm" color={colors.textMuted}>
-                              {t('matchDetail.paidCount' as TranslationKey, {
+                              {t('matchDetail.paidCount', {
                                 paid: paidParticipants,
                                 total: totalParticipants,
                               })}
@@ -5388,7 +5380,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                                           background: colors.cardBackground,
                                         }}
                                       >
-                                        {t('matchDetail.markAsPaid' as TranslationKey)}
+                                        {t('matchDetail.markAsPaid')}
                                       </Button>
                                     )}
                                   </HStack>
@@ -5561,9 +5553,9 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         visible={showSwitchToManualConfirm}
         onClose={() => setShowSwitchToManualConfirm(false)}
         onConfirm={handleConfirmSwitchToManual}
-        title={t('matchDetail.choosePayouts.switchToManualConfirmTitle' as TranslationKey)}
-        message={t('matchDetail.choosePayouts.switchToManualConfirmMessage' as TranslationKey)}
-        confirmLabel={t('matchDetail.choosePayouts.manualOption' as TranslationKey)}
+        title={t('matchDetail.choosePayouts.switchToManualConfirmTitle')}
+        message={t('matchDetail.choosePayouts.switchToManualConfirmMessage')}
+        confirmLabel={t('matchDetail.choosePayouts.manualOption')}
         cancelLabel={t('common.cancel')}
       />
 

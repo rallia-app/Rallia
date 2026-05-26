@@ -44,13 +44,13 @@ import {
   useTranslation,
   useRequireOnboarding,
   useTourSequence,
-} from '../hooks';
-import { useActionsSheet, useSport } from '../context';
-import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import SignInPrompt from '../components/SignInPrompt';
-import { SearchBar } from '../components/SearchBar';
-import { ConversationItem, ConversationFilterChips } from '../features/chat';
-import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
+} from '#/hooks';
+import { useActionsSheet, useSport } from '#/context';
+import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
+import SignInPrompt from '#/components/SignInPrompt';
+import { SearchBar } from '#/components/SearchBar';
+import { ConversationItem, ConversationFilterChips } from '#/features/chat';
+import { useAppNavigation, useChatNavigation } from '#/navigation/hooks';
 
 const SERVER_FILTERS = new Set<ChatInboxFilter>([
   'all',

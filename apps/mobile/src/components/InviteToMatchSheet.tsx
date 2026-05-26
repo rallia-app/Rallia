@@ -26,7 +26,8 @@ import {
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { useTheme, usePlayerMatches, useInviteToMatch, useAuth } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
-import { useTranslation } from '../hooks';
+
+import { useTranslation } from '#/hooks';
 
 // =============================================================================
 // TYPES

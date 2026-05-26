@@ -28,7 +28,8 @@ import {
   shadowsSemanticNative,
   spacingPixels,
 } from '@rallia/design-system';
-import { useTranslation } from '../../../hooks';
+
+import { useTranslation } from '#/hooks';
 
 const COUNT_UP_DURATION_MS = 800;
 

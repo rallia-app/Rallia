@@ -20,9 +20,10 @@ import {
   shadowsNative,
 } from '@rallia/design-system';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, usePermissions } from '../../hooks';
-import * as Analytics from '../../services/analytics';
-import { SportIcon } from '../../components/SportIcon';
+
+import { useThemeStyles, useTranslation, usePermissions } from '#/hooks';
+import * as Analytics from '#/services/analytics';
+import { SportIcon } from '#/components/SportIcon';
 
 interface NotificationPermissionStepProps {
   /** Called when user enables notifications or dismisses the system dialog */

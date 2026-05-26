@@ -17,10 +17,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { useProfile } from '@rallia/shared-hooks';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { primary } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+
 import { useAddScore } from './AddScoreContext';
 import { MatchResultConfirmModal } from './MatchResultConfirmModal';
 import type { SetScore } from './types';

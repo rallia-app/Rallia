@@ -12,10 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { Sport } from '@rallia/shared-types';
 import DatabaseService, { Logger } from '@rallia/shared-services';
-import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import { SportIcon } from '../../../../components/SportIcon';
+
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -202,7 +203,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     // Get sport names from IDs for useOnboardingFlow
     const selectedSportNames = selectedSportIds
       .map(id => sports.find(s => s.id === id)?.name)
-      .filter(name => name !== undefined) as string[];
+      .filter(name => name !== undefined);
 
     Logger.debug('sport_selection_continue', {
       sportIds: selectedSportIds,

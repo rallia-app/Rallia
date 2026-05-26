@@ -16,7 +16,8 @@ import {
   accent,
 } from '@rallia/design-system';
 import type { Court } from '@rallia/shared-types';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 interface CourtCardProps {
   court: Court;

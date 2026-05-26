@@ -12,8 +12,6 @@ import { View, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../hooks';
-import ProofViewer from '../ratings/components/ProofViewer';
 import {
   spacingPixels,
   radiusPixels,
@@ -21,6 +19,9 @@ import {
   fontWeightNumeric,
   shadowsNative,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import ProofViewer from '#/features/ratings/components/ProofViewer';
 
 // Horizontal scroll card dimensions
 const CARD_WIDTH = 120;

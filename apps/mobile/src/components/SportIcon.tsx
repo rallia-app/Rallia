@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { ViewStyle } from 'react-native';
+
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
 

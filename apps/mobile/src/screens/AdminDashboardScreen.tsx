@@ -40,9 +40,7 @@ import {
   type SportStatistics,
   type OnboardingFunnelStep,
 } from '@rallia/shared-hooks';
-import { useTranslation } from '../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { RootStackParamList } from '../navigation/types';
 import {
   lightTheme,
   darkTheme,
@@ -53,6 +51,9 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+
+import type { RootStackParamList } from '#/navigation/types';
+import { useTranslation } from '#/hooks';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -234,7 +235,7 @@ const AdminDashboardScreen: React.FC = () => {
               {sport.totalPlayers.toLocaleString()}
             </Text>
             <Text style={[styles.sportStatLabel, { color: colors.textMuted }]}>
-              {t('admin.analytics.players' as TranslationKey)}
+              {t('admin.analytics.players')}
             </Text>
           </View>
           <View style={styles.sportStatItem}>
@@ -242,7 +243,7 @@ const AdminDashboardScreen: React.FC = () => {
               {sport.matchesCreated.toLocaleString()}
             </Text>
             <Text style={[styles.sportStatLabel, { color: colors.textMuted }]}>
-              {t('admin.analytics.matches' as TranslationKey)}
+              {t('admin.analytics.matches')}
             </Text>
           </View>
           <View style={styles.sportStatItem}>
@@ -250,7 +251,7 @@ const AdminDashboardScreen: React.FC = () => {
               {sport.matchesCompleted.toLocaleString()}
             </Text>
             <Text style={[styles.sportStatLabel, { color: colors.textMuted }]}>
-              {t('admin.analytics.completed' as TranslationKey)}
+              {t('admin.analytics.completed')}
             </Text>
           </View>
         </View>
@@ -290,7 +291,7 @@ const AdminDashboardScreen: React.FC = () => {
         </View>
         <View style={styles.funnelStepMeta}>
           <Text style={[styles.funnelMetaText, { color: colors.textMuted }]}>
-            {step.totalViews} {t('admin.analytics.views' as TranslationKey)}
+            {step.totalViews} {t('admin.analytics.views')}
           </Text>
           <Text style={[styles.funnelMetaText, { color: colors.textMuted }]}>
             {step.avgTimeSeconds > 0 ? `~${Math.round(step.avgTimeSeconds)}s` : '-'}
@@ -312,11 +313,11 @@ const AdminDashboardScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.analytics.title' as TranslationKey)}
+            {t('admin.analytics.title')}
           </Text>
           {lastUpdated && (
             <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
-              {t('admin.analytics.lastUpdated' as TranslationKey)}: {formatLastUpdated(lastUpdated)}
+              {t('admin.analytics.lastUpdated')}: {formatLastUpdated(lastUpdated)}
             </Text>
           )}
         </View>
@@ -341,7 +342,7 @@ const AdminDashboardScreen: React.FC = () => {
         {/* Time Range Selector */}
         <View style={styles.timeRangeSection}>
           <TimeRangeSelector
-            value={selectedOption as '7d' | '30d' | '90d' | 'ytd'}
+            value={selectedOption}
             onChange={range => handleTimeRangeChange(range as '7d' | '30d' | '90d' | 'ytd')}
             size="md"
             disabled={trendsLoading}
@@ -353,7 +354,7 @@ const AdminDashboardScreen: React.FC = () => {
           <View style={[styles.errorBanner, { backgroundColor: colors.errorBg }]}>
             <Ionicons name="alert-circle" size={20} color={colors.errorText} />
             <Text style={[styles.errorBannerText, { color: colors.errorText }]}>
-              {t('admin.analytics.errorLoading' as TranslationKey)}
+              {t('admin.analytics.errorLoading')}
             </Text>
           </View>
         )}
@@ -361,7 +362,7 @@ const AdminDashboardScreen: React.FC = () => {
         {/* KPI Widgets Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t('admin.analytics.overview' as TranslationKey)}
+            {t('admin.analytics.overview')}
           </Text>
           <View style={styles.widgetsGrid}>{widgets.slice(0, 5).map(renderWidgetCard)}</View>
         </View>
@@ -370,7 +371,7 @@ const AdminDashboardScreen: React.FC = () => {
         {kpi?.sportStats && kpi.sportStats.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.sportStatistics' as TranslationKey)}
+              {t('admin.analytics.sportStatistics')}
             </Text>
             {kpi.sportStats.map(renderSportCard)}
           </View>
@@ -380,7 +381,7 @@ const AdminDashboardScreen: React.FC = () => {
         {kpi?.onboardingFunnel && kpi.onboardingFunnel.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.onboardingFunnel' as TranslationKey)}
+              {t('admin.analytics.onboardingFunnel')}
             </Text>
             <View
               style={[
@@ -397,7 +398,7 @@ const AdminDashboardScreen: React.FC = () => {
         {kpi?.matches && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.matchStatistics' as TranslationKey)}
+              {t('admin.analytics.matchStatistics')}
             </Text>
             <View
               style={[
@@ -412,7 +413,7 @@ const AdminDashboardScreen: React.FC = () => {
                     {kpi.matches.scheduledMatches}
                   </Text>
                   <Text style={[styles.matchStatLabel, { color: colors.textMuted }]}>
-                    {t('admin.analytics.scheduled' as TranslationKey)}
+                    {t('admin.analytics.scheduled')}
                   </Text>
                 </View>
                 <View style={styles.matchStatItem}>
@@ -421,7 +422,7 @@ const AdminDashboardScreen: React.FC = () => {
                     {kpi.matches.completedMatches}
                   </Text>
                   <Text style={[styles.matchStatLabel, { color: colors.textMuted }]}>
-                    {t('admin.analytics.completed' as TranslationKey)}
+                    {t('admin.analytics.completed')}
                   </Text>
                 </View>
                 <View style={styles.matchStatItem}>
@@ -430,7 +431,7 @@ const AdminDashboardScreen: React.FC = () => {
                     {kpi.matches.cancelledMatches}
                   </Text>
                   <Text style={[styles.matchStatLabel, { color: colors.textMuted }]}>
-                    {t('admin.analytics.cancelled' as TranslationKey)}
+                    {t('admin.analytics.cancelled')}
                   </Text>
                 </View>
               </View>
@@ -438,7 +439,7 @@ const AdminDashboardScreen: React.FC = () => {
               <View style={styles.matchStatRow}>
                 <View style={styles.matchStatItemWide}>
                   <Text style={[styles.matchStatLabel, { color: colors.textMuted }]}>
-                    {t('admin.analytics.avgParticipants' as TranslationKey)}
+                    {t('admin.analytics.avgParticipants')}
                   </Text>
                   <Text style={[styles.matchStatValue, { color: colors.text }]}>
                     {kpi.matches.avgParticipants.toFixed(1)}
@@ -446,7 +447,7 @@ const AdminDashboardScreen: React.FC = () => {
                 </View>
                 <View style={styles.matchStatItemWide}>
                   <Text style={[styles.matchStatLabel, { color: colors.textMuted }]}>
-                    {t('admin.analytics.completionRate' as TranslationKey)}
+                    {t('admin.analytics.completionRate')}
                   </Text>
                   <Text style={[styles.matchStatValue, { color: colors.successText }]}>
                     {kpi.matches.totalMatches > 0
@@ -463,14 +464,14 @@ const AdminDashboardScreen: React.FC = () => {
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t('admin.analytics.quickActions' as TranslationKey)}
+            {t('admin.analytics.quickActions')}
           </Text>
 
           {/* Analytics Section Navigation Cards - Full Width Layout */}
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.users' as TranslationKey) || 'User Analytics'}
+            title={t('admin.analytics.sections.users') || 'User Analytics'}
             description={
-              t('admin.analytics.sections.usersFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.usersFullDesc') ||
               'Monitor user growth, retention, and activity patterns across the platform.'
             }
             icon="people"
@@ -481,9 +482,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.matches' as TranslationKey) || 'Match Analytics'}
+            title={t('admin.analytics.sections.matches') || 'Match Analytics'}
             description={
-              t('admin.analytics.sections.matchesFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.matchesFullDesc') ||
               'Track match creation, completion rates, and scheduling trends.'
             }
             icon="tennisball"
@@ -494,11 +495,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={
-              t('admin.analytics.sections.onboarding' as TranslationKey) || 'Onboarding Analytics'
-            }
+            title={t('admin.analytics.sections.onboarding') || 'Onboarding Analytics'}
             description={
-              t('admin.analytics.sections.onboardingFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.onboardingFullDesc') ||
               'Analyze the user journey funnel and identify drop-off points.'
             }
             icon="git-branch"
@@ -509,11 +508,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={
-              t('admin.analytics.sections.engagement' as TranslationKey) || 'Engagement Analytics'
-            }
+            title={t('admin.analytics.sections.engagement') || 'Engagement Analytics'}
             description={
-              t('admin.analytics.sections.engagementFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.engagementFullDesc') ||
               'Understand user behavior, session metrics, and feature adoption.'
             }
             icon="analytics"
@@ -524,11 +521,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={
-              t('admin.analytics.sections.messaging' as TranslationKey) || 'Messaging Analytics'
-            }
+            title={t('admin.analytics.sections.messaging') || 'Messaging Analytics'}
             description={
-              t('admin.analytics.sections.messagingFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.messagingFullDesc') ||
               'Review communication patterns, message volume, and chat health.'
             }
             icon="chatbubbles"
@@ -539,9 +534,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.rating' as TranslationKey) || 'Rating & Reputation'}
+            title={t('admin.analytics.sections.rating') || 'Rating & Reputation'}
             description={
-              t('admin.analytics.sections.ratingFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.ratingFullDesc') ||
               'Explore player ratings, certification progress, and reputation trends.'
             }
             icon="star"
@@ -552,11 +547,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={
-              t('admin.analytics.sections.moderation' as TranslationKey) || 'Moderation & Safety'
-            }
+            title={t('admin.analytics.sections.moderation') || 'Moderation & Safety'}
             description={
-              t('admin.analytics.sections.moderationFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.moderationFullDesc') ||
               'Monitor reports, bans, and platform safety metrics.'
             }
             icon="shield-checkmark"
@@ -567,11 +560,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={
-              t('admin.analytics.sections.community' as TranslationKey) || 'Community Analytics'
-            }
+            title={t('admin.analytics.sections.community') || 'Community Analytics'}
             description={
-              t('admin.analytics.sections.communityFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.communityFullDesc') ||
               'Analyze network growth, group activity, and community engagement.'
             }
             icon="people-circle"
@@ -582,9 +573,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.sports' as TranslationKey) || 'Sport Analytics'}
+            title={t('admin.analytics.sections.sports') || 'Sport Analytics'}
             description={
-              t('admin.analytics.sections.sportsFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.sportsFullDesc') ||
               'Compare sport popularity, facility usage, and growth trends.'
             }
             icon="tennisball"
@@ -595,9 +586,9 @@ const AdminDashboardScreen: React.FC = () => {
             size="fullWidth"
           />
           <AnalyticsSectionCard
-            title={t('admin.analytics.sections.settings' as TranslationKey) || 'Admin Panel'}
+            title={t('admin.analytics.sections.settings') || 'Admin Panel'}
             description={
-              t('admin.analytics.sections.settingsFullDesc' as TranslationKey) ||
+              t('admin.analytics.sections.settingsFullDesc') ||
               'Access system settings, user management, and admin configuration.'
             }
             icon="settings"

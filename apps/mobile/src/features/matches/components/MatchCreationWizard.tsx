@@ -16,7 +16,6 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
-import { ConfirmationModal } from '../../../components/ConfirmationModal';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,19 +39,24 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useCreateMatch, useUpdateMatch } from '@rallia/shared-hooks';
+import { useCreateMatch, useUpdateMatch, useTheme } from '@rallia/shared-hooks';
 import { validateMatchUpdate, getMatchWithDetails } from '@rallia/shared-services';
-import * as Analytics from '../../../services/analytics';
-
-import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
-import { useSport, type MatchDetailData } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
-import { useAuth } from '../../../hooks';
-import { useMatchForm, useMatchDraft, calculateEndTime, matchToFormData } from '../hooks';
-import { supabase } from '../../../lib/supabase';
-import { shareMatch } from '../../../utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
+
+import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
+import { SportIcon } from '#/components/SportIcon';
+import { useAuth } from '#/hooks';
+import {
+  useMatchForm,
+  useMatchDraft,
+  calculateEndTime,
+  matchToFormData,
+} from '#/features/matches/hooks';
+import { supabase } from '#/lib/supabase';
+import { shareMatch } from '#/utils';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+import * as Analytics from '#/services/analytics';
+import { useSport, type MatchDetailData } from '#/context';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
@@ -471,7 +475,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     // Apply preferences to form
     Object.entries(playerPreferences).forEach(([key, value]) => {
       if (value !== undefined) {
-        form.setValue(key as keyof MatchFormSchemaData, value as never, { shouldDirty: false });
+        form.setValue(key as keyof MatchFormSchemaData, value, { shouldDirty: false });
       }
     });
   }, [

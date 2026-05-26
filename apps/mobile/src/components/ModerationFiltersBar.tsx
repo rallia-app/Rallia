@@ -21,7 +21,6 @@ import {
   type ReportType,
   type ReportPriority,
 } from '@rallia/shared-hooks';
-import { useTranslation, type TranslationKey } from '../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -32,7 +31,9 @@ import {
   darkTheme,
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic, selectionHaptic } from '../utils/haptics';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
+import { lightHaptic, selectionHaptic } from '#/utils/haptics';
 
 // =============================================================================
 // TYPES
@@ -79,32 +80,32 @@ const PRIORITY_OPTIONS: (ReportPriority | '')[] = ['', 'urgent', 'high', 'normal
 
 // Label key mappings for translation
 const STATUS_LABEL_KEYS: Record<ReportStatus | '', TranslationKey> = {
-  '': 'common.all' as TranslationKey,
-  pending: 'admin.moderation.status.pending' as TranslationKey,
-  under_review: 'admin.moderation.status.under_review' as TranslationKey,
-  dismissed: 'admin.moderation.status.dismissed' as TranslationKey,
-  action_taken: 'admin.moderation.status.action_taken' as TranslationKey,
-  escalated: 'admin.moderation.status.escalated' as TranslationKey,
+  '': 'common.all',
+  pending: 'admin.moderation.status.pending',
+  under_review: 'admin.moderation.status.under_review',
+  dismissed: 'admin.moderation.status.dismissed',
+  action_taken: 'admin.moderation.status.action_taken',
+  escalated: 'admin.moderation.status.escalated',
 };
 
 const REPORT_TYPE_LABEL_KEYS: Record<ReportType | '', TranslationKey> = {
-  '': 'common.all' as TranslationKey,
-  harassment: 'admin.moderation.reportType.harassment' as TranslationKey,
-  cheating: 'admin.moderation.reportType.cheating' as TranslationKey,
-  inappropriate_content: 'admin.moderation.reportType.inappropriate_content' as TranslationKey,
-  spam: 'admin.moderation.reportType.spam' as TranslationKey,
-  impersonation: 'admin.moderation.reportType.impersonation' as TranslationKey,
-  no_show: 'admin.moderation.reportType.no_show' as TranslationKey,
-  unsportsmanlike: 'admin.moderation.reportType.unsportsmanlike' as TranslationKey,
-  other: 'admin.moderation.reportType.other' as TranslationKey,
+  '': 'common.all',
+  harassment: 'admin.moderation.reportType.harassment',
+  cheating: 'admin.moderation.reportType.cheating',
+  inappropriate_content: 'admin.moderation.reportType.inappropriate_content',
+  spam: 'admin.moderation.reportType.spam',
+  impersonation: 'admin.moderation.reportType.impersonation',
+  no_show: 'admin.moderation.reportType.no_show',
+  unsportsmanlike: 'admin.moderation.reportType.unsportsmanlike',
+  other: 'admin.moderation.reportType.other',
 };
 
 const PRIORITY_LABEL_KEYS: Record<ReportPriority | '', TranslationKey> = {
-  '': 'common.all' as TranslationKey,
-  urgent: 'admin.moderation.priority.urgent' as TranslationKey,
-  high: 'admin.moderation.priority.high' as TranslationKey,
-  normal: 'admin.moderation.priority.normal' as TranslationKey,
-  low: 'admin.moderation.priority.low' as TranslationKey,
+  '': 'common.all',
+  urgent: 'admin.moderation.priority.urgent',
+  high: 'admin.moderation.priority.high',
+  normal: 'admin.moderation.priority.normal',
+  low: 'admin.moderation.priority.low',
 };
 
 // =============================================================================
@@ -472,15 +473,15 @@ export function ModerationFiltersBar({
   // Display values for chips
   const statusDisplay =
     filters.status === ''
-      ? t('admin.moderation.filterStatus' as TranslationKey)
+      ? t('admin.moderation.filterStatus')
       : t(STATUS_LABEL_KEYS[filters.status]);
   const typeDisplay =
     filters.reportType === ''
-      ? t('admin.moderation.filterType' as TranslationKey)
+      ? t('admin.moderation.filterType')
       : t(REPORT_TYPE_LABEL_KEYS[filters.reportType]);
   const priorityDisplay =
     filters.priority === ''
-      ? t('admin.moderation.filterPriority' as TranslationKey)
+      ? t('admin.moderation.filterPriority')
       : t(PRIORITY_LABEL_KEYS[filters.priority]);
 
   // Theme colors for reset chip
@@ -499,7 +500,7 @@ export function ModerationFiltersBar({
         {/* Search Input */}
         <SearchChip
           value={filters.searchQuery}
-          placeholder={t('admin.moderation.searchPlaceholder' as TranslationKey)}
+          placeholder={t('admin.moderation.searchPlaceholder')}
           onChangeText={handleSearchChange}
           onClear={handleSearchClear}
           isDark={isDark}
@@ -507,7 +508,7 @@ export function ModerationFiltersBar({
 
         {/* Status Filter */}
         <FilterChip
-          label={t('admin.moderation.filterStatus' as TranslationKey)}
+          label={t('admin.moderation.filterStatus')}
           value={statusDisplay}
           isActive={filters.status !== ''}
           onPress={() => setShowStatusDropdown(true)}
@@ -517,7 +518,7 @@ export function ModerationFiltersBar({
 
         {/* Report Type Filter */}
         <FilterChip
-          label={t('admin.moderation.filterType' as TranslationKey)}
+          label={t('admin.moderation.filterType')}
           value={typeDisplay}
           isActive={filters.reportType !== ''}
           onPress={() => setShowTypeDropdown(true)}
@@ -527,7 +528,7 @@ export function ModerationFiltersBar({
 
         {/* Priority Filter */}
         <FilterChip
-          label={t('admin.moderation.filterPriority' as TranslationKey)}
+          label={t('admin.moderation.filterPriority')}
           value={priorityDisplay}
           isActive={filters.priority !== ''}
           onPress={() => setShowPriorityDropdown(true)}
@@ -550,7 +551,7 @@ export function ModerationFiltersBar({
           >
             <Ionicons name="refresh-outline" size={14} color={resetTextColor} />
             <Text size="xs" weight="medium" color={resetTextColor}>
-              {t('admin.moderation.clearFilters' as TranslationKey)}
+              {t('admin.moderation.clearFilters')}
             </Text>
           </TouchableOpacity>
         )}
@@ -559,7 +560,7 @@ export function ModerationFiltersBar({
       {/* Dropdown Modals */}
       <FilterDropdown
         visible={showStatusDropdown}
-        title={t('admin.moderation.filterStatus' as TranslationKey)}
+        title={t('admin.moderation.filterStatus')}
         options={STATUS_OPTIONS}
         selectedValue={filters.status}
         onSelect={handleStatusChange}
@@ -570,7 +571,7 @@ export function ModerationFiltersBar({
 
       <FilterDropdown
         visible={showTypeDropdown}
-        title={t('admin.moderation.filterType' as TranslationKey)}
+        title={t('admin.moderation.filterType')}
         options={REPORT_TYPE_OPTIONS}
         selectedValue={filters.reportType}
         onSelect={handleTypeChange}
@@ -581,7 +582,7 @@ export function ModerationFiltersBar({
 
       <FilterDropdown
         visible={showPriorityDropdown}
-        title={t('admin.moderation.filterPriority' as TranslationKey)}
+        title={t('admin.moderation.filterPriority')}
         options={PRIORITY_OPTIONS}
         selectedValue={filters.priority}
         onSelect={handlePriorityChange}

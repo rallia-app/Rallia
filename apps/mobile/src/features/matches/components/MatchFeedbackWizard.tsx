@@ -30,8 +30,9 @@ import type {
   MatchReportReasonEnum,
 } from '@rallia/shared-types';
 
-import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
-import * as Analytics from '../../../services/analytics';
+import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
+import * as Analytics from '#/services/analytics';
+
 import { MatchOutcomeStep, OpponentFeedbackStep } from './feedback-steps';
 
 const BASE_WHITE = '#ffffff';

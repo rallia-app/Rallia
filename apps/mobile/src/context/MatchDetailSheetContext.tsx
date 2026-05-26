@@ -14,7 +14,8 @@ import React, { createContext, useContext, useCallback, useState, ReactNode } fr
 import { SheetManager } from 'react-native-actions-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { getMatchWithDetails } from '@rallia/shared-services';
-import * as Analytics from '../services/analytics';
+
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // TYPES

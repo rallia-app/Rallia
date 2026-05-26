@@ -16,12 +16,13 @@ import {
   warningHaptic,
   lightHaptic,
 } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../hooks';
-import { SportIcon } from '../../../components/SportIcon';
 import { useConfirmMatchScore, type PendingScoreConfirmation } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
+
+import { SportIcon } from '#/components/SportIcon';
+import { useThemeStyles } from '#/hooks';
 
 export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-confirmation'>) {
   const confirmation = payload?.confirmation as PendingScoreConfirmation | null;

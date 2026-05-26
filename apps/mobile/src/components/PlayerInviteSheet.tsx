@@ -21,10 +21,11 @@ import {
 import { selectionHaptic } from '@rallia/shared-utils';
 import { useTheme, useMatch } from '@rallia/shared-hooks';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
-import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import { useTranslation } from '../hooks';
-import { PlayerInviteStep } from '../features/matches/components/PlayerInviteStep';
+
+import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { useTranslation } from '#/hooks';
+import { PlayerInviteStep } from '#/features/matches/components/PlayerInviteStep';
 
 const BASE_WHITE = '#ffffff';
 
@@ -78,7 +79,7 @@ export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>
       updateSelectedMatch({
         ...freshMatch,
         distance_meters: selectedMatch.distance_meters,
-      } as MatchDetailData);
+      });
     }
     SheetManager.hide('player-invite');
   }, [refetchMatch, selectedMatch, updateSelectedMatch]);
@@ -90,7 +91,7 @@ export function PlayerInviteActionSheet({ payload }: SheetProps<'player-invite'>
       updateSelectedMatch({
         ...selectedMatch,
         participants: [...(selectedMatch.participants ?? []), ...newParticipants],
-      } as MatchDetailData);
+      });
     },
     [selectedMatch, updateSelectedMatch]
   );

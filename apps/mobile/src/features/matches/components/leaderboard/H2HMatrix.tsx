@@ -16,7 +16,7 @@ import type {
   NetworkPulseSettlingInEntry,
 } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface H2HMatrixProps {
   cells: NetworkPulseH2HCell[];

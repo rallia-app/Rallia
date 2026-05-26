@@ -12,12 +12,17 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useAuth, useTranslation } from '../../../hooks';
-import { supabase } from '../../../lib/supabase';
 import { Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { checkOnboardingStatus, getFriendlyErrorMessage, RESEND_COOLDOWN_SECONDS } from '../utils';
-import * as Analytics from '../../../services/analytics';
+
+import { useAuth, useTranslation } from '#/hooks';
+import { supabase } from '#/lib/supabase';
+import {
+  checkOnboardingStatus,
+  getFriendlyErrorMessage,
+  RESEND_COOLDOWN_SECONDS,
+} from '#/features/auth/utils';
+import * as Analytics from '#/services/analytics';
 
 interface UseAuthWizardOptions {
   /**

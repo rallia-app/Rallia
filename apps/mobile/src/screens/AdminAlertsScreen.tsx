@@ -19,8 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme, useAdminAlerts } from '@rallia/shared-hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -30,7 +29,6 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { useAdminAlerts } from '@rallia/shared-hooks';
 import {
   alertService,
   supabase,

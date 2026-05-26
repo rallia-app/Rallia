@@ -66,18 +66,18 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-} from '../hooks';
-import { useSport } from '../context';
-import { SportIcon } from '../components/SportIcon';
-import type { RootStackParamList } from '../navigation/types';
+} from '#/hooks';
+import { useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
+import type { RootStackParamList } from '#/navigation/types';
 import {
   AddScoreIntroModal,
   AddScoreModal,
   PendingScoresSection,
   type MatchType,
-} from '../features/matches';
-import { NetworkFavoriteFacilities } from '../components/NetworkFavoriteFacilities';
-import { NetworkLeaderboardTab, NetworkMatchesTab } from '../features/matches/components';
+} from '#/features/matches';
+import { NetworkFavoriteFacilities } from '#/components/NetworkFavoriteFacilities';
+import { NetworkLeaderboardTab, NetworkMatchesTab } from '#/features/matches/components';
 
 const HEADER_HEIGHT = 140;
 

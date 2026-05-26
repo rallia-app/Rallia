@@ -56,9 +56,10 @@ import {
   secondary,
 } from '@rallia/design-system';
 
-import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '../hooks';
-import { useActionsSheet } from '../context';
-import { uploadImage } from '../services/imageUpload';
+import { useAuth, useTranslation, type TranslationKey, useImagePicker } from '#/hooks';
+import { useActionsSheet } from '#/context';
+import { uploadImage } from '#/services/imageUpload';
+
 import { FeedbackBrowseList } from './feedback/FeedbackBrowseList';
 import { FeedbackDetailView } from './feedback/FeedbackDetailView';
 
@@ -400,7 +401,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       },
       {
         onError: error => {
-          Logger.error('Failed to toggle vote', error as Error);
+          Logger.error('Failed to toggle vote', error);
         },
       }
     );
@@ -430,7 +431,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   const handleAddScreenshot = useCallback(async () => {
     const remaining = MAX_SCREENSHOTS - screenshots.length;
     if (remaining <= 0) {
-      toast.error(t('feedback.maxScreenshotsReached' as TranslationKey, { max: MAX_SCREENSHOTS }));
+      toast.error(t('feedback.maxScreenshotsReached', { max: MAX_SCREENSHOTS }));
       return;
     }
 
@@ -461,13 +462,13 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
           ...(expectedRef.current.trim() && {
             expected_vs_actual: expectedRef.current.trim(),
           }),
-        } as BugFeedbackMetadata;
+        };
       case 'feature':
         return {
           feature_title: featureTitleRef.current.trim(),
           description: featureDescRef.current.trim(),
           ...(useCaseRef.current.trim() && { use_case: useCaseRef.current.trim() }),
-        } as FeatureFeedbackMetadata;
+        };
       case 'improvement':
         return {
           disappointment_score: disappointment!,
@@ -476,7 +477,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
           }),
           ...(idealUserRef.current.trim() && { ideal_user: idealUserRef.current.trim() }),
           how_to_improve: improveRef.current.trim(),
-        } as ImprovementFeedbackMetadata;
+        };
       case 'missing_court':
         return {
           ...(selectedPlace && {
@@ -489,7 +490,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
           ...(courtDetailsRef.current.trim() && {
             details: courtDetailsRef.current.trim(),
           }),
-        } as MissingCourtFeedbackMetadata;
+        };
       default:
         return undefined;
     }
@@ -582,7 +583,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       });
 
       void successHaptic();
-      toast.success(t('bugReport.success' as TranslationKey));
+      toast.success(t('bugReport.success'));
       Logger.logUserAction('feedback_report_submitted', {
         trigger,
         category: selectedCategory,
@@ -592,7 +593,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       SheetManager.hide('feedback-report');
     } catch (error) {
       Logger.error('Failed to submit feedback report', error as Error);
-      toast.error(t('bugReport.error' as TranslationKey));
+      toast.error(t('bugReport.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -603,7 +604,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   const renderModuleSelector = () => (
     <View style={styles.section}>
       <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
-        {t('bugReport.moduleLabel' as TranslationKey)}
+        {t('bugReport.moduleLabel')}
       </Text>
       <View style={styles.moduleCards}>
         {QUICK_MODULES.map(mod => {
@@ -656,7 +657,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
   const renderScreenshotsSection = () => (
     <View style={styles.section}>
       <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
-        {t('feedback.screenshotsLabel' as TranslationKey)}
+        {t('feedback.screenshotsLabel')}
       </Text>
 
       <View
@@ -671,7 +672,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         <View style={styles.screenshotCardHeader}>
           <Ionicons name="images-outline" size={18} color={colors.textSecondary} />
           <Text size="xs" color={colors.textSecondary} style={styles.screenshotHintText}>
-            {t('feedback.screenshotsHint' as TranslationKey, { max: MAX_SCREENSHOTS })}
+            {t('feedback.screenshotsHint', { max: MAX_SCREENSHOTS })}
           </Text>
         </View>
 
@@ -726,7 +727,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         {opts.label}
         {opts.optional && (
           <Text size="xs" color={colors.textMuted}>
-            {'  '}({t('feedback.optional' as TranslationKey)})
+            {'  '}({t('feedback.optional')})
           </Text>
         )}
       </Text>
@@ -772,7 +773,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       {/* Severity picker */}
       <View style={styles.section}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
-          {t('feedback.bug.severityLabel' as TranslationKey)}
+          {t('feedback.bug.severityLabel')}
         </Text>
         <View style={styles.pillRow}>
           {SEVERITY_OPTIONS.map(opt => {
@@ -807,8 +808,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       </View>
 
       {renderTextInput({
-        label: t('feedback.bug.stepsLabel' as TranslationKey),
-        placeholder: t('feedback.bug.stepsPlaceholder' as TranslationKey),
+        label: t('feedback.bug.stepsLabel'),
+        placeholder: t('feedback.bug.stepsPlaceholder'),
         inputRef: stepsInputRef,
         onChange: (text: string) => {
           stepsRef.current = text;
@@ -818,8 +819,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       })}
 
       {renderTextInput({
-        label: t('feedback.bug.expectedLabel' as TranslationKey),
-        placeholder: t('feedback.bug.expectedPlaceholder' as TranslationKey),
+        label: t('feedback.bug.expectedLabel'),
+        placeholder: t('feedback.bug.expectedPlaceholder'),
         inputRef: expectedInputRef,
         onChange: (text: string) => {
           expectedRef.current = text;
@@ -838,8 +839,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       {renderModuleSelector()}
 
       {renderTextInput({
-        label: t('feedback.feature.titleLabel' as TranslationKey),
-        placeholder: t('feedback.feature.titlePlaceholder' as TranslationKey),
+        label: t('feedback.feature.titleLabel'),
+        placeholder: t('feedback.feature.titlePlaceholder'),
         inputRef: featureTitleInputRef,
         onChange: (text: string) => {
           featureTitleRef.current = text;
@@ -851,8 +852,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       })}
 
       {renderTextInput({
-        label: t('feedback.feature.descriptionLabel' as TranslationKey),
-        placeholder: t('feedback.feature.descriptionPlaceholder' as TranslationKey),
+        label: t('feedback.feature.descriptionLabel'),
+        placeholder: t('feedback.feature.descriptionPlaceholder'),
         inputRef: featureDescInputRef,
         onChange: (text: string) => {
           featureDescRef.current = text;
@@ -862,8 +863,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       })}
 
       {renderTextInput({
-        label: t('feedback.feature.useCaseLabel' as TranslationKey),
-        placeholder: t('feedback.feature.useCasePlaceholder' as TranslationKey),
+        label: t('feedback.feature.useCaseLabel'),
+        placeholder: t('feedback.feature.useCasePlaceholder'),
         inputRef: useCaseInputRef,
         onChange: (text: string) => {
           useCaseRef.current = text;
@@ -880,7 +881,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       {/* Disappointment scale */}
       <View style={styles.section}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
-          {t('feedback.pmf.disappointmentLabel' as TranslationKey)}
+          {t('feedback.pmf.disappointmentLabel')}
         </Text>
         <View style={styles.moduleCards}>
           {DISAPPOINTMENT_OPTIONS.map(opt => {
@@ -933,8 +934,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       </View>
 
       {renderTextInput({
-        label: t('feedback.pmf.mainBenefitLabel' as TranslationKey),
-        placeholder: t('feedback.pmf.mainBenefitPlaceholder' as TranslationKey),
+        label: t('feedback.pmf.mainBenefitLabel'),
+        placeholder: t('feedback.pmf.mainBenefitPlaceholder'),
         inputRef: mainBenefitInputRef,
         onChange: (text: string) => {
           mainBenefitRef.current = text;
@@ -945,8 +946,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       })}
 
       {renderTextInput({
-        label: t('feedback.pmf.improveLabel' as TranslationKey),
-        placeholder: t('feedback.pmf.improvePlaceholder' as TranslationKey),
+        label: t('feedback.pmf.improveLabel'),
+        placeholder: t('feedback.pmf.improvePlaceholder'),
         inputRef: improveInputRef,
         onChange: (text: string) => {
           improveRef.current = text;
@@ -956,8 +957,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       })}
 
       {renderTextInput({
-        label: t('feedback.pmf.idealUserLabel' as TranslationKey),
-        placeholder: t('feedback.pmf.idealUserPlaceholder' as TranslationKey),
+        label: t('feedback.pmf.idealUserLabel'),
+        placeholder: t('feedback.pmf.idealUserPlaceholder'),
         inputRef: idealUserInputRef,
         onChange: (text: string) => {
           idealUserRef.current = text;
@@ -994,7 +995,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       {/* Google Places search */}
       <View style={styles.section}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
-          {t('feedback.missingCourt.searchLabel' as TranslationKey)}
+          {t('feedback.missingCourt.searchLabel')}
         </Text>
 
         {hasSelectedPlace ? (
@@ -1011,16 +1012,16 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
               <Ionicons name="location" size={20} color={colors.buttonActive} />
               <View style={styles.selectedPlaceText}>
                 <Text size="sm" weight="semibold" color={colors.text}>
-                  {selectedPlace!.name}
+                  {selectedPlace.name}
                 </Text>
                 <Text size="xs" color={colors.textMuted} numberOfLines={2}>
-                  {selectedPlace!.address}
+                  {selectedPlace.address}
                 </Text>
               </View>
             </View>
             <TouchableOpacity onPress={handleClearPlace} activeOpacity={0.7}>
               <Text size="sm" weight="semibold" color={colors.buttonActive}>
-                {t('feedback.missingCourt.clearPlace' as TranslationKey)}
+                {t('feedback.missingCourt.clearPlace')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1035,7 +1036,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
                   color: colors.text,
                 },
               ]}
-              placeholder={t('feedback.missingCourt.searchPlaceholder' as TranslationKey)}
+              placeholder={t('feedback.missingCourt.searchPlaceholder')}
               placeholderTextColor={colors.textMuted}
               value={placeSearchQuery}
               onChangeText={setPlaceSearchQuery}
@@ -1076,8 +1077,8 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
       </View>
 
       {renderTextInput({
-        label: t('feedback.missingCourt.detailsLabel' as TranslationKey),
-        placeholder: t('feedback.missingCourt.detailsPlaceholder' as TranslationKey),
+        label: t('feedback.missingCourt.detailsLabel'),
+        placeholder: t('feedback.missingCourt.detailsPlaceholder'),
         inputRef: courtDetailsInputRef,
         onChange: (text: string) => {
           courtDetailsRef.current = text;
@@ -1122,7 +1123,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
           <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
             <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
             <Text size="sm" weight="semibold" color={base.white}>
-              {t('feedback.sheetTitle' as TranslationKey)}
+              {t('feedback.sheetTitle')}
             </Text>
           </View>
           <TouchableOpacity
@@ -1195,7 +1196,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         <View style={[styles.badge, { backgroundColor: secondary[500] }]}>
           <Ionicons name="chatbox-ellipses-outline" size={14} color={base.white} />
           <Text size="sm" weight="semibold" color={base.white}>
-            {t('feedback.sheetTitle' as TranslationKey)}
+            {t('feedback.sheetTitle')}
           </Text>
         </View>
 
@@ -1219,7 +1220,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
         >
           {/* Subtitle */}
           <Text size="sm" color={colors.textSecondary} style={styles.subtitle}>
-            {t('feedback.description' as TranslationKey)}
+            {t('feedback.description')}
           </Text>
 
           {/* Category Selection */}
@@ -1230,7 +1231,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
               color={colors.textSecondary}
               style={styles.sectionLabel}
             >
-              {t('feedback.categoryLabel' as TranslationKey)}
+              {t('feedback.categoryLabel')}
             </Text>
             <View style={styles.moduleCards}>
               {CATEGORY_OPTIONS.map(cat => {
@@ -1308,7 +1309,7 @@ export function FeedbackReportActionSheet({ payload }: SheetProps<'feedback-repo
                   weight="semibold"
                   color={isValid ? colors.buttonTextActive : colors.textMuted}
                 >
-                  {t('feedback.submitButton' as TranslationKey)}
+                  {t('feedback.submitButton')}
                 </Text>
                 <Ionicons
                   name="paper-plane-outline"

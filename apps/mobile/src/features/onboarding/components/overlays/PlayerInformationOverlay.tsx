@@ -6,8 +6,9 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+
+import { useThemeStyles, usePlayer, useProfile, useTranslation } from '#/hooks';
 
 export function PlayerInformationActionSheet({ payload }: SheetProps<'player-information'>) {
   const onSave = payload?.onSave;
@@ -55,7 +56,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         .eq('id', user.id);
 
       if (profileUpdateError) {
-        Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
+        Logger.error('Failed to update profile', profileUpdateError, { userId: user.id });
         setIsSaving(false);
         toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;
@@ -71,7 +72,7 @@ export function PlayerInformationActionSheet({ payload }: SheetProps<'player-inf
         .eq('id', user.id);
 
       if (playerUpdateError) {
-        Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
+        Logger.error('Failed to update player', playerUpdateError, { userId: user.id });
         setIsSaving(false);
         toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;

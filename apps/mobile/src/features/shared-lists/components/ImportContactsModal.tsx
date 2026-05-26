@@ -18,13 +18,13 @@ import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
-import { ContactRow, ContactSelectionCheck } from '../../../components/ContactRow';
-import { formatContactSubtitle } from '../../../utils/contactDisplay';
-import { primary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
+import { ContactRow, ContactSelectionCheck } from '#/components/ContactRow';
+import { formatContactSubtitle } from '#/utils/contactDisplay';
 
 interface DeviceContact {
   id: string;

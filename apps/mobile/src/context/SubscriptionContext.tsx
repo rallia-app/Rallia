@@ -10,16 +10,18 @@ import React, {
 import Purchases from 'react-native-purchases';
 import type { CustomerInfo } from 'react-native-purchases';
 import { isRunningInExpoGo } from 'expo';
+
 import {
   identifyRevenueCatUser,
   resetRevenueCatUser,
   isRevenueCatSupported,
   PRO_ENTITLEMENT_ID,
-} from '../lib/revenuecat';
+} from '#/lib/revenuecat';
+import { supabase } from '#/lib/supabase';
+import { navigationRef } from '#/navigation';
+import { Logger } from '#/services/logger';
+
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
-import { navigationRef } from '../navigation';
-import { Logger } from '../services/logger';
 
 export type SubscriptionStatus = 'none' | 'active' | 'cancelling' | 'billing_issue' | 'expired';
 

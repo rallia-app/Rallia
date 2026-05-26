@@ -12,9 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import { TimeRangeSelector, LineChart } from '@rallia/shared-components/src/charts';
@@ -29,7 +27,9 @@ import {
   type NetworkActivity,
   type NetworkMatchIntegration,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -271,7 +271,7 @@ export default function AdminCommunityAnalyticsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('admin.analytics.sections.community' as TranslationKey) || 'Community Analytics'}
+          {t('admin.analytics.sections.community') || 'Community Analytics'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -314,7 +314,7 @@ export default function AdminCommunityAnalyticsScreen() {
         {summaryMetrics && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.overview' as TranslationKey) || 'Overview'}
+              {t('admin.analytics.community.overview') || 'Overview'}
             </Text>
             <View style={styles.metricsGrid}>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -323,8 +323,7 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.totalNetworks}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.totalNetworks' as TranslationKey) ||
-                    'Total Networks'}
+                  {t('admin.analytics.community.totalNetworks') || 'Total Networks'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -333,8 +332,7 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.activeNetworks}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.activeNetworks' as TranslationKey) ||
-                    'Active Networks'}
+                  {t('admin.analytics.community.activeNetworks') || 'Active Networks'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -343,7 +341,7 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.avgMembers}
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.avgMembers' as TranslationKey) || 'Avg Members'}
+                  {t('admin.analytics.community.avgMembers') || 'Avg Members'}
                 </Text>
               </View>
               <View style={[styles.metricCard, { backgroundColor: colors.card }]}>
@@ -352,8 +350,7 @@ export default function AdminCommunityAnalyticsScreen() {
                   {summaryMetrics.networkPostRate.toFixed(1)}%
                 </Text>
                 <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-                  {t('admin.analytics.community.networkPostRate' as TranslationKey) ||
-                    'Network Post Rate'}
+                  {t('admin.analytics.community.networkPostRate') || 'Network Post Rate'}
                 </Text>
               </View>
             </View>
@@ -364,15 +361,14 @@ export default function AdminCommunityAnalyticsScreen() {
         {growthChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.networkGrowth' as TranslationKey) || 'Network Growth'}
+              {t('admin.analytics.community.networkGrowth') || 'Network Growth'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: chartColors.primary }]} />
                   <Text style={[styles.legendText, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.totalNetworks' as TranslationKey) ||
-                      'Total Networks'}
+                    {t('admin.analytics.community.totalNetworks') || 'Total Networks'}
                   </Text>
                 </View>
               </View>
@@ -392,8 +388,7 @@ export default function AdminCommunityAnalyticsScreen() {
         {sizeChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.sizeDistribution' as TranslationKey) ||
-                'Network Size Distribution'}
+              {t('admin.analytics.community.sizeDistribution') || 'Network Size Distribution'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -425,7 +420,7 @@ export default function AdminCommunityAnalyticsScreen() {
         {networkTypesData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.networkTypes' as TranslationKey) || 'Network Types'}
+              {t('admin.analytics.community.networkTypes') || 'Network Types'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.pieChartContainer}>
@@ -440,7 +435,7 @@ export default function AdminCommunityAnalyticsScreen() {
                         {topNetworks.length}
                       </Text>
                       <Text style={[styles.pieCenterLabel, { color: colors.textSecondary }]}>
-                        {t('admin.analytics.community.networks' as TranslationKey) || 'Networks'}
+                        {t('admin.analytics.community.networks') || 'Networks'}
                       </Text>
                     </View>
                   )}
@@ -464,8 +459,7 @@ export default function AdminCommunityAnalyticsScreen() {
         {topNetworksChartData.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.topNetworks' as TranslationKey) ||
-                'Most Active Networks'}
+              {t('admin.analytics.community.topNetworks') || 'Most Active Networks'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <BarChart
@@ -490,8 +484,7 @@ export default function AdminCommunityAnalyticsScreen() {
                 isAnimated
               />
               <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-                {t('admin.analytics.community.activityScore' as TranslationKey) ||
-                  'Activity Score (0-100)'}
+                {t('admin.analytics.community.activityScore') || 'Activity Score (0-100)'}
               </Text>
             </View>
           </View>
@@ -501,8 +494,7 @@ export default function AdminCommunityAnalyticsScreen() {
         {matchIntegration && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.matchIntegration' as TranslationKey) ||
-                'Match Integration'}
+              {t('admin.analytics.community.matchIntegration') || 'Match Integration'}
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
               <View style={styles.integrationGrid}>
@@ -511,8 +503,7 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.matchesPostedToNetworks.toLocaleString()}
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.matchesPosted' as TranslationKey) ||
-                      'Matches Posted to Networks'}
+                    {t('admin.analytics.community.matchesPosted') || 'Matches Posted to Networks'}
                   </Text>
                 </View>
                 <View style={styles.integrationItem}>
@@ -520,8 +511,7 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.networkPostRate.toFixed(1)}%
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.postRate' as TranslationKey) ||
-                      'Network Post Rate'}
+                    {t('admin.analytics.community.postRate') || 'Network Post Rate'}
                   </Text>
                 </View>
                 <View style={styles.integrationItem}>
@@ -529,7 +519,7 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.networkOriginatedMatches.toLocaleString()}
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.networkOriginated' as TranslationKey) ||
+                    {t('admin.analytics.community.networkOriginated') ||
                       'Network-Originated Matches'}
                   </Text>
                 </View>
@@ -538,7 +528,7 @@ export default function AdminCommunityAnalyticsScreen() {
                     {matchIntegration.avgParticipantsFromNetwork.toFixed(1)}
                   </Text>
                   <Text style={[styles.integrationLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.community.avgParticipants' as TranslationKey) ||
+                    {t('admin.analytics.community.avgParticipants') ||
                       'Avg Participants from Network'}
                   </Text>
                 </View>
@@ -551,8 +541,7 @@ export default function AdminCommunityAnalyticsScreen() {
         {topNetworks.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('admin.analytics.community.networkActivity' as TranslationKey) ||
-                'Network Activity Details'}
+              {t('admin.analytics.community.networkActivity') || 'Network Activity Details'}
             </Text>
             <View style={[styles.listCard, { backgroundColor: colors.card }]}>
               {topNetworks.map((network, index) => (

@@ -26,6 +26,7 @@ import {
   duration,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+
 import { SportIcon } from './SportIcon';
 
 export interface Sport {

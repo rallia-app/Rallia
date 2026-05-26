@@ -13,7 +13,6 @@
 import React, { createContext, useContext } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import {
   spacingPixels,

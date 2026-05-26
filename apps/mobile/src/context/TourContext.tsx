@@ -28,11 +28,11 @@ import {
   Platform,
   InteractionManager,
 } from 'react-native';
-import { useTranslation } from '../hooks';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { tourService, TourId, TourStatus } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
-import { lightHaptic, selectionHaptic, successHaptic } from '../utils/haptics';
+import { tourService, TourId, TourStatus, Logger } from '@rallia/shared-services';
+
+import { useTranslation } from '#/hooks';
+import { lightHaptic, selectionHaptic, successHaptic } from '#/utils/haptics';
 
 // =============================================================================
 // TYPES

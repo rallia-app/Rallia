@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 
-import HomeBanner from '../../../components/HomeBanner';
+import HomeBanner from '#/components/HomeBanner';
 
 const STORAGE_KEY_DISMISS_COUNT = '@rallia/profile-completion-banner-dismiss-count';
 const STORAGE_KEY_COOLDOWN = '@rallia/profile-completion-banner-cooldown';

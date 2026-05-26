@@ -27,14 +27,15 @@ import { WebView } from 'react-native-webview';
 import { Text, useToast } from '@rallia/shared-components';
 import { Logger, supabase } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { resolveStorageUrl } from '../../../services/imageUpload';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { resolveStorageUrl } from '#/services/imageUpload';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

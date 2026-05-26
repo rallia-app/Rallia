@@ -14,9 +14,7 @@ import {
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   spacingPixels,
   fontSizePixels,
@@ -24,6 +22,8 @@ import {
   neutral,
   radiusPixels,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 function EditMessageModalComponent({ payload }: SheetProps<'edit-message'>) {
   const message = payload?.message ?? null;

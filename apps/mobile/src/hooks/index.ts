@@ -29,6 +29,7 @@ export {
   type ResolvedTheme,
 } from '@rallia/shared-hooks/src/useTheme.native';
 export { useThemeStyles, type ThemeColors } from '@rallia/shared-hooks/src/useThemeStyles.native';
+export { useThemedStyles, type ThemedStylesContext } from './useThemedStyles';
 
 // Re-export commonly used shared hooks
 export {

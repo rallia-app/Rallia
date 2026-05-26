@@ -18,12 +18,14 @@ import { Text, Button, Skeleton } from '@rallia/shared-components';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
-import { useAuth } from '../../../../hooks';
-import { useSport } from '../../../../context';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useAuth } from '#/hooks';
+import { useSport } from '#/context';
+import { SearchBar } from '#/components/SearchBar';
+
 import { useAddScore } from './AddScoreContext';
 import { ContactPickerModal } from './ContactPickerModal';
-import { SearchBar } from '../../../../components/SearchBar';
 import type { SelectedPlayer } from './types';
 
 interface FindOpponentStepProps {
@@ -78,10 +80,7 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
 
   const handleSelectPlayer = useCallback(
     (player: SelectedPlayer | PlayerSearchResult) => {
-      const member: SelectedPlayer =
-        'firstName' in player
-          ? (player as SelectedPlayer)
-          : toSelectedPlayer(player as PlayerSearchResult);
+      const member: SelectedPlayer = 'firstName' in player ? player : toSelectedPlayer(player);
 
       setSelectedPlayers(prev => {
         // Check if already selected

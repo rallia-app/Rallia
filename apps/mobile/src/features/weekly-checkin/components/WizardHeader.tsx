@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+
 import { ProgressDots } from './ProgressDots';
 
 interface WizardHeaderProps {

@@ -20,7 +20,8 @@ import {
   shadowsNative,
 } from '@rallia/design-system';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, usePermissions } from '../../hooks';
+
+import { useThemeStyles, useTranslation, usePermissions } from '#/hooks';
 
 interface LocationPermissionStepProps {
   /** Called when user enables location or skips */

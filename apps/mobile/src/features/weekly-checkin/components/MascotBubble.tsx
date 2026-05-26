@@ -23,7 +23,7 @@ import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, shadowsSemanticNative } from '@rallia/design-system';
 
-import aceAnimation from '../assets/ace-squirrel.json';
+import aceAnimation from '#/features/weekly-checkin/assets/ace-squirrel.json';
 
 const TYPE_INTERVAL_MS = 22;
 const MASCOT_SIZE = 128;

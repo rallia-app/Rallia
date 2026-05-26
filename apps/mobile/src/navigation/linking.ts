@@ -11,6 +11,7 @@
 
 import { type LinkingOptions, getStateFromPath } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
+
 import type { RootStackParamList } from './types';
 import {
   setPendingDeepLink,

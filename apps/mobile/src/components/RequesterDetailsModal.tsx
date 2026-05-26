@@ -17,7 +17,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
-import { ReputationBadge } from './ReputationBadge';
 import {
   lightTheme,
   darkTheme,
@@ -36,9 +35,11 @@ import {
 } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
 import { getTierForScore, getTierConfig, MIN_EVENTS_FOR_PUBLIC } from '@rallia/shared-services';
-import { useTranslation } from '../hooks';
-import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
-import type { PlayerWithProfile } from '@rallia/shared-types';
+import type { MatchParticipantWithPlayer, PlayerWithProfile } from '@rallia/shared-types';
+
+import { useTranslation } from '#/hooks';
+
+import { ReputationBadge } from './ReputationBadge';
 
 const BASE_WHITE = '#ffffff';
 

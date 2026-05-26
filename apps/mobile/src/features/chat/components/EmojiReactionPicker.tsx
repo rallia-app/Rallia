@@ -13,11 +13,11 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
 } from 'react-native';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
 import { spacingPixels } from '@rallia/design-system';
 import { COMMON_REACTIONS } from '@rallia/shared-services';
+
+import { useThemeStyles } from '#/hooks';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PICKER_HEIGHT = 60; // Approximate picker height

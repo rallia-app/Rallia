@@ -18,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../hooks';
 import {
   lightTheme,
   darkTheme,
@@ -37,7 +36,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Contacts from 'expo-contacts';
 import { Camera } from 'expo-camera';
 import { getTrackingPermissionsAsync } from 'expo-tracking-transparency';
-import { requestATTAndConfigureMeta } from '../lib/meta';
+
+import { useTranslation } from '#/hooks';
+import { requestATTAndConfigureMeta } from '#/lib/meta';
 
 const BASE_WHITE = '#ffffff';
 

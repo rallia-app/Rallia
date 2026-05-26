@@ -21,8 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme, useAuditLog, useAuditStats } from '@rallia/shared-hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -32,7 +31,6 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { useAuditLog, useAuditStats } from '@rallia/shared-hooks';
 import { useToast } from '@rallia/shared-components';
 import {
   auditService,
@@ -42,7 +40,8 @@ import {
   type AuditEntityType,
   type AuditSeverity,
 } from '@rallia/shared-services';
-import { exportService } from '../services/exportService';
+
+import { exportService } from '#/services/exportService';
 
 // =============================================================================
 // TYPES
@@ -170,7 +169,7 @@ const AdminActivityLogScreen: React.FC = () => {
           description: `${log.action_type} on ${log.entity_type}${log.entity_name ? ` (${log.entity_name})` : ''}`,
           severity: log.severity,
           created_at: log.created_at,
-          ip_address: ((log.metadata as Record<string, unknown>)?.ip_address as string) || null,
+          ip_address: (log.metadata?.ip_address as string) || null,
         }));
 
         let success: boolean;

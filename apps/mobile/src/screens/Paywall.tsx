@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import Purchases from 'react-native-purchases';
 import type { CustomerInfo, PurchasesError, PurchasesOffering } from 'react-native-purchases';
-import { Logger } from '../services/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast, Button } from '@rallia/shared-components';
@@ -23,11 +22,13 @@ import {
   secondary,
 } from '@rallia/design-system';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
-import { useAppNavigation } from '../navigation/hooks';
-import { paywallViewed, paywallDismissed, subscriptionStarted } from '../services/analytics';
-import { useTranslation } from '../hooks';
-import { getPaywallOffering } from '../lib/revenuecat';
-import { ThemeLogo } from '../components/ThemeLogo';
+
+import { Logger } from '#/services/logger';
+import { useAppNavigation } from '#/navigation/hooks';
+import { paywallViewed, paywallDismissed, subscriptionStarted } from '#/services/analytics';
+import { useTranslation } from '#/hooks';
+import { getPaywallOffering } from '#/lib/revenuecat';
+import { ThemeLogo } from '#/components/ThemeLogo';
 
 type PackageMeta = {
   label: string;

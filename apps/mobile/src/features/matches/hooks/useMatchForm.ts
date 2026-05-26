@@ -178,7 +178,7 @@ export function matchToFormData(
 
   if (match.duration) {
     // Use the stored duration value directly (enum values match form values)
-    duration = match.duration as MatchFormSchemaData['duration'];
+    duration = match.duration;
     customMinutes = match.custom_duration_minutes ?? undefined;
   } else {
     // Fallback: calculate from start/end times for legacy matches
@@ -327,7 +327,7 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
       stepFields.forEach(field => {
         const error = formState.errors[field];
         if (error?.message) {
-          errors[field] = error.message as string;
+          errors[field] = error.message;
         }
       });
 
@@ -371,7 +371,7 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             locationAddress: values.locationAddress,
             customLatitude: values.customLatitude,
             customLongitude: values.customLongitude,
-          } as Step1FormData;
+          };
         case 2:
           // Step 2: When
           return {
@@ -380,7 +380,7 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             duration: values.duration,
             customDurationMinutes: values.customDurationMinutes,
             timezone: values.timezone,
-          } as Step2FormData;
+          };
         case 3:
           // Step 3: Preferences (includes format and player expectation)
           return {
@@ -395,7 +395,7 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             visibleInCommunities: values.visibleInCommunities,
             joinMode: values.joinMode,
             notes: values.notes,
-          } as Step3FormData;
+          };
         default:
           return {} as Step1FormData;
       }
