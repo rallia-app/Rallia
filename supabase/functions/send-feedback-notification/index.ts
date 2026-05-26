@@ -11,7 +11,7 @@ import { Resend } from 'resend';
 import { requireSecretApikey } from '../_shared/auth.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.app';
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'Rallia <no-reply@updates.rallia.ca>';
 const ADMIN_EMAILS = ['contact@rallia.ca'];
 
 interface FeedbackMetadata {

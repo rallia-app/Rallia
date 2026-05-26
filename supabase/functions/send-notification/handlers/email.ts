@@ -11,7 +11,7 @@ import { generateEmailHtml, generateEmailSubject } from '../templates/match.ts';
 import { isFakeSeedEmail } from '../../_shared/email-guards.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@rallia.com';
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'Rallia <no-reply@updates.rallia.ca>';
 const SITE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://rallia.app';
 
 /**
