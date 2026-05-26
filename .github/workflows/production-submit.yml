@@ -2,9 +2,19 @@ name: Production Submit
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to submit'
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - ios
+          - android
 
 concurrency:
-  group: production-submit
+  group: production-submit-${{ inputs.platform }}
   cancel-in-progress: false
 
 jobs:
@@ -48,7 +58,7 @@ jobs:
         id: submit
         run: |
           cd apps/mobile
-          eas submit --platform all --latest --non-interactive
+          eas submit --platform ${{ inputs.platform }} --latest --non-interactive
 
       - name: Notify Discord
         if: success() || failure()
@@ -57,14 +67,15 @@ jobs:
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
+          PLATFORM="${{ inputs.platform }}"
           if [ "${{ steps.submit.outcome }}" = "success" ]; then
             COLOR=3066993
             TITLE="Production Submit Completed"
-            DESCRIPTION="Latest builds submitted to App Store & Google Play"
+            DESCRIPTION="Latest \`${PLATFORM}\` build(s) submitted to the app store(s)"
           else
             COLOR=15158332
             TITLE="Production Submit Failed"
-            DESCRIPTION="Failed to submit builds to app stores"
+            DESCRIPTION="Failed to submit \`${PLATFORM}\` build(s) to the app store(s)"
           fi
 
           FIELDS="["

@@ -3,13 +3,22 @@ name: Production Build
 on:
   workflow_dispatch:
     inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - ios
+          - android
       release_notes:
         description: 'Release notes for this build'
         required: false
         default: ''
 
 concurrency:
-  group: production-build
+  group: production-build-${{ inputs.platform }}
   cancel-in-progress: false
 
 jobs:
@@ -43,7 +52,7 @@ jobs:
         id: build
         run: |
           cd apps/mobile
-          eas build --platform all --profile production --non-interactive --json \
+          eas build --platform ${{ inputs.platform }} --profile production --non-interactive --json \
             | tee build-result.json
 
       - name: Notify Discord
@@ -100,6 +109,11 @@ jobs:
               VERSION_STR="v${IOS_APP_VERSION}"
               if [ -n "$IOS_BUILD_NUMBER" ]; then
                 VERSION_STR="${VERSION_STR} (${IOS_BUILD_NUMBER})"
+              fi
+            elif [ -n "$ANDROID_APP_VERSION" ]; then
+              VERSION_STR="v${ANDROID_APP_VERSION}"
+              if [ -n "$ANDROID_BUILD_NUMBER" ]; then
+                VERSION_STR="${VERSION_STR} (${ANDROID_BUILD_NUMBER})"
               fi
             fi
 
