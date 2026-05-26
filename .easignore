@@ -92,6 +92,14 @@ Pods/
 !default.xcworkspace
 *.xcuserdata
 
+# Native projects (CNG) — gitignored locally (apps/mobile/.gitignore) and
+# regenerated on the EAS VM via prebuild. If NOT excluded here, EAS uploads
+# the local prebuild output and treats the project as a bare workflow, which
+# breaks the runtimeVersion "appVersion" policy and ignores app config
+# (android.package, etc.).
+apps/mobile/android/
+apps/mobile/ios/
+
 # Logs
 logs
 *.log
@@ -123,7 +131,7 @@ apps/ai-agent/*
 apps/mobile/docs/
 docs/
 specs/
-scripts/
+/scripts/
 supabase/
 
 # CI config / editor config — not needed on the EAS worker
