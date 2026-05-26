@@ -16,11 +16,9 @@ export const WEEKLY_CHECKIN_ENABLED = true;
  *
  *  • Auto-create: the weekly match-generation pipeline is live (DB trigger →
  *    generate-weekly-matches edge function), so this toggle is revealed.
- *  • Auto-invite: the pipeline that invites compatible opponents is NOT built
- *    yet, so this toggle stays hidden. The hook keeps its state defaulted to
- *    `true` so the preference is pre-set when the work lands.
- *
- * Flip the auto-invite flag to `true` once that pipeline consumes the pref.
+ *  • Auto-invite: the generate-weekly-matches edge function now invites the
+ *    best-fit compatible opponents (get_auto_invite_candidates) to each
+ *    auto-created match and notifies them, so this toggle is revealed.
  */
 export const WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED = true;
-export const WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED = false;
+export const WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED = true;
