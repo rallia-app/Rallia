@@ -156,7 +156,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": ["android.permission.CAMERA"],
+      "permissions": ["android.permission.CAMERA", "com.google.android.gms.permission.AD_ID"],
       "package": "com.mathisl971.ralliaapp",
       "intentFilters": [
         {
@@ -283,8 +283,8 @@
           "clientToken": "PLACEHOLDER_FB_CLIENT_TOKEN",
           "displayName": "Rallia",
           "scheme": "fbPLACEHOLDER_FB_APP_ID",
-          "advertiserIDCollectionEnabled": false,
-          "autoLogAppEventsEnabled": false,
+          "advertiserIDCollectionEnabled": true,
+          "autoLogAppEventsEnabled": true,
           "isAutoInitEnabled": true,
           "iosUserTrackingPermission": "Allow tracking so $(PRODUCT_NAME) can measure which ads bring real players and personalize match suggestions. Your data is never sold."
         }

@@ -50,9 +50,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
   ]);
 
-  // Add Meta SDK plugin with env-injected credentials. Everything else is
-  // inherited from the app.json plugin block (autoLogAppEventsEnabled,
-  // ATT description, etc).
+  // Add Meta SDK plugin with env-injected credentials. This block fully
+  // replaces the react-native-fbsdk-next entry from app.json (filtered out
+  // above), so the flags here — not app.json — are the source of truth.
+  // advertiserIDCollection + autoLogAppEvents are enabled for Meta install
+  // attribution; the AD_ID permission is declared via android.permissions.
   dynamicPlugins.push([
     'react-native-fbsdk-next',
     {
@@ -60,8 +62,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       clientToken: fbClientToken,
       displayName: 'Rallia',
       scheme: `fb${fbAppId}`,
-      advertiserIDCollectionEnabled: false,
-      autoLogAppEventsEnabled: false,
+      advertiserIDCollectionEnabled: true,
+      autoLogAppEventsEnabled: true,
       isAutoInitEnabled: true,
       iosUserTrackingPermission:
         'Allow tracking so $(PRODUCT_NAME) can measure which ads bring real players and personalize match suggestions. Your data is never sold.',
