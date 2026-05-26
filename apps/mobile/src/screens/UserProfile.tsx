@@ -152,20 +152,26 @@ const UserProfile = () => {
   // Confirmation dialog before flipping a connected Stripe account into manual mode
   const [showSwitchToManualConfirm, setShowSwitchToManualConfirm] = useState(false);
 
+  // Extract narrow primitives so React Compiler can preserve these Stripe memos;
+  // it otherwise widens player?.id / stripeAccount?.onboarding_completed to the
+  // whole objects and bails on the screen.
+  const playerId = player?.id;
+  const stripeOnboardingCompleted = stripeAccount?.onboarding_completed;
+
   const refetchStripeState = useCallback(async () => {
     if (!MATCH_REIMBURSEMENT_ENABLED) return;
-    if (!player?.id) return;
+    if (!playerId) return;
     const [{ data: acct }, { data: playerRow }, { data: pending }] = await Promise.all([
       supabase
         .from('player_stripe_account')
         .select('onboarding_completed')
-        .eq('player_id', player.id)
+        .eq('player_id', playerId)
         .maybeSingle(),
-      supabase.from('player').select('payouts_mode').eq('id', player.id).maybeSingle(),
+      supabase.from('player').select('payouts_mode').eq('id', playerId).maybeSingle(),
       supabase
         .from('pending_host_transfer')
         .select('amount_cents')
-        .eq('host_player_id', player.id)
+        .eq('host_player_id', playerId)
         .eq('status', 'awaiting_onboarding'),
     ]);
     setStripeAccount(acct);
@@ -173,7 +179,7 @@ const UserProfile = () => {
       (playerRow?.payouts_mode as 'auto' | 'manual_only' | 'undecided') ?? 'undecided'
     );
     setPendingFundsCents((pending ?? []).reduce((sum, r) => sum + (r.amount_cents ?? 0), 0));
-  }, [player?.id]);
+  }, [playerId]);
 
   useEffect(() => {
     void refetchStripeState();
@@ -220,8 +226,8 @@ const UserProfile = () => {
   // Stripe JIT: switch to manual-only (skip Stripe entirely). When the host
   // already has a connected Stripe account, gate behind a confirmation.
   const handleSwitchToManual = useCallback(() => {
-    if (!player?.id) return;
-    if (stripeAccount?.onboarding_completed) {
+    if (!playerId) return;
+    if (stripeOnboardingCompleted) {
       mediumHaptic();
       setShowSwitchToManualConfirm(true);
       return;
@@ -232,7 +238,7 @@ const UserProfile = () => {
       const { error } = await supabase
         .from('player')
         .update({ payouts_mode: 'manual_only' })
-        .eq('id', player.id);
+        .eq('id', playerId);
       setSwitchingMode(false);
       if (error) {
         errorHaptic();
@@ -242,16 +248,16 @@ const UserProfile = () => {
       successHaptic();
       setPayoutsMode('manual_only');
     })();
-  }, [player?.id, stripeAccount?.onboarding_completed, toast, t]);
+  }, [playerId, stripeOnboardingCompleted, toast, t]);
 
   // Confirmed path for switching a connected Stripe account into manual mode.
   const handleConfirmSwitchToManual = useCallback(async () => {
-    if (!player?.id) return;
+    if (!playerId) return;
     setSwitchingMode(true);
     const { error } = await supabase
       .from('player')
       .update({ payouts_mode: 'manual_only' })
-      .eq('id', player.id);
+      .eq('id', playerId);
     setSwitchingMode(false);
     if (error) {
       errorHaptic();
@@ -261,17 +267,17 @@ const UserProfile = () => {
     successHaptic();
     setPayoutsMode('manual_only');
     setShowSwitchToManualConfirm(false);
-  }, [player?.id, toast, t]);
+  }, [playerId, toast, t]);
 
   // Stripe JIT: switch from manual_only back to auto + open onboarding
   const handleSwitchToAuto = useCallback(async () => {
-    if (!player?.id) return;
+    if (!playerId) return;
     lightHaptic();
     setSwitchingMode(true);
     const { error } = await supabase
       .from('player')
       .update({ payouts_mode: 'auto' })
-      .eq('id', player.id);
+      .eq('id', playerId);
     if (error) {
       setSwitchingMode(false);
       errorHaptic();
@@ -282,10 +288,10 @@ const UserProfile = () => {
     setPayoutsMode('auto');
     setSwitchingMode(false);
     // If no Stripe account yet, kick off onboarding immediately
-    if (!stripeAccount?.onboarding_completed) {
+    if (!stripeOnboardingCompleted) {
       await handleStripeOnboard();
     }
-  }, [player?.id, stripeAccount?.onboarding_completed, handleStripeOnboard, toast, t]);
+  }, [playerId, stripeOnboardingCompleted, handleStripeOnboard, toast, t]);
 
   // Derive sport cards from shared contexts (updated automatically by SportProfile)
   const sports: SportWithRating[] = useMemo(() => {

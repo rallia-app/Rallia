@@ -119,22 +119,19 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Member selection handlers — accepts either type
-  const handleSelectMember = useCallback(
-    (player: SelectedMember | PlayerSearchResult) => {
-      const member: SelectedMember =
-        'firstName' in player
-          ? (player as SelectedMember)
-          : toSelectedMember(player as PlayerSearchResult);
+  const handleSelectMember = (player: SelectedMember | PlayerSearchResult) => {
+    const member: SelectedMember =
+      'firstName' in player
+        ? (player as SelectedMember)
+        : toSelectedMember(player as PlayerSearchResult);
 
-      setSelectedMembers(prev => {
-        if (prev.some(p => p.id === member.id)) {
-          return prev.filter(p => p.id !== member.id);
-        }
-        return [...prev, member];
-      });
-    },
-    [toSelectedMember]
-  );
+    setSelectedMembers(prev => {
+      if (prev.some(p => p.id === member.id)) {
+        return prev.filter(p => p.id !== member.id);
+      }
+      return [...prev, member];
+    });
+  };
 
   // Hook for creating direct conversations
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
@@ -173,7 +170,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
   }, []);
 
   // Image picker
-  const handlePickImage = useCallback(async () => {
+  const handlePickImage = async () => {
     try {
       const { uri, error } = await pickImageWithCropper({
         aspectRatio: [1, 1],
@@ -193,14 +190,14 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
       console.error('Error picking image:', err);
       Alert.alert(t('common.error'), t('chat.failedToPickImage'));
     }
-  }, [t]);
+  };
 
   const _handleRemoveImage = useCallback(() => {
     setGroupImage(null);
   }, []);
 
   // Create group chat (simple group conversation without network)
-  const handleCreateGroup = useCallback(async () => {
+  const handleCreateGroup = async () => {
     if (!groupName.trim()) {
       setError(t('chat.groupNameRequired'));
       return;
@@ -272,47 +269,44 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
     } finally {
       setIsCreating(false);
     }
-  }, [groupName, groupImage, selectedMembers, currentUserId, handleClose, onSuccess, t]);
+  };
 
   // Render player item
-  const renderPlayerItem = useCallback(
-    ({ item }: { item: PlayerSearchResult }) => {
-      const isSelected = selectedMembers.some(p => p.id === item.id);
-      const displayName = `${item.first_name} ${item.last_name || ''}`.trim();
+  const renderPlayerItem = ({ item }: { item: PlayerSearchResult }) => {
+    const isSelected = selectedMembers.some(p => p.id === item.id);
+    const displayName = `${item.first_name} ${item.last_name || ''}`.trim();
 
-      return (
-        <TouchableOpacity
-          style={[
-            styles.playerItem,
-            {
-              backgroundColor: isSelected ? `${colors.buttonActive}15` : colors.buttonInactive,
-              borderColor: isSelected ? colors.buttonActive : colors.border,
-            },
-          ]}
-          onPress={() => handleSelectMember(item)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            {item.profile_picture_url ? (
-              <Image
-                source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? '' }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Ionicons name="person-outline" size={24} color={colors.textMuted} />
-            )}
-          </View>
-          <View style={styles.playerInfo}>
-            <Text weight="medium" style={{ color: colors.text }}>
-              {displayName}
-            </Text>
-          </View>
-          {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />}
-        </TouchableOpacity>
-      );
-    },
-    [colors, isDark, handleSelectMember, selectedMembers]
-  );
+    return (
+      <TouchableOpacity
+        style={[
+          styles.playerItem,
+          {
+            backgroundColor: isSelected ? `${colors.buttonActive}15` : colors.buttonInactive,
+            borderColor: isSelected ? colors.buttonActive : colors.border,
+          },
+        ]}
+        onPress={() => handleSelectMember(item)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+          {item.profile_picture_url ? (
+            <Image
+              source={{ uri: getProfilePictureUrl(item.profile_picture_url) ?? '' }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
+          )}
+        </View>
+        <View style={styles.playerInfo}>
+          <Text weight="medium" style={{ color: colors.text }}>
+            {displayName}
+          </Text>
+        </View>
+        {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />}
+      </TouchableOpacity>
+    );
+  };
 
   // Render selected member chips
   const renderSelectedChips = () => {
