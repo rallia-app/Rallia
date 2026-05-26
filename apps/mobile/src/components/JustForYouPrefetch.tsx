@@ -79,10 +79,7 @@ export function JustForYouPrefetch() {
     ]
   );
 
-  const excludeUserIds = useMemo(
-    () => (session?.user?.id ? [session.user.id] : []),
-    [session?.user?.id]
-  );
+  const excludeUserIds = session?.user?.id ? [session.user.id] : [];
 
   // Fire prefetch exactly once per cold start, when all inputs are ready.
   // Ref-guarded so re-renders (sport switch, location update) don't trigger

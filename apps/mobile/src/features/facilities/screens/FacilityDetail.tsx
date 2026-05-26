@@ -187,7 +187,7 @@ export default function FacilityDetail() {
   }, [facility]);
 
   // Handle report inaccuracy
-  const handleReportInaccuracy = useCallback(() => {
+  const handleReportInaccuracy = () => {
     if (!player?.id || !facility) return;
     lightHaptic();
     SheetManager.show('report-facility', {
@@ -197,7 +197,7 @@ export default function FacilityDetail() {
         facilityName: facility.name,
       },
     });
-  }, [player?.id, facility, facilityId]);
+  };
 
   // Contact info — general contact has the city info page URL;
   // reservation contact has the booking URL and phone number.

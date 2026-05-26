@@ -3,7 +3,7 @@
  * Modal for editing community name, description, cover image, and visibility
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -57,11 +57,8 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
   const { sports } = useSports();
 
   // Derive sport name from community's sport_id for rating scores lookup
-  const communitySportName = useMemo(() => {
-    if (!community?.sport_id || !sports) return undefined;
-    const sport = sports.find(s => s.id === community.sport_id);
-    return sport?.name;
-  }, [community?.sport_id, sports]);
+  const communitySportName =
+    community?.sport_id && sports ? sports.find(s => s.id === community.sport_id)?.name : undefined;
 
   const { ratingScores, hasRatingSystem } = useRatingScoresForSport(communitySportName);
 

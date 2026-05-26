@@ -897,10 +897,7 @@ const Home = () => {
   // Just for you: top 5 = best matches in the area, padded with suggestions
   // when matches < 5. Score-ordered, opponent-deduped on the suggestion side,
   // creator/participant matches filtered out by the composer's exclude set.
-  const excludeUserIds = useMemo(
-    () => (session?.user?.id ? [session.user.id] : []),
-    [session?.user?.id]
-  );
+  const excludeUserIds = session?.user?.id ? [session.user.id] : [];
   const {
     items: justForYouItems,
     isLoading: loadingJustForYou,
