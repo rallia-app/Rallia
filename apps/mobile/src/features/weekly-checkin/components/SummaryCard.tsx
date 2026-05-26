@@ -21,7 +21,10 @@ import {
 } from '@rallia/design-system';
 
 import { useTranslation } from '#/hooks';
-import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '#/features/weekly-checkin/featureFlag';
+import {
+  WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED,
+  WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED,
+} from '#/features/weekly-checkin/featureFlag';
 
 interface SummaryCardProps {
   newStreak: number;
@@ -139,19 +142,22 @@ export function SummaryCard({
         colors={colors}
         iconBubbleBg={iconBubbleBg}
         iconColor={iconColor}
-        isLast={!WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED || (!autoCreate && !autoInvite)}
+        isLast={
+          !(WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && autoCreate) &&
+          !(WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite)
+        }
       />
-      {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && autoCreate && (
+      {WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && autoCreate && (
         <SummaryRow
           icon="add-circle"
           text={t('weeklyCheckIn.step4.summaryAutoCreate')}
           colors={colors}
           iconBubbleBg={iconBubbleBg}
           iconColor={iconColor}
-          isLast={!autoInvite}
+          isLast={!(WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite)}
         />
       )}
-      {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && autoInvite && (
+      {WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite && (
         <SummaryRow
           icon="people"
           text={t('weeklyCheckIn.step4.summaryAutoInvite')}
