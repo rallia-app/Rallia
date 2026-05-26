@@ -105,7 +105,7 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
         // modals above the nav stack). The wizard also calls hideAll() on mount
         // as a backstop.
         void SheetManager.hideAll();
-        navigationRef.navigate('WeeklyCheckIn');
+        navigationRef.navigate('WeeklyCheckIn', { source: 'auto_opener' });
       };
       tryNavigate();
     })();

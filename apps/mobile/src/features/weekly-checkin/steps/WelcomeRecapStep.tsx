@@ -23,9 +23,9 @@ interface WelcomeRecapStepProps {
   onContinue: () => void;
 }
 
-type RecapVariant = 'hit' | 'met' | 'miss' | 'first';
+export type RecapVariant = 'hit' | 'met' | 'miss' | 'first';
 
-function deriveVariant(ctx: CheckInContext): RecapVariant {
+export function deriveVariant(ctx: CheckInContext): RecapVariant {
   if (ctx.lastWeekFrequencyGoal == null) return 'first';
   const played = ctx.lastWeekSessionsPlayed ?? 0;
   if (played > ctx.lastWeekFrequencyGoal) return 'hit';

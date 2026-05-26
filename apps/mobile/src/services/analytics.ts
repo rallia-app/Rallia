@@ -621,3 +621,57 @@ export function restorePurchasesFailed(): void {
 export function billingIssueEncountered(): void {
   capture('billing_issue_encountered');
 }
+
+// ---- Weekly Check-In Wizard ----
+// Funnel: opened → step_completed (×3) → submitted → completed; abandoned on
+// exit. All timestamped, so weekly behaviour is sliceable by event time.
+
+export function weeklyCheckinOpened(props: {
+  source: string; // 'auto_opener' | 'banner' | 'manual' | 'unknown'
+  current_streak: number;
+  recap_variant: string; // 'hit' | 'met' | 'miss' | 'first'
+}): void {
+  capture('weekly_checkin_opened', props);
+}
+
+export function weeklyCheckinStepCompleted(props: {
+  step_name: string; // 'welcome_recap' | 'availability' | 'frequency_auto'
+  step_index: number;
+  availability_cells?: number;
+  frequency_goal?: number;
+  auto_create?: boolean;
+  auto_invite?: boolean;
+}): void {
+  capture('weekly_checkin_step_completed', props);
+}
+
+export function weeklyCheckinSubmitted(props: {
+  frequency_goal: number;
+  availability_cells: number;
+  auto_create: boolean;
+  auto_invite: boolean;
+  new_streak: number;
+  milestone_reached: boolean;
+  freeze_earned: boolean;
+}): void {
+  capture('weekly_checkin_submitted', props);
+}
+
+export function weeklyCheckinSubmitFailed(props: { error: string }): void {
+  capture('weekly_checkin_submit_failed', props);
+}
+
+export function weeklyCheckinCompleted(props: {
+  duration_seconds: number;
+  new_streak: number;
+}): void {
+  capture('weekly_checkin_completed', props);
+}
+
+export function weeklyCheckinAbandoned(props: {
+  last_step: string;
+  step_index: number;
+  duration_seconds: number;
+}): void {
+  capture('weekly_checkin_abandoned', props);
+}

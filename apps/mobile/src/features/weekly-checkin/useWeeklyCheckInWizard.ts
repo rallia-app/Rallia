@@ -22,6 +22,8 @@ import {
 } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
 
+import * as Analytics from '#/services/analytics';
+
 import {
   useAvailabilityKeys,
   useCheckInContext,
@@ -30,6 +32,14 @@ import {
   type CheckInResult,
   type HourGrid,
 } from './api';
+
+// Analytics step labels, keyed by step index.
+const STEP_NAMES: Record<WizardStep, string> = {
+  1: 'welcome_recap',
+  2: 'availability',
+  3: 'frequency_auto',
+  4: 'all_set',
+};
 
 // Shared with apps/mobile/src/screens/Home.tsx (AVAILABILITY_BANNER_COOLDOWN_KEY).
 // Dismissing either the banner OR the wizard sets this — they're a unified
@@ -82,6 +92,9 @@ export interface UseWeeklyCheckInWizard {
   requestExit: () => void;
   cancelExit: () => void;
   confirmExit: () => Promise<void>;
+
+  /** Epoch ms when the wizard opened (analytics duration). */
+  startedAt: number;
 }
 
 interface UseWeeklyCheckInWizardOptions {
@@ -112,6 +125,9 @@ export function useWeeklyCheckInWizard(
   const [frequencyGoal, setFrequencyGoalState] = useState<number>(3);
   const [autoCreate, setAutoCreateState] = useState<boolean>(true);
   const [autoInvite, setAutoInviteState] = useState<boolean>(true);
+
+  // When the wizard opened — drives duration_seconds on completed/abandoned.
+  const startedAtRef = useRef(Date.now());
 
   // Seed availability from the fetched key list (once, on first load).
   // initialKeys is a string[] — see api.ts for why it's not a Set.
@@ -170,9 +186,20 @@ export function useWeeklyCheckInWizard(
     setCurrentStep(step);
   }, []);
   const goNext = useCallback(() => {
+    // Funnel step_completed for the step being left. Step 3 (frequency_auto)
+    // completes via submit(), not goNext.
+    if (currentStep === 1) {
+      Analytics.weeklyCheckinStepCompleted({ step_name: STEP_NAMES[1], step_index: 1 });
+    } else if (currentStep === 2) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[2],
+        step_index: 2,
+        availability_cells: availability.size,
+      });
+    }
     setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
     mediumHaptic();
-  }, []);
+  }, [currentStep, availability]);
   const goBack = useCallback(() => {
     setCurrentStep(prev => (prev > 1 ? ((prev - 1) as WizardStep) : prev));
   }, []);
@@ -205,12 +232,30 @@ export function useWeeklyCheckInWizard(
         autoInvite,
         availability,
       });
+      // Step 3 completes on a successful submit (not via goNext).
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[3],
+        step_index: 3,
+        frequency_goal: frequencyGoal,
+        auto_create: autoCreate,
+        auto_invite: autoInvite,
+      });
+      Analytics.weeklyCheckinSubmitted({
+        frequency_goal: frequencyGoal,
+        availability_cells: availability.size,
+        auto_create: autoCreate,
+        auto_invite: autoInvite,
+        new_streak: res.newStreak,
+        milestone_reached: res.milestoneReached,
+        freeze_earned: res.freezeEarned,
+      });
       setResult(res);
       successHaptic();
       setCurrentStep(4);
       onComplete?.(res);
     } catch (err) {
       errorHaptic();
+      Analytics.weeklyCheckinSubmitFailed({ error: (err as Error)?.message ?? 'unknown' });
       Logger.error('Weekly check-in submit failed', err as Error);
       throw err;
     }
@@ -230,6 +275,11 @@ export function useWeeklyCheckInWizard(
   }, []);
   const confirmExit = useCallback(async () => {
     warningHaptic();
+    Analytics.weeklyCheckinAbandoned({
+      last_step: STEP_NAMES[currentStep],
+      step_index: currentStep,
+      duration_seconds: Math.round((Date.now() - startedAtRef.current) / 1000),
+    });
     try {
       await AsyncStorage.setItem(WEEKLY_CHECKIN_COOLDOWN_KEY, Date.now().toString());
     } catch (err) {
@@ -237,7 +287,7 @@ export function useWeeklyCheckInWizard(
     }
     setExitPromptVisible(false);
     onDismiss?.();
-  }, [onDismiss]);
+  }, [onDismiss, currentStep]);
 
   return {
     currentStep,
@@ -271,5 +321,8 @@ export function useWeeklyCheckInWizard(
     requestExit,
     cancelExit,
     confirmExit,
+
+    // Epoch ms when the wizard opened — for analytics duration on completion.
+    startedAt: startedAtRef.current,
   };
 }

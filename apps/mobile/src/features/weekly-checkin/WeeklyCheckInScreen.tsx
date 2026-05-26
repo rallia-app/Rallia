@@ -12,7 +12,7 @@
  * Confirm sets the AsyncStorage cooldown (shared with the Home banner) and
  * calls the route's dismiss callback. Cancel just closes the prompt.
  */
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -23,7 +23,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Button, Text } from '@rallia/shared-components';
@@ -39,9 +39,10 @@ import {
 } from '@rallia/design-system';
 
 import { useTranslation } from '#/hooks';
+import * as Analytics from '#/services/analytics';
 
 import { WizardHeader } from './components/WizardHeader';
-import { WelcomeRecapStep } from './steps/WelcomeRecapStep';
+import { WelcomeRecapStep, deriveVariant } from './steps/WelcomeRecapStep';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { FrequencyAutoStep } from './steps/FrequencyAutoStep';
 import { AllSetStep } from './steps/AllSetStep';
@@ -62,6 +63,23 @@ export function WeeklyCheckInScreen() {
   const wizard = useWeeklyCheckInWizard({
     onDismiss: dismissModal,
   });
+
+  // Analytics: which entry point opened the wizard (set by the navigator param).
+  const route = useRoute();
+  const source = (route.params as { source?: string } | undefined)?.source ?? 'unknown';
+
+  // Fire `weekly_checkin_opened` once, after the cold-start context loads so the
+  // streak + recap variant are populated.
+  const openedFiredRef = useRef(false);
+  useEffect(() => {
+    if (openedFiredRef.current || !wizard.context) return;
+    openedFiredRef.current = true;
+    Analytics.weeklyCheckinOpened({
+      source,
+      current_streak: wizard.context.currentStreak,
+      recap_variant: deriveVariant(wizard.context),
+    });
+  }, [wizard.context, source]);
 
   // Warm light surface in day mode (accent-50 → primary-50, both from the
   // design-system palette); soft dark theme background in night mode.
@@ -108,8 +126,12 @@ export function WeeklyCheckInScreen() {
 
   const handleDone = useCallback(() => {
     lightHaptic();
+    Analytics.weeklyCheckinCompleted({
+      duration_seconds: Math.round((Date.now() - wizard.startedAt) / 1000),
+      new_streak: wizard.result?.newStreak ?? wizard.context?.currentStreak ?? 0,
+    });
     dismissModal();
-  }, [dismissModal]);
+  }, [dismissModal, wizard.startedAt, wizard.result, wizard.context]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
