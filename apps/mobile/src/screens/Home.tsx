@@ -964,7 +964,7 @@ const Home = () => {
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   // Render section header with "Soon & Nearby" title and "View All" button
   // Wrapped with CopilotStep for home screen tour
-  const renderSectionHeader = useCallback(() => {
+  const renderSectionHeader = () => {
     // Get a short label for the home location (full address if available, otherwise postal code)
     const homeLocationLabel = player?.address
       ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
@@ -1014,21 +1014,7 @@ const Home = () => {
         </TouchableOpacity>
       </View>
     );
-  }, [
-    colors.text,
-    colors.primary,
-    navigation,
-    t,
-    locationMode,
-    setLocationMode,
-    hasHomeLocation,
-    hasBothLocationOptions,
-    homeLocation,
-    isDark,
-    player?.address,
-    player?.city,
-    session?.user?.id,
-  ]);
+  };
 
   // Render "My Matches" section with horizontal scroll
   const renderMyMatchesSection = useCallback(() => {

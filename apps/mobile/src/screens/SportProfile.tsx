@@ -275,9 +275,15 @@ const SportProfile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Refresh proof counts when returning to this screen
+  // Refresh proof counts when returning to this screen.
+  // Extract narrow primitives so React Compiler can preserve this memo; it
+  // otherwise widens the ratingInfo?.x deps to the whole ratingInfo object and
+  // bails out of optimizing the screen. scoreValue is required on RatingInfo,
+  // so the undefined check never fires in practice and only narrows the type.
+  const ratingScoreId = ratingInfo?.ratingScoreId;
+  const ratingScoreValue = ratingInfo?.scoreValue;
   const refreshProofAndCertificationData = useCallback(async () => {
-    if (!playerRatingScoreId || !ratingInfo?.ratingScoreId) return;
+    if (!playerRatingScoreId || !ratingScoreId || ratingScoreValue === undefined) return;
 
     // Fetch proof counts and certification status in parallel
     const [proofsResult, certResult] = await Promise.all([
@@ -304,7 +310,7 @@ const SportProfile = () => {
       setTotalProofsCount(proofs.length);
 
       // Current-level count: proofs at the current rating or higher
-      const currentValue = ratingInfo.scoreValue;
+      const currentValue = ratingScoreValue;
       const currentLevelCount = proofs.filter(p => {
         const score = p.rating_score as unknown as { value: number } | null;
         return score && score.value >= currentValue;
@@ -319,7 +325,7 @@ const SportProfile = () => {
       setPeerEvaluationAverage(certResult.data.peer_evaluation_average ?? undefined);
       setPeerEvaluationCount(certResult.data.peer_evaluation_count ?? 0);
     }
-  }, [playerRatingScoreId, ratingInfo?.ratingScoreId, ratingInfo?.scoreValue]);
+  }, [playerRatingScoreId, ratingScoreId, ratingScoreValue]);
 
   useFocusEffect(
     useCallback(() => {

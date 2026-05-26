@@ -133,17 +133,21 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     };
   }, [user?.id, fetchDbSubscription]);
 
+  // Extract userId so React Compiler can preserve these memos; it otherwise
+  // widens the user?.id dep to the whole user object and bails on the provider.
+  const userId = user?.id;
+
   const refreshSubscription = useCallback(async () => {
-    if (!user?.id || isRunningInExpoGo() || !isRevenueCatSupported) return;
+    if (!userId || isRunningInExpoGo() || !isRevenueCatSupported) return;
     try {
       const info = await Purchases.getCustomerInfo();
       setCustomerInfo(info);
-      await fetchDbSubscription(user.id);
+      await fetchDbSubscription(userId);
     } catch (err) {
       Logger.error('Failed to refresh subscription', err as Error);
       setError(err instanceof Error ? err : new Error('Failed to refresh'));
     }
-  }, [user?.id, fetchDbSubscription]);
+  }, [userId, fetchDbSubscription]);
 
   const presentPaywall = useCallback(() => {
     if (navigationRef.isReady()) {
@@ -156,15 +160,15 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     try {
       const info = await Purchases.restorePurchases();
       setCustomerInfo(info);
-      if (user?.id) {
-        await fetchDbSubscription(user.id);
+      if (userId) {
+        await fetchDbSubscription(userId);
       }
       return PRO_ENTITLEMENT_ID in info.entitlements.active;
     } catch (err) {
       Logger.error('Failed to restore purchases', err as Error);
       throw err;
     }
-  }, [user?.id, fetchDbSubscription]);
+  }, [userId, fetchDbSubscription]);
 
   const subscriptionStatus = deriveStatus(customerInfo, dbStatus);
   const isProActive = PRO_ENTITLEMENT_ID in (customerInfo?.entitlements.active ?? {});
