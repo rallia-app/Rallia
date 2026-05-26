@@ -8,11 +8,13 @@ import { View, TouchableOpacity, StyleSheet, Alert, TextInput, Image } from 'rea
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, useImagePicker } from '../../../hooks';
 import { createUserReport, type ReportReason, REPORT_REASON_LABELS } from '@rallia/shared-services';
 import { radiusPixels, primary, status, spacingPixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation, useImagePicker } from '#/hooks';
+import { uploadImage } from '#/services/imageUpload';
+
 import { ReportSubmittedSuccessModal } from './ReportSubmittedSuccessModal';
-import { uploadImage } from '../../../services/imageUpload';
 
 // Report reasons that allow evidence/proof images
 const EVIDENCE_REPORT_REASONS: ReportReason[] = [

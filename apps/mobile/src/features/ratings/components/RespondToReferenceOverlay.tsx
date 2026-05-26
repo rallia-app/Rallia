@@ -16,7 +16,6 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger, notifyReferenceRequestResponded } from '@rallia/shared-services';
 import { selectionHaptic, successHaptic, errorHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -24,6 +23,8 @@ import {
   fontWeightNumeric,
   status,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-to-reference'>) {
   const request = payload?.request;
@@ -110,7 +111,7 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
             request.id,
             refereeName,
             request.rating_info.sport_display_name,
-            newStatus as 'completed' | 'declined',
+            newStatus,
             request.rating_info.label,
             isApproved,
             responseMessage.trim() || null

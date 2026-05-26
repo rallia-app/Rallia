@@ -18,7 +18,6 @@ import {
   type MembershipFilter,
   type OrganizationNatureFilter,
 } from '@rallia/shared-hooks';
-import { useTranslation } from '../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -30,7 +29,9 @@ import {
   darkTheme,
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { selectionHaptic, lightHaptic } from '../../../utils/haptics';
+
+import { useTranslation } from '#/hooks';
+import { selectionHaptic, lightHaptic } from '#/utils/haptics';
 
 // =============================================================================
 // FILTER OPTIONS
@@ -671,7 +672,7 @@ export default function FacilityFiltersBar({
               hasHomeLocation={hasHomeLocation}
               homeLocationLabel={homeLocationLabel}
               isDark={isDark}
-              t={t as (key: string) => string}
+              t={t}
             />
           </View>
         )}

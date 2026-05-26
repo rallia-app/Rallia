@@ -12,11 +12,11 @@ import {
   lightTheme,
   darkTheme,
 } from '@rallia/design-system';
-import type { PlayerSearchResult } from '@rallia/shared-services';
-import type { ReputationDisplay } from '@rallia/shared-services';
-import RatingBadge from '../../../components/RatingBadge';
-import ReputationBadge from '../../../components/ReputationBadge';
-import { useTranslation, useThemeStyles } from '../../../hooks';
+import type { PlayerSearchResult, ReputationDisplay } from '@rallia/shared-services';
+
+import RatingBadge from '#/components/RatingBadge';
+import ReputationBadge from '#/components/ReputationBadge';
+import { useTranslation, useThemeStyles } from '#/hooks';
 
 // Match MatchCard token usage: same background tier, same border alpha,
 // same shadow / radius / spacing. Card surface comes from primary[50/950]

@@ -6,7 +6,6 @@ import { Text, Skeleton } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useCommunityFavoriteFacilities } from '@rallia/shared-hooks';
 import { selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -14,6 +13,9 @@ import {
   fontWeightNumeric,
 } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 
 interface NetworkFavoriteFacilitiesProps {
@@ -119,7 +121,7 @@ export const NetworkFavoriteFacilities: React.FC<NetworkFavoriteFacilitiesProps>
             <TennisCourtIcon width={20} height={20} stroke={colors.textSecondary} />
           </View>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t(`${translationPrefix}.favoriteFacilities` as TranslationKey)}
+            {t(`${translationPrefix}.favoriteFacilities`)}
           </Text>
         </View>
         {canManage && (
@@ -205,11 +207,11 @@ export const NetworkFavoriteFacilities: React.FC<NetworkFavoriteFacilitiesProps>
         <View style={[styles.emptyState, { borderColor: colors.border }]}>
           <Ionicons name="location-outline" size={32} color={colors.textMuted} />
           <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-            {t(`${translationPrefix}.noFavoriteFacilities` as TranslationKey)}
+            {t(`${translationPrefix}.noFavoriteFacilities`)}
           </Text>
           {canManage && (
             <Text style={[styles.emptyStateHint, { color: colors.textMuted }]}>
-              {t(`${translationPrefix}.addFavoriteFacilitiesHint` as TranslationKey)}
+              {t(`${translationPrefix}.addFavoriteFacilitiesHint`)}
             </Text>
           )}
         </View>

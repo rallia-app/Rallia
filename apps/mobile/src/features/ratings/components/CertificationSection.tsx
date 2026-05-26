@@ -13,10 +13,12 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Card, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { InfoModal } from '#/components/InfoModal';
+
 import { CertificationBadge, type BadgeStatus } from './CertificationBadge';
-import { InfoModal } from '../../../components/InfoModal';
 
 export interface CertificationSectionProps {
   /**

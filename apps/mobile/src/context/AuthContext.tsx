@@ -24,11 +24,12 @@ import React, {
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
 import { Logger, unregisterPushToken } from '@rallia/shared-services';
-import { posthogClient } from '../providers/PostHogProvider';
-import { clearMetaUser } from '../lib/meta';
+
+import { supabase } from '#/lib/supabase';
+import { posthogClient } from '#/providers/PostHogProvider';
+import { clearMetaUser } from '#/lib/meta';
 
 // =============================================================================
 // DEMO ACCOUNT FOR APP STORE REVIEW
@@ -385,7 +386,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async (provider: OAuthProvider, options?: OAuthSignInOptions): Promise<AuthResult> => {
       try {
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: provider as Provider,
+          provider: provider,
           options: {
             redirectTo: options?.redirectTo,
             scopes: options?.scopes,

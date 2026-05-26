@@ -18,7 +18,8 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+
+import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
 
 interface ThemeColors {
   background: string;

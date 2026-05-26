@@ -18,9 +18,13 @@ import { View, StyleSheet } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { spacingPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { HourlyAvailabilityGrid, type HourGrid } from '../../HourlyAvailabilityGrid';
-import { HourlyAvailabilityPresets } from '../../HourlyAvailabilityPresets';
-import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+
+import {
+  HourlyAvailabilityGrid,
+  type HourGrid,
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import { HourlyAvailabilityPresets } from '#/features/onboarding/components/HourlyAvailabilityPresets';
+import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
 
 interface ThemeColors {
   background: string;

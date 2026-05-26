@@ -18,10 +18,12 @@ import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-util
 import { useFacilitySearch } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { computeFavoriteSportCounts } from '../../../hooks/useOnboardingWizard';
-import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
-import { useUserLocation } from '../../../../../hooks/useUserLocation';
-import { SearchBar } from '../../../../../components/SearchBar';
+
+import { computeFavoriteSportCounts } from '#/features/onboarding/hooks/useOnboardingWizard';
+import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
+import { useUserLocation } from '#/hooks/useUserLocation';
+import { SearchBar } from '#/components/SearchBar';
+
 import TennisCourtIcon from '../../../../../../assets/icons/tennis-court.svg';
 
 // =============================================================================

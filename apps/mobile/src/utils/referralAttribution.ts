@@ -29,7 +29,7 @@ import {
   type PendingReferral,
   type DeepLinkPayload,
   setPendingDeepLink,
-} from '../navigation/deepLinkStore';
+} from '#/navigation/deepLinkStore';
 
 import { readClipboardAttribution } from './iosClipboardAttribution';
 

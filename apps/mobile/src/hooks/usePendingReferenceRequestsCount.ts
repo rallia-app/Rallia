@@ -24,7 +24,7 @@ export const usePendingReferenceRequestsCount = () => {
         .gte('expires_at', new Date().toISOString());
 
       if (error) {
-        Logger.error('Failed to fetch pending reference requests count', error as Error);
+        Logger.error('Failed to fetch pending reference requests count', error);
         return;
       }
       setCount(result || 0);

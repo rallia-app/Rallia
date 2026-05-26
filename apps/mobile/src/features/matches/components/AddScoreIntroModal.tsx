@@ -10,7 +10,8 @@ import { View, StyleSheet, TouchableOpacity, Modal, ImageBackground } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTranslation, type TranslationKey } from '../../../hooks';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
 
 interface AddScoreIntroModalProps {
   visible: boolean;

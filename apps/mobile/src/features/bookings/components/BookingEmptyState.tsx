@@ -7,10 +7,11 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels } from '@rallia/design-system';
 import type { BookingTab } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface BookingEmptyStateProps {
   activeTab: BookingTab;

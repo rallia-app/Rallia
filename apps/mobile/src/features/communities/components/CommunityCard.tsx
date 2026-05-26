@@ -7,7 +7,6 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { OptimizedImage } from '../../../components/OptimizedImage';
 import {
   spacingPixels,
   radiusPixels,
@@ -16,7 +15,9 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+
+import { OptimizedImage } from '#/components/OptimizedImage';
+import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 export interface CommunityCardData {
   id: string;
@@ -78,8 +79,8 @@ export function CommunityCard({ community, onPress, colors, isDark, t }: Communi
           <Ionicons name="people-outline" size={12} color={colors.textMuted} />
           <Text style={[styles.memberCount, { color: colors.textMuted }]}>
             {community.memberCount === 1
-              ? t('facilityDetail.communities.memberCountOne' as Parameters<typeof t>[0])
-              : t('facilityDetail.communities.memberCount' as Parameters<typeof t>[0], {
+              ? t('facilityDetail.communities.memberCountOne')
+              : t('facilityDetail.communities.memberCount', {
                   count: community.memberCount,
                 })}
           </Text>

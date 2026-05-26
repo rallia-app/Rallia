@@ -7,7 +7,7 @@ import { StyleSheet, View, ViewStyle } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles } from '#/hooks';
 
 export interface StatCardProps {
   title: string;

@@ -15,7 +15,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { SportIcon } from '../../../components/SportIcon';
 import { useTheme, usePlayerMatches, usePlayerMatchFilters } from '@rallia/shared-hooks';
 import {
   getUpcomingDateSection,
@@ -26,12 +25,14 @@ import {
   type PastDateSection,
 } from '@rallia/shared-utils';
 import type { MatchWithDetails } from '@rallia/shared-types';
-import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import { PlayerMatchFilterChips, MatchCardSkeleton } from '../components';
 import { spacingPixels, neutral } from '@rallia/design-system';
+
+import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
+import { useMatchDetailSheet, useSport } from '#/context';
+import { PlayerMatchFilterChips, MatchCardSkeleton } from '#/features/matches/components';
+import { SportIcon } from '#/components/SportIcon';
 
 // =============================================================================
 // TYPES
@@ -61,7 +62,7 @@ function groupMatchesByDate(
         ? getUpcomingDateSection(match.match_date)
         : getPastDateSection(match.match_date);
     if (!groups[key]) groups[key] = [];
-    groups[key]!.push(match);
+    groups[key].push(match);
   });
 
   return order
@@ -248,7 +249,7 @@ export default function PlayerMatches() {
         title: t(`playerMatches.emptyFiltered.title`),
         description: t(`playerMatches.emptyFiltered.description`, {
           filter: t(
-            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter}` as TranslationKey
+            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter}`
           ),
         }),
       };

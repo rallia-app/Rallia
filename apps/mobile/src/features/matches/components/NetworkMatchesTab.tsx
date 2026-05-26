@@ -8,7 +8,6 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { SportIcon } from '../../../components/SportIcon';
 import {
   useNetworkMemberUpcomingMatches,
   usePublicMatchFilters,
@@ -16,12 +15,15 @@ import {
   type NetworkMemberMatch,
   type NetworkMatchFilters,
 } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation, useAuth } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+
+import { useMatchDetailSheet, useSport } from '#/context';
+import { useThemeStyles, useTranslation, useAuth } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+
 import { SearchBar, MatchFiltersBar } from './index';
 
 // =============================================================================
@@ -174,7 +176,7 @@ export default function NetworkMatchesTab({
     (match: NetworkMemberMatch) => {
       void lightHaptic();
       Logger.logUserAction('network_match_pressed', { matchId: match.id, networkId, networkType });
-      openMatchDetail(match as Parameters<typeof openMatchDetail>[0]);
+      openMatchDetail(match);
     },
     [openMatchDetail, networkId, networkType]
   );
@@ -184,9 +186,9 @@ export default function NetworkMatchesTab({
     ({ item }: { item: NetworkMemberMatch }) => {
       return (
         <MatchCard
-          match={item as Parameters<typeof MatchCard>[0]['match']}
+          match={item}
           isDark={isDark}
-          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          t={t}
           locale={locale}
           currentPlayerId={playerId}
           sportIcon={
@@ -224,7 +226,7 @@ export default function NetworkMatchesTab({
       <EmptyState
         hasActiveFilters={hasActiveFilters}
         colors={colors}
-        t={t as (key: TranslationKey) => string}
+        t={t}
         networkType={networkType}
       />
     );

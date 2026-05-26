@@ -33,11 +33,12 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { useReferral } from '@rallia/shared-hooks';
 import { getReferralLink } from '@rallia/shared-services';
 import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
-import * as Analytics from '../../../../../services/analytics';
-import { SearchBar } from '../../../../../components/SearchBar';
-import { ContactRow, ContactSelectionCheck } from '../../../../../components/ContactRow';
-import { useDeviceContacts } from '../../../../../hooks/useDeviceContacts';
-import { formatContactSubtitle } from '../../../../../utils/contactDisplay';
+
+import * as Analytics from '#/services/analytics';
+import { SearchBar } from '#/components/SearchBar';
+import { ContactRow, ContactSelectionCheck } from '#/components/ContactRow';
+import { useDeviceContacts } from '#/hooks/useDeviceContacts';
+import { formatContactSubtitle } from '#/utils/contactDisplay';
 
 const BASE_WHITE = '#ffffff';
 const CONTACT_LIST_MAX_HEIGHT = 280;
@@ -191,9 +192,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       currentSport?.display_name?.toLowerCase() ??
       selectedSports[0]?.display_name?.toLowerCase() ??
       'sports';
-    return t('referral.shareMessage' as TranslationKey)
-      .replace('{sport}', sportName)
-      .replace('{link}', referralLink);
+    return t('referral.shareMessage').replace('{sport}', sportName).replace('{link}', referralLink);
   }, [currentSport, selectedSports, t, referralLink]);
 
   const handleNativeShare = useCallback(async () => {
@@ -203,7 +202,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       lightHaptic();
       const result = await Share.share({
         message,
-        title: t('referral.shareTitle' as TranslationKey),
+        title: t('referral.shareTitle'),
       });
       if (result.action === Share.sharedAction) {
         Analytics.invitationLinkGenerated({
@@ -266,7 +265,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
         successHaptic();
         clearSelection();
         setInvitesSentCount(c => c + 1);
-        toast.success(t('onboarding.success.invitesSentToast' as TranslationKey));
+        toast.success(t('onboarding.success.invitesSentToast'));
       }
     } catch {
       toast.error(t('referral.contacts.failedToSend'));
@@ -334,10 +333,10 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           >
             <Ionicons name="people-outline" size={28} color={colors.buttonActive} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.inviteTitle}>
-              {t('onboarding.success.contactsTitle' as TranslationKey)}
+              {t('onboarding.success.contactsTitle')}
             </Text>
             <Text size="sm" color={colors.textMuted} style={styles.inviteSubtitle}>
-              {t('onboarding.success.contactsSubtitle' as TranslationKey)}
+              {t('onboarding.success.contactsSubtitle')}
             </Text>
 
             {/* PRE-PERMISSION: persuasive primary CTA */}
@@ -364,7 +363,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                         color={colors.buttonTextActive}
                         style={styles.primaryButtonText}
                       >
-                        {t('onboarding.success.findFromContacts' as TranslationKey)}
+                        {t('onboarding.success.findFromContacts')}
                       </Text>
                     </>
                   )}
@@ -383,7 +382,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                     color={colors.text}
                     style={styles.secondaryButtonText}
                   >
-                    {t('onboarding.success.shareLinkInstead' as TranslationKey)}
+                    {t('onboarding.success.shareLinkInstead')}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -395,7 +394,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                 <SearchBar
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder={t('onboarding.success.searchPlaceholder' as TranslationKey)}
+                  placeholder={t('onboarding.success.searchPlaceholder')}
                   colors={colors}
                   style={styles.searchBar}
                 />
@@ -409,18 +408,16 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                       style={styles.listHeaderLabel}
                     >
                       {remainingCount > 0
-                        ? `${visibleContacts.length} / ${filteredContacts.length} ${t('onboarding.success.contactPlural' as TranslationKey)}`
+                        ? `${visibleContacts.length} / ${filteredContacts.length} ${t('onboarding.success.contactPlural')}`
                         : `${filteredContacts.length} ${
                             filteredContacts.length === 1
-                              ? t('onboarding.success.contactSingular' as TranslationKey)
-                              : t('onboarding.success.contactPlural' as TranslationKey)
+                              ? t('onboarding.success.contactSingular')
+                              : t('onboarding.success.contactPlural')
                           }`}
                     </Text>
                     <TouchableOpacity onPress={handleToggleAll} activeOpacity={0.6} hitSlop={8}>
                       <Text size="xs" weight="semibold" color={colors.buttonActive}>
-                        {allFilteredSelected
-                          ? t('common.deselectAll' as TranslationKey)
-                          : t('common.selectAll' as TranslationKey)}
+                        {allFilteredSelected ? t('common.deselectAll') : t('common.selectAll')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -436,7 +433,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                     <View style={styles.emptySearchState}>
                       <Ionicons name="search-outline" size={28} color={colors.textMuted} />
                       <Text size="sm" color={colors.textMuted} style={styles.noContacts}>
-                        {t('onboarding.success.noContacts' as TranslationKey)}
+                        {t('onboarding.success.noContacts')}
                       </Text>
                     </View>
                   ) : (
@@ -472,7 +469,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                       activeOpacity={0.7}
                     >
                       <Text size="sm" weight="semibold" color={colors.buttonActive}>
-                        {t('onboarding.success.showMoreCount' as TranslationKey).replace(
+                        {t('onboarding.success.showMoreCount').replace(
                           '{count}',
                           String(Math.min(CONTACTS_PAGE_SIZE, remainingCount))
                         )}
@@ -509,7 +506,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                         color={selectedCount === 0 ? colors.textMuted : colors.buttonTextActive}
                         style={styles.primaryButtonText}
                       >
-                        {t('onboarding.success.sendInvitesCount' as TranslationKey).replace(
+                        {t('onboarding.success.sendInvitesCount').replace(
                           '{count}',
                           String(selectedCount)
                         )}
@@ -531,7 +528,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                     color={colors.text}
                     style={styles.secondaryButtonText}
                   >
-                    {t('onboarding.success.shareLinkInstead' as TranslationKey)}
+                    {t('onboarding.success.shareLinkInstead')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -541,10 +538,10 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
             {showDeniedState && (
               <View style={styles.deniedArea}>
                 <Text size="sm" weight="semibold" color={colors.text} style={styles.deniedTitle}>
-                  {t('onboarding.success.permissionDenied' as TranslationKey)}
+                  {t('onboarding.success.permissionDenied')}
                 </Text>
                 <Text size="xs" color={colors.textMuted} style={styles.deniedHint}>
-                  {t('onboarding.success.permissionDeniedHint' as TranslationKey)}
+                  {t('onboarding.success.permissionDeniedHint')}
                 </Text>
 
                 <TouchableOpacity
@@ -576,7 +573,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                   activeOpacity={0.6}
                 >
                   <Text size="xs" color={colors.buttonActive}>
-                    {t('onboarding.success.openSettings' as TranslationKey)}
+                    {t('onboarding.success.openSettings')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -598,7 +595,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                 color={colors.buttonTextActive}
                 style={styles.continueText}
               >
-                {t('common.continue' as TranslationKey)}
+                {t('common.continue')}
               </Text>
               <Ionicons name="arrow-forward" size={18} color={colors.buttonTextActive} />
             </TouchableOpacity>

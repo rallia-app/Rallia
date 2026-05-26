@@ -31,12 +31,12 @@ import { useGetOrCreateDirectConversation, usePlayerSearch } from '@rallia/share
 import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 
-import { SearchBar } from '../../../components/SearchBar';
-import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
-import { supabase } from '../../../lib/supabase';
-import { uploadImage } from '../../../services/imageUpload';
-import { pickImageWithCropper } from '../../../utils/imagePicker';
+import { SearchBar } from '#/components/SearchBar';
+import { useThemeStyles, useAuth, useTranslation } from '#/hooks';
+import { useSport } from '#/context';
+import { supabase } from '#/lib/supabase';
+import { uploadImage } from '#/services/imageUpload';
+import { pickImageWithCropper } from '#/utils/imagePicker';
 
 const BASE_WHITE = '#ffffff';
 
@@ -120,10 +120,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
 
   // Member selection handlers — accepts either type
   const handleSelectMember = (player: SelectedMember | PlayerSearchResult) => {
-    const member: SelectedMember =
-      'firstName' in player
-        ? (player as SelectedMember)
-        : toSelectedMember(player as PlayerSearchResult);
+    const member: SelectedMember = 'firstName' in player ? player : toSelectedMember(player);
 
     setSelectedMembers(prev => {
       if (prev.some(p => p.id === member.id)) {

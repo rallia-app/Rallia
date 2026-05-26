@@ -10,15 +10,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button, useToast } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, useImagePicker } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { Logger, supabase } from '@rallia/shared-services';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+
 import {
   uploadRatingProofFile,
   validateProofFile,
   getMaxFileSizes,
-} from '../../../services/ratingProofUpload';
-import { Logger, supabase } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+} from '#/services/ratingProofUpload';
+import { useThemeStyles, useTranslation, useImagePicker } from '#/hooks';
+
 import type { ProofFormProps } from './AddRatingProofOverlay';
 
 interface ImageProofOverlayProps {

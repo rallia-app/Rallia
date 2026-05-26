@@ -10,11 +10,15 @@ import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MatchCard } from '@rallia/shared-components';
 import { neutral, spacingPixels } from '@rallia/design-system';
-import type { UnifiedFeedItem, UnifiedFeedMatch } from '@rallia/shared-hooks';
-import { SportIcon } from '../../../components/SportIcon';
-import { SuggestionCard, type SuggestionCardLabels } from '../../../components/SuggestionCard';
-import type { InvitePayload, InviteState } from '../../../components/SuggestionCard';
-import type { ThemeColors } from '@rallia/shared-hooks';
+import type { UnifiedFeedItem, UnifiedFeedMatch, ThemeColors } from '@rallia/shared-hooks';
+
+import { SportIcon } from '#/components/SportIcon';
+import {
+  SuggestionCard,
+  type SuggestionCardLabels,
+  InvitePayload,
+  InviteState,
+} from '#/components/SuggestionCard';
 
 export interface FeedItemCardProps {
   item: UnifiedFeedItem;

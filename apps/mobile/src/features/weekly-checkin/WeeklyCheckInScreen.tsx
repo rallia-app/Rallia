@@ -38,13 +38,14 @@ import {
   spacingPixels,
 } from '@rallia/design-system';
 
+import { useTranslation } from '#/hooks';
+
 import { WizardHeader } from './components/WizardHeader';
 import { WelcomeRecapStep } from './steps/WelcomeRecapStep';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { FrequencyAutoStep } from './steps/FrequencyAutoStep';
 import { AllSetStep } from './steps/AllSetStep';
 import { useWeeklyCheckInWizard, type WizardStep } from './useWeeklyCheckInWizard';
-import { useTranslation } from '../../hooks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

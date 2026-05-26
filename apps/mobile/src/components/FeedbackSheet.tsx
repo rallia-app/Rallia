@@ -9,11 +9,13 @@ import * as React from 'react';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { selectionHaptic } from '@rallia/shared-utils';
-import { useFeedbackSheet } from '../context/FeedbackSheetContext';
-import { useMatchDetailSheet } from '../context/MatchDetailSheetContext';
-import { MatchFeedbackWizard } from '../features/matches/components/MatchFeedbackWizard';
+
+import { useFeedbackSheet } from '#/context/FeedbackSheetContext';
+import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
+import { MatchFeedbackWizard } from '#/features/matches/components/MatchFeedbackWizard';
+import * as Analytics from '#/services/analytics';
+
 import { BaseActionSheet } from './BaseActionSheet';
-import * as Analytics from '../services/analytics';
 
 // =============================================================================
 // MAIN COMPONENT

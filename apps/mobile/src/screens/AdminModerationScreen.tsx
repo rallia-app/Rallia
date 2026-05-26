@@ -38,13 +38,6 @@ import {
   type BanType,
 } from '@rallia/shared-hooks';
 import { moderationService, type CreateBanParams } from '@rallia/shared-services';
-import { useTranslation, type TranslationKey } from '../hooks';
-import type { RootStackParamList } from '../navigation/types';
-import {
-  ModerationFiltersBar,
-  type ModerationFilters,
-  DEFAULT_MODERATION_FILTERS,
-} from '../components/ModerationFiltersBar';
 import {
   lightTheme,
   darkTheme,
@@ -57,6 +50,14 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
+import {
+  ModerationFiltersBar,
+  type ModerationFilters,
+  DEFAULT_MODERATION_FILTERS,
+} from '#/components/ModerationFiltersBar';
 
 // Spacing aliases for this screen (mapping semantic names to spacingPixels keys)
 const spacing = {
@@ -214,7 +215,7 @@ const ReportCard: React.FC<ReportCardProps> = ({
             <View style={styles.evidenceLabelRow}>
               <Ionicons name="image-outline" size={14} color={colors.textMuted} />
               <Text style={[styles.evidenceLabel, { color: colors.textMuted }]}>
-                {t('admin.moderation.evidence' as TranslationKey)} ({report.evidence_urls.length})
+                {t('admin.moderation.evidence')} ({report.evidence_urls.length})
               </Text>
             </View>
             <View style={styles.evidenceGrid}>
@@ -224,9 +225,7 @@ const ReportCard: React.FC<ReportCardProps> = ({
                   style={[styles.evidenceImageContainer, { borderColor: colors.border }]}
                   onPress={() => {
                     // TODO: Open full-screen image viewer
-                    Alert.alert(t('admin.moderation.evidenceImage' as TranslationKey), url, [
-                      { text: 'OK' },
-                    ]);
+                    Alert.alert(t('admin.moderation.evidenceImage'), url, [{ text: 'OK' }]);
                   }}
                   activeOpacity={0.8}
                 >
@@ -302,7 +301,7 @@ const BanCard: React.FC<BanCardProps> = ({ ban, colors, onRevoke, t }) => {
             ]}
           >
             <Ionicons
-              name={banTypeIcon as keyof typeof Ionicons.glyphMap}
+              name={banTypeIcon}
               size={18}
               color={isActive ? colors.errorText : colors.successText}
             />

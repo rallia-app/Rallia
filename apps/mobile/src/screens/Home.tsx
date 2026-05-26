@@ -23,27 +23,8 @@ import {
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
-
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
-import {
-  useAuth,
-  useThemeStyles,
-  useTranslation,
-  useEffectiveLocation,
-  useTourSequence,
-  usePendingReferenceRequestsCount,
-  useSuggestionInviteHandler,
-} from '../hooks';
-import {
-  useOverlay,
-  useActionsSheet,
-  useSport,
-  useMatchDetailSheet,
-  useUserHomeLocation,
-} from '../context';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import {
   useProfile,
   useTheme,
@@ -68,35 +49,56 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
+import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import {
   PENDING_REFERRAL_KEY,
   type PendingReferral,
   consumePendingDeepLink,
   getPendingDeepLink,
   addDeepLinkListener,
-} from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
-import { useCheckInContext } from '../features/weekly-checkin/api';
-import { WEEKLY_CHECKIN_ENABLED } from '../features/weekly-checkin/featureFlag';
-import { isWeeklyCheckInActive } from '../features/weekly-checkin/isWizardActive';
-import { LinearGradient } from 'expo-linear-gradient';
-import TennisIcon from '../../assets/icons/tennis.svg';
-import PickleballIcon from '../../assets/icons/pickleball.svg';
-import { SportIcon } from '../components/SportIcon';
-import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
+} from '#/navigation/deepLinkStore';
+import { useCheckInContext } from '#/features/weekly-checkin/api';
+import { WEEKLY_CHECKIN_ENABLED } from '#/features/weekly-checkin/featureFlag';
+import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
+import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import {
+  useOverlay,
+  useActionsSheet,
+  useSport,
+  useMatchDetailSheet,
+  useUserHomeLocation,
+  useSubscription,
+} from '#/context';
+import {
+  useAuth,
+  useThemeStyles,
+  useTranslation,
+  useEffectiveLocation,
+  useTourSequence,
+  usePendingReferenceRequestsCount,
+  useSuggestionInviteHandler,
+} from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
+import { useTabPreload } from '#/navigation/useTabPreload';
 import ProfileCompletionBanner, {
   useProfileCompletionBannerVisibility,
-} from '../features/profile/components/ProfileCompletionBanner';
-import { SuggestionCard } from '../components/SuggestionCard';
-import BillingIssueBanner from '../components/BillingIssueBanner';
-import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
-import HomeBanner, { HomeBannerLayoutProvider } from '../components/HomeBanner';
-import { useSubscription } from '../context';
+} from '#/features/profile/components/ProfileCompletionBanner';
+import { SuggestionCard } from '#/components/SuggestionCard';
+import BillingIssueBanner from '#/components/BillingIssueBanner';
+import ReferenceRequestsBanner from '#/components/ReferenceRequestsBanner';
+import HomeBanner, { HomeBannerLayoutProvider } from '#/components/HomeBanner';
 import {
   incrementOnboardedLaunchCount,
   shouldShowReferralInvite,
   markSheetShown,
-} from '../utils/referralInviteFrequency';
+} from '#/utils/referralInviteFrequency';
+
+import TennisIcon from '../../assets/icons/tennis.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -264,6 +266,9 @@ const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-co
 const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const Home = () => {
+  // Warm sibling tab stacks in the background so their first open is instant.
+  useTabPreload();
+
   // Use custom hooks for auth, profile, and overlay context
   const { session, loading: authLoading } = useAuth();
   const { profile } = useProfile();
@@ -579,7 +584,7 @@ const Home = () => {
   // Retry once player data arrives in case it was null on first run
   useEffect(() => {
     if (player?.id) processDeepLink();
-  }, [player?.id, processDeepLink]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [player?.id, processDeepLink]);
 
   // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals).
   // Deferred past first paint — this is a periodic prompt, never time-sensitive.
@@ -608,7 +613,7 @@ const Home = () => {
       })();
     });
     return () => handle.cancel();
-  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]);
 
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
 
@@ -989,7 +994,7 @@ const Home = () => {
                 hasHomeLocation={hasHomeLocation}
                 homeLocationLabel={homeLocationLabel}
                 isDark={isDark}
-                t={t as (key: string) => string}
+                t={t}
               />
             </View>
           )}
@@ -1117,12 +1122,7 @@ const Home = () => {
                         key={match.id}
                         match={match}
                         isDark={isDark}
-                        t={
-                          t as (
-                            key: string,
-                            options?: Record<string, string | number | boolean>
-                          ) => string
-                        }
+                        t={t}
                         locale={locale}
                         isInvited={isInvited}
                         pendingRequestCount={pendingRequestCount}
@@ -1573,14 +1573,14 @@ const Home = () => {
                               }
                               onPress={() => {
                                 Logger.logUserAction('match_pressed', { matchId: item.data.id });
-                                openMatchDetail(item.data as MatchDetailData);
+                                openMatchDetail(item.data);
                               }}
                             />
                           </View>
                         </View>
                       ) : (
                         <View
-                          key={`suggestion:${item.data.opponentId}:${(item.data.slot.datetime as Date).getTime?.() ?? 0}`}
+                          key={`suggestion:${item.data.opponentId}:${item.data.slot.datetime.getTime?.() ?? 0}`}
                           style={styles.jfyCardWrapper}
                         >
                           <SuggestionCard

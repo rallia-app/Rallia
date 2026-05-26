@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
-import { Logger } from '../services/logger';
+
+import { Logger } from '#/services/logger';
 
 const RC_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '';
 const RC_API_KEY_TEST = process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY ?? '';

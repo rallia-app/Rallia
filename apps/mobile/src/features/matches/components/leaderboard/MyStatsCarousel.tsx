@@ -11,7 +11,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 import type { NetworkPulseYourSummary } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 import { ActivityHeatmapCard } from './ActivityHeatmapCard';
 import { PersonalRecordsCard } from './PersonalRecordsCard';

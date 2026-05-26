@@ -14,9 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Overlay } from '@rallia/shared-components';
 import { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingPlayerPreferences } from '@rallia/shared-types';
-import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface PlayerPreferencesOverlayProps {
   visible: boolean;

@@ -24,7 +24,8 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
-import { useLocale } from '../context';
+
+import { useLocale } from '#/context';
 
 export interface PhoneInputProps {
   value?: string;

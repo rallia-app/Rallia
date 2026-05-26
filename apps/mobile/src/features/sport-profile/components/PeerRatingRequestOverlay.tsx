@@ -5,10 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
-import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles } from '../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
+
+import { selectionHaptic, mediumHaptic } from '#/utils/haptics';
+import { useThemeStyles } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
 
 interface Player {
   id: string;

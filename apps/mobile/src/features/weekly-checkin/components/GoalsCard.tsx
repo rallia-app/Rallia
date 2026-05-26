@@ -33,8 +33,9 @@ import {
   shadowsSemanticNative,
   spacingPixels,
 } from '@rallia/design-system';
-import { useTranslation } from '../../../hooks';
-import { useLocale } from '../../../context';
+
+import { useTranslation } from '#/hooks';
+import { useLocale } from '#/context';
 
 const HISTORY_WEEKS = 4;
 
@@ -77,7 +78,7 @@ export function GoalsCard({ lastWeekGoal, lastWeekPlayed, goalsHitLast4Weeks }: 
   // Last-week summary derivation
   const hasLastWeek = lastWeekGoal != null;
   const playedCount = lastWeekPlayed ?? 0;
-  const lastWeekHit = hasLastWeek ? playedCount >= (lastWeekGoal as number) : false;
+  const lastWeekHit = hasLastWeek ? playedCount >= lastWeekGoal : false;
   const lastWeekStatusColor = lastWeekHit
     ? isDark
       ? primary[300]
@@ -107,7 +108,7 @@ export function GoalsCard({ lastWeekGoal, lastWeekPlayed, goalsHitLast4Weeks }: 
                 <Text style={[styles.lastWeekSummary, { color: colors.text }]}>
                   {t('weeklyCheckIn.step1.goalsCardLastWeekSummary', {
                     played: playedCount,
-                    goal: lastWeekGoal as number,
+                    goal: lastWeekGoal,
                   })}
                 </Text>
                 <Text style={[styles.lastWeekStatus, { color: lastWeekStatusColor }]}>

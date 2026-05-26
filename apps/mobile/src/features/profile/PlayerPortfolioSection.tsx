@@ -23,15 +23,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../hooks';
-import { withTimeout, getNetworkErrorMessage } from '../../utils/networkTimeout';
-import ProofViewer from '../ratings/components/ProofViewer';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+import ProofViewer from '#/features/ratings/components/ProofViewer';
 
 // Horizontal scroll card dimensions
 const CARD_WIDTH = 120;

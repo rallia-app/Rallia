@@ -6,8 +6,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import Animated, {
   useSharedValue,
@@ -22,7 +21,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { SuggestionCard } from './SuggestionCard';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -31,10 +29,12 @@ import {
   type UpcomingDateSection,
 } from '@rallia/shared-utils';
 import { useTopSuggestions } from '@rallia/shared-hooks';
-import { suggestionSlotKey, useSuggestionInviteHandler } from '../hooks/useSuggestionInviteHandler';
-import { useThemeStyles, useTranslation, useEffectiveLocation } from '../hooks';
-import { useSport } from '../context';
-import { useAuth, usePlayer } from '../hooks';
+
+import { suggestionSlotKey, useSuggestionInviteHandler } from '#/hooks/useSuggestionInviteHandler';
+import { useThemeStyles, useTranslation, useEffectiveLocation, useAuth, usePlayer } from '#/hooks';
+import { useSport } from '#/context';
+
+import { SuggestionCard } from './SuggestionCard';
 
 const MAX_SUGGESTIONS = 15;
 
@@ -131,9 +131,9 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
       >
     > = {};
     suggestions.forEach((s, i) => {
-      const section = getUpcomingDateSection(s.slot.datetime as Date);
+      const section = getUpcomingDateSection(s.slot.datetime);
       if (!buckets[section]) buckets[section] = [];
-      buckets[section]!.push({ suggestion: s, originalIndex: i });
+      buckets[section].push({ suggestion: s, originalIndex: i });
     });
     return UPCOMING_SECTION_ORDER.filter(section => (buckets[section]?.length ?? 0) > 0).map(
       section => ({ section, items: buckets[section]! })

@@ -13,8 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, shadowsNative } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../hooks';
-import { SportIcon } from '../../components/SportIcon';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+
 import TennisIcon from '../../../assets/icons/tennis.svg';
 import PickleballIcon from '../../../assets/icons/pickleball.svg';
 

@@ -7,15 +7,15 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text, Button, Skeleton } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
 import { spacingPixels, fontSizePixels, primary, radiusPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { useSport } from '#/context';
+import { SearchBar } from '#/components/SearchBar';
 
 export function AddMembersToChatActionSheet({ payload }: SheetProps<'add-members-to-chat'>) {
   const existingMemberIds = payload?.existingMemberIds ?? [];

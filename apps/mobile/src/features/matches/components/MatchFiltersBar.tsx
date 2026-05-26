@@ -17,22 +17,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme, DISTANCE_OPTIONS, MATCH_TIER_OPTIONS } from '@rallia/shared-hooks';
-import type { RatingScoreOption } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
-import {
-  spacingPixels,
-  radiusPixels,
-  primary,
-  neutral,
-  secondary,
-  duration as animDuration,
-  lightTheme,
-  darkTheme,
-} from '@rallia/design-system';
-import { Ionicons } from '@expo/vector-icons';
-import { selectionHaptic, lightHaptic } from '../../../utils/haptics';
 import type {
+  RatingScoreOption,
   FormatFilter,
   MatchTypeFilter,
   DateRangeFilter,
@@ -49,6 +35,21 @@ import type {
   ReputationFilter,
   RatingFilter,
 } from '@rallia/shared-hooks';
+import type { TranslationKey } from '@rallia/shared-translations';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  secondary,
+  duration as animDuration,
+  lightTheme,
+  darkTheme,
+} from '@rallia/design-system';
+import { Ionicons } from '@expo/vector-icons';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { selectionHaptic, lightHaptic } from '#/utils/haptics';
 
 // =============================================================================
 // TYPES & OPTIONS
@@ -669,15 +670,15 @@ export default function MatchFiltersBar({
     [t]
   );
   const getReputationLabel = useCallback(
-    (v: ReputationFilter) => t(`publicMatches.filters.reputation.${v}` as TranslationKey),
+    (v: ReputationFilter) => t(`publicMatches.filters.reputation.${v}`),
     [t]
   );
   const getMatchTierLabel = useCallback(
-    (v: MatchTierFilter) => t(`publicMatches.filters.tier.${v}` as TranslationKey),
+    (v: MatchTierFilter) => t(`publicMatches.filters.tier.${v}`),
     [t]
   );
   const getSpotsAvailableLabel = useCallback(
-    (v: SpotsAvailableFilter) => t(`publicMatches.filters.spotsAvailable.${v}` as TranslationKey),
+    (v: SpotsAvailableFilter) => t(`publicMatches.filters.spotsAvailable.${v}`),
     [t]
   );
   const getDistanceLabel = useCallback(
@@ -753,15 +754,15 @@ export default function MatchFiltersBar({
     duration === 'all' ? t('publicMatches.filters.duration.label') : getDurationLabel(duration);
   const reputationDisplay =
     reputation === 'all'
-      ? t('publicMatches.filters.reputation.label' as TranslationKey)
+      ? t('publicMatches.filters.reputation.label')
       : getReputationLabel(reputation);
   const ratingDisplay = useMemo(() => {
-    if (rating.length === 0) return t('publicMatches.filters.rating.label' as TranslationKey);
+    if (rating.length === 0) return t('publicMatches.filters.rating.label');
     if (rating.length === 1) {
       const selected = ratingOptions.find(r => r.id === rating[0]);
-      return selected?.label ?? t('publicMatches.filters.rating.label' as TranslationKey);
+      return selected?.label ?? t('publicMatches.filters.rating.label');
     }
-    return t('publicMatches.filters.rating.countActive' as TranslationKey, {
+    return t('publicMatches.filters.rating.countActive', {
       count: rating.length,
     });
   }, [rating, ratingOptions, t]);
@@ -770,9 +771,9 @@ export default function MatchFiltersBar({
 
   const spotsAvailableDisplay =
     spotsAvailable === 'all'
-      ? t('publicMatches.filters.spotsAvailable.label' as TranslationKey)
+      ? t('publicMatches.filters.spotsAvailable.label')
       : getSpotsAvailableLabel(spotsAvailable);
-  const favoritesDisplay = t('publicMatches.filters.favorites.label' as TranslationKey);
+  const favoritesDisplay = t('publicMatches.filters.favorites.label');
 
   // Time display - combines timeOfDay and specificTime
   const getTimeDisplay = useCallback(() => {
@@ -888,13 +889,13 @@ export default function MatchFiltersBar({
           ? t('publicMatches.filters.specificDate.clear')
           : t('publicMatches.filters.specificDate.pick');
       }
-      return getDateRangeLabel(v as DateRangeFilter);
+      return getDateRangeLabel(v);
     },
     [t, getDateRangeLabel, specificDate]
   );
 
   const getDateOptionIcon = useCallback((v: DateRangeFilter | 'pick_date') => {
-    if (v === 'pick_date') return 'calendar-outline' as keyof typeof Ionicons.glyphMap;
+    if (v === 'pick_date') return 'calendar-outline';
     return undefined;
   }, []);
 
@@ -917,18 +918,18 @@ export default function MatchFiltersBar({
     (v: TimeOfDayFilter | 'pick_time') => {
       if (v === 'pick_time') {
         return specificTime
-          ? t('publicMatches.filters.specificTime.clear' as TranslationKey)
-          : t('publicMatches.filters.timeOfDay.pick_time' as TranslationKey);
+          ? t('publicMatches.filters.specificTime.clear')
+          : t('publicMatches.filters.timeOfDay.pick_time');
       }
-      return getTimeOfDayLabel(v as TimeOfDayFilter);
+      return getTimeOfDayLabel(v);
     },
     [t, getTimeOfDayLabel, specificTime]
   );
 
   const getTimeOptionIcon = useCallback(
     (v: TimeOfDayFilter | 'pick_time') => {
-      if (v === 'pick_time') return 'time-outline' as keyof typeof Ionicons.glyphMap;
-      return getTimeOfDayIcon(v as TimeOfDayFilter);
+      if (v === 'pick_time') return 'time-outline';
+      return getTimeOfDayIcon(v);
     },
     [getTimeOfDayIcon]
   );
@@ -1065,9 +1066,7 @@ export default function MatchFiltersBar({
         value: getTimeDisplay(),
         isActive: timeOfDay !== 'all' || specificTime !== null,
         onPress: () => setShowTimeDropdown(true),
-        icon: specificTime
-          ? ('time' as keyof typeof Ionicons.glyphMap)
-          : getTimeOfDayIcon(timeOfDay),
+        icon: specificTime ? 'time' : getTimeOfDayIcon(timeOfDay),
       },
       {
         key: 'matchTier',
@@ -1208,7 +1207,7 @@ export default function MatchFiltersBar({
               hasHomeLocation={hasHomeLocation}
               homeLocationLabel={homeLocationLabel}
               isDark={isDark}
-              t={t as (key: string) => string}
+              t={t}
             />
           </View>
         )}
@@ -1321,7 +1320,7 @@ export default function MatchFiltersBar({
       <FilterDropdown
         visible={showDistanceDropdown}
         title={t('publicMatches.filters.distance.label')}
-        options={DISTANCE_OPTIONS as DistanceFilter[]}
+        options={DISTANCE_OPTIONS}
         selectedValue={distance}
         onSelect={onDistanceChange}
         onClose={() => setShowDistanceDropdown(false)}
@@ -1332,7 +1331,7 @@ export default function MatchFiltersBar({
       {/* Rating Multi-Select Dropdown */}
       <MultiSelectFilterDropdown
         visible={showRatingDropdown}
-        title={t('publicMatches.filters.rating.label' as TranslationKey)}
+        title={t('publicMatches.filters.rating.label')}
         options={ratingDropdownOptions}
         selectedIds={rating}
         onToggle={handleRatingToggle}
@@ -1369,7 +1368,7 @@ export default function MatchFiltersBar({
       {/* Reputation Dropdown */}
       <FilterDropdown
         visible={showReputationDropdown}
-        title={t('publicMatches.filters.reputation.label' as TranslationKey)}
+        title={t('publicMatches.filters.reputation.label')}
         options={REPUTATION_OPTIONS}
         selectedValue={reputation}
         onSelect={onReputationChange}
@@ -1383,7 +1382,7 @@ export default function MatchFiltersBar({
       <FilterDropdown
         visible={showMatchTierDropdown}
         title={t('publicMatches.filters.tier.label')}
-        options={MATCH_TIER_OPTIONS as MatchTierFilter[]}
+        options={MATCH_TIER_OPTIONS}
         selectedValue={matchTier}
         onSelect={onMatchTierChange}
         onClose={() => setShowMatchTierDropdown(false)}
@@ -1407,7 +1406,7 @@ export default function MatchFiltersBar({
       {/* Spots Available Dropdown */}
       <FilterDropdown
         visible={showSpotsDropdown}
-        title={t('publicMatches.filters.spotsAvailable.label' as TranslationKey)}
+        title={t('publicMatches.filters.spotsAvailable.label')}
         options={SPOTS_AVAILABLE_OPTIONS}
         selectedValue={spotsAvailable}
         onSelect={onSpotsAvailableChange}
@@ -1511,7 +1510,7 @@ export default function MatchFiltersBar({
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('publicMatches.filters.specificTime.label' as TranslationKey)}
+                  {t('publicMatches.filters.specificTime.label')}
                 </Text>
                 <TouchableOpacity onPress={handleTimeDone} style={styles.datePickerHeaderButton}>
                   <Text size="base" weight="semibold" color={primary[500]}>

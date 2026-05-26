@@ -14,6 +14,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
+import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import type { PlayerSearchResult } from '@rallia/shared-services';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+
 import {
   useAuth,
   useThemeStyles,
@@ -21,13 +25,10 @@ import {
   useNavigateToPlayerProfile,
   useRequireOnboarding,
   type TranslationKey,
-} from '../hooks';
-import { useSport } from '../context';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
-import { PlayerDirectory } from '../features/community';
-import type { PlayerSearchResult } from '@rallia/shared-services';
-import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
-import type { CompositeNavigationProp } from '@react-navigation/native';
+} from '#/hooks';
+import { useSport } from '#/context';
+import { PlayerDirectory } from '#/features/community';
+import type { RootStackParamList, CommunityStackParamList } from '#/navigation/types';
 
 type CommunityNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<CommunityStackParamList>,

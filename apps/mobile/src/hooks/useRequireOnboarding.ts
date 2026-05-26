@@ -28,9 +28,10 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useProfile } from '@rallia/shared-hooks';
-import { useActionsSheet } from '../context/ActionsSheetContext';
+
+import { useAuth } from '#/context/AuthContext';
+import { useActionsSheet } from '#/context/ActionsSheetContext';
 
 export interface UseRequireOnboardingReturn {
   /**

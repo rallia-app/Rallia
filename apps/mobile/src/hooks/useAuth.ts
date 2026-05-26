@@ -6,5 +6,5 @@
  * - Single source of truth for auth state
  * - Session validation
  */
-export { useAuth } from '../context/AuthContext';
-export type { AuthContextType, OAuthProvider, AuthResult } from '../context/AuthContext';
+export { useAuth } from '#/context/AuthContext';
+export type { AuthContextType, OAuthProvider, AuthResult } from '#/context/AuthContext';

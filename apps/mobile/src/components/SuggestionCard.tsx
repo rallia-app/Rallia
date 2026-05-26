@@ -25,11 +25,13 @@ import {
   lightHaptic,
   formatIntuitiveDateInTimezone,
 } from '@rallia/shared-utils';
-import * as Analytics from '../services/analytics';
-import type { SuggestionSource } from '../services/analytics';
+
+import * as Analytics from '#/services/analytics';
+import type { SuggestionSource } from '#/services/analytics';
+import { useNavigateToPlayerProfile } from '#/hooks';
+
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
-import { useNavigateToPlayerProfile } from '../hooks';
 
 export type InviteState = 'idle' | 'sending' | 'sent';
 

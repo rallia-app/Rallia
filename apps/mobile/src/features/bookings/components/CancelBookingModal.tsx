@@ -9,15 +9,16 @@ import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Text, Button } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { BookingWithDetails, PlayerBookingsPage } from '@rallia/shared-services';
 import { calculateRefundAmount } from '@rallia/shared-services';
 import { useCancelBooking, useCancellationPolicy, bookingKeys } from '@rallia/shared-hooks';
-import { lightHaptic, mediumHaptic } from '../../../utils/haptics';
 import type { CancellationReasonEnum } from '@rallia/shared-types';
-import * as Analytics from '../../../services/analytics';
+
+import { lightHaptic, mediumHaptic } from '#/utils/haptics';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import * as Analytics from '#/services/analytics';
 
 interface CancelBookingModalProps {
   visible: boolean;

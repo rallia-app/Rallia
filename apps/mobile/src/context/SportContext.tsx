@@ -9,7 +9,8 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerSports } from '@rallia/shared-hooks';
-import * as Analytics from '../services/analytics';
+
+import * as Analytics from '#/services/analytics';
 
 const SPORT_STORAGE_KEY = '@rallia/selected-sport';
 const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';

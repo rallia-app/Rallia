@@ -10,7 +10,6 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../../../hooks';
 import { createFacilityReport, type FacilityReportReason } from '@rallia/shared-services';
 import {
   lightTheme,
@@ -23,6 +22,8 @@ import {
   status,
 } from '@rallia/design-system';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
+
+import { useTranslation } from '#/hooks';
 
 // =============================================================================
 // TYPES
@@ -223,7 +224,7 @@ export function ReportFacilityActionSheet({ payload }: SheetProps<'report-facili
                     flex: 1,
                   }}
                 >
-                  {t(`facilityDetail.reportFacility.reasons.${reason}` as Parameters<typeof t>[0])}
+                  {t(`facilityDetail.reportFacility.reasons.${reason}`)}
                 </Text>
                 {isSelected && (
                   <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />

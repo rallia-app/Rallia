@@ -24,9 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import {
@@ -49,7 +47,9 @@ import {
   type BanStatistics,
   type FeedbackSentiment,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -224,7 +224,7 @@ export default function AdminModerationAnalyticsScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primary[500]} />
           <Text style={[styles.loadingText, { color: subtextColor }]}>
-            {t('common.loading' as TranslationKey) || 'Loading...'}
+            {t('common.loading') || 'Loading...'}
           </Text>
         </View>
       </SafeAreaView>
@@ -241,9 +241,7 @@ export default function AdminModerationAnalyticsScreen() {
             style={[styles.retryButton, { backgroundColor: primary[500] }]}
             onPress={refetch}
           >
-            <Text style={styles.retryButtonText}>
-              {t('common.retry' as TranslationKey) || 'Retry'}
-            </Text>
+            <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -262,11 +260,10 @@ export default function AdminModerationAnalyticsScreen() {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: textColor }]}>
-            {t('admin.analytics.sections.moderation' as TranslationKey) || 'Moderation & Safety'}
+            {t('admin.analytics.sections.moderation') || 'Moderation & Safety'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: subtextColor }]}>
-            {t('admin.analytics.sections.moderationDesc' as TranslationKey) ||
-              'Reports & safety metrics'}
+            {t('admin.analytics.sections.moderationDesc') || 'Reports & safety metrics'}
           </Text>
         </View>
       </View>

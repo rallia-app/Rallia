@@ -14,8 +14,8 @@ import { Text } from '@rallia/shared-components';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { NetworkPulseHeadlineInsight } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import type { TranslationKey } from '#/hooks';
 
 interface PulseHeroProps {
   insight: NetworkPulseHeadlineInsight;

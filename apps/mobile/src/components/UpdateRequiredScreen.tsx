@@ -12,10 +12,10 @@ import React, { useCallback } from 'react';
 import { View, StyleSheet, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, primary } from '@rallia/design-system';
-import { useThemeStyles, useTranslation } from '../hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface UpdateRequiredScreenProps {
   storeUrl: string | null;

@@ -21,6 +21,7 @@ import {
   warningHaptic,
 } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
+
 import {
   useAvailabilityKeys,
   useCheckInContext,
@@ -247,7 +248,7 @@ export function useWeeklyCheckInWizard(
 
     context,
     isContextLoading,
-    contextError: (contextError as Error) ?? null,
+    contextError: contextError ?? null,
 
     availability,
     setAvailability,

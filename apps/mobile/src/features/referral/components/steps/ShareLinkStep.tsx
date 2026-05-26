@@ -29,12 +29,14 @@ import { Text, useToast, Button } from '@rallia/shared-components';
 import QRCode from 'react-native-qrcode-svg';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import type { TranslationKey } from '../../../../hooks';
-import { useSport } from '../../../../context';
-import { InviteContactsStep } from './InviteContactsStep';
-import { ContestLeaderboard } from '../ContestLeaderboard';
 import type { ReferralContest, ReferralLeaderboardEntry, ContestRank } from '@rallia/shared-hooks';
-import * as Analytics from '../../../../services/analytics';
+
+import type { TranslationKey } from '#/hooks';
+import { useSport } from '#/context';
+import { ContestLeaderboard } from '#/features/referral/components/ContestLeaderboard';
+import * as Analytics from '#/services/analytics';
+
+import { InviteContactsStep } from './InviteContactsStep';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -182,7 +184,7 @@ const ContestBanner: React.FC<ContestBannerProps> = ({
           {hasRank && (
             <View style={[styles.rankBadge, { backgroundColor: `${colors.buttonActive}20` }]}>
               <Text size="xs" weight="bold" color={colors.buttonActive}>
-                #{myRank!.rank}
+                #{myRank.rank}
               </Text>
             </View>
           )}

@@ -12,7 +12,6 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button, Spinner } from '@rallia/shared-components';
-import { SportIcon } from '../../components/SportIcon';
 import {
   spacingPixels,
   radiusPixels,
@@ -27,8 +26,10 @@ import {
   type PostalCodeLocation,
 } from '@rallia/shared-hooks';
 import { selectionHaptic, formatPostalCodeInput } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../hooks';
-import { useUserHomeLocation } from '../../context';
+
+import { SportIcon } from '#/components/SportIcon';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { useUserHomeLocation } from '#/context';
 
 interface PostalCodeStepProps {
   /** Current postal code input, owned by the parent so it survives remounts. */

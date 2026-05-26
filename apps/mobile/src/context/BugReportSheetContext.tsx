@@ -7,10 +7,10 @@
 
 import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
 import { SheetManager } from 'react-native-actions-sheet';
-
 import { useProfile } from '@rallia/shared-hooks';
 
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '#/hooks/useAuth';
+
 import { useActionsSheet } from './ActionsSheetContext';
 
 // =============================================================================

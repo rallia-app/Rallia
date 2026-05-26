@@ -1,7 +1,8 @@
 import React from 'react';
 import { SkeletonMatchCard } from '@rallia/shared-components';
 import { primary, radiusPixels } from '@rallia/design-system';
-import { useThemeStyles } from '../../../hooks';
+
+import { useThemeStyles } from '#/hooks';
 
 const MatchCardSkeleton: React.FC = () => {
   const { isDark } = useThemeStyles();

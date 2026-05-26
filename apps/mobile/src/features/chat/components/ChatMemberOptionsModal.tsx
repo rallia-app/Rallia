@@ -17,7 +17,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface OptionItem {
   id: string;
@@ -97,7 +98,7 @@ export function ChatMemberOptionsModal({
                       ]}
                     >
                       <Text size="xs" style={{ color: isDark ? '#FFFFFF' : colors.primary }}>
-                        {t('chat.groupChat.admin' as any)}
+                        {t('chat.groupChat.admin')}
                       </Text>
                     </View>
                   )}

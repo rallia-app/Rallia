@@ -7,11 +7,11 @@
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels, fontSizePixels, primary } from '@rallia/design-system';
 import { useSearchMessages } from '@rallia/shared-hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface ChatSearchBarProps {
   conversationId: string;

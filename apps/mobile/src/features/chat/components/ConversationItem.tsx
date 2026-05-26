@@ -7,14 +7,14 @@
 import React, { memo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import { getCoverImageUrl, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
 import { getConversationDisplayName } from '@rallia/shared-services';
-import { SportIcon } from '../../../components/SportIcon';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
 
 interface ConversationItemProps {
   conversation: ConversationPreview;

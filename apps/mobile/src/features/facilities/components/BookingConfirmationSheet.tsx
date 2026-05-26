@@ -12,16 +12,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
 
 export function BookingConfirmationActionSheet({ payload }: SheetProps<'booking-confirmation'>) {
-  const facilityName = payload?.facilityName as string | undefined;
-  const slotTime = payload?.slotTime as string | undefined;
-  const slotDate = payload?.slotDate as string | undefined;
-  const onConfirm = payload?.onConfirm as (() => void) | undefined;
-  const onDecline = payload?.onDecline as (() => void) | undefined;
+  const facilityName = payload?.facilityName;
+  const slotTime = payload?.slotTime;
+  const slotDate = payload?.slotDate;
+  const onConfirm = payload?.onConfirm;
+  const onDecline = payload?.onDecline;
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();

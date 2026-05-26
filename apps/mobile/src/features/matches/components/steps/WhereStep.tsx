@@ -21,9 +21,8 @@ import {
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
-import { SearchBar } from '../../../../components/SearchBar';
 import { spacingPixels, radiusPixels, accent, secondary } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
@@ -37,6 +36,7 @@ import {
   usePlacesAutocomplete,
   useCourtAvailability,
   useFavoriteFacilities,
+  usePlayer,
 } from '@rallia/shared-hooks';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import type {
@@ -45,13 +45,13 @@ import type {
   PlacePrediction,
   MatchWithDetails,
 } from '@rallia/shared-types';
-import { SheetManager } from 'react-native-actions-sheet';
-import { ConfirmationModal } from '../../../../components/ConfirmationModal';
-import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
-import { useEffectiveLocation } from '../../../../hooks/useEffectiveLocation';
-import { useUserHomeLocation } from '../../../../context';
-import { usePlayer } from '@rallia/shared-hooks';
-import * as Analytics from '../../../../services/analytics';
+
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+import { useEffectiveLocation } from '#/hooks/useEffectiveLocation';
+import { useUserHomeLocation } from '#/context';
+import { SearchBar } from '#/components/SearchBar';
+import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // TYPES
@@ -1381,7 +1381,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     }
 
     return null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isLoadingFacilities,
     locationLoading,

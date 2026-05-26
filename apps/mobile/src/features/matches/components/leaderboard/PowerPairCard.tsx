@@ -11,7 +11,7 @@ import { Text } from '@rallia/shared-components';
 import { neutral, radiusPixels, spacingPixels, status } from '@rallia/design-system';
 import type { NetworkPulsePowerPair } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface PowerPairCardProps {
   pair: NetworkPulsePowerPair;

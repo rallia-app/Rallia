@@ -11,14 +11,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from '../hooks';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { useTour } from '../context/TourContext';
-import { tourService } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
+import { tourService, Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic, mediumHaptic } from '../utils/haptics';
-import { TOURS_ENABLED } from '../hooks/useTourSequence';
+
+import { useTour } from '#/context/TourContext';
+import { useTranslation } from '#/hooks';
+import { lightHaptic, mediumHaptic } from '#/utils/haptics';
+import { TOURS_ENABLED } from '#/hooks/useTourSequence';
 
 interface WelcomeTourModalProps {
   /** Whether the splash animation is complete */

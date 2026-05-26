@@ -12,8 +12,8 @@ import { Text } from '@rallia/shared-components';
 import { neutral, primary, radiusPixels, spacingPixels, status } from '@rallia/design-system';
 import type { NetworkPulseYourSummary } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import type { TranslationKey } from '#/hooks';
 
 import { FormLine } from './FormLine';
 

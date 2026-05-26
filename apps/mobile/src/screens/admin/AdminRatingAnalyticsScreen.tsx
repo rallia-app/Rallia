@@ -20,9 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import {
@@ -45,7 +43,9 @@ import {
   type ReputationEventData,
   type PeerRatingActivity,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -194,7 +194,7 @@ export default function AdminRatingAnalyticsScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primary[500]} />
           <Text style={[styles.loadingText, { color: subtextColor }]}>
-            {t('common.loading' as TranslationKey) || 'Loading...'}
+            {t('common.loading') || 'Loading...'}
           </Text>
         </View>
       </SafeAreaView>
@@ -211,9 +211,7 @@ export default function AdminRatingAnalyticsScreen() {
             style={[styles.retryButton, { backgroundColor: primary[500] }]}
             onPress={refetch}
           >
-            <Text style={styles.retryButtonText}>
-              {t('common.retry' as TranslationKey) || 'Retry'}
-            </Text>
+            <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -232,11 +230,10 @@ export default function AdminRatingAnalyticsScreen() {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: textColor }]}>
-            {t('admin.analytics.sections.rating' as TranslationKey) || 'Rating Analytics'}
+            {t('admin.analytics.sections.rating') || 'Rating Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: subtextColor }]}>
-            {t('admin.analytics.sections.ratingDesc' as TranslationKey) ||
-              'Player ratings & reputation'}
+            {t('admin.analytics.sections.ratingDesc') || 'Player ratings & reputation'}
           </Text>
         </View>
       </View>
@@ -257,8 +254,7 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="stats-chart" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              {t('admin.analytics.rating.ratingDistribution' as TranslationKey) ||
-                'Rating Distribution'}
+              {t('admin.analytics.rating.ratingDistribution') || 'Rating Distribution'}
             </Text>
           </View>
 
@@ -312,8 +308,7 @@ export default function AdminRatingAnalyticsScreen() {
               />
             ) : (
               <Text style={[styles.noDataText, { color: subtextColor }]}>
-                {t('admin.analytics.rating.noDataAvailable' as TranslationKey) ||
-                  'No data available'}
+                {t('admin.analytics.rating.noDataAvailable') || 'No data available'}
               </Text>
             )}
           </View>
@@ -338,8 +333,7 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="ribbon" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              {t('admin.analytics.rating.certificationFunnel' as TranslationKey) ||
-                'Certification Funnel'}
+              {t('admin.analytics.rating.certificationFunnel') || 'Certification Funnel'}
             </Text>
           </View>
 
@@ -371,8 +365,7 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="shield" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              {t('admin.analytics.rating.reputationDistribution' as TranslationKey) ||
-                'Reputation Distribution'}
+              {t('admin.analytics.rating.reputationDistribution') || 'Reputation Distribution'}
             </Text>
           </View>
 
@@ -391,7 +384,7 @@ export default function AdminRatingAnalyticsScreen() {
                         {data?.reputationDistribution?.reduce((sum, item) => sum + item.count, 0)}
                       </Text>
                       <Text style={[styles.pieCenterSubtext, { color: subtextColor }]}>
-                        {t('admin.analytics.rating.totalUsers' as TranslationKey) || 'Total Users'}
+                        {t('admin.analytics.rating.totalUsers') || 'Total Users'}
                       </Text>
                     </View>
                   )}
@@ -429,8 +422,7 @@ export default function AdminRatingAnalyticsScreen() {
               </>
             ) : (
               <Text style={[styles.noDataText, { color: subtextColor }]}>
-                {t('admin.analytics.rating.noDataAvailable' as TranslationKey) ||
-                  'No data available'}
+                {t('admin.analytics.rating.noDataAvailable') || 'No data available'}
               </Text>
             )}
           </View>
@@ -441,8 +433,7 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="time" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              {t('admin.analytics.rating.reputationEvents' as TranslationKey) ||
-                'Reputation Events'}
+              {t('admin.analytics.rating.reputationEvents') || 'Reputation Events'}
             </Text>
           </View>
 
@@ -466,8 +457,7 @@ export default function AdminRatingAnalyticsScreen() {
               />
             ) : (
               <Text style={[styles.noDataText, { color: subtextColor }]}>
-                {t('admin.analytics.rating.noDataAvailable' as TranslationKey) ||
-                  'No data available'}
+                {t('admin.analytics.rating.noDataAvailable') || 'No data available'}
               </Text>
             )}
           </View>
@@ -478,7 +468,7 @@ export default function AdminRatingAnalyticsScreen() {
                 style={[styles.lineChartLegendDot, { backgroundColor: status.success.DEFAULT }]}
               />
               <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>
-                {t('admin.analytics.rating.positiveEvents' as TranslationKey) || 'Positive Events'}
+                {t('admin.analytics.rating.positiveEvents') || 'Positive Events'}
               </Text>
             </View>
             <View style={styles.lineChartLegendItem}>
@@ -486,7 +476,7 @@ export default function AdminRatingAnalyticsScreen() {
                 style={[styles.lineChartLegendDot, { backgroundColor: status.error.DEFAULT }]}
               />
               <Text style={[styles.lineChartLegendText, { color: subtextColor }]}>
-                {t('admin.analytics.rating.negativeEvents' as TranslationKey) || 'Negative Events'}
+                {t('admin.analytics.rating.negativeEvents') || 'Negative Events'}
               </Text>
             </View>
           </View>
@@ -497,8 +487,7 @@ export default function AdminRatingAnalyticsScreen() {
           <View style={styles.cardHeader}>
             <Ionicons name="people" size={20} color={primary[500]} />
             <Text style={[styles.cardTitle, { color: textColor }]}>
-              {t('admin.analytics.rating.peerRatingActivity' as TranslationKey) ||
-                'Peer Rating Activity'}
+              {t('admin.analytics.rating.peerRatingActivity') || 'Peer Rating Activity'}
             </Text>
           </View>
 
@@ -510,7 +499,7 @@ export default function AdminRatingAnalyticsScreen() {
                 {data?.peerRatingActivity?.requestsSent.toLocaleString()}
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                {t('admin.analytics.rating.requestsSent' as TranslationKey) || 'Requests Sent'}
+                {t('admin.analytics.rating.requestsSent') || 'Requests Sent'}
               </Text>
             </View>
 
@@ -521,7 +510,7 @@ export default function AdminRatingAnalyticsScreen() {
                 {data?.peerRatingActivity?.requestsCompleted.toLocaleString()}
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                {t('admin.analytics.rating.requestsCompleted' as TranslationKey) || 'Completed'}
+                {t('admin.analytics.rating.requestsCompleted') || 'Completed'}
               </Text>
             </View>
 
@@ -532,7 +521,7 @@ export default function AdminRatingAnalyticsScreen() {
                 {data?.peerRatingActivity?.completionRate.toFixed(1)}%
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                {t('admin.analytics.rating.completionRate' as TranslationKey) || 'Completion Rate'}
+                {t('admin.analytics.rating.completionRate') || 'Completion Rate'}
               </Text>
             </View>
 
@@ -543,7 +532,7 @@ export default function AdminRatingAnalyticsScreen() {
                 ±{data?.peerRatingActivity?.avgRatingDifference.toFixed(2)}
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                {t('admin.analytics.rating.avgRatingDiff' as TranslationKey) || 'Avg Rating Diff'}
+                {t('admin.analytics.rating.avgRatingDiff') || 'Avg Rating Diff'}
               </Text>
             </View>
 
@@ -558,8 +547,7 @@ export default function AdminRatingAnalyticsScreen() {
                 {data?.peerRatingActivity?.referenceSupportRate.toFixed(1)}%
               </Text>
               <Text style={[styles.metricLabel, { color: subtextColor }]}>
-                {t('admin.analytics.rating.referenceSupportRate' as TranslationKey) ||
-                  'Reference Support Rate'}
+                {t('admin.analytics.rating.referenceSupportRate') || 'Reference Support Rate'}
               </Text>
             </View>
           </View>
@@ -568,13 +556,13 @@ export default function AdminRatingAnalyticsScreen() {
         {/* Key Insights */}
         <View style={[styles.summaryCard, { backgroundColor: `${primary[500]}15` }]}>
           <Text style={[styles.summaryTitle, { color: primary[700] }]}>
-            {t('admin.analytics.rating.keyInsights' as TranslationKey) || 'Key Insights'}
+            {t('admin.analytics.rating.keyInsights') || 'Key Insights'}
           </Text>
           <View style={styles.insightsList}>
             <View style={styles.insightItem}>
               <Ionicons name="checkmark-circle" size={20} color={status.success.DEFAULT} />
               <Text style={[styles.insightText, { color: textColor }]}>
-                {t('admin.analytics.rating.insightCertification' as TranslationKey, {
+                {t('admin.analytics.rating.insightCertification', {
                   percentage:
                     data?.certificationFunnel?.find(s => s.stage === 'Proof Submitted')
                       ?.percentage || 0,
@@ -585,7 +573,7 @@ export default function AdminRatingAnalyticsScreen() {
             <View style={styles.insightItem}>
               <Ionicons name="trending-up" size={20} color={primary[500]} />
               <Text style={[styles.insightText, { color: textColor }]}>
-                {t('admin.analytics.rating.insightReputation' as TranslationKey, {
+                {t('admin.analytics.rating.insightReputation', {
                   percentage: (
                     (data?.reputationDistribution?.find(r => r.tier === 'excellent')?.percentage ||
                       0) +
@@ -598,7 +586,7 @@ export default function AdminRatingAnalyticsScreen() {
             <View style={styles.insightItem}>
               <Ionicons name="star" size={20} color={status.warning.DEFAULT} />
               <Text style={[styles.insightText, { color: textColor }]}>
-                {t('admin.analytics.rating.insightPeerRating' as TranslationKey, {
+                {t('admin.analytics.rating.insightPeerRating', {
                   rate: data?.peerRatingActivity?.completionRate.toFixed(1) || 0,
                 }) ||
                   `Peer rating completion rate: ${data?.peerRatingActivity?.completionRate.toFixed(1) || 0}%`}

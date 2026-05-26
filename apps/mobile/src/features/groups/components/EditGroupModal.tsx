@@ -19,9 +19,9 @@ import { Text, useToast } from '@rallia/shared-components';
 import { useUpdateGroup, type Group } from '@rallia/shared-hooks';
 import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 
-import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { uploadImage, replaceImage } from '../../../services/imageUpload';
-import { pickImageWithCropper } from '../../../utils/imagePicker';
+import { useThemeStyles, useAuth, useTranslation } from '#/hooks';
+import { uploadImage, replaceImage } from '#/services/imageUpload';
+import { pickImageWithCropper } from '#/utils/imagePicker';
 
 export function EditGroupActionSheet({ payload }: SheetProps<'edit-group'>) {
   const group = payload?.group as Group;

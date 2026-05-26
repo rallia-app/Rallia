@@ -26,7 +26,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
 import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   spacingPixels,
@@ -36,7 +35,9 @@ import {
   status,
 } from '@rallia/design-system';
 import { SheetManager } from 'react-native-actions-sheet';
-import { CertificationBadge } from '../features/ratings/components';
+
+import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '#/hooks';
+import { CertificationBadge } from '#/features/ratings/components';
 
 interface ReferenceRequest {
   id: string;

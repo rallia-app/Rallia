@@ -21,7 +21,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { useThemeStyles, type ThemeColors } from '../hooks';
+
+import { useThemeStyles, type ThemeColors } from '#/hooks';
 
 const SEARCH_ICON_SIZE = 20;
 const CLEAR_ICON_SIZE = 18;

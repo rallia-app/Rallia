@@ -11,7 +11,6 @@ export default [
       'ios/**',
       'babel.config.js',
       'metro.config.js',
-      'tailwind.config.js',
       'plugins/**/*.js',
       'analyze-bundle.js',
     ],

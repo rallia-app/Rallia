@@ -13,7 +13,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
 import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
-import { cellKey, type HourGrid } from '../onboarding/components/HourlyAvailabilityGrid';
+
+import { cellKey, type HourGrid } from '#/features/onboarding/components/HourlyAvailabilityGrid';
 
 // =============================================================================
 // QUERY KEYS
@@ -86,7 +87,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
 
   const { data, error } = await supabase.rpc('get_check_in_context');
   if (error) {
-    Logger.error('[weekly-checkin] get_check_in_context failed', error as Error);
+    Logger.error('[weekly-checkin] get_check_in_context failed', error);
     throw error;
   }
 
@@ -151,7 +152,7 @@ async function fetchAvailabilityKeys(): Promise<string[]> {
     .eq('is_active', true);
 
   if (error) {
-    Logger.error('Weekly check-in: fetchAvailabilityKeys failed', error as Error);
+    Logger.error('Weekly check-in: fetchAvailabilityKeys failed', error);
     throw error;
   }
 

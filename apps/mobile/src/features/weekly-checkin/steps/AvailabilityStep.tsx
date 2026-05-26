@@ -13,14 +13,15 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels } from '@rallia/design-system';
+
 import {
   HourlyAvailabilityGrid,
   type HourGrid,
-} from '../../onboarding/components/HourlyAvailabilityGrid';
-import { MascotBubble } from '../components/MascotBubble';
-import { MIN_AVAILABILITY_CELLS } from '../useWeeklyCheckInWizard';
-import { useTranslation } from '../../../hooks';
-import { useLocale } from '../../../context';
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
+import { MIN_AVAILABILITY_CELLS } from '#/features/weekly-checkin/useWeeklyCheckInWizard';
+import { useTranslation } from '#/hooks';
+import { useLocale } from '#/context';
 
 interface AvailabilityStepProps {
   availability: HourGrid;
@@ -54,7 +55,7 @@ export function AvailabilityStep({ availability, onChange, onContinue }: Availab
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <MascotBubble text={t('weeklyCheckIn.step2.bubble' as any)} textKey="step2-bubble" />
+        <MascotBubble text={t('weeklyCheckIn.step2.bubble')} textKey="step2-bubble" />
 
         <View style={styles.gridWrap}>
           <HourlyAvailabilityGrid
@@ -76,7 +77,7 @@ export function AvailabilityStep({ availability, onChange, onContinue }: Availab
           disabled={!canContinue}
           onPress={onContinue}
         >
-          {t('weeklyCheckIn.step2.cta' as any)}
+          {t('weeklyCheckIn.step2.cta')}
         </Button>
       </View>
     </View>

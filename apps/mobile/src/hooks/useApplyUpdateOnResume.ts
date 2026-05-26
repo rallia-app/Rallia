@@ -9,8 +9,8 @@ import {
 } from 'expo-updates';
 import { getSheetStack } from 'react-native-actions-sheet';
 
-import { isWeeklyCheckInActive } from '../features/weekly-checkin/isWizardActive';
-import { Logger } from '../services/logger';
+import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
+import { Logger } from '#/services/logger';
 
 // Conservative on purpose: a Rallia session carries a lot of in-flight UI
 // state (action sheets, the weekly check-in wizard, deep-link match flows),

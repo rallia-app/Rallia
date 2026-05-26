@@ -70,16 +70,16 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-} from '../hooks';
-import { useSport } from '../context';
-import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
-import { SportIcon } from '../components/SportIcon';
-import RatingBadge from '../components/RatingBadge';
-import type { RootStackParamList } from '../navigation/types';
-import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
-import { NetworkLeaderboardTab, NetworkMatchesTab } from '../features/matches/components';
-import { NetworkFavoriteFacilities } from '../components/NetworkFavoriteFacilities';
-import { InfoModal } from '../components/InfoModal';
+} from '#/hooks';
+import { useSport } from '#/context';
+import { getJoinErrorToastMessage } from '#/utils/joinErrorToast';
+import { SportIcon } from '#/components/SportIcon';
+import RatingBadge from '#/components/RatingBadge';
+import type { RootStackParamList } from '#/navigation/types';
+import { AddScoreIntroModal, AddScoreModal, type MatchType } from '#/features/matches';
+import { NetworkLeaderboardTab, NetworkMatchesTab } from '#/features/matches/components';
+import { NetworkFavoriteFacilities } from '#/components/NetworkFavoriteFacilities';
+import { InfoModal } from '#/components/InfoModal';
 
 const HEADER_HEIGHT = 140;
 

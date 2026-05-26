@@ -10,14 +10,17 @@ import {
   useRejectCommunityMember,
   usePendingCommunityMembers,
 } from '@rallia/shared-hooks';
-import type { PendingMemberRequest } from '@rallia/shared-services';
+import type {
+  PendingMemberRequest,
+  ReputationTier,
+  ReputationDisplay,
+} from '@rallia/shared-services';
 import { getTierConfig, MIN_EVENTS_FOR_PUBLIC } from '@rallia/shared-services';
-import type { ReputationTier, ReputationDisplay } from '@rallia/shared-services';
 
-import { useThemeStyles, useAuth } from '../../../hooks';
-import { BaseActionSheet } from '../../../components/BaseActionSheet';
-import RatingBadge from '../../../components/RatingBadge';
-import ReputationBadge from '../../../components/ReputationBadge';
+import { useThemeStyles, useAuth } from '#/hooks';
+import { BaseActionSheet } from '#/components/BaseActionSheet';
+import RatingBadge from '#/components/RatingBadge';
+import ReputationBadge from '#/components/ReputationBadge';
 
 function buildReputationDisplay(request: PendingMemberRequest): ReputationDisplay | undefined {
   if (!request.reputation_tier || request.reputation_score == null) return undefined;

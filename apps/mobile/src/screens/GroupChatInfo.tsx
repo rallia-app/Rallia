@@ -24,9 +24,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
+import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
+import { SheetManager } from 'react-native-actions-sheet';
+
 import {
   useThemeStyles,
   useAuth,
@@ -35,12 +37,10 @@ import {
   useGroupEditActions,
   useTranslation,
   type TranslationKey,
-} from '../hooks';
-import type { RootStackParamList } from '../navigation/types';
-import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
-import { ChatMemberOptionsModal } from '../features/chat';
-import { ConfirmationModal } from '../components/ConfirmationModal';
-import { SheetManager } from 'react-native-actions-sheet';
+} from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
+import { ChatMemberOptionsModal } from '#/features/chat';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupChatInfoRouteProp = RouteProp<RootStackParamList, 'GroupChatInfo'>;
@@ -425,7 +425,7 @@ export default function GroupChatInfoScreen() {
             </View>
             <View style={styles.sectionContent}>
               <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                {t('chat.groupChat.addMembers' as TranslationKey)}
+                {t('chat.groupChat.addMembers')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -440,7 +440,7 @@ export default function GroupChatInfoScreen() {
             </View>
             <View style={styles.sectionContent}>
               <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                {t('chat.groupChat.inviteViaLinkOrQR' as TranslationKey)}
+                {t('chat.groupChat.inviteViaLinkOrQR')}
               </Text>
             </View>
           </TouchableOpacity>

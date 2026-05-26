@@ -12,14 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { useTheme, useMatch } from '@rallia/shared-hooks';
-import { useAuth, useRequireOnboarding } from '../hooks';
-import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
+import { useTheme, useMatch, useNotificationsWithActions } from '@rallia/shared-hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
-import { useCommunityNavigation, useAppNavigation } from '../navigation';
-import SignInPrompt from '../components/SignInPrompt';
-import { SportIcon } from '../components/SportIcon';
 import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
@@ -27,7 +21,6 @@ import {
   NOTIFICATION_TYPE_CATEGORIES,
   ExtendedNotificationTypeEnum,
 } from '@rallia/shared-types';
-import { useNotificationsWithActions } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 import {
   lightTheme,
@@ -38,6 +31,13 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
+
+import { useAuth, useRequireOnboarding } from '#/hooks';
+import { useTranslation, type TranslationOptions } from '#/hooks/useTranslation';
+import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
+import { useCommunityNavigation, useAppNavigation } from '#/navigation';
+import SignInPrompt from '#/components/SignInPrompt';
+import { SportIcon } from '#/components/SportIcon';
 
 /**
  * Match-related notification types that should open match detail sheet
@@ -81,7 +81,8 @@ const REFERENCE_RESPONSE_NOTIFICATION_TYPES: string[] = [
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import * as Analytics from '../services/analytics';
+
+import * as Analytics from '#/services/analytics';
 
 // Helper function to format relative time
 function formatRelativeTime(
@@ -449,9 +450,7 @@ const Notifications: React.FC = () => {
 
       // Navigate to target based on notification type and target_id
       if (notification.target_id && notification.type) {
-        const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(
-          notification.type as ExtendedNotificationTypeEnum
-        );
+        const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(notification.type);
 
         if (isMatchNotification) {
           // Set the selected match ID to trigger match detail fetch and sheet opening
@@ -739,14 +738,14 @@ const Notifications: React.FC = () => {
                     weight="semibold"
                     style={{ color: themeColors.foreground, textAlign: 'center' }}
                   >
-                    {t('notifications.sportSwitch.title' as TranslationKey)}
+                    {t('notifications.sportSwitch.title')}
                   </Text>
                 </View>
                 <Text
                   size="base"
                   style={[styles.confirmationMessage, { color: themeColors.mutedForeground }]}
                 >
-                  {t('notifications.sportSwitch.message' as TranslationKey, {
+                  {t('notifications.sportSwitch.message', {
                     sportName: pendingMatch?.sport?.display_name ?? '',
                   })}
                 </Text>
@@ -765,7 +764,7 @@ const Notifications: React.FC = () => {
                       weight="medium"
                       style={{ color: themeColors.foreground, textAlign: 'center' }}
                     >
-                      {t('common.cancel' as TranslationKey)}
+                      {t('common.cancel')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -782,7 +781,7 @@ const Notifications: React.FC = () => {
                       weight="medium"
                       style={{ color: '#ffffff', textAlign: 'center' }}
                     >
-                      {t('notifications.sportSwitch.confirm' as TranslationKey)}
+                      {t('notifications.sportSwitch.confirm')}
                     </Text>
                   </TouchableOpacity>
                 </View>

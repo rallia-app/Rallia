@@ -7,19 +7,19 @@
 
 import React, { useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Image } from 'react-native';
-import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic, getProfilePictureUrl, successHaptic } from '@rallia/shared-utils';
-import { SheetManager } from 'react-native-actions-sheet';
-import { StarRating } from '../../../../components/StarRating';
 import type {
   OpponentForFeedback,
   OpponentFeedbackFormState,
   MatchReportReasonEnum,
 } from '@rallia/shared-types';
-import type { TranslationKey } from '../../../../hooks/useTranslation';
+
+import { StarRating } from '#/components/StarRating';
+import type { TranslationKey } from '#/hooks/useTranslation';
 
 // =============================================================================
 // TYPES

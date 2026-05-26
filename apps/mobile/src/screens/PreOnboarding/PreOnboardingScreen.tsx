@@ -32,20 +32,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { spacingPixels, primary, secondary, neutral } from '@rallia/design-system';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../hooks';
-import { useOverlay, useSport, useLocationMode } from '../../context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { PostalCodeLocation } from '@rallia/shared-hooks';
+import { SportService, Logger } from '@rallia/shared-services';
+import type { Sport as DatabaseSport } from '@rallia/shared-types';
+
+import { useThemeStyles } from '#/hooks';
+import { useOverlay, useSport, useLocationMode } from '#/context';
+import * as Analytics from '#/services/analytics';
+import { ACQUISITION_CHANNEL_KEY } from '#/navigation/deepLinkStore';
+
 import { SportStep, type Sport } from './SportStep';
 import { PostalCodeStep } from './PostalCodeStep';
 import { LocationPermissionStep } from './LocationPermissionStep';
 import { NotificationPermissionStep } from './NotificationPermissionStep';
 import { TrackingPermissionStep } from './TrackingPermissionStep';
 import { DiscoveryStep } from './DiscoveryStep';
-import type { PostalCodeLocation } from '@rallia/shared-hooks';
-import { SportService, Logger } from '@rallia/shared-services';
-import type { Sport as DatabaseSport } from '@rallia/shared-types';
-import * as Analytics from '../../services/analytics';
-import { ACQUISITION_CHANNEL_KEY } from '../../navigation/deepLinkStore';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

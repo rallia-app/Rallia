@@ -13,7 +13,7 @@ import { Text } from '@rallia/shared-components';
 import { radiusPixels, spacingPixels, status } from '@rallia/design-system';
 import type { NetworkPulseMatchupExtreme } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface MatchupExtremesCardProps {
   favorite: NetworkPulseMatchupExtreme | null;

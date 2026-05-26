@@ -15,7 +15,8 @@ import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { ReferralContest, ReferralLeaderboardEntry, ContestRank } from '@rallia/shared-hooks';
-import type { TranslationKey } from '../../../hooks/useTranslation';
+
+import type { TranslationKey } from '#/hooks/useTranslation';
 
 // ============================================================================
 // TYPES

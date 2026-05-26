@@ -167,9 +167,6 @@ import {
   WEB_DISTINCT_ID_KEY,
 } from './src/utils/referralAttribution';
 
-// Import NativeWind global styles
-// import './global.css';
-
 // Connect React Query's focusManager to React Native's AppState.
 // When the app returns from background, stale queries automatically refetch.
 focusManager.setEventListener(handleFocus => {

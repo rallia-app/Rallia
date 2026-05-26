@@ -12,11 +12,12 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Text } from '@rallia/shared-components';
 import DatabaseService, { OnboardingService, SportService, Logger } from '@rallia/shared-services';
 import type { OnboardingRating } from '@rallia/shared-types';
-import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
 
 interface PickleballRatingOverlayProps {
   visible: boolean;

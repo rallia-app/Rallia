@@ -11,11 +11,12 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
-import { MascotBubble } from '../components/MascotBubble';
-import { StreakCard } from '../components/StreakCard';
-import { GoalsCard } from '../components/GoalsCard';
-import type { CheckInContext } from '../api';
-import { useTranslation } from '../../../hooks';
+
+import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
+import { StreakCard } from '#/features/weekly-checkin/components/StreakCard';
+import { GoalsCard } from '#/features/weekly-checkin/components/GoalsCard';
+import type { CheckInContext } from '#/features/weekly-checkin/api';
+import { useTranslation } from '#/hooks';
 
 interface WelcomeRecapStepProps {
   context: CheckInContext;
@@ -39,15 +40,15 @@ export function WelcomeRecapStep({ context, onContinue }: WelcomeRecapStepProps)
   const bubbleText = (() => {
     switch (variant) {
       case 'hit':
-        return t('weeklyCheckIn.step1.bubbleHit' as any);
+        return t('weeklyCheckIn.step1.bubbleHit');
       case 'met':
-        return t('weeklyCheckIn.step1.bubbleMet' as any, {
+        return t('weeklyCheckIn.step1.bubbleMet', {
           goal: context.lastWeekFrequencyGoal ?? 0,
         });
       case 'miss':
-        return t('weeklyCheckIn.step1.bubbleMiss' as any);
+        return t('weeklyCheckIn.step1.bubbleMiss');
       case 'first':
-        return t('weeklyCheckIn.step1.bubbleFirstTime' as any);
+        return t('weeklyCheckIn.step1.bubbleFirstTime');
     }
   })();
 
@@ -75,7 +76,7 @@ export function WelcomeRecapStep({ context, onContinue }: WelcomeRecapStepProps)
 
       <View style={styles.footer}>
         <Button variant="primary" size="lg" fullWidth rounded onPress={onContinue}>
-          {t('weeklyCheckIn.step1.cta' as any)}
+          {t('weeklyCheckIn.step1.cta')}
         </Button>
       </View>
     </View>

@@ -10,8 +10,9 @@ import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles } from '../../../hooks';
 import type { PendingScoreConfirmation } from '@rallia/shared-hooks';
+
+import { useThemeStyles } from '#/hooks';
 
 interface PendingScoreCardProps {
   confirmation: PendingScoreConfirmation;

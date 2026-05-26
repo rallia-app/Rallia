@@ -25,9 +25,9 @@ import {
 } from '@rallia/shared-hooks';
 import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 
-import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { uploadImage, replaceImage } from '../../../services/imageUpload';
-import { pickImageWithCropper } from '../../../utils/imagePicker';
+import { useThemeStyles, useAuth, useTranslation } from '#/hooks';
+import { uploadImage, replaceImage } from '#/services/imageUpload';
+import { pickImageWithCropper } from '#/utils/imagePicker';
 
 export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community'>) {
   const community = payload?.community as Community;

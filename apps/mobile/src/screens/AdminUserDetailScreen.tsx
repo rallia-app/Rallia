@@ -38,7 +38,6 @@ import {
   adminCertifyRating,
 } from '@rallia/shared-services';
 import type { EditableProfileFields } from '@rallia/shared-services';
-import { ConfirmationModal } from '../components/ConfirmationModal';
 import {
   useTheme,
   useAdminUserDetail,
@@ -49,9 +48,7 @@ import {
   type AdminMatchSummary,
   type AdminBanInfo,
 } from '@rallia/shared-hooks';
-import { useTranslation, useAuth } from '../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { RootStackParamList } from '../navigation/types';
 import {
   lightTheme,
   darkTheme,
@@ -67,6 +64,10 @@ import {
   getHumanName,
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
+
+import type { RootStackParamList } from '#/navigation/types';
+import { useTranslation, useAuth } from '#/hooks';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminUserDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -190,17 +191,14 @@ const AdminUserDetailScreen: React.FC = () => {
       changes.birth_date = editedProfile.birth_date;
 
     if (Object.keys(changes).length === 0) {
-      Alert.alert(
-        t('common.info' as TranslationKey),
-        t('admin.users.edit.noChanges' as TranslationKey)
-      );
+      Alert.alert(t('common.info' as TranslationKey), t('admin.users.edit.noChanges'));
       return;
     }
 
     try {
       mediumHaptic();
       setSaveLoading(true);
-      await updatePlayerProfile(user.id, session.user.id, changes as EditableProfileFields);
+      await updatePlayerProfile(user.id, session.user.id, changes);
       Logger.logUserAction('admin_profile_edited', {
         userId: user.id,
         fields: Object.keys(changes),
@@ -208,10 +206,10 @@ const AdminUserDetailScreen: React.FC = () => {
       await refetch();
       setIsEditing(false);
       setEditedProfile({});
-      Alert.alert(t('common.done'), t('admin.users.edit.saveSuccess' as TranslationKey));
+      Alert.alert(t('common.done'), t('admin.users.edit.saveSuccess'));
     } catch (err) {
       console.error('Failed to save profile:', err);
-      Alert.alert(t('common.error'), t('admin.users.edit.saveFailed' as TranslationKey));
+      Alert.alert(t('common.error'), t('admin.users.edit.saveFailed'));
     } finally {
       setSaveLoading(false);
     }
@@ -243,14 +241,14 @@ const AdminUserDetailScreen: React.FC = () => {
     if (!user || !session?.user?.id || !canBan || !user.player_id) return;
 
     Alert.alert(
-      t('admin.users.actions.banUser' as TranslationKey),
-      t('admin.users.actions.banConfirm' as TranslationKey, {
-        name: getHumanName(user, t('admin.users.anonymous' as TranslationKey)),
+      t('admin.users.actions.banUser'),
+      t('admin.users.actions.banConfirm', {
+        name: getHumanName(user, t('admin.users.anonymous')),
       }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('admin.users.actions.ban' as TranslationKey),
+          text: t('admin.users.actions.ban'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -264,10 +262,10 @@ const AdminUserDetailScreen: React.FC = () => {
               });
               Logger.logUserAction('admin_user_banned', { userId: user.id });
               await refetch();
-              Alert.alert(t('common.done'), t('admin.users.actions.banSuccess' as TranslationKey));
+              Alert.alert(t('common.done'), t('admin.users.actions.banSuccess'));
             } catch (err) {
               console.error('Failed to ban user:', err);
-              Alert.alert(t('common.error'), t('admin.users.actions.banFailed' as TranslationKey));
+              Alert.alert(t('common.error'), t('admin.users.actions.banFailed'));
             } finally {
               setActionLoading(false);
             }
@@ -282,14 +280,14 @@ const AdminUserDetailScreen: React.FC = () => {
     if (!user || !session?.user?.id || !canBan || !user.active_ban) return;
 
     Alert.alert(
-      t('admin.users.actions.unbanUser' as TranslationKey),
-      t('admin.users.actions.unbanConfirm' as TranslationKey, {
-        name: getHumanName(user, t('admin.users.anonymous' as TranslationKey)),
+      t('admin.users.actions.unbanUser'),
+      t('admin.users.actions.unbanConfirm', {
+        name: getHumanName(user, t('admin.users.anonymous')),
       }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('admin.users.actions.unban' as TranslationKey),
+          text: t('admin.users.actions.unban'),
           onPress: async () => {
             try {
               mediumHaptic();
@@ -297,16 +295,10 @@ const AdminUserDetailScreen: React.FC = () => {
               await unbanUser(user.active_ban!.id, session.user.id);
               Logger.logUserAction('admin_user_unbanned', { userId: user.id });
               await refetch();
-              Alert.alert(
-                t('common.done'),
-                t('admin.users.actions.unbanSuccess' as TranslationKey)
-              );
+              Alert.alert(t('common.done'), t('admin.users.actions.unbanSuccess'));
             } catch (err) {
               console.error('Failed to unban user:', err);
-              Alert.alert(
-                t('common.error'),
-                t('admin.users.actions.unbanFailed' as TranslationKey)
-              );
+              Alert.alert(t('common.error'), t('admin.users.actions.unbanFailed'));
             } finally {
               setActionLoading(false);
             }
@@ -365,14 +357,14 @@ const AdminUserDetailScreen: React.FC = () => {
       if (result.success) {
         await refetch();
         setShowCertificationModal(false);
-        Alert.alert(t('common.done'), t(successKey as TranslationKey));
+        Alert.alert(t('common.done'), t(successKey));
       } else {
         throw new Error(result.error);
       }
     } catch (err) {
       console.error('Failed to update rating certification:', err);
       setShowCertificationModal(false);
-      Alert.alert(t('common.error'), t(failedKey as TranslationKey));
+      Alert.alert(t('common.error'), t(failedKey));
     } finally {
       setCertifyingRatingId(null);
     }
@@ -387,7 +379,7 @@ const AdminUserDetailScreen: React.FC = () => {
         <View style={[styles.statusBadgeLarge, { backgroundColor: colors.errorBg }]}>
           <Ionicons name="ban-outline" size={16} color={colors.errorText} />
           <Text size="sm" weight="semibold" color={colors.errorText}>
-            {t('admin.users.status.banned' as TranslationKey)}
+            {t('admin.users.status.banned')}
           </Text>
         </View>
       );
@@ -397,7 +389,7 @@ const AdminUserDetailScreen: React.FC = () => {
         <View style={[styles.statusBadgeLarge, { backgroundColor: colors.warningBg }]}>
           <Ionicons name="time-outline" size={16} color={colors.warningText} />
           <Text size="sm" weight="semibold" color={colors.warningText}>
-            {t('admin.users.status.inactive' as TranslationKey)}
+            {t('admin.users.status.inactive')}
           </Text>
         </View>
       );
@@ -406,7 +398,7 @@ const AdminUserDetailScreen: React.FC = () => {
       <View style={[styles.statusBadgeLarge, { backgroundColor: colors.successBg }]}>
         <Ionicons name="checkmark-circle-outline" size={16} color={colors.successText} />
         <Text size="sm" weight="semibold" color={colors.successText}>
-          {t('admin.users.status.active' as TranslationKey)}
+          {t('admin.users.status.active')}
         </Text>
       </View>
     );
@@ -570,10 +562,10 @@ const AdminUserDetailScreen: React.FC = () => {
               <Ionicons name={certColors.icon} size={14} color={certColors.text} />
               <Text size="sm" weight="semibold" color={certColors.text}>
                 {profile.badge_status === 'certified'
-                  ? t('admin.users.certification.certified' as TranslationKey)
+                  ? t('admin.users.certification.certified')
                   : profile.badge_status === 'disputed'
-                    ? t('admin.users.certification.disputed' as TranslationKey)
-                    : t('admin.users.certification.selfDeclared' as TranslationKey)}
+                    ? t('admin.users.certification.disputed')
+                    : t('admin.users.certification.selfDeclared')}
               </Text>
             </View>
           </View>
@@ -582,7 +574,7 @@ const AdminUserDetailScreen: React.FC = () => {
         {/* Certified Via Info */}
         {hasRating && profile.certified_via && (
           <Text size="xs" color={colors.textMuted} style={{ marginBottom: spacingPixels[2] }}>
-            {t('admin.users.certification.via' as TranslationKey)}: {profile.certified_via}
+            {t('admin.users.certification.via')}: {profile.certified_via}
           </Text>
         )}
 
@@ -591,7 +583,7 @@ const AdminUserDetailScreen: React.FC = () => {
           <View style={[styles.noRatingContainer, { backgroundColor: colors.background }]}>
             <Ionicons name="remove-circle-outline" size={24} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted}>
-              {t('admin.users.noRating' as TranslationKey)}
+              {t('admin.users.noRating')}
             </Text>
           </View>
         )}
@@ -608,7 +600,7 @@ const AdminUserDetailScreen: React.FC = () => {
             <View style={styles.metaItem}>
               <Ionicons name="trending-up" size={12} color={colors.textMuted} />
               <Text size="xs" color={colors.textMuted}>
-                {t('admin.users.skillLevel' as TranslationKey)}: {profile.skill_level}
+                {t('admin.users.skillLevel')}: {profile.skill_level}
               </Text>
             </View>
           )}
@@ -629,7 +621,7 @@ const AdminUserDetailScreen: React.FC = () => {
                   >
                     <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
                     <Text size="xs" weight="semibold" color="#4CAF50">
-                      {t('admin.users.certification.certify' as TranslationKey)}
+                      {t('admin.users.certification.certify')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -642,7 +634,7 @@ const AdminUserDetailScreen: React.FC = () => {
                   >
                     <Ionicons name="warning" size={18} color="#F44336" />
                     <Text size="xs" weight="semibold" color="#F44336">
-                      {t('admin.users.certification.dispute' as TranslationKey)}
+                      {t('admin.users.certification.dispute')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -655,7 +647,7 @@ const AdminUserDetailScreen: React.FC = () => {
                   >
                     <Ionicons name="refresh" size={18} color="#FF9800" />
                     <Text size="xs" weight="semibold" color="#FF9800">
-                      {t('admin.users.certification.reset' as TranslationKey)}
+                      {t('admin.users.certification.reset')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -708,8 +700,7 @@ const AdminUserDetailScreen: React.FC = () => {
         </View>
       </View>
       <Text size="xs" color={colors.textMuted}>
-        {match.match_type} • {match.participant_count}{' '}
-        {t('admin.users.participants' as TranslationKey)}
+        {match.match_type} • {match.participant_count} {t('admin.users.participants')}
       </Text>
       <Text size="xs" color={colors.textMuted}>
         {formatDate(match.scheduled_at)}
@@ -728,8 +719,8 @@ const AdminUserDetailScreen: React.FC = () => {
           <Ionicons name="ban-outline" size={16} color={colors.errorText} />
           <Text size="sm" weight="semibold" color={colors.errorText}>
             {ban.ban_type === 'permanent'
-              ? t('admin.users.banType.permanent' as TranslationKey)
-              : t('admin.users.banType.temporary' as TranslationKey)}
+              ? t('admin.users.banType.permanent')
+              : t('admin.users.banType.temporary')}
           </Text>
         </View>
         <View
@@ -739,9 +730,7 @@ const AdminUserDetailScreen: React.FC = () => {
           ]}
         >
           <Text size="xs" color={ban.is_active ? colors.errorText : colors.successText}>
-            {ban.is_active
-              ? t('admin.users.status.active' as TranslationKey)
-              : t('admin.users.banStatus.lifted' as TranslationKey)}
+            {ban.is_active ? t('admin.users.status.active') : t('admin.users.banStatus.lifted')}
           </Text>
         </View>
       </View>
@@ -755,11 +744,11 @@ const AdminUserDetailScreen: React.FC = () => {
       )}
       <View style={styles.banDates}>
         <Text size="xs" color={colors.textMuted}>
-          {t('admin.users.bannedAt' as TranslationKey)}: {formatDate(ban.banned_at)}
+          {t('admin.users.bannedAt')}: {formatDate(ban.banned_at)}
         </Text>
         {ban.expires_at && (
           <Text size="xs" color={colors.textMuted}>
-            {t('admin.users.expiresAt' as TranslationKey)}: {formatDate(ban.expires_at)}
+            {t('admin.users.expiresAt')}: {formatDate(ban.expires_at)}
           </Text>
         )}
       </View>
@@ -776,10 +765,10 @@ const AdminUserDetailScreen: React.FC = () => {
         <View style={styles.centerContent}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
-            {t('admin.errors.accessDenied' as TranslationKey)}
+            {t('admin.errors.accessDenied')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.centerDescription}>
-            {t('admin.errors.noPermission' as TranslationKey)}
+            {t('admin.errors.noPermission')}
           </Text>
         </View>
       </SafeAreaView>
@@ -813,7 +802,7 @@ const AdminUserDetailScreen: React.FC = () => {
         <View style={styles.centerContent}>
           <Ionicons name="alert-circle-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.centerTitle}>
-            {t('admin.errors.loadFailed' as TranslationKey)}
+            {t('admin.errors.loadFailed')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.centerDescription}>
             {error.message}
@@ -861,10 +850,10 @@ const AdminUserDetailScreen: React.FC = () => {
           />
           <View style={styles.profileInfo}>
             <Text size="xl" weight="bold" color={colors.text}>
-              {getHumanName(user, t('admin.users.anonymous' as TranslationKey))}
+              {getHumanName(user, t('admin.users.anonymous'))}
             </Text>
             <Text size="sm" color={colors.textSecondary}>
-              {user.email || t('admin.users.noEmail' as TranslationKey)}
+              {user.email || t('admin.users.noEmail')}
             </Text>
             {renderStatusBadge()}
           </View>
@@ -879,7 +868,7 @@ const AdminUserDetailScreen: React.FC = () => {
           >
             <Ionicons name="person-outline" size={20} color={colors.accent} />
             <Text size="sm" weight="medium" color={colors.accent}>
-              {t('admin.users.actions.viewProfile' as TranslationKey)}
+              {t('admin.users.actions.viewProfile')}
             </Text>
           </TouchableOpacity>
 
@@ -891,7 +880,7 @@ const AdminUserDetailScreen: React.FC = () => {
             >
               <Ionicons name="create-outline" size={20} color={colors.accent} />
               <Text size="sm" weight="medium" color={colors.accent}>
-                {t('admin.users.actions.edit' as TranslationKey)}
+                {t('admin.users.actions.edit')}
               </Text>
             </TouchableOpacity>
           )}
@@ -915,7 +904,7 @@ const AdminUserDetailScreen: React.FC = () => {
                         color={colors.successText}
                       />
                       <Text size="sm" weight="medium" color={colors.successText}>
-                        {t('admin.users.actions.unban' as TranslationKey)}
+                        {t('admin.users.actions.unban')}
                       </Text>
                     </>
                   )}
@@ -933,7 +922,7 @@ const AdminUserDetailScreen: React.FC = () => {
                     <>
                       <Ionicons name="ban-outline" size={20} color={colors.errorText} />
                       <Text size="sm" weight="medium" color={colors.errorText}>
-                        {t('admin.users.actions.ban' as TranslationKey)}
+                        {t('admin.users.actions.ban')}
                       </Text>
                     </>
                   )}
@@ -953,71 +942,71 @@ const AdminUserDetailScreen: React.FC = () => {
           >
             <View style={styles.editHeader}>
               <Text size="base" weight="semibold" color={colors.text}>
-                {t('admin.users.edit.title' as TranslationKey)}
+                {t('admin.users.edit.title')}
               </Text>
               <Text size="xs" color={colors.textMuted}>
-                {t('admin.users.edit.description' as TranslationKey)}
+                {t('admin.users.edit.description')}
               </Text>
             </View>
 
             {renderEditableField(
               'person-outline',
-              t('admin.users.edit.firstName' as TranslationKey),
+              t('admin.users.edit.firstName'),
               'first_name',
-              t('admin.users.edit.firstNamePlaceholder' as TranslationKey)
+              t('admin.users.edit.firstNamePlaceholder')
             )}
             {renderEditableField(
               'person-outline',
-              t('admin.users.edit.lastName' as TranslationKey),
+              t('admin.users.edit.lastName'),
               'last_name',
-              t('admin.users.edit.lastNamePlaceholder' as TranslationKey)
+              t('admin.users.edit.lastNamePlaceholder')
             )}
             {renderEditableField(
               'at-outline',
-              t('admin.users.edit.displayName' as TranslationKey),
+              t('admin.users.edit.displayName'),
               'display_name',
-              t('admin.users.edit.displayNamePlaceholder' as TranslationKey)
+              t('admin.users.edit.displayNamePlaceholder')
             )}
             {renderEditableField(
               'mail-outline',
-              t('admin.users.edit.email' as TranslationKey),
+              t('admin.users.edit.email'),
               'email',
-              t('admin.users.edit.emailPlaceholder' as TranslationKey)
+              t('admin.users.edit.emailPlaceholder')
             )}
             {renderEditableField(
               'call-outline',
-              t('admin.users.edit.phone' as TranslationKey),
+              t('admin.users.edit.phone'),
               'phone',
-              t('admin.users.edit.phonePlaceholder' as TranslationKey)
+              t('admin.users.edit.phonePlaceholder')
             )}
             {renderEditableField(
               'document-text-outline',
-              t('admin.users.edit.bio' as TranslationKey),
+              t('admin.users.edit.bio'),
               'bio',
-              t('admin.users.edit.bioPlaceholder' as TranslationKey),
+              t('admin.users.edit.bioPlaceholder'),
               true
             )}
             {renderEditableField(
               'location-outline',
-              t('admin.users.edit.city' as TranslationKey),
+              t('admin.users.edit.city'),
               'city',
-              t('admin.users.edit.cityPlaceholder' as TranslationKey)
+              t('admin.users.edit.cityPlaceholder')
             )}
             {renderEditableField(
               'globe-outline',
-              t('admin.users.edit.country' as TranslationKey),
+              t('admin.users.edit.country'),
               'country',
-              t('admin.users.edit.countryPlaceholder' as TranslationKey)
+              t('admin.users.edit.countryPlaceholder')
             )}
             {renderEditableField(
               'male-female-outline',
-              t('admin.users.edit.gender' as TranslationKey),
+              t('admin.users.edit.gender'),
               'gender',
-              t('admin.users.edit.genderPlaceholder' as TranslationKey)
+              t('admin.users.edit.genderPlaceholder')
             )}
             {renderEditableField(
               'calendar-outline',
-              t('admin.users.edit.dateOfBirth' as TranslationKey),
+              t('admin.users.edit.dateOfBirth'),
               'birth_date',
               'YYYY-MM-DD'
             )}
@@ -1063,38 +1052,26 @@ const AdminUserDetailScreen: React.FC = () => {
             ]}
           >
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-              {t('admin.users.sections.userInfo' as TranslationKey)}
+              {t('admin.users.sections.userInfo')}
             </Text>
-            {renderInfoRow(
-              'mail-outline',
-              t('admin.users.info.email' as TranslationKey),
-              user.email
-            )}
-            {renderInfoRow(
-              'call-outline',
-              t('admin.users.info.phone' as TranslationKey),
-              user.phone_number
-            )}
+            {renderInfoRow('mail-outline', t('admin.users.info.email'), user.email)}
+            {renderInfoRow('call-outline', t('admin.users.info.phone'), user.phone_number)}
             {renderInfoRow(
               'location-outline',
-              t('admin.users.info.location' as TranslationKey),
+              t('admin.users.info.location'),
               user.city && user.country
                 ? `${user.city}, ${user.country}`
                 : user.city || user.country
             )}
-            {renderInfoRow(
-              'male-female-outline',
-              t('admin.users.info.gender' as TranslationKey),
-              user.gender
-            )}
+            {renderInfoRow('male-female-outline', t('admin.users.info.gender'), user.gender)}
             {renderInfoRow(
               'calendar-outline',
-              t('admin.users.info.birthDate' as TranslationKey),
+              t('admin.users.info.birthDate'),
               user.date_of_birth ? formatDate(user.date_of_birth) : null
             )}
             {renderInfoRow(
               'hand-left-outline',
-              t('admin.users.info.playingHand' as TranslationKey),
+              t('admin.users.info.playingHand'),
               user.playing_hand
             )}
           </View>
@@ -1108,26 +1085,26 @@ const AdminUserDetailScreen: React.FC = () => {
           ]}
         >
           <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-            {t('admin.users.sections.accountInfo' as TranslationKey)}
+            {t('admin.users.sections.accountInfo')}
           </Text>
           {renderInfoRow(
             'log-in-outline',
-            t('admin.users.info.lastLogin' as TranslationKey),
+            t('admin.users.info.lastLogin'),
             formatDate(user.last_sign_in_at)
           )}
           {renderInfoRow(
             'time-outline',
-            t('admin.users.info.createdAt' as TranslationKey),
+            t('admin.users.info.createdAt'),
             formatDate(user.created_at)
           )}
           {renderInfoRow(
             'create-outline',
-            t('admin.users.info.updatedAt' as TranslationKey),
+            t('admin.users.info.updatedAt'),
             formatDate(user.updated_at)
           )}
           {renderInfoRow(
             'checkmark-done-outline',
-            t('admin.users.info.onboardingCompleted' as TranslationKey),
+            t('admin.users.info.onboardingCompleted'),
             user.onboarding_completed ? t('common.yes') : t('common.no')
           )}
         </View>
@@ -1136,8 +1113,7 @@ const AdminUserDetailScreen: React.FC = () => {
         {user.sport_profiles && user.sport_profiles.length > 0 && (
           <View style={styles.sectionContainer}>
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionHeader}>
-              {t('admin.users.sections.sportProfiles' as TranslationKey)} (
-              {user.sport_profiles.length})
+              {t('admin.users.sections.sportProfiles')} ({user.sport_profiles.length})
             </Text>
             {user.sport_profiles.map(renderSportProfile)}
           </View>
@@ -1147,8 +1123,7 @@ const AdminUserDetailScreen: React.FC = () => {
         {user.recent_matches && user.recent_matches.length > 0 && (
           <View style={styles.sectionContainer}>
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionHeader}>
-              {t('admin.users.sections.recentMatches' as TranslationKey)} (
-              {user.recent_matches.length})
+              {t('admin.users.sections.recentMatches')} ({user.recent_matches.length})
             </Text>
             {user.recent_matches.map(renderMatchSummary)}
           </View>
@@ -1158,7 +1133,7 @@ const AdminUserDetailScreen: React.FC = () => {
         {user.ban_history && user.ban_history.length > 0 && (
           <View style={styles.sectionContainer}>
             <Text size="base" weight="semibold" color={colors.text} style={styles.sectionHeader}>
-              {t('admin.users.sections.banHistory' as TranslationKey)} ({user.ban_history.length})
+              {t('admin.users.sections.banHistory')} ({user.ban_history.length})
             </Text>
             {user.ban_history.map(renderBanHistoryItem)}
           </View>
@@ -1178,14 +1153,14 @@ const AdminUserDetailScreen: React.FC = () => {
             ? 'admin.users.certification.certifyTitle'
             : certificationAction === 'dispute'
               ? 'admin.users.certification.disputeTitle'
-              : ('admin.users.certification.resetTitle' as TranslationKey)
+              : 'admin.users.certification.resetTitle'
         )}
         message={t(
           certificationAction === 'certify'
             ? 'admin.users.certification.certifyConfirm'
             : certificationAction === 'dispute'
               ? 'admin.users.certification.disputeConfirm'
-              : ('admin.users.certification.resetConfirm' as TranslationKey),
+              : 'admin.users.certification.resetConfirm',
           { sport: selectedProfile ? capitalizeSportName(selectedProfile.sport_name) : '' }
         )}
         confirmLabel={t(
@@ -1193,7 +1168,7 @@ const AdminUserDetailScreen: React.FC = () => {
             ? 'admin.users.certification.certify'
             : certificationAction === 'dispute'
               ? 'admin.users.certification.dispute'
-              : ('admin.users.certification.reset' as TranslationKey)
+              : 'admin.users.certification.reset'
         )}
         cancelLabel={t('common.cancel')}
         destructive={certificationAction === 'dispute'}

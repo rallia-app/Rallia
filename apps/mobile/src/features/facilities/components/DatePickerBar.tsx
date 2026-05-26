@@ -14,7 +14,8 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 interface DateItem {
   dateKey: string;

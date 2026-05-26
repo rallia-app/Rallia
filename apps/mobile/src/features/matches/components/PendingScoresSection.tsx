@@ -10,8 +10,10 @@ import { View, StyleSheet } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
 import { usePendingScoreConfirmations, type PendingScoreConfirmation } from '@rallia/shared-hooks';
+
+import { useThemeStyles } from '#/hooks';
+
 import { PendingScoreCard } from './PendingScoreCard';
 
 interface PendingScoresSectionProps {

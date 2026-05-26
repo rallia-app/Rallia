@@ -34,7 +34,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SportIcon } from '../components/SportIcon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -63,8 +62,9 @@ import { Logger } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { getCoverImageUrl, lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 
-import { useTranslation } from '../hooks';
-import type { RootStackParamList } from '../navigation/types';
+import { SportIcon } from '#/components/SportIcon';
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -400,17 +400,17 @@ const AdminNetworksScreen: React.FC = () => {
     () => [
       {
         value: 'all',
-        label: t('admin.networks.filters.all' as TranslationKey),
+        label: t('admin.networks.filters.all'),
         icon: 'layers-outline',
       },
       {
         value: 'certified',
-        label: t('admin.networks.filters.certified' as TranslationKey),
+        label: t('admin.networks.filters.certified'),
         icon: 'shield-checkmark-outline',
       },
       {
         value: 'uncertified',
-        label: t('admin.networks.filters.uncertified' as TranslationKey),
+        label: t('admin.networks.filters.uncertified'),
         icon: 'shield-outline',
       },
     ],
@@ -421,17 +421,17 @@ const AdminNetworksScreen: React.FC = () => {
     () => [
       {
         value: 'all',
-        label: t('admin.networks.filters.privacyAll' as TranslationKey),
+        label: t('admin.networks.filters.privacyAll'),
         icon: 'earth-outline',
       },
       {
         value: 'public',
-        label: t('admin.networks.filters.public' as TranslationKey),
+        label: t('admin.networks.filters.public'),
         icon: 'globe-outline',
       },
       {
         value: 'private',
-        label: t('admin.networks.filters.private' as TranslationKey),
+        label: t('admin.networks.filters.private'),
         icon: 'lock-closed-outline',
       },
     ],
@@ -442,7 +442,7 @@ const AdminNetworksScreen: React.FC = () => {
     const options: FilterDropdownOption<SportFilter>[] = [
       {
         value: 'all',
-        label: t('admin.networks.filters.allSports' as TranslationKey),
+        label: t('admin.networks.filters.allSports'),
         icon: 'apps-outline',
       },
     ];
@@ -460,20 +460,20 @@ const AdminNetworksScreen: React.FC = () => {
   // Get current filter labels
   const getCertificationLabel = useCallback(() => {
     const option = certificationOptions.find(o => o.value === certificationFilter);
-    return option?.label || t('admin.networks.filters.all' as TranslationKey);
+    return option?.label || t('admin.networks.filters.all');
   }, [certificationFilter, certificationOptions, t]);
 
   const getPrivacyLabel = useCallback(() => {
     const option = privacyOptions.find(o => o.value === privacyFilter);
-    return option?.label || t('admin.networks.filters.privacyAll' as TranslationKey);
+    return option?.label || t('admin.networks.filters.privacyAll');
   }, [privacyFilter, privacyOptions, t]);
 
   const getSportLabel = useCallback(() => {
     if (sportFilter === 'all') {
-      return t('admin.networks.filters.allSports' as TranslationKey);
+      return t('admin.networks.filters.allSports');
     }
     const sport = sports.find((s: Sport) => s.id === sportFilter);
-    return sport?.display_name || t('admin.networks.filters.allSports' as TranslationKey);
+    return sport?.display_name || t('admin.networks.filters.allSports');
   }, [sportFilter, sports, t]);
 
   // Check if any filter is active (excluding default values)
@@ -525,10 +525,7 @@ const AdminNetworksScreen: React.FC = () => {
   const handleSaveMaxMembers = useCallback(async () => {
     const newValue = parseInt(maxMembersInput, 10);
     if (isNaN(newValue) || newValue < 2 || newValue > 100) {
-      Alert.alert(
-        t('common.error' as TranslationKey),
-        t('admin.networks.maxMembers.invalidValue' as TranslationKey)
-      );
+      Alert.alert(t('common.error'), t('admin.networks.maxMembers.invalidValue'));
       return;
     }
 
@@ -541,20 +538,14 @@ const AdminNetworksScreen: React.FC = () => {
 
       if (result.success) {
         setIsEditingMaxMembers(false);
-        Alert.alert(
-          t('common.success' as TranslationKey),
-          t('admin.networks.maxMembers.saveSuccess' as TranslationKey)
-        );
+        Alert.alert(t('common.success'), t('admin.networks.maxMembers.saveSuccess'));
         Logger.logUserAction('admin_max_members_updated', { newValue });
       } else {
         throw new Error(result.error);
       }
     } catch (err) {
       console.error('Error saving max members:', err);
-      Alert.alert(
-        t('common.error' as TranslationKey),
-        t('admin.networks.maxMembers.saveError' as TranslationKey)
-      );
+      Alert.alert(t('common.error'), t('admin.networks.maxMembers.saveError'));
     } finally {
       setSavingMaxMembers(false);
     }
@@ -688,9 +679,9 @@ const AdminNetworksScreen: React.FC = () => {
   const getNetworkTypeLabel = useCallback(
     (network: AdminNetworkInfo): string => {
       if (network.network_type === 'player_group') {
-        return t('admin.networks.types.group' as TranslationKey);
+        return t('admin.networks.types.group');
       }
-      return t('admin.networks.types.community' as TranslationKey);
+      return t('admin.networks.types.community');
     },
     [t]
   );
@@ -771,7 +762,7 @@ const AdminNetworksScreen: React.FC = () => {
                       color={colors.certifiedText}
                     />
                     <Text size="xs" weight="medium" color={colors.certifiedText}>
-                      {t('admin.networks.certified' as TranslationKey)}
+                      {t('admin.networks.certified')}
                     </Text>
                   </View>
                 )}
@@ -784,8 +775,7 @@ const AdminNetworksScreen: React.FC = () => {
                 <Ionicons name="people-outline" size={14} color={colors.textMuted} />
                 <Text size="xs" color={colors.textMuted}>
                   {item.member_count}
-                  {item.max_members ? `/${item.max_members}` : ''}{' '}
-                  {t('admin.networks.members' as TranslationKey)}
+                  {item.max_members ? `/${item.max_members}` : ''} {t('admin.networks.members')}
                 </Text>
               </View>
               {/* Sport icon(s) - show both when null, single when specific */}
@@ -839,7 +829,7 @@ const AdminNetworksScreen: React.FC = () => {
               <View style={styles.creatorInfo}>
                 <Ionicons name="person-outline" size={12} color={colors.textMuted} />
                 <Text size="xs" color={colors.textMuted} numberOfLines={1}>
-                  {item.creator_name || t('admin.networks.unknownCreator' as TranslationKey)}
+                  {item.creator_name || t('admin.networks.unknownCreator')}
                 </Text>
               </View>
               <View style={styles.rightActions}>
@@ -847,7 +837,7 @@ const AdminNetworksScreen: React.FC = () => {
                   <View style={[styles.privateBadge, { backgroundColor: colors.warningBg }]}>
                     <Ionicons name="lock-closed" size={10} color={colors.warningText} />
                     <Text size="xs" color={colors.warningText}>
-                      {t('admin.networks.private' as TranslationKey)}
+                      {t('admin.networks.private')}
                     </Text>
                   </View>
                 )}
@@ -873,14 +863,12 @@ const AdminNetworksScreen: React.FC = () => {
           color={colors.textMuted}
         />
         <Text size="lg" weight="medium" color={colors.text} style={styles.emptyTitle}>
-          {searchQuery
-            ? t('admin.networks.noResults' as TranslationKey)
-            : t('admin.networks.empty' as TranslationKey)}
+          {searchQuery ? t('admin.networks.noResults') : t('admin.networks.empty')}
         </Text>
         <Text size="sm" color={colors.textSecondary} style={styles.emptyDescription}>
           {searchQuery
-            ? t('admin.networks.tryDifferentSearch' as TranslationKey)
-            : t('admin.networks.emptyDescription' as TranslationKey)}
+            ? t('admin.networks.tryDifferentSearch')
+            : t('admin.networks.emptyDescription')}
         </Text>
       </View>
     );
@@ -894,7 +882,7 @@ const AdminNetworksScreen: React.FC = () => {
         <Ionicons name="search" size={20} color={colors.textMuted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder={t('admin.networks.searchPlaceholder' as TranslationKey)}
+          placeholder={t('admin.networks.searchPlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={handleSearch}
@@ -919,7 +907,7 @@ const AdminNetworksScreen: React.FC = () => {
             weight="medium"
             color={networkType === 'all' ? BASE_WHITE : colors.textSecondary}
           >
-            {t('admin.networks.types.all' as TranslationKey)}
+            {t('admin.networks.types.all')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -940,7 +928,7 @@ const AdminNetworksScreen: React.FC = () => {
             color={networkType === 'player_group' ? BASE_WHITE : colors.textSecondary}
             style={styles.toggleText}
           >
-            {t('admin.networks.types.groups' as TranslationKey)}
+            {t('admin.networks.types.groups')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -961,7 +949,7 @@ const AdminNetworksScreen: React.FC = () => {
             color={networkType === 'community' ? BASE_WHITE : colors.textSecondary}
             style={styles.toggleText}
           >
-            {t('admin.networks.types.communities' as TranslationKey)}
+            {t('admin.networks.types.communities')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -980,10 +968,10 @@ const AdminNetworksScreen: React.FC = () => {
             </View>
             <View style={styles.maxMembersTextContainer}>
               <Text size="sm" weight="semibold" color={colors.text}>
-                {t('admin.networks.maxMembers.title' as TranslationKey)}
+                {t('admin.networks.maxMembers.title')}
               </Text>
               <Text size="xs" color={colors.textMuted}>
-                {t('admin.networks.maxMembers.description' as TranslationKey)}
+                {t('admin.networks.maxMembers.description')}
               </Text>
             </View>
           </View>
@@ -1030,14 +1018,14 @@ const AdminNetworksScreen: React.FC = () => {
                 <>
                   <Ionicons name="checkmark" size={16} color={BASE_WHITE} />
                   <Text size="sm" weight="medium" color={BASE_WHITE} style={{ marginLeft: 4 }}>
-                    {t('common.save' as TranslationKey)}
+                    {t('common.save')}
                   </Text>
                 </>
               ) : (
                 <>
                   <Ionicons name="create-outline" size={16} color={colors.accent} />
                   <Text size="sm" weight="medium" color={colors.accent} style={{ marginLeft: 4 }}>
-                    {t('common.update' as TranslationKey)}
+                    {t('common.update')}
                   </Text>
                 </>
               )}
@@ -1107,7 +1095,7 @@ const AdminNetworksScreen: React.FC = () => {
           >
             <Ionicons name="close-circle" size={16} color={colors.errorText} />
             <Text size="sm" color={colors.errorText} style={styles.resetButtonText}>
-              {t('common.reset' as TranslationKey)}
+              {t('common.reset')}
             </Text>
           </TouchableOpacity>
         )}
@@ -1116,7 +1104,7 @@ const AdminNetworksScreen: React.FC = () => {
       {/* Stats Row */}
       <View style={styles.statsRowHeader}>
         <Text size="sm" color={colors.textSecondary}>
-          {totalCount} {t('admin.networks.networksFound' as TranslationKey)}
+          {totalCount} {t('admin.networks.networksFound')}
         </Text>
       </View>
     </View>
@@ -1142,7 +1130,7 @@ const AdminNetworksScreen: React.FC = () => {
             {t('admin.accessDenied' as TranslationKey)}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.accessDeniedText}>
-            {t('admin.networks.accessDeniedDescription' as TranslationKey)}
+            {t('admin.networks.accessDeniedDescription')}
           </Text>
         </View>
       </SafeAreaView>
@@ -1156,7 +1144,7 @@ const AdminNetworksScreen: React.FC = () => {
         <View style={styles.errorState}>
           <Ionicons name="alert-circle" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.errorTitle}>
-            {t('common.error' as TranslationKey)}
+            {t('common.error')}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.errorText}>
             {error.message}
@@ -1166,7 +1154,7 @@ const AdminNetworksScreen: React.FC = () => {
             onPress={handleRefresh}
           >
             <Text size="sm" weight="medium" color={BASE_WHITE}>
-              {t('common.retry' as TranslationKey)}
+              {t('common.retry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1203,7 +1191,7 @@ const AdminNetworksScreen: React.FC = () => {
       <FilterDropdown<SportFilter>
         visible={showSportDropdown}
         onClose={() => setShowSportDropdown(false)}
-        title={t('admin.networks.filters.sportTitle' as TranslationKey)}
+        title={t('admin.networks.filters.sportTitle')}
         options={sportOptions}
         selectedValue={sportFilter}
         onSelect={value => {
@@ -1217,7 +1205,7 @@ const AdminNetworksScreen: React.FC = () => {
       <FilterDropdown<CertificationFilter>
         visible={showCertificationDropdown}
         onClose={() => setShowCertificationDropdown(false)}
-        title={t('admin.networks.filters.certificationTitle' as TranslationKey)}
+        title={t('admin.networks.filters.certificationTitle')}
         options={certificationOptions}
         selectedValue={certificationFilter}
         onSelect={value => {
@@ -1231,7 +1219,7 @@ const AdminNetworksScreen: React.FC = () => {
       <FilterDropdown<PrivacyFilter>
         visible={showPrivacyDropdown}
         onClose={() => setShowPrivacyDropdown(false)}
-        title={t('admin.networks.filters.privacyTitle' as TranslationKey)}
+        title={t('admin.networks.filters.privacyTitle')}
         options={privacyOptions}
         selectedValue={privacyFilter}
         onSelect={value => {

@@ -19,9 +19,11 @@ import { Text } from '@rallia/shared-components';
 import { useFacilitySearch, facilityKeys } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { lightHaptic, selectionHaptic, successHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
+
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
 // =============================================================================

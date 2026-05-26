@@ -19,8 +19,9 @@ import {
   spacingPixels,
   shadowsSemanticNative,
 } from '@rallia/design-system';
-import { useTranslation } from '../../../hooks';
-import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '../featureFlag';
+
+import { useTranslation } from '#/hooks';
+import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '#/features/weekly-checkin/featureFlag';
 
 interface SummaryCardProps {
   newStreak: number;

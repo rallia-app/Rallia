@@ -21,7 +21,9 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import DatabaseService, { Logger } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+
+import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
+
 import TennisIcon from '../../../../../../assets/icons/tennis.svg';
 import PickleballIcon from '../../../../../../assets/icons/pickleball.svg';
 

@@ -9,8 +9,9 @@ import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-shee
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface OptionItem {
   id: string;

@@ -26,10 +26,11 @@ import {
   useSharedContactsRealtime,
   type SharedContact,
 } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
-import type { CommunityStackParamList } from '../navigation/types';
-import { ContactCard } from '../features/shared-lists';
-import { SearchBar } from '../components/SearchBar';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import type { CommunityStackParamList } from '#/navigation/types';
+import { ContactCard } from '#/features/shared-lists';
+import { SearchBar } from '#/components/SearchBar';
 
 type RouteParams = {
   SharedListDetail: {

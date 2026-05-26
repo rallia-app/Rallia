@@ -1,7 +1,8 @@
 import type { JsonType } from '@posthog/core';
 import { Platform } from 'react-native';
-import { posthogClient } from '../providers/PostHogProvider';
-import { logMetaEvent } from '../lib/meta';
+
+import { posthogClient } from '#/providers/PostHogProvider';
+import { logMetaEvent } from '#/lib/meta';
 
 function capture(event: string, properties?: Record<string, JsonType>): void {
   if (__DEV__) {

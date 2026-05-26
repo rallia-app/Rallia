@@ -7,11 +7,11 @@ import { useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement'>) {
   const onAgree = payload?.onAgree;

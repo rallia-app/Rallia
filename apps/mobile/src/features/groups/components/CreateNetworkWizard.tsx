@@ -20,10 +20,11 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
+
+import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
+import { CreateCommunityForm } from '#/features/communities/components/CreateCommunityModal';
 
 import { CreateGroupForm } from './CreateGroupModal';
-import { CreateCommunityForm } from '../../communities/components/CreateCommunityModal';
 
 // ============================================================================
 // TYPES
