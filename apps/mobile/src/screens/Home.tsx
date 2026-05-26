@@ -818,7 +818,7 @@ const Home = () => {
     //   • opt-ins for auto-create / auto-invite
     // On submit, last_confirmed_at is bumped and a player_weekly_checkin
     // row is inserted, so the banner disappears for the rest of the week.
-    appNavigation.navigate('WeeklyCheckIn');
+    appNavigation.navigate('WeeklyCheckIn', { source: 'banner' });
   }, [appNavigation]);
 
   const handleDismissAvailabilityBanner = useCallback(async () => {
