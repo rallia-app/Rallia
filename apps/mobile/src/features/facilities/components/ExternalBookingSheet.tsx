@@ -14,9 +14,10 @@ import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, useOpenExternalBooking } from '../../../hooks';
-import { useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
+
+import { useThemeStyles, useTranslation, useOpenExternalBooking } from '#/hooks';
+import { useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
 
 export function ExternalBookingActionSheet({ payload }: SheetProps<'external-booking'>) {
   const facility = payload?.facility as FacilityWithDetails;

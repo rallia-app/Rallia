@@ -4,6 +4,7 @@
     "strict": true,
     "jsx": "react-jsx",
     "paths": {
+      "#/*": ["./src/*"],
       "@rallia/shared-components": ["../../packages/shared-components/src"],
       "@rallia/shared-constants": ["../../packages/shared-constants/src"],
       "@rallia/shared-hooks": ["../../packages/shared-hooks/src"],
@@ -22,7 +23,6 @@
     "**/*.tsx",
     "*.ts",
     "*.tsx",
-    "nativewind-env.d.ts",
     "../../packages/shared-hooks/src/**/*.native.ts",
     "../../packages/shared-components/src/**/*.native.tsx"
   ]

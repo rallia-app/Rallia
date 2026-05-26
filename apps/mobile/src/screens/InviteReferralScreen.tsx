@@ -12,8 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import { lightTheme, darkTheme, spacingPixels, primary } from '@rallia/design-system';
-import { useTranslation } from '../hooks';
-import type { RootStackScreenProps } from '../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackScreenProps } from '#/navigation/types';
 
 const PENDING_REFERRAL_KEY = 'pending_referral_code';
 

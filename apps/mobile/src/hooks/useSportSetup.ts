@@ -2,11 +2,13 @@ import { useState, useCallback } from 'react';
 import { supabase, Logger } from '@rallia/shared-services';
 import { usePlayer } from '@rallia/shared-hooks';
 import { useToast } from '@rallia/shared-components';
-import { useSport } from '../context';
+import { SheetManager } from 'react-native-actions-sheet';
+
+import { useSport } from '#/context';
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+
 import { useUserLocation } from './useUserLocation';
 import { useTranslation } from './useTranslation';
-import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { SheetManager } from 'react-native-actions-sheet';
 
 interface UseSportSetupOptions {
   userId: string;

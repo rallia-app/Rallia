@@ -10,7 +10,6 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../../../hooks';
 import { createProofReport, type ProofReportReason } from '@rallia/shared-services';
 import {
   lightTheme,
@@ -23,6 +22,8 @@ import {
   status,
 } from '@rallia/design-system';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
+
+import { useTranslation } from '#/hooks';
 
 // =============================================================================
 // TYPES
@@ -219,7 +220,7 @@ export function ReportProofActionSheet({ payload }: SheetProps<'report-proof'>) 
                     flex: 1,
                   }}
                 >
-                  {t(`profile.reportProof.reasons.${reason}` as Parameters<typeof t>[0])}
+                  {t(`profile.reportProof.reasons.${reason}`)}
                 </Text>
                 {isSelected && (
                   <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />

@@ -13,9 +13,10 @@ import {
   formatPostalCodeInput,
 } from '@rallia/shared-utils';
 import type { PlacePrediction } from '@rallia/shared-types';
-import { useThemeStyles, usePlayer, useTranslation } from '../../../../hooks';
-import { useUserHomeLocation } from '../../../../context/UserLocationContext';
-import { SearchBar } from '../../../../components/SearchBar';
+
+import { useThemeStyles, usePlayer, useTranslation } from '#/hooks';
+import { useUserHomeLocation } from '#/context/UserLocationContext';
+import { SearchBar } from '#/components/SearchBar';
 
 export function LocationActionSheet({ payload }: SheetProps<'player-location'>) {
   const onSave = payload?.onSave;
@@ -234,7 +235,7 @@ export function LocationActionSheet({ payload }: SheetProps<'player-location'>) 
         .eq('id', user.id);
 
       if (updateError) {
-        Logger.error('Failed to update location', updateError as Error, { userId: user.id });
+        Logger.error('Failed to update location', updateError, { userId: user.id });
         setIsSaving(false);
         toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;

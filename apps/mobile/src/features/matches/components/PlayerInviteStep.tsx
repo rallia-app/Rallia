@@ -25,15 +25,19 @@ import {
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
 import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
-import type { PlayerSearchResult, ReputationTier } from '@rallia/shared-services';
+import type {
+  PlayerSearchResult,
+  ReputationTier,
+  ReputationDisplay,
+} from '@rallia/shared-services';
 import { getTierConfig } from '@rallia/shared-services';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
-import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
-import { SearchBar } from '../../../components/SearchBar';
-import RatingBadge from '../../../components/RatingBadge';
-import ReputationBadge from '../../../components/ReputationBadge';
-import type { ReputationDisplay } from '@rallia/shared-services';
-import * as Analytics from '../../../services/analytics';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
+import { SearchBar } from '#/components/SearchBar';
+import RatingBadge from '#/components/RatingBadge';
+import ReputationBadge from '#/components/ReputationBadge';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // TYPES

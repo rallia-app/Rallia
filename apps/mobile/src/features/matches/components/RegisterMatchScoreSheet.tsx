@@ -32,10 +32,11 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { usePlayer, useProposeRebuttalScore } from '@rallia/shared-hooks';
 import { submitMatchResultForMatch } from '@rallia/shared-services';
 import type { MatchWithDetails, MatchParticipantWithPlayer } from '@rallia/shared-types';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 const MAX_SETS = 5;
 const BASE_WHITE = '#ffffff';

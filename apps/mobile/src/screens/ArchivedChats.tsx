@@ -7,10 +7,8 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { getConversationDisplayName } from '@rallia/shared-services';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import {
   usePlayerConversations,
@@ -20,9 +18,11 @@ import {
   useBlockedUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem } from '../features/chat';
 import { SheetManager } from 'react-native-actions-sheet';
-import { useAppNavigation } from '../navigation/hooks';
+
+import { ConversationItem } from '#/features/chat';
+import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '#/hooks';
+import { useAppNavigation } from '#/navigation/hooks';
 
 const ArchivedChats = () => {
   const { colors, isDark } = useThemeStyles();

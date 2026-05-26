@@ -5,11 +5,11 @@
 
 import React, { memo, useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
 import type { TypingIndicator as TypingIndicatorType } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface TypingIndicatorProps {
   typingUsers: TypingIndicatorType[];

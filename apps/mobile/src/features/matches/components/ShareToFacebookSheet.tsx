@@ -30,10 +30,11 @@ import {
   spacingPixels,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useTranslation } from '../../../hooks';
-import { generateFacebookPostMessage } from '../../../utils/shareUtils';
-import type { MatchDetailData } from '../../../context';
-import * as Analytics from '../../../services/analytics';
+
+import { useTranslation } from '#/hooks';
+import { generateFacebookPostMessage } from '#/utils/shareUtils';
+import type { MatchDetailData } from '#/context';
+import * as Analytics from '#/services/analytics';
 
 const FACEBOOK_BLUE = '#1877F2';
 const FACEBOOK_APP_URL = 'fb://';

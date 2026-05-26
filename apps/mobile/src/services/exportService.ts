@@ -69,8 +69,8 @@ export function toCSV<T>(data: T[], columns: ExportColumn<T>[]): string {
       const key = col.key as keyof T;
       const rowRecord = row as Record<string, unknown>;
       const value =
-        typeof key === 'string' && (key as string).includes('.')
-          ? getNestedValue(rowRecord, key as string)
+        typeof key === 'string' && key.includes('.')
+          ? getNestedValue(rowRecord, key)
           : rowRecord[key as string];
 
       if (col.formatter) {
@@ -124,8 +124,8 @@ function generateHTMLTable<T>(
         .map(col => {
           const key = col.key as keyof T;
           const value =
-            typeof key === 'string' && (key as string).includes('.')
-              ? getNestedValue(rowRecord, key as string)
+            typeof key === 'string' && key.includes('.')
+              ? getNestedValue(rowRecord, key)
               : rowRecord[key as string];
 
           const displayValue = col.formatter ? col.formatter(value, row) : (value ?? '');

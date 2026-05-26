@@ -11,14 +11,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from '../hooks';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { useTour } from '../context/TourContext';
-import { tourService } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
+import { tourService, Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic, mediumHaptic } from '../utils/haptics';
-import { TOURS_ENABLED } from '../hooks/useTourSequence';
+
+import { useTour } from '#/context/TourContext';
+import { useTranslation } from '#/hooks';
+import { lightHaptic, mediumHaptic } from '#/utils/haptics';
+import { TOURS_ENABLED } from '#/hooks/useTourSequence';
 
 interface WelcomeTourModalProps {
   /** Whether the splash animation is complete */
@@ -36,15 +36,6 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   const { startTour, isTourCompleted, isLoading } = useTour();
   const insets = useSafeAreaInsets();
   const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for icon rings
-
-  const FeatureItem: React.FC<FeatureItemProps> = ({ icon, text }) => (
-    <View style={styles.featureItem}>
-      <View style={[styles.featureIconContainer, { backgroundColor: tintedPrimaryBg }]}>
-        <Ionicons name={icon} size={20} color={colors.primary} />
-      </View>
-      <Text style={[styles.featureText, { color: colors.text }]}>{text}</Text>
-    </View>
-  );
 
   const [visible, setVisible] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
@@ -169,11 +160,20 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
           {/* Feature highlights */}
           <View style={styles.featuresContainer}>
             <FeatureItem
+              colors={colors}
               icon="game-controller-outline"
               text={t('tour.mainNavigation.matches.title')}
             />
-            <FeatureItem icon="chatbubbles-outline" text={t('tour.mainNavigation.chat.title')} />
-            <FeatureItem icon="person-outline" text={t('tour.mainNavigation.profile.title')} />
+            <FeatureItem
+              colors={colors}
+              icon="chatbubbles-outline"
+              text={t('tour.mainNavigation.chat.title')}
+            />
+            <FeatureItem
+              colors={colors}
+              icon="person-outline"
+              text={t('tour.mainNavigation.profile.title')}
+            />
           </View>
 
           {/* Buttons */}
@@ -216,10 +216,24 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   );
 };
 
-// Feature item component (rendered inside WelcomeTourModal so it shares the themed colors closure)
 interface FeatureItemProps {
   icon: keyof typeof Ionicons.glyphMap;
   text: string;
+  colors: { primary: string; text: string };
+}
+
+// Declared at module scope so it keeps a stable component identity across the
+// parent's renders (an in-render definition remounts the subtree each render).
+function FeatureItem({ icon, text, colors }: FeatureItemProps) {
+  const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for icon rings
+  return (
+    <View style={styles.featureItem}>
+      <View style={[styles.featureIconContainer, { backgroundColor: tintedPrimaryBg }]}>
+        <Ionicons name={icon} size={20} color={colors.primary} />
+      </View>
+      <Text style={[styles.featureText, { color: colors.text }]}>{text}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

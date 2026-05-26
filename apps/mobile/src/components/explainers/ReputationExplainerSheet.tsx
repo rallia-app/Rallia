@@ -5,7 +5,9 @@ import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { TIER_COLORS } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../../hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+
 import { ExplainerSection } from './ExplainerSection';
 
 interface TierRowProps {

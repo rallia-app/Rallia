@@ -27,7 +27,6 @@ import { StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CopilotStep } from 'react-native-copilot';
-import { WalkthroughableView } from '../context/TourContext';
 import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 
@@ -37,11 +36,6 @@ import {
   NotificationButton,
   SettingsButton,
 } from '@rallia/shared-components';
-import { useActionsSheet, useSport, useOverlay } from '../context';
-import SportSelector from '../components/SportSelector';
-import TennisIcon from '../../assets/icons/tennis.svg';
-import PickleballIcon from '../../assets/icons/pickleball.svg';
-import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import {
   useUnreadCountForSport,
   useProfile,
@@ -49,79 +43,94 @@ import {
   useOtherSportsUnreadCount,
   useProfileCompleteness,
   chatKeys,
+  useTheme,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
-import { useTheme } from '@rallia/shared-hooks';
-import { useAppNavigation } from './hooks';
 import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
-import ProfileCompletionRing from '../features/profile/components/ProfileCompletionRing';
-import { getTierColors } from '../features/profile/completionTierColors';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   NativeStackNavigationProp,
   NativeStackHeaderProps,
 } from '@react-navigation/native-stack';
+import { getTierColors } from '#/features/profile/completionTierColors';
+import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '#/hooks';
+import ProfileCompletionRing from '#/features/profile/components/ProfileCompletionRing';
+import SportSelector from '#/components/SportSelector';
+import { useActionsSheet, useSport, useOverlay } from '#/context';
+import { WalkthroughableView } from '#/context/TourContext';
 
 // Screens
-import Home from '../screens/Home';
-import Community from '../screens/Community';
-import Chat from '../screens/Chat';
-import ChatConversation from '../screens/ChatConversation';
-import ArchivedChats from '../screens/ArchivedChats';
-import SettingsScreen from '../screens/SettingsScreen';
-import Paywall from '../screens/Paywall';
-import SubscriptionManagement from '../screens/SubscriptionManagement';
-import UserProfile from '../screens/UserProfile';
-import SportProfile from '../screens/SportProfile';
-import RatingProofs from '../screens/RatingProofs';
-import RatingReferences from '../screens/RatingReferences';
-import IncomingReferenceRequests from '../screens/IncomingReferenceRequests';
-import Notifications from '../screens/Notifications';
-import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
-import PermissionsScreen from '../screens/PermissionsScreen';
-import PlayerProfile from '../screens/PlayerProfile';
-import SharedLists from '../screens/SharedLists';
-import SharedListDetail from '../screens/SharedListDetail';
-import Groups from '../screens/Groups';
-import GroupDetail from '../screens/GroupDetail';
-import PreOnboardingScreen from '../screens/PreOnboarding';
-import GroupChatInfo from '../screens/GroupChatInfo';
-import PlayedMatchDetail from '../screens/PlayedMatchDetail';
-import Communities from '../screens/Communities';
-import CommunityDetail from '../screens/CommunityDetail';
-import TournamentDetail from '../screens/TournamentDetail';
-import Tournaments from '../screens/Tournaments';
-import NetworkMatches from '../screens/NetworkMatches';
-import AdminPanelScreen from '../screens/AdminPanelScreen';
-import AdminDashboardScreen from '../screens/AdminDashboardScreen';
-import AdminUsersScreen from '../screens/AdminUsersScreen';
-import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
-import AdminNetworksScreen from '../screens/AdminNetworksScreen';
-import AdminNetworkDetailScreen from '../screens/AdminNetworkDetailScreen';
-import AdminActivityLogScreen from '../screens/AdminActivityLogScreen';
-import AdminAlertsScreen from '../screens/AdminAlertsScreen';
-import AdminSettingsScreen from '../screens/AdminSettingsScreen';
-import AdminModerationScreen from '../screens/AdminModerationScreen';
+import Home from '#/screens/Home';
+import Community from '#/screens/Community';
+import Chat from '#/screens/Chat';
+import ChatConversation from '#/screens/ChatConversation';
+import ArchivedChats from '#/screens/ArchivedChats';
+import SettingsScreen from '#/screens/SettingsScreen';
+import Paywall from '#/screens/Paywall';
+import SubscriptionManagement from '#/screens/SubscriptionManagement';
+import UserProfile from '#/screens/UserProfile';
+import SportProfile from '#/screens/SportProfile';
+import RatingProofs from '#/screens/RatingProofs';
+import RatingReferences from '#/screens/RatingReferences';
+import IncomingReferenceRequests from '#/screens/IncomingReferenceRequests';
+import Notifications from '#/screens/Notifications';
+import NotificationPreferencesScreen from '#/screens/NotificationPreferencesScreen';
+import PermissionsScreen from '#/screens/PermissionsScreen';
+import PlayerProfile from '#/screens/PlayerProfile';
+import SharedLists from '#/screens/SharedLists';
+import SharedListDetail from '#/screens/SharedListDetail';
+import Groups from '#/screens/Groups';
+import GroupDetail from '#/screens/GroupDetail';
+import PreOnboardingScreen from '#/screens/PreOnboarding';
+import GroupChatInfo from '#/screens/GroupChatInfo';
+import PlayedMatchDetail from '#/screens/PlayedMatchDetail';
+import Communities from '#/screens/Communities';
+import CommunityDetail from '#/screens/CommunityDetail';
+import TournamentDetail from '#/screens/TournamentDetail';
+import Tournaments from '#/screens/Tournaments';
+import NetworkMatches from '#/screens/NetworkMatches';
+import AdminPanelScreen from '#/screens/AdminPanelScreen';
+import AdminDashboardScreen from '#/screens/AdminDashboardScreen';
+import AdminUsersScreen from '#/screens/AdminUsersScreen';
+import AdminUserDetailScreen from '#/screens/AdminUserDetailScreen';
+import AdminNetworksScreen from '#/screens/AdminNetworksScreen';
+import AdminNetworkDetailScreen from '#/screens/AdminNetworkDetailScreen';
+import AdminActivityLogScreen from '#/screens/AdminActivityLogScreen';
+import AdminAlertsScreen from '#/screens/AdminAlertsScreen';
+import AdminSettingsScreen from '#/screens/AdminSettingsScreen';
+import AdminModerationScreen from '#/screens/AdminModerationScreen';
 // Phase 2 Analytics Sub-Views
-import AdminOnboardingAnalyticsScreen from '../screens/admin/AdminOnboardingAnalyticsScreen';
-import AdminUserAnalyticsScreen from '../screens/admin/AdminUserAnalyticsScreen';
-import AdminMatchAnalyticsScreen from '../screens/admin/AdminMatchAnalyticsScreen';
+import AdminOnboardingAnalyticsScreen from '#/screens/admin/AdminOnboardingAnalyticsScreen';
+import AdminUserAnalyticsScreen from '#/screens/admin/AdminUserAnalyticsScreen';
+import AdminMatchAnalyticsScreen from '#/screens/admin/AdminMatchAnalyticsScreen';
 // Phase 3 Analytics Sub-Views
-import AdminEngagementAnalyticsScreen from '../screens/admin/AdminEngagementAnalyticsScreen';
-import AdminMessagingAnalyticsScreen from '../screens/admin/AdminMessagingAnalyticsScreen';
+import AdminEngagementAnalyticsScreen from '#/screens/admin/AdminEngagementAnalyticsScreen';
+import AdminMessagingAnalyticsScreen from '#/screens/admin/AdminMessagingAnalyticsScreen';
 // Phase 4 Analytics Sub-Views
-import AdminRatingAnalyticsScreen from '../screens/admin/AdminRatingAnalyticsScreen';
-import AdminModerationAnalyticsScreen from '../screens/admin/AdminModerationAnalyticsScreen';
+import AdminRatingAnalyticsScreen from '#/screens/admin/AdminRatingAnalyticsScreen';
+import AdminModerationAnalyticsScreen from '#/screens/admin/AdminModerationAnalyticsScreen';
 // Phase 5 Analytics Sub-Views
-import AdminCommunityAnalyticsScreen from '../screens/admin/AdminCommunityAnalyticsScreen';
-import AdminSportAnalyticsScreen from '../screens/admin/AdminSportAnalyticsScreen';
-import MapScreen from '../screens/Map';
+import AdminCommunityAnalyticsScreen from '#/screens/admin/AdminCommunityAnalyticsScreen';
+import AdminSportAnalyticsScreen from '#/screens/admin/AdminSportAnalyticsScreen';
+import MapScreen from '#/screens/Map';
 
 // Components
-import { ThemeLogo } from '../components/ThemeLogo';
+import { ThemeLogo } from '#/components/ThemeLogo';
 
 // Types
+import PublicMatches from '#/features/matches/screens/PublicMatches';
+import PlayerMatches from '#/features/matches/screens/PlayerMatches';
+import { FacilitiesDirectory, FacilityDetail } from '#/features/facilities';
+import { MyBookingsScreen, BookingDetailScreen } from '#/features/bookings';
+import { InviteReferralScreen } from '#/screens/InviteReferralScreen';
+import { WeeklyCheckInScreen } from '#/features/weekly-checkin/WeeklyCheckInScreen';
+
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
+import TennisIcon from '../../assets/icons/tennis.svg';
+
+import { useAppNavigation } from './hooks';
 import type {
   RootStackParamList,
   BottomTabParamList,
@@ -131,12 +140,6 @@ import type {
   ChatStackParamList,
   MapStackParamList,
 } from './types';
-import PublicMatches from '../features/matches/screens/PublicMatches';
-import PlayerMatches from '../features/matches/screens/PlayerMatches';
-import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
-import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
-import { InviteReferralScreen } from '../screens/InviteReferralScreen';
-import { WeeklyCheckInScreen } from '../features/weekly-checkin/WeeklyCheckInScreen';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -569,15 +572,19 @@ function HomeStack() {
   const playerMatchesOptions = usePlayerMatchesScreenOptions();
   return (
     <HomeStackNavigator.Navigator id="HomeStack" screenOptions={fastAnimationOptions}>
-      <HomeStackNavigator.Screen name="HomeScreen" component={Home} options={mainScreenOptions} />
+      <HomeStackNavigator.Screen
+        name="HomeScreen"
+        getComponent={() => Home}
+        options={mainScreenOptions}
+      />
       <HomeStackNavigator.Screen
         name="PublicMatches"
-        component={PublicMatches}
+        getComponent={() => PublicMatches}
         options={publicMatchesOptions}
       />
       <HomeStackNavigator.Screen
         name="PlayerMatches"
-        component={PlayerMatches}
+        getComponent={() => PlayerMatches}
         options={playerMatchesOptions}
       />
     </HomeStackNavigator.Navigator>
@@ -596,12 +603,12 @@ function CourtsStack() {
     <CourtsStackNavigator.Navigator id="CourtsStack" screenOptions={fastAnimationOptions}>
       <CourtsStackNavigator.Screen
         name="FacilitiesDirectory"
-        component={FacilitiesDirectory}
+        getComponent={() => FacilitiesDirectory}
         options={mainScreenOptions}
       />
       <CourtsStackNavigator.Screen
         name="FacilityDetail"
-        component={FacilityDetail}
+        getComponent={() => FacilityDetail}
         options={({ navigation, route }) => {
           const rootNav = navigation.getParent()?.getParent();
           const { returnTo } = route.params ?? {};
@@ -652,12 +659,12 @@ function CommunityStack() {
     <CommunityStackNavigator.Navigator id="CommunityStack" screenOptions={fastAnimationOptions}>
       <CommunityStackNavigator.Screen
         name="PlayerDirectory"
-        component={Community}
+        getComponent={() => Community}
         options={mainScreenOptions}
       />
       <CommunityStackNavigator.Screen
         name="ShareLists"
-        component={SharedLists}
+        getComponent={() => SharedLists}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('community.shareLists') || 'Shared Lists',
@@ -667,7 +674,7 @@ function CommunityStack() {
       />
       <CommunityStackNavigator.Screen
         name="SharedListDetail"
-        component={SharedListDetail}
+        getComponent={() => SharedListDetail}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('sharedLists.title') || 'List',
@@ -676,7 +683,7 @@ function CommunityStack() {
       />
       <CommunityStackNavigator.Screen
         name="Groups"
-        component={Groups}
+        getComponent={() => Groups}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('community.groups') || 'Groups',
@@ -685,7 +692,7 @@ function CommunityStack() {
       />
       <CommunityStackNavigator.Screen
         name="Communities"
-        component={Communities}
+        getComponent={() => Communities}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('community.communities') || 'Communities',
@@ -716,12 +723,12 @@ function ChatStack() {
     <ChatStackNavigator.Navigator id="ChatStack" screenOptions={fastAnimationOptions}>
       <ChatStackNavigator.Screen
         name="Conversations"
-        component={Chat}
+        getComponent={() => Chat}
         options={mainScreenOptions}
       />
       <ChatStackNavigator.Screen
         name="ArchivedChats"
-        component={ArchivedChats}
+        getComponent={() => ArchivedChats}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('chat.archivedChats.title'),
@@ -1083,7 +1090,7 @@ function BottomTabs() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeStack}
+        getComponent={() => HomeStack}
         options={{
           tabBarLabel: t('navigation.matches'),
           tabBarIcon: ({ color, size }) => <HomeTabIcon color={color} size={size} />,
@@ -1092,7 +1099,7 @@ function BottomTabs() {
       />
       <Tab.Screen
         name="Courts"
-        component={CourtsStack}
+        getComponent={() => CourtsStack}
         options={{
           tabBarLabel: t('navigation.courts'),
           tabBarIcon: ({ color, size }) => <CourtsTabIcon color={color} size={size} />,
@@ -1101,7 +1108,7 @@ function BottomTabs() {
       />
       <Tab.Screen
         name="Actions"
-        component={ActionsPlaceholder}
+        getComponent={() => ActionsPlaceholder}
         options={{
           tabBarShowLabel: false,
           tabBarIcon: () => null,
@@ -1117,7 +1124,7 @@ function BottomTabs() {
       />
       <Tab.Screen
         name="Community"
-        component={CommunityStack}
+        getComponent={() => CommunityStack}
         options={{
           tabBarLabel: t('navigation.players'),
           tabBarIcon: ({ color, size }) => <CommunityTabIcon color={color} size={size} />,
@@ -1126,7 +1133,7 @@ function BottomTabs() {
       />
       <Tab.Screen
         name="Chat"
-        component={ChatStack}
+        getComponent={() => ChatStack}
         options={{
           tabBarLabel: t('navigation.chat'),
           tabBarIcon: ({ color, size }) => <ChatTabIconWithTour color={color} size={size} />,
@@ -1185,12 +1192,12 @@ function MapStack() {
     <MapStackNavigator.Navigator id="MapStack" screenOptions={fastAnimationOptions}>
       <MapStackNavigator.Screen
         name="MapView"
-        component={MapScreen}
+        getComponent={() => MapScreen}
         options={{ headerShown: false }}
       />
       <MapStackNavigator.Screen
         name="FacilityDetail"
-        component={FacilityDetail}
+        getComponent={() => FacilityDetail}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('facilitiesTab.title'),
@@ -1225,18 +1232,22 @@ export default function AppNavigator() {
       {!isSportSelectionComplete && (
         <RootStack.Screen
           name="PreOnboarding"
-          component={PreOnboardingScreen}
+          getComponent={() => PreOnboardingScreen}
           options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
         />
       )}
 
       {/* Main app entry - only rendered after sport selection is complete */}
-      <RootStack.Screen name="Main" component={MainWithSheets} options={{ headerShown: false }} />
+      <RootStack.Screen
+        name="Main"
+        getComponent={() => MainWithSheets}
+        options={{ headerShown: false }}
+      />
 
       {/* Shared screens - full screen, tabs hidden */}
       <RootStack.Screen
         name="UserProfile"
-        component={UserProfile}
+        getComponent={() => UserProfile}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.profile'),
@@ -1246,7 +1257,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="PlayerProfile"
-        component={PlayerProfile}
+        getComponent={() => PlayerProfile}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.playerProfile'),
@@ -1256,7 +1267,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="SportProfile"
-        component={SportProfile}
+        getComponent={() => SportProfile}
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.sportName
@@ -1268,7 +1279,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="Settings"
-        component={SettingsScreen}
+        getComponent={() => SettingsScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.settings'),
@@ -1278,13 +1289,13 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="Paywall"
-        component={Paywall}
+        getComponent={() => Paywall}
         options={{ headerShown: false, presentation: 'modal' }}
       />
 
       <RootStack.Screen
         name="SubscriptionManagement"
-        component={SubscriptionManagement}
+        getComponent={() => SubscriptionManagement}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('subscription.manage'),
@@ -1294,7 +1305,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="Notifications"
-        component={Notifications}
+        getComponent={() => Notifications}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.notifications'),
@@ -1304,7 +1315,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="NotificationPreferences"
-        component={NotificationPreferencesScreen}
+        getComponent={() => NotificationPreferencesScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.notificationPreferences'),
@@ -1314,7 +1325,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="Permissions"
-        component={PermissionsScreen}
+        getComponent={() => PermissionsScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.permissions'),
@@ -1324,7 +1335,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminPanel"
-        component={AdminPanelScreen}
+        getComponent={() => AdminPanelScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.title'),
@@ -1334,7 +1345,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminDashboard"
-        component={AdminDashboardScreen}
+        getComponent={() => AdminDashboardScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.analytics.title'),
@@ -1344,7 +1355,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminUsers"
-        component={AdminUsersScreen}
+        getComponent={() => AdminUsersScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.users.title'),
@@ -1354,7 +1365,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminUserDetail"
-        component={AdminUserDetailScreen}
+        getComponent={() => AdminUserDetailScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.users.detail.title'),
@@ -1364,7 +1375,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminNetworks"
-        component={AdminNetworksScreen}
+        getComponent={() => AdminNetworksScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.networks.title'),
@@ -1374,7 +1385,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminNetworkDetail"
-        component={AdminNetworkDetailScreen}
+        getComponent={() => AdminNetworkDetailScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('admin.networks.detail.title'),
@@ -1384,89 +1395,89 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="AdminActivityLog"
-        component={AdminActivityLogScreen}
+        getComponent={() => AdminActivityLogScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminAlerts"
-        component={AdminAlertsScreen}
+        getComponent={() => AdminAlertsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminSettings"
-        component={AdminSettingsScreen}
+        getComponent={() => AdminSettingsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminModeration"
-        component={AdminModerationScreen}
+        getComponent={() => AdminModerationScreen}
         options={{ headerShown: false }}
       />
 
       {/* Phase 2 Analytics Sub-Views */}
       <RootStack.Screen
         name="AdminOnboardingAnalytics"
-        component={AdminOnboardingAnalyticsScreen}
+        getComponent={() => AdminOnboardingAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminUserAnalytics"
-        component={AdminUserAnalyticsScreen}
+        getComponent={() => AdminUserAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminMatchAnalytics"
-        component={AdminMatchAnalyticsScreen}
+        getComponent={() => AdminMatchAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       {/* Phase 3 Analytics Sub-Views */}
       <RootStack.Screen
         name="AdminEngagementAnalytics"
-        component={AdminEngagementAnalyticsScreen}
+        getComponent={() => AdminEngagementAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminMessagingAnalytics"
-        component={AdminMessagingAnalyticsScreen}
+        getComponent={() => AdminMessagingAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       {/* Phase 4 Analytics Sub-Views */}
       <RootStack.Screen
         name="AdminRatingAnalytics"
-        component={AdminRatingAnalyticsScreen}
+        getComponent={() => AdminRatingAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminModerationAnalytics"
-        component={AdminModerationAnalyticsScreen}
+        getComponent={() => AdminModerationAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       {/* Phase 5 Analytics Sub-Views */}
       <RootStack.Screen
         name="AdminCommunityAnalytics"
-        component={AdminCommunityAnalyticsScreen}
+        getComponent={() => AdminCommunityAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="AdminSportAnalytics"
-        component={AdminSportAnalyticsScreen}
+        getComponent={() => AdminSportAnalyticsScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="Map"
-        component={MapStack}
+        getComponent={() => MapStack}
         options={{
           headerShown: false,
         }}
@@ -1474,7 +1485,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="RatingProofs"
-        component={RatingProofs}
+        getComponent={() => RatingProofs}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.ratingProofs'),
@@ -1484,7 +1495,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="RatingReferences"
-        component={RatingReferences}
+        getComponent={() => RatingReferences}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('screens.ratingReferences'),
@@ -1494,7 +1505,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="IncomingReferenceRequests"
-        component={IncomingReferenceRequests}
+        getComponent={() => IncomingReferenceRequests}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('referenceRequest.screenTitle'),
@@ -1504,7 +1515,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="GroupDetail"
-        component={GroupDetail}
+        getComponent={() => GroupDetail}
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.groupName || t('screens.group'),
@@ -1514,7 +1525,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="CommunityDetail"
-        component={CommunityDetail}
+        getComponent={() => CommunityDetail}
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.communityName || t('community.title'),
@@ -1534,7 +1545,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="FacilityDetail"
-        component={FacilityDetail}
+        getComponent={() => FacilityDetail}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('facilitiesTab.title'),
@@ -1544,7 +1555,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="GroupChatInfo"
-        component={GroupChatInfo}
+        getComponent={() => GroupChatInfo}
         options={{
           headerShown: false,
         }}
@@ -1552,7 +1563,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="PlayedMatchDetail"
-        component={PlayedMatchDetail}
+        getComponent={() => PlayedMatchDetail}
         options={{
           headerShown: false,
         }}
@@ -1560,7 +1571,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="NetworkMatches"
-        component={NetworkMatches}
+        getComponent={() => NetworkMatches}
         options={{
           headerShown: false,
         }}
@@ -1568,7 +1579,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="ChatConversation"
-        component={ChatConversation}
+        getComponent={() => ChatConversation}
         options={{
           headerShown: false,
         }}
@@ -1577,7 +1588,7 @@ export default function AppNavigator() {
       {/* My Bookings screens commented out for now
       <RootStack.Screen
         name="MyBookings"
-        component={MyBookingsScreen}
+        getComponent={() => MyBookingsScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('myBookings.title'),
@@ -1587,7 +1598,7 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="BookingDetail"
-        component={BookingDetailScreen}
+        getComponent={() => BookingDetailScreen}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('myBookings.detail.title'),
@@ -1598,16 +1609,16 @@ export default function AppNavigator() {
 
       <RootStack.Screen
         name="InviteReferral"
-        component={InviteReferralScreen}
+        getComponent={() => InviteReferralScreen}
         options={{ headerShown: false }}
       />
 
       <RootStack.Screen
         name="WeeklyCheckIn"
-        component={WeeklyCheckInScreen}
+        getComponent={() => WeeklyCheckInScreen}
         options={{
           headerShown: false,
-          presentation: 'fullScreenModal',
+          presentation: 'modal',
           gestureEnabled: false, // discrete × is the only dismiss path
         }}
       />

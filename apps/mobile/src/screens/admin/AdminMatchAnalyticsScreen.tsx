@@ -18,9 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import {
@@ -32,7 +30,9 @@ import {
 } from '@rallia/shared-components/src/charts';
 import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import { getMatchAnalyticsRPC, type MatchAnalyticsRPC } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -278,10 +278,10 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.analytics.sections.matches' as TranslationKey) || 'Match Analytics'}
+            {t('admin.analytics.sections.matches') || 'Match Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.sections.matchesDesc' as TranslationKey) || 'Match statistics'}
+            {t('admin.analytics.sections.matchesDesc') || 'Match statistics'}
           </Text>
         </View>
       </View>
@@ -330,8 +330,7 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
               <View style={styles.statsGrid}>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.matchAnalytics.matchesCreated' as TranslationKey) ||
-                      'Total Matches'}
+                    {t('admin.analytics.matchAnalytics.matchesCreated') || 'Total Matches'}
                   </Text>
                   <Text style={[styles.statValue, { color: colors.text }]}>
                     {matchStats.total.toLocaleString()}
@@ -339,8 +338,7 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.matchAnalytics.matchesCompleted' as TranslationKey) ||
-                      'Completed'}
+                    {t('admin.analytics.matchAnalytics.matchesCompleted') || 'Completed'}
                   </Text>
                   <Text style={[styles.statValue, { color: status.success.DEFAULT }]}>
                     {matchStats.completed.toLocaleString()}
@@ -366,8 +364,7 @@ const AdminMatchAnalyticsScreen: React.FC = () => {
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {t('admin.analytics.matchAnalytics.avgParticipants' as TranslationKey) ||
-                      'Avg. Players'}
+                    {t('admin.analytics.matchAnalytics.avgParticipants') || 'Avg. Players'}
                   </Text>
                   <Text style={[styles.statValue, { color: colors.primary }]}>
                     {matchStats.avgParticipants.toFixed(1)}

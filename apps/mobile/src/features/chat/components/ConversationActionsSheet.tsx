@@ -7,10 +7,8 @@ import React, { memo, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import { isGroupConversationType, getConversationDisplayName } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   spacingPixels,
   fontSizePixels,
@@ -19,6 +17,8 @@ import {
   status,
   radiusPixels,
 } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation-actions'>) {
   const conversation = payload?.conversation ?? null;

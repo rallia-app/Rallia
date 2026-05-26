@@ -18,12 +18,12 @@ import {
   TextInput,
 } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
-import { primary } from '@rallia/design-system';
+import { primary, spacingPixels, radiusPixels } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { SocialProvider } from '../../hooks/useSocialAuth';
+
+import type { SocialProvider } from '#/features/auth/hooks/useSocialAuth';
 
 interface ThemeColors {
   background: string;

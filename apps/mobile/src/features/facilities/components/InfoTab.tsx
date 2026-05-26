@@ -30,13 +30,14 @@ import {
 import type { Court, Facility } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
-import { useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
-
 import { useCommunitiesForFacility } from '@rallia/shared-hooks';
-import { navigationRef } from '../../../navigation';
-import { CommunityCard } from '../../communities/components/CommunityCard';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks';
+import { useSport } from '#/context';
+import { SportIcon } from '#/components/SportIcon';
+import { navigationRef } from '#/navigation';
+import { CommunityCard } from '#/features/communities/components/CommunityCard';
+
 import CourtCard from './CourtCard';
 
 // Enable LayoutAnimation on Android
@@ -414,8 +415,8 @@ L.marker([${facilityLatitude},${facilityLongitude}],{icon:icon,interactive:false
                 <MapView
                   style={styles.mapView}
                   initialRegion={{
-                    latitude: facilityLatitude!,
-                    longitude: facilityLongitude!,
+                    latitude: facilityLatitude,
+                    longitude: facilityLongitude,
                     latitudeDelta: 0.005,
                     longitudeDelta: 0.005,
                   }}
@@ -430,8 +431,8 @@ L.marker([${facilityLatitude},${facilityLongitude}],{icon:icon,interactive:false
                 >
                   <Marker
                     coordinate={{
-                      latitude: facilityLatitude!,
-                      longitude: facilityLongitude!,
+                      latitude: facilityLatitude,
+                      longitude: facilityLongitude,
                     }}
                   >
                     <View

@@ -9,9 +9,10 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useBooking } from '@rallia/shared-hooks';
 import { SheetManager } from 'react-native-actions-sheet';
-import { useThemeStyles } from '../../../hooks';
 import { spacingPixels } from '@rallia/design-system';
-import type { RootStackScreenProps } from '../../../navigation/types';
+
+import { useThemeStyles } from '#/hooks';
+import type { RootStackScreenProps } from '#/navigation/types';
 
 type Props = RootStackScreenProps<'BookingDetail'>;
 

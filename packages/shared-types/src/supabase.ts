@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_conversation: {
+        Row: {
+          active_at: string
+          conversation_id: string
+          player_id: string
+        }
+        Insert: {
+          active_at?: string
+          conversation_id: string
+          player_id: string
+        }
+        Update: {
+          active_at?: string
+          conversation_id?: string
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_conversation_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_conversation_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin: {
         Row: {
           assigned_at: string
@@ -366,6 +399,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      app_min_version: {
+        Row: {
+          min_supported_version: string
+          platform: string
+          recommended_version: string | null
+          store_url: string
+          updated_at: string
+        }
+        Insert: {
+          min_supported_version: string
+          platform: string
+          recommended_version?: string | null
+          store_url: string
+          updated_at?: string
+        }
+        Update: {
+          min_supported_version?: string
+          platform?: string
+          recommended_version?: string | null
+          store_url?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       availability_block: {
         Row: {
@@ -4181,6 +4238,7 @@ export type Database = {
           province: string | null
           push_notifications_enabled: boolean | null
           reputation_score: number
+          timezone: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4210,6 +4268,7 @@ export type Database = {
           province?: string | null
           push_notifications_enabled?: boolean | null
           reputation_score?: number
+          timezone?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4239,6 +4298,7 @@ export type Database = {
           province?: string | null
           push_notifications_enabled?: boolean | null
           reputation_score?: number
+          timezone?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -7771,6 +7831,10 @@ export type Database = {
         Args: { p_latitude: number; p_longitude: number; p_radius_km?: number }
         Returns: boolean
       }
+      clear_active_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       confirm_match_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
@@ -9326,6 +9390,10 @@ export type Database = {
         Returns: number
       }
       player_activity_score: { Args: { p_player_id: string }; Returns: number }
+      player_current_week_start: {
+        Args: { p_player_id: string }
+        Returns: string
+      }
       player_history_score: {
         Args: { p_caller_id: string; p_opponent_id: string }
         Returns: number
@@ -9333,6 +9401,16 @@ export type Database = {
       player_responsiveness_score: {
         Args: { p_player_id: string; p_window_days?: number }
         Returns: number
+      }
+      players_needing_streak_reset: {
+        Args: never
+        Returns: {
+          current_streak: number
+          freeze_inventory: number
+          last_checkin_week_start: string
+          player_id: string
+          player_last_week: string
+        }[]
       }
       propose_rebuttal_score: {
         Args: {
@@ -9375,8 +9453,10 @@ export type Database = {
           p_auto_create: boolean
           p_auto_invite: boolean
           p_frequency_goal: number
+          p_timezone?: string
         }
         Returns: {
+          freeze_earned: boolean
           freezes: number
           longest_streak: number
           milestone_reached: boolean
@@ -9668,6 +9748,10 @@ export type Database = {
           p_title: string
         }
         Returns: Json
+      }
+      set_active_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
       }
       set_profile_utm: {
         Args: { p_player_id: string; p_utm: Json }

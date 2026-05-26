@@ -26,8 +26,14 @@ import Animated, {
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
-import { primary, neutral, base } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  fontSizePixels,
+  primary,
+  neutral,
+  base,
+} from '@rallia/design-system';
 import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   getSharedContactLists,
@@ -38,9 +44,10 @@ import {
   type ShareChannel,
 } from '@rallia/shared-services';
 import { usePlayerMatches } from '@rallia/shared-hooks';
-import { SportIcon } from '../../../components/SportIcon';
-import { ContactRow, ContactSelectionCheck } from '../../../components/ContactRow';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
+
+import { SportIcon } from '#/components/SportIcon';
+import { ContactRow, ContactSelectionCheck } from '#/components/ContactRow';
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 
 // Local interface to ensure TypeScript recognizes match properties
 // (workaround for TS language server cache issues with extended types)

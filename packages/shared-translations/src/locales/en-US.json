@@ -853,7 +853,8 @@
       "location": "Location",
       "photos": "Photos & Media",
       "contacts": "Contacts",
-      "camera": "Camera"
+      "camera": "Camera",
+      "tracking": "Ad Tracking"
     },
     "status": {
       "granted": "Allowed",
@@ -2043,7 +2044,8 @@
       "clearYourMessagesConfirm": "This will delete all messages you sent in this conversation. This action cannot be undone.",
       "clear": "Clear",
       "messagesDeleted": "{count} message(s) deleted",
-      "failedToClear": "Failed to clear messages. Please try again."
+      "failedToClear": "Failed to clear messages. Please try again.",
+      "failedToSend": "Failed to send message. Please try again."
     },
     "blocked": {
       "title": "You blocked {name}",
@@ -7867,7 +7869,7 @@
         }
       },
       "enable": "Enable Precise Location",
-      "privacyNote": "Your location stays on your device — change this anytime in Settings."
+      "privacyNote": "Change anytime in Settings."
     },
     "notificationPermission": {
       "title": "Stay in the game",
@@ -7892,7 +7894,28 @@
         }
       },
       "enable": "Enable Notifications",
-      "privacyNote": "You can change this anytime in Settings."
+      "privacyNote": "Change anytime in Settings."
+    },
+    "trackingPermission": {
+      "title": "Help us improve Rallia",
+      "subtitle": "Allow tracking so we can match you with better opponents and grow the app based on what actually helps players find games.",
+      "benefits": {
+        "betterMatches": {
+          "title": "Better match suggestions",
+          "description": "We learn which matchups actually convert into great games"
+        },
+        "improveApp": {
+          "title": "Smarter features over time",
+          "description": "We see which tools players use and focus on what matters"
+        },
+        "privacy": {
+          "title": "Always private",
+          "description": "We never sell your data — only use it to make Rallia better"
+        }
+      },
+      "enable": "Allow Tracking",
+      "skip": "Not Now",
+      "privacyNote": "Change anytime in Settings."
     },
     "discovery": {
       "title": "How did you hear about us?",
@@ -9691,11 +9714,27 @@
       "bubbleHit": "Hey 👋 Welcome back — you smashed your goal last week. Streak still climbing. 🔥",
       "bubbleMet": "Hey 👋 Welcome back — you hit all {goal} sessions last week. Streak alive and well. 💪",
       "bubbleMiss": "Hey 👋 Welcome back — you missed the goal, but not the streak. Let's get back on track. 🌱",
-      "bubbleFirstTime": "Hey 👋 Welcome to your weekly check-in. Let's set you up for a great week of tennis.",
+      "bubbleFirstTime": "Hey 👋 Welcome aboard! Let's set up your first week — it only takes a minute. 🎾",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
       "streakSubtitle": "weeks",
       "streakSubtitleOne": "week streak",
+      "streakLabel": "WEEK CHECK-IN STREAK",
+      "streakLabelOne": "WEEK CHECK-IN STREAK",
+      "timelineLabel": "Your check-in history",
+      "thisWeek": "This week",
+      "freezeCount": "{count} freezes saved",
+      "freezeOne": "1 freeze saved",
+      "freezeZero": "0 freezes saved",
+      "freezeHint": "Earn 1 every 4-week milestone",
+      "freezeFirstTimeInvite": "Your first check-in starts your streak 🔥",
+      "goalsCardTitle": "GOAL TRACKING",
+      "goalsCardLastWeek": "Last week",
+      "goalsCardTrendLabel": "Last 4 weeks",
+      "goalsCardLastWeekSummary": "{played} of {goal} sessions",
+      "goalsCardLastWeekHit": "Goal hit ✓",
+      "goalsCardLastWeekMiss": "Goal missed",
+      "goalsCardNoHistory": "Your goal-hit history will show up here once you've played a few weeks. 📈",
       "freezeTooltip": "Streak freezes protect you if you miss a check-in.",
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
@@ -9718,6 +9757,7 @@
       "frequencyContextSame": "Same as last week — consistency wins! 🌱",
       "frequencyContextUp": "Stepping it up from {last} → {current}. I love the ambition! 🔥",
       "frequencyContextDown": "Dialing back to {current}. Sustainable beats burnout. 💆",
+      "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨",
       "opsLabel": "Make this easier",
       "autoCreateTitle": "Auto-create open matches",
       "autoCreateDesc": "Post request-to-join matches at your free times.",
@@ -9730,7 +9770,9 @@
       "streakHeroCount": "{count} weeks!",
       "streakHeroCountOne": "1 week!",
       "streakHeroSub": "Streak extended · +1",
+      "streakHeroSubFirst": "Streak started 🌱",
       "streakHeroSubMilestone": "Streak milestone · +1 freeze earned ❄️",
+      "streakHeroSubMilestoneCapped": "Streak milestone! Freezes maxed at 2 ❄️❄️",
       "summaryGoal": "Goal: {freq}",
       "summarySlots": "{count} hours confirmed",
       "summarySlotsOne": "1 hour confirmed",
@@ -9828,6 +9870,14 @@
     "cta": {
       "heading": "Get on the court",
       "body": "Rallia is available on iOS and Android. Set your level, pick your home courts, and start finding games near you."
+    }
+  },
+  "update": {
+    "required": {
+      "title": "Update Required",
+      "description": "This version of Rallia is no longer supported. Update to the latest version to keep playing.",
+      "versionInfo": "You have {current} · {required} or newer is required",
+      "cta": "Update Now"
     }
   }
 }

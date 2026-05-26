@@ -12,11 +12,12 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
-import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
-import { SearchBar } from '../../../components/SearchBar';
-import RatingBadge from '../../../components/RatingBadge';
+
+import { selectionHaptic, mediumHaptic } from '#/utils/haptics';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
+import RatingBadge from '#/components/RatingBadge';
 
 interface ReferenceRequestOverlayProps {
   visible: boolean;

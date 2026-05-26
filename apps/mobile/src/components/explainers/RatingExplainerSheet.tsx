@@ -2,13 +2,14 @@ import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels } from '@rallia/design-system';
+import { spacingPixels, primary } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { CERTIFICATION_BADGE_COLORS } from '#/components/RatingBadge';
+import { BaseActionSheet } from '#/components/BaseActionSheet';
+
 import { ExplainerSection } from './ExplainerSection';
-import { CERTIFICATION_BADGE_COLORS } from '../RatingBadge';
-import { BaseActionSheet } from '../BaseActionSheet';
-import { primary } from '@rallia/design-system';
 
 function CertificationDot({
   color,

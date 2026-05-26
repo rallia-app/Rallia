@@ -6,11 +6,11 @@
 import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 import type { MessageWithSender } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface MessageInputProps {
   onSend: (message: string, replyToMessageId?: string) => void;

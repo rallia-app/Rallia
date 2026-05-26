@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../navigation/types';
 import {
   View,
   StyleSheet,
@@ -15,7 +14,6 @@ import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { useAppNavigation } from '../navigation/hooks';
 import {
   Text,
   Skeleton,
@@ -29,21 +27,8 @@ import {
 import { supabase, Logger, OnboardingService } from '@rallia/shared-services';
 import { useProfile, usePlayer, useProfileCompleteness } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
-import { replaceImage } from '../services/imageUpload';
 import {
-  useImagePicker,
-  useThemeStyles,
-  useTranslation,
-  useTourSequence,
-  useSportSetup,
-  type TranslationKey,
-} from '../hooks';
-import { useSport } from '../context';
-import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
-import {
+  getProfilePictureUrl,
   lightHaptic,
   mediumHaptic,
   successHaptic,
@@ -51,12 +36,6 @@ import {
   getHumanName,
 } from '@rallia/shared-utils';
 import type { DayEnum, Sport } from '@rallia/shared-types';
-import {
-  HourlyAvailabilityGrid,
-  cellKey,
-  emptyGrid,
-  type HourGrid,
-} from '../features/onboarding/components/HourlyAvailabilityGrid';
 import {
   spacingPixels,
   radiusPixels,
@@ -67,13 +46,35 @@ import {
   status,
   base,
 } from '@rallia/design-system';
-import { MATCH_REIMBURSEMENT_ENABLED } from '../constants/features';
-import { ConfirmationModal } from '../components/ConfirmationModal';
-import RatingBadge from '../components/RatingBadge';
-import ReputationBadge from '../components/ReputationBadge';
-import CovetedBadge from '../components/CovetedBadge';
-import SportIcon from '../components/SportIcon';
-import ProfileCompletionChecklist from '../features/profile/components/ProfileCompletionChecklist';
+
+import { useAppNavigation } from '#/navigation/hooks';
+import { replaceImage } from '#/services/imageUpload';
+import {
+  useImagePicker,
+  useThemeStyles,
+  useTranslation,
+  useTourSequence,
+  useSportSetup,
+  type TranslationKey,
+} from '#/hooks';
+import { useSport } from '#/context';
+import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+import { formatDate as formatDateUtil, formatDateMonthYear } from '#/utils/dateFormatting';
+import {
+  HourlyAvailabilityGrid,
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import type { RootStackParamList } from '#/navigation/types';
+import { MATCH_REIMBURSEMENT_ENABLED } from '#/constants/features';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+import RatingBadge from '#/components/RatingBadge';
+import ReputationBadge from '#/components/ReputationBadge';
+import CovetedBadge from '#/components/CovetedBadge';
+import SportIcon from '#/components/SportIcon';
+import ProfileCompletionChecklist from '#/features/profile/components/ProfileCompletionChecklist';
 
 interface SportWithRating extends Sport {
   isActive: boolean;
@@ -152,20 +153,26 @@ const UserProfile = () => {
   // Confirmation dialog before flipping a connected Stripe account into manual mode
   const [showSwitchToManualConfirm, setShowSwitchToManualConfirm] = useState(false);
 
+  // Extract narrow primitives so React Compiler can preserve these Stripe memos;
+  // it otherwise widens player?.id / stripeAccount?.onboarding_completed to the
+  // whole objects and bails on the screen.
+  const playerId = player?.id;
+  const stripeOnboardingCompleted = stripeAccount?.onboarding_completed;
+
   const refetchStripeState = useCallback(async () => {
     if (!MATCH_REIMBURSEMENT_ENABLED) return;
-    if (!player?.id) return;
+    if (!playerId) return;
     const [{ data: acct }, { data: playerRow }, { data: pending }] = await Promise.all([
       supabase
         .from('player_stripe_account')
         .select('onboarding_completed')
-        .eq('player_id', player.id)
+        .eq('player_id', playerId)
         .maybeSingle(),
-      supabase.from('player').select('payouts_mode').eq('id', player.id).maybeSingle(),
+      supabase.from('player').select('payouts_mode').eq('id', playerId).maybeSingle(),
       supabase
         .from('pending_host_transfer')
         .select('amount_cents')
-        .eq('host_player_id', player.id)
+        .eq('host_player_id', playerId)
         .eq('status', 'awaiting_onboarding'),
     ]);
     setStripeAccount(acct);
@@ -173,7 +180,7 @@ const UserProfile = () => {
       (playerRow?.payouts_mode as 'auto' | 'manual_only' | 'undecided') ?? 'undecided'
     );
     setPendingFundsCents((pending ?? []).reduce((sum, r) => sum + (r.amount_cents ?? 0), 0));
-  }, [player?.id]);
+  }, [playerId]);
 
   useEffect(() => {
     void refetchStripeState();
@@ -211,7 +218,7 @@ const UserProfile = () => {
       await refetchStripeState();
     } catch {
       errorHaptic();
-      toast.error(t('profile.payments.onboardingError' as TranslationKey));
+      toast.error(t('profile.payments.onboardingError'));
     } finally {
       setStripeOnboarding(false);
     }
@@ -220,8 +227,8 @@ const UserProfile = () => {
   // Stripe JIT: switch to manual-only (skip Stripe entirely). When the host
   // already has a connected Stripe account, gate behind a confirmation.
   const handleSwitchToManual = useCallback(() => {
-    if (!player?.id) return;
-    if (stripeAccount?.onboarding_completed) {
+    if (!playerId) return;
+    if (stripeOnboardingCompleted) {
       mediumHaptic();
       setShowSwitchToManualConfirm(true);
       return;
@@ -232,60 +239,60 @@ const UserProfile = () => {
       const { error } = await supabase
         .from('player')
         .update({ payouts_mode: 'manual_only' })
-        .eq('id', player.id);
+        .eq('id', playerId);
       setSwitchingMode(false);
       if (error) {
         errorHaptic();
-        toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+        toast.error(t('profile.payments.modeUpdateError'));
         return;
       }
       successHaptic();
       setPayoutsMode('manual_only');
     })();
-  }, [player?.id, stripeAccount?.onboarding_completed, toast, t]);
+  }, [playerId, stripeOnboardingCompleted, toast, t]);
 
   // Confirmed path for switching a connected Stripe account into manual mode.
   const handleConfirmSwitchToManual = useCallback(async () => {
-    if (!player?.id) return;
+    if (!playerId) return;
     setSwitchingMode(true);
     const { error } = await supabase
       .from('player')
       .update({ payouts_mode: 'manual_only' })
-      .eq('id', player.id);
+      .eq('id', playerId);
     setSwitchingMode(false);
     if (error) {
       errorHaptic();
-      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      toast.error(t('profile.payments.modeUpdateError'));
       return;
     }
     successHaptic();
     setPayoutsMode('manual_only');
     setShowSwitchToManualConfirm(false);
-  }, [player?.id, toast, t]);
+  }, [playerId, toast, t]);
 
   // Stripe JIT: switch from manual_only back to auto + open onboarding
   const handleSwitchToAuto = useCallback(async () => {
-    if (!player?.id) return;
+    if (!playerId) return;
     lightHaptic();
     setSwitchingMode(true);
     const { error } = await supabase
       .from('player')
       .update({ payouts_mode: 'auto' })
-      .eq('id', player.id);
+      .eq('id', playerId);
     if (error) {
       setSwitchingMode(false);
       errorHaptic();
-      toast.error(t('profile.payments.modeUpdateError' as TranslationKey));
+      toast.error(t('profile.payments.modeUpdateError'));
       return;
     }
     successHaptic();
     setPayoutsMode('auto');
     setSwitchingMode(false);
     // If no Stripe account yet, kick off onboarding immediately
-    if (!stripeAccount?.onboarding_completed) {
+    if (!stripeOnboardingCompleted) {
       await handleStripeOnboard();
     }
-  }, [player?.id, stripeAccount?.onboarding_completed, handleStripeOnboard, toast, t]);
+  }, [playerId, stripeOnboardingCompleted, handleStripeOnboard, toast, t]);
 
   // Derive sport cards from shared contexts (updated automatically by SportProfile)
   const sports: SportWithRating[] = useMemo(() => {
@@ -739,7 +746,7 @@ const UserProfile = () => {
           });
         } else {
           // Rating or preferences sheets (sport-specific)
-          SheetManager.show(sheet as never);
+          SheetManager.show(sheet);
         }
       }
     },
@@ -1512,7 +1519,7 @@ const UserProfile = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                {t('profile.payments.section' as TranslationKey)}
+                {t('profile.payments.section')}
               </Text>
             </View>
             {stripeAccount === undefined || payoutsMode === null ? (
@@ -1574,7 +1581,7 @@ const UserProfile = () => {
                               color={isDark ? primary[300] : primary[600]}
                             />
                             <Text size="sm" weight="semibold" color={colors.text}>
-                              {t('profile.payments.pendingTitle' as TranslationKey, {
+                              {t('profile.payments.pendingTitle', {
                                 amount: new Intl.NumberFormat(locale, {
                                   style: 'currency',
                                   currency: 'CAD',
@@ -1583,7 +1590,7 @@ const UserProfile = () => {
                             </Text>
                           </HStack>
                           <Text size="xs" color={colors.textMuted}>
-                            {t('profile.payments.pendingBody' as TranslationKey)}
+                            {t('profile.payments.pendingBody')}
                           </Text>
                         </VStack>
                       </Card>
@@ -1595,11 +1602,11 @@ const UserProfile = () => {
                       <HStack spacing={spacingPixels[2]} align="center">
                         <Ionicons name="hand-left-outline" size={20} color={colors.textMuted} />
                         <Text weight="medium" color={colors.text}>
-                          {t('profile.payments.manualMode' as TranslationKey)}
+                          {t('profile.payments.manualMode')}
                         </Text>
                       </HStack>
                       <Text size="sm" color={colors.textMuted}>
-                        {t('profile.payments.manualModeDescription' as TranslationKey)}
+                        {t('profile.payments.manualModeDescription')}
                       </Text>
                       <Button
                         variant="primary"
@@ -1621,7 +1628,7 @@ const UserProfile = () => {
                           background: colors.card,
                         }}
                       >
-                        {t('profile.payments.switchToStripe' as TranslationKey)}
+                        {t('profile.payments.switchToStripe')}
                       </Button>
                     </VStack>
                   ) : stripeAccount?.onboarding_completed ? (
@@ -1634,11 +1641,11 @@ const UserProfile = () => {
                           color={status.success.DEFAULT}
                         />
                         <Text weight="medium" color={colors.text}>
-                          {t('profile.payments.connected' as TranslationKey)}
+                          {t('profile.payments.connected')}
                         </Text>
                       </HStack>
                       <Text size="sm" color={colors.textMuted}>
-                        {t('profile.payments.connectedDescription' as TranslationKey)}
+                        {t('profile.payments.connectedDescription')}
                       </Text>
                       <Button
                         variant="outline"
@@ -1660,14 +1667,14 @@ const UserProfile = () => {
                           background: colors.card,
                         }}
                       >
-                        {t('profile.payments.switchToManual' as TranslationKey)}
+                        {t('profile.payments.switchToManual')}
                       </Button>
                     </VStack>
                   ) : (
                     /* Auto / undecided + not onboarded — original setup prompt with manual escape */
                     <VStack spacing={spacingPixels[3]} align="start">
                       <Text color={colors.textMuted} size="sm">
-                        {t('profile.payments.setupPrompt' as TranslationKey)}
+                        {t('profile.payments.setupPrompt')}
                       </Text>
                       <HStack spacing={spacingPixels[2]} wrap>
                         <Button
@@ -1691,8 +1698,8 @@ const UserProfile = () => {
                           }}
                         >
                           {stripeAccount === null
-                            ? t('profile.payments.connectAccount' as TranslationKey)
-                            : t('profile.payments.continueSetup' as TranslationKey)}
+                            ? t('profile.payments.connectAccount')
+                            : t('profile.payments.continueSetup')}
                         </Button>
                         <Button
                           variant="outline"
@@ -1713,7 +1720,7 @@ const UserProfile = () => {
                             background: colors.card,
                           }}
                         >
-                          {t('profile.payments.useManualInstead' as TranslationKey)}
+                          {t('profile.payments.useManualInstead')}
                         </Button>
                       </HStack>
                     </VStack>
@@ -1744,9 +1751,9 @@ const UserProfile = () => {
         visible={showSwitchToManualConfirm}
         onClose={() => setShowSwitchToManualConfirm(false)}
         onConfirm={handleConfirmSwitchToManual}
-        title={t('profile.payments.switchToManualConfirmTitle' as TranslationKey)}
-        message={t('profile.payments.switchToManualConfirmMessage' as TranslationKey)}
-        confirmLabel={t('profile.payments.switchToManual' as TranslationKey)}
+        title={t('profile.payments.switchToManualConfirmTitle')}
+        message={t('profile.payments.switchToManualConfirmMessage')}
+        confirmLabel={t('profile.payments.switchToManual')}
         cancelLabel={t('common.cancel')}
         isLoading={switchingMode}
       />

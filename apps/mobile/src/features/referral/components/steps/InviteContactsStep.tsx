@@ -20,11 +20,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast, Button } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
-import { SearchBar } from '../../../../components/SearchBar';
-import { ContactRow, ContactSelectionCheck } from '../../../../components/ContactRow';
-import { formatContactSubtitle } from '../../../../utils/contactDisplay';
-import type { TranslationKey } from '../../../../hooks';
-import { useSport } from '../../../../context';
+
+import { SearchBar } from '#/components/SearchBar';
+import { ContactRow, ContactSelectionCheck } from '#/components/ContactRow';
+import { formatContactSubtitle } from '#/utils/contactDisplay';
+import type { TranslationKey } from '#/hooks';
+import { useSport } from '#/context';
 
 // ============================================================================
 // TYPES
@@ -285,8 +286,8 @@ export const InviteContactsStep: React.FC<InviteContactsStepProps> = ({
               >
                 {filteredContacts.length}{' '}
                 {filteredContacts.length === 1
-                  ? t('referral.contacts.contactSingular' as TranslationKey)
-                  : t('referral.contacts.contactPlural' as TranslationKey)}
+                  ? t('referral.contacts.contactSingular')
+                  : t('referral.contacts.contactPlural')}
               </Text>
               <TouchableOpacity onPress={toggleSelectAll} activeOpacity={0.6} hitSlop={8}>
                 <Text size="xs" weight="semibold" color={colors.buttonActive}>

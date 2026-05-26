@@ -12,7 +12,8 @@ import { Text } from '@rallia/shared-components';
 import { lightTheme, darkTheme, spacingPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
+
+import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
 
 import { CreateListForm } from './CreateListModal';
 

@@ -22,12 +22,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
-
 import { Text, Skeleton, Button } from '@rallia/shared-components';
 import { getCoverImageUrl, lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '../hooks';
-import { useSport, useMatchDetailSheet } from '../context';
-import type { MatchDetailData } from '../context';
 import {
   usePlayerGroups,
   usePlayerGroupsRealtime,
@@ -35,11 +31,12 @@ import {
   useNetworkLimits,
   type Group,
 } from '@rallia/shared-hooks';
-import type { RootStackParamList } from '../navigation/types';
-import {
-  InviteQRScannerModal,
-  type InviteScanJoinResult,
-} from '../components/InviteQRScannerModal';
+
+import { useThemeStyles, useAuth, useTranslation, useRequireOnboarding } from '#/hooks';
+import { useSport, useMatchDetailSheet } from '#/context';
+import type { MatchDetailData } from '#/context';
+import type { RootStackParamList } from '#/navigation/types';
+import { InviteQRScannerModal, type InviteScanJoinResult } from '#/components/InviteQRScannerModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;

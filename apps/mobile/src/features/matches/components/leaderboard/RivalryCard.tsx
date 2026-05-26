@@ -11,7 +11,7 @@ import { Text } from '@rallia/shared-components';
 import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { NetworkPulseRivalry } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface RivalryCardProps {
   rivalry: NetworkPulseRivalry;

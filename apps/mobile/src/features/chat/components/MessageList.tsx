@@ -24,11 +24,12 @@ import {
   NativeSyntheticEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '../../../hooks';
 import { spacingPixels, fontSizePixels } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
+
+import { useThemeStyles } from '#/hooks';
+
 import { MessageBubble } from './MessageBubble';
 
 export interface MessageListRef {

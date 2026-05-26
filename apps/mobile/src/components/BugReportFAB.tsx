@@ -17,7 +17,7 @@ import Animated, {
 import { lightHaptic } from '@rallia/shared-utils';
 import { secondary } from '@rallia/design-system';
 
-import { useFeedbackReportSheet } from '../context/BugReportSheetContext';
+import { useFeedbackReportSheet } from '#/context/BugReportSheetContext';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 

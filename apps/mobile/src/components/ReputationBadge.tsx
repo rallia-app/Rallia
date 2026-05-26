@@ -51,7 +51,7 @@ const ReputationBadge: React.FC<ReputationBadgeProps> = ({
 
   if (!reputationDisplay?.isVisible) return null;
 
-  const tierKey = reputationDisplay.tier as keyof typeof TIER_COLORS;
+  const tierKey = reputationDisplay.tier;
   const tier = TIER_COLORS[tierKey] ?? TIER_COLORS.unknown;
 
   const gradientColors = (

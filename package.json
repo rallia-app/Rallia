@@ -2,7 +2,7 @@
   "name": "rallia",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "npm@10.8.2",
+  "packageManager": "npm@11.15.0",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -164,6 +164,6 @@
     "puppeteer": "^24.40.0",
     "react": "19.2.0",
     "react-native": "0.83.6",
-    "react-native-fbsdk-next": "^13.4.1"
+    "react-native-fbsdk-next": "^13.4.3"
   }
 }

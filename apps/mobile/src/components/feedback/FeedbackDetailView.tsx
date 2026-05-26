@@ -10,7 +10,6 @@ import React, { useCallback, useState } from 'react';
 import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView } from 'react-native-actions-sheet';
-
 import { Text } from '@rallia/shared-components';
 import {
   base,
@@ -29,7 +28,8 @@ import type {
   PublicFeedback,
 } from '@rallia/shared-services';
 
-import { useTranslation, type TranslationKey } from '../../hooks';
+import { useTranslation, type TranslationKey } from '#/hooks';
+
 import { getModuleIcon, getModuleLabelKey, STATUS_COLORS } from './feedbackModules';
 
 interface FeedbackDetailViewProps {
@@ -86,7 +86,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
         <>
           {meta.severity && (
             <DetailRow
-              label={t('feedback.bug.severityLabel' as TranslationKey)}
+              label={t('feedback.bug.severityLabel')}
               value={t(
                 `feedback.bug.severity${meta.severity.charAt(0).toUpperCase() + meta.severity.slice(1)}` as TranslationKey
               )}
@@ -95,7 +95,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
           )}
           {meta.steps_to_reproduce && (
             <DetailRow
-              label={t('feedback.bug.stepsLabel' as TranslationKey)}
+              label={t('feedback.bug.stepsLabel')}
               value={meta.steps_to_reproduce}
               colors={colors}
               multiline
@@ -103,7 +103,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
           )}
           {meta.expected_vs_actual && (
             <DetailRow
-              label={t('feedback.bug.expectedLabel' as TranslationKey)}
+              label={t('feedback.bug.expectedLabel')}
               value={meta.expected_vs_actual}
               colors={colors}
               multiline
@@ -119,7 +119,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
         <>
           {meta.description && (
             <DetailRow
-              label={t('feedback.feature.descriptionLabel' as TranslationKey)}
+              label={t('feedback.feature.descriptionLabel')}
               value={meta.description}
               colors={colors}
               multiline
@@ -127,7 +127,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
           )}
           {meta.use_case && (
             <DetailRow
-              label={t('feedback.feature.useCaseLabel' as TranslationKey)}
+              label={t('feedback.feature.useCaseLabel')}
               value={meta.use_case}
               colors={colors}
               multiline
@@ -151,7 +151,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
         >
           <Ionicons name="chevron-back" size={22} color={colors.text} />
           <Text size="sm" weight="semibold" color={colors.text}>
-            {t('feedback.browse.detail.backToList' as TranslationKey)}
+            {t('feedback.browse.detail.backToList')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -176,7 +176,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
           </View>
           <View style={[styles.statusPill, { backgroundColor: statusColors.bg }]}>
             <Text size="xs" weight="semibold" color={statusColors.fg}>
-              {t(`feedback.browse.statusPill.${item.status}` as TranslationKey)}
+              {t(`feedback.browse.statusPill.${item.status}`)}
             </Text>
           </View>
         </View>
@@ -188,9 +188,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
 
         {/* Submitter line */}
         <Text size="xs" color={colors.muted} style={styles.submitterLine}>
-          {item.is_anonymous
-            ? t('feedback.browse.anonymous' as TranslationKey)
-            : t('feedback.browse.byPlayer' as TranslationKey)}
+          {item.is_anonymous ? t('feedback.browse.anonymous') : t('feedback.browse.byPlayer')}
           {' · '}
           {new Date(item.created_at).toLocaleDateString()}
         </Text>
@@ -216,7 +214,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
         {item.screenshot_urls && item.screenshot_urls.length > 0 && (
           <View style={styles.screenshots}>
             <Text size="sm" weight="semibold" color={colors.muted} style={styles.sectionLabel}>
-              {t('feedback.screenshotsLabel' as TranslationKey)}
+              {t('feedback.screenshotsLabel')}
             </Text>
             <View style={styles.screenshotGrid}>
               {item.screenshot_urls.map(url => (
@@ -237,7 +235,7 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
             <View style={styles.adminNoteHeader}>
               <Ionicons name="megaphone-outline" size={16} color={secondary[500]} />
               <Text size="xs" weight="semibold" color={secondary[500]}>
-                {t('feedback.browse.detail.adminNoteLabel' as TranslationKey)}
+                {t('feedback.browse.detail.adminNoteLabel')}
               </Text>
             </View>
             <Text size="sm" color={colors.text}>
@@ -268,8 +266,8 @@ export const FeedbackDetailView: React.FC<FeedbackDetailViewProps> = ({
           />
           <Text size="base" weight="semibold" color={item.has_voted ? base.white : secondary[500]}>
             {item.has_voted
-              ? t('feedback.browse.upvoted' as TranslationKey, { n: item.upvote_count })
-              : t('feedback.browse.upvote' as TranslationKey, { n: item.upvote_count })}
+              ? t('feedback.browse.upvoted', { n: item.upvote_count })
+              : t('feedback.browse.upvote', { n: item.upvote_count })}
           </Text>
         </TouchableOpacity>
       </View>

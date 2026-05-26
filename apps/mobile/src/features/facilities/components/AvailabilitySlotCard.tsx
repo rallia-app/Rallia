@@ -10,7 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import type { FormattedSlot } from '@rallia/shared-hooks';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 interface AvailabilitySlotCardProps {
   slot: FormattedSlot;

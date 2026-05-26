@@ -2,8 +2,10 @@ import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { primary, accent, base } from '@rallia/design-system';
+
+import { SportIcon } from '#/components/SportIcon';
+
 import TennisCourtIcon from '../../../assets/icons/tennis-court.svg';
-import { SportIcon } from '../SportIcon';
 
 interface MapMarkerImagesProps {
   isDark: boolean;

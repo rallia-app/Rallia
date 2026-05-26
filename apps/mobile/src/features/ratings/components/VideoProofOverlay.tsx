@@ -5,17 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button, useToast } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { Logger, supabase } from '@rallia/shared-services';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 import {
   uploadRatingProofFile,
   validateProofFile,
   getMaxFileSizes,
   getSupportedVideoFormats,
-} from '../../../services/ratingProofUpload';
-import { isBackblazeConfigured, getBackblazeConfigStatus } from '../../../services/backblazeUpload';
-import { Logger, supabase } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
+} from '#/services/ratingProofUpload';
+import { isBackblazeConfigured, getBackblazeConfigStatus } from '#/services/backblazeUpload';
+
 import type { ProofFormProps } from './AddRatingProofOverlay';
 
 interface VideoProofOverlayProps {

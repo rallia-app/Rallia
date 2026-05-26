@@ -9,12 +9,13 @@ import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic } from '../../../utils/haptics';
 import type { UpcomingBookingFilter, PastBookingFilter } from '@rallia/shared-hooks';
+
+import { lightHaptic } from '#/utils/haptics';
+import { useTranslation } from '#/hooks';
 
 // =============================================================================
 // TYPES

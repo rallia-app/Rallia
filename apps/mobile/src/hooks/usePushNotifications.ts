@@ -8,15 +8,15 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
-import { registerPushToken, supabase, unregisterPushToken } from '@rallia/shared-services';
-import { Logger } from '@rallia/shared-services';
+import { registerPushToken, supabase, unregisterPushToken, Logger } from '@rallia/shared-services';
+
 import {
   navigateFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
   navigateToUserProfileFromOutside,
-} from '../navigation';
-import * as Analytics from '../services/analytics';
+} from '#/navigation';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // TYPES

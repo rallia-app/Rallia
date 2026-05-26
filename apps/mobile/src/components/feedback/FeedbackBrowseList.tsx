@@ -18,7 +18,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import {
   base,
@@ -38,8 +37,9 @@ import {
 import type { PublicFeedback, PublicFeedbackCategory } from '@rallia/shared-services';
 import { selectionHaptic } from '@rallia/shared-utils';
 
-import { useActionsSheet } from '../../context';
-import { useTranslation, type TranslationKey } from '../../hooks';
+import { useActionsSheet } from '#/context';
+import { useTranslation, type TranslationKey } from '#/hooks';
+
 import { FeedbackListItem } from './FeedbackListItem';
 import { FeedbackListItemSkeleton } from './FeedbackListItemSkeleton';
 
@@ -216,7 +216,7 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
         <TextInput
           value={searchText}
           onChangeText={setSearchText}
-          placeholder={t('feedback.browse.searchPlaceholder' as TranslationKey)}
+          placeholder={t('feedback.browse.searchPlaceholder')}
           placeholderTextColor={colors.muted}
           style={[styles.searchInput, { color: colors.text }]}
           autoCorrect={false}
@@ -270,7 +270,7 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
       {/* Sticky CTA */}
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <Text size="xs" color={colors.muted} style={styles.footerHint}>
-          {t('feedback.browse.dontSeeYours' as TranslationKey)}
+          {t('feedback.browse.dontSeeYours')}
         </Text>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -279,7 +279,7 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
         >
           <Ionicons name="add" size={18} color={base.white} />
           <Text size="base" weight="semibold" color={base.white}>
-            {t('feedback.browse.submitNew' as TranslationKey)}
+            {t('feedback.browse.submitNew')}
           </Text>
         </TouchableOpacity>
       </View>

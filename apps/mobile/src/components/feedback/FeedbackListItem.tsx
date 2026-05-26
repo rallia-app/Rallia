@@ -8,13 +8,13 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
 import { neutral, radiusPixels, secondary, spacingPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 import type { PublicFeedback } from '@rallia/shared-services';
 
-import { useTranslation, type TranslationKey } from '../../hooks';
+import { useTranslation, type TranslationKey } from '#/hooks';
+
 import { getModuleIcon, getModuleLabelKey, STATUS_COLORS } from './feedbackModules';
 
 interface FeedbackListItemProps {
@@ -34,15 +34,15 @@ function formatRelativeTime(iso: string, t: TFn): string {
   const then = new Date(iso).getTime();
   const now = Date.now();
   const diffSec = Math.max(0, Math.round((now - then) / 1000));
-  if (diffSec < 60) return t('feedback.browse.time.now' as TranslationKey);
+  if (diffSec < 60) return t('feedback.browse.time.now');
   const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return t('feedback.browse.time.min' as TranslationKey, { n: diffMin });
+  if (diffMin < 60) return t('feedback.browse.time.min', { n: diffMin });
   const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return t('feedback.browse.time.hour' as TranslationKey, { n: diffH });
+  if (diffH < 24) return t('feedback.browse.time.hour', { n: diffH });
   const diffD = Math.round(diffH / 24);
-  if (diffD < 30) return t('feedback.browse.time.day' as TranslationKey, { n: diffD });
+  if (diffD < 30) return t('feedback.browse.time.day', { n: diffD });
   const diffMo = Math.round(diffD / 30);
-  return t('feedback.browse.time.month' as TranslationKey, { n: diffMo });
+  return t('feedback.browse.time.month', { n: diffMo });
 }
 
 export const FeedbackListItem: React.FC<FeedbackListItemProps> = ({
@@ -89,7 +89,7 @@ export const FeedbackListItem: React.FC<FeedbackListItemProps> = ({
         <View style={styles.metaRow}>
           <View style={[styles.statusPill, { backgroundColor: statusColors.bg }]}>
             <Text size="xs" weight="semibold" color={statusColors.fg}>
-              {t(`feedback.browse.statusPill.${item.status}` as TranslationKey)}
+              {t(`feedback.browse.statusPill.${item.status}`)}
             </Text>
           </View>
           <Text size="xs" color={mutedColor}>
@@ -113,9 +113,7 @@ export const FeedbackListItem: React.FC<FeedbackListItemProps> = ({
         ]}
         accessibilityRole="button"
         accessibilityLabel={t(
-          item.has_voted
-            ? ('feedback.browse.upvotedAria' as TranslationKey)
-            : ('feedback.browse.upvoteAria' as TranslationKey)
+          item.has_voted ? 'feedback.browse.upvotedAria' : 'feedback.browse.upvoteAria'
         )}
       >
         <Ionicons name="caret-up" size={14} color={item.has_voted ? '#FFFFFF' : mutedColor} />

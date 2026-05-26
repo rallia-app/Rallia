@@ -11,9 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import {
@@ -33,7 +31,9 @@ import {
   type EngagementDistribution,
   type MatchChatAdoption,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -219,11 +219,10 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.messaging.title' as TranslationKey) ||
-              'Messaging Analytics'}
+            {t('admin.analytics.screens.messaging.title') || 'Messaging Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.messaging.subtitle' as TranslationKey) ||
+            {t('admin.analytics.screens.messaging.subtitle') ||
               'Communication patterns & engagement'}
           </Text>
         </View>
@@ -261,8 +260,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
               {totalMessages.toLocaleString()}
             </Text>
             <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              {t('admin.analytics.screens.messaging.totalMessages' as TranslationKey) ||
-                'Total Messages'}
+              {t('admin.analytics.screens.messaging.totalMessages') || 'Total Messages'}
             </Text>
           </View>
 
@@ -274,8 +272,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
               {conversationHealth?.activeConversations.toLocaleString() || '0'}
             </Text>
             <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              {t('admin.analytics.screens.messaging.activeConversations' as TranslationKey) ||
-                'Active Convos'}
+              {t('admin.analytics.screens.messaging.activeConversations') || 'Active Convos'}
             </Text>
           </View>
 
@@ -287,8 +284,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
               {conversationHealth?.responseRate.toFixed(1) || '0'}%
             </Text>
             <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              {t('admin.analytics.screens.messaging.responseRate' as TranslationKey) ||
-                'Response Rate'}
+              {t('admin.analytics.screens.messaging.responseRate') || 'Response Rate'}
             </Text>
           </View>
 
@@ -300,8 +296,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
               {conversationHealth?.avgResponseTimeMinutes || 0}m
             </Text>
             <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              {t('admin.analytics.screens.messaging.avgResponseTime' as TranslationKey) ||
-                'Avg Response'}
+              {t('admin.analytics.screens.messaging.avgResponseTime') || 'Avg Response'}
             </Text>
           </View>
         </View>
@@ -309,11 +304,10 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         {/* Message Volume Trend */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.messaging.volumeTrend' as TranslationKey) ||
-              'Message Volume'}
+            {t('admin.analytics.screens.messaging.volumeTrend') || 'Message Volume'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.messaging.volumeTrendDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.messaging.volumeTrendDesc') ||
               'Daily message count across all conversations'}
           </Text>
           {totalMessageChartData.length > 0 ? (
@@ -331,7 +325,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -340,11 +334,10 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         {/* Message Types Distribution */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.messaging.messageTypes' as TranslationKey) ||
-              'Message Types'}
+            {t('admin.analytics.screens.messaging.messageTypes') || 'Message Types'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.messaging.messageTypesDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.messaging.messageTypesDesc') ||
               'Distribution by conversation type'}
           </Text>
           {messageTypeData.length > 0 ? (
@@ -365,7 +358,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -375,11 +368,10 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         {conversationHealth && (
           <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.chartTitle, { color: colors.text }]}>
-              {t('admin.analytics.screens.messaging.conversationHealth' as TranslationKey) ||
-                'Conversation Health'}
+              {t('admin.analytics.screens.messaging.conversationHealth') || 'Conversation Health'}
             </Text>
             <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-              {t('admin.analytics.screens.messaging.conversationHealthDesc' as TranslationKey) ||
+              {t('admin.analytics.screens.messaging.conversationHealthDesc') ||
                 'Key conversation metrics and health indicators'}
             </Text>
 
@@ -492,11 +484,10 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         {/* User Engagement Distribution */}
         <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t('admin.analytics.screens.messaging.engagementDist' as TranslationKey) ||
-              'User Engagement'}
+            {t('admin.analytics.screens.messaging.engagementDist') || 'User Engagement'}
           </Text>
           <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.screens.messaging.engagementDistDesc' as TranslationKey) ||
+            {t('admin.analytics.screens.messaging.engagementDistDesc') ||
               'Distribution of users by message count'}
           </Text>
           {engagementChartData.length > 0 ? (
@@ -511,7 +502,7 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={[styles.noDataText, { color: colors.textSecondary }]}>
-                {t('admin.analytics.noData' as TranslationKey) || 'No data available'}
+                {t('admin.analytics.noData') || 'No data available'}
               </Text>
             </View>
           )}
@@ -538,11 +529,10 @@ const AdminMessagingAnalyticsScreen: React.FC = () => {
         {matchChatAdoption && (
           <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.chartTitle, { color: colors.text }]}>
-              {t('admin.analytics.screens.messaging.matchChatAdoption' as TranslationKey) ||
-                'Match Chat Adoption'}
+              {t('admin.analytics.screens.messaging.matchChatAdoption') || 'Match Chat Adoption'}
             </Text>
             <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
-              {t('admin.analytics.screens.messaging.matchChatAdoptionDesc' as TranslationKey) ||
+              {t('admin.analytics.screens.messaging.matchChatAdoptionDesc') ||
                 'How often match participants use chat'}
             </Text>
 

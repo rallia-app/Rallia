@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, ViewStyle, StyleProp } from 'react-native';
 import { useTheme } from '@rallia/shared-hooks';
+
 import RalliaLogoDark from '../../assets/images/logo-dark.svg';
 import RalliaLogoLight from '../../assets/images/logo-light.svg';
 

@@ -10,7 +10,6 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image } from
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { SportIcon } from '../../../../components/SportIcon';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import type {
@@ -19,7 +18,9 @@ import type {
   OpponentForFeedback,
   MatchContextForFeedback,
 } from '@rallia/shared-types';
-import type { TranslationKey } from '../../../../hooks/useTranslation';
+
+import { SportIcon } from '#/components/SportIcon';
+import type { TranslationKey } from '#/hooks/useTranslation';
 
 // =============================================================================
 // TYPES

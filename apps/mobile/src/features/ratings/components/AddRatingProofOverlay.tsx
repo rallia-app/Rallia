@@ -4,14 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import * as Analytics from '#/services/analytics';
+
 import { ExternalLinkProofForm } from './ExternalLinkProofOverlay';
 import { ImageProofForm } from './ImageProofOverlay';
 import { VideoProofForm } from './VideoProofOverlay';
 import { DocumentProofForm } from './DocumentProofOverlay';
-import * as Analytics from '../../../services/analytics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

@@ -32,9 +32,9 @@ import {
   updateMatch,
 } from '@rallia/shared-services';
 
-import { ConfirmationModal } from '../components/ConfirmationModal';
-import { useTranslation } from '../hooks/useTranslation';
-import * as Analytics from '../services/analytics';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+import { useTranslation } from '#/hooks/useTranslation';
+import * as Analytics from '#/services/analytics';
 
 import { useActionsSheet } from './ActionsSheetContext';
 import { useMatchDetailSheet, type MatchDetailData } from './MatchDetailSheetContext';

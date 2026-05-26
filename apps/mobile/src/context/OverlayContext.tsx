@@ -21,7 +21,8 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '@rallia/shared-services';
-import { setSportSelectionComplete as syncSportSelectionToStore } from '../navigation/deepLinkStore';
+
+import { setSportSelectionComplete as syncSportSelectionToStore } from '#/navigation/deepLinkStore';
 
 // =============================================================================
 // CONSTANTS

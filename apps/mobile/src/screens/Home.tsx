@@ -23,27 +23,8 @@ import {
   SkeletonMyMatchCard,
   useToast,
 } from '@rallia/shared-components';
-
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
-import {
-  useAuth,
-  useThemeStyles,
-  useTranslation,
-  useEffectiveLocation,
-  useTourSequence,
-  usePendingReferenceRequestsCount,
-  useSuggestionInviteHandler,
-} from '../hooks';
-import {
-  useOverlay,
-  useActionsSheet,
-  useSport,
-  useMatchDetailSheet,
-  useUserHomeLocation,
-} from '../context';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import {
   useProfile,
   useTheme,
@@ -68,35 +49,56 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
+import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import {
   PENDING_REFERRAL_KEY,
   type PendingReferral,
   consumePendingDeepLink,
   getPendingDeepLink,
   addDeepLinkListener,
-} from '../navigation/deepLinkStore';
-import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
-import { useCheckInContext } from '../features/weekly-checkin/api';
-import { WEEKLY_CHECKIN_ENABLED } from '../features/weekly-checkin/featureFlag';
-import { isWeeklyCheckInActive } from '../features/weekly-checkin/isWizardActive';
-import { LinearGradient } from 'expo-linear-gradient';
-import TennisIcon from '../../assets/icons/tennis.svg';
-import PickleballIcon from '../../assets/icons/pickleball.svg';
-import { SportIcon } from '../components/SportIcon';
-import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
+} from '#/navigation/deepLinkStore';
+import { useCheckInContext } from '#/features/weekly-checkin/api';
+import { WEEKLY_CHECKIN_ENABLED } from '#/features/weekly-checkin/featureFlag';
+import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
+import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import {
+  useOverlay,
+  useActionsSheet,
+  useSport,
+  useMatchDetailSheet,
+  useUserHomeLocation,
+  useSubscription,
+} from '#/context';
+import {
+  useAuth,
+  useThemeStyles,
+  useTranslation,
+  useEffectiveLocation,
+  useTourSequence,
+  usePendingReferenceRequestsCount,
+  useSuggestionInviteHandler,
+} from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
+import { useTabPreload } from '#/navigation/useTabPreload';
 import ProfileCompletionBanner, {
   useProfileCompletionBannerVisibility,
-} from '../features/profile/components/ProfileCompletionBanner';
-import { SuggestionCard } from '../components/SuggestionCard';
-import BillingIssueBanner from '../components/BillingIssueBanner';
-import ReferenceRequestsBanner from '../components/ReferenceRequestsBanner';
-import HomeBanner, { HomeBannerLayoutProvider } from '../components/HomeBanner';
-import { useSubscription } from '../context';
+} from '#/features/profile/components/ProfileCompletionBanner';
+import { SuggestionCard } from '#/components/SuggestionCard';
+import BillingIssueBanner from '#/components/BillingIssueBanner';
+import ReferenceRequestsBanner from '#/components/ReferenceRequestsBanner';
+import HomeBanner, { HomeBannerLayoutProvider } from '#/components/HomeBanner';
 import {
   incrementOnboardedLaunchCount,
   shouldShowReferralInvite,
   markSheetShown,
-} from '../utils/referralInviteFrequency';
+} from '#/utils/referralInviteFrequency';
+
+import TennisIcon from '../../assets/icons/tennis.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -254,16 +256,19 @@ const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
 const SECOND_SPORT_BANNER_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
 
-// Availability staleness banner — matches the 7-day threshold the weekly
-// refresh cron and edit-overlay banner already use. Dismissing the banner
-// hides it for 1 day; after that, it re-appears until the user actually
-// confirms their schedule (which advances last_confirmed_at and clears it
-// for the full 7-day window).
-const AVAILABILITY_STALENESS_DAYS = 7;
+// Weekly check-in banner cooldown — shared key with the wizard's exit-confirm
+// (apps/mobile/src/features/weekly-checkin/useWeeklyCheckInWizard.ts), so
+// dismissing either surface suppresses both for 24h. The data signal that
+// drives the banner is `checkInContext.isPendingCheckIn` (true iff no
+// player_weekly_checkin row exists for the current local week) — no
+// availability-staleness proxy.
 const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const Home = () => {
+  // Warm sibling tab stacks in the background so their first open is instant.
+  useTabPreload();
+
   // Use custom hooks for auth, profile, and overlay context
   const { session, loading: authLoading } = useAuth();
   const { profile } = useProfile();
@@ -579,7 +584,7 @@ const Home = () => {
   // Retry once player data arrives in case it was null on first run
   useEffect(() => {
     if (player?.id) processDeepLink();
-  }, [player?.id, processDeepLink]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [player?.id, processDeepLink]);
 
   // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals).
   // Deferred past first paint — this is a periodic prompt, never time-sensitive.
@@ -608,7 +613,7 @@ const Home = () => {
       })();
     });
     return () => handle.cancel();
-  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]);
 
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
 
@@ -760,80 +765,49 @@ const Home = () => {
     });
   }, [secondSportFadeAnim]);
 
-  // Availability-refresh banner state. We check freshness once when the
-  // player loads; the banner shows whenever the player's most-recent
-  // last_confirmed_at is NULL (never confirmed under the 6-block model) or
-  // older than AVAILABILITY_STALENESS_DAYS. Dismissal stores a short
-  // AsyncStorage cooldown so the user isn't nagged on every Home open.
-  const [availabilityIsStale, setAvailabilityIsStale] = useState(false);
+  // Weekly check-in banner state. Data signal is `checkInContext.isPendingCheckIn`
+  // (true iff no player_weekly_checkin row exists for the current local week).
+  // We also gate on a 24h AsyncStorage cooldown shared with the wizard's ×
+  // dismissal — pessimistic default `true` so the banner doesn't flash before
+  // the cooldown read resolves.
   const [availabilityBannerDismissed, setAvailabilityBannerDismissed] = useState(false);
+  const [weeklyCheckinCooldownActive, setWeeklyCheckinCooldownActive] = useState(true);
 
-  // Stable callback so both initial-mount and focus effects re-use the same
-  // logic. `respectCooldown` is true on mount (so dismissals stick) but false
-  // on focus refresh — a fresh confirmation from the edit sheet must be able
-  // to clear the banner immediately regardless of any prior dismiss cooldown.
-  const checkAvailabilityStaleness = useCallback(
-    async (respectCooldown: boolean) => {
-      if (!isOnboarded || !player?.id) return;
+  // Read the dismiss-cooldown once on mount. After 24h have elapsed since
+  // the last dismissal (either the banner's × or the wizard's exit-confirm),
+  // the cooldown becomes inactive and the banner is free to show again
+  // whenever `isPendingCheckIn` is true.
+  useEffect(() => {
+    const handle = InteractionManager.runAfterInteractions(async () => {
       try {
-        if (respectCooldown) {
-          const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
+        const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
+        if (cooldownRaw) {
+          const dismissedAt = parseInt(cooldownRaw, 10);
           if (
-            cooldownRaw &&
-            Date.now() - parseInt(cooldownRaw, 10) < AVAILABILITY_BANNER_COOLDOWN_MS
+            Number.isFinite(dismissedAt) &&
+            Date.now() - dismissedAt < AVAILABILITY_BANNER_COOLDOWN_MS
           ) {
-            return;
+            return; // Cooldown still active — leave state at default `true`.
           }
         }
-
-        // Fetch the most-recent last_confirmed_at across the player's active
-        // rows. nullsLast: true puts confirmed rows ahead of NULL ones, so
-        // the single result reflects the freshest signal we have.
-        const { data, error } = await supabase
-          .from('player_availability')
-          .select('last_confirmed_at')
-          .eq('player_id', player.id)
-          .eq('is_active', true)
-          .order('last_confirmed_at', { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error || !data) return; // No rows = no availability set at all; profile-completion banner handles that
-
-        const mostRecent = data.last_confirmed_at;
-        const isStale =
-          !mostRecent ||
-          Date.now() - new Date(mostRecent).getTime() >
-            AVAILABILITY_STALENESS_DAYS * 24 * 60 * 60 * 1000;
-        setAvailabilityIsStale(isStale);
-        // A fresh confirmation also clears the local dismiss flag so the
-        // banner won't reappear stuck-hidden if it ever goes stale again
-        // later in this session.
-        if (!isStale) setAvailabilityBannerDismissed(false);
+        setWeeklyCheckinCooldownActive(false);
       } catch {
-        // Swallow — banner is a soft nudge, not load-bearing.
+        // Best-effort — if AsyncStorage errors, default to allowing the banner.
+        setWeeklyCheckinCooldownActive(false);
       }
-    },
-    [isOnboarded, player?.id]
-  );
-
-  useEffect(() => {
-    // Deferred past first paint — Supabase round-trip plus AsyncStorage read,
-    // none of it on the critical path for the initial frame.
-    const handle = InteractionManager.runAfterInteractions(() => {
-      void checkAvailabilityStaleness(true);
     });
     return () => handle.cancel();
-  }, [checkAvailabilityStaleness]);
+  }, []);
 
-  // Re-check whenever Home regains focus — covers the case where the user
-  // updated availability on UserProfile (or any other screen) and bounced
-  // back. Bypasses the dismiss cooldown so a fresh confirmation clears the
-  // banner immediately.
+  // When the wizard completes (or returns to home in any state where the
+  // pending-checkin signal flips false), clear the in-session dismiss flag so
+  // the banner can reappear naturally next week.
   useFocusEffect(
     useCallback(() => {
-      void checkAvailabilityStaleness(false);
-    }, [checkAvailabilityStaleness])
+      if (checkInContext && !checkInContext.isPendingCheckIn) {
+        setAvailabilityBannerDismissed(false);
+      }
+    }, [checkInContext])
   );
 
   const handleAvailabilityBannerAction = useCallback(() => {
@@ -849,6 +823,7 @@ const Home = () => {
 
   const handleDismissAvailabilityBanner = useCallback(async () => {
     setAvailabilityBannerDismissed(true);
+    setWeeklyCheckinCooldownActive(true);
     try {
       await AsyncStorage.setItem(AVAILABILITY_BANNER_COOLDOWN_KEY, Date.now().toString());
     } catch {
@@ -927,10 +902,7 @@ const Home = () => {
   // Just for you: top 5 = best matches in the area, padded with suggestions
   // when matches < 5. Score-ordered, opponent-deduped on the suggestion side,
   // creator/participant matches filtered out by the composer's exclude set.
-  const excludeUserIds = useMemo(
-    () => (session?.user?.id ? [session.user.id] : []),
-    [session?.user?.id]
-  );
+  const excludeUserIds = session?.user?.id ? [session.user.id] : [];
   const {
     items: justForYouItems,
     isLoading: loadingJustForYou,
@@ -997,7 +969,7 @@ const Home = () => {
   // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   // Render section header with "Soon & Nearby" title and "View All" button
   // Wrapped with CopilotStep for home screen tour
-  const renderSectionHeader = useCallback(() => {
+  const renderSectionHeader = () => {
     // Get a short label for the home location (full address if available, otherwise postal code)
     const homeLocationLabel = player?.address
       ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
@@ -1022,7 +994,7 @@ const Home = () => {
                 hasHomeLocation={hasHomeLocation}
                 homeLocationLabel={homeLocationLabel}
                 isDark={isDark}
-                t={t as (key: string) => string}
+                t={t}
               />
             </View>
           )}
@@ -1047,21 +1019,7 @@ const Home = () => {
         </TouchableOpacity>
       </View>
     );
-  }, [
-    colors.text,
-    colors.primary,
-    navigation,
-    t,
-    locationMode,
-    setLocationMode,
-    hasHomeLocation,
-    hasBothLocationOptions,
-    homeLocation,
-    isDark,
-    player?.address,
-    player?.city,
-    session?.user?.id,
-  ]);
+  };
 
   // Render "My Matches" section with horizontal scroll
   const renderMyMatchesSection = useCallback(() => {
@@ -1164,12 +1122,7 @@ const Home = () => {
                         key={match.id}
                         match={match}
                         isDark={isDark}
-                        t={
-                          t as (
-                            key: string,
-                            options?: Record<string, string | number | boolean>
-                          ) => string
-                        }
+                        t={t}
                         locale={locale}
                         isInvited={isInvited}
                         pendingRequestCount={pendingRequestCount}
@@ -1268,7 +1221,12 @@ const Home = () => {
       // suppresses both for 24h.
       // Banner CTA navigates into the weekly check-in wizard, so keep it
       // hidden while the wizard is shipped dark.
-      if (WEEKLY_CHECKIN_ENABLED && availabilityIsStale && !availabilityBannerDismissed) {
+      if (
+        WEEKLY_CHECKIN_ENABLED &&
+        checkInContext?.isPendingCheckIn === true &&
+        !availabilityBannerDismissed &&
+        !weeklyCheckinCooldownActive
+      ) {
         // Show the streak-aware subtitle when the player has an active streak.
         // checkInContext is loaded by the auto-opener but we read it here too
         // (TanStack cache de-dupes the request).
@@ -1522,8 +1480,10 @@ const Home = () => {
     profileCompletionBanner.ready,
     profileCompletionBanner.visible,
     profileCompletionBanner.handleDismiss,
-    availabilityIsStale,
+    checkInContext?.isPendingCheckIn,
+    checkInContext?.currentStreak,
     availabilityBannerDismissed,
+    weeklyCheckinCooldownActive,
     handleAvailabilityBannerAction,
     handleDismissAvailabilityBanner,
   ]);
@@ -1626,14 +1586,14 @@ const Home = () => {
                               }
                               onPress={() => {
                                 Logger.logUserAction('match_pressed', { matchId: item.data.id });
-                                openMatchDetail(item.data as MatchDetailData);
+                                openMatchDetail(item.data);
                               }}
                             />
                           </View>
                         </View>
                       ) : (
                         <View
-                          key={`suggestion:${item.data.opponentId}:${(item.data.slot.datetime as Date).getTime?.() ?? 0}`}
+                          key={`suggestion:${item.data.opponentId}:${item.data.slot.datetime.getTime?.() ?? 0}`}
                           style={styles.jfyCardWrapper}
                         >
                           <SuggestionCard

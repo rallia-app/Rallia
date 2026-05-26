@@ -17,9 +17,10 @@ import { lightTheme, darkTheme, spacingPixels, primary, neutral } from '@rallia/
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme, useReferral } from '@rallia/shared-hooks';
 import { getReferralLink } from '@rallia/shared-services';
-import { useTranslation, type TranslationKey } from '../../../hooks/useTranslation';
-import { useAuth } from '../../../hooks';
-import { useLocale } from '../../../context';
+
+import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
+import { useAuth } from '#/hooks';
+import { useLocale } from '#/context';
 
 import { ShareLinkStep } from './steps/ShareLinkStep';
 

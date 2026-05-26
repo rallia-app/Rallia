@@ -25,16 +25,17 @@ import {
   useSharedListsRealtime,
   type SharedContactList,
 } from '@rallia/shared-hooks';
+
 import {
   useThemeStyles,
   useAuth,
   useTranslation,
   useRequireOnboarding,
   type TranslationKey,
-} from '../hooks';
-import type { CommunityStackParamList } from '../navigation/types';
-import { SharedListCard } from '../features/shared-lists';
-import { SearchBar } from '../components/SearchBar';
+} from '#/hooks';
+import type { CommunityStackParamList } from '#/navigation/types';
+import { SharedListCard } from '#/features/shared-lists';
+import { SearchBar } from '#/components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<CommunityStackParamList>;
 

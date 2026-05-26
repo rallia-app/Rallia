@@ -15,7 +15,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { SearchBar } from '../../matches/components';
 import {
   useFacilitySearch,
   useFavoriteFacilities,
@@ -25,8 +24,16 @@ import {
   DEFAULT_FACILITY_FILTERS,
   MIN_FAVORITE_FACILITIES,
   type FacilityFilters,
+  FormattedSlot,
+  CourtOption,
 } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import { Logger } from '@rallia/shared-services';
+import { spacingPixels, secondary } from '@rallia/design-system';
+import { lightHaptic } from '@rallia/shared-utils';
+import { SheetManager } from 'react-native-actions-sheet';
+
+import { SearchBar } from '#/features/matches/components';
 import {
   useThemeStyles,
   useTranslation,
@@ -35,17 +42,15 @@ import {
   type TranslationOptions,
   useRequireOnboarding,
   useOpenExternalBooking,
-} from '../../../hooks';
-import { useAuth } from '../../../hooks';
-import { useSport, useUserHomeLocation, useActionsSheet } from '../../../context';
-import { useCourtsNavigation } from '../../../navigation/hooks';
-import { useAppNavigation } from '../../../navigation/hooks';
-import { Logger } from '@rallia/shared-services';
-import { spacingPixels, secondary } from '@rallia/design-system';
-import { FacilityCard, FacilityCardSkeleton, FacilityFiltersBar } from '../components';
-import { lightHaptic } from '@rallia/shared-utils';
-import { SheetManager } from 'react-native-actions-sheet';
-import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
+} from '#/hooks';
+import { useAuth } from '#/hooks';
+import { useSport, useUserHomeLocation, useActionsSheet } from '#/context';
+import { useCourtsNavigation, useAppNavigation } from '#/navigation/hooks';
+import {
+  FacilityCard,
+  FacilityCardSkeleton,
+  FacilityFiltersBar,
+} from '#/features/facilities/components';
 
 // =============================================================================
 // HELPER COMPONENTS

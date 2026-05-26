@@ -8,9 +8,10 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, status, primary } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface BlockedUserModalProps {
   visible: boolean;

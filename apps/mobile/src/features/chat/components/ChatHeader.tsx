@@ -8,11 +8,11 @@ import React, { memo, useState, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { Text } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface ChatHeaderProps {
   title: string;

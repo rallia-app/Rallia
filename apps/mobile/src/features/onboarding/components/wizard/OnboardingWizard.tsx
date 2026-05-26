@@ -48,17 +48,6 @@ import {
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, useTopSuggestions, facilityKeys } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  PENDING_REFERRAL_KEY,
-  ACQUISITION_CHANNEL_KEY,
-  type PendingReferral,
-  type DiscoveryChannelId,
-} from '../../../../navigation/deepLinkStore';
-import { replaceImage } from '../../../../services/imageUpload';
-import * as Analytics from '../../../../services/analytics';
-import { posthogClient } from '../../../../providers/PostHogProvider';
-import { useImagePicker, useTranslation as useLocale } from '../../../../hooks';
-import { useSport, useUserHomeLocation } from '../../../../context';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type {
   OnboardingPlayerPreferences,
@@ -68,10 +57,22 @@ import type {
 } from '@rallia/shared-types';
 
 import {
+  PENDING_REFERRAL_KEY,
+  ACQUISITION_CHANNEL_KEY,
+  type PendingReferral,
+  type DiscoveryChannelId,
+} from '#/navigation/deepLinkStore';
+import { replaceImage } from '#/services/imageUpload';
+import * as Analytics from '#/services/analytics';
+import { posthogClient } from '#/providers/PostHogProvider';
+import { useImagePicker, useTranslation as useLocale } from '#/hooks';
+import { useSport, useUserHomeLocation } from '#/context';
+import {
   useOnboardingWizard,
   computeFavoriteSportCounts,
   type OnboardingStepId,
-} from '../../hooks/useOnboardingWizard';
+} from '#/features/onboarding/hooks/useOnboardingWizard';
+
 import {
   PersonalInfoStep,
   RatingStep,
@@ -253,7 +254,7 @@ const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => strin
     'favorite-sites': 'onboarding.stepNames.favoriteSites',
     availabilities: 'onboarding.stepNames.availability',
     success: 'onboarding.complete',
-    suggestions: 'onboarding.suggestions.title' as TranslationKey,
+    suggestions: 'onboarding.suggestions.title',
   };
   return t(keys[stepId]) || '';
 };
@@ -558,7 +559,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               'profile-pictures'
             );
             if (uploadError) {
-              Logger.error('Failed to upload profile picture', uploadError as Error);
+              Logger.error('Failed to upload profile picture', uploadError);
             } else if (url) {
               uploadedImageUrl = url;
               setLastUploadedProfileUrl(url); // Track for future replacements
@@ -704,11 +705,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               sportsData.push({
                 sport_id: tennisSport.id,
                 sport_name: 'tennis',
-                preferred_match_duration: (formData.tennisMatchDuration || '90') as
-                  | '30'
-                  | '60'
-                  | '90'
-                  | '120',
+                preferred_match_duration: formData.tennisMatchDuration || '90',
                 preferred_match_type: formData.tennisMatchType,
                 is_primary: true,
               });
@@ -721,11 +718,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               sportsData.push({
                 sport_id: pickleballSport.id,
                 sport_name: 'pickleball',
-                preferred_match_duration: (formData.pickleballMatchDuration || '90') as
-                  | '30'
-                  | '60'
-                  | '90'
-                  | '120',
+                preferred_match_duration: formData.pickleballMatchDuration || '90',
                 preferred_match_type: formData.pickleballMatchType,
                 is_primary: !hasTennis,
               });
@@ -814,7 +807,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             .insert(favoritesToInsert);
 
           if (insertError) {
-            Logger.error('Failed to save favorite facilities', insertError as Error);
+            Logger.error('Failed to save favorite facilities', insertError);
             Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.failedToSave'));
             setIsSaving(false);
             return false;
@@ -864,7 +857,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Logger.error('Failed to mark onboarding as completed', completeError as Error);
             Alert.alert(
               t('alerts.error'),
-              t('onboarding.validation.failedToCompleteOnboarding' as TranslationKey) ||
+              t('onboarding.validation.failedToCompleteOnboarding') ||
                 'Failed to complete onboarding. Please try again.'
             );
             setIsSaving(false);

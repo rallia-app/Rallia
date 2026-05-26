@@ -21,8 +21,8 @@ import type { CourtOption, FormattedSlot } from '@rallia/shared-hooks';
 import { useCourtAvailability, useFacilityDetail } from '@rallia/shared-hooks';
 import { getTimeDifferenceFromNow } from '@rallia/shared-utils';
 
-import type { MatchDetailData } from '../../../context/MatchDetailSheetContext';
-import { useTranslation, useThemeStyles, useOpenExternalBooking } from '../../../hooks';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { useTranslation, useThemeStyles, useOpenExternalBooking } from '#/hooks';
 
 interface MatchAvailableCourtsSectionProps {
   match: MatchDetailData;

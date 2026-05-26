@@ -9,9 +9,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import {
   spacingPixels,
   fontSizePixels,
@@ -21,6 +19,8 @@ import {
   radiusPixels,
 } from '@rallia/design-system';
 import { COMMON_REACTIONS } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 type ActionItem = {
   id: string;

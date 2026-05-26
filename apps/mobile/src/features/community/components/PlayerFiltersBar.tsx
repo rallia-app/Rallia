@@ -9,7 +9,6 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 
 import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
 import type { RatingScoreOption } from '@rallia/shared-hooks';
-import { useTranslation, type TranslationKey } from '../../../hooks';
 import {
   spacingPixels,
   radiusPixels,
@@ -21,7 +20,9 @@ import {
   darkTheme,
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic, selectionHaptic } from '../../../utils/haptics';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
+import { lightHaptic, selectionHaptic } from '#/utils/haptics';
 
 // =============================================================================
 // TYPES
@@ -782,7 +783,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
   const getStyleLabel = useCallback((v: PlayStyleFilter) => t(PLAY_STYLE_LABEL_KEYS[v]), [t]);
   const getSortLabel = useCallback((v: SortOption) => t(SORT_LABEL_KEYS[v]), [t]);
   const getReputationLabel = useCallback(
-    (v: ReputationFilter) => t(`playerDirectory.filters.reputation.${v}` as TranslationKey),
+    (v: ReputationFilter) => t(`playerDirectory.filters.reputation.${v}`),
     [t]
   );
   const getReputationIcon = useCallback((v: ReputationFilter) => {
@@ -825,7 +826,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       : t(HOUR_RANGE_LABEL_KEYS[hourRangePreset]);
   const dayDisplay =
     filters.day === 'all'
-      ? t('playerDirectory.filters.day' as TranslationKey)
+      ? t('playerDirectory.filters.day')
       : t(DAY_LABEL_KEYS[filters.day] as TranslationKey);
   const styleDisplay =
     filters.playStyle === 'all'
@@ -834,16 +835,15 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
   const sortDisplay = t(SORT_LABEL_KEYS[filters.sortBy || 'distance']);
   const reputationDisplay =
     filters.reputation === 'all'
-      ? t('playerDirectory.filters.reputation.label' as TranslationKey)
-      : t(`playerDirectory.filters.reputation.${filters.reputation}` as TranslationKey);
+      ? t('playerDirectory.filters.reputation.label')
+      : t(`playerDirectory.filters.reputation.${filters.reputation}`);
   const ratingDisplay = useMemo(() => {
-    if (filters.rating.length === 0)
-      return t('playerDirectory.filters.rating.label' as TranslationKey);
+    if (filters.rating.length === 0) return t('playerDirectory.filters.rating.label');
     if (filters.rating.length === 1) {
       const selected = ratingOptions.find(r => r.id === filters.rating[0]);
-      return selected?.label ?? t('playerDirectory.filters.rating.label' as TranslationKey);
+      return selected?.label ?? t('playerDirectory.filters.rating.label');
     }
-    return t('playerDirectory.filters.rating.countActive' as TranslationKey, {
+    return t('playerDirectory.filters.rating.countActive', {
       count: filters.rating.length,
     });
   }, [filters.rating, ratingOptions, t]);
@@ -874,7 +874,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       // Rating Filter (multi-select)
       {
         key: 'rating',
-        label: t('playerDirectory.filters.rating.label' as TranslationKey),
+        label: t('playerDirectory.filters.rating.label'),
         value: ratingDisplay,
         isActive: filters.rating.length > 0,
         onPress: () => setShowRatingDropdown(true),
@@ -883,8 +883,8 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       // Certified Toggle
       {
         key: 'certified',
-        label: t('playerDirectory.filters.certified' as TranslationKey),
-        value: t('playerDirectory.filters.certified' as TranslationKey),
+        label: t('playerDirectory.filters.certified'),
+        value: t('playerDirectory.filters.certified'),
         isActive: filters.certifiedOnly,
         onPress: handleCertifiedToggle,
         hasDropdown: false,
@@ -920,7 +920,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       // Day Filter
       {
         key: 'day',
-        label: t('playerDirectory.filters.day' as TranslationKey),
+        label: t('playerDirectory.filters.day'),
         value: dayDisplay,
         isActive: filters.day !== 'all',
         onPress: () => setShowDayDropdown(true),
@@ -938,7 +938,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       // Reputation Filter
       {
         key: 'reputation',
-        label: t('playerDirectory.filters.reputation.label' as TranslationKey),
+        label: t('playerDirectory.filters.reputation.label'),
         value: reputationDisplay,
         isActive: filters.reputation !== 'all',
         onPress: () => setShowReputationDropdown(true),
@@ -1010,7 +1010,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
               hasHomeLocation={hasHomeLocation}
               homeLocationLabel={homeLocationLabel}
               isDark={isDark}
-              t={t as (key: string) => string}
+              t={t}
             />
           </View>
         )}
@@ -1058,7 +1058,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       {/* Rating Multi-Select Dropdown */}
       <MultiSelectFilterDropdown
         visible={showRatingDropdown}
-        title={t('playerDirectory.filters.selectRating' as TranslationKey)}
+        title={t('playerDirectory.filters.selectRating')}
         options={ratingDropdownOptions}
         selectedIds={filters.rating}
         onToggle={handleRatingToggle}
@@ -1070,7 +1070,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       {/* Reputation Dropdown */}
       <FilterDropdown
         visible={showReputationDropdown}
-        title={t('playerDirectory.filters.selectReputation' as TranslationKey)}
+        title={t('playerDirectory.filters.selectReputation')}
         options={REPUTATION_OPTIONS}
         selectedValue={filters.reputation}
         onSelect={handleReputationChange}
@@ -1115,7 +1115,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
 
       <FilterDropdown
         visible={showDayDropdown}
-        title={t('playerDirectory.filters.selectDay' as TranslationKey)}
+        title={t('playerDirectory.filters.selectDay')}
         options={DAY_OPTIONS}
         selectedValue={filters.day}
         onSelect={handleDayChange}

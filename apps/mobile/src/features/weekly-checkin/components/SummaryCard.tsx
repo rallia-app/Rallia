@@ -19,11 +19,17 @@ import {
   spacingPixels,
   shadowsSemanticNative,
 } from '@rallia/design-system';
-import { useTranslation } from '../../../hooks';
+
+import { useTranslation } from '#/hooks';
+import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '#/features/weekly-checkin/featureFlag';
 
 interface SummaryCardProps {
   newStreak: number;
   milestoneReached: boolean;
+  /** True iff a freeze was actually earned this call. False when capped. */
+  freezeEarned: boolean;
+  /** True if this is the player's very first check-in (no prior streak). */
+  isFirstEver: boolean;
   frequencyGoal: number;
   hoursConfirmed: number;
   autoCreate: boolean;
@@ -33,6 +39,8 @@ interface SummaryCardProps {
 export function SummaryCard({
   newStreak,
   milestoneReached,
+  freezeEarned,
+  isFirstEver,
   frequencyGoal,
   hoursConfirmed,
   autoCreate,
@@ -79,9 +87,18 @@ export function SummaryCard({
       ? t('weeklyCheckIn.step4.streakHeroCountOne')
       : t('weeklyCheckIn.step4.streakHeroCount', { count: newStreak });
 
+  // Hero sub copy priority:
+  //   1. Milestone + freeze earned → "Streak milestone · +1 freeze earned ❄️"
+  //   2. Milestone but freezes capped → "Streak milestone! Freezes maxed ❄️❄️"
+  //   3. First ever check-in → "Streak started 🌱"
+  //   4. Default → "Streak extended · +1"
   const heroSub = milestoneReached
-    ? t('weeklyCheckIn.step4.streakHeroSubMilestone')
-    : t('weeklyCheckIn.step4.streakHeroSub');
+    ? freezeEarned
+      ? t('weeklyCheckIn.step4.streakHeroSubMilestone')
+      : t('weeklyCheckIn.step4.streakHeroSubMilestoneCapped')
+    : isFirstEver
+      ? t('weeklyCheckIn.step4.streakHeroSubFirst')
+      : t('weeklyCheckIn.step4.streakHeroSub');
 
   const freqText = t('weeklyCheckIn.step4.summaryGoal', {
     freq: `${frequencyGoal}${frequencyGoal === 5 ? '+' : ''}× sessions`,
@@ -122,9 +139,9 @@ export function SummaryCard({
         colors={colors}
         iconBubbleBg={iconBubbleBg}
         iconColor={iconColor}
-        isLast={!autoCreate && !autoInvite}
+        isLast={!WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED || (!autoCreate && !autoInvite)}
       />
-      {autoCreate && (
+      {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && autoCreate && (
         <SummaryRow
           icon="add-circle"
           text={t('weeklyCheckIn.step4.summaryAutoCreate')}
@@ -134,7 +151,7 @@ export function SummaryCard({
           isLast={!autoInvite}
         />
       )}
-      {autoInvite && (
+      {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && autoInvite && (
         <SummaryRow
           icon="people"
           text={t('weeklyCheckIn.step4.summaryAutoInvite')}

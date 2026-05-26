@@ -3,7 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { useThemeStyles, useTranslation } from '../../../hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface ProgressIndicatorProps {
   currentStep: number;

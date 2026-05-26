@@ -27,7 +27,8 @@ import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useRatingScoresForSport, useFacilityReservationContact } from '@rallia/shared-hooks';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
-import type { TranslationKey, TranslationOptions } from '../../../../hooks/useTranslation';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
 
 // =============================================================================
 // TYPES

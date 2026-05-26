@@ -10,8 +10,10 @@ import { View, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+
 import { useAddScore } from './AddScoreContext';
 import type { SelectedPlayer } from './types';
 

@@ -1,5 +1,8 @@
 import type { JsonType } from '@posthog/core';
-import { posthogClient } from '../providers/PostHogProvider';
+import { Platform } from 'react-native';
+
+import { posthogClient } from '#/providers/PostHogProvider';
+import { logMetaEvent } from '#/lib/meta';
 
 function capture(event: string, properties?: Record<string, JsonType>): void {
   if (__DEV__) {
@@ -19,6 +22,12 @@ export function signInCompleted(props: {
   is_new_user: boolean;
 }): void {
   capture('sign_in_completed', props);
+  // Meta uses Complete Registration for lookalikes and new-user optimization.
+  // Only fire for genuine new sign-ups — returning sign-ins should not inflate
+  // Meta's registration count or attribution data.
+  if (props.is_new_user) {
+    logMetaEvent('fb_mobile_complete_registration', { fb_registration_method: props.method });
+  }
 }
 
 // ---- Onboarding Funnel ----
@@ -33,6 +42,11 @@ export function onboardingStepCompleted(props: { step_name: string; step_index: 
 
 export function onboardingCompleted(props: { sports: string[]; duration_seconds: number }): void {
   capture('onboarding_completed', props);
+  // Meta's "tutorial completion" — activation signal for the optimizer once
+  // we graduate from install-only optimization.
+  logMetaEvent('fb_mobile_tutorial_completion', {
+    fb_num_items: props.sports.length,
+  });
 }
 
 export function onboardingAbandoned(props: {
@@ -54,6 +68,12 @@ export function matchCreated(props: {
   player_count: string;
 }): void {
   capture('match_created', props);
+  // Core activation moment — the user has created a real match. Mapped to
+  // Meta's Achievement Unlocked so it's eligible for AEO optimization later.
+  logMetaEvent('fb_mobile_achievement_unlocked', {
+    fb_description: 'Match Created',
+    fb_content_type: props.sport_name,
+  });
 }
 
 export function matchJoined(props: {
@@ -63,6 +83,10 @@ export function matchJoined(props: {
   discovery_source?: string;
 }): void {
   capture('match_joined', props);
+  // Custom engagement event — not in Meta's standard catalog but useful as a
+  // secondary signal alongside Match Created. Custom event names are
+  // arbitrary but must stay stable for Meta to model them.
+  logMetaEvent('Match Joined', { fb_content_type: props.sport_name });
 }
 
 export function matchFilled(props: {
@@ -353,6 +377,10 @@ export function searchPerformed(props: {
   context: string;
 }): void {
   capture('search_performed', props);
+  // Map to Meta's Search standard event. We deliberately omit fb_search_string
+  // — Meta's docs flag it as PII-sensitive and our queries can include
+  // partial postal codes / player names.
+  logMetaEvent('fb_mobile_search', { fb_content_type: props.context });
 }
 
 export function filterApplied(props: { filter_type: string; value: string }): void {
@@ -385,8 +413,29 @@ export function notificationPermissionResult(props: {
   capture('notification_permission_result', props);
 }
 
+/**
+ * Fires after the user resolves Apple's ATT (App Tracking Transparency)
+ * prompt — or skips the pre-prompt screen without triggering the system
+ * dialog. `skipped: true` means the user dismissed the pre-prompt, so the
+ * one-shot system ATT prompt was deliberately NOT fired and remains
+ * available for a future moment.
+ */
+export function trackingPermissionResult(props: {
+  granted: boolean;
+  skipped: boolean;
+  source: 'pre_onboarding';
+}): void {
+  capture('tracking_permission_result', props);
+}
+
 export function deepLinkOpened(props: {
   link_type: string;
+  /** Where the URL came from: 'os' = standard OS deep link (Universal Link,
+   *  custom scheme, push tap); 'meta_deferred' = Meta SDK's
+   *  AppLink.fetchDeferredAppLink() — set when the user tapped a Meta ad
+   *  with a deep destination, before installing. Lets us distinguish
+   *  ad-driven cold starts from organic ones in PostHog. */
+  source?: 'os' | 'meta_deferred';
   invitation_type?: string;
   has_referral?: boolean;
   referral_code?: string;
@@ -446,6 +495,10 @@ export function bookingInitiated(props: {
   sport_name: string;
 }): void {
   capture('booking_initiated', props);
+  // Court-booking handoff is the marketplace equivalent of "initiated
+  // checkout". Distinct from in-app subscription purchase — those fire
+  // automatically via the iOS Shared Secret / Android Play Billing auto-log.
+  logMetaEvent('fb_mobile_initiated_checkout', { fb_content_type: props.sport_name });
 }
 
 export function bookingRedirected(props: {
@@ -510,14 +563,35 @@ export function appOpened(props: { cold_start: boolean }): void {
 
 export function paywallViewed(): void {
   capture('paywall_viewed');
+  // Meta's Content View — useful for retargeting audiences ("saw paywall but
+  // didn't subscribe") and as an intent signal upstream of fb_mobile_subscribe.
+  logMetaEvent('fb_mobile_content_view', { fb_content_type: 'paywall' });
 }
 
 export function paywallDismissed(): void {
   capture('paywall_dismissed');
 }
 
-export function subscriptionStarted(props: { product_id: string }): void {
+export function subscriptionStarted(props: {
+  product_id: string;
+  /** Local price as a number (e.g. 9.99). Passed straight through to Meta's
+   *  valueToSum on Android. RevenueCat exposes this as `product.price`. */
+  price?: number;
+  /** ISO 4217 code (e.g. 'CAD', 'USD'). Required for Meta valuation on
+   *  Android — without it Meta can't normalize across geos. */
+  currency?: string;
+}): void {
   capture('subscription_started', props);
+  // iOS auto-logs subscriptions from App Store receipts via the App-Specific
+  // Shared Secret configured in Meta dashboard, so firing here would cause
+  // duplicate fb_mobile_subscribe events. Android purchases auto-log only
+  // covers non-subscription IAPs (Google Play Billing limitation without a
+  // Play API service account), so we fire fb_mobile_subscribe manually on
+  // Android. If/when GCP service account is added in Meta dashboard, remove
+  // this branch — auto-log will take over and duplicates will appear.
+  if (Platform.OS === 'android' && props.price && props.currency) {
+    logMetaEvent('fb_mobile_subscribe', { fb_currency: props.currency }, props.price);
+  }
 }
 
 export function subscriptionRenewed(props: { product_id: string }): void {

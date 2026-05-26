@@ -1,5 +1,4 @@
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
-const { withNativeWind } = require('nativewind/metro');
 const path = require('path');
 
 const projectRoot = __dirname;
@@ -65,5 +64,4 @@ config.resolver = {
 // Watch workspace packages (extend Expo defaults rather than replace)
 config.watchFolders = [...(config.watchFolders ?? []), workspaceRoot];
 
-// Apply NativeWind
-module.exports = withNativeWind(config);
+module.exports = config;

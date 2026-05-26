@@ -70,16 +70,16 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-} from '../hooks';
-import { useSport } from '../context';
-import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
-import { SportIcon } from '../components/SportIcon';
-import RatingBadge from '../components/RatingBadge';
-import type { RootStackParamList } from '../navigation/types';
-import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
-import { NetworkLeaderboardTab, NetworkMatchesTab } from '../features/matches/components';
-import { NetworkFavoriteFacilities } from '../components/NetworkFavoriteFacilities';
-import { InfoModal } from '../components/InfoModal';
+} from '#/hooks';
+import { useSport } from '#/context';
+import { getJoinErrorToastMessage } from '#/utils/joinErrorToast';
+import { SportIcon } from '#/components/SportIcon';
+import RatingBadge from '#/components/RatingBadge';
+import type { RootStackParamList } from '#/navigation/types';
+import { AddScoreIntroModal, AddScoreModal, type MatchType } from '#/features/matches';
+import { NetworkLeaderboardTab, NetworkMatchesTab } from '#/features/matches/components';
+import { NetworkFavoriteFacilities } from '#/components/NetworkFavoriteFacilities';
+import { InfoModal } from '#/components/InfoModal';
 
 const HEADER_HEIGHT = 140;
 
@@ -197,11 +197,11 @@ export default function CommunityDetailScreen() {
   );
 
   // Derive sport name for rating requirement display
-  const communitySportName = useMemo(() => {
-    if (!community?.sport_id || !sports) return undefined;
-    const sport = sports.find(s => s.id === community.sport_id);
-    return sport?.name ? sport.name.charAt(0).toUpperCase() + sport.name.slice(1) : undefined;
-  }, [community?.sport_id, sports]);
+  const communitySport =
+    community?.sport_id && sports ? sports.find(s => s.id === community.sport_id) : undefined;
+  const communitySportName = communitySport?.name
+    ? communitySport.name.charAt(0).toUpperCase() + communitySport.name.slice(1)
+    : undefined;
 
   // Computed access state
   const canAccessCommunity = accessInfo?.canAccess ?? false;

@@ -20,7 +20,8 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
-import { useTranslation } from '../hooks';
+
+import { useTranslation } from '#/hooks';
 
 // =============================================================================
 // TYPES

@@ -19,10 +19,12 @@ import {
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
-import { SearchBar } from '../../../../components/SearchBar';
-import { ContactRow } from '../../../../components/ContactRow';
-import { formatContactSubtitle } from '../../../../utils/contactDisplay';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { SearchBar } from '#/components/SearchBar';
+import { ContactRow } from '#/components/ContactRow';
+import { formatContactSubtitle } from '#/utils/contactDisplay';
+
 import type { SelectedPlayer } from './types';
 
 interface DeviceContact {

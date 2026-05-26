@@ -26,8 +26,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, useToast } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
-import { useTranslation } from '../hooks';
-import type { RootStackParamList } from '../navigation/types';
 import {
   lightTheme,
   darkTheme,
@@ -38,6 +36,9 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

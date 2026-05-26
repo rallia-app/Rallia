@@ -17,8 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { primary, neutral, base } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/design-system';
 import {
   getSharedContactLists,
   getSharedContacts,
@@ -28,8 +27,9 @@ import {
   type ShareChannel,
 } from '@rallia/shared-services';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
-import { ContactRow, ContactSelectionCheck } from '../../../components/ContactRow';
-import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
+
+import { ContactRow, ContactSelectionCheck } from '#/components/ContactRow';
+import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
 
 // =============================================================================
 // TYPES

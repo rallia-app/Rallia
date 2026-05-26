@@ -16,7 +16,7 @@ import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-nat
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import {
   errorHaptic,
@@ -26,8 +26,8 @@ import {
 } from '@rallia/shared-utils';
 import { Logger, supabase } from '@rallia/shared-services';
 import { topSuggestionKeys, justForYouKeys } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation } from '../hooks';
-import { useToast } from '@rallia/shared-components';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 export interface MatchInviteConfirmPayload {
   opponentId: string;

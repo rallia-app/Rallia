@@ -19,9 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import {
@@ -37,7 +35,9 @@ import {
   type OnboardingFunnelRPC,
   type UserGrowthTrend,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -240,11 +240,10 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.analytics.sections.onboarding' as TranslationKey) || 'Onboarding Analytics'}
+            {t('admin.analytics.sections.onboarding') || 'Onboarding Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.sections.onboardingDesc' as TranslationKey) ||
-              'User journey funnel'}
+            {t('admin.analytics.sections.onboardingDesc') || 'User journey funnel'}
           </Text>
         </View>
       </View>
@@ -343,10 +342,7 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
             <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
               <FunnelChart
                 data={funnelData}
-                title={
-                  t('admin.analytics.charts.funnelChart.defaultTitle' as TranslationKey) ||
-                  'Conversion Funnel'
-                }
+                title={t('admin.analytics.charts.funnelChart.defaultTitle') || 'Conversion Funnel'}
                 subtitle={`${selectedOption === '7d' ? 'Last 7 days' : selectedOption === '30d' ? 'Last 30 days' : selectedOption === '90d' ? 'Last 90 days' : 'Year to date'}`}
                 showConversion
                 showPercentOfTotal
@@ -375,7 +371,7 @@ const AdminOnboardingAnalyticsScreen: React.FC = () => {
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
                 <LineChart
                   data={cohortTrend}
-                  title={t('admin.analytics.userGrowth.newUsers' as TranslationKey) || 'New Users'}
+                  title={t('admin.analytics.userGrowth.newUsers') || 'New Users'}
                   subtitle="Daily user registrations"
                   showArea
                   curved

@@ -7,10 +7,10 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { primary, neutral, status } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import type { SharedContactList } from '@rallia/shared-services';
-import { useTranslation, type TranslationKey } from '../../../hooks';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
 
 interface ThemeColors {
   background: string;
@@ -107,7 +107,7 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
           isDark={isDark}
           textStyle={{ color: colors.textMuted }}
         >
-          {t('common.edit' as TranslationKey)}
+          {t('common.edit')}
         </Button>
         <Button
           variant="ghost"
@@ -118,7 +118,7 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
           leftIcon={<Ionicons name="trash-outline" size={14} color={status.error.DEFAULT} />}
           isDark={isDark}
         >
-          {t('common.delete' as TranslationKey)}
+          {t('common.delete')}
         </Button>
       </View>
     </TouchableOpacity>

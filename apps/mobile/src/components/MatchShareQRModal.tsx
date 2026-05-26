@@ -9,15 +9,14 @@ import { View, StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback } f
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-
 import { Text, useToast } from '@rallia/shared-components';
 import { lightTheme, darkTheme, spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
 
-import { useTranslation, useThemeStyles } from '../hooks';
-import { generateMatchDeepLink } from '../utils/shareUtils';
-import * as Analytics from '../services/analytics';
+import { useTranslation, useThemeStyles } from '#/hooks';
+import { generateMatchDeepLink } from '#/utils/shareUtils';
+import * as Analytics from '#/services/analytics';
 
 export interface MatchShareQRModalProps {
   visible: boolean;

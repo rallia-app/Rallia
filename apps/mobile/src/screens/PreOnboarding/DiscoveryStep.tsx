@@ -27,10 +27,11 @@ import {
   REFERRAL_CODE_LENGTH,
 } from '@rallia/shared-utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useThemeStyles, useTranslation } from '../../hooks';
-import { PENDING_REFERRAL_KEY } from '../../navigation/deepLinkStore';
-import * as Analytics from '../../services/analytics';
-import type { TranslationKey } from '../../hooks';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { PENDING_REFERRAL_KEY } from '#/navigation/deepLinkStore';
+import * as Analytics from '#/services/analytics';
+import type { TranslationKey } from '#/hooks';
 
 type Mode = 'chips' | 'friendCode';
 

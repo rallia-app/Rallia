@@ -16,6 +16,7 @@ export * from './useOpenExternalBooking';
 export * from './usePendingReferenceRequestsCount';
 export * from './useDeviceContacts';
 export * from './useSuggestionInviteHandler';
+export * from './useActiveConversation';
 
 // Group chat hooks
 export * from './groupChat';
@@ -28,6 +29,7 @@ export {
   type ResolvedTheme,
 } from '@rallia/shared-hooks/src/useTheme.native';
 export { useThemeStyles, type ThemeColors } from '@rallia/shared-hooks/src/useThemeStyles.native';
+export { useThemedStyles, type ThemedStylesContext } from './useThemedStyles';
 
 // Re-export commonly used shared hooks
 export {

@@ -8,10 +8,12 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
-import { SportIcon } from '../../../../components/SportIcon';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import DateTimePicker from '@react-native-community/datetimepicker';
+
+import { SportIcon } from '#/components/SportIcon';
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+
 import { useAddScore } from './AddScoreContext';
 import type { Sport } from './types';
 

@@ -37,19 +37,21 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
-import { useTranslation, type TranslationKey } from '../hooks';
-import { SportIcon } from './SportIcon';
 import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
-import { MatchCreationWizard } from '../features/matches';
-import { TournamentCreationWizard } from '../features/tournaments';
-import { InvitePlayersWizard } from '../features/referral';
-import { CreateNetworkWizard } from '../features/groups';
-import { AuthWizard } from '../features/auth';
-import { OnboardingWizard } from '../features/onboarding/components/wizard';
-import { navigateFromOutside, navigationRef } from '../navigation';
-import * as Analytics from '../services/analytics';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
+import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
+import { MatchCreationWizard } from '#/features/matches';
+import { TournamentCreationWizard } from '#/features/tournaments';
+import { InvitePlayersWizard } from '#/features/referral';
+import { CreateNetworkWizard } from '#/features/groups';
+import { AuthWizard } from '#/features/auth';
+import { OnboardingWizard } from '#/features/onboarding/components/wizard';
+import { navigateFromOutside, navigationRef } from '#/navigation';
+import * as Analytics from '#/services/analytics';
+
+import { SportIcon } from './SportIcon';
 
 // =============================================================================
 // TYPES

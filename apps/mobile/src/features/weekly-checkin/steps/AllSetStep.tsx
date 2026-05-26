@@ -8,13 +8,16 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
-import { MascotBubble } from '../components/MascotBubble';
-import { SummaryCard } from '../components/SummaryCard';
-import type { CheckInResult } from '../api';
-import { useTranslation } from '../../../hooks';
+
+import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
+import { SummaryCard } from '#/features/weekly-checkin/components/SummaryCard';
+import type { CheckInResult } from '#/features/weekly-checkin/api';
+import { useTranslation } from '#/hooks';
 
 interface AllSetStepProps {
   result: CheckInResult;
+  /** True if the player had no streak before this submit (first-ever check-in). */
+  isFirstEver: boolean;
   frequencyGoal: number;
   hoursConfirmed: number;
   autoCreate: boolean;
@@ -24,6 +27,7 @@ interface AllSetStepProps {
 
 export function AllSetStep({
   result,
+  isFirstEver,
   frequencyGoal,
   hoursConfirmed,
   autoCreate,
@@ -39,12 +43,14 @@ export function AllSetStep({
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <MascotBubble text={t('weeklyCheckIn.step4.bubble' as any)} textKey="step4-bubble" />
+        <MascotBubble text={t('weeklyCheckIn.step4.bubble')} textKey="step4-bubble" />
 
         <View style={styles.section}>
           <SummaryCard
             newStreak={result.newStreak}
             milestoneReached={result.milestoneReached}
+            freezeEarned={result.freezeEarned}
+            isFirstEver={isFirstEver}
             frequencyGoal={frequencyGoal}
             hoursConfirmed={hoursConfirmed}
             autoCreate={autoCreate}
@@ -55,7 +61,7 @@ export function AllSetStep({
 
       <View style={styles.footer}>
         <Button variant="primary" size="lg" fullWidth rounded onPress={onDone}>
-          {t('weeklyCheckIn.step4.cta' as any)}
+          {t('weeklyCheckIn.step4.cta')}
         </Button>
       </View>
     </View>

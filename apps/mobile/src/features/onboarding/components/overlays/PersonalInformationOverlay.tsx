@@ -15,15 +15,16 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { PhoneInput } from '../../../../components/PhoneInput';
-import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
 import { validateFullName, lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
-import { uploadImage, replaceImage } from '../../../../services/imageUpload';
 import { GENDER_VALUES } from '@rallia/shared-types';
 import type { GenderEnum } from '@rallia/shared-types';
-import ProgressIndicator from '../ProgressIndicator';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
+
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
+import { uploadImage, replaceImage } from '#/services/imageUpload';
+import { useImagePicker, useThemeStyles, useTranslation } from '#/hooks';
+import { PhoneInput } from '#/components/PhoneInput';
 
 // Calculate minimum date of birth (13 years and 1 month ago)
 const getMinimumDateOfBirth = (): Date => {
@@ -36,7 +37,7 @@ const getMinimumDateOfBirth = (): Date => {
 export function PersonalInformationActionSheet({ payload }: SheetProps<'personal-information'>) {
   const mode = payload?.mode || 'onboarding';
   const onClose = () => SheetManager.hide('personal-information');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const _onBack = payload?.onBack;
   const onContinue = payload?.onContinue;
   const onSave = payload?.onSave;
@@ -148,7 +149,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           : await uploadImage(profileImage, 'profile-pictures');
 
         if (uploadError) {
-          Logger.error('Failed to upload profile picture', uploadError as Error);
+          Logger.error('Failed to upload profile picture', uploadError);
           setIsSaving(false);
           toast.error(t('onboarding.validation.failedToUploadPicture'));
           return;
@@ -198,7 +199,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           .eq('id', user.id);
 
         if (updateError) {
-          Logger.error('Failed to update profile', updateError as Error, { userId: user.id });
+          Logger.error('Failed to update profile', updateError, { userId: user.id });
           setIsSaving(false);
           toast.error(t('onboarding.validation.failedToUpdateProfile'));
           return;
@@ -213,7 +214,7 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
           .eq('id', user.id);
 
         if (playerUpdateError) {
-          Logger.error('Failed to update player gender', playerUpdateError as Error, {
+          Logger.error('Failed to update player gender', playerUpdateError, {
             userId: user.id,
           });
         }

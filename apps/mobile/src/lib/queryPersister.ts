@@ -28,11 +28,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function isDateMarker(value: unknown): value is DateMarker {
-  return (
-    isPlainObject(value) &&
-    (value as Record<string, unknown>)[DATE_MARKER] === DATE_VALUE &&
-    typeof (value as Record<string, unknown>).iso === 'string'
-  );
+  return isPlainObject(value) && value[DATE_MARKER] === DATE_VALUE && typeof value.iso === 'string';
 }
 
 function encodeDates(value: unknown): unknown {

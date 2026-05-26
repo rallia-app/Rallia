@@ -1,7 +1,8 @@
 import React from 'react';
 import { Linking } from 'react-native';
 
-import { useTranslation } from '../hooks';
+import { useTranslation } from '#/hooks';
+
 import HomeBanner from './HomeBanner';
 
 interface BillingIssueBannerProps {

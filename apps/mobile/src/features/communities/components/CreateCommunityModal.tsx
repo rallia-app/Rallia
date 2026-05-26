@@ -36,11 +36,11 @@ import {
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context/SportContext';
-import { CommunityStackParamList } from '../../../navigation/types';
-import { uploadImage } from '../../../services/imageUpload';
-import { pickImageWithCropper } from '../../../utils/imagePicker';
+import { useRequireOnboarding, useThemeStyles, useTranslation } from '#/hooks';
+import { useSport } from '#/context/SportContext';
+import { CommunityStackParamList } from '#/navigation/types';
+import { uploadImage } from '#/services/imageUpload';
+import { pickImageWithCropper } from '#/utils/imagePicker';
 
 // =============================================================================
 // FORM COMPONENT

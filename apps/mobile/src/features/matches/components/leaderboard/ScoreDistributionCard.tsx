@@ -11,7 +11,7 @@ import { Text } from '@rallia/shared-components';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { NetworkPulseScoreDistEntry } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 import { StatCard } from './StatCard';
 

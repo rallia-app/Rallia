@@ -9,8 +9,9 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 
 export type MatchType = 'single' | 'double';
 

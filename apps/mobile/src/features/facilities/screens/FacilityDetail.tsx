@@ -17,7 +17,6 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { OptimizedImage } from '../../../components/OptimizedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
@@ -29,27 +28,29 @@ import {
   useProfile,
   MIN_FAVORITE_FACILITIES,
 } from '@rallia/shared-hooks';
-import {
-  useThemeStyles,
-  useTranslation,
-  useEffectiveLocation,
-  useRequireOnboarding,
-  useAuth,
-} from '../../../hooks';
-import { useSport } from '../../../context';
-import { SportIcon } from '../../../components/SportIcon';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { FacilityDetailScreenParams } from '@rallia/shared-types';
 import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
-import { openInMaps } from '../../../utils/openInMaps';
+
+import { SportIcon } from '#/components/SportIcon';
+import { useSport } from '#/context';
+import {
+  useThemeStyles,
+  useTranslation,
+  useEffectiveLocation,
+  useRequireOnboarding,
+  useAuth,
+} from '#/hooks';
+import { OptimizedImage } from '#/components/OptimizedImage';
+import { openInMaps } from '#/utils/openInMaps';
 
 // Tab components
-import InfoTab from '../components/InfoTab';
-import AvailabilityTab from '../components/AvailabilityTab';
-import MatchesTab from '../components/MatchesTab';
+import InfoTab from '#/features/facilities/components/InfoTab';
+import AvailabilityTab from '#/features/facilities/components/AvailabilityTab';
+import MatchesTab from '#/features/facilities/components/MatchesTab';
 
 // =============================================================================
 // TYPES
@@ -187,7 +188,7 @@ export default function FacilityDetail() {
   }, [facility]);
 
   // Handle report inaccuracy
-  const handleReportInaccuracy = useCallback(() => {
+  const handleReportInaccuracy = () => {
     if (!player?.id || !facility) return;
     lightHaptic();
     SheetManager.show('report-facility', {
@@ -197,7 +198,7 @@ export default function FacilityDetail() {
         facilityName: facility.name,
       },
     });
-  }, [player?.id, facility, facilityId]);
+  };
 
   // Contact info — general contact has the city info page URL;
   // reservation contact has the booking URL and phone number.
@@ -512,7 +513,7 @@ export default function FacilityDetail() {
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {visibleTabs.map(tab => {
           const isActive = activeTab === tab;
-          const tabLabel = t(`facilityDetail.tabs.${tab}` as Parameters<typeof t>[0]);
+          const tabLabel = t(`facilityDetail.tabs.${tab}`);
           const iconName = TAB_ICONS[tab];
           return (
             <TouchableOpacity

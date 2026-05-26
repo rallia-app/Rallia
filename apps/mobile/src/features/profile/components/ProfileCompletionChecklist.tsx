@@ -9,8 +9,10 @@ import {
   fontWeightNumeric,
 } from '@rallia/design-system';
 import type { CompletenessTier, CompletenessItem } from '@rallia/shared-hooks';
+
+import { getTierColors } from '#/features/profile/completionTierColors';
+
 import ProfileCompletionRing from './ProfileCompletionRing';
-import { getTierColors } from '../completionTierColors';
 
 // =============================================================================
 // PROPS

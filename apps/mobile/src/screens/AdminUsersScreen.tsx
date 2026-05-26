@@ -34,7 +34,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, useToast } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
-import { exportService } from '../services/exportService';
 import {
   useTheme,
   useAdminUsers,
@@ -43,9 +42,7 @@ import {
   type AdminUserInfo,
   type AdminUserStatus,
 } from '@rallia/shared-hooks';
-import { useTranslation } from '../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { RootStackParamList } from '../navigation/types';
 import {
   lightTheme,
   darkTheme,
@@ -58,6 +55,10 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
+
+import type { RootStackParamList } from '#/navigation/types';
+import { useTranslation } from '#/hooks';
+import { exportService } from '#/services/exportService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -251,7 +252,7 @@ const AdminUsersScreen: React.FC = () => {
     (user: AdminUserInfo) => {
       if (user.active_ban) {
         return {
-          text: t('admin.users.status.banned' as TranslationKey),
+          text: t('admin.users.status.banned'),
           bg: colors.errorBg,
           textColor: colors.errorText,
           icon: 'ban-outline' as keyof typeof Ionicons.glyphMap,
@@ -259,14 +260,14 @@ const AdminUsersScreen: React.FC = () => {
       }
       if (!user.is_active) {
         return {
-          text: t('admin.users.status.inactive' as TranslationKey),
+          text: t('admin.users.status.inactive'),
           bg: colors.warningBg,
           textColor: colors.warningText,
           icon: 'time-outline' as keyof typeof Ionicons.glyphMap,
         };
       }
       return {
-        text: t('admin.users.status.active' as TranslationKey),
+        text: t('admin.users.status.active'),
         bg: colors.successBg,
         textColor: colors.successText,
         icon: 'checkmark-circle-outline' as keyof typeof Ionicons.glyphMap,
@@ -293,7 +294,7 @@ const AdminUsersScreen: React.FC = () => {
   const renderUserCard = useCallback(
     ({ item }: { item: AdminUserInfo }) => {
       const statusBadge = getStatusBadge(item);
-      const displayName = getHumanName(item, t('admin.users.anonymous' as TranslationKey));
+      const displayName = getHumanName(item, t('admin.users.anonymous'));
 
       return (
         <TouchableOpacity
@@ -317,7 +318,7 @@ const AdminUsersScreen: React.FC = () => {
                 {displayName}
               </Text>
               <Text size="sm" color={colors.textSecondary} numberOfLines={1}>
-                {item.email || t('admin.users.noEmail' as TranslationKey)}
+                {item.email || t('admin.users.noEmail')}
               </Text>
               <View style={styles.userMeta}>
                 {item.city && (
@@ -359,13 +360,13 @@ const AdminUsersScreen: React.FC = () => {
             <View style={styles.statItem}>
               <Ionicons name="football-outline" size={14} color={colors.textMuted} />
               <Text size="xs" color={colors.textMuted}>
-                {item.sports_count} {t('admin.users.sports' as TranslationKey)}
+                {item.sports_count} {t('admin.users.sports')}
               </Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="game-controller-outline" size={14} color={colors.textMuted} />
               <Text size="xs" color={colors.textMuted}>
-                {item.matches_count} {t('admin.users.matches' as TranslationKey)}
+                {item.matches_count} {t('admin.users.matches')}
               </Text>
             </View>
             {item.last_sign_in_at && (
@@ -391,14 +392,10 @@ const AdminUsersScreen: React.FC = () => {
       <View style={styles.emptyContainer}>
         <Ionicons name="people-outline" size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {searchQuery
-            ? t('admin.users.noSearchResults' as TranslationKey)
-            : t('admin.users.noUsers' as TranslationKey)}
+          {searchQuery ? t('admin.users.noSearchResults') : t('admin.users.noUsers')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {searchQuery
-            ? t('admin.users.tryDifferentSearch' as TranslationKey)
-            : t('admin.users.noUsersDescription' as TranslationKey)}
+          {searchQuery ? t('admin.users.tryDifferentSearch') : t('admin.users.noUsersDescription')}
         </Text>
       </View>
     );
@@ -424,10 +421,10 @@ const AdminUsersScreen: React.FC = () => {
         <View style={styles.accessDenied}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.accessDeniedTitle}>
-            {t('admin.errors.accessDenied' as TranslationKey)}
+            {t('admin.errors.accessDenied')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.accessDeniedDescription}>
-            {t('admin.errors.noPermission' as TranslationKey)}
+            {t('admin.errors.noPermission')}
           </Text>
         </View>
       </SafeAreaView>
@@ -444,7 +441,7 @@ const AdminUsersScreen: React.FC = () => {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.errorTitle}>
-            {t('admin.errors.loadFailed' as TranslationKey)}
+            {t('admin.errors.loadFailed')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.errorDescription}>
             {error.message}
@@ -476,7 +473,7 @@ const AdminUsersScreen: React.FC = () => {
           <Ionicons name="search-outline" size={20} color={colors.iconMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('admin.users.searchPlaceholder' as TranslationKey)}
+            placeholder={t('admin.users.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={handleSearch}
@@ -600,7 +597,7 @@ const AdminUsersScreen: React.FC = () => {
         <Pressable style={styles.modalOverlay} onPress={() => setShowExportMenu(false)}>
           <View style={[styles.exportMenu, { backgroundColor: colors.cardBackground }]}>
             <Text size="lg" weight="semibold" color={colors.text} style={styles.exportMenuTitle}>
-              {t('admin.export.selectFormat' as TranslationKey)}
+              {t('admin.export.selectFormat')}
             </Text>
 
             <TouchableOpacity
@@ -614,7 +611,7 @@ const AdminUsersScreen: React.FC = () => {
                   CSV
                 </Text>
                 <Text size="sm" color={colors.textMuted}>
-                  {t('admin.export.csvDescription' as TranslationKey)}
+                  {t('admin.export.csvDescription')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -630,7 +627,7 @@ const AdminUsersScreen: React.FC = () => {
                   PDF
                 </Text>
                 <Text size="sm" color={colors.textMuted}>
-                  {t('admin.export.pdfDescription' as TranslationKey)}
+                  {t('admin.export.pdfDescription')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -641,7 +638,7 @@ const AdminUsersScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <Text size="base" weight="medium" color={colors.textMuted}>
-                {t('common.cancel' as TranslationKey)}
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
           </View>

@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
-import { useThemeStyles } from '../hooks';
+import { useThemeStyles } from '#/hooks';
 
 interface BaseActionSheetProps {
   /** Sheet title — if omitted, no header is rendered */

@@ -1,19 +1,29 @@
 /**
  * compute-streak-reset Edge Function
  *
- * Runs Monday at 02:00 UTC via pg_cron. Enforces the Option-C mercy mechanic:
- * for every player whose last_checkin_week_start < (last Monday), either:
+ * Runs HOURLY via pg_cron. Enforces the Option-C mercy mechanic for every
+ * player whose last_checkin_week_start is older than LAST MONDAY IN THEIR
+ * LOCAL TIMEZONE. For each such player:
  *
- *   1. Consume 1 freeze and PRESERVE the streak. Records a synthetic
- *      player_weekly_checkin row for the missed week with
- *      `freeze_consumed = true, frequency_goal = NULL`.
+ *   1. If freezes available → consume 1 freeze and PRESERVE the streak.
+ *      Records a synthetic player_weekly_checkin row for the missed week
+ *      with `freeze_consumed = true, frequency_goal = NULL`.
  *
- *   2. If no freezes available, RESET current_streak to 0.
+ *   2. If no freezes available → RESET current_streak to 0.
  *
  * This is the ONLY writer that decrements freeze_inventory.
  *
- * Idempotency: skips rows whose `updated_at >= (last Monday)`, so re-running
- * the cron on the same data is a no-op.
+ * Timezone awareness: the per-player "last Monday" is computed via the
+ * `players_needing_streak_reset()` RPC, which uses `player.timezone`. This
+ * matters because a Monday 2am UTC tick is still Sunday evening on the US
+ * west coast — UTC-only logic would reset western players' streaks before
+ * their Monday locally started.
+ *
+ * Cron cadence: hourly. Each player's local Monday rolls past 02:00 in their
+ * timezone within a single 24-hour cycle, so an hourly tick covers every
+ * timezone exactly once per week. Idempotency: the RPC's WHERE clause only
+ * returns rows that genuinely haven't been advanced for this player's local
+ * "last week", so re-running within the same tick is a no-op.
  *
  * ## Response Format
  * Success (200):
@@ -28,12 +38,6 @@ import { requireSecretApikey } from '../_shared/auth.ts';
 import { reportHeartbeat } from '../_shared/heartbeat.ts';
 
 // =============================================================================
-// CONFIG
-// =============================================================================
-
-const PAGE_SIZE = 500;
-
-// =============================================================================
 // SUPABASE
 // =============================================================================
 
@@ -43,37 +47,16 @@ const supabase: SupabaseClient = createClient(
 );
 
 // =============================================================================
-// HELPERS
-// =============================================================================
-
-/** ISO date string (YYYY-MM-DD) for a given UTC Date. */
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-/** Monday of the current ISO week (UTC). */
-function thisMondayUtc(): Date {
-  const now = new Date();
-  const day = now.getUTCDay();
-  const diff = day === 0 ? 6 : day - 1;
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff));
-}
-
-/** Monday of last ISO week (UTC). */
-function lastMondayUtc(): Date {
-  const m = thisMondayUtc();
-  return new Date(m.getTime() - 7 * 24 * 60 * 60 * 1000);
-}
-
-// =============================================================================
 // CORE LOGIC
 // =============================================================================
 
-interface StreakRow {
+interface PlayerNeedingReset {
   player_id: string;
   current_streak: number;
   freeze_inventory: number;
   last_checkin_week_start: string | null;
+  /** ISO date of last Monday in the player's local timezone. */
+  player_last_week: string;
 }
 
 async function processStreakResets(): Promise<{
@@ -83,88 +66,79 @@ async function processStreakResets(): Promise<{
   errors: string[];
 }> {
   const errors: string[] = [];
-  const thisMon = isoDate(thisMondayUtc());
-  const lastMon = isoDate(lastMondayUtc());
-
   let processed = 0;
   let rescued = 0;
   let reset = 0;
-  let lastSeenId = '';
 
-  // Page through player_streak rows where the player missed last week.
-  // Idempotent re-runs: filter `updated_at < thisMon` so rows we already
-  // touched today are skipped.
-  while (true) {
-    const { data, error } = await supabase
-      .from('player_streak')
-      .select('player_id, current_streak, freeze_inventory, last_checkin_week_start, updated_at')
-      .lt('last_checkin_week_start', lastMon)
-      .lt('updated_at', `${thisMon}T00:00:00Z`)
-      .gt('current_streak', 0)
-      .gt('player_id', lastSeenId)
-      .order('player_id', { ascending: true })
-      .limit(PAGE_SIZE);
+  // The RPC does the heavy lifting: returns only players whose
+  // last_checkin_week_start is strictly older than their personal last
+  // Monday. So this set IS the work queue — no further filtering needed.
+  const { data, error } = await supabase.rpc('players_needing_streak_reset');
+  if (error) {
+    console.error('players_needing_streak_reset RPC failed', error);
+    return { processed: 0, rescued: 0, reset: 0, errors: [`rpc: ${error.message}`] };
+  }
 
-    if (error) {
-      console.error('compute-streak-reset page query failed', error);
-      errors.push(`page query: ${error.message}`);
-      break;
-    }
+  const rows = (data ?? []) as PlayerNeedingReset[];
 
-    const rows = (data ?? []) as Array<StreakRow & { updated_at: string }>;
-    if (rows.length === 0) break;
-
-    for (const row of rows) {
-      try {
-        if (row.freeze_inventory > 0) {
-          // Rescue path — consume 1 freeze, preserve the streak, record the
-          // synthetic missed-week row. last_checkin_week_start advances to
-          // lastMon so next week's check-in stays on the increment branch.
-          const { error: streakErr } = await supabase
-            .from('player_streak')
-            .update({
-              freeze_inventory: row.freeze_inventory - 1,
-              last_checkin_week_start: lastMon,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('player_id', row.player_id);
-          if (streakErr) throw streakErr;
-
-          const { error: checkinErr } = await supabase.from('player_weekly_checkin').upsert(
-            {
-              player_id: row.player_id,
-              week_start_date: lastMon,
-              frequency_goal: null,
-              sessions_played: null,
-              freeze_consumed: true,
-            },
-            { onConflict: 'player_id,week_start_date' }
-          );
-          if (checkinErr) throw checkinErr;
-
-          rescued += 1;
-        } else {
-          // No freeze — streak breaks.
-          const { error: resetErr } = await supabase
-            .from('player_streak')
-            .update({
-              current_streak: 0,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('player_id', row.player_id);
-          if (resetErr) throw resetErr;
-
-          reset += 1;
-        }
-
-        processed += 1;
-      } catch (err) {
-        errors.push(`player ${row.player_id}: ${err}`);
+  for (const row of rows) {
+    try {
+      // Defensive guard — if the player_last_week is missing (shouldn't
+      // happen) skip the row rather than silently overwriting with an
+      // unexpected value.
+      if (!row.player_last_week) {
+        errors.push(`player ${row.player_id}: missing player_last_week`);
+        continue;
       }
-    }
 
-    lastSeenId = rows[rows.length - 1].player_id;
-    if (rows.length < PAGE_SIZE) break;
+      if (row.freeze_inventory > 0) {
+        // Rescue path — consume 1 freeze, preserve the streak, record the
+        // synthetic missed-week row. last_checkin_week_start advances to the
+        // player's local last Monday so next week's check-in stays on the
+        // increment branch.
+        const { error: streakErr } = await supabase
+          .from('player_streak')
+          .update({
+            freeze_inventory: row.freeze_inventory - 1,
+            last_checkin_week_start: row.player_last_week,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('player_id', row.player_id);
+        if (streakErr) throw streakErr;
+
+        const { error: checkinErr } = await supabase.from('player_weekly_checkin').upsert(
+          {
+            player_id: row.player_id,
+            week_start_date: row.player_last_week,
+            frequency_goal: null,
+            sessions_played: null,
+            freeze_consumed: true,
+          },
+          { onConflict: 'player_id,week_start_date' }
+        );
+        if (checkinErr) throw checkinErr;
+
+        rescued += 1;
+      } else {
+        // No freeze — streak breaks. We leave last_checkin_week_start
+        // untouched so the player's NEXT check-in starts a fresh streak
+        // (`prev_last_week != prev_week` → resets to 1 in the RPC).
+        const { error: resetErr } = await supabase
+          .from('player_streak')
+          .update({
+            current_streak: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('player_id', row.player_id);
+        if (resetErr) throw resetErr;
+
+        reset += 1;
+      }
+
+      processed += 1;
+    } catch (err) {
+      errors.push(`player ${row.player_id}: ${err}`);
+    }
   }
 
   return { processed, rescued, reset, errors };
@@ -222,7 +196,7 @@ Deno.serve(async req => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: err instanceof Error ? err.message : String(err),
+        error: 'Internal server error',
         duration_ms: Date.now() - startTime,
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

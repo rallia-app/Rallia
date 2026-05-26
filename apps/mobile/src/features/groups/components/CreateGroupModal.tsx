@@ -35,12 +35,12 @@ import {
 import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-import { useRequireOnboarding, useThemeStyles, useTranslation } from '../../../hooks';
-import { useSport } from '../../../context/SportContext';
-import type { RootStackParamList } from '../../../navigation/types';
-import { uploadImage } from '../../../services/imageUpload';
-import { pickImageWithCropper } from '../../../utils/imagePicker';
-import * as Analytics from '../../../services/analytics';
+import { useRequireOnboarding, useThemeStyles, useTranslation } from '#/hooks';
+import { useSport } from '#/context/SportContext';
+import type { RootStackParamList } from '#/navigation/types';
+import { uploadImage } from '#/services/imageUpload';
+import { pickImageWithCropper } from '#/utils/imagePicker';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // FORM COMPONENT

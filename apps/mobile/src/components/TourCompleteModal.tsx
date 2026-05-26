@@ -8,11 +8,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from '../hooks';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
-import { lightHaptic } from '../utils/haptics';
+
+import { useTranslation } from '#/hooks';
+import { lightHaptic } from '#/utils/haptics';
 
 interface TourCompleteModalProps {
   /** Whether the modal should be visible */

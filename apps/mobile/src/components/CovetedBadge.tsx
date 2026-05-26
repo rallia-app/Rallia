@@ -5,7 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { isCoveted } from '@rallia/shared-utils';
-import { useTranslation, type TranslationKey } from '../hooks';
+
+import { useTranslation, type TranslationKey } from '#/hooks';
 
 interface CovetedBadgeProps {
   /** Reputation score (0-100) */
@@ -57,11 +58,9 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
 
   const accentColor = isDark ? accent[400] : accent[500];
 
-  const gradientColors = (
-    isDark
-      ? [withAlpha(accentColor, 0.32), withAlpha(accentColor, 0.5)]
-      : [withAlpha(accentColor, 0.08), withAlpha(accentColor, 0.22)]
-  ) as [string, string];
+  const gradientColors: [string, string] = isDark
+    ? [withAlpha(accentColor, 0.32), withAlpha(accentColor, 0.5)]
+    : [withAlpha(accentColor, 0.08), withAlpha(accentColor, 0.22)];
 
   const borderColor = isDark ? withAlpha(accentColor, 0.55) : withAlpha(accentColor, 0.3);
 
@@ -83,7 +82,7 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
     >
       <Ionicons name="star" size={iconSize} color={accentColor} />
       <Text size="xs" weight="semibold" color={accentColor} style={styles.label}>
-        {t('match.tier.topPlayer' as TranslationKey)}
+        {t('match.tier.topPlayer')}
       </Text>
     </LinearGradient>
   );

@@ -4,12 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { PreferencesInfo } from '@rallia/shared-types';
-import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles } from '../../../hooks';
-import { useTranslation, type TranslationKey } from '../../../hooks';
-
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
-import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
+
+import { selectionHaptic, mediumHaptic } from '#/utils/haptics';
+import { useThemeStyles } from '#/hooks';
+import { useTranslation, type TranslationKey } from '#/hooks';
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
 
 /**
  * Dynamic play style option fetched from database

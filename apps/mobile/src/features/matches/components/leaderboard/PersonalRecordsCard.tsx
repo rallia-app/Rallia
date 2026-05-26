@@ -12,8 +12,8 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 import type { NetworkPulsePersonalRecord } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '../../../../hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import type { TranslationKey } from '#/hooks';
 
 import { StatCard } from './StatCard';
 

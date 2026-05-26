@@ -19,11 +19,22 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   // Start with base config from app.json (merged by Expo via ConfigContext)
   const baseConfig = config;
 
+  // Meta (Facebook) SDK credentials — pulled from env so the same app.json
+  // template ships to all build profiles. Falls back to the placeholder
+  // strings in app.json when the env var is missing; prebuild still succeeds
+  // but the SDK won't authenticate, which is fine for type-check / dev runs
+  // without a configured Meta App.
+  const fbAppId = process.env.EXPO_PUBLIC_FB_APP_ID || 'PLACEHOLDER_FB_APP_ID';
+  const fbClientToken = process.env.EXPO_PUBLIC_FB_CLIENT_TOKEN || 'PLACEHOLDER_FB_CLIENT_TOKEN';
+
   // Filter out plugins that need dynamic configuration
   const basePlugins = (baseConfig.plugins || []).filter(plugin => {
     if (Array.isArray(plugin)) {
       const pluginName = plugin[0];
-      return pluginName !== '@react-native-google-signin/google-signin';
+      return (
+        pluginName !== '@react-native-google-signin/google-signin' &&
+        pluginName !== 'react-native-fbsdk-next'
+      );
     }
     return true;
   });
@@ -36,6 +47,26 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     '@react-native-google-signin/google-signin',
     {
       iosUrlScheme: googleIosUrlScheme,
+    },
+  ]);
+
+  // Add Meta SDK plugin with env-injected credentials. This block fully
+  // replaces the react-native-fbsdk-next entry from app.json (filtered out
+  // above), so the flags here — not app.json — are the source of truth.
+  // advertiserIDCollection + autoLogAppEvents are enabled for Meta install
+  // attribution; the AD_ID permission is declared via android.permissions.
+  dynamicPlugins.push([
+    'react-native-fbsdk-next',
+    {
+      appID: fbAppId,
+      clientToken: fbClientToken,
+      displayName: 'Rallia',
+      scheme: `fb${fbAppId}`,
+      advertiserIDCollectionEnabled: true,
+      autoLogAppEventsEnabled: true,
+      isAutoInitEnabled: true,
+      iosUserTrackingPermission:
+        'Allow tracking so $(PRODUCT_NAME) can measure which ads bring real players and personalize match suggestions. Your data is never sold.',
     },
   ]);
 

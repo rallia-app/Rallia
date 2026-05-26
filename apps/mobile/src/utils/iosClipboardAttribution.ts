@@ -24,7 +24,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Platform } from 'react-native';
 import type { InvitationType } from '@rallia/shared-services';
 
-import { Logger } from '../services/logger';
+import { Logger } from '#/services/logger';
 
 const TOKEN_PREFIX = 'rallia_attrib_v1:';
 const VERIFY_ENDPOINT = 'https://rallia.app/api/attribution/verify';

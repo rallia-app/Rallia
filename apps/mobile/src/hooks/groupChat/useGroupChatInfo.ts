@@ -91,7 +91,7 @@ export function useGroupChatInfo(
   // Get participants
   const participants = useMemo(() => {
     if (!conversation?.participants) return [];
-    return conversation.participants as ParticipantInfo[];
+    return conversation.participants;
   }, [conversation]);
 
   // Check if current user is admin

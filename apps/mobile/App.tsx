@@ -5,6 +5,7 @@
  */
 import './src/lib/supabase';
 import { initRevenueCat } from './src/lib/revenuecat';
+import { initMeta, syncMetaTrackingFromExistingATT } from './src/lib/meta';
 
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
@@ -13,6 +14,12 @@ import Mapbox from '@rnmapbox/maps';
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 if (!isRunningInExpoGo()) {
   initRevenueCat();
+  // Init Meta SDK with tracking OFF — it stays gated until the user passes
+  // ATT in TrackingPermissionStep. If ATT is already granted from a prior
+  // session, syncMetaTrackingFromExistingATT flips tracking back on without
+  // re-prompting.
+  initMeta();
+  void syncMetaTrackingFromExistingATT();
 }
 
 // Set up Sentry navigation integration (must be created before Sentry.init)
@@ -111,6 +118,9 @@ import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
+import { useAppVersionGate } from './src/hooks/useAppVersionGate';
+import { useApplyUpdateOnResume } from './src/hooks/useApplyUpdateOnResume';
+import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
 import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
@@ -140,6 +150,7 @@ import {
   TourProvider,
 } from './src/context';
 import { appOpened, deepLinkOpened } from './src/services/analytics';
+import { fetchDeferredAppLink, setMetaUserId, setMetaUserData } from './src/lib/meta';
 import { Logger } from './src/services/logger';
 import { JustForYouPrefetch } from './src/components/JustForYouPrefetch';
 import { TourCompleteModal } from './src/components/TourCompleteModal';
@@ -155,9 +166,6 @@ import {
   attemptFirstLaunchAttribution,
   WEB_DISTINCT_ID_KEY,
 } from './src/utils/referralAttribution';
-
-// Import NativeWind global styles
-// import './global.css';
 
 // Connect React Query's focusManager to React Native's AppState.
 // When the app returns from background, stale queries automatically refetch.
@@ -330,13 +338,19 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         }
       } finally {
         posthogClient?.identify(user.id, { email: user.email ?? null });
+        // Mirror identify to the Meta SDK for Advanced Matching. The SDK
+        // SHA-256-hashes these locally before they leave the device; we just
+        // hand it the raw values. Improves EMQ (Event Match Quality) for
+        // ATT-opted-in users and gives Meta better lookalike seeds.
+        setMetaUserId(user.id);
+        setMetaUserData({ email: user.email ?? null });
       }
     })();
   }, [user]);
 
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
-    (url: string | null, isColdStart = false) => {
+    (url: string | null, isColdStart = false, source: 'os' | 'meta_deferred' = 'os') => {
       if (!url) return;
       const utmParams = parseUtmParams(url);
 
@@ -375,8 +389,8 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         url.includes('stripe-connect-return') || url.includes('/stripe-connect-return');
 
       if (matchId) {
-        Logger.logNavigation('deep_link_received', { url, matchId });
-        deepLinkOpened({ link_type: 'match', ...utmParams });
+        Logger.logNavigation('deep_link_received', { url, matchId, source });
+        deepLinkOpened({ link_type: 'match', source, ...utmParams });
         setPendingMatchId(matchId);
       } else if (isStripeConnectReturn) {
         // The account.updated webhook may not have fired yet when the user
@@ -398,9 +412,9 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         };
         checkOnboarding();
       } else if (inviteCode) {
-        deepLinkOpened({ link_type: 'invite', referral_code: inviteCode, ...utmParams });
+        deepLinkOpened({ link_type: 'invite', source, referral_code: inviteCode, ...utmParams });
       } else if (utmParams) {
-        deepLinkOpened({ link_type: 'utm', ...utmParams });
+        deepLinkOpened({ link_type: 'utm', source, ...utmParams });
       }
     },
     [setPendingMatchId, user?.id, toast, t]
@@ -433,6 +447,17 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   useEffect(() => {
     // Handle URL that opened the app (cold start)
     Linking.getInitialURL().then(url => handleDeepLink(url, true));
+
+    // Meta's deferred deep link — populated when the user tapped a Meta ad
+    // whose destination was a deep link, before the app was installed. Fires
+    // exactly once per install; subsequent launches return null. Without an
+    // MMP this is the only mechanism that recovers ad-click → install
+    // context, so we route it through the same handler as a normal cold-start
+    // URL — but tag the source so PostHog can distinguish ad-driven cold
+    // starts from organic ones.
+    fetchDeferredAppLink().then(url => {
+      if (url) handleDeepLink(url, true, 'meta_deferred');
+    });
 
     // Handle URLs while app is running
     const subscription = Linking.addEventListener('url', event => {
@@ -759,12 +784,46 @@ function useOTAUpdate() {
   return isChecking;
 }
 
+/**
+ * UpdateGate — replaces the entire app surface with a blocking "Update Required"
+ * screen when the installed binary is below `app_min_version.min_supported_version`.
+ * Wraps AppContent so the version check runs in parallel with provider init; on
+ * "required" we hide the native splash and render the blocking screen instead of
+ * the navigation tree. Fail-open is enforced inside useAppVersionGate so a
+ * Supabase outage can't lock the install base out.
+ */
+function UpdateGate({ children }: PropsWithChildren) {
+  const gate = useAppVersionGate();
+
+  useEffect(() => {
+    if (gate.status === 'required') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [gate.status]);
+
+  if (gate.status === 'required') {
+    return (
+      <UpdateRequiredScreen
+        storeUrl={gate.storeUrl}
+        currentVersion={gate.currentVersion}
+        requiredVersion={gate.requiredVersion}
+      />
+    );
+  }
+  return <>{children}</>;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   // Splash hide is owned by SplashGate (which lives inside AuthenticatedProviders
   // so it can wait on profile/player/sport before revealing Home).
   const { isSplashComplete, permissionsHandled } = useOverlay();
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
+
+  // Apply a pending OTA update when the app resumes after a long background,
+  // for users who background/foreground rather than cold-start. Gated on
+  // splash completion so it never races the launch-time update flow.
+  useApplyUpdateOnResume({ enabled: isSplashComplete });
 
   // Track app opened event on mount
   useEffect(() => {
@@ -923,7 +982,9 @@ function App() {
                                               }
                                               merchantIdentifier="merchant.com.mathisl971.rallia-app"
                                             >
-                                              <AppContent />
+                                              <UpdateGate>
+                                                <AppContent />
+                                              </UpdateGate>
                                             </StripeProvider>
                                           </FeedbackReportSheetProvider>
                                         </FeedbackSheetProvider>

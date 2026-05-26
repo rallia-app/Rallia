@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       rollout_percentage:
-        description: "Rollout percentage (1-100). Use to ramp up an in-flight canary or ship at full bore."
+        description: "Canary rollout percentage (1-99). Leave at 100 to ship at full bore (flag omitted)."
         required: false
         default: "100"
         type: string
@@ -49,10 +49,15 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           # Full rollout on main pushes; workflow_dispatch can pass a lower % for canary.
+          # EAS rejects --rollout-percentage=100 (valid: 0-99); omit the flag for full rollout.
           ROLLOUT="${DISPATCH_ROLLOUT:-100}"
           echo "rollout_percentage=$ROLLOUT" >> "$GITHUB_OUTPUT"
           cd apps/mobile
-          eas update --branch production --environment production --message "$COMMIT_MSG" --rollout-percentage "$ROLLOUT"
+          if [ "$ROLLOUT" -ge 100 ]; then
+            eas update --branch production --environment production --message "$COMMIT_MSG"
+          else
+            eas update --branch production --environment production --message "$COMMIT_MSG" --rollout-percentage "$ROLLOUT"
+          fi
 
       - name: Notify Discord
         if: always()

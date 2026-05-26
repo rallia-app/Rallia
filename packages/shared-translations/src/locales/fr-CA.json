@@ -853,7 +853,8 @@
       "location": "Localisation",
       "photos": "Photos et médias",
       "contacts": "Contacts",
-      "camera": "Caméra"
+      "camera": "Caméra",
+      "tracking": "Suivi publicitaire"
     },
     "status": {
       "granted": "Autorisé",
@@ -2043,7 +2044,8 @@
       "clearYourMessagesConfirm": "Cela supprimera tous les messages que vous avez envoyés dans cette conversation. Cette action est irréversible.",
       "clear": "Effacer",
       "messagesDeleted": "{count} message(s) supprimé(s)",
-      "failedToClear": "Échec de la suppression des messages. Veuillez réessayer."
+      "failedToClear": "Échec de la suppression des messages. Veuillez réessayer.",
+      "failedToSend": "Échec de l'envoi du message. Veuillez réessayer."
     },
     "actions": {
       "conversation": "Conversation",
@@ -7867,7 +7869,7 @@
         }
       },
       "enable": "Activer la localisation précise",
-      "privacyNote": "Votre localisation reste sur votre appareil — modifiable à tout moment dans les Réglages."
+      "privacyNote": "Modifiable dans Réglages."
     },
     "notificationPermission": {
       "title": "Restez dans le match",
@@ -7892,7 +7894,28 @@
         }
       },
       "enable": "Activer les notifications",
-      "privacyNote": "Modifiable à tout moment dans les Réglages."
+      "privacyNote": "Modifiable dans Réglages."
+    },
+    "trackingPermission": {
+      "title": "Aidez-nous à améliorer Rallia",
+      "subtitle": "Autorisez le suivi pour qu'on puisse vous proposer de meilleurs adversaires et faire évoluer l'app selon ce qui aide vraiment les joueurs à trouver des matchs.",
+      "benefits": {
+        "betterMatches": {
+          "title": "Meilleures suggestions de matchs",
+          "description": "On apprend quels appariements deviennent vraiment de bons matchs"
+        },
+        "improveApp": {
+          "title": "Fonctions plus intelligentes",
+          "description": "On voit quels outils sont utilisés et on se concentre sur l'essentiel"
+        },
+        "privacy": {
+          "title": "Toujours privé",
+          "description": "On ne vend jamais vos données — uniquement pour améliorer Rallia"
+        }
+      },
+      "enable": "Autoriser le suivi",
+      "skip": "Plus tard",
+      "privacyNote": "Modifiable dans Réglages."
     },
     "discovery": {
       "title": "Comment avez-vous entendu parler de nous?",
@@ -9691,11 +9714,27 @@
       "bubbleHit": "Salut 👋 De retour — tu as explosé ton objectif la semaine passée. La séquence grimpe. 🔥",
       "bubbleMet": "Salut 👋 De retour — tu as joué tes {goal} sessions la semaine passée. La séquence tient bon. 💪",
       "bubbleMiss": "Salut 👋 De retour — tu as manqué l'objectif, mais pas la séquence. On se replace cette semaine. 🌱",
-      "bubbleFirstTime": "Salut 👋 Bienvenue à ton check-in hebdo. On va te préparer une belle semaine de tennis.",
+      "bubbleFirstTime": "Salut 👋 Bienvenue à bord! On configure ta première semaine — ça prend une minute. 🎾",
       "streakTitle": "Séquence de {count} semaines",
       "streakTitleZero": "Commence une séquence cette semaine",
       "streakSubtitle": "semaines",
       "streakSubtitleOne": "semaine de suite",
+      "streakLabel": "SEMAINES DE CHECK-IN",
+      "streakLabelOne": "SEMAINE DE CHECK-IN",
+      "timelineLabel": "Tes derniers check-ins",
+      "thisWeek": "Cette sem.",
+      "freezeCount": "{count} jokers en réserve",
+      "freezeOne": "1 joker en réserve",
+      "freezeZero": "0 joker en réserve",
+      "freezeHint": "Tu en gagnes 1 tous les 4 semaines",
+      "freezeFirstTimeInvite": "Ton premier check-in lance ta séquence 🔥",
+      "goalsCardTitle": "SUIVI DES OBJECTIFS",
+      "goalsCardLastWeek": "Semaine passée",
+      "goalsCardTrendLabel": "Les 4 dernières semaines",
+      "goalsCardLastWeekSummary": "{played} sur {goal} sessions",
+      "goalsCardLastWeekHit": "Objectif atteint ✓",
+      "goalsCardLastWeekMiss": "Objectif manqué",
+      "goalsCardNoHistory": "Ton historique d'objectifs apparaîtra ici après quelques semaines de jeu. 📈",
       "freezeTooltip": "Les jokers de séquence te protègent si tu rates un check-in.",
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
@@ -9718,6 +9757,7 @@
       "frequencyContextSame": "Comme la semaine passée — la régularité paie! 🌱",
       "frequencyContextUp": "On monte de {last} → {current}. J'adore l'ambition! 🔥",
       "frequencyContextDown": "On revient à {current}. Mieux vaut tenir la cadence. 💆",
+      "frequencyContextFirstTime": "Choisis ce qui te convient — tu peux ajuster à chaque semaine. ✨",
       "opsLabel": "Pour te simplifier la vie",
       "autoCreateTitle": "Créer des matchs ouverts automatiquement",
       "autoCreateDesc": "Publie des matchs request-to-join à tes heures libres.",
@@ -9730,7 +9770,9 @@
       "streakHeroCount": "{count} semaines!",
       "streakHeroCountOne": "1 semaine!",
       "streakHeroSub": "Séquence prolongée · +1",
+      "streakHeroSubFirst": "Séquence lancée 🌱",
       "streakHeroSubMilestone": "Étape franchie · +1 joker gagné ❄️",
+      "streakHeroSubMilestoneCapped": "Étape franchie! Jokers au max (2) ❄️❄️",
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",
@@ -9828,6 +9870,14 @@
     "cta": {
       "heading": "Sur le terrain",
       "body": "Rallia est disponible sur iOS et Android. Inscris ton niveau, choisis tes terrains habituels, et commence à trouver des parties près de chez toi."
+    }
+  },
+  "update": {
+    "required": {
+      "title": "Mise à jour requise",
+      "description": "Cette version de Rallia n'est plus prise en charge. Mets à jour vers la dernière version pour continuer à jouer.",
+      "versionInfo": "Tu as la version {current} · la version {required} ou plus récente est requise",
+      "cta": "Mettre à jour"
     }
   }
 }

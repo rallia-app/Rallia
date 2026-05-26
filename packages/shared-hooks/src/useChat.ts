@@ -281,30 +281,107 @@ export function useMessages(conversationId: string | undefined, pageSize = 50) {
   });
 }
 
+type MessagesPages = { pages: MessageWithSender[][]; pageParams: number[] };
+
 /**
- * Send a message — waits for the API to return the real message, then adds it to the cache.
- * No optimistic update: the realtime subscription is responsible for other people's messages,
- * and onSuccess handles the sender's own message. This avoids race conditions entirely.
+ * Send a message optimistically.
+ *
+ * The message is inserted into the thread immediately with a temporary id so it
+ * appears instantly. On success the placeholder is replaced in place with the
+ * server row (so it keeps its position); on failure it is rolled back and
+ * removed. The realtime subscription ignores the sender's own messages, so the
+ * server echo never double-inserts.
  */
 export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: SendMessageInput) => sendMessage(input),
-    onSuccess: (newMessage, variables) => {
-      const realMsg = newMessage as MessageWithSender;
+    onMutate: async input => {
+      const messagesKey = chatKeys.messages(input.conversation_id);
 
-      // Add the real message to the messages cache (prepend to first page)
+      // Stop in-flight refetches from clobbering the optimistic insert
+      await queryClient.cancelQueries({ queryKey: messagesKey });
+
+      const previousMessages = queryClient.getQueryData<MessagesPages>(messagesKey);
+
+      const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      // Enrich with the sender's own profile from the cached conversation
+      const conversation = queryClient.getQueryData<ConversationWithDetails>(
+        chatKeys.conversation(input.conversation_id)
+      );
+      const participant = conversation?.participants?.find(p => p.player_id === input.sender_id);
+
+      // Build the reply preview from the message being replied to, if any
+      let replyTo: MessageWithSender['reply_to'] = null;
+      if (input.reply_to_message_id) {
+        const repliedMessage = previousMessages?.pages
+          .flat()
+          .find(m => m.id === input.reply_to_message_id);
+        if (repliedMessage) {
+          replyTo = {
+            id: repliedMessage.id,
+            content: repliedMessage.content,
+            sender_name: repliedMessage.sender?.profile?.first_name ?? 'Unknown',
+          };
+        }
+      }
+
+      const now = new Date().toISOString();
+      const optimisticMessage: MessageWithSender = {
+        id: tempId,
+        conversation_id: input.conversation_id,
+        sender_id: input.sender_id,
+        content: input.content,
+        status: 'sent',
+        read_by: null,
+        created_at: now,
+        updated_at: now,
+        reply_to_message_id: input.reply_to_message_id ?? null,
+        is_edited: false,
+        edited_at: null,
+        deleted_at: null,
+        sender: participant?.player ?? null,
+        reply_to: replyTo,
+      };
+
+      queryClient.setQueryData(messagesKey, (oldData: MessagesPages | undefined) => {
+        if (!oldData?.pages) {
+          return { pages: [[optimisticMessage]], pageParams: [0] };
+        }
+        const firstPage = oldData.pages[0] || [];
+        return {
+          ...oldData,
+          pages: [[optimisticMessage, ...firstPage], ...oldData.pages.slice(1)],
+        };
+      });
+
+      return { tempId };
+    },
+    onSuccess: (newMessage, variables, context) => {
+      const realMsg = newMessage as MessageWithSender;
+      const tempId = context?.tempId;
+
       queryClient.setQueryData(
         chatKeys.messages(variables.conversation_id),
-        (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
+        (oldData: MessagesPages | undefined) => {
           if (!oldData?.pages) return oldData;
 
-          // Already present (e.g. a stale refetch included it) — skip
-          if (oldData.pages.flat().some(m => m.id === realMsg.id)) {
-            return oldData;
+          // Replace the optimistic placeholder in place with the server row
+          const tempExists = oldData.pages.some(page => page.some(m => m.id === tempId));
+          if (tempExists) {
+            return {
+              ...oldData,
+              pages: oldData.pages.map(page => page.map(m => (m.id === tempId ? realMsg : m))),
+            };
           }
 
+          // Placeholder is gone (e.g. cache was reset) — make sure the real
+          // message is present without duplicating it
+          if (oldData.pages.some(page => page.some(m => m.id === realMsg.id))) {
+            return oldData;
+          }
           const firstPage = oldData.pages[0] || [];
           return {
             ...oldData,
@@ -318,6 +395,23 @@ export function useSendMessage() {
       queryClient.invalidateQueries({
         queryKey: chatKeys.conversations(),
       });
+    },
+    onError: (_err, variables, context) => {
+      const tempId = context?.tempId;
+      if (!tempId) return;
+
+      // Roll back by removing only the failed placeholder — preserves any
+      // messages that arrived from other users during the pending window
+      queryClient.setQueryData(
+        chatKeys.messages(variables.conversation_id),
+        (oldData: MessagesPages | undefined) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map(page => page.filter(m => m.id !== tempId)),
+          };
+        }
+      );
     },
   });
 }
@@ -682,7 +776,10 @@ export function useChatRealtime(
 
     const channel = subscribeToMessages(conversationId, {
       // Handle new messages from OTHER users only.
-      // Own messages are added to the cache by useSendMessage.onSuccess.
+      // Own messages are inserted optimistically in useSendMessage.onMutate and
+      // replaced in place by onSuccess. This guard is load-bearing: without it,
+      // the realtime echo of our own INSERT would duplicate the message until a
+      // refetch dedupes it. Do not remove without changing the send flow.
       onInsert: newMessage => {
         if (newMessage.sender_id === playerId) return;
 

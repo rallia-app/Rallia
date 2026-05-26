@@ -4,6 +4,7 @@
 
 import { createNavigationContainerRef } from '@react-navigation/native';
 import type { NavigatorScreenParams } from '@react-navigation/native';
+
 import type { RootStackParamList, HomeStackParamList, CommunityStackParamList } from './types';
 
 // Navigation ref for use outside NavigationContainer (e.g., ActionsBottomSheet)

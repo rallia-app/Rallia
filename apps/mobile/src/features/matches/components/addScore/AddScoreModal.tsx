@@ -19,7 +19,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { useCreatePlayedMatch, type CreatePlayedMatchInput } from '@rallia/shared-hooks';
+import { getSportIdByName } from '@rallia/shared-services';
+
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { useAuth } from '#/context/AuthContext';
+
 import { AddScoreProvider, useAddScore } from './AddScoreContext';
 import { FindOpponentStep } from './FindOpponentStep';
 import { MatchDetailsStep } from './MatchDetailsStep';
@@ -28,9 +33,6 @@ import { CreateTeamsStep } from './CreateTeamsStep';
 import { WinnerScoresStep } from './WinnerScoresStep';
 import { ScoreSubmittedSuccessModal } from './ScoreSubmittedSuccessModal';
 import type { MatchType } from './types';
-import { useCreatePlayedMatch, type CreatePlayedMatchInput } from '@rallia/shared-hooks';
-import { getSportIdByName } from '@rallia/shared-services';
-import { useAuth } from '../../../../context/AuthContext';
 
 interface AddScoreModalProps {
   visible: boolean;

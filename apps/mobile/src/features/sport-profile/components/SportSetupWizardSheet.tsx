@@ -21,13 +21,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { usePlayPreferences, useFacilitySearch, facilityKeys } from '@rallia/shared-hooks';
 import type { OnboardingRating, FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
-import ProgressIndicator from '../../onboarding/components/ProgressIndicator';
-import { SearchBar } from '../../../components/SearchBar';
-import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
-import { selectionHaptic, mediumHaptic } from '../../../utils/haptics';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { withTimeout } from '../../../utils/networkTimeout';
+
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
+import { SearchBar } from '#/components/SearchBar';
+import { selectionHaptic, mediumHaptic } from '#/utils/haptics';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { withTimeout } from '#/utils/networkTimeout';
+
+import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 3;

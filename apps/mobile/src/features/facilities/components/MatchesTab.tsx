@@ -8,7 +8,6 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { SportIcon } from '../../../components/SportIcon';
 import {
   useTheme,
   usePlayer,
@@ -16,12 +15,14 @@ import {
   usePublicMatchFilters,
   type PublicMatch,
 } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, neutral } from '@rallia/design-system';
-import { SearchBar, MatchFiltersBar } from '../../matches/components';
+
+import { useMatchDetailSheet, useSport } from '#/context';
+import { useThemeStyles, useTranslation, useEffectiveLocation } from '#/hooks';
+import { SportIcon } from '#/components/SportIcon';
+import { SearchBar, MatchFiltersBar } from '#/features/matches/components';
 
 // =============================================================================
 // TYPES

@@ -19,10 +19,11 @@ import type { FormattedSlot } from '@rallia/shared-hooks';
 import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
-
-import { useRequireOnboarding, type TranslationKey, type TranslationOptions } from '../../../hooks';
-import { useActionsSheet } from '../../../context';
 import { SheetManager } from 'react-native-actions-sheet';
+
+import { useRequireOnboarding, type TranslationKey, type TranslationOptions } from '#/hooks';
+import { useActionsSheet } from '#/context';
+
 import AvailabilitySlotCard from './AvailabilitySlotCard';
 import DatePickerBar from './DatePickerBar';
 import TimeOfDaySection, { groupSlotsByTimeOfDay } from './TimeOfDaySection';

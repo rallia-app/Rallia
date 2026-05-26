@@ -12,7 +12,7 @@ import { Text } from '@rallia/shared-components';
 import { neutral, radiusPixels, spacingPixels } from '@rallia/design-system';
 import type { NetworkPulseFormStripEntry } from '@rallia/shared-hooks';
 
-import { useThemeStyles } from '../../../../hooks';
+import { useThemeStyles } from '#/hooks';
 
 import { FormLine } from './FormLine';
 

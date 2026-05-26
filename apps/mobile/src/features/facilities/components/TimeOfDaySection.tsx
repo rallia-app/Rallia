@@ -19,7 +19,8 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { FormattedSlot } from '@rallia/shared-hooks';
-import type { TranslationKey, TranslationOptions } from '../../../hooks';
+
+import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -152,7 +153,7 @@ export default function TimeOfDaySection({
           </View>
           <View style={styles.headerText}>
             <Text size="sm" weight="semibold" color={colors.text}>
-              {t(`facilityDetail.timeOfDay.${timeOfDay}` as Parameters<typeof t>[0])}
+              {t(`facilityDetail.timeOfDay.${timeOfDay}`)}
             </Text>
             <Text size="xs" color={colors.textMuted}>
               {config.timeRange} • {slots.length} {slots.length === 1 ? 'slot' : 'slots'}

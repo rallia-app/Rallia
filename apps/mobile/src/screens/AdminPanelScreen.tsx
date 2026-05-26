@@ -24,10 +24,7 @@ import {
   useAdminDashboardStats,
   type AdminRole,
 } from '@rallia/shared-hooks';
-import { useAdminPush } from '../hooks/useAdminPush';
-import { useTranslation } from '../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import type { RootStackParamList } from '../navigation/types';
 import {
   lightTheme,
   darkTheme,
@@ -38,6 +35,10 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
+
+import { useAdminPush } from '#/hooks/useAdminPush';
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -367,7 +368,7 @@ const AdminPanelScreen: React.FC = () => {
               </Text>
               <View style={[styles.roleBadge, { backgroundColor: roleBadgeStyle.bg }]}>
                 <Text size="sm" weight="semibold" color={roleBadgeStyle.text}>
-                  {role ? t(`admin.roles.${role}` as TranslationKey) : ''}
+                  {role ? t(`admin.roles.${role}`) : ''}
                 </Text>
               </View>
             </View>

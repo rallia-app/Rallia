@@ -15,8 +15,9 @@ import { Text, Card, Button, VStack, HStack, Badge } from '@rallia/shared-compon
 import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+
 import { BaseActionSheet } from './BaseActionSheet';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
 
 export function ChoosePayoutsActionSheet(props: SheetProps<'choose-payouts'>) {
   const { colors, isDark } = useThemeStyles();
@@ -44,13 +45,13 @@ export function ChoosePayoutsActionSheet(props: SheetProps<'choose-payouts'>) {
 
   return (
     <BaseActionSheet
-      title={t('matchDetail.choosePayouts.title' as TranslationKey)}
+      title={t('matchDetail.choosePayouts.title')}
       onClose={handleLater}
       flex={false}
     >
       <VStack spacing={spacingPixels[3]} style={{ padding: spacingPixels[4] }}>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchDetail.choosePayouts.subtitle' as TranslationKey)}
+          {t('matchDetail.choosePayouts.subtitle')}
         </Text>
 
         {/* Stripe option (recommended) */}
@@ -69,14 +70,14 @@ export function ChoosePayoutsActionSheet(props: SheetProps<'choose-payouts'>) {
             <HStack spacing={spacingPixels[2]} align="center">
               <Ionicons name={walletIcon} size={20} color={colors.primary} />
               <Text size="base" weight="semibold" color={colors.primary}>
-                {t('matchDetail.choosePayouts.stripeOption' as TranslationKey)}
+                {t('matchDetail.choosePayouts.stripeOption')}
               </Text>
               <Badge variant="primary" size="sm">
-                {t('matchDetail.choosePayouts.stripeBadge' as TranslationKey)}
+                {t('matchDetail.choosePayouts.stripeBadge')}
               </Badge>
             </HStack>
             <Text size="xs" color={colors.textMuted}>
-              {t('matchDetail.choosePayouts.stripeDescription' as TranslationKey)}
+              {t('matchDetail.choosePayouts.stripeDescription')}
             </Text>
           </VStack>
         </Card>
@@ -96,14 +97,14 @@ export function ChoosePayoutsActionSheet(props: SheetProps<'choose-payouts'>) {
             <HStack spacing={spacingPixels[2]} align="center">
               <Ionicons name="hand-left-outline" size={20} color={colors.text} />
               <Text size="base" weight="semibold" color={colors.text}>
-                {t('matchDetail.choosePayouts.manualOption' as TranslationKey)}
+                {t('matchDetail.choosePayouts.manualOption')}
               </Text>
               <Badge variant="default" size="sm">
-                {t('matchDetail.choosePayouts.manualBadge' as TranslationKey)}
+                {t('matchDetail.choosePayouts.manualBadge')}
               </Badge>
             </HStack>
             <Text size="xs" color={colors.textMuted}>
-              {t('matchDetail.choosePayouts.manualDescription' as TranslationKey)}
+              {t('matchDetail.choosePayouts.manualDescription')}
             </Text>
           </VStack>
         </Card>
@@ -127,7 +128,7 @@ export function ChoosePayoutsActionSheet(props: SheetProps<'choose-payouts'>) {
             background: colors.cardBackground,
           }}
         >
-          {t('matchDetail.choosePayouts.later' as TranslationKey)}
+          {t('matchDetail.choosePayouts.later')}
         </Button>
       </VStack>
     </BaseActionSheet>

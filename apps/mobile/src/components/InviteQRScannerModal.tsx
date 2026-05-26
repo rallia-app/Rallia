@@ -22,15 +22,14 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Text, useToast } from '@rallia/shared-components';
 import { useJoinByInviteCode } from '@rallia/shared-hooks';
 import { getMatchWithDetails, parseInvitationUrl } from '@rallia/shared-services';
 
-import { useThemeStyles, useTranslation } from '../hooks';
-import * as Analytics from '../services/analytics';
-import type { MatchDetailData } from '../context/MatchDetailSheetContext';
-import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import * as Analytics from '#/services/analytics';
+import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { getJoinErrorToastMessage } from '#/utils/joinErrorToast';
 
 type ScanResult = { kind: 'invite-code'; code: string } | { kind: 'match'; matchId: string } | null;
 

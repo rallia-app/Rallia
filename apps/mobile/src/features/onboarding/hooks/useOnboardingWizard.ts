@@ -10,8 +10,13 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
-import { cellKey, emptyGrid, type HourGrid } from '../components/HourlyAvailabilityGrid';
-import * as Analytics from '../../../services/analytics';
+
+import {
+  cellKey,
+  emptyGrid,
+  type HourGrid,
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import * as Analytics from '#/services/analytics';
 
 /**
  * AsyncStorage key written by pre-onboarding's SportStep (via SportContext).
@@ -306,7 +311,7 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           updates.longitude = playerRes.data.longitude || null;
           updates.gender = playerRes.data.gender || '';
           if (playerRes.data.playing_hand) {
-            updates.playingHand = playerRes.data.playing_hand as 'left' | 'right' | 'both';
+            updates.playingHand = playerRes.data.playing_hand;
           }
           if (playerRes.data.max_travel_distance) {
             updates.maxTravelDistance = playerRes.data.max_travel_distance;
@@ -328,16 +333,10 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
             // Extract match type preferences
             if (sport?.name === 'tennis' && ps.preferred_match_type) {
-              updates.tennisMatchType = ps.preferred_match_type as
-                | 'casual'
-                | 'competitive'
-                | 'both';
+              updates.tennisMatchType = ps.preferred_match_type;
             }
             if (sport?.name === 'pickleball' && ps.preferred_match_type) {
-              updates.pickleballMatchType = ps.preferred_match_type as
-                | 'casual'
-                | 'competitive'
-                | 'both';
+              updates.pickleballMatchType = ps.preferred_match_type;
             }
             // Extract match duration preferences
             if (sport?.name === 'tennis' && ps.preferred_match_duration) {

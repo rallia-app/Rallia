@@ -14,18 +14,15 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { usePlayerSports } from '@rallia/shared-hooks';
-import { usePlayer } from '@rallia/shared-hooks';
+import { usePlayerSports, usePlayer } from '@rallia/shared-hooks';
+
+import { useActionsSheet, useSport } from '#/context';
+import * as Analytics from '#/services/analytics';
+import type { SuggestionSource } from '#/services/analytics';
+import type { InvitePayload, InviteState, SuggestionCardLabels } from '#/components/SuggestionCard';
+
 import { useAuth } from './useAuth';
 import { useTranslation } from './useTranslation';
-import { useActionsSheet, useSport } from '../context';
-import * as Analytics from '../services/analytics';
-import type { SuggestionSource } from '../services/analytics';
-import type {
-  InvitePayload,
-  InviteState,
-  SuggestionCardLabels,
-} from '../components/SuggestionCard';
 
 export function suggestionSlotKey(
   opponentId: string,
@@ -85,91 +82,70 @@ export function useSuggestionInviteHandler(
   const inviteStatesRef = useRef(inviteStates);
   inviteStatesRef.current = inviteStates;
 
-  const handleSendInvite = useCallback(
-    async (payload: InvitePayload) => {
-      if (!session?.user) {
-        lightHaptic();
-        onAuthRequired?.();
-        openAuthSheet();
-        return;
-      }
+  const handleSendInvite = async (payload: InvitePayload) => {
+    if (!session?.user) {
+      lightHaptic();
+      onAuthRequired?.();
+      openAuthSheet();
+      return;
+    }
 
-      const { suggestion } = payload;
-      const slotStart =
-        suggestion.slot.datetime instanceof Date
-          ? suggestion.slot.datetime
-          : new Date(suggestion.slot.datetime);
-      const slotEnd =
-        suggestion.slot.endDatetime instanceof Date
-          ? suggestion.slot.endDatetime
-          : new Date(suggestion.slot.endDatetime);
+    const { suggestion } = payload;
+    const slotStart =
+      suggestion.slot.datetime instanceof Date
+        ? suggestion.slot.datetime
+        : new Date(suggestion.slot.datetime);
+    const slotEnd =
+      suggestion.slot.endDatetime instanceof Date
+        ? suggestion.slot.endDatetime
+        : new Date(suggestion.slot.endDatetime);
 
-      const key = suggestionSlotKey(
-        suggestion.opponentId,
-        suggestion.facility.facilityId,
-        slotStart
-      );
-      if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent') {
-        return;
-      }
+    const key = suggestionSlotKey(suggestion.opponentId, suggestion.facility.facilityId, slotStart);
+    if (inviteStatesRef.current[key] === 'sending' || inviteStatesRef.current[key] === 'sent') {
+      return;
+    }
 
-      setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
-      try {
-        const result = await createMatchFromSuggestion({
-          createdBy: optionPlayerId ?? player?.id ?? session?.user?.id ?? '',
-          opponentId: suggestion.opponentId,
-          sportId: sportId ?? '',
-          matchType: callerMatchType,
-          matchDuration: callerDuration,
-          facilityId: suggestion.facility.facilityId,
-          startTime: slotStart,
-          endTime: slotEnd,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    setInviteStates(prev => ({ ...prev, [key]: 'sending' }));
+    try {
+      const result = await createMatchFromSuggestion({
+        createdBy: optionPlayerId ?? player?.id ?? session?.user?.id ?? '',
+        opponentId: suggestion.opponentId,
+        sportId: sportId ?? '',
+        matchType: callerMatchType,
+        matchDuration: callerDuration,
+        facilityId: suggestion.facility.facilityId,
+        startTime: slotStart,
+        endTime: slotEnd,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      successHaptic();
+      setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
+      if (source) {
+        Analytics.matchSuggestionInviteSent({
+          source,
+          opponent_id: suggestion.opponentId,
+          facility_id: suggestion.facility.facilityId,
+          slot_start: slotStart.toISOString(),
+          match_id: result.matchId,
+          sport_id: sportId,
+          sport_name: selectedSport?.id === sportId ? selectedSport?.name : undefined,
+          score: suggestion.score,
+          player_compatibility: suggestion.playerCompatibility,
+          facility_affinity: suggestion.facility.facilityAffinity,
+          score_history: suggestion.scoreHistory,
+          rank: suggestion.rank,
+          match_type: suggestion.matchType,
+          match_duration: suggestion.matchDuration,
         });
-        successHaptic();
-        setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
-        if (source) {
-          Analytics.matchSuggestionInviteSent({
-            source,
-            opponent_id: suggestion.opponentId,
-            facility_id: suggestion.facility.facilityId,
-            slot_start: slotStart.toISOString(),
-            match_id: result.matchId,
-            sport_id: sportId,
-            sport_name: selectedSport?.id === sportId ? selectedSport?.name : undefined,
-            score: suggestion.score,
-            player_compatibility: suggestion.playerCompatibility,
-            facility_affinity: suggestion.facility.facilityAffinity,
-            score_history: suggestion.scoreHistory,
-            rank: suggestion.rank,
-            match_type: suggestion.matchType,
-            match_duration: suggestion.matchDuration,
-          });
-        }
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
-        queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
-        onSendSuccess?.(payload, key);
-      } catch {
-        setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
       }
-    },
-    [
-      optionPlayerId,
-      player?.id,
-      session?.user,
-      sportId,
-      callerDuration,
-      callerMatchType,
-      queryClient,
-      openAuthSheet,
-      onAuthRequired,
-      onSendSuccess,
-      source,
-      selectedSport?.id,
-      selectedSport?.name,
-    ]
-  );
+      queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });
+      queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'nearby'] });
+      queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'public'] });
+      onSendSuccess?.(payload, key);
+    } catch {
+      setInviteStates(prev => ({ ...prev, [key]: 'idle' }));
+    }
+  };
 
   const cardLabels: SuggestionCardLabels = useMemo(
     () => ({

@@ -10,17 +10,19 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { BookingWithDetails } from '@rallia/shared-services';
-import { lightHaptic } from '../../../utils/haptics';
-import BookingStatusBadge from './BookingStatusBadge';
-import CancelBookingModal from './CancelBookingModal';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../../navigation/types';
 import * as Clipboard from 'expo-clipboard';
+
+import type { RootStackParamList } from '#/navigation/types';
+import { lightHaptic } from '#/utils/haptics';
+import { useThemeStyles, useTranslation } from '#/hooks';
+
+import CancelBookingModal from './CancelBookingModal';
+import BookingStatusBadge from './BookingStatusBadge';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -68,7 +70,7 @@ function isCancellable(booking: BookingWithDetails): boolean {
 }
 
 export function BookingDetailActionSheet(props: SheetProps<'booking-detail'>) {
-  const booking = props.payload?.booking as BookingWithDetails | undefined;
+  const booking = props.payload?.booking;
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
   const navigation = useNavigation<NavigationProp>();

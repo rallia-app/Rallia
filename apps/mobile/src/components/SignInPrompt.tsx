@@ -8,7 +8,8 @@ import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { spacingPixels, fontSizePixels, radiusPixels, primary } from '@rallia/design-system';
-import { useThemeStyles } from '../hooks';
+
+import { useThemeStyles } from '#/hooks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

@@ -11,9 +11,7 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-
 import { Text, useToast, Button } from '@rallia/shared-components';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 import {
   useGroupInviteCode,
   useResetGroupInviteCode,
@@ -23,7 +21,9 @@ import {
 } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import * as Analytics from '../../../services/analytics';
+
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // TAB BAR

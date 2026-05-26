@@ -11,15 +11,16 @@
  */
 
 import { supabase, Logger } from '@rallia/shared-services';
-import { getStoragePublicUrl } from './imageUpload';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+
 import {
   uploadVideoToBackblaze,
   isBackblazeConfigured,
   BackblazeUploadProgress,
 } from './backblazeUpload';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as VideoThumbnails from 'expo-video-thumbnails';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { getStoragePublicUrl } from './imageUpload';
 
 /**
  * Convert base64 string to Uint8Array for Supabase upload

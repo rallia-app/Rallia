@@ -11,8 +11,8 @@ import { Linking } from 'react-native';
 import type { FormattedSlot, CourtOption } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
 
-import * as Analytics from '../services/analytics';
-import { usePendingExternalBooking } from '../context/PendingExternalBookingContext';
+import * as Analytics from '#/services/analytics';
+import { usePendingExternalBooking } from '#/context/PendingExternalBookingContext';
 
 interface FacilityForBooking {
   id: string;

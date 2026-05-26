@@ -22,18 +22,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { Text, Skeleton, Button, useToast } from '@rallia/shared-components';
 import { getCoverImageUrl, lightHaptic } from '@rallia/shared-utils';
-import {
-  useThemeStyles,
-  useAuth,
-  useTranslation,
-  useRequireOnboarding,
-  type TranslationKey,
-} from '../hooks';
-import { useSport, useMatchDetailSheet } from '../context';
-import type { MatchDetailData } from '../context';
 import {
   usePublicCommunities,
   usePlayerCommunities,
@@ -43,15 +33,22 @@ import {
   useSports,
   type CommunityWithStatus,
 } from '@rallia/shared-hooks';
-import type { RootStackParamList, CommunityStackParamList } from '../navigation/types';
 import type { CompositeNavigationProp } from '@react-navigation/native';
-import {
-  InviteQRScannerModal,
-  type InviteScanJoinResult,
-} from '../components/InviteQRScannerModal';
-import { getJoinErrorToastMessage } from '../utils/joinErrorToast';
 import { SheetManager } from 'react-native-actions-sheet';
-import { InfoModal } from '../components/InfoModal';
+
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '#/hooks';
+import { useSport, useMatchDetailSheet } from '#/context';
+import type { MatchDetailData } from '#/context';
+import type { RootStackParamList, CommunityStackParamList } from '#/navigation/types';
+import { InviteQRScannerModal, type InviteScanJoinResult } from '#/components/InviteQRScannerModal';
+import { getJoinErrorToastMessage } from '#/utils/joinErrorToast';
+import { InfoModal } from '#/components/InfoModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;

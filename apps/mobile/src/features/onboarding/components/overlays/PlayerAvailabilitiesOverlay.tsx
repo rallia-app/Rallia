@@ -20,19 +20,20 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Text, useToast } from '@rallia/shared-components';
 import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
-import ProgressIndicator from '../ProgressIndicator';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
-import { useLocale } from '../../../../context';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
-import * as Analytics from '../../../../services/analytics';
+
+import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useLocale } from '#/context';
+import * as Analytics from '#/services/analytics';
 import {
   HourlyAvailabilityGrid,
   cellKey,
   emptyGrid,
   type HourGrid,
-} from '../HourlyAvailabilityGrid';
-import { HourlyAvailabilityPresets } from '../HourlyAvailabilityPresets';
+} from '#/features/onboarding/components/HourlyAvailabilityGrid';
+import { HourlyAvailabilityPresets } from '#/features/onboarding/components/HourlyAvailabilityPresets';
 
 const MIN_SELECTIONS = 6;
 

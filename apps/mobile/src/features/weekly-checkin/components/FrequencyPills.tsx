@@ -10,7 +10,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { base, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
-import { useTranslation } from '../../../hooks';
+
+import { useTranslation } from '#/hooks';
 
 const FREQ_OPTIONS = [1, 2, 3, 4, 5] as const;
 
@@ -26,7 +27,9 @@ export function FrequencyPills({ value, onChange, previousGoal }: FrequencyPills
   const { colors, isDark } = useThemeStyles();
 
   const contextText = (() => {
-    if (previousGoal == null) return null;
+    // First-time user (no prior goal) → welcoming, low-pressure copy that
+    // encourages picking any number without referencing a past week.
+    if (previousGoal == null) return t('weeklyCheckIn.step3.frequencyContextFirstTime');
     if (value === previousGoal) return t('weeklyCheckIn.step3.frequencyContextSame');
     if (value > previousGoal)
       return t('weeklyCheckIn.step3.frequencyContextUp', {

@@ -6,14 +6,15 @@
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button } from '@rallia/shared-components';
-import { Text } from '@rallia/shared-components';
+import { Button, Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels } from '@rallia/design-system';
-import { MascotBubble } from '../components/MascotBubble';
-import { FrequencyPills } from '../components/FrequencyPills';
-import { AutoToggleRow } from '../components/AutoToggleRow';
-import { useTranslation } from '../../../hooks';
+
+import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
+import { FrequencyPills } from '#/features/weekly-checkin/components/FrequencyPills';
+import { AutoToggleRow } from '#/features/weekly-checkin/components/AutoToggleRow';
+import { WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED } from '#/features/weekly-checkin/featureFlag';
+import { useTranslation } from '#/hooks';
 
 interface FrequencyAutoStepProps {
   frequencyGoal: number;
@@ -48,7 +49,7 @@ export function FrequencyAutoStep({
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <MascotBubble text={t('weeklyCheckIn.step3.bubble' as any)} textKey="step3-bubble" />
+        <MascotBubble text={t('weeklyCheckIn.step3.bubble')} textKey="step3-bubble" />
 
         <View style={styles.section}>
           <FrequencyPills
@@ -57,22 +58,26 @@ export function FrequencyAutoStep({
             previousGoal={previousGoal}
           />
 
-          <Text style={[styles.opsLabel, { color: colors.textMuted }]}>
-            {t('weeklyCheckIn.step3.opsLabel' as any)}
-          </Text>
+          {WEEKLY_CHECKIN_AUTO_TOGGLES_ENABLED && (
+            <>
+              <Text style={[styles.opsLabel, { color: colors.textMuted }]}>
+                {t('weeklyCheckIn.step3.opsLabel')}
+              </Text>
 
-          <AutoToggleRow
-            title={t('weeklyCheckIn.step3.autoCreateTitle' as any)}
-            description={t('weeklyCheckIn.step3.autoCreateDesc' as any)}
-            checked={autoCreate}
-            onChange={setAutoCreate}
-          />
-          <AutoToggleRow
-            title={t('weeklyCheckIn.step3.autoInviteTitle' as any)}
-            description={t('weeklyCheckIn.step3.autoInviteDesc' as any)}
-            checked={autoInvite}
-            onChange={setAutoInvite}
-          />
+              <AutoToggleRow
+                title={t('weeklyCheckIn.step3.autoCreateTitle')}
+                description={t('weeklyCheckIn.step3.autoCreateDesc')}
+                checked={autoCreate}
+                onChange={setAutoCreate}
+              />
+              <AutoToggleRow
+                title={t('weeklyCheckIn.step3.autoInviteTitle')}
+                description={t('weeklyCheckIn.step3.autoInviteDesc')}
+                checked={autoInvite}
+                onChange={setAutoInvite}
+              />
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -86,7 +91,7 @@ export function FrequencyAutoStep({
           disabled={isSubmitting}
           onPress={onSubmit}
         >
-          {t('weeklyCheckIn.step3.cta' as any)}
+          {t('weeklyCheckIn.step3.cta')}
         </Button>
       </View>
     </View>

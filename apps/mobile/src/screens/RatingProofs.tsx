@@ -13,20 +13,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { useVideoThumbnail } from '../hooks/useVideoThumbnail';
 import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useProfileCompleteness } from '@rallia/shared-hooks';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
-import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import { useThemeStyles, useTranslation } from '../hooks';
-import { resolveStorageUrl, isPrivateBucketUrl } from '../services/imageUpload';
-import RatingBadge from '../components/RatingBadge';
-import ProofViewer from '../features/ratings/components/ProofViewer';
-import { formatDateShort } from '../utils/dateFormatting';
 import { spacingPixels, radiusPixels, fontSizePixels, status } from '@rallia/design-system';
+
+import { useVideoThumbnail } from '#/hooks/useVideoThumbnail';
+import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
+import { useThemeStyles, useTranslation } from '#/hooks';
+import { resolveStorageUrl, isPrivateBucketUrl } from '#/services/imageUpload';
+import RatingBadge from '#/components/RatingBadge';
+import ProofViewer from '#/features/ratings/components/ProofViewer';
+import { formatDateShort } from '#/utils/dateFormatting';
 
 type RatingProofsRouteProp = RouteProp<{ RatingProofs: RatingProofsScreenParams }, 'RatingProofs'>;
 

@@ -28,7 +28,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import {
   lightTheme,
   darkTheme,
@@ -59,8 +58,8 @@ import {
   mediumHaptic,
 } from '@rallia/shared-utils';
 
-import { useTranslation } from '../hooks';
-import type { RootStackParamList } from '../navigation/types';
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminNetworkDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -158,11 +157,11 @@ const AdminNetworkDetailScreen: React.FC = () => {
       t(`admin.networks.certification.${actionKey}Message` as TranslationKey),
       [
         {
-          text: t('common.cancel' as TranslationKey),
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: t('common.confirm' as TranslationKey),
+          text: t('common.confirm'),
           onPress: async () => {
             try {
               mediumHaptic();
@@ -183,11 +182,11 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 setCertificationNotes('');
                 refetch();
               } else {
-                toast.error(result.error || t('common.error' as TranslationKey));
+                toast.error(result.error || t('common.error'));
               }
             } catch (err) {
               console.error('Certification error:', err);
-              toast.error(t('common.error' as TranslationKey));
+              toast.error(t('common.error'));
             }
           },
         },
@@ -203,19 +202,19 @@ const AdminNetworkDetailScreen: React.FC = () => {
     const memberCount = network.member_count || 0;
 
     Alert.alert(
-      t('admin.networks.delete.title' as TranslationKey),
-      t('admin.networks.delete.confirmMessage' as TranslationKey, {
+      t('admin.networks.delete.title'),
+      t('admin.networks.delete.confirmMessage', {
         name: network.name,
         count: memberCount,
         type: networkType,
       }),
       [
         {
-          text: t('common.cancel' as TranslationKey),
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: t('common.delete' as TranslationKey),
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -229,7 +228,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                   membersNotified: result.membersNotified ?? 0,
                 });
                 toast.success(
-                  t('admin.networks.delete.success' as TranslationKey, {
+                  t('admin.networks.delete.success', {
                     name: result.networkName ?? network.name,
                     count: result.membersNotified ?? 0,
                   })
@@ -238,11 +237,11 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 // Navigate back to networks list
                 navigation.goBack();
               } else {
-                toast.error(result.error ?? t('common.error' as TranslationKey));
+                toast.error(result.error ?? t('common.error'));
               }
             } catch (err) {
               console.error('Delete network error:', err);
-              toast.error(t('common.error' as TranslationKey));
+              toast.error(t('common.error'));
             }
           },
         },
@@ -267,7 +266,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
         />
         <View style={styles.memberInfo}>
           <Text size="sm" weight="medium" color={colors.text} numberOfLines={1}>
-            {member.player_name || t('admin.users.anonymous' as TranslationKey)}
+            {member.player_name || t('admin.users.anonymous')}
           </Text>
           <View style={styles.memberMeta}>
             <View
@@ -337,7 +336,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             {t('admin.accessDenied' as TranslationKey)}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.centeredText}>
-            {t('admin.networks.accessDeniedDescription' as TranslationKey)}
+            {t('admin.networks.accessDeniedDescription')}
           </Text>
         </View>
       </SafeAreaView>
@@ -362,7 +361,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
         <View style={styles.centered}>
           <Ionicons name="alert-circle" size={64} color={colors.errorText} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.centeredTitle}>
-            {t('common.error' as TranslationKey)}
+            {t('common.error')}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.centeredText}>
             {error.message}
@@ -372,7 +371,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             onPress={refetch}
           >
             <Text size="sm" weight="medium" color={BASE_WHITE}>
-              {t('common.retry' as TranslationKey)}
+              {t('common.retry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -434,9 +433,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
               color={isGroup ? colors.warningText : colors.accent}
               style={styles.typeBadgeText}
             >
-              {isGroup
-                ? t('admin.networks.types.group' as TranslationKey)
-                : t('admin.networks.types.community' as TranslationKey)}
+              {isGroup ? t('admin.networks.types.group') : t('admin.networks.types.community')}
             </Text>
           </View>
 
@@ -454,7 +451,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 color={colors.certifiedText}
                 style={{ marginLeft: 4 }}
               >
-                {t('admin.networks.certified' as TranslationKey)}
+                {t('admin.networks.certified')}
               </Text>
             </View>
           )}
@@ -489,7 +486,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 {network.max_members ? `/${network.max_members}` : ''}
               </Text>
               <Text size="xs" color={colors.textMuted}>
-                {t('admin.networks.members' as TranslationKey)}
+                {t('admin.networks.members')}
               </Text>
             </View>
 
@@ -509,9 +506,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 color={network.is_private ? colors.warningText : colors.successText}
               />
               <Text size="sm" weight="medium" color={colors.text}>
-                {network.is_private
-                  ? t('admin.networks.private' as TranslationKey)
-                  : t('admin.networks.public' as TranslationKey)}
+                {network.is_private ? t('admin.networks.private') : t('admin.networks.public')}
               </Text>
             </View>
           </View>
@@ -528,7 +523,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             <View style={styles.aboutHeader}>
               <Ionicons name="information-circle-outline" size={24} color={colors.accent} />
               <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                {t('admin.networks.about' as TranslationKey)}
+                {t('admin.networks.about')}
               </Text>
             </View>
             <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
@@ -548,7 +543,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             <View style={styles.cardHeader}>
               <MaterialCommunityIcons name="shield-check" size={22} color={colors.accent} />
               <Text size="lg" weight="semibold" color={colors.text} style={styles.cardTitle}>
-                {t('admin.networks.certification.title' as TranslationKey)}
+                {t('admin.networks.certification.title')}
               </Text>
             </View>
 
@@ -571,15 +566,14 @@ const AdminNetworkDetailScreen: React.FC = () => {
               <View style={styles.certificationStatusText}>
                 <Text size="base" weight="medium" color={colors.text}>
                   {network.is_certified
-                    ? t('admin.networks.certification.isCertified' as TranslationKey)
-                    : t('admin.networks.certification.notCertified' as TranslationKey)}
+                    ? t('admin.networks.certification.isCertified')
+                    : t('admin.networks.certification.notCertified')}
                 </Text>
                 {network.is_certified && network.certified_at && (
                   <Text size="xs" color={colors.textMuted}>
-                    {t('admin.networks.certification.certifiedAt' as TranslationKey)}{' '}
+                    {t('admin.networks.certification.certifiedAt')}{' '}
                     {formatDate(network.certified_at)}
-                    {network.certified_by_name &&
-                      ` ${t('common.by' as TranslationKey)} ${network.certified_by_name}`}
+                    {network.certified_by_name && ` ${t('common.by')} ${network.certified_by_name}`}
                   </Text>
                 )}
               </View>
@@ -589,7 +583,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             {network.certification_notes && (
               <View style={[styles.notesContainer, { backgroundColor: colors.inputBackground }]}>
                 <Text size="xs" weight="medium" color={colors.textMuted}>
-                  {t('admin.networks.certification.notes' as TranslationKey)}
+                  {t('admin.networks.certification.notes')}
                 </Text>
                 <Text size="sm" color={colors.textSecondary}>
                   {network.certification_notes}
@@ -601,8 +595,8 @@ const AdminNetworkDetailScreen: React.FC = () => {
             <View style={styles.notesInputContainer}>
               <Text size="sm" weight="medium" color={colors.text} style={styles.notesLabel}>
                 {network.is_certified
-                  ? t('admin.networks.certification.uncertifyNotes' as TranslationKey)
-                  : t('admin.networks.certification.certifyNotes' as TranslationKey)}
+                  ? t('admin.networks.certification.uncertifyNotes')
+                  : t('admin.networks.certification.certifyNotes')}
               </Text>
               <TextInput
                 style={[
@@ -613,7 +607,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                     borderColor: colors.border,
                   },
                 ]}
-                placeholder={t('admin.networks.certification.notesPlaceholder' as TranslationKey)}
+                placeholder={t('admin.networks.certification.notesPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={certificationNotes}
                 onChangeText={setCertificationNotes}
@@ -649,8 +643,8 @@ const AdminNetworkDetailScreen: React.FC = () => {
                     style={styles.certifyButtonText}
                   >
                     {network.is_certified
-                      ? t('admin.networks.certification.uncertify' as TranslationKey)
-                      : t('admin.networks.certification.certify' as TranslationKey)}
+                      ? t('admin.networks.certification.uncertify')
+                      : t('admin.networks.certification.certify')}
                   </Text>
                 </>
               )}
@@ -668,23 +662,23 @@ const AdminNetworkDetailScreen: React.FC = () => {
           <View style={styles.cardHeader}>
             <Ionicons name="information-circle" size={22} color={colors.accent} />
             <Text size="lg" weight="semibold" color={colors.text} style={styles.cardTitle}>
-              {t('admin.networks.details' as TranslationKey)}
+              {t('admin.networks.details')}
             </Text>
           </View>
 
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
               <Text size="xs" color={colors.textMuted}>
-                {t('admin.networks.createdBy' as TranslationKey)}
+                {t('admin.networks.createdBy')}
               </Text>
               <Text size="sm" weight="medium" color={colors.text}>
-                {network.creator_name || t('admin.networks.unknownCreator' as TranslationKey)}
+                {network.creator_name || t('admin.networks.unknownCreator')}
               </Text>
             </View>
 
             <View style={styles.detailItem}>
               <Text size="xs" color={colors.textMuted}>
-                {t('admin.networks.createdAt' as TranslationKey)}
+                {t('admin.networks.createdAt')}
               </Text>
               <Text size="sm" weight="medium" color={colors.text}>
                 {formatDate(network.created_at)}
@@ -694,7 +688,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             {network.invite_code && (
               <View style={styles.detailItem}>
                 <Text size="xs" color={colors.textMuted}>
-                  {t('admin.networks.inviteCode' as TranslationKey)}
+                  {t('admin.networks.inviteCode')}
                 </Text>
                 <Text size="sm" weight="medium" color={colors.accent}>
                   {network.invite_code}
@@ -705,7 +699,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             {network.updated_at && (
               <View style={styles.detailItem}>
                 <Text size="xs" color={colors.textMuted}>
-                  {t('admin.networks.updatedAt' as TranslationKey)}
+                  {t('admin.networks.updatedAt')}
                 </Text>
                 <Text size="sm" weight="medium" color={colors.text}>
                   {formatDate(network.updated_at)}
@@ -726,7 +720,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             <View style={styles.cardHeader}>
               <Ionicons name="people" size={22} color={colors.accent} />
               <Text size="lg" weight="semibold" color={colors.text} style={styles.cardTitle}>
-                {t('admin.networks.membersList' as TranslationKey)} ({members.length})
+                {t('admin.networks.membersList')} ({members.length})
               </Text>
             </View>
 
@@ -742,7 +736,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
               >
                 <Text size="sm" weight="medium" color={colors.accent}>
                   {showMembersExpanded
-                    ? t('common.showLess' as TranslationKey)
+                    ? t('common.showLess')
                     : t('common.showAll' as TranslationKey, { count: members.length })}
                 </Text>
                 <Ionicons
@@ -766,7 +760,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             <View style={styles.cardHeader}>
               <Ionicons name="location" size={22} color={colors.accent} />
               <Text size="lg" weight="semibold" color={colors.text} style={styles.cardTitle}>
-                {t('admin.networks.favoriteFacilities' as TranslationKey)} ({facilities.length})
+                {t('admin.networks.favoriteFacilities')} ({facilities.length})
               </Text>
             </View>
 
@@ -782,7 +776,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
               >
                 <Text size="sm" weight="medium" color={colors.accent}>
                   {showFacilitiesExpanded
-                    ? t('common.showLess' as TranslationKey)
+                    ? t('common.showLess')
                     : t('common.showAll' as TranslationKey, { count: facilities.length })}
                 </Text>
                 <Ionicons
@@ -806,18 +800,18 @@ const AdminNetworkDetailScreen: React.FC = () => {
             <View style={styles.cardHeader}>
               <Ionicons name="warning" size={22} color={colors.errorText} />
               <Text size="lg" weight="semibold" color={colors.errorText} style={styles.cardTitle}>
-                {t('admin.networks.delete.dangerZone' as TranslationKey)}
+                {t('admin.networks.delete.dangerZone')}
               </Text>
             </View>
 
             <Text size="sm" color={colors.text} style={styles.dangerZoneDescription}>
-              {t('admin.networks.delete.description' as TranslationKey)}
+              {t('admin.networks.delete.description')}
             </Text>
 
             {/* Delete Reason Input */}
             <View style={styles.deleteReasonContainer}>
               <Text size="sm" weight="medium" color={colors.text} style={styles.notesLabel}>
-                {t('admin.networks.delete.reasonLabel' as TranslationKey)}
+                {t('admin.networks.delete.reasonLabel')}
               </Text>
               <TextInput
                 style={[
@@ -828,7 +822,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                     borderColor: colors.border,
                   },
                 ]}
-                placeholder={t('admin.networks.delete.reasonPlaceholder' as TranslationKey)}
+                placeholder={t('admin.networks.delete.reasonPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={deleteReason}
                 onChangeText={setDeleteReason}
@@ -860,8 +854,8 @@ const AdminNetworkDetailScreen: React.FC = () => {
                     style={styles.deleteButtonText}
                   >
                     {network?.network_type === 'player_group'
-                      ? t('admin.networks.delete.deleteGroup' as TranslationKey)
-                      : t('admin.networks.delete.deleteCommunity' as TranslationKey)}
+                      ? t('admin.networks.delete.deleteGroup')
+                      : t('admin.networks.delete.deleteCommunity')}
                   </Text>
                 </>
               )}

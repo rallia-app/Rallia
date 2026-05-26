@@ -18,9 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { useTheme, useAnalyticsTimeRange, type TimeRangeOption } from '@rallia/shared-hooks';
-import { useTranslation } from '../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Text } from '@rallia/shared-components';
 import {
@@ -39,7 +37,9 @@ import {
   type RetentionCohort,
   type SportDistribution,
 } from '@rallia/shared-services';
-import type { RootStackParamList } from '../../navigation/types';
+
+import { useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -270,10 +270,10 @@ const AdminUserAnalyticsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('admin.analytics.sections.users' as TranslationKey) || 'User Analytics'}
+            {t('admin.analytics.sections.users') || 'User Analytics'}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {t('admin.analytics.sections.usersDesc' as TranslationKey) || 'User growth & activity'}
+            {t('admin.analytics.sections.usersDesc') || 'User growth & activity'}
           </Text>
         </View>
       </View>
@@ -360,10 +360,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
                 <LineChart
                   data={cumulativeUsers}
-                  title={
-                    t('admin.analytics.userGrowth.cumulativeUsers' as TranslationKey) ||
-                    'Total Users Over Time'
-                  }
+                  title={t('admin.analytics.userGrowth.cumulativeUsers') || 'Total Users Over Time'}
                   subtitle="Cumulative user growth"
                   showArea
                   curved
@@ -390,9 +387,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
                         value: item.value,
                       };
                     })}
-                    title={
-                      t('admin.analytics.userGrowth.newUsers' as TranslationKey) || 'New Users'
-                    }
+                    title={t('admin.analytics.userGrowth.newUsers') || 'New Users'}
                     subtitle={
                       selectedOption === 'ytd'
                         ? 'Year to date registrations'
@@ -416,9 +411,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
                         value: item.value,
                       };
                     })}
-                    title={
-                      t('admin.analytics.userGrowth.newUsers' as TranslationKey) || 'New Users'
-                    }
+                    title={t('admin.analytics.userGrowth.newUsers') || 'New Users'}
                     subtitle={
                       selectedOption === '30d'
                         ? 'Last 30 days registrations'
@@ -438,10 +431,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
                 <PieChart
                   data={sportChartData}
-                  title={
-                    t('admin.analytics.sportDistribution.title' as TranslationKey) ||
-                    'Sport Distribution'
-                  }
+                  title={t('admin.analytics.sportDistribution.title') || 'Sport Distribution'}
                   subtitle="Users by preferred sport"
                   donut
                   centerLabel="Users"
@@ -459,7 +449,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
               <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
                 <View style={styles.chartHeader}>
                   <Text style={[styles.chartTitle, { color: colors.text }]}>
-                    {t('admin.analytics.retention.title' as TranslationKey) || 'User Retention'}
+                    {t('admin.analytics.retention.title') || 'User Retention'}
                   </Text>
                   <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
                     Week-over-week retention by cohort
