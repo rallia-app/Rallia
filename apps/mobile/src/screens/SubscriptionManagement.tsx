@@ -32,6 +32,41 @@ import {
 
 const APPLE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 
+// Module scope so it keeps a stable component identity across the screen's
+// renders; an in-render definition would remount the badge each render.
+function StatusBadge({ status, mutedColor }: { status: string; mutedColor: string }) {
+  const { t } = useTranslation();
+  const badgeColor =
+    status === 'active'
+      ? statusColors.success.DEFAULT
+      : status === 'cancelling'
+        ? statusColors.warning.DEFAULT
+        : status === 'billing_issue'
+          ? statusColors.error.DEFAULT
+          : mutedColor;
+
+  const label =
+    status === 'active'
+      ? t('subscription.status_active')
+      : status === 'cancelling'
+        ? t('subscription.status_cancelling')
+        : status === 'billing_issue'
+          ? t('subscription.status_billing_issue')
+          : status === 'expired'
+            ? t('subscription.status_expired')
+            : t('subscription.free_plan');
+
+  return (
+    <View
+      style={[styles.badge, { backgroundColor: `${badgeColor}20`, borderColor: `${badgeColor}50` }]}
+    >
+      <Text size="xs" weight="semibold" color={badgeColor}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 const SubscriptionManagement: React.FC = () => {
   const navigation = useAppNavigation();
   const { theme } = useTheme();
@@ -85,41 +120,6 @@ const SubscriptionManagement: React.FC = () => {
     } finally {
       setIsRestoring(false);
     }
-  };
-
-  const StatusBadge = ({ status }: { status: string }) => {
-    const badgeColor =
-      status === 'active'
-        ? statusColors.success.DEFAULT
-        : status === 'cancelling'
-          ? statusColors.warning.DEFAULT
-          : status === 'billing_issue'
-            ? statusColors.error.DEFAULT
-            : colors.textMuted;
-
-    const label =
-      status === 'active'
-        ? t('subscription.status_active')
-        : status === 'cancelling'
-          ? t('subscription.status_cancelling')
-          : status === 'billing_issue'
-            ? t('subscription.status_billing_issue')
-            : status === 'expired'
-              ? t('subscription.status_expired')
-              : t('subscription.free_plan');
-
-    return (
-      <View
-        style={[
-          styles.badge,
-          { backgroundColor: `${badgeColor}20`, borderColor: `${badgeColor}50` },
-        ]}
-      >
-        <Text size="xs" weight="semibold" color={badgeColor}>
-          {label}
-        </Text>
-      </View>
-    );
   };
 
   if (isLoading) {
@@ -192,7 +192,7 @@ const SubscriptionManagement: React.FC = () => {
             <Text size="2xl" weight="bold" color={colors.text} style={styles.cardTitle}>
               Rallia Plus
             </Text>
-            <StatusBadge status={subscriptionStatus} />
+            <StatusBadge status={subscriptionStatus} mutedColor={colors.textMuted} />
           </View>
 
           {description && (

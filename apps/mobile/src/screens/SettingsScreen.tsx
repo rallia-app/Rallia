@@ -39,6 +39,40 @@ import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 // Get app environment (EXPO_PUBLIC_ vars are inlined at build time by Metro)
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
 
+function SettingsItem({
+  icon,
+  title,
+  onPress,
+  colors,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  onPress: () => void;
+  colors: { background: string; border: string; icon: string; text: string; iconMuted: string };
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.settingsItem,
+        { backgroundColor: colors.background, borderBottomColor: colors.border },
+      ]}
+      onPress={() => {
+        lightHaptic();
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.settingsItemLeft}>
+        <Ionicons name={icon} size={20} color={colors.icon} />
+        <Text size="base" color={colors.text}>
+          {title}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
+    </TouchableOpacity>
+  );
+}
+
 const SettingsScreen: React.FC = () => {
   const navigation = useAppNavigation();
   const toast = useToast();
@@ -236,36 +270,6 @@ const SettingsScreen: React.FC = () => {
     ]);
   };
 
-  const SettingsItem = ({
-    icon,
-    title,
-    onPress,
-  }: {
-    icon: keyof typeof Ionicons.glyphMap;
-    title: string;
-    onPress: () => void;
-  }) => (
-    <TouchableOpacity
-      style={[
-        styles.settingsItem,
-        { backgroundColor: colors.background, borderBottomColor: colors.border },
-      ]}
-      onPress={() => {
-        lightHaptic();
-        onPress();
-      }}
-      activeOpacity={0.7}
-    >
-      <View style={styles.settingsItemLeft}>
-        <Ionicons name={icon} size={20} color={colors.icon} />
-        <Text size="base" color={colors.text}>
-          {title}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.iconMuted} />
-    </TouchableOpacity>
-  );
-
   // Show loading indicator until i18n is ready
   if (!isLocaleReady || authLoading || profileLoading) {
     return (
@@ -328,32 +332,38 @@ const SettingsScreen: React.FC = () => {
         <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
           {isOnboarded && (
             <SettingsItem
+              colors={colors}
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
             />
           )}
           <SettingsItem
+            colors={colors}
             icon="shield-checkmark-outline"
             title={t('settings.permissions')}
             onPress={handlePermissions}
           />
           <SettingsItem
+            colors={colors}
             icon="refresh-outline"
             title={t('tour.settings.restartTour')}
             onPress={handleResetTour}
           />
           <SettingsItem
+            colors={colors}
             icon="document-text-outline"
             title={t('settings.termsOfService')}
             onPress={() => Linking.openURL('https://rallia.ca/terms')}
           />
           <SettingsItem
+            colors={colors}
             icon="lock-closed-outline"
             title={t('settings.privacyPolicy')}
             onPress={() => Linking.openURL('https://rallia.ca/privacy')}
           />
           <SettingsItem
+            colors={colors}
             icon="mail-outline"
             title={t('settings.contactSupport')}
             onPress={() => Linking.openURL('mailto:contact@rallia.ca')}
@@ -364,6 +374,7 @@ const SettingsScreen: React.FC = () => {
         {isAuthenticated && isAdmin && (
           <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
             <SettingsItem
+              colors={colors}
               icon="construct-outline"
               title={t('admin.panelButton')}
               onPress={handleAdminPanel}
@@ -375,6 +386,7 @@ const SettingsScreen: React.FC = () => {
         {isOnboarded && isAdmin && (
           <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
             <SettingsItem
+              colors={colors}
               icon={
                 subscriptionStatus === 'active' || subscriptionStatus === 'cancelling'
                   ? 'star'
