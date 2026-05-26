@@ -119,6 +119,7 @@ import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
 import { useAppVersionGate } from './src/hooks/useAppVersionGate';
+import { useApplyUpdateOnResume } from './src/hooks/useApplyUpdateOnResume';
 import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
 import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
@@ -821,6 +822,11 @@ function AppContent() {
   // so it can wait on profile/player/sport before revealing Home).
   const { isSplashComplete, permissionsHandled } = useOverlay();
   const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
+
+  // Apply a pending OTA update when the app resumes after a long background,
+  // for users who background/foreground rather than cold-start. Gated on
+  // splash completion so it never races the launch-time update flow.
+  useApplyUpdateOnResume({ enabled: isSplashComplete });
 
   // Track app opened event on mount
   useEffect(() => {
