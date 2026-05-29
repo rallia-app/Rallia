@@ -6,13 +6,12 @@
  * per app launch when all gate conditions are met.
  *
  * Gate conditions (all must be true to fire):
- *   1. `isSplashComplete` (passed in by AppContent, same as WelcomeTourModal)
+ *   1. `isSplashComplete` (passed in by AppContent)
  *   2. `isSportSelectionComplete` (read from OverlayContext)
- *   3. WelcomeTourModal is not pending — welcome tour wins on a fresh install
- *   4. `get_check_in_context().is_pending_check_in === true`
- *   5. `@rallia/availability-refresh-banner-cooldown` is absent or > 24h old
+ *   3. `get_check_in_context().is_pending_check_in === true`
+ *   4. `@rallia/availability-refresh-banner-cooldown` is absent or > 24h old
  *      (shared key with the home banner — wizard × dismissal also writes it)
- *   6. Per-session ref `autoOpenedThisSession` is false (fire at most once)
+ *   5. Per-session ref `autoOpenedThisSession` is false (fire at most once)
  */
 import React, { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,7 +20,6 @@ import { Logger } from '@rallia/shared-services';
 import { useAuth } from '@rallia/shared-hooks';
 
 import { useOverlay } from '#/context';
-import { useTour } from '#/context/TourContext';
 import { navigationRef } from '#/navigation';
 
 import { useCheckInContext } from './api';
@@ -42,7 +40,6 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
   const { session } = useAuth();
   const isAuthed = !!session?.user;
   const { isSportSelectionComplete } = useOverlay();
-  const { isTourCompleted } = useTour();
 
   // Don't fetch the context until splash is done AND the user is authenticated
   // (the RPC throws auth.uid()-null otherwise, which retries 3× and spams logs).
@@ -70,8 +67,6 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
       if (!isSportSelectionComplete) return;
       if (!context) return;
       if (!context.isPendingCheckIn) return;
-      const welcomeDone = isTourCompleted('welcome');
-      if (!welcomeDone && context.currentStreak === 0) return;
     }
 
     let cancelled = false;
@@ -113,15 +108,7 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     return () => {
       cancelled = true;
     };
-  }, [
-    isSplashComplete,
-    isAuthed,
-    isSportSelectionComplete,
-    context,
-    isTourCompleted,
-    FORCE_SHOW,
-    BYPASS_COOLDOWN,
-  ]);
+  }, [isSplashComplete, isAuthed, isSportSelectionComplete, context, FORCE_SHOW, BYPASS_COOLDOWN]);
 
   return null;
 };

@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
-import { Logger, tourService, supabase } from '@rallia/shared-services';
+import { Logger, supabase } from '@rallia/shared-services';
 import { useTheme, useAdminStatus, useProfile } from '@rallia/shared-hooks';
 import type { Locale } from '@rallia/shared-translations';
 import {
@@ -247,29 +247,6 @@ const SettingsScreen: React.FC = () => {
     );
   };
 
-  const handleResetTour = () => {
-    lightHaptic();
-    Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
-      {
-        text: t('common.cancel'),
-        style: 'cancel',
-      },
-      {
-        text: t('common.confirm'),
-        onPress: async () => {
-          try {
-            await tourService.resetAllTours();
-            toast.success(t('tour.settings.tourReset'));
-            Logger.logUserAction('tour_reset');
-          } catch (error) {
-            Logger.error('Failed to reset tour', error as Error);
-            toast.error(t('errors.unknown'));
-          }
-        },
-      },
-    ]);
-  };
-
   // Show loading indicator until i18n is ready
   if (!isLocaleReady || authLoading || profileLoading) {
     return (
@@ -343,12 +320,6 @@ const SettingsScreen: React.FC = () => {
             icon="shield-checkmark-outline"
             title={t('settings.permissions')}
             onPress={handlePermissions}
-          />
-          <SettingsItem
-            colors={colors}
-            icon="refresh-outline"
-            title={t('tour.settings.restartTour')}
-            onPress={handleResetTour}
           />
           <SettingsItem
             colors={colors}
