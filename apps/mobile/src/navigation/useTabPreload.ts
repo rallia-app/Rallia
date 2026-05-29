@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { InteractionManager } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { runWhenIdle } from '#/utils/runWhenIdle';
 
 // Sibling tabs worth warming. 'Actions' is a sheet trigger, not a real screen.
 const TABS_TO_PRELOAD = ['Courts', 'Community', 'Chat'] as const;
@@ -29,14 +29,26 @@ export function useTabPreload() {
     const tab = navigation.getParent('BottomTabs');
     if (!tab?.preload) return;
 
-    // Yield to Home's own post-interaction work first, then stagger each stack
-    // onto its own frame so three mounts don't land in one janky commit.
-    const handle = InteractionManager.runAfterInteractions(() => {
-      TABS_TO_PRELOAD.forEach((name, i) => {
-        setTimeout(() => tab.preload?.(name), i * 150);
+    // Hold tab warming until the cold-start critical path (auth → player →
+    // Home carousel) has cleared the Supabase connection pool. Warming three
+    // tab stacks immediately piled their mount queries (e.g. Chat's
+    // get_player_conversations) onto the sign-in request herd and saturated the
+    // pool — that RPC was hitting the 8s statement timeout. The tabs aren't
+    // needed in the first few seconds, so defer past the burst, then yield to
+    // interactions and stagger each stack onto its own frame as before.
+    const PRELOAD_DELAY_MS = 4000;
+    let handle: ReturnType<typeof runWhenIdle> | undefined;
+    const timer = setTimeout(() => {
+      handle = runWhenIdle(() => {
+        TABS_TO_PRELOAD.forEach((name, i) => {
+          setTimeout(() => tab.preload?.(name), i * 150);
+        });
       });
-    });
+    }, PRELOAD_DELAY_MS);
 
-    return () => handle.cancel();
+    return () => {
+      clearTimeout(timer);
+      handle?.cancel();
+    };
   }, [navigation]);
 }

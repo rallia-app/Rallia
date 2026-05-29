@@ -89,6 +89,14 @@ const DEFAULT_LIMIT = 5;
  *  headroom so the limit is never the bottleneck after exclusions. */
 const MATCH_POOL_SIZE = 30;
 
+/**
+ * Toggle for the suggestion pool in the Nearby / Just-for-you carousel.
+ * When `false`, the carousel is matches-only — `getTopSuggestions` is skipped
+ * entirely (no `get_match_suggestions_anon` / scored suggestion RPC, no slot
+ * expansion). When `true`, suggestions are fetched and merged as before.
+ */
+const INCLUDE_SUGGESTIONS = true;
+
 export async function composeJustForYou(
   input: ComposeJustForYouInput
 ): Promise<ComposeJustForYouResult> {
@@ -126,17 +134,20 @@ export async function composeJustForYou(
     // Fetch up to matchLimit suggestions (already opponent-deduped + score-desc
     // by `getTopSuggestions`). Asking for `matchLimit` gives us enough
     // headroom: even if all matches lose to suggestions, we have exactly the
-    // count we need.
-    getTopSuggestions({
-      playerId,
-      sportId,
-      sportName,
-      latitude,
-      longitude,
-      maxDistanceKm,
-      maxItems: matchLimit,
-      signal,
-    }),
+    // count we need. Disabled via INCLUDE_SUGGESTIONS while the carousel is
+    // matches-only — short-circuit to an empty pool so no suggestion RPC fires.
+    INCLUDE_SUGGESTIONS
+      ? getTopSuggestions({
+          playerId,
+          sportId,
+          sportName,
+          latitude,
+          longitude,
+          maxDistanceKm,
+          maxItems: matchLimit,
+          signal,
+        })
+      : Promise.resolve([] as SlotSuggestion[]),
   ]);
 
   if (signal?.aborted) {

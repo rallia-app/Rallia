@@ -35,7 +35,7 @@ import {
 import { useAuth, useRequireOnboarding } from '#/hooks';
 import { useTranslation, type TranslationOptions } from '#/hooks/useTranslation';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
-import { useCommunityNavigation, useAppNavigation } from '#/navigation';
+import { useCommunityNavigation, useAppNavigation } from '#/navigation/hooks';
 import SignInPrompt from '#/components/SignInPrompt';
 import { SportIcon } from '#/components/SportIcon';
 

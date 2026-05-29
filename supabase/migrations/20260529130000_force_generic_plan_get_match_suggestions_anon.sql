@@ -1,0 +1,45 @@
+-- ════════════════════════════════════════════════════════════════════════
+-- get_match_suggestions_anon — force the generic plan
+-- ════════════════════════════════════════════════════════════════════════
+--
+-- Symptom: the anon suggestion fetch (onboarding / Public Matches padding)
+-- feels slow / empty on first load, then fast on retry. The anon Postgres
+-- role has a 3s statement_timeout (vs 8s authenticated), so a slow cold call
+-- surfaces as `[SuggestionService] RPC error` 57014.
+--
+-- Root cause: plan choice, NOT data volume or JIT. Measured on prod
+-- (EXPLAIN ANALYZE BUFFERS on the live function, all buffers cached):
+--   force_custom_plan  : 156,136 buffers, ~360 ms warm
+--   force_generic_plan :  16,225 buffers, ~686 ms warm
+-- PostgREST opens fresh pooled connections at login that run fewer than the 5
+-- executions plpgsql needs before it will consider a generic plan, so every
+-- cold call uses a CUSTOM plan. The custom plan chooses nested-loop index
+-- scans that touch ~156k buffers (~1.2 GB of page accesses) for a single
+-- suggestion request. When those buffers are cached it's 360ms; on a cold
+-- backend after login they become disk reads and blow the 3s anon timeout —
+-- the carousel renders empty. The refetch lands on a now-warm backend and
+-- returns in under a second.
+--
+-- The generic plan hashes instead of nested-looping, so it touches ~10× fewer
+-- buffers (16k vs 156k) — a far smaller cold-read footprint that stays well
+-- under the 3s budget. Verified the buffer cap holds across areas/sports:
+-- Montreal tennis 16k, Brossard pickleball 8.6k.
+--
+-- Trade-off: forcing the generic plan makes WARM calls modestly slower
+-- (~686-960ms vs ~360ms custom) because it hashes rather than nested-loops.
+-- That is the correct trade for this path — its failure mode is a cold-call
+-- timeout, not warm p50, and anon suggestions are an infrequent
+-- onboarding/padding call, not a hot loop. Reversible (RESET / set to auto).
+--
+-- Function body is unchanged → results are identical; this only fixes which
+-- cached plan PostgREST connections use. No TS type regen.
+--
+-- Scope note: get_match_suggestions_scored (the signed-in suggestion RPC) does
+-- NOT have this problem — its custom plan is ~10k buffers / ~209ms — so it is
+-- left on the default `auto` mode. get_just_for_you's cold-login failure is a
+-- separate JIT issue, fixed in 20260529120000.
+-- ════════════════════════════════════════════════════════════════════════
+
+ALTER FUNCTION public.get_match_suggestions_anon(
+  uuid, double precision, double precision, integer, integer
+) SET plan_cache_mode = force_generic_plan;

@@ -35,7 +35,7 @@ import { useCommunitiesForFacility } from '@rallia/shared-hooks';
 import type { TranslationKey, TranslationOptions } from '#/hooks';
 import { useSport } from '#/context';
 import { SportIcon } from '#/components/SportIcon';
-import { navigationRef } from '#/navigation';
+import { navigationRef } from '#/navigation/navigationRef';
 import { CommunityCard } from '#/features/communities/components/CommunityCard';
 
 import CourtCard from './CourtCard';
