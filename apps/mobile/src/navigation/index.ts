@@ -2,91 +2,17 @@
  * Navigation - Barrel exports
  */
 
-import { createNavigationContainerRef } from '@react-navigation/native';
-import type { NavigatorScreenParams } from '@react-navigation/native';
-
-import type { RootStackParamList, HomeStackParamList, CommunityStackParamList } from './types';
-
-// Navigation ref for use outside NavigationContainer (e.g., ActionsBottomSheet)
-export const navigationRef = createNavigationContainerRef<RootStackParamList>();
-
-/**
- * Navigate to a screen from outside the NavigationContainer.
- * This is useful for components like ActionsBottomSheet that render outside the navigation tree.
- */
-export function navigateFromOutside<T extends keyof HomeStackParamList>(
-  screen: T,
-  params?: HomeStackParamList[T]
-) {
-  if (navigationRef.isReady()) {
-    // Navigate to the Home tab first, then to the nested screen
-    navigationRef.navigate('Main', {
-      screen: 'Home',
-      params: {
-        screen,
-        params,
-      },
-    });
-  }
-}
-
-/**
- * Navigate to a Community stack screen from outside the NavigationContainer.
- *
- * Note: We use a type assertion here because React Navigation's TypeScript types
- * don't properly support generic constraints with nested navigators. This is a
- * known limitation documented at:
- * https://reactnavigation.org/docs/typescript/#type-checking-screens
- *
- * The assertion is safe because the function signature ensures callers pass
- * valid screen names and params that match CommunityStackParamList.
- */
-export function navigateToCommunityScreen<T extends keyof CommunityStackParamList>(
-  screen: T,
-  params?: CommunityStackParamList[T]
-) {
-  if (navigationRef.isReady()) {
-    navigationRef.navigate('Main', {
-      screen: 'Community',
-      params: {
-        screen,
-        params,
-      } as NavigatorScreenParams<CommunityStackParamList>,
-    });
-  }
-}
-
-/**
- * Navigate to PlayerProfile from outside the NavigationContainer.
- * Use in components like MatchDetailSheet that render outside the navigation tree.
- * Caller is responsible for auth/onboarding checks (open auth sheet if not signed in or not onboarded).
- */
-export function navigateToPlayerProfileFromOutside(playerId: string, sportId?: string) {
-  if (navigationRef.isReady()) {
-    navigationRef.navigate('PlayerProfile', { playerId, sportId });
-  }
-}
-
-/**
- * Navigate to IncomingReferenceRequests from outside the NavigationContainer.
- * Used for push notification tap handling.
- */
-export function navigateToIncomingReferenceRequestsFromOutside() {
-  if (navigationRef.isReady()) {
-    navigationRef.navigate('IncomingReferenceRequests');
-  }
-}
-
-/**
- * Navigate to the current user's UserProfile screen from outside the
- * NavigationContainer. Used as a fallback when push-tap handlers can't
- * complete their primary action (e.g. opening Stripe onboarding fails).
- */
-export function navigateToUserProfileFromOutside() {
-  if (navigationRef.isReady()) {
-    navigationRef.navigate('UserProfile', {});
-  }
-}
+// Navigation ref + imperative navigate-from-outside helpers. Defined in a
+// dedicated module (not here) so importing them doesn't pull in AppNavigator
+// and create a require cycle; re-exported here for back-compat.
+export {
+  navigationRef,
+  navigateFromOutside,
+  navigateToCommunityScreen,
+  navigateToPlayerProfileFromOutside,
+  navigateToIncomingReferenceRequestsFromOutside,
+  navigateToUserProfileFromOutside,
+} from './navigationRef';
 
 // Main navigator
 export { default as AppNavigator } from './AppNavigator';

@@ -32,6 +32,20 @@ import type { Player } from '@rallia/shared-types';
 /** Default max travel distance in km if not set by user */
 const DEFAULT_MAX_TRAVEL_DISTANCE_KM = 50;
 
+// TEMP perf instrumentation (REMOVE after diagnosis). Shared global clock so
+// deltas are continuous across files/contexts. Grep `[perf⏱]` to remove.
+function perfLog(label: string, extra?: Record<string, unknown>) {
+  const g = globalThis as unknown as { __ralliaPerfLast?: number };
+  const now = Date.now();
+  const since = g.__ralliaPerfLast ? now - g.__ralliaPerfLast : 0;
+  g.__ralliaPerfLast = now;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[perf⏱] ${new Date(now).toISOString().slice(11, 23)} +${String(since).padStart(6)}ms  ${label}`,
+    extra ?? ''
+  );
+}
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -146,21 +160,29 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       setLoading(true);
       setError(null);
 
-      // Fetch player and primary sport rating in parallel
-      const [playerResult, primarySportResult, ratingsResult, preferencesResult, reputationResult] =
-        await Promise.all([
-          // Player data
-          supabase.from('player').select('*').eq('id', userId).single(),
+      // TEMP perf: time the whole fetch + each parallel query independently, so
+      // we can tell contention/auth-lock (all resolve together, late) from a
+      // single slow query (one lags). REMOVE after diagnosis.
+      const __t0 = Date.now();
+      perfLog('PlayerCtx.fetchPlayer START', { userId });
+      const tq = <T,>(label: string, q: PromiseLike<T>): Promise<T> =>
+        Promise.resolve(q).then(r => {
+          perfLog(`  PlayerCtx q:${label} resolved`, { ms: Date.now() - __t0 });
+          return r;
+        });
 
-          // Primary sport
-          supabase
-            .from('player_sport')
-            .select('sport_id')
-            .eq('player_id', userId)
-            .eq('is_primary', true)
-            .maybeSingle(),
+      // Fetch player and primary sport rating in parallel.
+      // NOTE: the primary sport_id is derived from `preferencesResult` below
+      // (it already selects `is_primary` + `sport_id` for every row), so we do
+      // NOT issue a separate primary-sport query — one fewer round-trip in the
+      // cold-start burst, result-identical.
+      const [playerResult, ratingsResult, preferencesResult, reputationResult] = await Promise.all([
+        // Player data
+        tq('player', supabase.from('player').select('*').eq('id', userId).single()),
 
-          // All player ratings (expanded for SportProfile cache)
+        // All player ratings (expanded for SportProfile cache)
+        tq(
+          'ratings',
           supabase
             .from('player_rating_score')
             .select(
@@ -184,9 +206,12 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
             )
             .eq('player_id', userId)
             .order('is_certified', { ascending: false })
-            .order('created_at', { ascending: false }),
+            .order('created_at', { ascending: false })
+        ),
 
-          // All player sport preferences with play style and attributes
+        // All player sport preferences with play style and attributes
+        tq(
+          'preferences',
           supabase
             .from('player_sport')
             .select(
@@ -205,15 +230,20 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
             )
           `
             )
-            .eq('player_id', userId),
+            .eq('player_id', userId)
+        ),
 
-          // Reputation data
+        // Reputation data
+        tq(
+          'reputation',
           supabase
             .from('player_reputation')
             .select('reputation_score, reputation_tier, total_events, matches_completed, is_public')
             .eq('player_id', userId)
-            .maybeSingle(),
-        ]);
+            .maybeSingle()
+        ),
+      ]);
+      perfLog('PlayerCtx.fetchPlayer DONE (all 5 resolved)', { totalMs: Date.now() - __t0 });
 
       // Handle player result
       if (playerResult.error) {
@@ -353,8 +383,11 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       }
       setSportPreferences(prefsMap);
 
-      // Handle primary rating result
-      const primarySportId = primarySportResult.data?.sport_id;
+      // Handle primary rating result — primary sport_id derived from the
+      // preferences rows (the row flagged is_primary) instead of a separate query.
+      const primarySportId = (preferencesResult.data ?? []).find(ps => ps.is_primary)?.sport_id as
+        | string
+        | undefined;
       if (primarySportId && ratingsMap[primarySportId]) {
         setPrimaryRating(ratingsMap[primarySportId]);
       } else {

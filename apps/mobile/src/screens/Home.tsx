@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
-  InteractionManager,
 } from 'react-native';
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,6 +95,7 @@ import {
   shouldShowReferralInvite,
   markSheetShown,
 } from '#/utils/referralInviteFrequency';
+import { runWhenIdle } from '#/utils/runWhenIdle';
 
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -265,6 +265,26 @@ const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
 const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
+// ─────────────────────────────────────────────────────────────────────────
+// TEMP cold-start instrumentation — REMOVE after diagnosing Home time-to-fetch.
+// Logs an absolute timestamp + ms elapsed since the previous timeline log, so
+// the sign-in / cold-start critical path that gates the "Just for you" query
+// (auth → player → location → sport → favorites/rating → enabled → fetch) is
+// visible in the console. `__homeTimelineLast` is module-level so deltas are
+// continuous across re-renders.
+function homeTimeline(label: string, extra?: Record<string, unknown>) {
+  // Shares the global `__ralliaPerfLast` clock with the perfLog() helpers in
+  // AuthContext/PlayerContext/usePlayerSports/LocaleContext so deltas are
+  // continuous across all instrumented files. TEMP — remove with the rest.
+  const g = globalThis as unknown as { __ralliaPerfLast?: number };
+  const now = Date.now();
+  const since = g.__ralliaPerfLast ? now - g.__ralliaPerfLast : 0;
+  g.__ralliaPerfLast = now;
+  const ts = new Date(now).toISOString().slice(11, 23); // HH:MM:SS.mmm (UTC)
+  // eslint-disable-next-line no-console
+  console.log(`[Home⏱] ${ts}  +${String(since).padStart(6)}ms  ${label}`, extra ?? '');
+}
+
 const Home = () => {
   // Warm sibling tab stacks in the background so their first open is instant.
   useTabPreload();
@@ -299,10 +319,10 @@ const Home = () => {
   const [deepLinkOverlay, setDeepLinkOverlay] = useState(false);
 
   // Consume pending navigation from post-onboarding join (AsyncStorage).
-  // Deferred past first paint via InteractionManager — none of this is on the
+  // Deferred past first paint via runWhenIdle — none of this is on the
   // critical-path for the initial frame and AsyncStorage reads add up.
   useEffect(() => {
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runWhenIdle(() => {
       AsyncStorage.getItem('@rallia/pending-navigation').then(raw => {
         if (!raw) return;
         AsyncStorage.removeItem('@rallia/pending-navigation');
@@ -337,7 +357,7 @@ const Home = () => {
   // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired).
   // Deferred past first paint — not critical for initial frame.
   useEffect(() => {
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runWhenIdle(() => {
       AsyncStorage.getItem(PENDING_REFERRAL_KEY).then(raw => {
         if (!raw) return;
         try {
@@ -571,7 +591,7 @@ const Home = () => {
   // keeps Supabase/network work off the initial render path. The listener stays
   // synchronous so runtime deep links (app already open) still fire immediately.
   useEffect(() => {
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runWhenIdle(() => {
       processDeepLink();
     });
     const unsubscribe = addDeepLinkListener(processDeepLink);
@@ -594,7 +614,7 @@ const Home = () => {
 
     const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
 
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runWhenIdle(() => {
       (async () => {
         await incrementOnboardedLaunchCount();
         const show = await shouldShowReferralInvite(hasReferredUser);
@@ -748,7 +768,7 @@ const Home = () => {
       }
     };
 
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runWhenIdle(() => {
       void checkCooldownAndShow();
     });
     return () => handle.cancel();
@@ -778,7 +798,7 @@ const Home = () => {
   // the cooldown becomes inactive and the banner is free to show again
   // whenever `isPendingCheckIn` is true.
   useEffect(() => {
-    const handle = InteractionManager.runAfterInteractions(async () => {
+    const handle = runWhenIdle(async () => {
       try {
         const cooldownRaw = await AsyncStorage.getItem(AVAILABILITY_BANNER_COOLDOWN_KEY);
         if (cooldownRaw) {
@@ -921,8 +941,58 @@ const Home = () => {
     matchLimit: 5,
     // Anon-mode supported by the composer/hook — gate only on the location
     // and sport context that the carousel itself depends on.
-    enabled: showNearbySection,
+    //
+    // Signed-in: also wait for `player` to finish loading. The RPC's only
+    // player-derived input is the search radius (max_travel_distance), which
+    // defaults to 50 until `player` resolves then becomes the real value.
+    // Gating here means the carousel fires ONCE with the final radius instead
+    // of firing at 50 and refetching at 15. Anon has no player → fire as soon
+    // as location + sport are ready.
+    enabled: showNearbySection && (!session?.user?.id || !playerLoading),
   });
+
+  // ── TEMP cold-start timeline instrumentation (REMOVE after diagnosis) ─────
+  // Each effect fires on mount (initial snapshot) and again whenever its input
+  // resolves — the deltas between logs reveal what gates the JFY query at
+  // sign-in / cold start. Watch the gap to `enabled gate=true`, then the gap
+  // from there to `JFY settled` (the actual fetch).
+  useEffect(() => {
+    homeTimeline('Home mounted (first effect tick)');
+  }, []);
+  useEffect(() => {
+    homeTimeline(`auth      loading=${authLoading} session=${!!session?.user?.id}`);
+  }, [authLoading, session?.user?.id]);
+  useEffect(() => {
+    homeTimeline(`player    loading=${playerLoading} player=${!!player?.id}`);
+  }, [playerLoading, player?.id]);
+  useEffect(() => {
+    homeTimeline(
+      `location  ready=${!!location}`,
+      location ? { lat: location.latitude, lng: location.longitude, mode: locationMode } : undefined
+    );
+  }, [location, locationMode]);
+  useEffect(() => {
+    homeTimeline(`sport     loading=${sportLoading} selected=${selectedSport?.name ?? 'none'}`);
+  }, [sportLoading, selectedSport?.id, selectedSport?.name]);
+  useEffect(() => {
+    homeTimeline(`playerSports n=${playerSports.length} currentSport=${!!currentPlayerSport}`);
+  }, [playerSports.length, currentPlayerSport]);
+  useEffect(() => {
+    homeTimeline(
+      `favorites n=${favoriteFacilityIds.length}  ratingValue=${playerRatingValue ?? 'null'}`
+    );
+  }, [favoriteFacilityIds.length, playerRatingValue]);
+  useEffect(() => {
+    homeTimeline(
+      `GATE isNearbyFetchReady=${isNearbyFetchReady} showNearby=${showNearbySection} radiusKm=${searchRadiusKm}`
+    );
+  }, [isNearbyFetchReady, showNearbySection, searchRadiusKm]);
+  useEffect(() => {
+    homeTimeline(
+      `JFY  isLoading=${loadingJustForYou} isRefetching=${isRefetching} items=${justForYouItems.length}`
+    );
+  }, [loadingJustForYou, isRefetching, justForYouItems.length]);
+  // ── end TEMP instrumentation ─────────────────────────────────────────────
 
   // Suggestion invite plumbing (shared with PublicMatches via the hook).
   const {
@@ -1481,7 +1551,14 @@ const Home = () => {
   // flicker that came from swapping a full-page skeleton in and out.
   // Treat "fetch not yet ready" as a loading state so the carousel renders
   // skeletons (instead of the empty card) while sport/location settle.
-  const showJfyLoading = loadingJustForYou || !isNearbyFetchReady;
+  //
+  // Also cover the signed-in gate window: the carousel is disabled until
+  // `player` loads (see useJustForYou `enabled`), so the query reports
+  // isLoading=false even though it hasn't fired yet. Without this, skeletons
+  // would disappear during that window. Gate on "no items yet" so a warm cache
+  // (persisted results) still renders instantly instead of skeletons.
+  const jfyGatedWaiting = !!session?.user?.id && playerLoading && justForYouItems.length === 0;
+  const showJfyLoading = loadingJustForYou || !isNearbyFetchReady || jfyGatedWaiting;
   const showJfyEmpty = !showJfyLoading && justForYouItems.length === 0;
 
   const content = (

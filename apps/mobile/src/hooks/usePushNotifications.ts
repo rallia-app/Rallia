@@ -10,12 +10,15 @@ import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
 import { registerPushToken, supabase, unregisterPushToken, Logger } from '@rallia/shared-services';
 
+// Import from the dedicated navigationRef module (not the '#/navigation'
+// barrel) to avoid a require cycle: the barrel re-exports AppNavigator → every
+// screen → the '#/hooks' barrel that re-exports this hook.
 import {
   navigateFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
   navigateToUserProfileFromOutside,
-} from '#/navigation';
+} from '#/navigation/navigationRef';
 import * as Analytics from '#/services/analytics';
 
 // =============================================================================

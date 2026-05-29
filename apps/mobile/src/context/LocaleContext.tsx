@@ -21,6 +21,19 @@ import { initI18n, changeLanguage, getDeviceLocale } from '#/i18n';
 
 const LOCALE_STORAGE_KEY = '@rallia/locale';
 
+// TEMP perf instrumentation (REMOVE after diagnosis). Shared global clock.
+function perfLog(label: string, extra?: Record<string, unknown>) {
+  const g = globalThis as unknown as { __ralliaPerfLast?: number };
+  const now = Date.now();
+  const since = g.__ralliaPerfLast ? now - g.__ralliaPerfLast : 0;
+  g.__ralliaPerfLast = now;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[perf⏱] ${new Date(now).toISOString().slice(11, 23)} +${String(since).padStart(6)}ms  ${label}`,
+    extra ?? ''
+  );
+}
+
 interface LocaleContextValue {
   /** Current active locale */
   locale: Locale;
@@ -62,11 +75,14 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
     async (userId: string) => {
       if (!userId) return;
 
+      const __t0 = Date.now();
+      perfLog('LocaleCtx.syncLocaleToDatabase START', { userId });
       try {
         const { error: profileError } = await supabase
           .from('profile')
           .update({ preferred_locale: locale })
           .eq('id', userId);
+        perfLog('LocaleCtx  profile.update done', { ms: Date.now() - __t0 });
 
         if (profileError) {
           console.error('Failed to sync locale to database:', profileError);
@@ -77,13 +93,25 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (session) {
+        perfLog('LocaleCtx  getSession done', { ms: Date.now() - __t0 });
+        // Only write auth user_metadata when the locale actually changed.
+        // `auth.updateUser` acquires the GoTrue auth lock; calling it
+        // unconditionally on every sign-in serialized ~9s of token contention
+        // during the cold-start load storm (the whole client stalls behind it).
+        // The metadata copy only feeds OTP/magic-link email language, so it is
+        // safe to skip when it already matches the current locale.
+        const currentMetaLocale = session?.user?.user_metadata?.locale as string | undefined;
+        if (session && currentMetaLocale !== locale) {
+          perfLog('LocaleCtx  auth.updateUser START (locale changed)', { from: currentMetaLocale });
           const { error: authError } = await supabase.auth.updateUser({
             data: { locale },
           });
+          perfLog('LocaleCtx  auth.updateUser DONE', { ms: Date.now() - __t0 });
           if (authError) {
             console.error('Failed to sync locale to auth user_metadata:', authError);
           }
+        } else {
+          perfLog('LocaleCtx  auth.updateUser SKIPPED (locale unchanged)');
         }
       } catch (error) {
         console.error('Failed to sync locale to database:', error);

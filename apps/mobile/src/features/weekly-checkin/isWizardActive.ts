@@ -14,7 +14,8 @@
  */
 import { useEffect, useState } from 'react';
 
-import { navigationRef } from '#/navigation';
+// Direct import to avoid the navigation→AppNavigator→Home→isWizardActive cycle.
+import { navigationRef } from '#/navigation/navigationRef';
 
 const ROUTE_NAME = 'WeeklyCheckIn';
 

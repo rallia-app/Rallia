@@ -24,7 +24,10 @@ import { useMatchDetailSheet, useSport } from '#/context';
 import { useThemeStyles, useTranslation, useAuth } from '#/hooks';
 import { SportIcon } from '#/components/SportIcon';
 
-import { SearchBar, MatchFiltersBar } from './index';
+// Direct sibling imports (not './index') — importing the barrel this file is
+// itself exported from creates a self-referential require cycle.
+import { SearchBar } from './SearchBar';
+import MatchFiltersBar from './MatchFiltersBar';
 
 // =============================================================================
 // TYPES

@@ -4,7 +4,9 @@ import { usePlayer } from '@rallia/shared-hooks';
 import { useToast } from '@rallia/shared-components';
 import { SheetManager } from 'react-native-actions-sheet';
 
-import { useSport } from '#/context';
+// Direct import (not the '#/context' barrel) to avoid the hooks↔context↔
+// navigation require cycle — see useEffectiveLocation for the full chain.
+import { useSport } from '#/context/SportContext';
 import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
 
 import { useUserLocation } from './useUserLocation';

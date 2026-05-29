@@ -18,7 +18,10 @@ import {
   PRO_ENTITLEMENT_ID,
 } from '#/lib/revenuecat';
 import { supabase } from '#/lib/supabase';
-import { navigationRef } from '#/navigation';
+// Direct import (not the '#/navigation' barrel): the barrel re-exports
+// AppNavigator → every screen → the '#/context' barrel that re-exports this
+// context, which was the spine of most require cycles.
+import { navigationRef } from '#/navigation/navigationRef';
 import { Logger } from '#/services/logger';
 
 import { useAuth } from './AuthContext';
