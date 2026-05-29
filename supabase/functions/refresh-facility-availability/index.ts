@@ -83,8 +83,12 @@ interface FacilityRow {
  * on a different platform). Then:
  *
  * - 0 candidate sports → null.
- * - 1 candidate sport → stamp it. Covers single-sport facilities and
- *   multi-sport facilities whose other sports are served elsewhere.
+ * - 1 candidate sport → stamp it, UNLESS the court_name / facilityType.name
+ *   clearly names a sport Rallia doesn't model (see FOREIGN_SPORT_KEYWORDS),
+ *   in which case → null. Without this guard a provider that bundles e.g.
+ *   volleyball courts under a tennis-only facility (IC3 siteId 1035, Parc
+ *   Hartenstein → "Terrain de volleyball no 2") would have those slots
+ *   stamped tennis and leaked into the tennis space.
  * - >1 candidate sports → resolve in this order:
  *     1. `facility_type_sport_map` lookup keyed on the row's
  *        `external_facility_type_id`. Deterministic per provider.
@@ -100,6 +104,45 @@ interface FacilityRow {
  * volleyball rows for a tennis+pickleball-tagged facility correctly stays
  * null instead of leaking an untagged sport into the snapshot.
  */
+/** Lower-cased keywords for sports Rallia does not model. Used as a negative
+ *  signal in the single-candidate path of resolveSportId: when a provider
+ *  bundles courts for one of these under a facility tagged with a single
+ *  supported sport, we must NOT stamp the supported sport onto them. Covers
+ *  common FR/EN names seen in Loisirs Montréal / IC3 / Tennis Laval feeds. */
+const FOREIGN_SPORT_KEYWORDS = [
+  'volleyball',
+  'volley',
+  'basketball',
+  'basket',
+  'soccer',
+  'futsal',
+  'football',
+  'baseball',
+  'softball',
+  'hockey',
+  'patinoire',
+  'patinage',
+  'badminton',
+  'handball',
+  'rugby',
+  'cricket',
+  'petanque',
+  'pétanque',
+  'shuffleboard',
+  'racquetball',
+  'racketball',
+];
+
+/** True when `text` names a foreign (non-modelled) sport and does NOT also
+ *  name one of the candidate sports. Candidate names take precedence so a
+ *  court that legitimately mentions its own sport is never rejected. */
+function nameIndicatesForeignSport(text: string | null, candidateNames: string[]): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  if (candidateNames.some(n => lower.includes(n))) return false;
+  return FOREIGN_SPORT_KEYWORDS.some(k => lower.includes(k));
+}
+
 function resolveSportId(
   sports: FacilitySport[] | null,
   servedSportIds: string[] | null,
@@ -112,7 +155,18 @@ function resolveSportId(
   const served = servedSportIds && servedSportIds.length > 0 ? new Set(servedSportIds) : null;
   const candidates = served ? sports.filter(s => served.has(s.id)) : sports;
   if (candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0].id;
+  if (candidates.length === 1) {
+    // Negative guard: don't blindly stamp the only tagged sport onto a court
+    // whose name clearly belongs to a sport we don't model.
+    const candidateNames = [candidates[0].name.toLowerCase()];
+    if (
+      nameIndicatesForeignSport(facilityTypeName, candidateNames) ||
+      nameIndicatesForeignSport(courtName, candidateNames)
+    ) {
+      return null;
+    }
+    return candidates[0].id;
+  }
 
   const candidateIds = new Set(candidates.map(s => s.id));
 
