@@ -71,14 +71,12 @@ interface FieldErrors {
   gender?: string;
 }
 
-const MINIMUM_AGE_YEARS = 13;
-const MINIMUM_AGE_MONTHS = 1;
+const MINIMUM_AGE_YEARS = 18;
 
-// Calculate minimum date of birth (13 years and 1 month ago)
+// Calculate minimum date of birth (18 years ago)
 const getMinimumDateOfBirth = (): Date => {
   const date = new Date();
   date.setFullYear(date.getFullYear() - MINIMUM_AGE_YEARS);
-  date.setMonth(date.getMonth() - MINIMUM_AGE_MONTHS);
   return date;
 };
 
