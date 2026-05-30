@@ -48,7 +48,7 @@ interface PlayerCardProps {
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
   if (meters === null || meters === undefined) return '';
-  if (meters < 100) return nearbyLabel;
+  if (meters < 500) return nearbyLabel;
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
 }

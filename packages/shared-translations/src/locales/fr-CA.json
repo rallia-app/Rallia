@@ -9509,10 +9509,10 @@
       "cancel": "Continuer"
     },
     "step1": {
-      "bubbleHit": "Salut 👋 De retour — tu as explosé ton objectif la semaine passée. La séquence grimpe. 🔥",
-      "bubbleMet": "Salut 👋 De retour — tu as joué tes {goal} sessions la semaine passée. La séquence tient bon. 💪",
-      "bubbleMiss": "Salut 👋 De retour — tu as manqué l'objectif, mais pas la séquence. On se replace cette semaine. 🌱",
-      "bubbleFirstTime": "Salut 👋 Bienvenue à bord! On configure ta première semaine — ça prend une minute. 🎾",
+      "bubbleHit": "Horaire enregistré 🔒 Objectif explosé la semaine passée — la séquence grimpe.",
+      "bubbleMet": "Horaire enregistré 🔒 {goal} sessions jouées la semaine passée. La séquence tient bon.",
+      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué, mais pas la séquence. On se replace.",
+      "bubbleFirstTime": "Horaire enregistré 🔒 C'est ton premier check-in — on lance ta séquence.",
       "streakTitle": "Séquence de {count} semaines",
       "streakTitleZero": "Commence une séquence cette semaine",
       "streakSubtitle": "semaines",
@@ -9537,14 +9537,14 @@
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
       "recapPlayed": "Joué",
-      "cta": "Planifions la semaine 🎾"
+      "cta": "Fixons mon objectif 🎯"
     },
     "step2": {
-      "bubble": "Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages — je vais faire opérer ma magie autour de ça. ✨",
+      "bubble": "Salut 👋 Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages. ✨",
       "cta": "Parfait"
     },
     "step3": {
-      "bubble": "Combien de sessions veux-tu jouer cette semaine? Je vais garder l'œil sur l'objectif. 🎯",
+      "goalHeading": "Combien de sessions cette semaine? 🎯",
       "frequencyOption": {
         "1": "1×",
         "2": "2×",

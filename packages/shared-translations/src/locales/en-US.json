@@ -9509,10 +9509,10 @@
       "cancel": "Keep going"
     },
     "step1": {
-      "bubbleHit": "Hey 👋 Welcome back — you smashed your goal last week. Streak still climbing. 🔥",
-      "bubbleMet": "Hey 👋 Welcome back — you hit all {goal} sessions last week. Streak alive and well. 💪",
-      "bubbleMiss": "Hey 👋 Welcome back — you missed the goal, but not the streak. Let's get back on track. 🌱",
-      "bubbleFirstTime": "Hey 👋 Welcome aboard! Let's set up your first week — it only takes a minute. 🎾",
+      "bubbleHit": "Schedule locked 🔒 And last week? You smashed your goal — streak's still climbing.",
+      "bubbleMet": "Schedule locked 🔒 Last week you hit all {goal} sessions too. Streak alive and well.",
+      "bubbleMiss": "Schedule locked 🔒 Missed last week's goal, but not the streak. Let's bounce back.",
+      "bubbleFirstTime": "Schedule locked 🔒 This is your first check-in — let's get your streak started.",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
       "streakSubtitle": "weeks",
@@ -9537,14 +9537,14 @@
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
       "recapPlayed": "Played",
-      "cta": "Let's plan this week 🎾"
+      "cta": "Set my goal 🎯"
     },
     "step2": {
-      "bubble": "When are you free this week? Tap or drag to paint your slots — I'll work my matchmaking magic around them. ✨",
+      "bubble": "Hey 👋 When are you free this week? Tap or drag to paint your slots. ✨",
       "cta": "Looks good"
     },
     "step3": {
-      "bubble": "How many sessions do you want to play this week? I'll keep an eye on the goal. 🎯",
+      "goalHeading": "How many sessions this week? 🎯",
       "frequencyOption": {
         "1": "1×",
         "2": "2×",

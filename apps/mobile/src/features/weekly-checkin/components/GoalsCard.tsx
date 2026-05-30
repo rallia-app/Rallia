@@ -7,15 +7,14 @@
  * the independent signals they are.
  *
  *   ┌────────────────────────────────────────────────┐
- *   │  GOAL TRACKING                                 │
- *   │                                                │
- *   │  Last week                                     │
- *   │  Goal 3 · Played 2 — Goal missed               │
- *   │                                                │
- *   │  Last 4 weeks                                  │
+ *   │  GOAL TRACKING               Last week  2/3 ✗  │
  *   │   ✓     ✓     ✗     ✗                          │
  *   │  Apr20 Apr27 May4 May11                         │
  *   └────────────────────────────────────────────────┘
+ *
+ * Compact layout: the last-week result rides on the title row (played/goal +
+ * a hit/miss glyph), and the 4-week trend sits directly below — no divider or
+ * stacked section labels.
  *
  * For first-time users with no prior history, renders a friendly placeholder
  * line so the card doesn't look broken.
@@ -25,7 +24,6 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import {
-  accent,
   base,
   primary,
   secondary,
@@ -52,10 +50,8 @@ export function GoalsCard({ lastWeekGoal, lastWeekPlayed, goalsHitLast4Weeks }: 
   const { colors, isDark } = useThemeStyles();
 
   const titleColor = colors.textMuted;
-  const labelColor = isDark ? colors.textSecondary : colors.text;
   const subTextColor = colors.textMuted;
   const dateLabelColor = colors.textMuted;
-  const dividerColor = colors.divider;
   const emptyBorderColor = isDark ? `${colors.border}` : colors.border;
 
   // Reverse the newest-first array to render left-to-right chronological.
@@ -89,75 +85,55 @@ export function GoalsCard({ lastWeekGoal, lastWeekPlayed, goalsHitLast4Weeks }: 
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card }]}>
-      <Text style={[styles.title, { color: titleColor }]}>
-        {t('weeklyCheckIn.step1.goalsCardTitle')}
-      </Text>
+      <View style={styles.headerRow}>
+        <Text style={[styles.title, { color: titleColor }]}>
+          {t('weeklyCheckIn.step1.goalsCardTitle')}
+        </Text>
+
+        {!isFirstTime && hasLastWeek && (
+          <View style={styles.lastWeekInline}>
+            <Text style={[styles.lastWeekInlineLabel, { color: subTextColor }]}>
+              {t('weeklyCheckIn.step1.goalsCardLastWeek')}
+            </Text>
+            <Text style={[styles.lastWeekInlineValue, { color: lastWeekStatusColor }]}>
+              {playedCount}/{lastWeekGoal} {lastWeekHit ? '✓' : '✗'}
+            </Text>
+          </View>
+        )}
+      </View>
 
       {isFirstTime ? (
         <Text style={[styles.placeholder, { color: subTextColor }]}>
           {t('weeklyCheckIn.step1.goalsCardNoHistory')}
         </Text>
       ) : (
-        <>
-          {hasLastWeek && (
-            <View style={styles.lastWeekBlock}>
-              <Text style={[styles.sectionLabel, { color: labelColor }]}>
-                {t('weeklyCheckIn.step1.goalsCardLastWeek')}
-              </Text>
-              <View style={styles.lastWeekLine}>
-                <Text style={[styles.lastWeekSummary, { color: colors.text }]}>
-                  {t('weeklyCheckIn.step1.goalsCardLastWeekSummary', {
-                    played: playedCount,
-                    goal: lastWeekGoal,
-                  })}
-                </Text>
-                <Text style={[styles.lastWeekStatus, { color: lastWeekStatusColor }]}>
-                  {lastWeekHit
-                    ? t('weeklyCheckIn.step1.goalsCardLastWeekHit')
-                    : `✗  ${t('weeklyCheckIn.step1.goalsCardLastWeekMiss')}`}
+        goalsHitLast4Weeks.length > 0 && (
+          <View style={styles.markersRow}>
+            {Array.from({ length: emptySlots }, (_, i) => (
+              <View key={`e-${i}`} style={styles.markerCol}>
+                <View
+                  style={[styles.marker, styles.markerEmpty, { borderColor: emptyBorderColor }]}
+                />
+                <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
+                  {dateFormatter.format(historyDates[i])}
                 </Text>
               </View>
-            </View>
-          )}
-
-          {goalsHitLast4Weeks.length > 0 && (
-            <>
-              {hasLastWeek && <View style={[styles.divider, { backgroundColor: dividerColor }]} />}
-
-              <Text style={[styles.sectionLabel, { color: labelColor }]}>
-                {t('weeklyCheckIn.step1.goalsCardTrendLabel')}
-              </Text>
-              <View style={styles.markersRow}>
-                {Array.from({ length: emptySlots }, (_, i) => (
-                  <View key={`e-${i}`} style={styles.markerCol}>
-                    <View
-                      style={[styles.marker, styles.markerEmpty, { borderColor: emptyBorderColor }]}
-                    />
-                    <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
-                      {dateFormatter.format(historyDates[i])}
-                    </Text>
+            ))}
+            {historyOldestFirst.map((hit, i) => {
+              const date = historyDates[emptySlots + i];
+              return (
+                <View key={`h-${i}`} style={styles.markerCol}>
+                  <View style={[styles.marker, hit ? styles.markerHit : styles.markerMiss]}>
+                    <Text style={styles.markerText}>{hit ? '✓' : '✗'}</Text>
                   </View>
-                ))}
-                {historyOldestFirst.map((hit, i) => {
-                  const date = historyDates[emptySlots + i];
-                  return (
-                    <View key={`h-${i}`} style={styles.markerCol}>
-                      <View style={[styles.marker, hit ? styles.markerHit : styles.markerMiss]}>
-                        <Text style={styles.markerText}>{hit ? '✓' : '✗'}</Text>
-                      </View>
-                      <Text
-                        style={[styles.markerDate, { color: dateLabelColor }]}
-                        numberOfLines={1}
-                      >
-                        {dateFormatter.format(date)}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </>
-          )}
-        </>
+                  <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
+                    {dateFormatter.format(date)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )
       )}
     </View>
   );
@@ -187,43 +163,36 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[3],
     ...shadowsSemanticNative.card,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[3],
+  },
   title: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.1,
     textTransform: 'uppercase',
-    marginBottom: spacingPixels[3],
   },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: spacingPixels[1],
-  },
-  lastWeekBlock: {},
-  lastWeekLine: {
+  lastWeekInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacingPixels[2],
-    flexWrap: 'wrap',
+    gap: spacingPixels[1],
   },
-  lastWeekSummary: {
-    fontSize: 15,
+  lastWeekInlineLabel: {
+    fontSize: 11,
     fontWeight: '600',
   },
-  lastWeekStatus: {
+  lastWeekInlineValue: {
     fontSize: 13,
-    fontWeight: '700',
-  },
-  divider: {
-    height: 1,
-    marginVertical: spacingPixels[3],
+    fontWeight: '800',
   },
   markersRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginTop: spacingPixels[1],
   },
   markerCol: {
     flex: 1,

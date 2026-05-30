@@ -1,8 +1,10 @@
 /**
- * Step 3 — Frequency goal + auto-magic opt-ins.
+ * Step 2 — Slim recap + weekly goal (merged).
  *
- * Single screen with frequency pills at the top + two compact opt-in cards
- * under a "Make this easier" label at the bottom. CTA triggers submit.
+ * Combines what used to be two separate steps (welcome/recap and frequency)
+ * into one to keep the wizard short. Ace opens with the variant-aware recap
+ * line, the StreakCard + GoalsCard carry the recap signal, and the weekly goal
+ * picker (+ auto-magic opt-ins) is the focus below. The CTA submits.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -11,15 +13,29 @@ import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
+import { StreakCard } from '#/features/weekly-checkin/components/StreakCard';
+import { GoalsCard } from '#/features/weekly-checkin/components/GoalsCard';
 import { FrequencyPills } from '#/features/weekly-checkin/components/FrequencyPills';
 import { AutoToggleRow } from '#/features/weekly-checkin/components/AutoToggleRow';
 import {
   WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED,
   WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED,
 } from '#/features/weekly-checkin/featureFlag';
+import type { CheckInContext } from '#/features/weekly-checkin/api';
 import { useTranslation } from '#/hooks';
 
-interface FrequencyAutoStepProps {
+export type RecapVariant = 'hit' | 'met' | 'miss' | 'first';
+
+export function deriveVariant(ctx: CheckInContext): RecapVariant {
+  if (ctx.lastWeekFrequencyGoal == null) return 'first';
+  const played = ctx.lastWeekSessionsPlayed ?? 0;
+  if (played > ctx.lastWeekFrequencyGoal) return 'hit';
+  if (played === ctx.lastWeekFrequencyGoal) return 'met';
+  return 'miss';
+}
+
+interface RecapGoalStepProps {
+  context: CheckInContext;
   frequencyGoal: number;
   setFrequencyGoal: (n: number) => void;
   previousGoal: number | null;
@@ -31,7 +47,8 @@ interface FrequencyAutoStepProps {
   onSubmit: () => void;
 }
 
-export function FrequencyAutoStep({
+export function RecapGoalStep({
+  context,
   frequencyGoal,
   setFrequencyGoal,
   previousGoal,
@@ -41,9 +58,25 @@ export function FrequencyAutoStep({
   setAutoInvite,
   isSubmitting,
   onSubmit,
-}: FrequencyAutoStepProps) {
+}: RecapGoalStepProps) {
   const { t } = useTranslation();
   const { colors } = useThemeStyles();
+  const variant = deriveVariant(context);
+
+  const bubbleText = (() => {
+    switch (variant) {
+      case 'hit':
+        return t('weeklyCheckIn.step1.bubbleHit');
+      case 'met':
+        return t('weeklyCheckIn.step1.bubbleMet', {
+          goal: context.lastWeekFrequencyGoal ?? 0,
+        });
+      case 'miss':
+        return t('weeklyCheckIn.step1.bubbleMiss');
+      case 'first':
+        return t('weeklyCheckIn.step1.bubbleFirstTime');
+    }
+  })();
 
   return (
     <View style={styles.root}>
@@ -52,9 +85,25 @@ export function FrequencyAutoStep({
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <MascotBubble text={t('weeklyCheckIn.step3.bubble')} textKey="step3-bubble" />
+        <MascotBubble text={bubbleText} textKey={`recap-${variant}`} />
 
-        <View style={styles.section}>
+        <View style={styles.recapSection}>
+          <StreakCard
+            currentStreak={context.currentStreak}
+            freezeInventory={context.freezeInventory}
+          />
+          <GoalsCard
+            lastWeekGoal={context.lastWeekFrequencyGoal}
+            lastWeekPlayed={context.lastWeekSessionsPlayed}
+            goalsHitLast4Weeks={context.goalsHitLast4Weeks}
+          />
+        </View>
+
+        <View style={styles.goalSection}>
+          <Text style={[styles.goalHeading, { color: colors.text }]}>
+            {t('weeklyCheckIn.step3.goalHeading')}
+          </Text>
+
           <FrequencyPills
             value={frequencyGoal}
             onChange={setFrequencyGoal}
@@ -118,8 +167,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[5],
     paddingBottom: spacingPixels[3],
   },
-  section: {
-    marginTop: spacingPixels[5],
+  recapSection: {
+    marginTop: spacingPixels[4],
+  },
+  goalSection: {
+    marginTop: spacingPixels[3],
+  },
+  goalHeading: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    marginHorizontal: spacingPixels[1],
+    marginBottom: spacingPixels[3],
   },
   opsLabel: {
     fontSize: 11,

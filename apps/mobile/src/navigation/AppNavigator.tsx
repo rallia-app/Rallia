@@ -1598,7 +1598,7 @@ export default function AppNavigator() {
         options={{
           headerShown: false,
           presentation: 'modal',
-          gestureEnabled: false, // discrete × is the only dismiss path
+          gestureEnabled: false, // mandatory check-in — no swipe-to-dismiss
         }}
       />
     </RootStack.Navigator>
