@@ -265,26 +265,6 @@ const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
 const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-// ─────────────────────────────────────────────────────────────────────────
-// TEMP cold-start instrumentation — REMOVE after diagnosing Home time-to-fetch.
-// Logs an absolute timestamp + ms elapsed since the previous timeline log, so
-// the sign-in / cold-start critical path that gates the "Just for you" query
-// (auth → player → location → sport → favorites/rating → enabled → fetch) is
-// visible in the console. `__homeTimelineLast` is module-level so deltas are
-// continuous across re-renders.
-function homeTimeline(label: string, extra?: Record<string, unknown>) {
-  // Shares the global `__ralliaPerfLast` clock with the perfLog() helpers in
-  // AuthContext/PlayerContext/usePlayerSports/LocaleContext so deltas are
-  // continuous across all instrumented files. TEMP — remove with the rest.
-  const g = globalThis as unknown as { __ralliaPerfLast?: number };
-  const now = Date.now();
-  const since = g.__ralliaPerfLast ? now - g.__ralliaPerfLast : 0;
-  g.__ralliaPerfLast = now;
-  const ts = new Date(now).toISOString().slice(11, 23); // HH:MM:SS.mmm (UTC)
-  // eslint-disable-next-line no-console
-  console.log(`[Home⏱] ${ts}  +${String(since).padStart(6)}ms  ${label}`, extra ?? '');
-}
-
 const Home = () => {
   // Warm sibling tab stacks in the background so their first open is instant.
   useTabPreload();
@@ -950,49 +930,6 @@ const Home = () => {
     // as location + sport are ready.
     enabled: showNearbySection && (!session?.user?.id || !playerLoading),
   });
-
-  // ── TEMP cold-start timeline instrumentation (REMOVE after diagnosis) ─────
-  // Each effect fires on mount (initial snapshot) and again whenever its input
-  // resolves — the deltas between logs reveal what gates the JFY query at
-  // sign-in / cold start. Watch the gap to `enabled gate=true`, then the gap
-  // from there to `JFY settled` (the actual fetch).
-  useEffect(() => {
-    homeTimeline('Home mounted (first effect tick)');
-  }, []);
-  useEffect(() => {
-    homeTimeline(`auth      loading=${authLoading} session=${!!session?.user?.id}`);
-  }, [authLoading, session?.user?.id]);
-  useEffect(() => {
-    homeTimeline(`player    loading=${playerLoading} player=${!!player?.id}`);
-  }, [playerLoading, player?.id]);
-  useEffect(() => {
-    homeTimeline(
-      `location  ready=${!!location}`,
-      location ? { lat: location.latitude, lng: location.longitude, mode: locationMode } : undefined
-    );
-  }, [location, locationMode]);
-  useEffect(() => {
-    homeTimeline(`sport     loading=${sportLoading} selected=${selectedSport?.name ?? 'none'}`);
-  }, [sportLoading, selectedSport?.id, selectedSport?.name]);
-  useEffect(() => {
-    homeTimeline(`playerSports n=${playerSports.length} currentSport=${!!currentPlayerSport}`);
-  }, [playerSports.length, currentPlayerSport]);
-  useEffect(() => {
-    homeTimeline(
-      `favorites n=${favoriteFacilityIds.length}  ratingValue=${playerRatingValue ?? 'null'}`
-    );
-  }, [favoriteFacilityIds.length, playerRatingValue]);
-  useEffect(() => {
-    homeTimeline(
-      `GATE isNearbyFetchReady=${isNearbyFetchReady} showNearby=${showNearbySection} radiusKm=${searchRadiusKm}`
-    );
-  }, [isNearbyFetchReady, showNearbySection, searchRadiusKm]);
-  useEffect(() => {
-    homeTimeline(
-      `JFY  isLoading=${loadingJustForYou} isRefetching=${isRefetching} items=${justForYouItems.length}`
-    );
-  }, [loadingJustForYou, isRefetching, justForYouItems.length]);
-  // ── end TEMP instrumentation ─────────────────────────────────────────────
 
   // Suggestion invite plumbing (shared with PublicMatches via the hook).
   const {

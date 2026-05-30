@@ -4,20 +4,6 @@ import { supabase } from '@rallia/shared-services';
 import type { Sport } from './useSports';
 import { getStorageAdapter } from './storage';
 
-// TEMP perf instrumentation (REMOVE after diagnosis). Shared global clock so
-// deltas are continuous across files. Grep `[perf⏱]` to remove.
-function perfLog(label: string, extra?: Record<string, unknown>) {
-  const g = globalThis as unknown as { __ralliaPerfLast?: number };
-  const now = Date.now();
-  const since = g.__ralliaPerfLast ? now - g.__ralliaPerfLast : 0;
-  g.__ralliaPerfLast = now;
-  // eslint-disable-next-line no-console
-  console.log(
-    `[perf⏱] ${new Date(now).toISOString().slice(11, 23)} +${String(since).padStart(6)}ms  ${label}`,
-    extra ?? ''
-  );
-}
-
 /** Storage key for guest-selected sports (must match SportContext) */
 const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
 
@@ -88,9 +74,6 @@ async function loadGuestSportsAsFallback(currentPlayerId: string): Promise<Playe
 
 /** Single source of truth for the player_sport fetch (shared by every caller). */
 async function fetchPlayerSportsData(playerId: string): Promise<PlayerSport[]> {
-  const __t0 = Date.now();
-  perfLog('usePlayerSports fetch START (shared)', { playerId });
-
   const { data, error } = await supabase
     .from('player_sport')
     .select(
@@ -112,12 +95,6 @@ async function fetchPlayerSportsData(playerId: string): Promise<PlayerSport[]> {
     `
     )
     .eq('player_id', playerId);
-
-  perfLog('usePlayerSports fetch DONE (shared)', {
-    ms: Date.now() - __t0,
-    rows: data?.length ?? 0,
-    err: error?.message,
-  });
 
   if (error) {
     throw new Error(error.message);

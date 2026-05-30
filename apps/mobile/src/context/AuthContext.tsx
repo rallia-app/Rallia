@@ -42,19 +42,6 @@ function isDemoAccount(email: string): boolean {
   return email.trim().toLowerCase() === DEMO_ACCOUNT_EMAIL;
 }
 
-// TEMP perf instrumentation (REMOVE after diagnosis). Shared global clock.
-function perfLog(label: string, extra?: Record<string, unknown>) {
-  const g = globalThis as unknown as { __ralliaPerfLast?: number };
-  const now = Date.now();
-  const since = g.__ralliaPerfLast ? now - g.__ralliaPerfLast : 0;
-  g.__ralliaPerfLast = now;
-  // eslint-disable-next-line no-console
-  console.log(
-    `[perf⏱] ${new Date(now).toISOString().slice(11, 23)} +${String(since).padStart(6)}ms  ${label}`,
-    extra ?? ''
-  );
-}
-
 /** Supported OAuth providers */
 export type OAuthProvider = 'google' | 'apple' | 'facebook' | 'azure';
 
@@ -226,15 +213,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
    * Returns true if account is suspended (caller should abort further processing).
    */
   const checkAccountSuspended = useCallback(async (userId: string): Promise<boolean> => {
-    const __t0 = Date.now();
-    perfLog('AuthCtx.checkAccountSuspended START', { userId });
     try {
       const { data: profile } = await supabase
         .from('profile')
         .select('account_status')
         .eq('id', userId)
         .single();
-      perfLog('AuthCtx.checkAccountSuspended DONE', { ms: Date.now() - __t0 });
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Account suspended — signing user out');
@@ -325,7 +309,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       Logger.debug('Auth state change', { event });
-      perfLog('AuthCtx.onAuthStateChange', { event, hasUser: !!newSession?.user?.id });
 
       // Detect session expiry: user was logged in but session is now null
       // and it wasn't a manual sign out
@@ -348,14 +331,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // (checkAccountSuspended signs out + clears the session if suspended,
         // and nulls previousSessionRef first so it won't trip sessionExpired).
         // Avoids gating the whole post-sign-in load on the suspend-check call.
-        perfLog('AuthCtx.setSession (immediate, suspend-check async)', { event });
         setSession(newSession);
         previousSessionRef.current = newSession;
         void checkAccountSuspended(newSession.user.id);
         return;
       }
 
-      perfLog('AuthCtx.setSession (direct)', { event });
       setSession(newSession);
       previousSessionRef.current = newSession;
     });
