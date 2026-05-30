@@ -7,19 +7,24 @@
  *
  * Gate conditions (all must be true to fire):
  *   1. `isSplashComplete` (passed in by AppContent)
- *   2. `isSportSelectionComplete` (read from OverlayContext)
- *   3. `get_check_in_context().is_pending_check_in === true`
- *   4. `@rallia/availability-refresh-banner-cooldown` is absent or > 24h old
+ *   2. `profile.onboarding_completed === true` (never interrupt onboarding)
+ *   3. Actions-sheet `contentMode !== 'onboarding'` — the wizard's post-
+ *      completion steps (success + suggestions) still render after the
+ *      `onboarding_completed` flag flips true, so we wait for the sheet to
+ *      stop presenting onboarding before firing
+ *   4. `isSportSelectionComplete` (read from OverlayContext)
+ *   5. `get_check_in_context().is_pending_check_in === true`
+ *   6. `@rallia/availability-refresh-banner-cooldown` is absent or > 24h old
  *      (shared key with the home banner — wizard × dismissal also writes it)
- *   5. Per-session ref `autoOpenedThisSession` is false (fire at most once)
+ *   7. Per-session ref `autoOpenedThisSession` is false (fire at most once)
  */
 import React, { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Logger } from '@rallia/shared-services';
-import { useAuth } from '@rallia/shared-hooks';
+import { useAuth, useProfile } from '@rallia/shared-hooks';
 
-import { useOverlay } from '#/context';
+import { useActionsSheet, useOverlay } from '#/context';
 import { navigationRef } from '#/navigation';
 
 import { useCheckInContext } from './api';
@@ -39,6 +44,17 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
 }) => {
   const { session } = useAuth();
   const isAuthed = !!session?.user;
+  const { profile } = useProfile();
+  // Onboarding must be finished before the check-in wizard may auto-open —
+  // otherwise it navigates on top of (and dismisses) the onboarding wizard.
+  const isOnboardingComplete = !!profile?.onboarding_completed;
+  // The onboarding wizard lives inside the `main-actions` sheet. It flips
+  // `onboarding_completed` true while STILL showing its tail steps (success +
+  // suggestions), so `isOnboardingComplete` alone isn't enough — we also wait
+  // until the sheet is no longer presenting onboarding content before firing.
+  // `contentMode` is the single source of truth for what that sheet shows.
+  const { contentMode } = useActionsSheet();
+  const isOnboardingSheetOpen = contentMode === 'onboarding';
   const { isSportSelectionComplete } = useOverlay();
 
   // Don't fetch the context until splash is done AND the user is authenticated
@@ -62,6 +78,15 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     if (autoOpenedRef.current) return;
     if (!isSplashComplete) return;
     if (!isAuthed) return;
+    // Hard gates (apply even in FORCE_SHOW): never auto-open the check-in
+    // wizard while the user is still onboarding — it would navigate on top of
+    // (and dismiss) the onboarding wizard. We block until BOTH:
+    //   1. onboarding is marked complete, and
+    //   2. the onboarding wizard sheet is no longer presenting — its post-
+    //      completion steps (success + suggestions) still render after the
+    //      `onboarding_completed` flag flips true.
+    if (!isOnboardingComplete) return;
+    if (isOnboardingSheetOpen) return;
 
     if (!FORCE_SHOW) {
       if (!isSportSelectionComplete) return;
@@ -108,7 +133,16 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     return () => {
       cancelled = true;
     };
-  }, [isSplashComplete, isAuthed, isSportSelectionComplete, context, FORCE_SHOW, BYPASS_COOLDOWN]);
+  }, [
+    isSplashComplete,
+    isAuthed,
+    isOnboardingComplete,
+    isOnboardingSheetOpen,
+    isSportSelectionComplete,
+    context,
+    FORCE_SHOW,
+    BYPASS_COOLDOWN,
+  ]);
 
   return null;
 };
