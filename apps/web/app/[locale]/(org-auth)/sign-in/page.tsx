@@ -1,7 +1,7 @@
 import { OrganizationSignInForm } from '@/components/organization-sign-in-form';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,6 +18,7 @@ export default async function SignInPage({
   searchParams: Promise<{ error?: string; token?: string }>;
 }) {
   const t = await getTranslations('signIn');
+  const locale = await getLocale();
   const supabase = await createClient();
   const params = await searchParams;
 
@@ -30,7 +31,7 @@ export default async function SignInPage({
 
   // If already authenticated, redirect to post-auth flow with token
   if (user) {
-    redirect(`/sign-in/post-auth${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+    redirect(`/${locale}/sign-in/post-auth${token ? `?token=${encodeURIComponent(token)}` : ''}`);
   }
 
   // Look up invitation email from token

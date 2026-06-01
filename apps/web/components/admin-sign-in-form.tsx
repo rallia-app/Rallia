@@ -7,8 +7,9 @@ import { Separator } from '@/components/ui/separator';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth, type OAuthProvider } from '@rallia/shared-hooks';
 import { Loader2, Shield } from 'lucide-react';
+import { useRouter } from '@/i18n/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 type AuthState = 'initial' | 'email-sent' | 'loading' | 'error';

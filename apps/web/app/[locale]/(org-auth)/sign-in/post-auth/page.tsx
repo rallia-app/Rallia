@@ -1,5 +1,6 @@
 import { hasOrganizationMembership } from '@/lib/supabase/check-organization';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { getLocale } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 export default async function PostAuthPage({
@@ -8,6 +9,7 @@ export default async function PostAuthPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const supabase = await createClient();
+  const locale = await getLocale();
 
   // Check if user is authenticated
   const {
@@ -17,7 +19,7 @@ export default async function PostAuthPage({
 
   // If not authenticated, redirect to sign-in
   if (authError || !user) {
-    redirect('/sign-in');
+    redirect(`/${locale}/sign-in`);
   }
 
   // Get token query parameter
@@ -35,25 +37,25 @@ export default async function PostAuthPage({
     // Only treat as error if we have a token but can't find the invitation
     if (invitationError || !invitation) {
       console.error('Error fetching invitation:', invitationError);
-      redirect('/sign-in?error=invitation_not_found');
+      redirect(`/${locale}/sign-in?error=invitation_not_found`);
     }
 
     // Validate invitation email matches user email
     if (invitation.email !== user.email) {
       console.error('Invitation email does not match user email');
-      redirect('/sign-in?error=email_mismatch');
+      redirect(`/${locale}/sign-in?error=email_mismatch`);
     }
 
     // Check if invitation has been revoked
     if (invitation.revoked_at) {
       console.error('Invitation has been revoked');
-      redirect('/sign-in?error=invitation_revoked');
+      redirect(`/${locale}/sign-in?error=invitation_revoked`);
     }
 
     // Check if invitation has expired
     if (invitation.expires_at < new Date().toISOString()) {
       console.error('Invitation has expired');
-      redirect('/sign-in?error=invitation_expired');
+      redirect(`/${locale}/sign-in?error=invitation_expired`);
     }
 
     // Check if invitation has already been accepted
@@ -61,13 +63,13 @@ export default async function PostAuthPage({
       console.error('Invitation has already been accepted');
       // Already accepted, check if user has org membership and redirect accordingly
       const hasOrg = await hasOrganizationMembership(user.id);
-      redirect(hasOrg ? '/dashboard' : '/sign-in?error=already_accepted');
+      redirect(hasOrg ? `/${locale}/dashboard` : `/${locale}/sign-in?error=already_accepted`);
     }
 
     // Only accept pending or sent invitations
     if (invitation.status !== 'pending' && invitation.status !== 'sent') {
       console.error('Invitation is not in a valid state:', invitation.status);
-      redirect('/sign-in?error=invalid_invitation_status');
+      redirect(`/${locale}/sign-in?error=invalid_invitation_status`);
     }
 
     // Process organization member invitation
@@ -106,7 +108,7 @@ export default async function PostAuthPage({
         }
 
         // Member exists, redirect to dashboard
-        redirect('/dashboard');
+        redirect(`/${locale}/dashboard`);
       }
 
       // Use service role client for trusted server-side invitation processing
@@ -134,7 +136,7 @@ export default async function PostAuthPage({
 
       if (memberError) {
         console.error('Error creating organization member:', memberError);
-        redirect('/sign-in?error=member_creation_failed');
+        redirect(`/${locale}/sign-in?error=member_creation_failed`);
       }
 
       if (member) {
@@ -154,12 +156,12 @@ export default async function PostAuthPage({
         }
 
         // Successfully created member and updated invitation
-        redirect('/dashboard');
+        redirect(`/${locale}/dashboard`);
       }
     }
 
     // If we reach here, the invitation exists but doesn't match expected criteria
-    redirect('/sign-in?error=invalid_invitation');
+    redirect(`/${locale}/sign-in?error=invalid_invitation`);
   }
 
   // No token provided, check if user has organization membership
@@ -167,8 +169,8 @@ export default async function PostAuthPage({
 
   // Redirect based on organization membership
   if (hasOrg) {
-    redirect('/dashboard');
+    redirect(`/${locale}/dashboard`);
   } else {
-    redirect('/onboarding');
+    redirect(`/${locale}/onboarding`);
   }
 }
