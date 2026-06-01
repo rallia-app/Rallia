@@ -67,8 +67,8 @@ interface FavoriteSitesStepProps {
 // CONSTANTS
 // =============================================================================
 
-const MIN_SINGLE_SPORT = 3;
-const MIN_BOTH_SPORTS = 3;
+const MIN_SINGLE_SPORT = 2;
+const MIN_BOTH_SPORTS = 2;
 
 // =============================================================================
 // HELPER FUNCTIONS
