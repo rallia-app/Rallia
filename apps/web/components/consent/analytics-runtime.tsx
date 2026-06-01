@@ -32,7 +32,7 @@ function clearPostHogCookies() {
  *   <UtmCapture /> components unmount on their own via the consent value.
  */
 export function AnalyticsRuntime() {
-  const { consent } = useConsent();
+  const { consent, markPosthogReady } = useConsent();
   const posthogInitedRef = useRef(false);
   const replayAddedRef = useRef(false);
 
@@ -52,6 +52,9 @@ export function AnalyticsRuntime() {
         defaults: '2026-01-30',
         loaded: ph => {
           ph.register({ web_role: 'marketing_visitor' });
+          // Unblock one-shot captures (UtmCapture's deep_link_opened) that
+          // mounted before this async init resolved — see usePostHogReady.
+          markPosthogReady();
         },
       });
       posthogInitedRef.current = true;
@@ -60,7 +63,7 @@ export function AnalyticsRuntime() {
     return () => {
       cancelled = true;
     };
-  }, [consent?.analytics]);
+  }, [consent?.analytics, markPosthogReady]);
 
   // Revoke flow: opt out PostHog if consent flips off after a prior opt-in,
   // and purge the ph_* cookie set so a future visitor's session isn't tied

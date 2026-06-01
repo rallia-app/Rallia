@@ -28,6 +28,14 @@ interface ConsentContextValue {
   openPreferences: () => void;
   preferencesOpen: boolean;
   setPreferencesOpen: (open: boolean) => void;
+  /**
+   * True once PostHog has finished its lazy init this session. Consumers that
+   * fire a one-shot capture on mount (e.g. UtmCapture) must wait for this —
+   * capturing on the not-yet-initialized singleton silently no-ops.
+   */
+  posthogReady: boolean;
+  /** Called by AnalyticsRuntime from posthog's `loaded` callback. */
+  markPosthogReady: () => void;
 }
 
 const ConsentContext = createContext<ConsentContextValue | null>(null);
@@ -36,6 +44,7 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
   const [consent, setConsent] = useState<ConsentState | null>(null);
   const [ready, setReady] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [posthogReady, setPosthogReady] = useState(false);
 
   useEffect(() => {
     setConsent(readConsent());
@@ -71,6 +80,8 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
 
   const openPreferences = useCallback(() => setPreferencesOpen(true), []);
 
+  const markPosthogReady = useCallback(() => setPosthogReady(true), []);
+
   const value = useMemo<ConsentContextValue>(
     () => ({
       consent,
@@ -82,8 +93,21 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
       openPreferences,
       preferencesOpen,
       setPreferencesOpen,
+      posthogReady,
+      markPosthogReady,
     }),
-    [consent, ready, acceptAll, rejectAll, save, revoke, openPreferences, preferencesOpen]
+    [
+      consent,
+      ready,
+      acceptAll,
+      rejectAll,
+      save,
+      revoke,
+      openPreferences,
+      preferencesOpen,
+      posthogReady,
+      markPosthogReady,
+    ]
   );
 
   return <ConsentContext.Provider value={value}>{children}</ConsentContext.Provider>;
@@ -109,4 +133,9 @@ export function useHasAnalyticsConsent(): boolean {
 export function useHasMarketingConsent(): boolean {
   const ctx = useContext(ConsentContext);
   return ctx?.consent?.marketing === true;
+}
+
+export function usePostHogReady(): boolean {
+  const ctx = useContext(ConsentContext);
+  return ctx?.posthogReady === true;
 }
