@@ -13,7 +13,7 @@ import { parseTableParams } from '@/lib/table-params';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { Users } from 'lucide-react';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { canPerformAction } from '@/lib/admin-rbac';
 import { getAdminRole } from '@/lib/supabase/check-admin';
 import type { AdminRole } from '@rallia/shared-hooks';
@@ -69,6 +69,7 @@ export default async function AdminUsersPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const t = await getTranslations('admin.users');
+  const locale = await getLocale();
   const supabase = await createClient();
   const params = await searchParams;
 
@@ -77,7 +78,7 @@ export default async function AdminUsersPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/admin/sign-in');
+    redirect(`/${locale}/admin/sign-in`);
   }
 
   const adminRole = (await getAdminRole(user.id)) as AdminRole;

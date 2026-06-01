@@ -1,5 +1,6 @@
 import { isAdmin } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
+import { getLocale } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 export default async function AdminPostAuthPage({
@@ -8,6 +9,7 @@ export default async function AdminPostAuthPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const supabase = await createClient();
+  const locale = await getLocale();
 
   // Check if user is authenticated
   const {
@@ -17,7 +19,7 @@ export default async function AdminPostAuthPage({
 
   // If not authenticated, redirect to admin sign-in
   if (authError || !user) {
-    redirect('/admin/sign-in');
+    redirect(`/${locale}/admin/sign-in`);
   }
 
   // Get token query parameter
@@ -33,29 +35,29 @@ export default async function AdminPostAuthPage({
 
     if (invitationError) {
       console.error('Error fetching invitation:', invitationError);
-      redirect('/admin/sign-in?error=invitation_not_found');
+      redirect(`/${locale}/admin/sign-in?error=invitation_not_found`);
     }
 
     if (!invitation) {
-      redirect('/admin/sign-in?error=invitation_not_found');
+      redirect(`/${locale}/admin/sign-in?error=invitation_not_found`);
     }
 
     // Validate invitation email matches user email
     if (invitation.email !== user.email) {
       console.error('Invitation email does not match user email');
-      redirect('/admin/sign-in?error=email_mismatch');
+      redirect(`/${locale}/admin/sign-in?error=email_mismatch`);
     }
 
     // Check if invitation has been revoked
     if (invitation.revoked_at) {
       console.error('Invitation has been revoked');
-      redirect('/admin/sign-in?error=invitation_revoked');
+      redirect(`/${locale}/admin/sign-in?error=invitation_revoked`);
     }
 
     // Check if invitation has expired
     if (invitation.expires_at < new Date().toISOString()) {
       console.error('Invitation has expired');
-      redirect('/admin/sign-in?error=invitation_expired');
+      redirect(`/${locale}/admin/sign-in?error=invitation_expired`);
     }
 
     // Check if invitation has already been accepted
@@ -63,13 +65,17 @@ export default async function AdminPostAuthPage({
       console.error('Invitation has already been accepted');
       // Already accepted, check if user is admin and redirect accordingly
       const userIsAdmin = await isAdmin(user.id);
-      redirect(userIsAdmin ? '/admin/dashboard' : '/admin/sign-in?error=already_accepted');
+      redirect(
+        userIsAdmin
+          ? `/${locale}/admin/dashboard`
+          : `/${locale}/admin/sign-in?error=already_accepted`
+      );
     }
 
     // Only accept pending or sent invitations
     if (invitation.status !== 'pending' && invitation.status !== 'sent') {
       console.error('Invitation is not in a valid state:', invitation.status);
-      redirect('/admin/sign-in?error=invalid_invitation_status');
+      redirect(`/${locale}/admin/sign-in?error=invalid_invitation_status`);
     }
 
     // Process admin invitation
@@ -97,7 +103,7 @@ export default async function AdminPostAuthPage({
         }
 
         // Admin exists, redirect to dashboard
-        redirect('/admin/dashboard');
+        redirect(`/${locale}/admin/dashboard`);
       }
 
       // Create new admin record
@@ -112,7 +118,7 @@ export default async function AdminPostAuthPage({
 
       if (adminError) {
         console.error('Error creating admin:', adminError);
-        redirect('/admin/sign-in?error=admin_creation_failed');
+        redirect(`/${locale}/admin/sign-in?error=admin_creation_failed`);
       }
 
       if (admin) {
@@ -132,12 +138,12 @@ export default async function AdminPostAuthPage({
         }
 
         // Successfully created admin and updated invitation
-        redirect('/admin/dashboard');
+        redirect(`/${locale}/admin/dashboard`);
       }
     }
 
     // If we reach here, the invitation exists but doesn't match expected criteria
-    redirect('/admin/sign-in?error=invalid_invitation');
+    redirect(`/${locale}/admin/sign-in?error=invalid_invitation`);
   }
 
   // No token provided, check if user is already an admin
@@ -146,9 +152,9 @@ export default async function AdminPostAuthPage({
   // If not an admin, redirect to regular sign-in
   if (!userIsAdmin) {
     await supabase.auth.signOut();
-    redirect('/admin/sign-in?error=not_admin');
+    redirect(`/${locale}/admin/sign-in?error=not_admin`);
   }
 
   // User is authenticated and is an admin, redirect to dashboard
-  redirect('/admin/dashboard');
+  redirect(`/${locale}/admin/dashboard`);
 }
