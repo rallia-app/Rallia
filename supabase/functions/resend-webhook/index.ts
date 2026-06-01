@@ -58,53 +58,107 @@ const RELEVANT_EVENTS = new Set([
 // HANDLER HELPERS
 // =============================================================================
 
-async function getUserIdForResendId(
+/** Which kind of send a resend_id belongs to (drives the per-recipient log
+ *  table and the opt-out category written on complaint). */
+type SendSource = 'digest' | 'broadcast';
+
+/** Notification type to opt the user out of when they complain, per source. */
+const OPT_OUT_TYPE: Record<SendSource, 'morning_digest' | 'admin_broadcast'> = {
+  digest: 'morning_digest',
+  broadcast: 'admin_broadcast',
+};
+
+/**
+ * Map a resend_id back to its user + source. Checks the digest log first, then
+ * the broadcast recipient log, so events from both email systems tie back to
+ * the right user and table.
+ */
+async function resolveSend(
   supabase: SupabaseClient,
   resendId: string
-): Promise<string | null> {
-  const { data, error } = await supabase
+): Promise<{ userId: string | null; source: SendSource | null }> {
+  const digest = await supabase
     .from('digest_send_log')
     .select('user_id')
     .eq('resend_id', resendId)
     .maybeSingle();
-  if (error) {
-    console.warn(`[resend-webhook] digest_send_log lookup failed: ${error.message}`);
-    return null;
+  if (digest.error) {
+    console.warn(`[resend-webhook] digest_send_log lookup failed: ${digest.error.message}`);
+  } else if (digest.data) {
+    return { userId: digest.data.user_id, source: 'digest' };
   }
-  return data?.user_id ?? null;
+
+  const broadcast = await supabase
+    .from('email_broadcast_recipient')
+    .select('user_id')
+    .eq('resend_id', resendId)
+    .maybeSingle();
+  if (broadcast.error) {
+    console.warn(
+      `[resend-webhook] email_broadcast_recipient lookup failed: ${broadcast.error.message}`
+    );
+  } else if (broadcast.data) {
+    return { userId: broadcast.data.user_id ?? null, source: 'broadcast' };
+  }
+
+  return { userId: null, source: null };
+}
+
+/** Reflect a bounce/complaint on the originating per-recipient log row. */
+async function updateSendStatus(
+  supabase: SupabaseClient,
+  source: SendSource,
+  resendId: string,
+  status: 'bounced' | 'complained'
+): Promise<void> {
+  const table = source === 'digest' ? 'digest_send_log' : 'email_broadcast_recipient';
+  await supabase.from(table).update({ status }).eq('resend_id', resendId);
 }
 
 async function markBounced(
   supabase: SupabaseClient,
-  userId: string,
-  resendId: string
+  userId: string | null,
+  resendId: string,
+  source: SendSource | null
 ): Promise<void> {
   await Promise.all([
-    supabase.from('profile').update({ email_status: 'bouncing' }).eq('id', userId),
-    supabase.from('digest_send_log').update({ status: 'bounced' }).eq('resend_id', resendId),
+    userId
+      ? supabase.from('profile').update({ email_status: 'bouncing' }).eq('id', userId)
+      : Promise.resolve(),
+    source ? updateSendStatus(supabase, source, resendId, 'bounced') : Promise.resolve(),
   ]);
 }
 
 async function markComplained(
   supabase: SupabaseClient,
-  userId: string,
-  resendId: string
+  userId: string | null,
+  resendId: string,
+  source: SendSource | null
 ): Promise<void> {
-  await Promise.all([
-    supabase.from('profile').update({ email_status: 'complained' }).eq('id', userId),
-    supabase.from('digest_send_log').update({ status: 'complained' }).eq('resend_id', resendId),
-    // Permanent opt-out: write the preference row so even if email_status is
-    // later reset, the user remains unsubscribed.
-    supabase.from('notification_preference').upsert(
-      {
-        user_id: userId,
-        notification_type: 'morning_digest',
-        channel: 'email',
-        enabled: false,
-      },
-      { onConflict: 'user_id,notification_type,channel' }
-    ),
-  ]);
+  const ops: PromiseLike<unknown>[] = [];
+  if (userId) {
+    ops.push(supabase.from('profile').update({ email_status: 'complained' }).eq('id', userId));
+  }
+  if (source) {
+    ops.push(updateSendStatus(supabase, source, resendId, 'complained'));
+  }
+  // Permanent opt-out for the category they complained about: write the
+  // preference row so even if email_status is later reset, the user stays
+  // unsubscribed.
+  if (userId && source) {
+    ops.push(
+      supabase.from('notification_preference').upsert(
+        {
+          user_id: userId,
+          notification_type: OPT_OUT_TYPE[source],
+          channel: 'email',
+          enabled: false,
+        },
+        { onConflict: 'user_id,notification_type,channel' }
+      )
+    );
+  }
+  await Promise.all(ops);
 }
 
 async function logEvent(
@@ -178,17 +232,19 @@ Deno.serve(async req => {
     });
   }
 
-  const userId = await getUserIdForResendId(supabase, resendId);
+  const { userId, source } = await resolveSend(supabase, resendId);
 
   // Apply side-effects before logging so a partial failure leaves the most
   // important state (email_status) updated.
   try {
-    if (event.type === 'email.bounced' && userId) {
-      await markBounced(supabase, userId, resendId);
-      console.log(`[resend-webhook] bounced: user=${userId} resend=${resendId}`);
-    } else if (event.type === 'email.complained' && userId) {
-      await markComplained(supabase, userId, resendId);
-      console.log(`[resend-webhook] complained: user=${userId} resend=${resendId}`);
+    if (event.type === 'email.bounced') {
+      await markBounced(supabase, userId, resendId, source);
+      console.log(`[resend-webhook] bounced: user=${userId} source=${source} resend=${resendId}`);
+    } else if (event.type === 'email.complained') {
+      await markComplained(supabase, userId, resendId, source);
+      console.log(
+        `[resend-webhook] complained: user=${userId} source=${source} resend=${resendId}`
+      );
     }
 
     await logEvent(supabase, userId, resendId, event.type, event.created_at, event);

@@ -61,6 +61,10 @@ export interface LayoutOptions {
    *  is rendered in the footer instead of the generic settings page. Required
    *  for List-Unsubscribe one-click flows that ship a signed token. */
   unsubscribeUrl?: string;
+  /** Optional override for the unsubscribe link label. Defaults to a
+   *  morning-digest-specific label when `unsubscribeUrl` is set; callers like
+   *  the admin broadcast pass their own ("Unsubscribe from these emails"). */
+  unsubscribeLabel?: string;
 }
 
 /** Generate dark mode CSS block */
@@ -163,6 +167,7 @@ export function wrapInLayout(options: LayoutOptions): string {
     preheader,
     showUnsubscribe = false,
     unsubscribeUrl,
+    unsubscribeLabel: unsubscribeLabelOverride,
   } = options;
 
   const isFr = locale === 'fr-CA' || locale === 'fr';
@@ -196,13 +201,15 @@ export function wrapInLayout(options: LayoutOptions): string {
     : '';
 
   const unsubscribeHref = unsubscribeUrl ?? `${siteUrl}/settings/notifications`;
-  const unsubscribeLabel = unsubscribeUrl
-    ? isFr
-      ? 'Se désabonner du résumé matinal'
-      : 'Unsubscribe from the morning digest'
-    : isFr
-      ? 'Gérer les préférences de notification'
-      : 'Manage notification preferences';
+  const unsubscribeLabel =
+    unsubscribeLabelOverride ??
+    (unsubscribeUrl
+      ? isFr
+        ? 'Se désabonner du résumé matinal'
+        : 'Unsubscribe from the morning digest'
+      : isFr
+        ? 'Gérer les préférences de notification'
+        : 'Manage notification preferences');
   const unsubscribeHtml = showUnsubscribe
     ? `
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">

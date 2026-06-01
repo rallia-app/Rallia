@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+    "resend": "npm:resend@^6.9.3"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable", "dom"]
+  }
+}

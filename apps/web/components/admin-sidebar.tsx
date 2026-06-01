@@ -31,6 +31,7 @@ import {
   MapPin,
   Network,
   ScrollText,
+  Send,
   Settings,
   Shield,
   Trophy,
@@ -133,6 +134,12 @@ export function AdminSidebar() {
       href: '/admin/communications',
       label: t('communications'),
       icon: Mail,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/emails',
+      label: t('emails'),
+      icon: Send,
       exactMatch: false,
     },
     {

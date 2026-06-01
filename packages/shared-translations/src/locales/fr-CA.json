@@ -1498,6 +1498,13 @@
     "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
     "managePreferences": "Gérer les préférences de notification"
   },
+  "broadcastUnsubscribe": {
+    "successTitle": "Désabonnement effectué",
+    "successMessage": "Tu ne recevras plus ces courriels. Tu peux les réactiver à tout moment depuis tes préférences de notification.",
+    "errorTitle": "Impossible de te désabonner",
+    "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
+    "managePreferences": "Gérer les préférences de notification"
+  },
   "onboarding": {
     "pageTitle": "Créer votre organisation",
     "pageDescription": "Configurez le profil de votre organisation pour commencer",
@@ -5735,7 +5742,86 @@
       "settings": "Paramètres",
       "map": "Carte",
       "communications": "Communications",
+      "emails": "Courriels",
       "referralContests": "Concours de parrainage"
+    },
+    "emails": {
+      "titleMeta": "Courriels - Admin - Rallia",
+      "descriptionMeta": "Composer et envoyer des courriels en lot aux utilisateurs",
+      "title": "Courriels",
+      "description": "Composez et envoyez un courriel en lot à un segment d'utilisateurs.",
+      "compose": {
+        "heading": "Composer",
+        "subjectLabel": "Objet",
+        "subjectPlaceholder": "De quoi s'agit-il ?",
+        "bodyLabel": "Message",
+        "bodyPlaceholder": "Rédigez votre message…",
+        "ctaHeading": "Appel à l'action (facultatif)",
+        "ctaTextLabel": "Libellé du bouton",
+        "ctaTextPlaceholder": "p. ex. Ouvrir Rallia",
+        "ctaUrlLabel": "Lien du bouton",
+        "ctaUrlPlaceholder": "https://rallia.app/…"
+      },
+      "audience": {
+        "heading": "Audience",
+        "everyone": "Tout le monde",
+        "sport": "Sport",
+        "anySport": "Tous les sports",
+        "city": "Ville",
+        "cityPlaceholder": "p. ex. Montréal",
+        "locale": "Langue",
+        "anyLocale": "Toutes les langues",
+        "activeSince": "Actif depuis",
+        "activeAny": "N'importe quand",
+        "active30": "30 derniers jours",
+        "active90": "90 derniers jours",
+        "onlySubscribers": "Abonnés Premium seulement",
+        "recipients": "{count} destinataires",
+        "recipientsLoading": "Calcul des destinataires…"
+      },
+      "preview": {
+        "heading": "Aperçu",
+        "light": "Clair",
+        "dark": "Sombre",
+        "empty": "Ajoutez un objet et un message pour voir l'aperçu."
+      },
+      "actions": {
+        "sendTest": "M'envoyer un test",
+        "send": "Envoyer le courriel",
+        "sending": "Envoi en cours…"
+      },
+      "confirm": {
+        "title": "Envoyer ce courriel ?",
+        "description": "Ce courriel sera envoyé à {count} utilisateurs et ne peut pas être annulé.",
+        "cancel": "Annuler",
+        "confirm": "Envoyer à {count}"
+      },
+      "history": {
+        "heading": "Envois précédents",
+        "subject": "Objet",
+        "audience": "Audience",
+        "recipients": "Destinataires",
+        "sent": "Envoyés",
+        "failed": "Échecs",
+        "status": "Statut",
+        "date": "Date",
+        "empty": "Aucun envoi pour l'instant.",
+        "error": "Échec du chargement des envois"
+      },
+      "status": {
+        "queued": "En file",
+        "sending": "Envoi",
+        "sent": "Envoyé",
+        "partial": "Partiel",
+        "failed": "Échec"
+      },
+      "toast": {
+        "testSent": "Courriel test envoyé à {email}",
+        "testFailed": "Impossible d'envoyer le courriel test",
+        "sent": "Courriel envoyé à {sent} des {total} destinataires",
+        "sendFailed": "Impossible d'envoyer le courriel",
+        "validation": "Ajoutez d'abord un objet et un message"
+      }
     },
     "referralContests": {
       "titleMeta": "Concours de parrainage - Admin - Rallia",

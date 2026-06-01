@@ -14,6 +14,7 @@ import { renderNotificationEmail } from '../send-email/templates/notification.ts
 import { renderMatchInterestEmail } from '../send-email/templates/match-interest.ts';
 import { renderWelcomeEmail } from '../send-email/templates/welcome.ts';
 import { renderMorningDigestEmail } from '../send-morning-digest/template.ts';
+import { renderBroadcastEmail } from '../send-broadcast/template.ts';
 import type { NotificationRecord, OrganizationInfo } from '../send-notification/types.ts';
 import type {
   InvitationEmailPayload,
@@ -716,6 +717,8 @@ const PREVIEW_SITE_URL = 'http://localhost:3000';
 interface TemplateOverrides {
   title?: string;
   body?: string;
+  ctaText?: string;
+  ctaUrl?: string;
 }
 
 interface TemplateEntry {
@@ -812,6 +815,27 @@ const TEMPLATES: TemplateEntry[] = [
       };
       return renderNotificationEmail(payload, locale, PREVIEW_SITE_URL).html;
     },
+  },
+
+  // ---- Admin broadcast (via renderBroadcastEmail) ----
+  // Mirrors what /admin/emails actually sends. title/body/ctaText/ctaUrl come
+  // from the admin compose form via ?title=…&body=…&ctaText=…&ctaUrl=… .
+  {
+    id: 'admin_broadcast',
+    label: 'Admin: Broadcast',
+    category: 'Admin',
+    render: (locale, overrides) =>
+      renderBroadcastEmail({
+        subject: overrides?.title ?? 'An update from Rallia',
+        body:
+          overrides?.body ??
+          'Hi there,\n\nWe wanted to share some news with you. This is a preview of an admin broadcast email.\n\nThanks for being part of Rallia!',
+        ctaText: overrides?.ctaText ?? null,
+        ctaUrl: overrides?.ctaUrl ?? null,
+        firstName: 'Alex',
+        locale,
+        unsubscribeUrl: `${PREVIEW_SITE_URL}/api/broadcast/unsubscribe?token=preview`,
+      }).html,
   },
 
   // ---- Match notifications (via generateEmailHtml) ----
@@ -1623,11 +1647,15 @@ Deno.serve((req: Request) => {
   const isRaw = url.searchParams.get('raw') === '1';
   const titleOverride = url.searchParams.get('title');
   const bodyOverride = url.searchParams.get('body');
+  const ctaTextOverride = url.searchParams.get('ctaText');
+  const ctaUrlOverride = url.searchParams.get('ctaUrl');
   const overrides: TemplateOverrides | undefined =
-    titleOverride || bodyOverride
+    titleOverride || bodyOverride || ctaTextOverride || ctaUrlOverride
       ? {
           ...(titleOverride ? { title: titleOverride } : {}),
           ...(bodyOverride ? { body: bodyOverride } : {}),
+          ...(ctaTextOverride ? { ctaText: ctaTextOverride } : {}),
+          ...(ctaUrlOverride ? { ctaUrl: ctaUrlOverride } : {}),
         }
       : undefined;
 
