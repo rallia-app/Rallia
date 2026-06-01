@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
     const mode = searchParams.get('mode') || 'light';
     const title = searchParams.get('title');
     const body = searchParams.get('body');
+    const ctaText = searchParams.get('ctaText');
+    const ctaUrl = searchParams.get('ctaUrl');
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey =
@@ -42,6 +44,8 @@ export async function GET(request: NextRequest) {
     url.searchParams.set('raw', '1');
     if (title) url.searchParams.set('title', title);
     if (body) url.searchParams.set('body', body);
+    if (ctaText) url.searchParams.set('ctaText', ctaText);
+    if (ctaUrl) url.searchParams.set('ctaUrl', ctaUrl);
 
     const response = await fetch(url.toString(), {
       headers: {
