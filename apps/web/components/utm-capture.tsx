@@ -1,8 +1,9 @@
 'use client';
 
 import { usePostHog } from 'posthog-js/react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
+import { usePostHogReady } from '@/components/consent/consent-provider';
 import { inferInboundAttribution } from '@/lib/inbound-attribution';
 import { writeDistinctIdCookieIfAbsent, writeUtmCookieIfAbsent } from '@/lib/utm-cookie';
 
@@ -44,9 +45,22 @@ import { writeDistinctIdCookieIfAbsent, writeUtmCookieIfAbsent } from '@/lib/utm
  */
 export function UtmCapture() {
   const posthog = usePostHog();
+  const posthogReady = usePostHogReady();
+  const sentRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // PostHog is initialized lazily and asynchronously (AnalyticsRuntime, after
+    // analytics consent). This component mounts the instant marketing consent is
+    // granted — typically the same click — so on mount the client is usually not
+    // loaded yet. Capturing then would no-op and the event is lost: posthog-js is
+    // a singleton mutated in place by init(), so `posthog` never changes
+    // reference and this effect would never retry. Gate on posthogReady (flipped
+    // by posthog's `loaded` callback) and fire exactly once it's up.
+    if (!posthogReady) return;
+    if (sentRef.current) return;
+    sentRef.current = true;
 
     const did = posthog?.get_distinct_id();
     if (did) writeDistinctIdCookieIfAbsent(did);
@@ -84,7 +98,7 @@ export function UtmCapture() {
       first_touch: isFirstTouch,
       ...attribution,
     });
-  }, [posthog]);
+  }, [posthog, posthogReady]);
 
   return null;
 }
