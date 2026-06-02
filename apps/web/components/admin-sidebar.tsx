@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Link, usePathname } from '@/i18n/navigation';
+import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { canAccessRoute } from '@/lib/admin-rbac';
 import { createClient } from '@/lib/supabase/client';
 import { syncLocaleToBackend } from '@/lib/sync-locale';
@@ -31,13 +31,14 @@ import {
   MapPin,
   Network,
   ScrollText,
+  Send,
   Settings,
   Shield,
   Trophy,
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useMemo, useTransition } from 'react';
 import { useSidebar } from './sidebar-context';
 
@@ -133,6 +134,12 @@ export function AdminSidebar() {
       href: '/admin/communications',
       label: t('communications'),
       icon: Mail,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/emails',
+      label: t('emails'),
+      icon: Send,
       exactMatch: false,
     },
     {

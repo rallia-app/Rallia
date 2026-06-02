@@ -413,6 +413,11 @@ verify_jwt = false
 [functions.send-morning-digest]
 verify_jwt = false
 
+# Admin email broadcasts — invoked by the Next.js /api/admin/broadcasts route.
+# Auth is validated inside the function (forwarded admin session token).
+[functions.send-broadcast]
+verify_jwt = false
+
 [functions.send-match-reminders]
 verify_jwt = false
 
