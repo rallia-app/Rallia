@@ -1,4 +1,17 @@
 {
+  "summerLeague": {
+    "announcement": {
+      "badge": "Coming this summer",
+      "title": "The first Rallia Summer League",
+      "subtitle": "We're gauging interest to shape the first edition around players like you. Want in?",
+      "interested": "Count me in",
+      "later": "Maybe later",
+      "successTitle": "You're on the list",
+      "successBody": "Your interest helps shape it — we'll be in touch soon.",
+      "done": "Done",
+      "error": "Something went wrong. Please try again."
+    }
+  },
   "suggestionCard": {
     "courtsAvailable": "{count} courts available"
   },
