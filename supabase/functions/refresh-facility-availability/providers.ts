@@ -57,6 +57,10 @@ export interface FetchParams {
   /** IANA timezone of the facility (e.g., 'America/Toronto'). Used to keep
    *  date arithmetic in the facility's local calendar instead of UTC. */
   timezone: string | null;
+  /** Invocation-wide deadline from the worker. When it fires, in-flight
+   *  provider fetches abort so a slow upstream can't blow the wall-clock
+   *  budget. Combined with the per-fetch timeout below. */
+  signal?: AbortSignal;
 }
 
 export interface FetchResult {
@@ -118,6 +122,21 @@ export function buildBookingUrl(config: ProviderConfig, row: SnapshotRow): strin
 }
 
 // =============================================================================
+// FETCH HELPERS
+// =============================================================================
+
+/** Per-fetch timeout. A single hung upstream caps here instead of dragging the
+ *  worker toward its wall-clock ceiling. */
+const FETCH_TIMEOUT_MS = 15_000;
+
+/** Signal for one provider fetch: aborts at FETCH_TIMEOUT_MS, or earlier if the
+ *  invocation-wide deadline (`parent`) fires first. */
+function fetchSignal(parent?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+  return parent ? AbortSignal.any([timeout, parent]) : timeout;
+}
+
+// =============================================================================
 // IC3 / Otium
 // =============================================================================
 
@@ -167,21 +186,14 @@ async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<Fe
       isSortOrderAsc: true,
     };
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
-    let json: IC3SearchResponse;
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new Error(`IC3 HTTP ${res.status}`);
-      json = await res.json();
-    } finally {
-      clearTimeout(timeout);
-    }
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: fetchSignal(params.signal),
+    });
+    if (!res.ok) throw new Error(`IC3 HTTP ${res.status}`);
+    const json: IC3SearchResponse = await res.json();
 
     const results = json.results ?? [];
     for (const item of results) {
@@ -262,20 +274,13 @@ async function fetchActivityMessenger(
     `${config.apiBaseUrl}/org/${orgId}/package/${params.externalProviderId}/availability` +
     `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-  let events: AMEvent[];
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`ActivityMessenger HTTP ${res.status}`);
-    events = await res.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal: fetchSignal(params.signal),
+  });
+  if (!res.ok) throw new Error(`ActivityMessenger HTTP ${res.status}`);
+  const events: AMEvent[] = await res.json();
 
   const rows: SnapshotRow[] = [];
   const wantedDates = new Set(params.dates);
