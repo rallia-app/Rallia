@@ -31,6 +31,7 @@ import {
   listTournamentMatches,
   listVisibleTournaments,
   openTournamentRegistration,
+  overrideTournamentMatchScore,
   registerForTournament,
   withdrawFromTournament,
 } from './tournamentService';
@@ -337,6 +338,12 @@ describe('RPC wrappers', () => {
       fn: () => attachMatchToTournamentSlot('tm1', 'm1'),
       rpc: 'tournament_attach_match',
       args: { p_tournament_match_id: 'tm1', p_match_id: 'm1' },
+    },
+    {
+      name: 'overrideTournamentMatchScore',
+      fn: () => overrideTournamentMatchScore('tm1', 'reg1', '6-4 6-2'),
+      rpc: 'tournament_override_score',
+      args: { p_tournament_match_id: 'tm1', p_winner_registration_id: 'reg1', p_score: '6-4 6-2' },
     },
     {
       name: 'cancelTournament',

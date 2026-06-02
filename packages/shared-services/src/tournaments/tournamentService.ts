@@ -377,6 +377,26 @@ export async function attachMatchToTournamentSlot(
 }
 
 /**
+ * Organizer/admin authoritative result for a stalled or disputed bracket
+ * match. Sets the winner (and optional score string), completes the match,
+ * and advances the bracket. Used when an opponent never confirms a score or
+ * a result is disputed. Does not modify any linked casual match row.
+ */
+export async function overrideTournamentMatchScore(
+  tournamentMatchId: string,
+  winnerRegistrationId: string,
+  score?: string
+): Promise<TournamentMatch> {
+  const { data, error } = await supabase.rpc('tournament_override_score', {
+    p_tournament_match_id: tournamentMatchId,
+    p_winner_registration_id: winnerRegistrationId,
+    p_score: score,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentMatch;
+}
+
+/**
  * Organizer cancels a tournament (any non-terminal state). Pending and
  * in-progress matches are also cancelled.
  */

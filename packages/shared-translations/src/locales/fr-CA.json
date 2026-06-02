@@ -4121,13 +4121,31 @@
       "bye": "EXEMPT",
       "tbd": "À déterminer",
       "phantom": "—",
-      "linkMatch": "Lier une partie jouée à ce slot"
+      "linkMatch": "Lier une partie jouée à ce slot",
+      "overrideMatch": "Inscrire le résultat (organisateur)"
     },
     "linkPicker": {
       "title": "Lier une partie jouée",
       "empty": "Aucune partie trouvée",
       "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
       "attachFailed": "Impossible de lier la partie"
+    },
+    "override": {
+      "title": "Inscrire le résultat",
+      "subtitle": "Désignez le gagnant de cette partie. À utiliser quand les joueurs ne peuvent pas confirmer un score eux-mêmes.",
+      "winnerLabel": "Gagnant",
+      "scoreLabel": "Score (facultatif)",
+      "scorePlaceholder": "ex. : 6-4 6-2",
+      "confirm": "Enregistrer le résultat",
+      "confirming": "Enregistrement...",
+      "pickWinner": "Sélectionnez le gagnant",
+      "errors": {
+        "notOverridable": "Cette partie ne peut plus être modifiée.",
+        "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
+        "notInProgress": "Le tournoi n'est pas en cours.",
+        "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
+        "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
+      }
     },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",

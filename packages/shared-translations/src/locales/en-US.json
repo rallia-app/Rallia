@@ -4121,13 +4121,31 @@
       "bye": "BYE",
       "tbd": "TBD",
       "phantom": "—",
-      "linkMatch": "Link a played match to this slot"
+      "linkMatch": "Link a played match to this slot",
+      "overrideMatch": "Record the result as organizer"
     },
     "linkPicker": {
       "title": "Link a played match",
       "empty": "No matches found",
       "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match"
+    },
+    "override": {
+      "title": "Record the result",
+      "subtitle": "Set the winner for this match. Use this when players can't confirm a score themselves.",
+      "winnerLabel": "Winner",
+      "scoreLabel": "Score (optional)",
+      "scorePlaceholder": "e.g., 6-4 6-2",
+      "confirm": "Save result",
+      "confirming": "Saving...",
+      "pickWinner": "Select the winner",
+      "errors": {
+        "notOverridable": "This match can't be edited anymore.",
+        "winnerNotInMatch": "Pick one of the two players in this match.",
+        "notInProgress": "The tournament isn't in progress.",
+        "slotsIncomplete": "Both players aren't set yet for this match.",
+        "generic": "Couldn't save the result. Please try again."
+      }
     },
     "generateBracketErrors": {
       "insufficientParticipants": "At least 2 players must be registered.",

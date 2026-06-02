@@ -48,6 +48,7 @@ import {
   useGenerateTournamentBracket,
   useLinkableMatchesForSlot,
   useAttachMatchToTournamentSlot,
+  useOverrideTournamentMatchScore,
   useCancelTournament,
   useArchiveTournament,
   useProfilesByIds,
@@ -415,6 +416,21 @@ export const TournamentDetail: React.FC = () => {
     [userByRegId]
   );
 
+  // Organizer-only: declare a result for a stalled/disputed bracket match.
+  const [overrideSlot, setOverrideSlot] = useState<{
+    tournamentMatchId: string;
+    player1RegId: string;
+    player2RegId: string;
+  } | null>(null);
+
+  const handleOrganizerOverride = useCallback(
+    (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
+      lightHaptic();
+      setOverrideSlot({ tournamentMatchId, player1RegId: p1RegId, player2RegId: p2RegId });
+    },
+    []
+  );
+
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ScreenColors>(
     () => ({
@@ -632,7 +648,9 @@ export const TournamentDetail: React.FC = () => {
             nameByRegId={nameByRegId}
             userByRegId={userByRegId}
             currentUserId={userId}
+            isOrganizer={isOrganizer}
             onMatchPress={handleBracketMatchTap}
+            onOrganizerOverride={handleOrganizerOverride}
             colors={colors}
             t={t}
           />
@@ -803,6 +821,26 @@ export const TournamentDetail: React.FC = () => {
           onSuccess={() => {
             successHaptic();
             setPickerSlot(null);
+          }}
+        />
+      )}
+
+      {overrideSlot && tournament && (
+        <OverrideScoreModal
+          slot={overrideSlot}
+          tournamentId={tournament.id}
+          seedByRegId={seedByRegId}
+          nameByRegId={nameByRegId}
+          onDismiss={() => setOverrideSlot(null)}
+          colors={colors}
+          t={t}
+          onError={msg => {
+            warningHaptic();
+            toast.error(msg);
+          }}
+          onSuccess={() => {
+            successHaptic();
+            setOverrideSlot(null);
           }}
         />
       )}
@@ -1048,6 +1086,186 @@ const LinkableMatchRow: React.FC<{
   );
 };
 
+const OverrideScoreModal: React.FC<{
+  slot: { tournamentMatchId: string; player1RegId: string; player2RegId: string };
+  tournamentId: string;
+  seedByRegId: Map<string, number>;
+  nameByRegId: Map<string, string>;
+  onDismiss: () => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey) => string;
+  onError: (msg: string) => void;
+  onSuccess: () => void;
+}> = ({
+  slot,
+  tournamentId,
+  seedByRegId,
+  nameByRegId,
+  onDismiss,
+  colors,
+  t,
+  onError,
+  onSuccess,
+}) => {
+  const [winnerRegId, setWinnerRegId] = useState<string | null>(null);
+  const [score, setScore] = useState('');
+
+  const override = useOverrideTournamentMatchScore({
+    onSuccess,
+    onError: e => {
+      const msg = e.message || '';
+      const key = msg.includes('MATCH_NOT_OVERRIDABLE')
+        ? 'tournamentDetail.override.errors.notOverridable'
+        : msg.includes('WINNER_NOT_IN_MATCH')
+          ? 'tournamentDetail.override.errors.winnerNotInMatch'
+          : msg.includes('TOURNAMENT_NOT_IN_PROGRESS')
+            ? 'tournamentDetail.override.errors.notInProgress'
+            : msg.includes('MATCH_SLOTS_INCOMPLETE')
+              ? 'tournamentDetail.override.errors.slotsIncomplete'
+              : 'tournamentDetail.override.errors.generic';
+      onError(t(key as TranslationKey));
+    },
+  });
+
+  const optionLabel = useCallback(
+    (regId: string): string => {
+      const name = nameByRegId.get(regId);
+      if (name) return name;
+      const seed = seedByRegId.get(regId);
+      return seed !== undefined ? `Seed ${seed}` : regId;
+    },
+    [nameByRegId, seedByRegId]
+  );
+
+  const handleConfirm = useCallback(() => {
+    if (!winnerRegId) return;
+    lightHaptic();
+    override.mutate({
+      tournamentMatchId: slot.tournamentMatchId,
+      winnerRegistrationId: winnerRegId,
+      score: score.trim() || undefined,
+      tournamentId,
+    });
+  }, [override, slot.tournamentMatchId, tournamentId, winnerRegId, score]);
+
+  const renderOption = (regId: string) => {
+    const selected = winnerRegId === regId;
+    return (
+      <TouchableOpacity
+        key={regId}
+        onPress={() => {
+          lightHaptic();
+          setWinnerRegId(regId);
+        }}
+        activeOpacity={0.7}
+        style={[
+          styles.linkableMatchRow,
+          {
+            borderColor: selected ? colors.primary : colors.border,
+            backgroundColor: selected ? colors.statusActiveBg : colors.cardBackground,
+          },
+        ]}
+        accessibilityRole="radio"
+        accessibilityState={{ selected }}
+      >
+        <Text
+          size="base"
+          weight={selected ? 'semibold' : 'regular'}
+          color={selected ? colors.primary : colors.text}
+          style={{ flex: 1 }}
+        >
+          {optionLabel(regId)}
+        </Text>
+        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
+      <Pressable style={styles.modalBackdrop} onPress={onDismiss}>
+        <Pressable
+          style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}
+          onPress={e => e.stopPropagation()}
+        >
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text size="lg" weight="bold" color={colors.text}>
+                {t('tournamentDetail.override.title' as TranslationKey)}
+              </Text>
+              <Text size="sm" color={colors.textMuted}>
+                {t('tournamentDetail.override.subtitle' as TranslationKey)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={onDismiss}
+              style={styles.iconButton}
+              accessibilityRole="button"
+            >
+              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <Text
+            size="xs"
+            weight="semibold"
+            color={colors.textMuted}
+            style={{ marginTop: spacingPixels[2], marginBottom: spacingPixels[2] }}
+          >
+            {t('tournamentDetail.override.winnerLabel' as TranslationKey).toUpperCase()}
+          </Text>
+          {renderOption(slot.player1RegId)}
+          {renderOption(slot.player2RegId)}
+
+          <Text
+            size="xs"
+            weight="semibold"
+            color={colors.textMuted}
+            style={{ marginTop: spacingPixels[4], marginBottom: spacingPixels[2] }}
+          >
+            {t('tournamentDetail.override.scoreLabel' as TranslationKey).toUpperCase()}
+          </Text>
+          <TextInput
+            style={[
+              styles.reasonInput,
+              {
+                backgroundColor: colors.statusMutedBg,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={score}
+            onChangeText={setScore}
+            placeholder={t('tournamentDetail.override.scorePlaceholder' as TranslationKey)}
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+          />
+
+          <TouchableOpacity
+            onPress={handleConfirm}
+            disabled={!winnerRegId || override.isPending}
+            activeOpacity={0.8}
+            style={[
+              styles.overrideConfirm,
+              { backgroundColor: colors.primary },
+              (!winnerRegId || override.isPending) && styles.buttonDisabled,
+            ]}
+            accessibilityRole="button"
+          >
+            <Text size="base" weight="semibold" color="#ffffff">
+              {override.isPending
+                ? t('tournamentDetail.override.confirming' as TranslationKey)
+                : !winnerRegId
+                  ? t('tournamentDetail.override.pickWinner' as TranslationKey)
+                  : t('tournamentDetail.override.confirm' as TranslationKey)}
+            </Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
+
 type MatchRow = Tables<'tournament_matches'>;
 
 const roundLabel = (
@@ -1085,7 +1303,9 @@ const BracketSection: React.FC<{
   nameByRegId: Map<string, string>;
   userByRegId: Map<string, string>;
   currentUserId: string | undefined;
+  isOrganizer: boolean;
   onMatchPress: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
+  onOrganizerOverride: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
 }> = ({
@@ -1094,7 +1314,9 @@ const BracketSection: React.FC<{
   nameByRegId,
   userByRegId,
   currentUserId,
+  isOrganizer,
   onMatchPress,
+  onOrganizerOverride,
   colors,
   t,
 }) => {
@@ -1166,7 +1388,11 @@ const BracketSection: React.FC<{
                   !m.player2_is_bye &&
                   !!m.player1_registration_id &&
                   !!m.player2_registration_id;
-                const isTappable = isPlayable && callerIsParticipant;
+                // Organizers record results (override); non-organizer
+                // participants link their own played match.
+                const canOrganizerOverride = isPlayable && isOrganizer;
+                const canParticipantAttach = isPlayable && callerIsParticipant && !isOrganizer;
+                const isTappable = canOrganizerOverride || canParticipantAttach;
 
                 const matchInner = (
                   <>
@@ -1210,10 +1436,16 @@ const BracketSection: React.FC<{
                 if (isTappable && m.player1_registration_id && m.player2_registration_id) {
                   const p1RegId = m.player1_registration_id;
                   const p2RegId = m.player2_registration_id;
+                  const handlePress = canOrganizerOverride
+                    ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
+                    : () => onMatchPress(m.id, p1RegId, p2RegId);
+                  const a11yLabel = canOrganizerOverride
+                    ? t('tournamentDetail.bracket.overrideMatch' as TranslationKey)
+                    : t('tournamentDetail.bracket.linkMatch' as TranslationKey);
                   return (
                     <TouchableOpacity
                       key={m.id}
-                      onPress={() => onMatchPress(m.id, p1RegId, p2RegId)}
+                      onPress={handlePress}
                       activeOpacity={0.7}
                       style={[
                         styles.bracketMatch,
@@ -1221,7 +1453,7 @@ const BracketSection: React.FC<{
                         { borderColor: colors.primary },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel={t('tournamentDetail.bracket.linkMatch' as TranslationKey)}
+                      accessibilityLabel={a11yLabel}
                     >
                       {matchInner}
                     </TouchableOpacity>
@@ -1495,6 +1727,12 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     marginBottom: spacingPixels[2],
+  },
+  overrideConfirm: {
+    marginTop: spacingPixels[5],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    alignItems: 'center',
   },
   bracketSlot: {
     flexDirection: 'row',

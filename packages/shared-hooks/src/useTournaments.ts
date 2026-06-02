@@ -22,6 +22,7 @@ import {
   generateTournamentBracket,
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
+  overrideTournamentMatchScore,
   cancelTournament,
   archiveTournament,
   getProfilesByIds,
@@ -237,6 +238,38 @@ export function useAttachMatchToTournamentSlot(options: MutationOptions<Tourname
   >({
     mutationFn: ({ tournamentMatchId, matchId }) =>
       attachMatchToTournamentSlot(tournamentMatchId, matchId),
+    onSuccess: (tm, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(tm);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Organizer/admin authoritative score override for a stalled or disputed
+ * bracket match. Completes the match with the chosen winner and advances the
+ * bracket.
+ */
+export function useOverrideTournamentMatchScore(options: MutationOptions<TournamentMatch> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentMatch,
+    Error,
+    {
+      tournamentMatchId: string;
+      winnerRegistrationId: string;
+      score?: string;
+      tournamentId: string;
+    }
+  >({
+    mutationFn: ({ tournamentMatchId, winnerRegistrationId, score }) =>
+      overrideTournamentMatchScore(tournamentMatchId, winnerRegistrationId, score),
     onSuccess: (tm, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(tm);
