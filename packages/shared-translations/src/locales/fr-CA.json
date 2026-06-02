@@ -1,4 +1,17 @@
 {
+  "summerLeague": {
+    "announcement": {
+      "badge": "Cet été",
+      "title": "La toute première Ligue d'été Rallia",
+      "subtitle": "Nous sondons l'intérêt pour adapter la première édition à des joueurs comme vous. Ça vous tente ?",
+      "interested": "Ça m'intéresse",
+      "later": "Plus tard",
+      "successTitle": "Vous êtes sur la liste",
+      "successBody": "Votre intérêt nous aide à la façonner — nous vous écrirons bientôt.",
+      "done": "Terminé",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
   },
