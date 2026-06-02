@@ -3147,7 +3147,8 @@
     "pendingRequests": "{count} en attente",
     "courtStatus": {
       "readyToPlay": "Prêt à jouer",
-      "courtBooked": "Terrain Réservé"
+      "courtBooked": "Terrain Réservé",
+      "courtsAvailable": "{count} terrains disponibles"
     },
     "tier": {
       "mostWanted": "Incontournable",

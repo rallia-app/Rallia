@@ -3147,7 +3147,8 @@
     "pendingRequests": "{count} pending",
     "courtStatus": {
       "readyToPlay": "Ready to Play",
-      "courtBooked": "Court Booked"
+      "courtBooked": "Court Booked",
+      "courtsAvailable": "{count} courts available"
     },
     "tier": {
       "mostWanted": "Must-Play",
