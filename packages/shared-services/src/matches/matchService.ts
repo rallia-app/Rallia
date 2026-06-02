@@ -3,9 +3,14 @@
  * Handles all match-related database operations using Supabase.
  */
 
-import { getProfilePictureUrl, createDateInTimezone } from '@rallia/shared-utils';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
+import {
+  attachAvailableCourtCounts,
+  fetchAvailableCourtCountsForMatches,
+  applyCourtCounts,
+} from './availableCourts';
 import { Logger } from '../logger';
 import {
   notifyMatchJoinRequest,
@@ -447,117 +452,6 @@ export async function getMatchWithDetails(matchId: string) {
   }
 
   return data;
-}
-
-/**
- * Snapshot lookahead for open-court counts on match cards. Matches whose start
- * lies beyond this window can't have snapshot data, so we never query for them.
- * Mirrors the snapshot coverage window the refresh worker writes.
- */
-const MATCH_COURT_SNAPSHOT_HORIZON_DAYS = 7;
-
-/**
- * Count distinct bookable courts at each match's facility for the exact match
- * start time, reading `facility_availability_snapshot` — the same source the
- * suggestion service uses for its "N courts available" chip.
- *
- * Only future matches with a facility, a sport, and no court reserved yet are
- * eligible; everything else is skipped so a match that's already booked (or
- * past, or location-TBD) never triggers a lookup. Returns a map of match id →
- * court count, populated only for matches that actually have ≥1 court at the
- * slot. Snapshot-only by design (org-managed/local-template courts aren't
- * counted), matching the suggestion behavior.
- */
-async function fetchAvailableCourtCountsForMatches(
-  matches: MatchWithDetails[]
-): Promise<Map<string, number>> {
-  const result = new Map<string, number>();
-  const now = Date.now();
-  const horizonMs = now + MATCH_COURT_SNAPSHOT_HORIZON_DAYS * 24 * 60 * 60 * 1000;
-
-  // Build per-match snapshot lookup keys: facility|sport|slotStartISO.
-  const keyByMatch = new Map<string, string>();
-  const facilityIds = new Set<string>();
-  const sportIds = new Set<string>();
-  let minIso: string | undefined;
-  let maxIso: string | undefined;
-
-  for (const m of matches) {
-    if (!m.facility_id || !m.sport_id) continue;
-    if (m.court_status === 'reserved') continue;
-    if (!m.match_date || !m.start_time) continue;
-
-    const timezone = m.facility?.timezone ?? m.timezone ?? 'UTC';
-    let slotIso: string;
-    try {
-      slotIso = createDateInTimezone(m.match_date, m.start_time, timezone).toISOString();
-    } catch {
-      continue;
-    }
-    const slotMs = new Date(slotIso).getTime();
-    if (Number.isNaN(slotMs) || slotMs <= now || slotMs > horizonMs) continue;
-
-    keyByMatch.set(m.id, `${m.facility_id}|${m.sport_id}|${slotIso}`);
-    facilityIds.add(m.facility_id);
-    sportIds.add(m.sport_id);
-    if (!minIso || slotIso < minIso) minIso = slotIso;
-    if (!maxIso || slotIso > maxIso) maxIso = slotIso;
-  }
-
-  if (keyByMatch.size === 0 || !minIso || !maxIso) return result;
-
-  const { data, error } = await supabase
-    .from('facility_availability_snapshot')
-    .select('facility_id, sport_id, slot_start, external_court_id')
-    .in('facility_id', Array.from(facilityIds))
-    .in('sport_id', Array.from(sportIds))
-    .eq('is_available', true)
-    .gte('slot_start', minIso)
-    .lte('slot_start', maxIso);
-
-  if (error) {
-    Logger.warn('[getMatchesWithDetails] court-count snapshot fetch error', {
-      error: error.message,
-    });
-    return result;
-  }
-
-  // Count distinct courts per facility|sport|slot. Snapshot rows are unique on
-  // (facility_id, external_court_id, slot_start), but a Set guards against any
-  // duplication across the sport dimension.
-  const courtsByKey = new Map<string, Set<string>>();
-  for (const row of data ?? []) {
-    if (!row.sport_id) continue;
-    const iso = new Date(row.slot_start as string).toISOString();
-    const key = `${row.facility_id}|${row.sport_id}|${iso}`;
-    let set = courtsByKey.get(key);
-    if (!set) {
-      set = new Set<string>();
-      courtsByKey.set(key, set);
-    }
-    set.add(row.external_court_id as string);
-  }
-
-  for (const [matchId, key] of keyByMatch) {
-    const count = courtsByKey.get(key)?.size ?? 0;
-    if (count > 0) result.set(matchId, count);
-  }
-  return result;
-}
-
-/**
- * Mutate `matches` in place, setting `available_courts` on each eligible match
- * (future, unreserved, with snapshot data at its slot). No-op when nothing is
- * eligible. Used by the discovery-feed fetchers so MatchCard can render the
- * "N courts available" chip.
- */
-async function attachAvailableCourtCounts(matches: MatchWithDetails[]): Promise<void> {
-  const courtCounts = await fetchAvailableCourtCountsForMatches(matches);
-  if (courtCounts.size === 0) return;
-  for (const match of matches) {
-    const count = courtCounts.get(match.id);
-    if (count) match.available_courts = count;
-  }
 }
 
 /**
@@ -2866,6 +2760,11 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     }
   }
 
+  // Kick off the open-court snapshot read now so it overlaps the ratings query
+  // and the enrichment below instead of adding a round-trip to the tail. It only
+  // needs the raw match rows; applied once the ordered list is built.
+  const courtCountsPromise = fetchAvailableCourtCountsForMatches(matchesData);
+
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
   const ratingsMap: Record<
@@ -2980,9 +2879,9 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
 
-  // Attach open-court counts so MatchCard can show a "N courts available" chip
-  // for unreserved future matches (parity with suggestion cards).
-  await attachAvailableCourtCounts(orderedMatches);
+  // Apply the open-court counts kicked off above so MatchCard can show a
+  // "N courts available" chip for unreserved future matches.
+  applyCourtCounts(orderedMatches, await courtCountsPromise);
 
   if (isScoredPath) {
     return {
@@ -3332,6 +3231,11 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     return match;
   });
 
+  // Attach open-court counts so MatchCard can show a "N courts available" chip
+  // for unreserved future matches (parity with suggestion cards). Past matches
+  // in this list are naturally skipped (future-only inside the helper).
+  await attachAvailableCourtCounts(enrichedData);
+
   return {
     matches: enrichedData as MatchWithDetails[],
     hasMore,
@@ -3625,6 +3529,11 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     }
   }
 
+  // Kick off the open-court snapshot read now so it overlaps the ratings query
+  // and the enrichment below instead of adding a round-trip to the tail. It only
+  // needs the raw match rows; applied once the ordered list is built.
+  const courtCountsPromise = fetchAvailableCourtCountsForMatches(matchesData);
+
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
   const publicRatingsMap: Record<
@@ -3738,9 +3647,9 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
 
-  // Attach open-court counts so MatchCard can show a "N courts available" chip
-  // for unreserved future matches (parity with suggestion cards).
-  await attachAvailableCourtCounts(orderedMatches);
+  // Apply the open-court counts kicked off above so MatchCard can show a
+  // "N courts available" chip for unreserved future matches.
+  applyCourtCounts(orderedMatches, await courtCountsPromise);
 
   return {
     matches: orderedMatches,
