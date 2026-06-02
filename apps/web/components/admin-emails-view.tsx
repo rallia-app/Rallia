@@ -272,19 +272,6 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
 
   return (
     <div className="space-y-8">
-      {feedback && (
-        <div
-          className={cn(
-            'rounded-lg border px-4 py-3 text-sm',
-            feedback.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-red-200 bg-red-50 text-red-800'
-          )}
-        >
-          {feedback.message}
-        </div>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: compose + audience */}
         <div className="space-y-6">
@@ -450,6 +437,21 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
               {isSending ? t('actions.sending') : t('actions.send')}
             </Button>
           </div>
+
+          {feedback && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={cn(
+                'rounded-lg border px-4 py-3 text-sm',
+                feedback.type === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200'
+                  : 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200'
+              )}
+            >
+              {feedback.message}
+            </div>
+          )}
         </div>
 
         {/* Right: preview */}
