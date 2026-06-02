@@ -35,7 +35,7 @@ const jwtSecret = Deno.env.get('JWT_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRE
 const appUrl =
   Deno.env.get('NEXT_PUBLIC_BASE_URL') ??
   Deno.env.get('NEXT_PUBLIC_SITE_URL') ??
-  'https://rallia.app';
+  'https://www.rallia.ca';
 
 if (!resendApiKey) throw new Error('RESEND_API_KEY is required');
 if (!fromEmail) throw new Error('FROM_EMAIL is required');
