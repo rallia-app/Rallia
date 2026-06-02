@@ -8,19 +8,16 @@
  * fixed 4 steps, no dynamic step list, no per-step validators beyond
  * "frequency 1..5" and "availability has ≥ MIN_SELECTIONS cells".
  *
- * The cooldown AsyncStorage key is shared with the home banner so dismissing
- * via the wizard's discrete × ALSO suppresses the banner for 24h.
+ * The check-in is mandatory — there is no exit path. The wizard leaves the
+ * screen only on completion (the route's dismiss callback runs from the final
+ * step). The cooldown key below is still exported for the home banner / auto-
+ * opener, which use it independently.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  errorHaptic,
-  mediumHaptic,
-  selectionHaptic,
-  successHaptic,
-  warningHaptic,
-} from '@rallia/shared-utils';
+import { errorHaptic, mediumHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
+
+import * as Analytics from '#/services/analytics';
 
 import {
   useAvailabilityKeys,
@@ -31,17 +28,26 @@ import {
   type HourGrid,
 } from './api';
 
+// Analytics step labels, keyed by step index. Availability leads so the player
+// updates their schedule first (the wizard's primary goal); the recap + goal
+// are merged into one step to keep the wizard short.
+const STEP_NAMES: Record<WizardStep, string> = {
+  1: 'availability',
+  2: 'recap_goal',
+  3: 'all_set',
+};
+
 // Shared with apps/mobile/src/screens/Home.tsx (AVAILABILITY_BANNER_COOLDOWN_KEY).
-// Dismissing either the banner OR the wizard sets this — they're a unified
-// "user is choosing not to engage right now" signal.
+// Dismissing the home availability banner sets this; the auto-opener reads it to
+// avoid nagging right after a dismissal.
 export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 
 // Same as MIN_AVAILABILITIES in onboarding — the wizard requires at least
 // 6 free hours per week so the match-creation logic has something to work with.
 export const MIN_AVAILABILITY_CELLS = 6;
 
-export type WizardStep = 1 | 2 | 3 | 4;
-const TOTAL_STEPS: WizardStep = 4;
+export type WizardStep = 1 | 2 | 3;
+const TOTAL_STEPS: WizardStep = 3;
 
 export interface UseWeeklyCheckInWizard {
   // Step navigation
@@ -77,24 +83,19 @@ export interface UseWeeklyCheckInWizard {
   // Validation per step (gates the Continue CTA)
   canAdvance: boolean;
 
-  // Exit-confirmation flow
-  exitPromptVisible: boolean;
-  requestExit: () => void;
-  cancelExit: () => void;
-  confirmExit: () => Promise<void>;
+  /** Epoch ms when the wizard opened (analytics duration). */
+  startedAt: number;
 }
 
 interface UseWeeklyCheckInWizardOptions {
   /** Called when the user successfully completes the wizard. */
   onComplete?: (result: CheckInResult) => void;
-  /** Called when the user dismisses via the × (after confirmation). */
-  onDismiss?: () => void;
 }
 
 export function useWeeklyCheckInWizard(
   options: UseWeeklyCheckInWizardOptions = {}
 ): UseWeeklyCheckInWizard {
-  const { onComplete, onDismiss } = options;
+  const { onComplete } = options;
 
   // Step navigation
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
@@ -112,6 +113,9 @@ export function useWeeklyCheckInWizard(
   const [frequencyGoal, setFrequencyGoalState] = useState<number>(3);
   const [autoCreate, setAutoCreateState] = useState<boolean>(true);
   const [autoInvite, setAutoInviteState] = useState<boolean>(true);
+
+  // When the wizard opened — drives duration_seconds on completed/abandoned.
+  const startedAtRef = useRef(Date.now());
 
   // Seed availability from the fetched key list (once, on first load).
   // initialKeys is a string[] — see api.ts for why it's not a Set.
@@ -148,9 +152,6 @@ export function useWeeklyCheckInWizard(
   const { mutateAsync: recordCheckIn, isPending: isSubmitting } = useRecordCheckIn();
   const [result, setResult] = useState<CheckInResult | null>(null);
 
-  // Exit confirmation
-  const [exitPromptVisible, setExitPromptVisible] = useState(false);
-
   // Setters with light haptics on user interaction.
   const setFrequencyGoal = useCallback((n: number) => {
     selectionHaptic();
@@ -170,33 +171,40 @@ export function useWeeklyCheckInWizard(
     setCurrentStep(step);
   }, []);
   const goNext = useCallback(() => {
+    // Funnel step_completed for the step being left. Only step 1 (availability)
+    // advances via goNext; step 2 (recap_goal) completes via submit().
+    if (currentStep === 1) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[1],
+        step_index: 1,
+        availability_cells: availability.size,
+      });
+    }
     setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
     mediumHaptic();
-  }, []);
+  }, [currentStep, availability]);
   const goBack = useCallback(() => {
     setCurrentStep(prev => (prev > 1 ? ((prev - 1) as WizardStep) : prev));
   }, []);
 
-  // Validation — only step 2 has a non-trivial gate (≥ MIN_AVAILABILITY_CELLS).
-  // Step 1 always advances. Step 3 always advances (defaults are valid).
-  // Step 4 has no CTA — it's the success state.
+  // Validation — step 1 (availability) gates on ≥ MIN_AVAILABILITY_CELLS.
+  // Step 2 (recap + goal) gates on a valid frequency (defaults are valid).
+  // Step 3 has no CTA — it's the success state.
   const canAdvance = useMemo(() => {
     switch (currentStep) {
       case 1:
-        return true;
-      case 2:
         return availability.size >= MIN_AVAILABILITY_CELLS;
-      case 3:
+      case 2:
         return frequencyGoal >= 1 && frequencyGoal <= 5;
-      case 4:
+      case 3:
         return false; // no advance from the success step
       default:
         return false;
     }
   }, [currentStep, availability.size, frequencyGoal]);
 
-  // Submit handler — called when the user taps Continue on Step 3.
-  // Runs the availability save + RPC, then advances to Step 4 with the result.
+  // Submit handler — called when the user taps the CTA on the recap+goal step.
+  // Runs the availability save + RPC, then advances to the All-Set step.
   const submit = useCallback(async () => {
     try {
       const res = await recordCheckIn({
@@ -205,39 +213,34 @@ export function useWeeklyCheckInWizard(
         autoInvite,
         availability,
       });
+      // The recap+goal step (step 2) completes on a successful submit.
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[2],
+        step_index: 2,
+        frequency_goal: frequencyGoal,
+        auto_create: autoCreate,
+        auto_invite: autoInvite,
+      });
+      Analytics.weeklyCheckinSubmitted({
+        frequency_goal: frequencyGoal,
+        availability_cells: availability.size,
+        auto_create: autoCreate,
+        auto_invite: autoInvite,
+        new_streak: res.newStreak,
+        milestone_reached: res.milestoneReached,
+        freeze_earned: res.freezeEarned,
+      });
       setResult(res);
       successHaptic();
-      setCurrentStep(4);
+      setCurrentStep(3);
       onComplete?.(res);
     } catch (err) {
       errorHaptic();
+      Analytics.weeklyCheckinSubmitFailed({ error: (err as Error)?.message ?? 'unknown' });
       Logger.error('Weekly check-in submit failed', err as Error);
       throw err;
     }
   }, [recordCheckIn, frequencyGoal, autoCreate, autoInvite, availability, onComplete]);
-
-  // Exit flow — discrete × → confirmation → cooldown + dismiss.
-  // Haptics signal the weight of each step: selection "tick" on cancel
-  // (decision reversed) and warning "are you sure?" weight on confirm-dismiss.
-  // requestExit's tap haptic is fired by the WizardHeader × button itself
-  // (same pattern as the back chevron).
-  const requestExit = useCallback(() => {
-    setExitPromptVisible(true);
-  }, []);
-  const cancelExit = useCallback(() => {
-    selectionHaptic();
-    setExitPromptVisible(false);
-  }, []);
-  const confirmExit = useCallback(async () => {
-    warningHaptic();
-    try {
-      await AsyncStorage.setItem(WEEKLY_CHECKIN_COOLDOWN_KEY, Date.now().toString());
-    } catch (err) {
-      Logger.error('Weekly check-in: failed to set cooldown', err as Error);
-    }
-    setExitPromptVisible(false);
-    onDismiss?.();
-  }, [onDismiss]);
 
   return {
     currentStep,
@@ -267,9 +270,7 @@ export function useWeeklyCheckInWizard(
 
     canAdvance,
 
-    exitPromptVisible,
-    requestExit,
-    cancelExit,
-    confirmExit,
+    // Epoch ms when the wizard opened — for analytics duration on completion.
+    startedAt: startedAtRef.current,
   };
 }

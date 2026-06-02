@@ -11,6 +11,7 @@
  *             supabase/migrations/20260521120100_weekly_checkin_rpcs.sql
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { matchKeys } from '@rallia/shared-hooks';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
 import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
 
@@ -235,6 +236,18 @@ export function useRecordCheckIn() {
       // Banner + auto-opener now need to refetch — is_pending_check_in flipped.
       qc.invalidateQueries({ queryKey: checkInKeys.context() });
       qc.invalidateQueries({ queryKey: checkInKeys.availability() });
+
+      // Auto-create (+ auto-invite) generate matches ASYNCHRONOUSLY: the check-in
+      // write fires a DB trigger → generate-weekly-matches edge function, which
+      // inserts the matches a few seconds after commit. Refresh the player's
+      // match lists now and again shortly after so Home's "My games" updates on
+      // its own — no manual pull-to-refresh. Home's usePlayerMatches stays
+      // mounted behind the wizard modal, so these invalidations refetch it in
+      // the background and it's current by the time the wizard dismisses.
+      const refreshMatchLists = () => qc.invalidateQueries({ queryKey: matchKeys.lists() });
+      refreshMatchLists();
+      setTimeout(refreshMatchLists, 4000);
+      setTimeout(refreshMatchLists, 10000);
     },
   });
 }

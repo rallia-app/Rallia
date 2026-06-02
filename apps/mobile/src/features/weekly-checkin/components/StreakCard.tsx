@@ -103,17 +103,10 @@ export function StreakCard({ currentStreak, freezeInventory }: StreakCardProps) 
         )}
       </View>
 
-      {isFresh ? (
-        // First-time user — don't show "0 freezes saved" (reads as a
-        // negative for someone who hasn't started yet). Show an inviting
-        // one-liner that frames the first check-in as the start of the
-        // streak journey.
-        <View style={styles.footer}>
-          <Text style={[styles.footerPrimary, { color: freezeTextColor }]}>
-            {t('weeklyCheckIn.step1.freezeFirstTimeInvite')}
-          </Text>
-        </View>
-      ) : (
+      {/* First-time user (streak 0) — show only the flame + title; no freeze
+          footer (a "0 freezes saved" line reads as a negative, and the old
+          invite line was dropped). Returning players see their freeze status. */}
+      {!isFresh && (
         <View style={styles.footer}>
           <Text style={[styles.footerPrimary, { color: freezeTextColor }]}>❄️ {freezeLabel}</Text>
           <Text style={[styles.footerHint, { color: freezeHintColor }]}>

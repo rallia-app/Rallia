@@ -38,6 +38,11 @@ import {
 const WINDOW_DAYS = 7;
 const MAX_FACILITIES_PER_INVOCATION = 50;
 const FACILITY_CONCURRENCY = 8;
+// Wall-clock budget for one invocation. The edge runtime hard-kills a worker at
+// ~150s (→ 546), discarding all in-flight work. We stop launching new
+// facilities and abort in-flight provider fetches well before that, returning
+// the unprocessed ids as `deferred` for the next SWR trigger to pick up.
+const INVOCATION_BUDGET_MS = 120_000;
 
 // =============================================================================
 // TYPES
@@ -83,8 +88,12 @@ interface FacilityRow {
  * on a different platform). Then:
  *
  * - 0 candidate sports → null.
- * - 1 candidate sport → stamp it. Covers single-sport facilities and
- *   multi-sport facilities whose other sports are served elsewhere.
+ * - 1 candidate sport → stamp it, UNLESS the court_name / facilityType.name
+ *   clearly names a sport Rallia doesn't model (see FOREIGN_SPORT_KEYWORDS),
+ *   in which case → null. Without this guard a provider that bundles e.g.
+ *   volleyball courts under a tennis-only facility (IC3 siteId 1035, Parc
+ *   Hartenstein → "Terrain de volleyball no 2") would have those slots
+ *   stamped tennis and leaked into the tennis space.
  * - >1 candidate sports → resolve in this order:
  *     1. `facility_type_sport_map` lookup keyed on the row's
  *        `external_facility_type_id`. Deterministic per provider.
@@ -100,6 +109,45 @@ interface FacilityRow {
  * volleyball rows for a tennis+pickleball-tagged facility correctly stays
  * null instead of leaking an untagged sport into the snapshot.
  */
+/** Lower-cased keywords for sports Rallia does not model. Used as a negative
+ *  signal in the single-candidate path of resolveSportId: when a provider
+ *  bundles courts for one of these under a facility tagged with a single
+ *  supported sport, we must NOT stamp the supported sport onto them. Covers
+ *  common FR/EN names seen in Loisirs Montréal / IC3 / Tennis Laval feeds. */
+const FOREIGN_SPORT_KEYWORDS = [
+  'volleyball',
+  'volley',
+  'basketball',
+  'basket',
+  'soccer',
+  'futsal',
+  'football',
+  'baseball',
+  'softball',
+  'hockey',
+  'patinoire',
+  'patinage',
+  'badminton',
+  'handball',
+  'rugby',
+  'cricket',
+  'petanque',
+  'pétanque',
+  'shuffleboard',
+  'racquetball',
+  'racketball',
+];
+
+/** True when `text` names a foreign (non-modelled) sport and does NOT also
+ *  name one of the candidate sports. Candidate names take precedence so a
+ *  court that legitimately mentions its own sport is never rejected. */
+function nameIndicatesForeignSport(text: string | null, candidateNames: string[]): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  if (candidateNames.some(n => lower.includes(n))) return false;
+  return FOREIGN_SPORT_KEYWORDS.some(k => lower.includes(k));
+}
+
 function resolveSportId(
   sports: FacilitySport[] | null,
   servedSportIds: string[] | null,
@@ -112,7 +160,18 @@ function resolveSportId(
   const served = servedSportIds && servedSportIds.length > 0 ? new Set(servedSportIds) : null;
   const candidates = served ? sports.filter(s => served.has(s.id)) : sports;
   if (candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0].id;
+  if (candidates.length === 1) {
+    // Negative guard: don't blindly stamp the only tagged sport onto a court
+    // whose name clearly belongs to a sport we don't model.
+    const candidateNames = [candidates[0].name.toLowerCase()];
+    if (
+      nameIndicatesForeignSport(facilityTypeName, candidateNames) ||
+      nameIndicatesForeignSport(courtName, candidateNames)
+    ) {
+      return null;
+    }
+    return candidates[0].id;
+  }
 
   const candidateIds = new Set(candidates.map(s => s.id));
 
@@ -145,6 +204,9 @@ interface RefreshResult {
   refreshed: string[];
   already_fresh: string[];
   locked: string[];
+  /** Not processed before the invocation budget ran out. Not an error — the
+   *  next SWR trigger re-requests them (their lease auto-expires in 60s). */
+  deferred: string[];
   failed: Array<{ facility_id: string; error: string }>;
   skipped: Array<{ facility_id: string; reason: string }>;
   durationMs: number;
@@ -233,7 +295,7 @@ async function loadFacilityProviders(
 
 interface RefreshOutcome {
   facility_id: string;
-  status: 'refreshed' | 'already_fresh' | 'locked' | 'failed' | 'skipped';
+  status: 'refreshed' | 'already_fresh' | 'locked' | 'failed' | 'skipped' | 'deferred';
   error?: string;
   reason?: string;
   rowCount?: number;
@@ -241,7 +303,8 @@ interface RefreshOutcome {
 
 async function refreshOneFacility(
   supabase: SupabaseClient,
-  facilityRow: FacilityRow
+  facilityRow: FacilityRow,
+  signal: AbortSignal
 ): Promise<RefreshOutcome> {
   const {
     facility_id,
@@ -302,6 +365,7 @@ async function refreshOneFacility(
       externalProviderId: external_provider_id,
       dates,
       timezone,
+      signal,
     });
     rows = result.rows;
     source = result.source;
@@ -321,6 +385,12 @@ async function refreshOneFacility(
       r.booking_url = buildBookingUrl(providerConfig, r);
     }
   } catch (err) {
+    // Invocation budget hit mid-fetch: defer rather than record a provider
+    // error (which would inflate consecutive_errors). The 60s lease
+    // auto-expires; the next SWR trigger re-requests this facility.
+    if (signal.aborted) {
+      return { facility_id, status: 'deferred' };
+    }
     const msg = err instanceof Error ? err.message : String(err);
     await supabase.rpc('snapshot_record_refresh_error', {
       p_facility_id: facility_id,
@@ -376,9 +446,10 @@ async function refreshOneFacility(
 async function runWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
+  fn: (item: T) => Promise<R>,
+  shouldContinue: () => boolean = () => true
+): Promise<(R | undefined)[]> {
+  const results: (R | undefined)[] = new Array(items.length);
   let cursor = 0;
   const workers: Promise<void>[] = [];
   const width = Math.min(concurrency, items.length);
@@ -388,6 +459,9 @@ async function runWithConcurrency<T, R>(
         while (true) {
           const i = cursor++;
           if (i >= items.length) return;
+          // Budget exhausted — stop pulling work. This item and every later
+          // one stay undefined, surfaced as `deferred` by the caller.
+          if (!shouldContinue()) return;
           results[i] = await fn(items[i]);
         }
       })()
@@ -408,42 +482,56 @@ async function refreshFacilities(
   const startTime = Date.now();
   const providers = await loadFacilityProviders(supabase, facilityIds);
 
-  const outcomes = await runWithConcurrency(facilityIds, FACILITY_CONCURRENCY, async id => {
-    const row = providers.get(id);
-    if (!row) {
-      return {
-        facility_id: id,
-        status: 'skipped',
-        reason: 'Facility not found',
-      };
-    }
-    try {
-      return await refreshOneFacility(supabase, row);
-    } catch (err) {
-      return {
-        facility_id: id,
-        status: 'failed',
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  });
+  // Invocation-wide deadline: stops the worker loop from launching new
+  // facilities and aborts in-flight provider fetches once the budget is spent.
+  const deadline = AbortSignal.timeout(INVOCATION_BUDGET_MS);
+
+  const outcomes = await runWithConcurrency(
+    facilityIds,
+    FACILITY_CONCURRENCY,
+    async id => {
+      const row = providers.get(id);
+      if (!row) {
+        return {
+          facility_id: id,
+          status: 'skipped',
+          reason: 'Facility not found',
+        };
+      }
+      try {
+        return await refreshOneFacility(supabase, row, deadline);
+      } catch (err) {
+        return {
+          facility_id: id,
+          status: 'failed',
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+    () => !deadline.aborted
+  );
 
   const out: RefreshResult = {
     refreshed: [],
     already_fresh: [],
     locked: [],
+    deferred: [],
     failed: [],
     skipped: [],
     durationMs: Date.now() - startTime,
   };
-  for (const o of outcomes) {
-    if (o.status === 'refreshed') out.refreshed.push(o.facility_id);
+  outcomes.forEach((o, i) => {
+    // Undefined = the worker loop never reached this facility before the budget
+    // ran out; status 'deferred' = aborted mid-fetch. Both are deferrals.
+    if (!o || o.status === 'deferred') {
+      out.deferred.push(o?.facility_id ?? facilityIds[i]);
+    } else if (o.status === 'refreshed') out.refreshed.push(o.facility_id);
     else if (o.status === 'already_fresh') out.already_fresh.push(o.facility_id);
     else if (o.status === 'locked') out.locked.push(o.facility_id);
     else if (o.status === 'failed')
       out.failed.push({ facility_id: o.facility_id, error: o.error ?? 'unknown' });
     else out.skipped.push({ facility_id: o.facility_id, reason: o.reason ?? 'unknown' });
-  }
+  });
   return out;
 }
 
@@ -497,7 +585,7 @@ Deno.serve(async req => {
   try {
     const result = await refreshFacilities(supabase, ids);
     console.log(
-      `[refresh-facility-availability] refreshed=${result.refreshed.length} already_fresh=${result.already_fresh.length} locked=${result.locked.length} failed=${result.failed.length} skipped=${result.skipped.length} durationMs=${result.durationMs}`
+      `[refresh-facility-availability] refreshed=${result.refreshed.length} already_fresh=${result.already_fresh.length} locked=${result.locked.length} deferred=${result.deferred.length} failed=${result.failed.length} skipped=${result.skipped.length} durationMs=${result.durationMs}`
     );
     return new Response(JSON.stringify({ success: true, ...result }), {
       status: 200,

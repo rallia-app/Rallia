@@ -20,19 +20,14 @@ import React, {
   ReactNode,
 } from 'react';
 import { CopilotProvider, CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  InteractionManager,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { tourService, TourId, TourStatus, Logger } from '@rallia/shared-services';
 
-import { useTranslation } from '#/hooks';
+// Direct import to avoid the hooks→useTourSequence→TourContext→hooks cycle.
+import { useTranslation } from '#/hooks/useTranslation';
 import { lightHaptic, selectionHaptic, successHaptic } from '#/utils/haptics';
+import { runWhenIdle } from '#/utils/runWhenIdle';
 
 // =============================================================================
 // TYPES
@@ -316,10 +311,10 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
         setWasSkipped(false); // Reset skip flag when starting new tour
         setTourHasStarted(false); // Reset - will be set to true when visible becomes true
 
-        // Use InteractionManager to wait for all interactions/animations to complete
-        // Then add additional delay for layout stabilization across different devices
+        // Wait for the JS thread to go idle (interactions/animations settling),
+        // then add additional delay for layout stabilization across different devices.
         // This ensures all CopilotStep elements have been properly laid out and measured
-        InteractionManager.runAfterInteractions(() => {
+        runWhenIdle(() => {
           // Additional delay for slower devices to complete layout
           setTimeout(() => {
             // Request animation frame to ensure we're in sync with the render cycle

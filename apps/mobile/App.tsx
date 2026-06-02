@@ -485,12 +485,17 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // Keep app icon badge count synced with unread notification count
   useBadgeCountSync(userId);
 
-  // Sync locale to database when user logs in or locale becomes ready
-  // This ensures server-side notifications use the correct locale
+  // Sync locale to database when user logs in or locale becomes ready.
+  // Deferred off the cold-start critical path: this does a profile.update (and
+  // possibly auth.updateUser) that otherwise competed with the auth/player/
+  // carousel queries for the connection pool during sign-in. Locale rarely
+  // changes, so a few seconds' delay is harmless for server-side notifications.
   useEffect(() => {
-    if (userId && isLocaleReady) {
+    if (!userId || !isLocaleReady) return;
+    const timer = setTimeout(() => {
       syncLocaleToDatabase(userId);
-    }
+    }, 5000);
+    return () => clearTimeout(timer);
   }, [userId, isLocaleReady, syncLocaleToDatabase]);
 
   // Attempt automatic referral attribution on first launch — must run

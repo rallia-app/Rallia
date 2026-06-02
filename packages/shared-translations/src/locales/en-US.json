@@ -1498,6 +1498,13 @@
     "errorMessage": "This unsubscribe link looks invalid or expired. Please update your preferences in the app instead.",
     "managePreferences": "Manage notification preferences"
   },
+  "broadcastUnsubscribe": {
+    "successTitle": "You're unsubscribed",
+    "successMessage": "You won't receive these broadcast emails anymore. You can re-enable them anytime from your notification preferences.",
+    "errorTitle": "Couldn't unsubscribe",
+    "errorMessage": "This unsubscribe link looks invalid or expired. Please update your preferences in the app instead.",
+    "managePreferences": "Manage notification preferences"
+  },
   "onboarding": {
     "pageTitle": "Create Your Organization",
     "pageDescription": "Set up your organization profile to get started",
@@ -1678,7 +1685,7 @@
       "playerNotFound": "Player not found. Please try again.",
       "invalidRating": "Invalid rating selected",
       "unexpectedError": "An unexpected error occurred.",
-      "minimumAge": "You must be at least 13 years and 1 month old to use this app.",
+      "minimumAge": "You must be at least 18 years old to use this app.",
       "selectDateOfBirth": "Please select your date of birth",
       "selectGender": "Please select a valid gender option",
       "failedToUpdateProfile": "Failed to update your information. Please try again.",
@@ -1780,13 +1787,13 @@
     },
     "favoriteSitesStep": {
       "title": "Select Your Favorite Courts",
-      "subtitle": "Choose at least 3 facilities where you like to play. This helps us find you better matches.",
-      "subtitleBothSports": "Choose at least 3 facilities per sport. Facilities offering both sports count toward each.",
+      "subtitle": "Choose at least 2 facilities where you like to play. This helps us find you better matches.",
+      "subtitleBothSports": "Choose at least 2 facilities per sport. Facilities offering both sports count toward each.",
       "selected": "selected",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Please select at least 3 favorite facilities.",
-      "selectMinimumPerSport": "Please select at least 3 facilities for each sport (tennis and pickleball).",
+      "selectMinimum": "Please select at least 2 favorite facilities.",
+      "selectMinimumPerSport": "Please select at least 2 facilities for each sport (tennis and pickleball).",
       "searchLabel": "Search for a facility",
       "searchPlaceholder": "Type to search...",
       "loading": "Loading nearby facilities...",
@@ -3140,7 +3147,8 @@
     "pendingRequests": "{count} pending",
     "courtStatus": {
       "readyToPlay": "Ready to Play",
-      "courtBooked": "Court Booked"
+      "courtBooked": "Court Booked",
+      "courtsAvailable": "{count} courts available"
     },
     "tier": {
       "mostWanted": "Must-Play",
@@ -5954,7 +5962,86 @@
       "settings": "Settings",
       "map": "Map",
       "communications": "Communications",
+      "emails": "Emails",
       "referralContests": "Referral Contests"
+    },
+    "emails": {
+      "titleMeta": "Emails - Admin - Rallia",
+      "descriptionMeta": "Compose and send email broadcasts to users",
+      "title": "Emails",
+      "description": "Compose and send an email broadcast to a segment of users.",
+      "compose": {
+        "heading": "Compose",
+        "subjectLabel": "Subject",
+        "subjectPlaceholder": "What's this email about?",
+        "bodyLabel": "Message",
+        "bodyPlaceholder": "Write your message…",
+        "ctaHeading": "Call to action (optional)",
+        "ctaTextLabel": "Button label",
+        "ctaTextPlaceholder": "e.g. Open Rallia",
+        "ctaUrlLabel": "Button link",
+        "ctaUrlPlaceholder": "https://rallia.app/…"
+      },
+      "audience": {
+        "heading": "Audience",
+        "everyone": "Everyone",
+        "sport": "Sport",
+        "anySport": "Any sport",
+        "city": "City",
+        "cityPlaceholder": "e.g. Montréal",
+        "locale": "Language",
+        "anyLocale": "Any language",
+        "activeSince": "Active since",
+        "activeAny": "Any time",
+        "active30": "Last 30 days",
+        "active90": "Last 90 days",
+        "onlySubscribers": "Premium subscribers only",
+        "recipients": "{count} recipients",
+        "recipientsLoading": "Counting recipients…"
+      },
+      "preview": {
+        "heading": "Preview",
+        "light": "Light",
+        "dark": "Dark",
+        "empty": "Add a subject and message to see the preview."
+      },
+      "actions": {
+        "sendTest": "Send test to me",
+        "send": "Send broadcast",
+        "sending": "Sending…"
+      },
+      "confirm": {
+        "title": "Send this broadcast?",
+        "description": "This will email {count} users and can't be undone.",
+        "cancel": "Cancel",
+        "confirm": "Send to {count}"
+      },
+      "history": {
+        "heading": "Past broadcasts",
+        "subject": "Subject",
+        "audience": "Audience",
+        "recipients": "Recipients",
+        "sent": "Sent",
+        "failed": "Failed",
+        "status": "Status",
+        "date": "Date",
+        "empty": "No broadcasts sent yet.",
+        "error": "Failed to load broadcasts"
+      },
+      "status": {
+        "queued": "Queued",
+        "sending": "Sending",
+        "sent": "Sent",
+        "partial": "Partial",
+        "failed": "Failed"
+      },
+      "toast": {
+        "testSent": "Test email sent to {email}",
+        "testFailed": "Couldn't send the test email",
+        "sent": "Broadcast sent to {sent} of {total} recipients",
+        "sendFailed": "Couldn't send the broadcast",
+        "validation": "Add a subject and message first"
+      }
     },
     "referralContests": {
       "titleMeta": "Referral Contests - Admin - Rallia",
@@ -7886,7 +7973,7 @@
           "description": "Hear about matches forming nearby"
         }
       },
-      "enable": "Enable Precise Location",
+      "enable": "Continue",
       "privacyNote": "Change anytime in Settings."
     },
     "notificationPermission": {
@@ -7916,7 +8003,7 @@
     },
     "trackingPermission": {
       "title": "Help us improve Rallia",
-      "subtitle": "Allow tracking so we can match you with better opponents and grow the app based on what actually helps players find games.",
+      "subtitle": "On the next screen, iOS will ask whether Rallia can track activity. Sharing it helps us suggest better opponents and build features that help players find games.",
       "benefits": {
         "betterMatches": {
           "title": "Better match suggestions",
@@ -7931,9 +8018,8 @@
           "description": "We never sell your data — only use it to make Rallia better"
         }
       },
-      "enable": "Allow Tracking",
-      "skip": "Not Now",
-      "privacyNote": "Change anytime in Settings."
+      "enable": "Continue",
+      "privacyNote": "You choose on the next screen. Change anytime in Settings."
     },
     "discovery": {
       "title": "How did you hear about us?",
@@ -9729,10 +9815,10 @@
       "cancel": "Keep going"
     },
     "step1": {
-      "bubbleHit": "Hey 👋 Welcome back — you smashed your goal last week. Streak still climbing. 🔥",
-      "bubbleMet": "Hey 👋 Welcome back — you hit all {goal} sessions last week. Streak alive and well. 💪",
-      "bubbleMiss": "Hey 👋 Welcome back — you missed the goal, but not the streak. Let's get back on track. 🌱",
-      "bubbleFirstTime": "Hey 👋 Welcome aboard! Let's set up your first week — it only takes a minute. 🎾",
+      "bubbleHit": "Schedule locked 🔒 And last week? You smashed your goal — streak's still climbing.",
+      "bubbleMet": "Schedule locked 🔒 Last week you hit all {goal} sessions too. Streak alive and well.",
+      "bubbleMiss": "Schedule locked 🔒 Missed last week's goal, but not the streak. Let's bounce back.",
+      "bubbleFirstTime": "Schedule locked 🔒 This is your first check-in — let's get your streak started.",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
       "streakSubtitle": "weeks",
@@ -9757,14 +9843,14 @@
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
       "recapPlayed": "Played",
-      "cta": "Let's plan this week 🎾"
+      "cta": "Set my goal 🎯"
     },
     "step2": {
-      "bubble": "When are you free this week? Tap or drag to paint your slots — I'll work my matchmaking magic around them. ✨",
+      "bubble": "Hey 👋 When are you free this week? Tap or drag to paint your slots. ✨",
       "cta": "Looks good"
     },
     "step3": {
-      "bubble": "How many sessions do you want to play this week? I'll keep an eye on the goal. 🎯",
+      "goalHeading": "How many sessions this week? 🎯",
       "frequencyOption": {
         "1": "1×",
         "2": "2×",

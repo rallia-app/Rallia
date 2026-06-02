@@ -95,7 +95,6 @@ export function useUserLocation(): UseUserLocationReturn {
       // start immediately. Only used on cold start (when we don't already
       // have a location); on foreground refresh we skip straight to the
       // fresh fix to avoid an unnecessary swap.
-      let seededFromLastKnown = false;
       if (!locationRef.current) {
         try {
           const lastKnown = await Location.getLastKnownPositionAsync({
@@ -109,8 +108,6 @@ export function useUserLocation(): UseUserLocationReturn {
             };
             setLocation(coords);
             setLoading(false);
-            seededFromLastKnown = true;
-            Logger.debug('user_location_last_known', coords);
           }
         } catch {
           // Some platforms / configurations may throw; ignore and fall
@@ -130,12 +127,6 @@ export function useUserLocation(): UseUserLocationReturn {
         longitude: position.coords.longitude,
       });
       setLoading(false);
-
-      Logger.debug('user_location_fetched', {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        seededFromLastKnown,
-      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const isUnavailable =

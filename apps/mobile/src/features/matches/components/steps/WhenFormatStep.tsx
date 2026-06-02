@@ -19,7 +19,7 @@ import {
   TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
@@ -160,7 +160,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   isLocked = false,
 }) => {
   const {
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = form;
@@ -199,11 +199,15 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
     };
   }, [isCustomDurationFocused]);
 
-  const matchDate = watch('matchDate');
-  const startTime = watch('startTime');
-  const timezone = watch('timezone');
-  const duration = watch('duration');
-  const customDurationMinutes = watch('customDurationMinutes');
+  // Use useWatch (not form.watch) so this child component re-renders on its own
+  // when these fields change. form.watch only re-renders the component that called
+  // useForm (the wizard); with React Compiler memoizing this element, that re-render
+  // wouldn't reach here, leaving selections like duration visually stale.
+  const matchDate = useWatch({ control, name: 'matchDate' });
+  const startTime = useWatch({ control, name: 'startTime' });
+  const timezone = useWatch({ control, name: 'timezone' });
+  const duration = useWatch({ control, name: 'duration' });
+  const customDurationMinutes = useWatch({ control, name: 'customDurationMinutes' });
 
   // Get display label for selected timezone
   const selectedTimezoneOption = useMemo(() => {

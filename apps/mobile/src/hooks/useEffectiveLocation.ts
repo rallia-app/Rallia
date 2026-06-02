@@ -21,7 +21,12 @@
 
 import { useMemo, useRef } from 'react';
 
-import { useLocationMode, useUserHomeLocation } from '#/context';
+// Import directly from the defining context files (not the '#/context' barrel)
+// to break a require cycle: the barrel re-exports SubscriptionContext, which
+// pulls in the navigation barrel → AppNavigator → every screen → back to the
+// '#/hooks' barrel that re-exports this hook. Direct imports sever that edge.
+import { useLocationMode } from '#/context/LocationModeContext';
+import { useUserHomeLocation } from '#/context/UserLocationContext';
 
 import { useUserLocation } from './useUserLocation';
 

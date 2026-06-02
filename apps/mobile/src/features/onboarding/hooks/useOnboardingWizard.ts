@@ -208,15 +208,17 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       return !!(formData.playingHand && formData.maxTravelDistance);
 
     case 'favorite-sites': {
-      // Require at least 3 favorites; when both sports selected, need 3 per sport
+      // Require at least 2 favorites; when both sports selected, need 2 per sport.
+      // Must match the gate in OnboardingWizard (isButtonDisabled +
+      // validateAndSaveStep) and the MIN_* constants in FavoriteSitesStep.
       const bothSports =
         formData.selectedSportNames.includes('tennis') &&
         formData.selectedSportNames.includes('pickleball');
       if (bothSports) {
         const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount >= 3 && counts.pickleballCount >= 3;
+        return counts.tennisCount >= 2 && counts.pickleballCount >= 2;
       }
-      return formData.favoriteFacilities.length >= 3;
+      return formData.favoriteFacilities.length >= 2;
     }
 
     case 'availabilities':
@@ -268,9 +270,62 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
    */
   useEffect(() => {
     const loadExistingData = async () => {
+      // The sports picked during pre-onboarding live in this AsyncStorage key
+      // (written by SportContext while the user was still a guest). For a
+      // brand-new user it is the ONLY source of their sports until player_sport
+      // rows exist, and the favorite-sites step is unusable without it
+      // ("Veuillez d'abord sélectionner un sport"). Read it up front, isolated
+      // from the auth/DB calls so a flaky session lookup or a rejected query
+      // can't wipe the selection.
+      let guestSports: GuestSportEntry[] | null = null;
       try {
-        const userId = await DatabaseService.Auth.getCurrentUserId();
+        const guestRaw = await AsyncStorage.getItem(GUEST_SPORTS_STORAGE_KEY);
+        if (guestRaw) {
+          const parsed = JSON.parse(guestRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            guestSports = parsed as GuestSportEntry[];
+          }
+        }
+      } catch (guestError) {
+        Logger.warn('Failed to read pre-onboarding sport selection', { error: guestError });
+      }
+
+      // Apply the guest selection to the form unless sports are already set.
+      // Safe to call from any failure path — it never clobbers loaded data.
+      const seedSportsFromGuest = () => {
+        if (!guestSports) return;
+        const ids = guestSports.map(s => s.id);
+        const names = guestSports.map(s => s.name);
+        setFormData(prev =>
+          prev.selectedSportIds.length > 0
+            ? prev
+            : { ...prev, selectedSportIds: ids, selectedSportNames: names }
+        );
+      };
+
+      try {
+        // Resolve the user id from the cached session first (local, no network),
+        // then fall back to the network-validated lookup. getCurrentUserId()
+        // calls supabase.auth.getUser(), which hits the network and returns null
+        // on a transient error even when a valid session exists — that false
+        // null used to make this one-shot effect bail and load no sports.
+        let userId: string | null = null;
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          userId = session?.user?.id ?? null;
+        } catch {
+          // ignore — fall through to the network-validated lookup
+        }
         if (!userId) {
+          userId = await DatabaseService.Auth.getCurrentUserId();
+        }
+
+        if (!userId) {
+          // No session at all: still seed the sport selection so the wizard is
+          // usable, then stop — we can't read or write user rows without a user.
+          seedSportsFromGuest();
           setIsLoadingData(false);
           return;
         }
@@ -285,6 +340,14 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
         ]);
 
         const updates: Partial<OnboardingFormData> = {};
+
+        // Seed sports from the guest selection up front so a query that returns
+        // no player_sport rows (or one that throws) still leaves the wizard with
+        // the sports the user picked. Authoritative DB rows below override this.
+        if (guestSports) {
+          updates.selectedSportIds = guestSports.map(s => s.id);
+          updates.selectedSportNames = guestSports.map(s => s.name);
+        }
 
         // Profile data
         if (profileRes.data) {
@@ -362,34 +425,25 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
           updates.selectedSportIds = sportIds;
           updates.selectedSportNames = sportNames;
-        } else {
-          // Pre-onboarding's SportStep stores the guest selection in AsyncStorage
-          // (see SportContext.GUEST_SPORTS_STORAGE_KEY). The player_sport rows are
-          // only created later (here on first wizard load), so fall back to that
-          // selection so dynamic rating steps appear.
+        } else if (guestSports) {
+          // No player_sport rows yet — first wizard load after a guest
+          // pre-onboarding. selectedSport* was already seeded from the guest
+          // selection above; persist it to player_sport so subsequent steps
+          // (preferences, favorites, ratings) have a real row to write against.
+          // Failure here is non-fatal: the in-memory selection still drives the
+          // wizard and the rows can be created on a later save.
           try {
-            const guestRaw = await AsyncStorage.getItem(GUEST_SPORTS_STORAGE_KEY);
-            if (guestRaw) {
-              const guestSports = JSON.parse(guestRaw) as GuestSportEntry[];
-              if (Array.isArray(guestSports) && guestSports.length > 0) {
-                updates.selectedSportIds = guestSports.map(s => s.id);
-                updates.selectedSportNames = guestSports.map(s => s.name);
-
-                // Persist to player_sport so subsequent steps (preferences,
-                // favorites, ratings) have a real row to write against.
-                await Promise.all(
-                  guestSports.map((sport, index) =>
-                    DatabaseService.PlayerSport.addPlayerSport({
-                      player_id: userId,
-                      sport_id: sport.id,
-                      is_primary: index === 0,
-                    })
-                  )
-                );
-              }
-            }
+            await Promise.all(
+              guestSports.map((sport, index) =>
+                DatabaseService.PlayerSport.addPlayerSport({
+                  player_id: userId,
+                  sport_id: sport.id,
+                  is_primary: index === 0,
+                })
+              )
+            );
           } catch (guestError) {
-            Logger.warn('Failed to hydrate sports from pre-onboarding selection', {
+            Logger.warn('Failed to persist pre-onboarding sport selection to player_sport', {
               error: guestError,
             });
           }
@@ -508,6 +562,9 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
         Logger.debug('Loaded existing onboarding data', { updates });
       } catch (error) {
         Logger.error('Failed to load existing onboarding data', error as Error);
+        // Don't let a failed DB load strand the user on "select a sport first":
+        // apply the pre-onboarding sport selection so the wizard stays usable.
+        seedSportsFromGuest();
       } finally {
         setIsLoadingData(false);
       }

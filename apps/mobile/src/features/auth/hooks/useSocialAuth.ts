@@ -241,12 +241,13 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       Logger.info('Google sign-in completed successfully', { userId: data.user.id });
 
-      // Check if account is suspended before allowing sign-in
-      const { data: profile } = await supabase
-        .from('profile')
-        .select('account_status')
-        .eq('id', data.user.id)
-        .maybeSingle();
+      // Suspend check + onboarding check are independent profile reads — run
+      // them concurrently so the sign-in sheet doesn't linger for two
+      // sequential round-trips after auth has already succeeded.
+      const [{ data: profile }, needsOnboarding] = await Promise.all([
+        supabase.from('profile').select('account_status').eq('id', data.user.id).maybeSingle(),
+        checkOnboardingStatus(data.user.id),
+      ]);
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Suspended account attempted Google sign-in', { userId: data.user.id });
@@ -260,7 +261,6 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       successHaptic();
 
-      const needsOnboarding = await checkOnboardingStatus(data.user.id);
       Analytics.signInCompleted({ method: 'google', is_new_user: needsOnboarding });
 
       setIsLoading(false);
@@ -365,12 +365,13 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       Logger.info('Apple sign-in completed successfully', { userId: data.user.id });
 
-      // Check if account is suspended before allowing sign-in
-      const { data: profile } = await supabase
-        .from('profile')
-        .select('account_status')
-        .eq('id', data.user.id)
-        .maybeSingle();
+      // Suspend check + onboarding check are independent profile reads — run
+      // them concurrently so the sign-in sheet doesn't linger for two
+      // sequential round-trips after auth has already succeeded.
+      const [{ data: profile }, needsOnboarding] = await Promise.all([
+        supabase.from('profile').select('account_status').eq('id', data.user.id).maybeSingle(),
+        checkOnboardingStatus(data.user.id),
+      ]);
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Suspended account attempted Apple sign-in', { userId: data.user.id });
@@ -384,7 +385,6 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       successHaptic();
 
-      const needsOnboarding = await checkOnboardingStatus(data.user.id);
       Analytics.signInCompleted({ method: 'apple', is_new_user: needsOnboarding });
 
       setIsLoading(false);
@@ -477,12 +477,13 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       Logger.info('Facebook sign-in completed successfully', { userId: user.id });
 
-      // Check if account is suspended before allowing sign-in
-      const { data: profile } = await supabase
-        .from('profile')
-        .select('account_status')
-        .eq('id', user.id)
-        .maybeSingle();
+      // Suspend check + onboarding check are independent profile reads — run
+      // them concurrently so the sign-in sheet doesn't linger for two
+      // sequential round-trips after auth has already succeeded.
+      const [{ data: profile }, needsOnboarding] = await Promise.all([
+        supabase.from('profile').select('account_status').eq('id', user.id).maybeSingle(),
+        checkOnboardingStatus(user.id),
+      ]);
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Suspended account attempted Facebook sign-in', { userId: user.id });
@@ -496,7 +497,6 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       successHaptic();
 
-      const needsOnboarding = await checkOnboardingStatus(user.id);
       Analytics.signInCompleted({ method: 'facebook', is_new_user: needsOnboarding });
 
       setIsLoading(false);

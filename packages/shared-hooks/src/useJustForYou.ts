@@ -3,9 +3,9 @@
  *
  * TanStack wrapper around `getJustForYou` from `@rallia/shared-services` — a
  * single-round-trip RPC that owns scoring + slot expansion + cross-pool dedup
- * server-side. Anon callers fall through to the legacy `composeJustForYou`
- * orchestration inside the service wrapper, so the hook API is identical
- * across both paths.
+ * server-side. Anon callers route (inside the service wrapper) to the
+ * matches-only `get_nearby_public_matches` RPC instead, so the hook API is
+ * identical across both paths.
  */
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
@@ -28,9 +28,12 @@ export const justForYouKeys = {
     lng: number;
     maxDistanceKm: number;
     matchLimit: number;
-    /** Stable hash of scoring prefs so cache invalidates when prefs change. */
-    prefsHash: string;
   }) => [...justForYouKeys.all, params] as const,
+  // NOTE: scoring prefs (rating/favorites/duration/type) and gender are
+  // deliberately NOT part of the key. Signed-in derives all of them server-side
+  // from the caller id; anon has none; gender is fixed per caller (and implied
+  // by playerId). Keying on them only caused cold-start refetches as they
+  // trickled in, with no effect on the result.
 };
 
 export interface UseJustForYouOptions {
@@ -64,18 +67,6 @@ export interface UseJustForYouResult {
   isError: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
-}
-
-/** Stable string hash of the scoring prefs (cheap, just for cache keying). */
-function hashPrefs(p: MatchScoringPreferences): string {
-  return [
-    p.playerGender ?? '',
-    p.playerRatingValue ?? '',
-    p.preferredMatchDuration ?? '',
-    p.preferredMatchType ?? '',
-    (p.favoriteFacilityIds ?? []).slice().sort().join(','),
-    p.maxTravelDistanceKm ?? '',
-  ].join('|');
 }
 
 /**
@@ -115,8 +106,6 @@ export function justForYouQueryOptions(
   const hasRequired =
     !!sportId && latitude !== undefined && longitude !== undefined && maxDistanceKm !== undefined;
 
-  const prefsHash = hashPrefs(scoringPreferences);
-
   const queryKey = justForYouKeys.list({
     playerId: playerId ?? '',
     sportId: sportId ?? '',
@@ -124,7 +113,6 @@ export function justForYouQueryOptions(
     lng: roundCoord(longitude),
     maxDistanceKm: maxDistanceKm ?? 0,
     matchLimit,
-    prefsHash,
   });
 
   return {

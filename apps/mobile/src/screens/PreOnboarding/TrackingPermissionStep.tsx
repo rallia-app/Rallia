@@ -1,19 +1,16 @@
 /**
  * TrackingPermissionStep — Fifth step of the iOS pre-onboarding wizard.
  *
- * Persuasive pre-prompt screen that runs before Apple's system ATT
- * (App Tracking Transparency) dialog. The system prompt is one-shot per
- * install — if a user dismisses or denies it, you cannot re-prompt without
- * them going into iOS Settings manually. Industry benchmark: a custom
- * pre-prompt lifts ATT opt-in from ~25% (cold system prompt) to 40–50%
- * by self-selecting receptive users before the irreversible system call.
+ * Informational pre-prompt screen that runs before Apple's system ATT
+ * (App Tracking Transparency) dialog, explaining what the next system
+ * prompt will ask. Per App Review guideline 5.1.1(iv), the only action is
+ * "Continue", which always proceeds to the system prompt — there is no
+ * button that lets the user bypass or delay it. The user's actual choice
+ * happens in Apple's dialog (Allow / Ask App Not to Track).
  *
  * Behavior:
- *   - "Allow tracking" → triggers Apple's system ATT prompt, then
- *     flips Meta SDK advertiser tracking ON for granted, OFF for denied.
- *   - "Not now" → skips without firing the system prompt, preserving
- *     the one-shot for a future opportunity (e.g. a Settings deep link
- *     in profile, added later).
+ *   - "Continue" → triggers Apple's system ATT prompt, then flips Meta SDK
+ *     advertiser tracking ON for granted, OFF for denied.
  *
  * Android is handled at app launch in `initMeta()` — this step is only
  * rendered on iOS by PreOnboardingScreen.
@@ -112,19 +109,6 @@ export function TrackingPermissionStep({
     }
   }, [isRequesting, onContinue]);
 
-  const handleSkip = useCallback(() => {
-    if (isRequesting) return;
-    mediumHaptic();
-    // Deliberately do NOT call the ATT API — we want to preserve the
-    // one-shot system prompt for a later, better moment.
-    Analytics.trackingPermissionResult({
-      granted: false,
-      skipped: true,
-      source: 'pre_onboarding',
-    });
-    onContinue(false);
-  }, [isRequesting, onContinue]);
-
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
@@ -210,15 +194,6 @@ export function TrackingPermissionStep({
           style={styles.enableButton}
         >
           {isRequesting ? t('common.loading') : t('preOnboarding.trackingPermission.enable')}
-        </Button>
-
-        <Button
-          variant="ghost"
-          onPress={handleSkip}
-          disabled={isRequesting}
-          style={styles.skipButton}
-        >
-          {t('preOnboarding.trackingPermission.skip')}
         </Button>
 
         <View style={styles.privacyContainer}>
@@ -321,10 +296,6 @@ const styles = StyleSheet.create({
   },
   enableButton: {
     width: '100%',
-  },
-  skipButton: {
-    width: '100%',
-    marginTop: spacingPixels[2],
   },
 });
 

@@ -458,8 +458,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         }
         const minimumDateOfBirth = new Date();
-        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 13);
-        minimumDateOfBirth.setMonth(minimumDateOfBirth.getMonth() - 1);
+        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 18);
         if (formData.dateOfBirth > minimumDateOfBirth) return true;
         return false;
       }
@@ -531,10 +530,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return false;
         }
 
-        // Check minimum age (13 years and 1 month)
+        // Check minimum age (18 years)
         const minimumDateOfBirth = new Date();
-        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 13);
-        minimumDateOfBirth.setMonth(minimumDateOfBirth.getMonth() - 1);
+        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 18);
         if (formData.dateOfBirth > minimumDateOfBirth) {
           Alert.alert(t('alerts.error'), t('onboarding.validation.minimumAge'));
           warningHaptic();

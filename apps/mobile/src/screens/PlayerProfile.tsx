@@ -444,7 +444,7 @@ const PlayerProfile = () => {
       Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const meters = R * c;
-    if (meters < 100) return t('playerDirectory.nearby');
+    if (meters < 500) return t('playerDirectory.nearby');
     if (meters < 1000) return `${Math.round(meters)} m`;
     return `${(meters / 1000).toFixed(1)} km`;
   })();

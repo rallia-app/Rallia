@@ -77,7 +77,14 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (session) {
+        // Only write auth user_metadata when the locale actually changed.
+        // `auth.updateUser` acquires the GoTrue auth lock; calling it
+        // unconditionally on every sign-in serialized ~9s of token contention
+        // during the cold-start load storm (the whole client stalls behind it).
+        // The metadata copy only feeds OTP/magic-link email language, so it is
+        // safe to skip when it already matches the current locale.
+        const currentMetaLocale = session?.user?.user_metadata?.locale as string | undefined;
+        if (session && currentMetaLocale !== locale) {
           const { error: authError } = await supabase.auth.updateUser({
             data: { locale },
           });

@@ -34,7 +34,9 @@ export function initRevenueCat(): void {
     return;
   }
   if (__DEV__) {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    // WARN (not DEBUG) — DEBUG floods the dev console with per-request logs that
+    // add little value; warnings/errors still surface.
+    Purchases.setLogLevel(LOG_LEVEL.WARN);
   }
   Purchases.configure({ apiKey: RC_ACTIVE_KEY });
 }

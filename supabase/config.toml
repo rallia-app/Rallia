@@ -413,10 +413,24 @@ verify_jwt = false
 [functions.send-morning-digest]
 verify_jwt = false
 
+# Admin email broadcasts — invoked by the Next.js /api/admin/broadcasts route.
+# Auth is validated inside the function (forwarded admin session token).
+[functions.send-broadcast]
+verify_jwt = false
+
 [functions.send-match-reminders]
 verify_jwt = false
 
 [functions.send-check-in-reminders]
+verify_jwt = false
+
+# Weekly check-in family — pg_cron invokes with apikey header; auth validated
+# internally via requireSecretApikey(). Must be verify_jwt = false like every
+# other cron-driven function (omitting it defaults to true → gateway 401).
+[functions.weekly-checkin-reminder]
+verify_jwt = false
+
+[functions.compute-streak-reset]
 verify_jwt = false
 
 [functions.recalculate-reputation-decay]
@@ -425,6 +439,11 @@ verify_jwt = false
 # SWR snapshot refresh — pg_net invokes with apikey header; auth validated
 # internally via requireSecretApikey().
 [functions.refresh-facility-availability]
+verify_jwt = false
+
+# Weekly availability-refresh email — pg_cron invokes with apikey header; auth
+# validated internally via requireSecretApikey(). Same verify_jwt requirement.
+[functions.send-availability-refresh]
 verify_jwt = false
 
 # Client-invoked functions: gateway JWT verification disabled because these
@@ -446,6 +465,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.match-reimbursement-create]
+verify_jwt = false
+
+# Client-invoked (app sends the user's JWT, validated via auth.getUser()).
+[functions.match-payment-mark-manual]
 verify_jwt = false
 
 [functions.stripe-match-webhook]

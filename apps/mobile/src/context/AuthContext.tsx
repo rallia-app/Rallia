@@ -278,12 +278,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
               setSession(null);
             }
           } else if (isSubscribed) {
-            // Check if account is suspended before allowing session
-            const isSuspended = await checkAccountSuspended(user.id);
-            if (!isSuspended && isSubscribed) {
-              setSession(initialSession);
-              previousSessionRef.current = initialSession;
-            }
+            // Set the session immediately so the app starts loading; run the
+            // suspended-account check in the background (it signs the user out
+            // and clears the session if suspended). Awaiting it here serialized
+            // ~6s into the cold-start request burst.
+            setSession(initialSession);
+            previousSessionRef.current = initialSession;
+            void checkAccountSuspended(user.id);
           }
         } else if (isSubscribed) {
           setSession(null);
@@ -326,14 +327,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Check account status on sign-in and token refresh
       // For OAuth sign-in, this is the only interception point
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user?.id) {
-        checkAccountSuspended(newSession.user.id).then(isSuspended => {
-          if (!isSuspended) {
-            setSession(newSession);
-            previousSessionRef.current = newSession;
-          }
-          // If suspended, checkAccountSuspended already cleared session and signed out
-        });
-        return; // Don't set session synchronously — let the check decide
+        // Set the session immediately, then verify suspension in the background
+        // (checkAccountSuspended signs out + clears the session if suspended,
+        // and nulls previousSessionRef first so it won't trip sessionExpired).
+        // Avoids gating the whole post-sign-in load on the suspend-check call.
+        setSession(newSession);
+        previousSessionRef.current = newSession;
+        void checkAccountSuspended(newSession.user.id);
+        return;
       }
 
       setSession(newSession);

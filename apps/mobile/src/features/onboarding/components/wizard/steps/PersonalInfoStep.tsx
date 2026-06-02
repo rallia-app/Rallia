@@ -14,7 +14,6 @@ import {
   Modal,
   Image,
   Pressable,
-  Keyboard,
   LayoutAnimation,
   TextInput,
 } from 'react-native';
@@ -71,14 +70,12 @@ interface FieldErrors {
   gender?: string;
 }
 
-const MINIMUM_AGE_YEARS = 13;
-const MINIMUM_AGE_MONTHS = 1;
+const MINIMUM_AGE_YEARS = 18;
 
-// Calculate minimum date of birth (13 years and 1 month ago)
+// Calculate minimum date of birth (18 years ago)
 const getMinimumDateOfBirth = (): Date => {
   const date = new Date();
   date.setFullYear(date.getFullYear() - MINIMUM_AGE_YEARS);
-  date.setMonth(date.getMonth() - MINIMUM_AGE_MONTHS);
   return date;
 };
 
@@ -92,7 +89,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Referral code state
   const [referralCode, setReferralCode] = useState('');
@@ -111,24 +107,6 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
   const minimumDateOfBirth = useMemo(() => getMinimumDateOfBirth(), []);
   const minimumDateSelectable = useMemo(() => new Date(1900, 0, 1), []);
-
-  // Listen for keyboard events to adjust padding dynamically
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const keyboardShowListener = Keyboard.addListener(showEvent, e => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      keyboardShowListener.remove();
-      keyboardHideListener.remove();
-    };
-  }, []);
 
   // Validation functions
   const validateFirstName = (value: string): string | undefined => {
@@ -311,10 +289,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     <SheetScrollView
       ref={scrollViewRef}
       style={styles.container}
-      contentContainerStyle={[
-        styles.contentContainer,
-        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : spacingPixels[8] },
-      ]}
+      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"

@@ -81,6 +81,9 @@ export function matchJoined(props: {
   sport_id: string;
   sport_name: string;
   discovery_source?: string;
+  /** True for weekly-checkin auto-generated matches — lets us compare the
+   *  auto vs organic conversion funnel (created → joined → filled → played). */
+  is_auto_generated: boolean;
 }): void {
   capture('match_joined', props);
   // Custom engagement event — not in Meta's standard catalog but useful as a
@@ -94,6 +97,7 @@ export function matchFilled(props: {
   sport_id: string;
   sport_name: string;
   format: string;
+  is_auto_generated: boolean;
 }): void {
   capture('match_filled', props);
 }
@@ -102,11 +106,16 @@ export function matchJoinRequested(props: {
   match_id: string;
   sport_id: string;
   sport_name: string;
+  is_auto_generated: boolean;
 }): void {
   capture('match_join_requested', props);
 }
 
-export function matchViewed(props: { match_id: string; source: string }): void {
+export function matchViewed(props: {
+  match_id: string;
+  source: string;
+  is_auto_generated: boolean;
+}): void {
   capture('match_viewed', props);
 }
 
@@ -122,7 +131,11 @@ export function courtBooked(props: {
   capture('court_booked', props);
 }
 
-export function matchCancelled(props: { sport_id: string; sport_name: string }): void {
+export function matchCancelled(props: {
+  sport_id: string;
+  sport_name: string;
+  is_auto_generated: boolean;
+}): void {
   capture('match_cancelled', props);
 }
 
@@ -141,6 +154,9 @@ export function matchOutcomeSubmitted(props: {
   cancellation_reason?: CancellationReasonKind;
   no_show_count?: number;
   opponent_count: number;
+  /** The key conversion signal: outcome='played' on an auto-generated match
+   *  means the wizard turned an open match into a real game. */
+  is_auto_generated: boolean;
 }): void {
   capture('match_outcome_submitted', props);
 }
@@ -161,6 +177,7 @@ export function matchFeedbackCompleted(props: {
   sport_id: string;
   sport_name: string;
   opponent_count: number;
+  is_auto_generated: boolean;
 }): void {
   capture('match_feedback_completed', props);
 }
@@ -182,7 +199,11 @@ export function matchShared(props: { sport_id: string; sport_name: string }): vo
   capture('match_shared', props);
 }
 
-export function matchDeclined(props: { sport_id: string; sport_name: string }): void {
+export function matchDeclined(props: {
+  sport_id: string;
+  sport_name: string;
+  is_auto_generated: boolean;
+}): void {
   capture('match_declined', props);
 }
 
@@ -285,7 +306,11 @@ export function matchSuggestionAvatarTapped(props: {
   capture('match_suggestion_avatar_tapped', props);
 }
 
-export function matchCheckInCompleted(props: { sport_id: string; sport_name: string }): void {
+export function matchCheckInCompleted(props: {
+  sport_id: string;
+  sport_name: string;
+  is_auto_generated: boolean;
+}): void {
   capture('match_check_in_completed', props);
 }
 
@@ -620,4 +645,58 @@ export function restorePurchasesFailed(): void {
 
 export function billingIssueEncountered(): void {
   capture('billing_issue_encountered');
+}
+
+// ---- Weekly Check-In Wizard ----
+// Funnel: opened → step_completed (×3) → submitted → completed; abandoned on
+// exit. All timestamped, so weekly behaviour is sliceable by event time.
+
+export function weeklyCheckinOpened(props: {
+  source: string; // 'auto_opener' | 'banner' | 'manual' | 'unknown'
+  current_streak: number;
+  recap_variant: string; // 'hit' | 'met' | 'miss' | 'first'
+}): void {
+  capture('weekly_checkin_opened', props);
+}
+
+export function weeklyCheckinStepCompleted(props: {
+  step_name: string; // 'welcome_recap' | 'availability' | 'frequency_auto'
+  step_index: number;
+  availability_cells?: number;
+  frequency_goal?: number;
+  auto_create?: boolean;
+  auto_invite?: boolean;
+}): void {
+  capture('weekly_checkin_step_completed', props);
+}
+
+export function weeklyCheckinSubmitted(props: {
+  frequency_goal: number;
+  availability_cells: number;
+  auto_create: boolean;
+  auto_invite: boolean;
+  new_streak: number;
+  milestone_reached: boolean;
+  freeze_earned: boolean;
+}): void {
+  capture('weekly_checkin_submitted', props);
+}
+
+export function weeklyCheckinSubmitFailed(props: { error: string }): void {
+  capture('weekly_checkin_submit_failed', props);
+}
+
+export function weeklyCheckinCompleted(props: {
+  duration_seconds: number;
+  new_streak: number;
+}): void {
+  capture('weekly_checkin_completed', props);
+}
+
+export function weeklyCheckinAbandoned(props: {
+  last_step: string;
+  step_index: number;
+  duration_seconds: number;
+}): void {
+  capture('weekly_checkin_abandoned', props);
 }

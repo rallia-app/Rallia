@@ -11,10 +11,26 @@
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement, type ReactNode } from 'react';
 import { usePlayerSports } from './usePlayerSports';
 import { supabase } from '@rallia/shared-services';
 
 jest.mock('@rallia/shared-services');
+
+// usePlayerSports is now backed by React Query, so every render needs a
+// QueryClientProvider. A fresh client per render keeps cached results from
+// leaking across tests; retry:false makes the error case surface immediately
+// instead of retrying with backoff (which would hang the test).
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const Wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
+  Wrapper.displayName = 'QueryClientTestWrapper';
+  return Wrapper;
+}
 
 describe('usePlayerSports', () => {
   const mockPlayerId = 'player-123';
@@ -65,7 +81,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.loading).toBe(true);
       expect(result.current.playerSports).toEqual([]);
@@ -73,7 +91,7 @@ describe('usePlayerSports', () => {
     });
 
     it('should return empty array and not loading when playerId is undefined', async () => {
-      const { result } = renderHook(() => usePlayerSports(undefined));
+      const { result } = renderHook(() => usePlayerSports(undefined), { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -96,7 +114,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -116,7 +136,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -147,7 +169,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -172,7 +196,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -200,7 +226,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -221,7 +249,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -243,7 +273,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -302,6 +334,7 @@ describe('usePlayerSports', () => {
 
       const { result, rerender } = renderHook(({ playerId }) => usePlayerSports(playerId), {
         initialProps: { playerId: 'player-123' },
+        wrapper: createWrapper(),
       });
 
       await waitFor(() => {
@@ -333,6 +366,7 @@ describe('usePlayerSports', () => {
 
       const { result, rerender } = renderHook(({ playerId }) => usePlayerSports(playerId), {
         initialProps: { playerId: 'player-123' as string | undefined },
+        wrapper: createWrapper(),
       });
 
       await waitFor(() => {
@@ -361,7 +395,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -381,7 +417,9 @@ describe('usePlayerSports', () => {
         }),
       });
 
-      const { result } = renderHook(() => usePlayerSports(mockPlayerId));
+      const { result } = renderHook(() => usePlayerSports(mockPlayerId), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);

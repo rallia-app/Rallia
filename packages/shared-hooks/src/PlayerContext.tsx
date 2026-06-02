@@ -146,25 +146,20 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       setLoading(true);
       setError(null);
 
-      // Fetch player and primary sport rating in parallel
-      const [playerResult, primarySportResult, ratingsResult, preferencesResult, reputationResult] =
-        await Promise.all([
-          // Player data
-          supabase.from('player').select('*').eq('id', userId).single(),
+      // Fetch player and primary sport rating in parallel.
+      // NOTE: the primary sport_id is derived from `preferencesResult` below
+      // (it already selects `is_primary` + `sport_id` for every row), so we do
+      // NOT issue a separate primary-sport query — one fewer round-trip in the
+      // cold-start burst, result-identical.
+      const [playerResult, ratingsResult, preferencesResult, reputationResult] = await Promise.all([
+        // Player data
+        supabase.from('player').select('*').eq('id', userId).single(),
 
-          // Primary sport
-          supabase
-            .from('player_sport')
-            .select('sport_id')
-            .eq('player_id', userId)
-            .eq('is_primary', true)
-            .maybeSingle(),
-
-          // All player ratings (expanded for SportProfile cache)
-          supabase
-            .from('player_rating_score')
-            .select(
-              `
+        // All player ratings (expanded for SportProfile cache)
+        supabase
+          .from('player_rating_score')
+          .select(
+            `
             id,
             rating_score_id,
             badge_status,
@@ -181,16 +176,16 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
               )
             )
           `
-            )
-            .eq('player_id', userId)
-            .order('is_certified', { ascending: false })
-            .order('created_at', { ascending: false }),
+          )
+          .eq('player_id', userId)
+          .order('is_certified', { ascending: false })
+          .order('created_at', { ascending: false }),
 
-          // All player sport preferences with play style and attributes
-          supabase
-            .from('player_sport')
-            .select(
-              `
+        // All player sport preferences with play style and attributes
+        supabase
+          .from('player_sport')
+          .select(
+            `
             id,
             sport_id,
             is_active,
@@ -204,16 +199,16 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
               play_attribute:play_attribute_id (id, name, description, category)
             )
           `
-            )
-            .eq('player_id', userId),
+          )
+          .eq('player_id', userId),
 
-          // Reputation data
-          supabase
-            .from('player_reputation')
-            .select('reputation_score, reputation_tier, total_events, matches_completed, is_public')
-            .eq('player_id', userId)
-            .maybeSingle(),
-        ]);
+        // Reputation data
+        supabase
+          .from('player_reputation')
+          .select('reputation_score, reputation_tier, total_events, matches_completed, is_public')
+          .eq('player_id', userId)
+          .maybeSingle(),
+      ]);
 
       // Handle player result
       if (playerResult.error) {
@@ -353,8 +348,11 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
       }
       setSportPreferences(prefsMap);
 
-      // Handle primary rating result
-      const primarySportId = primarySportResult.data?.sport_id;
+      // Handle primary rating result — primary sport_id derived from the
+      // preferences rows (the row flagged is_primary) instead of a separate query.
+      const primarySportId = (preferencesResult.data ?? []).find(ps => ps.is_primary)?.sport_id as
+        | string
+        | undefined;
       if (primarySportId && ratingsMap[primarySportId]) {
         setPrimaryRating(ratingsMap[primarySportId]);
       } else {

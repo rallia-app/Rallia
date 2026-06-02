@@ -26,11 +26,10 @@ import { uploadImage, replaceImage } from '#/services/imageUpload';
 import { useImagePicker, useThemeStyles, useTranslation } from '#/hooks';
 import { PhoneInput } from '#/components/PhoneInput';
 
-// Calculate minimum date of birth (13 years and 1 month ago)
+// Calculate minimum date of birth (18 years ago)
 const getMinimumDateOfBirth = (): Date => {
   const date = new Date();
-  date.setFullYear(date.getFullYear() - 13);
-  date.setMonth(date.getMonth() - 1);
+  date.setFullYear(date.getFullYear() - 18);
   return date;
 };
 

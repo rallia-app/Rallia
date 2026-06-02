@@ -16,7 +16,10 @@ import { createMatchFromSuggestion } from '@rallia/shared-services';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { usePlayerSports, usePlayer } from '@rallia/shared-hooks';
 
-import { useActionsSheet, useSport } from '#/context';
+// Direct imports (not the '#/context' barrel) to avoid the hooks↔context↔
+// navigation require cycle — see useEffectiveLocation for the full chain.
+import { useActionsSheet } from '#/context/ActionsSheetContext';
+import { useSport } from '#/context/SportContext';
 import * as Analytics from '#/services/analytics';
 import type { SuggestionSource } from '#/services/analytics';
 import type { InvitePayload, InviteState, SuggestionCardLabels } from '#/components/SuggestionCard';

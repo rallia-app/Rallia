@@ -1,0 +1,46 @@
+-- ════════════════════════════════════════════════════════════════════════
+-- get_just_for_you — disable JIT for the function
+-- ════════════════════════════════════════════════════════════════════════
+--
+-- Symptom: signed-in Home "Just for you" carousel takes ~10s and returns
+-- nothing on first load after login, but pull-to-refresh returns results in
+-- under a second.
+--
+-- Root cause: NOT data volume and NOT cold disk I/O. Measured on prod against
+-- a real caller with EXPLAIN (ANALYZE, BUFFERS) — every buffer was a
+-- `shared hit` (zero disk reads) yet the call still took multiple seconds.
+-- The cost is per-backend JIT compilation. get_just_for_you runs the match
+-- pool AND the suggestion pool AND builds full MatchWithDetails JSONB in a
+-- single ~15-CTE statement, so its estimated cost sails past jit_above_cost
+-- (and jit_optimize_above_cost = 500000). On the first execution in a fresh
+-- pooled backend, Postgres LLVM-compiles + optimizes hundreds of expressions
+-- before running anything. At Rallia's row scale (hundreds of players) that
+-- compile time dwarfs any runtime saving.
+--
+-- Measured (caller a7744063, tennis, prod, all buffers cached):
+--   fresh backend, JIT on  (what the user hits at login) : ~3826 ms
+--   warm backend,  JIT on  (≈ pull-to-refresh)           :  ~857 ms
+--   fresh backend, JIT off (DISCARD PLANS; SET jit=off)  :  ~228 ms
+--
+-- The first-execution JIT tax (~3.6s) is what tips cold logins over the 8s
+-- `authenticated` statement_timeout — the RPC errors out and the carousel
+-- renders empty; the refetch lands on a now-warm backend and succeeds. JIT is
+-- also a net loss even warm here (857ms -> 228ms). Disabling it is strictly
+-- faster in every regime measured and removes the timeout-on-cold-login class
+-- of failure entirely.
+--
+-- jit is a GUC, so we attach it to the function with ALTER FUNCTION ... SET;
+-- it applies for the duration of each call (including the nested RETURN QUERY)
+-- and is trivially reversible (RESET). The function body is unchanged, so
+-- results are byte-identical and no TS type regen is needed.
+--
+-- Scope: only get_just_for_you. get_match_suggestions_scored measured ~209ms
+-- with JIT on (its query cost stays below the JIT threshold, so JIT never
+-- triggers). get_match_suggestions_anon is slow for an unrelated reason
+-- (~155k buffers from scanning the whole player pool with no caller filter) —
+-- tracked separately.
+-- ════════════════════════════════════════════════════════════════════════
+
+ALTER FUNCTION public.get_just_for_you(
+  uuid, uuid, double precision, double precision, double precision, text, integer
+) SET jit = off;

@@ -1197,6 +1197,107 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_broadcast: {
+        Row: {
+          audience: Json;
+          body: string;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          cta_text: string | null;
+          cta_url: string | null;
+          failed_count: number;
+          id: string;
+          recipients_total: number;
+          sent_count: number;
+          status: string;
+          subject: string;
+        };
+        Insert: {
+          audience?: Json;
+          body: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          cta_text?: string | null;
+          cta_url?: string | null;
+          failed_count?: number;
+          id?: string;
+          recipients_total?: number;
+          sent_count?: number;
+          status?: string;
+          subject: string;
+        };
+        Update: {
+          audience?: Json;
+          body?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          cta_text?: string | null;
+          cta_url?: string | null;
+          failed_count?: number;
+          id?: string;
+          recipients_total?: number;
+          sent_count?: number;
+          status?: string;
+          subject?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'email_broadcast_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'admin';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      email_broadcast_recipient: {
+        Row: {
+          broadcast_id: string;
+          email: string;
+          id: number;
+          resend_id: string | null;
+          sent_at: string;
+          status: string;
+          user_id: string | null;
+        };
+        Insert: {
+          broadcast_id: string;
+          email: string;
+          id?: number;
+          resend_id?: string | null;
+          sent_at?: string;
+          status?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          broadcast_id?: string;
+          email?: string;
+          id?: number;
+          resend_id?: string | null;
+          sent_at?: string;
+          status?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'email_broadcast_recipient_broadcast_id_fkey';
+            columns: ['broadcast_id'];
+            isOneToOne: false;
+            referencedRelation: 'email_broadcast';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'email_broadcast_recipient_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       facility: {
         Row: {
           address: string | null;
@@ -7111,6 +7212,21 @@ export type Database = {
           total_active_bans: number;
         }[];
       };
+      get_broadcast_recipients: {
+        Args: {
+          p_active_since?: string;
+          p_city?: string;
+          p_locale?: string;
+          p_only_subscribers?: boolean;
+          p_sport_id?: string;
+        };
+        Returns: {
+          email: string;
+          first_name: string;
+          preferred_locale: string;
+          user_id: string;
+        }[];
+      };
       get_certification_funnel: {
         Args: never;
         Returns: {
@@ -9011,7 +9127,8 @@ export type Database = {
         | 'payouts_expired_refunded'
         | 'reimbursement_received'
         | 'reimbursement_all_received'
-        | 'availability_refresh_reminder';
+        | 'availability_refresh_reminder'
+        | 'admin_broadcast';
       organization_nature_enum: 'public' | 'private';
       organization_type: 'club' | 'facility' | 'league' | 'academy' | 'association';
       organization_type_enum: 'club' | 'municipality' | 'city' | 'association';
@@ -9448,6 +9565,7 @@ export const Constants = {
         'reimbursement_received',
         'reimbursement_all_received',
         'availability_refresh_reminder',
+        'admin_broadcast',
       ],
       organization_nature_enum: ['public', 'private'],
       organization_type: ['club', 'facility', 'league', 'academy', 'association'],

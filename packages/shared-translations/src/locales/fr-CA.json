@@ -1498,6 +1498,13 @@
     "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
     "managePreferences": "Gérer les préférences de notification"
   },
+  "broadcastUnsubscribe": {
+    "successTitle": "Désabonnement effectué",
+    "successMessage": "Tu ne recevras plus ces courriels. Tu peux les réactiver à tout moment depuis tes préférences de notification.",
+    "errorTitle": "Impossible de te désabonner",
+    "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
+    "managePreferences": "Gérer les préférences de notification"
+  },
   "onboarding": {
     "pageTitle": "Créer votre organisation",
     "pageDescription": "Configurez le profil de votre organisation pour commencer",
@@ -1678,7 +1685,7 @@
       "playerNotFound": "Joueur non trouvé. Veuillez réessayer.",
       "invalidRating": "Classement sélectionné invalide",
       "unexpectedError": "Une erreur inattendue s'est produite.",
-      "minimumAge": "Vous devez avoir au moins 13 ans et 1 mois pour utiliser cette application.",
+      "minimumAge": "Vous devez avoir au moins 18 ans pour utiliser cette application.",
       "selectDateOfBirth": "Veuillez sélectionner votre date de naissance",
       "selectGender": "Veuillez sélectionner une option de genre valide",
       "failedToUpdateProfile": "Échec de la mise à jour de vos informations. Veuillez réessayer.",
@@ -1780,13 +1787,13 @@
     },
     "favoriteSitesStep": {
       "title": "Sélectionnez vos terrains favoris",
-      "subtitle": "Choisissez au moins 3 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
-      "subtitleBothSports": "Choisissez au moins 3 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
+      "subtitle": "Choisissez au moins 2 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "subtitleBothSports": "Choisissez au moins 2 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
       "selected": "sélectionnés",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Veuillez sélectionner au moins 3 sites de jeu favoris.",
-      "selectMinimumPerSport": "Veuillez sélectionner au moins 3 sites de jeu pour chaque sport (tennis et pickleball).",
+      "selectMinimum": "Veuillez sélectionner au moins 2 sites de jeu favoris.",
+      "selectMinimumPerSport": "Veuillez sélectionner au moins 2 sites de jeu pour chaque sport (tennis et pickleball).",
       "searchLabel": "Rechercher un site de jeu",
       "searchPlaceholder": "Tapez pour rechercher...",
       "loading": "Chargement des sites de jeu à proximité...",
@@ -3140,7 +3147,8 @@
     "pendingRequests": "{count} en attente",
     "courtStatus": {
       "readyToPlay": "Prêt à jouer",
-      "courtBooked": "Terrain Réservé"
+      "courtBooked": "Terrain Réservé",
+      "courtsAvailable": "{count} terrains disponibles"
     },
     "tier": {
       "mostWanted": "Incontournable",
@@ -5954,7 +5962,86 @@
       "settings": "Paramètres",
       "map": "Carte",
       "communications": "Communications",
+      "emails": "Courriels",
       "referralContests": "Concours de parrainage"
+    },
+    "emails": {
+      "titleMeta": "Courriels - Admin - Rallia",
+      "descriptionMeta": "Composer et envoyer des courriels en lot aux utilisateurs",
+      "title": "Courriels",
+      "description": "Composez et envoyez un courriel en lot à un segment d'utilisateurs.",
+      "compose": {
+        "heading": "Composer",
+        "subjectLabel": "Objet",
+        "subjectPlaceholder": "De quoi s'agit-il ?",
+        "bodyLabel": "Message",
+        "bodyPlaceholder": "Rédigez votre message…",
+        "ctaHeading": "Appel à l'action (facultatif)",
+        "ctaTextLabel": "Libellé du bouton",
+        "ctaTextPlaceholder": "p. ex. Ouvrir Rallia",
+        "ctaUrlLabel": "Lien du bouton",
+        "ctaUrlPlaceholder": "https://rallia.app/…"
+      },
+      "audience": {
+        "heading": "Audience",
+        "everyone": "Tout le monde",
+        "sport": "Sport",
+        "anySport": "Tous les sports",
+        "city": "Ville",
+        "cityPlaceholder": "p. ex. Montréal",
+        "locale": "Langue",
+        "anyLocale": "Toutes les langues",
+        "activeSince": "Actif depuis",
+        "activeAny": "N'importe quand",
+        "active30": "30 derniers jours",
+        "active90": "90 derniers jours",
+        "onlySubscribers": "Abonnés Premium seulement",
+        "recipients": "{count} destinataires",
+        "recipientsLoading": "Calcul des destinataires…"
+      },
+      "preview": {
+        "heading": "Aperçu",
+        "light": "Clair",
+        "dark": "Sombre",
+        "empty": "Ajoutez un objet et un message pour voir l'aperçu."
+      },
+      "actions": {
+        "sendTest": "M'envoyer un test",
+        "send": "Envoyer le courriel",
+        "sending": "Envoi en cours…"
+      },
+      "confirm": {
+        "title": "Envoyer ce courriel ?",
+        "description": "Ce courriel sera envoyé à {count} utilisateurs et ne peut pas être annulé.",
+        "cancel": "Annuler",
+        "confirm": "Envoyer à {count}"
+      },
+      "history": {
+        "heading": "Envois précédents",
+        "subject": "Objet",
+        "audience": "Audience",
+        "recipients": "Destinataires",
+        "sent": "Envoyés",
+        "failed": "Échecs",
+        "status": "Statut",
+        "date": "Date",
+        "empty": "Aucun envoi pour l'instant.",
+        "error": "Échec du chargement des envois"
+      },
+      "status": {
+        "queued": "En file",
+        "sending": "Envoi",
+        "sent": "Envoyé",
+        "partial": "Partiel",
+        "failed": "Échec"
+      },
+      "toast": {
+        "testSent": "Courriel test envoyé à {email}",
+        "testFailed": "Impossible d'envoyer le courriel test",
+        "sent": "Courriel envoyé à {sent} des {total} destinataires",
+        "sendFailed": "Impossible d'envoyer le courriel",
+        "validation": "Ajoutez d'abord un objet et un message"
+      }
     },
     "referralContests": {
       "titleMeta": "Concours de parrainage - Admin - Rallia",
@@ -7886,7 +7973,7 @@
           "description": "Soyez averti des parties à proximité"
         }
       },
-      "enable": "Activer la localisation précise",
+      "enable": "Continuer",
       "privacyNote": "Modifiable dans Réglages."
     },
     "notificationPermission": {
@@ -7916,7 +8003,7 @@
     },
     "trackingPermission": {
       "title": "Aidez-nous à améliorer Rallia",
-      "subtitle": "Autorisez le suivi pour qu'on puisse vous proposer de meilleurs adversaires et faire évoluer l'app selon ce qui aide vraiment les joueurs à trouver des matchs.",
+      "subtitle": "À l'écran suivant, iOS vous demandera si Rallia peut suivre votre activité. Le partager nous aide à vous proposer de meilleurs adversaires et à créer des fonctions qui aident les joueurs à trouver des matchs.",
       "benefits": {
         "betterMatches": {
           "title": "Meilleures suggestions de matchs",
@@ -7931,9 +8018,8 @@
           "description": "On ne vend jamais vos données — uniquement pour améliorer Rallia"
         }
       },
-      "enable": "Autoriser le suivi",
-      "skip": "Plus tard",
-      "privacyNote": "Modifiable dans Réglages."
+      "enable": "Continuer",
+      "privacyNote": "Vous choisissez à l'écran suivant. Modifiable dans Réglages."
     },
     "discovery": {
       "title": "Comment avez-vous entendu parler de nous?",
@@ -9729,10 +9815,10 @@
       "cancel": "Continuer"
     },
     "step1": {
-      "bubbleHit": "Salut 👋 De retour — tu as explosé ton objectif la semaine passée. La séquence grimpe. 🔥",
-      "bubbleMet": "Salut 👋 De retour — tu as joué tes {goal} sessions la semaine passée. La séquence tient bon. 💪",
-      "bubbleMiss": "Salut 👋 De retour — tu as manqué l'objectif, mais pas la séquence. On se replace cette semaine. 🌱",
-      "bubbleFirstTime": "Salut 👋 Bienvenue à bord! On configure ta première semaine — ça prend une minute. 🎾",
+      "bubbleHit": "Horaire enregistré 🔒 Objectif explosé la semaine passée — la séquence grimpe.",
+      "bubbleMet": "Horaire enregistré 🔒 {goal} sessions jouées la semaine passée. La séquence tient bon.",
+      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué, mais pas la séquence. On se replace.",
+      "bubbleFirstTime": "Horaire enregistré 🔒 C'est ton premier check-in — on lance ta séquence.",
       "streakTitle": "Séquence de {count} semaines",
       "streakTitleZero": "Commence une séquence cette semaine",
       "streakSubtitle": "semaines",
@@ -9757,14 +9843,14 @@
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
       "recapPlayed": "Joué",
-      "cta": "Planifions la semaine 🎾"
+      "cta": "Fixons mon objectif 🎯"
     },
     "step2": {
-      "bubble": "Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages — je vais faire opérer ma magie autour de ça. ✨",
+      "bubble": "Salut 👋 Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages. ✨",
       "cta": "Parfait"
     },
     "step3": {
-      "bubble": "Combien de sessions veux-tu jouer cette semaine? Je vais garder l'œil sur l'objectif. 🎯",
+      "goalHeading": "Combien de sessions cette semaine? 🎯",
       "frequencyOption": {
         "1": "1×",
         "2": "2×",

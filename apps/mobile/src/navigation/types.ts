@@ -102,7 +102,8 @@ export type RootStackParamList = {
 
   // Weekly check-in wizard — modal, full-screen, no gesture dismiss.
   // Entry points: Home banner CTA, splash-complete auto-opener, push deep link.
-  WeeklyCheckIn: undefined;
+  // `source` is for analytics (which entry point opened the wizard).
+  WeeklyCheckIn: { source?: string } | undefined;
 };
 
 // =============================================================================
