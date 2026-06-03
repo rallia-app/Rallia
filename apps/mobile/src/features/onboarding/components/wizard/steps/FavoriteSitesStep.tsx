@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
-import { useFacilitySearch } from '@rallia/shared-hooks';
+import { useFacilitySearch, useSports } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 
@@ -69,6 +69,15 @@ interface FavoriteSitesStepProps {
 
 const MIN_SINGLE_SPORT = 2;
 const MIN_BOTH_SPORTS = 2;
+
+// Fallback location (Parc Jeanne-Mance, Montréal) used when the user has no
+// saved coordinates and device location is unavailable, so the facility list
+// still resolves instead of stranding on the "no location" empty state.
+const JEANNE_MANCE_PARK_FALLBACK = { latitude: 45.5145, longitude: -73.5836 } as const;
+
+// Fallback sports (by slug) searched when no sport reached the step, resolved
+// to real sport UUIDs via useSports() so facilities still display.
+const FALLBACK_SPORT_SLUGS = ['tennis', 'pickleball'];
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -296,9 +305,29 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
   const bothSports = hasTennis && hasPickleball;
 
   const { location: effectiveLocation, isLoading: locationLoading } = useEffectiveLocation();
+  const { sports: allSports, loading: sportsLoading } = useSports();
 
-  const latitude = propLatitude ?? effectiveLocation?.latitude ?? null;
-  const longitude = propLongitude ?? effectiveLocation?.longitude ?? null;
+  // Coordinate fallback: saved location → device location → Parc Jeanne-Mance.
+  // Defer the park fallback until device location finishes loading so we don't
+  // flash park results and then re-search when the real location resolves.
+  const latitude =
+    propLatitude ??
+    effectiveLocation?.latitude ??
+    (locationLoading ? null : JEANNE_MANCE_PARK_FALLBACK.latitude);
+  const longitude =
+    propLongitude ??
+    effectiveLocation?.longitude ??
+    (locationLoading ? null : JEANNE_MANCE_PARK_FALLBACK.longitude);
+
+  // Sport fallback: if no sport reached the step, search tennis + pickleball so
+  // facilities still display. Display-only — never written back to the user's
+  // actual sport selection.
+  const needsSportFallback = !sportIds?.length;
+  const effectiveSportIds = useMemo(() => {
+    if (sportIds?.length) return sportIds;
+    const fallbackIds = allSports.filter(s => FALLBACK_SPORT_SLUGS.includes(s.name)).map(s => s.id);
+    return fallbackIds.length ? fallbackIds : undefined;
+  }, [sportIds, allSports]);
 
   // Use facility search hook
   const {
@@ -308,15 +337,19 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     fetchNextPage,
     isFetchingNextPage,
   } = useFacilitySearch({
-    sportIds,
+    sportIds: effectiveSportIds,
     latitude: latitude ?? undefined,
     longitude: longitude ?? undefined,
     searchQuery,
-    enabled: !!sportIds?.length && latitude !== null && longitude !== null,
+    enabled: !!effectiveSportIds?.length && latitude !== null && longitude !== null,
   });
 
-  // Combined loading state
-  const isLoading = facilitiesLoading || (locationLoading && latitude === null);
+  // Combined loading state. Wait on the sport fetch only when we actually need
+  // the fallback, so the normal (sport-selected) path is unaffected.
+  const isLoading =
+    facilitiesLoading ||
+    (locationLoading && latitude === null) ||
+    (needsSportFallback && sportsLoading);
 
   // Get selected facilities from form data (array of FacilitySearchResult)
   // Memoize to prevent dependency changes on every render
@@ -408,7 +441,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
       );
     }
 
-    if (!sportIds?.length) {
+    if (!effectiveSportIds?.length) {
       return (
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
