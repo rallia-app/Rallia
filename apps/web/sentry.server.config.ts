@@ -10,8 +10,8 @@ Sentry.init({
   // Only enable Sentry in production (not development or Vercel preview)
   enabled: process.env.NODE_ENV === 'production',
 
-  // Sample 20% of traces in production
-  tracesSampleRate: 0.2,
+  // Sample 10% of traces in production
+  tracesSampleRate: 0.1,
 
   enableLogs: true,
 

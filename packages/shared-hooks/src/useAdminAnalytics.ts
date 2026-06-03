@@ -196,6 +196,39 @@ function setCache<T>(key: string, data: T): void {
 }
 
 // =============================================================================
+// POLLING
+// =============================================================================
+
+/**
+ * Polling effect that pauses while the tab is backgrounded and refetches on
+ * refocus — stops a forgotten admin tab from hammering the API 24/7. Pass
+ * `null`/`0` to disable.
+ */
+function usePollingEffect(
+  fetchData: () => void | Promise<void>,
+  interval: number | null | undefined
+): void {
+  useEffect(() => {
+    if (!interval || interval <= 0) return;
+    if (typeof document === 'undefined') return;
+
+    const handle = setInterval(() => {
+      if (!document.hidden) void fetchData();
+    }, interval);
+
+    const onVisibility = () => {
+      if (!document.hidden) void fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(handle);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [interval, fetchData]);
+}
+
+// =============================================================================
 // HOOKS
 // =============================================================================
 
@@ -958,12 +991,7 @@ export function useUtmLandings(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [window, demo, compare]);
 
-  const interval = options.refetchInterval;
-  useEffect(() => {
-    if (!interval || interval <= 0) return;
-    const handle = setInterval(fetchData, interval);
-    return () => clearInterval(handle);
-  }, [interval, fetchData]);
+  usePollingEffect(fetchData, options.refetchInterval);
 
   return { data, loading, error, lastFetchedAt, refetch: fetchData };
 }
@@ -1008,12 +1036,7 @@ export function useUtmTotalsComparison(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
-  const interval = options.refetchInterval;
-  useEffect(() => {
-    if (!interval || interval <= 0) return;
-    const handle = setInterval(fetchData, interval);
-    return () => clearInterval(handle);
-  }, [interval, fetchData]);
+  usePollingEffect(fetchData, options.refetchInterval);
 
   return { data, loading, error, refetch: fetchData };
 }
@@ -1064,12 +1087,7 @@ export function useUtmSignupStats(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
-  const interval = options.refetchInterval;
-  useEffect(() => {
-    if (!interval || interval <= 0) return;
-    const handle = setInterval(fetchData, interval);
-    return () => clearInterval(handle);
-  }, [interval, fetchData]);
+  usePollingEffect(fetchData, options.refetchInterval);
 
   return { stats, loading, error, lastFetchedAt, refetch: fetchData };
 }

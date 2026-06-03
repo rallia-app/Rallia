@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { requireApiRole } from '@/lib/supabase/check-admin';
@@ -16,9 +17,10 @@ import { getDemoUtmData } from '@/lib/utm-demo-data';
  * from PostHog by utm_source / utm_medium / utm_campaign for the requested
  * window, plus a top-5 campaign timeseries for the chart.
  *
- * Cached for 60s — admin polling is shared across all callers.
+ * The route is dynamic (per-request auth), so `export const revalidate` does
+ * nothing here. Instead the expensive HogQL block is wrapped in
+ * `unstable_cache` (below), shared across all admin pollers for 60s.
  */
-export const revalidate = 60;
 
 type LandingRow = {
   source: string;
@@ -42,6 +44,121 @@ type PreviousTotalsRow = {
   previousLandings: number;
   previousUniqueVisitors: number;
 };
+
+/**
+ * Run the UTM aggregation queries against PostHog. Wrapped in `unstable_cache`
+ * keyed by window+compare so 60s of polling from any number of admins collapses
+ * to a single set of HogQL queries. Only depends on its args + server-only env
+ * (no request cookies/headers), so it is safe to cache.
+ */
+const getUtmAggregates = (window: WindowParam, compare: boolean) =>
+  unstable_cache(
+    async () => {
+      const hours = windowToHours(window);
+
+      // Filter to events fired by web's utm-capture.tsx specifically. Mobile
+      // (App.tsx) also fires `deep_link_opened` with utm_* whenever a Universal
+      // Link carries them (e.g. tap on a Smart App Banner with app-argument);
+      // without the `$lib = 'web'` clause every installed-user banner tap would
+      // double-count the web landing it originated from.
+      const whereClause = `
+        event = 'deep_link_opened'
+        AND properties.$lib = 'web'
+        AND timestamp >= now() - INTERVAL ${hours} HOUR
+        AND (
+          properties.utm_source IS NOT NULL
+          OR properties.utm_medium IS NOT NULL
+          OR properties.utm_campaign IS NOT NULL
+        )
+      `;
+
+      const previousWhere = `
+        event = 'deep_link_opened'
+        AND properties.$lib = 'web'
+        AND timestamp >= now() - INTERVAL ${hours * 2} HOUR
+        AND timestamp <  now() - INTERVAL ${hours} HOUR
+        AND (
+          properties.utm_source IS NOT NULL
+          OR properties.utm_medium IS NOT NULL
+          OR properties.utm_campaign IS NOT NULL
+        )
+      `;
+
+      const queries: Promise<unknown>[] = [
+        runHogQL<LandingRow>(`
+          SELECT
+            coalesce(properties.utm_source,   '(none)') AS source,
+            coalesce(properties.utm_medium,   '(none)') AS medium,
+            coalesce(properties.utm_campaign, '(none)') AS campaign,
+            count() AS count
+          FROM events
+          WHERE ${whereClause}
+          GROUP BY source, medium, campaign
+          ORDER BY count DESC
+          LIMIT 200
+        `),
+        runHogQL<TotalsRow>(`
+          SELECT
+            count() AS landings,
+            count(DISTINCT person_id) AS uniqueVisitors
+          FROM events
+          WHERE ${whereClause}
+        `),
+        runHogQL<TimeseriesRow>(`
+          WITH top_campaigns AS (
+            SELECT coalesce(properties.utm_campaign, '(none)') AS campaign
+            FROM events
+            WHERE ${whereClause}
+            GROUP BY campaign
+            ORDER BY count() DESC
+            LIMIT 20
+          )
+          SELECT
+            toStartOfDay(timestamp) AS day,
+            coalesce(properties.utm_campaign, '(none)') AS campaign,
+            count() AS landings
+          FROM events
+          WHERE ${whereClause}
+            AND coalesce(properties.utm_campaign, '(none)') IN (SELECT campaign FROM top_campaigns)
+          GROUP BY day, campaign
+          ORDER BY day ASC, campaign
+        `),
+      ];
+      if (compare) {
+        queries.push(
+          runHogQL<PreviousTotalsRow>(`
+            SELECT
+              count() AS previousLandings,
+              count(DISTINCT person_id) AS previousUniqueVisitors
+            FROM events
+            WHERE ${previousWhere}
+          `)
+        );
+      }
+
+      const results = await Promise.all(queries);
+      const landings = results[0] as LandingRow[];
+      const totalsRows = results[1] as TotalsRow[];
+      const timeseries = results[2] as TimeseriesRow[];
+      const previousRow = compare ? ((results[3] as PreviousTotalsRow[])[0] ?? null) : null;
+
+      return {
+        landings,
+        timeseries,
+        totals: totalsRows[0] ?? { landings: 0, uniqueVisitors: 0 },
+        ...(previousRow
+          ? {
+              previousTotals: {
+                landings: Number(previousRow.previousLandings) || 0,
+                uniqueVisitors: Number(previousRow.previousUniqueVisitors) || 0,
+              },
+            }
+          : {}),
+      };
+    },
+    ['admin-utm-aggregates', window, String(compare)],
+    { revalidate: 60, tags: ['admin-utm'] }
+  )();
 
 export async function GET(request: Request) {
   try {
@@ -74,108 +191,10 @@ export async function GET(request: Request) {
       return NextResponse.json(getDemoUtmData(window));
     }
 
-    const hours = windowToHours(window);
     const compare = url.searchParams.get('compare') === '1';
+    const data = await getUtmAggregates(window, compare);
 
-    // Filter to events fired by web's utm-capture.tsx specifically. Mobile
-    // (App.tsx) also fires `deep_link_opened` with utm_* whenever a Universal
-    // Link carries them (e.g. tap on a Smart App Banner with app-argument);
-    // without the `$lib = 'web'` clause every installed-user banner tap would
-    // double-count the web landing it originated from.
-    const whereClause = `
-      event = 'deep_link_opened'
-      AND properties.$lib = 'web'
-      AND timestamp >= now() - INTERVAL ${hours} HOUR
-      AND (
-        properties.utm_source IS NOT NULL
-        OR properties.utm_medium IS NOT NULL
-        OR properties.utm_campaign IS NOT NULL
-      )
-    `;
-
-    const previousWhere = `
-      event = 'deep_link_opened'
-      AND properties.$lib = 'web'
-      AND timestamp >= now() - INTERVAL ${hours * 2} HOUR
-      AND timestamp <  now() - INTERVAL ${hours} HOUR
-      AND (
-        properties.utm_source IS NOT NULL
-        OR properties.utm_medium IS NOT NULL
-        OR properties.utm_campaign IS NOT NULL
-      )
-    `;
-
-    const queries: Promise<unknown>[] = [
-      runHogQL<LandingRow>(`
-        SELECT
-          coalesce(properties.utm_source,   '(none)') AS source,
-          coalesce(properties.utm_medium,   '(none)') AS medium,
-          coalesce(properties.utm_campaign, '(none)') AS campaign,
-          count() AS count
-        FROM events
-        WHERE ${whereClause}
-        GROUP BY source, medium, campaign
-        ORDER BY count DESC
-        LIMIT 200
-      `),
-      runHogQL<TotalsRow>(`
-        SELECT
-          count() AS landings,
-          count(DISTINCT person_id) AS uniqueVisitors
-        FROM events
-        WHERE ${whereClause}
-      `),
-      runHogQL<TimeseriesRow>(`
-        WITH top_campaigns AS (
-          SELECT coalesce(properties.utm_campaign, '(none)') AS campaign
-          FROM events
-          WHERE ${whereClause}
-          GROUP BY campaign
-          ORDER BY count() DESC
-          LIMIT 20
-        )
-        SELECT
-          toStartOfDay(timestamp) AS day,
-          coalesce(properties.utm_campaign, '(none)') AS campaign,
-          count() AS landings
-        FROM events
-        WHERE ${whereClause}
-          AND coalesce(properties.utm_campaign, '(none)') IN (SELECT campaign FROM top_campaigns)
-        GROUP BY day, campaign
-        ORDER BY day ASC, campaign
-      `),
-    ];
-    if (compare) {
-      queries.push(
-        runHogQL<PreviousTotalsRow>(`
-          SELECT
-            count() AS previousLandings,
-            count(DISTINCT person_id) AS previousUniqueVisitors
-          FROM events
-          WHERE ${previousWhere}
-        `)
-      );
-    }
-    const results = await Promise.all(queries);
-    const landings = results[0] as LandingRow[];
-    const totalsRows = results[1] as TotalsRow[];
-    const timeseries = results[2] as TimeseriesRow[];
-    const previousRow = compare ? ((results[3] as PreviousTotalsRow[])[0] ?? null) : null;
-
-    return NextResponse.json({
-      window,
-      landings,
-      timeseries,
-      totals: totalsRows[0] ?? { landings: 0, uniqueVisitors: 0 },
-      ...(previousRow
-        ? {
-            previousTotals: {
-              landings: Number(previousRow.previousLandings) || 0,
-              uniqueVisitors: Number(previousRow.previousUniqueVisitors) || 0,
-            },
-          }
-        : {}),
-    });
+    return NextResponse.json({ window, ...data });
   } catch (error) {
     if (error instanceof PostHogQueryError) {
       console.error('[Admin UTM] PostHog query failed:', error);

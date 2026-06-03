@@ -19,7 +19,9 @@ import { UtmMonitoringSection } from '@/components/admin/utm-monitoring-section'
  */
 export function AcquisitionTab() {
   const [window, setWindow] = useState<WindowOption>('7d');
-  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  // Off by default — a forgotten open tab polling every 60s was the top driver
+  // of Vercel Fluid Active CPU. Admins opt in via the filter bar toggle.
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(false);
   const [demo, setDemo] = useState<boolean>(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
   const posthogUrl = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.posthog.com';
