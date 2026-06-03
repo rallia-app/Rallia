@@ -33,6 +33,48 @@ interface SentryLike {
   addBreadcrumb: (breadcrumb: SentryBreadcrumb) => void;
 }
 
+interface NormalizedCapture {
+  error: Error;
+  extra: Record<string, unknown>;
+  fingerprint?: string[];
+}
+
+// Supabase/PostgREST reject with a plain { code, details, hint, message } object
+// (not an Error). Sentry can't build a stack from those, so it titles them
+// "Object captured as exception with keys: ..." and groups every unrelated
+// failure under whichever incidental JS frame is on top (SentryTransport, a
+// useMemo, etc). Wrap any non-Error value in a real Error and pin a stable
+// fingerprint from the call-site message + code so distinct failures stay split.
+function normalizeForCapture(entry: LogEntry): NormalizedCapture {
+  const raw = entry.error as unknown;
+  const extra: Record<string, unknown> = { ...entry.context };
+
+  if (raw instanceof Error) {
+    return { error: raw, extra };
+  }
+
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const code = typeof obj.code === 'string' ? obj.code : undefined;
+    const detail =
+      (typeof obj.message === 'string' && obj.message) ||
+      (typeof obj.error_description === 'string' && obj.error_description) ||
+      (typeof obj.details === 'string' && obj.details) ||
+      'non-Error object captured';
+
+    extra.originalError = obj;
+    const error = new Error(`${entry.message}: ${detail}`);
+    error.name = code ? 'SupabaseError' : 'CapturedObjectError';
+    return { error, extra, fingerprint: ['logged-object-error', entry.message, code ?? ''] };
+  }
+
+  return {
+    error: new Error(`${entry.message}: ${String(raw)}`),
+    extra,
+    fingerprint: ['logged-primitive-error', entry.message],
+  };
+}
+
 export interface SentryTransportOptions {
   /**
    * Returns the current foreground/background state of the host app. On RN,
@@ -122,8 +164,10 @@ export class SentryTransport implements Transport {
 
         // Capture errors as Sentry issues
         if (entry.error) {
-          SentryTransport.sentry.captureException(entry.error, {
-            extra: entry.context,
+          const { error, extra, fingerprint } = normalizeForCapture(entry);
+          SentryTransport.sentry.captureException(error, {
+            extra,
+            ...(fingerprint ? { fingerprint } : {}),
           });
         } else {
           SentryTransport.sentry.captureMessage(entry.message, {

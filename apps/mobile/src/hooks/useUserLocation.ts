@@ -38,6 +38,23 @@ interface UseUserLocationReturn {
   refetch: () => Promise<void>;
 }
 
+/**
+ * Location failures that are environmental, not bugs: services off, permission
+ * denied at the OS level (incl. kCLErrorDenied when foreground-only access is
+ * requested in the background), or no fix obtainable. Logged at debug so they
+ * don't create Sentry issues; genuine failures still go to Logger.error.
+ */
+function isExpectedLocationError(message: string): boolean {
+  return (
+    message.includes('location is unavailable') ||
+    message.includes('location services') ||
+    message.includes('getCurrentPositionAsync') ||
+    message.includes('Cannot obtain current location') ||
+    message.includes('kCLError') ||
+    message.includes('denied')
+  );
+}
+
 /** Last-known fix freshness threshold — accept fixes up to 5 minutes old. */
 const LAST_KNOWN_MAX_AGE_MS = 5 * 60 * 1000;
 /** Last-known fix accuracy threshold (meters). 1km is plenty for radius-based
@@ -118,6 +135,14 @@ export function useUserLocation(): UseUserLocationReturn {
       // Fresh fix. If we already seeded from last-known above this runs in
       // the background and replaces the cached coords; otherwise it's the
       // first time we set `location`.
+      // Skip when the app isn't in front: iOS rejects a foreground-only
+      // location request with kCLErrorDenied while suspended (e.g. a background
+      // launch from a push), which is expected, not a failure worth a fix.
+      if (AppState.currentState !== 'active') {
+        setLoading(false);
+        return;
+      }
+
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -129,9 +154,7 @@ export function useUserLocation(): UseUserLocationReturn {
       setLoading(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const isUnavailable =
-        message.includes('location is unavailable') || message.includes('location services');
-      if (isUnavailable) {
+      if (isExpectedLocationError(message)) {
         Logger.debug('user_location_unavailable', { message });
         setError('Location unavailable');
       } else {
