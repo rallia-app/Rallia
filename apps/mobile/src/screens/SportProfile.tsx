@@ -18,7 +18,7 @@ import {
 
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { useSport } from '#/context';
-import { useUserLocation } from '#/hooks/useUserLocation';
+import { useEffectiveLocation } from '#/hooks/useEffectiveLocation';
 
 // Certification status colors for rating display (theme-aware)
 const getCertificationColors = (
@@ -116,7 +116,7 @@ const SportProfile = () => {
   const { t } = useTranslation();
   const { refetch: refetchSportContext } = useSport();
   const toast = useToast();
-  const { location } = useUserLocation();
+  const { location } = useEffectiveLocation();
 
   // Get player data from context (loads instantly)
   const {
