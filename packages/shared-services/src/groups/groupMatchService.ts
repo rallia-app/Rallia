@@ -6,6 +6,7 @@
 import { supabase } from '../supabase';
 import type { GroupMatch, LeaderboardEntry } from './groupTypes';
 import { logGroupActivity } from './groupActivityService';
+import { attachAvailableCourtSlots } from '../matches/availableCourts';
 import type {
   MatchWithDetails,
   MatchParticipantWithPlayer,
@@ -1125,5 +1126,10 @@ export async function getNetworkMemberUpcomingMatches(
     return a.start_time.localeCompare(b.start_time);
   });
 
-  return enrichedMatches.slice(0, limit);
+  // Attach open-court availability so MatchCard can show a "N courts available"
+  // chip for unreserved future matches (parity with suggestion cards). Only the
+  // matches we actually return are enriched.
+  const visibleMatches = enrichedMatches.slice(0, limit);
+  await attachAvailableCourtSlots(visibleMatches);
+  return visibleMatches;
 }

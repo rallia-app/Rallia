@@ -93,6 +93,8 @@ import {
 } from '#/components/explainers';
 // Reimbursement sheets
 import { ChoosePayoutsActionSheet } from '#/components/ChoosePayoutsSheet';
+// Summer League announcement
+import { SummerLeagueAnnouncementActionSheet } from '#/features/summer-league/SummerLeagueAnnouncementSheet';
 // Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
 // cell keys from the hourly 7×17 grid (hours 6..22). Defined inline to keep
 // this declaration free of feature-folder imports.
@@ -743,6 +745,9 @@ declare module 'react-native-actions-sheet' {
         proofTitle: string;
       };
     }>;
+    'summer-league-announcement': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
     feedback: SheetDefinition;
     'match-detail': SheetDefinition;
     'main-actions': SheetDefinition;
@@ -835,6 +840,8 @@ export const Sheets = () => {
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
         'suggest-match-time': SuggestMatchTimeActionSheet,
+        // Summer League announcement
+        'summer-league-announcement': SummerLeagueAnnouncementActionSheet,
       }}
     />
   );

@@ -157,6 +157,8 @@ import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyCheckInAutoOpener';
 import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
+import { SummerLeagueAnnouncementAutoOpener } from './src/features/summer-league/SummerLeagueAnnouncementAutoOpener';
+import { SUMMER_LEAGUE_ANNOUNCEMENT_ENABLED } from './src/features/summer-league/featureFlag';
 import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation';
@@ -890,6 +892,9 @@ function AppContent() {
       <AccountSuspendedHandler />
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
       {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
+      {SUMMER_LEAGUE_ANNOUNCEMENT_ENABLED && (
+        <SummerLeagueAnnouncementAutoOpener isSplashComplete={isSplashComplete} />
+      )}
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}

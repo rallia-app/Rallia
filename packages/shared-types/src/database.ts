@@ -548,6 +548,26 @@ export interface MatchWithDetails extends Match {
   min_rating_score?: RatingScore;
   participants?: MatchParticipantWithPlayer[];
   result?: MatchResultWithSets;
+  /**
+   * Number of distinct courts bookable at this match's facility at the exact
+   * match start time, derived from `facility_availability_snapshot`. Only
+   * populated by list fetchers (e.g. `getMatchesWithDetails`) for future
+   * matches that have no court reserved yet (`court_status !== 'reserved'`)
+   * and whose facility has snapshot data for the slot. Mirrors the suggestion
+   * card's `availableCourts` so MatchCard can show an "N courts available"
+   * chip. Undefined when not computed or when no courts are available.
+   */
+  available_courts?: number;
+  /**
+   * Raw snapshot rows for the bookable courts at this match's exact start time,
+   * scoped to the match's sport — the same `facility_availability_snapshot`
+   * rows `available_courts` is derived from. Populated alongside
+   * `available_courts` by the match fetchers so MatchDetailSheet's available-
+   * courts section can render tiles without a separate availability round trip
+   * (formatted client-side via `formatInlineSnapshotSlots`). Undefined when not
+   * computed; empty/absent when no courts are available at the slot.
+   */
+  available_courts_slots?: FacilityAvailabilitySlotRow[];
 }
 
 /** Match participant with player and profile info */

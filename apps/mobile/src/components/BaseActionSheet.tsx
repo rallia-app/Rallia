@@ -43,6 +43,12 @@ interface BaseActionSheetProps {
   onSheetClose?: () => void;
   /** Use flex: 1 on the container — set false for content-fit sheets (default: true) */
   flex?: boolean;
+  /**
+   * Hide the drag-handle indicator (and the bare strip it sits on) while
+   * keeping the gesture and rounded top corners. Useful when the sheet's own
+   * content (e.g. a full-bleed gradient header) should run to the very top.
+   */
+  hideHandle?: boolean;
 }
 
 export function BaseActionSheet({
@@ -57,6 +63,7 @@ export function BaseActionSheet({
   onBeforeClose,
   onSheetClose,
   flex = true,
+  hideHandle = false,
 }: BaseActionSheetProps) {
   const { colors } = useThemeStyles();
 
@@ -67,6 +74,9 @@ export function BaseActionSheet({
       closeOnTouchBackdrop={closeOnTouchBackdrop}
       onBeforeClose={onBeforeClose}
       onClose={onSheetClose}
+      // An empty header replaces (and thus hides) the default drag indicator
+      // while leaving the gesture + rounded corners intact.
+      CustomHeaderComponent={hideHandle ? <View /> : undefined}
       containerStyle={[
         styles.sheetBackground,
         flex && styles.sheetFlex,

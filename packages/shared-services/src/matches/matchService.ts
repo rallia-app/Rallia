@@ -6,6 +6,11 @@
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
+import {
+  attachAvailableCourtSlots,
+  fetchAvailableCourtSlotsForMatches,
+  applyCourtSlots,
+} from './availableCourts';
 import { Logger } from '../logger';
 import {
   notifyMatchJoinRequest,
@@ -446,6 +451,12 @@ export async function getMatchWithDetails(matchId: string) {
     });
   }
 
+  // Attach open-court availability (count + raw rows) so MatchDetailSheet's
+  // available-courts section can render tiles inline. This path replaces the
+  // sheet's match on refetch, so without it the inline slots from the list
+  // fetch would be wiped.
+  await attachAvailableCourtSlots([data as unknown as MatchWithDetails]);
+
   return data;
 }
 
@@ -613,6 +624,11 @@ export async function getMatchesWithDetails(
 
     return match;
   });
+
+  // Attach open-court counts for unreserved future matches so MatchCard can
+  // surface a "N courts available" chip (parity with suggestion cards). A
+  // failed/empty lookup simply leaves the field undefined — the chip hides.
+  await attachAvailableCourtSlots(enrichedData);
 
   return enrichedData;
 }
@@ -2750,6 +2766,12 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     }
   }
 
+  // Kick off the open-court snapshot read now so it overlaps the ratings query
+  // and the enrichment below instead of adding a round-trip to the tail. Returns
+  // full snapshot rows so both the card chip and the detail sheet's available-
+  // courts tiles can read them inline; applied once the ordered list is built.
+  const courtSlotsPromise = fetchAvailableCourtSlotsForMatches(matchesData);
+
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
   const ratingsMap: Record<
@@ -2863,6 +2885,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
   const orderedMatches = matchIds
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
+
+  // Apply the open-court availability kicked off above so MatchCard can show a
+  // "N courts available" chip for unreserved future matches.
+  applyCourtSlots(orderedMatches, await courtSlotsPromise);
 
   if (isScoredPath) {
     return {
@@ -3212,6 +3238,11 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     return match;
   });
 
+  // Attach open-court availability so MatchCard can show a "N courts available" chip
+  // for unreserved future matches (parity with suggestion cards). Past matches
+  // in this list are naturally skipped (future-only inside the helper).
+  await attachAvailableCourtSlots(enrichedData);
+
   return {
     matches: enrichedData as MatchWithDetails[],
     hasMore,
@@ -3505,6 +3536,12 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     }
   }
 
+  // Kick off the open-court snapshot read now so it overlaps the ratings query
+  // and the enrichment below instead of adding a round-trip to the tail. Returns
+  // full snapshot rows so both the card chip and the detail sheet's available-
+  // courts tiles can read them inline; applied once the ordered list is built.
+  const courtSlotsPromise = fetchAvailableCourtSlotsForMatches(matchesData);
+
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
   const publicRatingsMap: Record<
@@ -3617,6 +3654,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   const orderedMatches = matchIds
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
+
+  // Apply the open-court availability kicked off above so MatchCard can show a
+  // "N courts available" chip for unreserved future matches.
+  applyCourtSlots(orderedMatches, await courtSlotsPromise);
 
   return {
     matches: orderedMatches,

@@ -1211,6 +1211,19 @@ const MatchCard: React.FC<MatchCardProps> = ({
     });
   }
 
+  // 6. Open courts (tier/primary) — mirrors SuggestionCard's "N courts available"
+  //    chip. Only for matches with no court reserved yet; the count is
+  //    precomputed by the list fetcher from the facility availability snapshot.
+  if (match.court_status !== 'reserved' && match.available_courts && match.available_courts > 0) {
+    badges.push({
+      key: 'courtsAvailable',
+      label: t('match.courtStatus.courtsAvailable', { count: match.available_courts }),
+      bgColor: chipColors.tier.bgColor,
+      textColor: chipColors.tier.textColor,
+      icon: 'tennisball-outline',
+    });
+  }
+
   // Get dynamic border color based on tier
   const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
   const dynamicBorderColor = isExpired

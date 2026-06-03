@@ -1,4 +1,17 @@
 {
+  "summerLeague": {
+    "announcement": {
+      "badge": "Cet été",
+      "title": "La toute première Ligue d'été Rallia",
+      "subtitle": "Nous sondons l'intérêt pour adapter la première édition à des joueurs comme vous. Ça vous tente ?",
+      "interested": "Ça m'intéresse",
+      "later": "Plus tard",
+      "successTitle": "Vous êtes sur la liste",
+      "successBody": "Votre intérêt nous aide à la façonner — nous vous écrirons bientôt.",
+      "done": "Terminé",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
   },
@@ -1787,13 +1800,13 @@
     },
     "favoriteSitesStep": {
       "title": "Sélectionnez vos terrains favoris",
-      "subtitle": "Choisissez au moins 3 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
-      "subtitleBothSports": "Choisissez au moins 3 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
+      "subtitle": "Choisissez au moins 2 sites de jeu où vous aimez jouer. Cela nous aide à vous trouver de meilleures parties.",
+      "subtitleBothSports": "Choisissez au moins 2 sites de jeu par sport. Les sites offrant les deux sports comptent pour chacun.",
       "selected": "sélectionnés",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Veuillez sélectionner au moins 3 sites de jeu favoris.",
-      "selectMinimumPerSport": "Veuillez sélectionner au moins 3 sites de jeu pour chaque sport (tennis et pickleball).",
+      "selectMinimum": "Veuillez sélectionner au moins 2 sites de jeu favoris.",
+      "selectMinimumPerSport": "Veuillez sélectionner au moins 2 sites de jeu pour chaque sport (tennis et pickleball).",
       "searchLabel": "Rechercher un site de jeu",
       "searchPlaceholder": "Tapez pour rechercher...",
       "loading": "Chargement des sites de jeu à proximité...",
@@ -3147,7 +3160,8 @@
     "pendingRequests": "{count} en attente",
     "courtStatus": {
       "readyToPlay": "Prêt à jouer",
-      "courtBooked": "Terrain Réservé"
+      "courtBooked": "Terrain Réservé",
+      "courtsAvailable": "{count} terrains disponibles"
     },
     "tier": {
       "mostWanted": "Incontournable",

@@ -1,4 +1,17 @@
 {
+  "summerLeague": {
+    "announcement": {
+      "badge": "Coming this summer",
+      "title": "The first Rallia Summer League",
+      "subtitle": "We're gauging interest to shape the first edition around players like you. Want in?",
+      "interested": "Count me in",
+      "later": "Maybe later",
+      "successTitle": "You're on the list",
+      "successBody": "Your interest helps shape it — we'll be in touch soon.",
+      "done": "Done",
+      "error": "Something went wrong. Please try again."
+    }
+  },
   "suggestionCard": {
     "courtsAvailable": "{count} courts available"
   },
@@ -1787,13 +1800,13 @@
     },
     "favoriteSitesStep": {
       "title": "Select Your Favorite Courts",
-      "subtitle": "Choose at least 3 facilities where you like to play. This helps us find you better matches.",
-      "subtitleBothSports": "Choose at least 3 facilities per sport. Facilities offering both sports count toward each.",
+      "subtitle": "Choose at least 2 facilities where you like to play. This helps us find you better matches.",
+      "subtitleBothSports": "Choose at least 2 facilities per sport. Facilities offering both sports count toward each.",
       "selected": "selected",
       "tennisCount": "Tennis",
       "pickleballCount": "Pickleball",
-      "selectMinimum": "Please select at least 3 favorite facilities.",
-      "selectMinimumPerSport": "Please select at least 3 facilities for each sport (tennis and pickleball).",
+      "selectMinimum": "Please select at least 2 favorite facilities.",
+      "selectMinimumPerSport": "Please select at least 2 facilities for each sport (tennis and pickleball).",
       "searchLabel": "Search for a facility",
       "searchPlaceholder": "Type to search...",
       "loading": "Loading nearby facilities...",
@@ -3147,7 +3160,8 @@
     "pendingRequests": "{count} pending",
     "courtStatus": {
       "readyToPlay": "Ready to Play",
-      "courtBooked": "Court Booked"
+      "courtBooked": "Court Booked",
+      "courtsAvailable": "{count} courts available"
     },
     "tier": {
       "mostWanted": "Must-Play",
