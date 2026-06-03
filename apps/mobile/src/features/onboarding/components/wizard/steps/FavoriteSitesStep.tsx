@@ -21,7 +21,7 @@ import type { TranslationKey } from '@rallia/shared-translations';
 
 import { computeFavoriteSportCounts } from '#/features/onboarding/hooks/useOnboardingWizard';
 import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
-import { useUserLocation } from '#/hooks/useUserLocation';
+import { useEffectiveLocation } from '#/hooks/useEffectiveLocation';
 import { SearchBar } from '#/components/SearchBar';
 
 import TennisCourtIcon from '../../../../../../assets/icons/tennis-court.svg';
@@ -295,13 +295,10 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
 
   const bothSports = hasTennis && hasPickleball;
 
-  // Get device location as fallback if props don't have coordinates
-  // This handles cases where user typed city manually without using autocomplete
-  const { location: deviceLocation, loading: locationLoading } = useUserLocation();
+  const { location: effectiveLocation, isLoading: locationLoading } = useEffectiveLocation();
 
-  // Use props coordinates first (from address autocomplete), fallback to device location
-  const latitude = propLatitude ?? deviceLocation?.latitude ?? null;
-  const longitude = propLongitude ?? deviceLocation?.longitude ?? null;
+  const latitude = propLatitude ?? effectiveLocation?.latitude ?? null;
+  const longitude = propLongitude ?? effectiveLocation?.longitude ?? null;
 
   // Use facility search hook
   const {

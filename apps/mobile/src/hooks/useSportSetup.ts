@@ -9,7 +9,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { useSport } from '#/context/SportContext';
 import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
 
-import { useUserLocation } from './useUserLocation';
+import { useEffectiveLocation } from './useEffectiveLocation';
 import { useTranslation } from './useTranslation';
 
 interface UseSportSetupOptions {
@@ -28,7 +28,7 @@ export function useSportSetup({ userId, onComplete, onCancel }: UseSportSetupOpt
 
   const toast = useToast();
   const { t } = useTranslation();
-  const { location } = useUserLocation();
+  const { location } = useEffectiveLocation();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchSportContext } = useSport();
 
