@@ -7,7 +7,7 @@ export * from './useRequireOnboarding';
 export * from './useImagePicker';
 export * from './usePermissions';
 export * from './useTranslation';
-export * from './useUserLocation';
+// useUserLocation (GPS-only) intentionally not re-exported; prefer useEffectiveLocation.
 export * from './useEffectiveLocation';
 export * from './usePushNotifications';
 export * from './useTourSequence';
