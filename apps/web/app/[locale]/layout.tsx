@@ -3,7 +3,7 @@ import { routing } from '@/i18n/routing';
 
 import { getTranslations, type Locale as SharedLocale } from '@rallia/shared-translations';
 import type { Metadata } from 'next';
-import { getTranslations as getServerTranslations } from 'next-intl/server';
+import { getTranslations as getServerTranslations, setRequestLocale } from 'next-intl/server';
 import { Locale, NextIntlClientProvider } from 'next-intl';
 import { Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
 import { notFound } from 'next/navigation';
@@ -148,6 +148,10 @@ export default async function LocaleLayout({
   if (!(routing.locales as readonly string[]).includes(locale)) {
     notFound();
   }
+
+  // Enable static rendering: primes the locale so next-intl reads it instead of
+  // request headers, which would otherwise force every page into dynamic mode.
+  setRequestLocale(locale);
 
   // Get translations from shared package
   const messages = getTranslations(locale as SharedLocale);
