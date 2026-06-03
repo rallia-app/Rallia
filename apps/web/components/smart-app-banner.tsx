@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import { readDistinctIdCookie, readUtmCookie } from '@/lib/utm-cookie';
 
@@ -24,7 +24,7 @@ const BASE_HOST = 'https://rallia.app';
  * apple-app-site-association. On desktop Safari or other browsers it's a
  * no-op (the meta tag is rendered but ignored).
  */
-export function SmartAppBanner() {
+function SmartAppBannerInner() {
   const pathname = usePathname() ?? '/';
   const searchParams = useSearchParams();
   const [appArgument, setAppArgument] = useState<string>('');
@@ -58,4 +58,17 @@ export function SmartAppBanner() {
     : `app-id=${APP_ID}`;
 
   return <meta name="apple-itunes-app" content={content} />;
+}
+
+/**
+ * useSearchParams() must sit under a Suspense boundary so the surrounding page
+ * can be statically prerendered instead of bailing entirely to client-side
+ * rendering. The banner is a single (invisible) <meta> tag, so fallback=null.
+ */
+export function SmartAppBanner() {
+  return (
+    <Suspense fallback={null}>
+      <SmartAppBannerInner />
+    </Suspense>
+  );
 }
