@@ -128,33 +128,6 @@ export async function generateMetadata({
       shortcut: '/favicon-16x16.png',
       apple: '/apple-touch-icon.png',
     },
-    verification: {
-      // Plug in once Search Console / Bing verification codes are issued.
-      // google: 'GOOGLE_SITE_VERIFICATION_TOKEN',
-      //
-      // Meta Business Manager domain verification — required to associate
-      // each owned domain with our Meta app for iOS app linkage and to
-      // unlock attribution features. We serve the same Next.js app under
-      // multiple hosts (rallia.app + rallia.ca), and Meta issues one token
-      // per domain. Rather than detect the request host (which would force
-      // the layout into dynamic rendering and break SSG), we emit ALL
-      // tokens as separate meta tags. Meta's crawler at each domain only
-      // matches its own token and ignores the others.
-      //
-      // Tokens come from: Meta Business Manager → Brand Safety → Domains
-      // → Verify your domain → Meta-tag method.
-      ...((process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION ??
-      process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION_CA)
-        ? {
-            other: {
-              'facebook-domain-verification': [
-                process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION,
-                process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION_CA,
-              ].filter((v): v is string => Boolean(v)),
-            },
-          }
-        : {}),
-    },
   };
 }
 
