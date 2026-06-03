@@ -164,6 +164,30 @@ export interface UsePushNotificationsOptions {
 }
 
 /**
+ * Expo's push registration endpoint returns transient 503s ("upstream connect
+ * error / connection timeout"). Retry with backoff before giving up.
+ */
+async function getExpoPushTokenWithRetry(
+  options?: Parameters<typeof Notifications.getExpoPushTokenAsync>[0]
+): Promise<Awaited<ReturnType<typeof Notifications.getExpoPushTokenAsync>>> {
+  const backoffMs = [500, 1500, 3000];
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= backoffMs.length; attempt++) {
+    try {
+      return options
+        ? await Notifications.getExpoPushTokenAsync(options)
+        : await Notifications.getExpoPushTokenAsync();
+    } catch (error) {
+      lastError = error;
+      if (attempt < backoffMs.length) {
+        await new Promise(resolve => setTimeout(resolve, backoffMs[attempt]));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Get the Expo push token for this device
  */
 async function getExpoPushToken(): Promise<string | null> {
@@ -194,17 +218,20 @@ async function getExpoPushToken(): Promise<string | null> {
     if (!projectId) {
       Logger.warn('EAS project ID not found in app config');
       // Fallback for development
-      const token = await Notifications.getExpoPushTokenAsync();
+      const token = await getExpoPushTokenWithRetry();
       return token.data;
     }
 
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
+    const token = await getExpoPushTokenWithRetry({ projectId });
 
     return token.data;
   } catch (error) {
-    Logger.error('Failed to get Expo push token', error as Error);
+    // After retries this is Expo-side / network flakiness, not an app bug —
+    // warn so it stays a breadcrumb instead of opening a Sentry issue. Push
+    // simply won't register this session; the app degrades gracefully.
+    Logger.warn('Failed to get Expo push token after retries', {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
