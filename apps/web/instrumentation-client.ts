@@ -18,8 +18,8 @@ Sentry.init({
   // Session replay is attached lazily by AnalyticsRuntime after consent.
   integrations: [],
 
-  // Sample 20% of traces in production
-  tracesSampleRate: 0.2,
+  // Sample 10% of traces in production
+  tracesSampleRate: 0.1,
 
   enableLogs: true,
 
