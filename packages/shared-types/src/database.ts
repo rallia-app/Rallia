@@ -558,6 +558,16 @@ export interface MatchWithDetails extends Match {
    * chip. Undefined when not computed or when no courts are available.
    */
   available_courts?: number;
+  /**
+   * Raw snapshot rows for the bookable courts at this match's exact start time,
+   * scoped to the match's sport — the same `facility_availability_snapshot`
+   * rows `available_courts` is derived from. Populated alongside
+   * `available_courts` by the match fetchers so MatchDetailSheet's available-
+   * courts section can render tiles without a separate availability round trip
+   * (formatted client-side via `formatInlineSnapshotSlots`). Undefined when not
+   * computed; empty/absent when no courts are available at the slot.
+   */
+  available_courts_slots?: FacilityAvailabilitySlotRow[];
 }
 
 /** Match participant with player and profile info */

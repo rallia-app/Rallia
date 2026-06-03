@@ -2,12 +2,16 @@
  * MatchAvailableCourtsSection
  *
  * Shown inside MatchDetailSheet to the host of a match when:
- *  - the match is linked to a facility with real-time court availability, AND
- *  - no court has been booked yet (court_status !== 'reserved').
+ *  - the match is linked to a facility, AND
+ *  - no court has been booked yet (court_status !== 'reserved'), AND
+ *  - the facility has real-time snapshot availability at the match start time.
  *
- * Renders one tile per available court at the exact match start time. Tapping
- * a tile goes directly to that court's external booking URL; the pending
- * booking is tagged with matchId so the return flow (handled in
+ * Reads the availability rows inlined onto the match by the fetchers
+ * (`match.available_courts_slots`, populated from `facility_availability_snapshot`
+ * alongside the `available_courts` count) — no separate availability round trip.
+ * Renders one tile per available court at the exact match start time. Tapping a
+ * tile goes directly to that court's external booking URL; the pending booking
+ * is tagged with matchId so the return flow (handled in
  * PendingExternalBookingContext) can link the booked court back to the match.
  */
 
@@ -15,11 +19,10 @@ import React, { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
 import type { CourtOption, FormattedSlot } from '@rallia/shared-hooks';
-import { useCourtAvailability, useFacilityDetail } from '@rallia/shared-hooks';
-import { getTimeDifferenceFromNow } from '@rallia/shared-utils';
+import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
 
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { useTranslation, useThemeStyles, useOpenExternalBooking } from '#/hooks';
@@ -74,70 +77,43 @@ export function MatchAvailableCourtsSection({
   const { colors, isDark } = useThemeStyles();
   const { openExternalBooking } = useOpenExternalBooking();
 
-  const facilityId = match.facility_id ?? null;
-  const sportId = match.sport?.id ?? null;
   const matchTimezone: string = match.facility?.timezone ?? match.timezone;
 
-  const isFutureMatch = useMemo(() => {
-    try {
-      return getTimeDifferenceFromNow(match.match_date, match.start_time, matchTimezone) > 0;
-    } catch {
-      return false;
-    }
-  }, [match.match_date, match.start_time, matchTimezone]);
+  // Format the inlined snapshot rows into grouped slots. The rows are already
+  // scoped (server-side) to the match's exact start time and sport, so this
+  // yields a single slot whose courtOptions are the bookable courts. No fetch.
+  const slots = useMemo(
+    () => formatInlineSnapshotSlots(match.available_courts_slots, matchTimezone).slots,
+    [match.available_courts_slots, matchTimezone]
+  );
 
-  // Quick signal (from the raw match.facility relation) that this facility is likely
-  // backed by a real-time availability provider. data_provider_id can live at the
-  // organization level, but external_provider_id is always on the facility row when
-  // the facility is mapped to an external booking system — so it's a reliable gate.
-  const facilityLooksProviderBacked = !!match.facility?.external_provider_id;
-
-  const gateBeforeFetch =
-    isCreator &&
-    !!facilityId &&
-    !!sportId &&
-    match.court_status !== 'reserved' &&
-    isFutureMatch &&
-    facilityLooksProviderBacked;
-
-  const { facility, isLoading: isFacilityLoading } = useFacilityDetail({
-    facilityId: facilityId ?? '',
-    sportId: sportId ?? '',
-    enabled: gateBeforeFetch,
-  });
-
-  const {
-    slots,
-    isLoading: isSlotsLoading,
-    hasProvider,
-  } = useCourtAvailability({
-    facilityId: facilityId ?? '',
-    dataProviderId: facility?.data_provider_id ?? null,
-    dataProviderType: facility?.data_provider_type ?? null,
-    externalProviderId: facility?.external_provider_id ?? null,
-    bookingUrlTemplate: facility?.booking_url_template ?? null,
-    facilityTimezone: facility?.timezone ?? matchTimezone,
-    sportName: match.sport?.name,
-    dates: [match.match_date],
-    enabled: gateBeforeFetch && !!facility,
-  });
-
-  const matchingSlot = useMemo(() => {
-    if (!gateBeforeFetch) return null;
-    return (
+  const matchingSlot = useMemo(
+    () =>
       slots.find(slot =>
         slotMatchesMatchStart(slot, match.match_date, match.start_time, matchTimezone)
-      ) ?? null
-    );
-  }, [gateBeforeFetch, slots, match.match_date, match.start_time, matchTimezone]);
+      ) ?? null,
+    [slots, match.match_date, match.start_time, matchTimezone]
+  );
 
   const courtOptions = matchingSlot?.courtOptions ?? [];
 
+  // openExternalBooking only needs these identity/display fields off the
+  // facility relation — no full facility fetch required.
+  const facilityForBooking = match.facility
+    ? {
+        id: match.facility.id,
+        name: match.facility.name,
+        address: match.facility.address,
+        city: match.facility.city,
+        timezone: match.facility.timezone ?? matchTimezone,
+      }
+    : null;
+
   const handleCourtPress = useCallback(
     async (court: CourtOption) => {
-      if (!facility || !matchingSlot) return;
+      if (!facilityForBooking || !matchingSlot) return;
       await openExternalBooking({
-        facility,
+        facility: facilityForBooking,
         slot: matchingSlot,
         selectedCourt: court,
         matchId: match.id,
@@ -146,20 +122,22 @@ export function MatchAvailableCourtsSection({
         sportName: match.sport?.name,
       });
     },
-    [facility, matchingSlot, match.id, openExternalBooking]
+    [
+      facilityForBooking,
+      matchingSlot,
+      match.id,
+      match.sport?.id,
+      match.sport?.name,
+      openExternalBooking,
+    ]
   );
 
-  // We render the section shell as soon as the quick gate passes, even while the
-  // provider/availability queries are still in flight — the tiles area shows a
-  // skeleton state until slots resolve.
-  if (!gateBeforeFetch) return null;
-
-  const isResolving = isFacilityLoading || isSlotsLoading || (!facility && !hasProvider);
-  const availabilityResolved = !!facility && !isSlotsLoading;
-
-  // Once we've resolved availability, hide the section if the facility turns out
-  // not to have a real-time provider, or there are no courts at the match start.
-  if (availabilityResolved && (!hasProvider || courtOptions.length === 0)) return null;
+  // Host-only, unreserved matches with ≥1 bookable court at the start time.
+  // Anything else (no slots inlined, court already booked, viewer not the
+  // host) collapses the section away.
+  if (!isCreator || match.court_status === 'reserved' || courtOptions.length === 0) {
+    return null;
+  }
 
   const formatCourtLabel = (court: CourtOption) => {
     if (court.courtNumber !== undefined && court.courtNumber !== null) {
@@ -167,10 +145,6 @@ export function MatchAvailableCourtsSection({
     }
     return court.courtName;
   };
-
-  // Skeleton colors, mirroring the pattern in FacilitiesDirectory.tsx
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
 
   return (
     <Animated.View
@@ -193,82 +167,45 @@ export function MatchAvailableCourtsSection({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tilesRow}
       >
-        {isResolving && courtOptions.length === 0
-          ? [0, 1, 2, 3].map(i => (
-              <View
-                key={`skeleton-${i}`}
-                style={[
-                  styles.tile,
-                  {
-                    backgroundColor: isDark ? neutral[800] : neutral[50],
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <View style={styles.tileHeader}>
-                  <Skeleton
-                    width="70%"
-                    height={14}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                  <Skeleton
-                    width={14}
-                    height={14}
-                    borderRadius={7}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                </View>
-                <View style={styles.tileFooter}>
-                  <Skeleton
-                    width={44}
-                    height={18}
-                    backgroundColor={skeletonBg}
-                    highlightColor={skeletonHighlight}
-                  />
-                </View>
+        {courtOptions.map((court, index) => {
+          const price = court.price;
+          const isFree = price === 0;
+          const hasPrice = typeof price === 'number' && price > 0;
+          return (
+            <Pressable
+              key={`${court.facilityScheduleId}-${court.externalCourtId}-${index}`}
+              onPress={() => {
+                void handleCourtPress(court);
+              }}
+              style={({ pressed }) => [
+                styles.tile,
+                {
+                  backgroundColor: isDark ? neutral[800] : neutral[50],
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <View style={styles.tileHeader}>
+                <Text size="sm" weight="semibold" color={colors.text} style={styles.tileName}>
+                  {formatCourtLabel(court)}
+                </Text>
+                <Ionicons name="open-outline" size={14} color={colors.iconMuted} />
               </View>
-            ))
-          : courtOptions.map((court, index) => {
-              const price = court.price;
-              const isFree = price === 0;
-              const hasPrice = typeof price === 'number' && price > 0;
-              return (
-                <Pressable
-                  key={`${court.facilityScheduleId}-${court.externalCourtId}-${index}`}
-                  onPress={() => {
-                    void handleCourtPress(court);
-                  }}
-                  style={({ pressed }) => [
-                    styles.tile,
-                    {
-                      backgroundColor: isDark ? neutral[800] : neutral[50],
-                      borderColor: colors.border,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                >
-                  <View style={styles.tileHeader}>
-                    <Text size="sm" weight="semibold" color={colors.text} style={styles.tileName}>
-                      {formatCourtLabel(court)}
-                    </Text>
-                    <Ionicons name="open-outline" size={14} color={colors.iconMuted} />
-                  </View>
-                  <View style={styles.tileFooter}>
-                    {hasPrice ? (
-                      <Text size="sm" weight="semibold" color={colors.text}>
-                        ${price.toFixed(0)}
-                      </Text>
-                    ) : isFree ? (
-                      <Text size="sm" weight="semibold" color={colors.textMuted}>
-                        {t('facilityDetail.free')}
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            })}
+              <View style={styles.tileFooter}>
+                {hasPrice ? (
+                  <Text size="sm" weight="semibold" color={colors.text}>
+                    ${price.toFixed(0)}
+                  </Text>
+                ) : isFree ? (
+                  <Text size="sm" weight="semibold" color={colors.textMuted}>
+                    {t('facilityDetail.free')}
+                  </Text>
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </Animated.View>
   );

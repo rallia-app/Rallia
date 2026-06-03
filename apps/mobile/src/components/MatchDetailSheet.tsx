@@ -5472,7 +5472,12 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             {t('matchDetail.provideFeedbackOnly')}
           </Button>
         )}
-        <View style={styles.footerActionsColumn}>
+        <View
+          style={[
+            styles.footerActionsColumn,
+            needsScoreConfirmAndFeedback && hasTwoScoreActions && styles.footerActionsColumnStacked,
+          ]}
+        >
           {canSuggestTime && (
             <TouchableOpacity
               onPress={handleOpenSuggestTime}
@@ -6291,6 +6296,15 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: spacingPixels[2],
     minWidth: 0,
+  },
+  // When the sticky footer flips to a column (feedback stacked above the two
+  // score CTAs), this wrapper must size to its content vertically. Keeping
+  // `flex: 1` here would make it claim vertical space with flexBasis: 0 and
+  // collapse — since the parent has no fixed height — squishing the button row
+  // inside. Full width still comes from the parent's `alignItems: 'stretch'`.
+  footerActionsColumnStacked: {
+    flex: 0,
+    width: '100%',
   },
   // Tertiary "Suggest a different time" link — full-width tappable row,
   // with a touch of breathing room before the primary CTA row below.
