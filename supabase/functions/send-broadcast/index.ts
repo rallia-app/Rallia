@@ -57,7 +57,7 @@ const ENC = new TextEncoder();
 // =============================================================================
 
 interface Recipient {
-  userId: string;
+  userId: string | null;
   email: string;
   firstName: string | null;
   locale: string | null;
@@ -237,7 +237,7 @@ Deno.serve(async req => {
   let stopDispatching = false;
   const logRows: Array<{
     broadcast_id: string;
-    user_id: string;
+    user_id: string | null;
     email: string;
     resend_id: string | null;
     status: 'sent' | 'failed';
@@ -259,7 +259,11 @@ Deno.serve(async req => {
     }
 
     try {
-      const unsubscribeUrl = await buildUnsubscribeUrl(recipient.userId, secret);
+      // Known users get a signed one-click unsubscribe; addresses not tied to a
+      // user (manual externals) fall back to the generic unsubscribe page.
+      const unsubscribeUrl = recipient.userId
+        ? await buildUnsubscribeUrl(recipient.userId, secret)
+        : `${appUrl}/broadcast/unsubscribe`;
       const { subject: s, html } = renderBroadcastEmail({
         subject,
         body,
@@ -275,10 +279,12 @@ Deno.serve(async req => {
         to: recipient.email,
         subject: s,
         html,
-        headers: {
-          'List-Unsubscribe': `<${unsubscribeUrl}>`,
-          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-        },
+        headers: recipient.userId
+          ? {
+              'List-Unsubscribe': `<${unsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            }
+          : {},
       });
 
       if (error) {

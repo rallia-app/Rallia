@@ -6,19 +6,28 @@ import { NextRequest, NextResponse } from 'next/server';
 // Email broadcasts are a high-impact action (can reach every user) — super_admin only.
 const ALLOWED_ROLES = ['super_admin'];
 
-interface Audience {
-  sportId?: string | null;
-  city?: string | null;
-  locale?: string | null;
-  activeSince?: string | null;
-  onlySubscribers?: boolean | null;
-}
-
 interface Recipient {
-  userId: string;
+  userId: string | null;
   email: string;
   firstName: string | null;
   locale: string | null;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Parse + validate a recipient list (array or delimited string) into deduped, lowercased emails. */
+function parseEmails(raw: unknown): string[] {
+  const tokens = Array.isArray(raw)
+    ? raw.flatMap(v => (typeof v === 'string' ? v.split(/[\s,;]+/) : []))
+    : typeof raw === 'string'
+      ? raw.split(/[\s,;]+/)
+      : [];
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    const email = token.trim().toLowerCase();
+    if (email && EMAIL_RE.test(email)) seen.add(email);
+  }
+  return [...seen];
 }
 
 async function getAuthedAdminDb() {
@@ -49,29 +58,38 @@ async function getAuthedAdminDb() {
   };
 }
 
-/** Resolve the eligible recipient list for an audience via the consent-aware RPC. */
+/**
+ * Build the recipient list from an explicit email list. Matches against profile
+ * to enrich known users with their id/name/locale (so they get personalization
+ * and a working unsubscribe link); unmatched addresses are sent as-is.
+ */
 async function resolveRecipients(
   adminDb: ReturnType<typeof createServiceRoleClient>,
-  audience: Audience
+  emails: string[]
 ): Promise<Recipient[]> {
-  const { data, error } = await adminDb.rpc('get_broadcast_recipients', {
-    p_sport_id: audience.sportId ?? undefined,
-    p_city: audience.city ?? undefined,
-    p_locale: audience.locale ?? undefined,
-    p_active_since: audience.activeSince ?? undefined,
-    p_only_subscribers: audience.onlySubscribers ?? undefined,
-  });
+  if (emails.length === 0) return [];
+
+  const { data, error } = await adminDb
+    .from('profile')
+    .select('id, email, first_name, preferred_locale')
+    .in('email', emails);
 
   if (error) {
-    throw new Error(`get_broadcast_recipients failed: ${error.message}`);
+    throw new Error(`profile lookup failed: ${error.message}`);
   }
 
-  return (data ?? []).map(row => ({
-    userId: row.user_id,
-    email: row.email,
-    firstName: row.first_name,
-    locale: row.preferred_locale,
-  }));
+  const byEmail = new Map(
+    (data ?? [])
+      .filter((p): p is typeof p & { email: string } => Boolean(p.email))
+      .map(p => [p.email.toLowerCase(), p])
+  );
+
+  return emails.map(email => {
+    const p = byEmail.get(email);
+    return p
+      ? { userId: p.id, email: p.email, firstName: p.first_name, locale: p.preferred_locale }
+      : { userId: null, email, firstName: null, locale: null };
+  });
 }
 
 /** Invoke the send-broadcast edge function, forwarding the admin session token. */
@@ -148,13 +166,6 @@ export async function POST(request: NextRequest) {
 
     const raw = (await request.json()) as Record<string, unknown>;
     const action = typeof raw.action === 'string' ? raw.action : 'send';
-    const audience = (raw.audience ?? {}) as Audience;
-
-    // ---- count: recipient preview ----------------------------------------
-    if (action === 'count') {
-      const recipients = await resolveRecipients(adminDb, audience);
-      return NextResponse.json({ count: recipients.length });
-    }
 
     const content = parseContent(raw);
     if (content.error) {
@@ -191,11 +202,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, testEmail });
     }
 
-    // ---- send: resolve audience, persist campaign, dispatch --------------
-    const recipients = await resolveRecipients(adminDb, audience);
-    if (recipients.length === 0) {
-      return NextResponse.json({ error: 'No recipients match this audience' }, { status: 400 });
+    // ---- send: resolve recipients, persist campaign, dispatch ------------
+    const emails = parseEmails(raw.emails);
+    if (emails.length === 0) {
+      return NextResponse.json({ error: 'No valid recipient emails provided' }, { status: 400 });
     }
+    const recipients = await resolveRecipients(adminDb, emails);
 
     const { data: broadcast, error: insertError } = await adminDb
       .from('email_broadcast')
@@ -205,7 +217,7 @@ export async function POST(request: NextRequest) {
         body: content.body,
         cta_text: content.ctaText,
         cta_url: content.ctaUrl,
-        audience: (audience ?? {}) as unknown as Json,
+        audience: { source: 'email_list', count: recipients.length },
         recipients_total: recipients.length,
         status: 'sending',
       })
@@ -258,7 +270,6 @@ export async function POST(request: NextRequest) {
       p_entity_id: broadcast.id,
       p_new_data: {
         subject: content.subject,
-        audience,
         recipients_total: recipients.length,
         sent: result.body.sent ?? null,
         failed: result.body.failed ?? null,

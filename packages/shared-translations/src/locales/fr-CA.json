@@ -5763,7 +5763,7 @@
       "titleMeta": "Courriels - Admin - Rallia",
       "descriptionMeta": "Composer et envoyer des courriels en lot aux utilisateurs",
       "title": "Courriels",
-      "description": "Composez et envoyez un courriel en lot à un segment d'utilisateurs.",
+      "description": "Composez et envoyez un courriel en lot à une liste de destinataires.",
       "compose": {
         "heading": "Composer",
         "subjectLabel": "Objet",
@@ -5776,22 +5776,14 @@
         "ctaUrlLabel": "Lien du bouton",
         "ctaUrlPlaceholder": "https://rallia.app/…"
       },
-      "audience": {
-        "heading": "Audience",
-        "everyone": "Tout le monde",
-        "sport": "Sport",
-        "anySport": "Tous les sports",
-        "city": "Ville",
-        "cityPlaceholder": "p. ex. Montréal",
-        "locale": "Langue",
-        "anyLocale": "Toutes les langues",
-        "activeSince": "Actif depuis",
-        "activeAny": "N'importe quand",
-        "active30": "30 derniers jours",
-        "active90": "90 derniers jours",
-        "onlySubscribers": "Abonnés Premium seulement",
-        "recipients": "{count} destinataires",
-        "recipientsLoading": "Calcul des destinataires…"
+      "recipients": {
+        "heading": "Destinataires",
+        "label": "Adresses courriel",
+        "placeholder": "alex@example.com, sam@example.com…",
+        "help": "Collez les courriels ciblés, séparés par des virgules, des espaces ou des sauts de ligne.",
+        "count": "{count} destinataires valides",
+        "invalid": "{count} entrées ignorées (format invalide)",
+        "empty": "Ajoutez au moins un courriel de destinataire."
       },
       "preview": {
         "heading": "Aperçu",
