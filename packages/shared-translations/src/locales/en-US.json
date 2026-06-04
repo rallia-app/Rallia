@@ -5763,7 +5763,7 @@
       "titleMeta": "Emails - Admin - Rallia",
       "descriptionMeta": "Compose and send email broadcasts to users",
       "title": "Emails",
-      "description": "Compose and send an email broadcast to a segment of users.",
+      "description": "Compose and send an email broadcast to a list of recipients.",
       "compose": {
         "heading": "Compose",
         "subjectLabel": "Subject",
@@ -5776,22 +5776,14 @@
         "ctaUrlLabel": "Button link",
         "ctaUrlPlaceholder": "https://rallia.app/…"
       },
-      "audience": {
-        "heading": "Audience",
-        "everyone": "Everyone",
-        "sport": "Sport",
-        "anySport": "Any sport",
-        "city": "City",
-        "cityPlaceholder": "e.g. Montréal",
-        "locale": "Language",
-        "anyLocale": "Any language",
-        "activeSince": "Active since",
-        "activeAny": "Any time",
-        "active30": "Last 30 days",
-        "active90": "Last 90 days",
-        "onlySubscribers": "Premium subscribers only",
-        "recipients": "{count} recipients",
-        "recipientsLoading": "Counting recipients…"
+      "recipients": {
+        "heading": "Recipients",
+        "label": "Email addresses",
+        "placeholder": "alex@example.com, sam@example.com…",
+        "help": "Paste the targeted emails, separated by commas, spaces, or new lines.",
+        "count": "{count} valid recipients",
+        "invalid": "{count} entries ignored (invalid format)",
+        "empty": "Add at least one recipient email."
       },
       "preview": {
         "heading": "Preview",

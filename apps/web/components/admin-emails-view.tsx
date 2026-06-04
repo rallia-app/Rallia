@@ -13,27 +13,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@rallia/shared-hooks';
 import { Moon, Send, Sun, Users } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-
-interface SportOption {
-  id: string;
-  name: string;
-}
 
 interface BroadcastHistory {
   id: string;
@@ -51,9 +38,29 @@ interface Feedback {
 }
 
 const LOCALE_OPTIONS = ['en-US', 'fr-CA'] as const;
-const ACTIVE_SINCE_OPTIONS = ['', '30', '90'] as const;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
+/** Split a free-form list on commas/semicolons/whitespace into deduped valid + invalid entries. */
+function parseEmailList(raw: string): { valid: string[]; invalid: string[] } {
+  const seen = new Set<string>();
+  const valid: string[] = [];
+  const invalid: string[] = [];
+  for (const token of raw.split(/[\s,;]+/)) {
+    const trimmed = token.trim();
+    if (!trimmed) continue;
+    const email = trimmed.toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      invalid.push(trimmed);
+      continue;
+    }
+    if (seen.has(email)) continue;
+    seen.add(email);
+    valid.push(email);
+  }
+  return { valid, invalid };
+}
+
+export function AdminEmailsView() {
   const t = useTranslations('admin.emails');
   const locale = useLocale();
 
@@ -63,20 +70,14 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   const [ctaText, setCtaText] = useState('');
   const [ctaUrl, setCtaUrl] = useState('');
 
-  // ---- Audience state ----
-  const [sportId, setSportId] = useState('');
-  const [city, setCity] = useState('');
-  const [audienceLocale, setAudienceLocale] = useState('');
-  const [activeSince, setActiveSince] = useState('');
-  const [onlySubscribers, setOnlySubscribers] = useState(false);
+  // ---- Recipients state ----
+  const [recipientEmails, setRecipientEmails] = useState('');
 
   // ---- Preview state ----
   const [previewLocale, setPreviewLocale] = useState(locale === 'fr-CA' ? 'fr-CA' : 'en-US');
   const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
 
   // ---- Async state ----
-  const [recipientCount, setRecipientCount] = useState<number | null>(null);
-  const [countLoading, setCountLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -85,19 +86,11 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
 
   const hasContent = subject.trim().length > 0 && body.trim().length > 0;
 
-  // Audience payload (omits empty filters).
-  const buildAudience = useCallback((): Record<string, unknown> => {
-    const a: Record<string, unknown> = {};
-    if (sportId) a.sportId = sportId;
-    if (city.trim()) a.city = city.trim();
-    if (audienceLocale) a.locale = audienceLocale;
-    if (activeSince) {
-      const days = activeSince === '30' ? 30 : 90;
-      a.activeSince = new Date(Date.now() - days * 86_400_000).toISOString();
-    }
-    if (onlySubscribers) a.onlySubscribers = true;
-    return a;
-  }, [sportId, city, audienceLocale, activeSince, onlySubscribers]);
+  const { valid: validEmails, invalid: invalidEmails } = useMemo(
+    () => parseEmailList(recipientEmails),
+    [recipientEmails]
+  );
+  const recipientCount = validEmails.length;
 
   // ---- Live preview iframe (debounced) ----
   const debouncedSubject = useDebounce(subject, 400);
@@ -127,36 +120,6 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
     previewLocale,
     colorMode,
   ]);
-
-  // ---- Recipient count (debounced on audience) ----
-  const audienceKey = useMemo(() => JSON.stringify(buildAudience()), [buildAudience]);
-  const debouncedAudienceKey = useDebounce(audienceKey, 350);
-
-  useEffect(() => {
-    let ignore = false;
-    setCountLoading(true);
-    fetch('/api/admin/broadcasts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'count',
-        audience: JSON.parse(debouncedAudienceKey) as Record<string, unknown>,
-      }),
-    })
-      .then(res => res.json() as Promise<{ count?: number }>)
-      .then(data => {
-        if (!ignore) setRecipientCount(typeof data.count === 'number' ? data.count : null);
-      })
-      .catch(() => {
-        if (!ignore) setRecipientCount(null);
-      })
-      .finally(() => {
-        if (!ignore) setCountLoading(false);
-      });
-    return () => {
-      ignore = true;
-    };
-  }, [debouncedAudienceKey]);
 
   // ---- History ----
   const loadHistory = useCallback(async () => {
@@ -228,7 +191,7 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
           body,
           ctaText,
           ctaUrl,
-          audience: buildAudience(),
+          emails: validEmails,
         }),
       });
       const data = (await res.json()) as {
@@ -273,7 +236,7 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   return (
     <div className="space-y-8">
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left: compose + audience */}
+        {/* Left: compose + recipients */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -328,94 +291,31 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>{t('audience.heading')}</CardTitle>
+              <CardTitle>{t('recipients.heading')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('audience.sport')}</Label>
-                  <Select
-                    value={sportId || 'any'}
-                    onValueChange={v => setSportId(v === 'any' ? '' : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">{t('audience.anySport')}</SelectItem>
-                      {sports.map(s => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('audience.locale')}</Label>
-                  <Select
-                    value={audienceLocale || 'any'}
-                    onValueChange={v => setAudienceLocale(v === 'any' ? '' : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">{t('audience.anyLocale')}</SelectItem>
-                      {LOCALE_OPTIONS.map(l => (
-                        <SelectItem key={l} value={l}>
-                          {l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="broadcast-city">{t('audience.city')}</Label>
-                  <Input
-                    id="broadcast-city"
-                    value={city}
-                    onChange={e => setCity(e.target.value)}
-                    placeholder={t('audience.cityPlaceholder')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('audience.activeSince')}</Label>
-                  <Select
-                    value={activeSince || 'any'}
-                    onValueChange={v => setActiveSince(v === 'any' ? '' : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTIVE_SINCE_OPTIONS.map(opt => (
-                        <SelectItem key={opt || 'any'} value={opt || 'any'}>
-                          {opt === ''
-                            ? t('audience.activeAny')
-                            : t(`audience.active${opt}` as 'audience.active30')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="broadcast-recipients">{t('recipients.label')}</Label>
+                <Textarea
+                  id="broadcast-recipients"
+                  value={recipientEmails}
+                  onChange={e => setRecipientEmails(e.target.value)}
+                  placeholder={t('recipients.placeholder')}
+                  rows={5}
+                />
+                <p className="text-xs text-muted-foreground">{t('recipients.help')}</p>
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={onlySubscribers}
-                  onCheckedChange={v => setOnlySubscribers(v === true)}
-                />
-                {t('audience.onlySubscribers')}
-              </label>
-
-              <div className="flex items-center gap-2 pt-2">
-                <Users className="size-4 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {countLoading
-                    ? t('audience.recipientsLoading')
-                    : t('audience.recipients', { count: recipientCount ?? 0 })}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Users className="size-4 text-muted-foreground" />
+                  {t('recipients.count', { count: recipientCount })}
                 </span>
+                {invalidEmails.length > 0 && (
+                  <span className="text-sm text-amber-600 dark:text-amber-400">
+                    {t('recipients.invalid', { count: invalidEmails.length })}
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -431,7 +331,7 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
             </Button>
             <Button
               onClick={() => setConfirmOpen(true)}
-              disabled={!hasContent || isSending || !recipientCount}
+              disabled={!hasContent || isSending || recipientCount === 0}
             >
               <Send className="mr-2 size-4" />
               {isSending ? t('actions.sending') : t('actions.send')}
@@ -557,13 +457,13 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('confirm.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('confirm.description', { count: recipientCount ?? 0 })}
+              {t('confirm.description', { count: recipientCount })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('confirm.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={() => void handleSend()}>
-              {t('confirm.confirm', { count: recipientCount ?? 0 })}
+              {t('confirm.confirm', { count: recipientCount })}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
