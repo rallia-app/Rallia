@@ -1,7 +1,7 @@
 /**
  * MatchAvailableCourtsSection
  *
- * Shown inside MatchDetailSheet to the host of a match when:
+ * Shown inside MatchDetailSheet to any viewer of a match when:
  *  - the match is linked to a facility, AND
  *  - no court has been booked yet (court_status !== 'reserved'), AND
  *  - the facility has real-time snapshot availability at the match start time.
@@ -10,17 +10,19 @@
  * (`match.available_courts_slots`, populated from `facility_availability_snapshot`
  * alongside the `available_courts` count) — no separate availability round trip.
  * Renders one tile per available court at the exact match start time. Tapping a
- * tile goes directly to that court's external booking URL; the pending booking
- * is tagged with matchId so the return flow (handled in
- * PendingExternalBookingContext) can link the booked court back to the match.
+ * tile goes directly to that court's external booking URL. For the host, the
+ * pending booking is tagged with matchId so the return flow (handled in
+ * PendingExternalBookingContext) links the booked court back to the match.
+ * Non-hosts can only update their own matches (RLS), so their tap is a plain
+ * external booking with no match link.
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated as RNAnimated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, neutral, status, base } from '@rallia/design-system';
 import type { CourtOption, FormattedSlot } from '@rallia/shared-hooks';
 import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
 
@@ -66,6 +68,89 @@ function slotMatchesMatchStart(
   } catch {
     return false;
   }
+}
+
+type ThemeStyleColors = ReturnType<typeof useThemeStyles>['colors'];
+
+interface CourtTileProps {
+  court: CourtOption;
+  label: string;
+  freeLabel: string;
+  colors: ThemeStyleColors;
+  isDark: boolean;
+  onPress: (court: CourtOption) => void;
+}
+
+/**
+ * Single bookable-court tile. Owns its own press-scale spring so the tactile
+ * feedback matches MatchCard (RN Animated spring on pressIn/pressOut).
+ */
+function CourtTile({ court, label, freeLabel, colors, isDark, onPress }: CourtTileProps) {
+  const scale = useMemo(() => new RNAnimated.Value(1), []);
+  const price = court.price;
+  const isFree = price === 0;
+  const hasPrice = typeof price === 'number' && price > 0;
+
+  const handlePressIn = () => {
+    RNAnimated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    RNAnimated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  };
+
+  return (
+    <RNAnimated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        onPress={() => onPress(court)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.tile,
+          { backgroundColor: isDark ? neutral[800] : base.white, borderColor: colors.border },
+        ]}
+      >
+        <View style={styles.tileTop}>
+          <Text
+            size="sm"
+            weight="semibold"
+            color={colors.text}
+            numberOfLines={2}
+            style={styles.tileName}
+          >
+            {label}
+          </Text>
+          <Ionicons name="open-outline" size={13} color={colors.iconMuted} />
+        </View>
+
+        {hasPrice ? (
+          <View
+            style={[styles.pricePill, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+          >
+            <Text size="xs" weight="bold" color={colors.text}>
+              ${price.toFixed(0)}
+            </Text>
+          </View>
+        ) : isFree ? (
+          <View style={[styles.pricePill, { backgroundColor: status.success.DEFAULT + '1A' }]}>
+            <Text size="xs" weight="bold" color={status.success.DEFAULT}>
+              {freeLabel}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
+    </RNAnimated.View>
+  );
 }
 
 export function MatchAvailableCourtsSection({
@@ -116,7 +201,9 @@ export function MatchAvailableCourtsSection({
         facility: facilityForBooking,
         slot: matchingSlot,
         selectedCourt: court,
-        matchId: match.id,
+        // Only the host can attach the booked court to the match (RLS); for
+        // everyone else this is a plain external booking with no match link.
+        matchId: isCreator ? match.id : undefined,
         source: 'match_courts',
         sportId: match.sport?.id,
         sportName: match.sport?.name,
@@ -125,6 +212,7 @@ export function MatchAvailableCourtsSection({
     [
       facilityForBooking,
       matchingSlot,
+      isCreator,
       match.id,
       match.sport?.id,
       match.sport?.name,
@@ -132,10 +220,11 @@ export function MatchAvailableCourtsSection({
     ]
   );
 
-  // Host-only, unreserved matches with ≥1 bookable court at the start time.
-  // Anything else (no slots inlined, court already booked, viewer not the
-  // host) collapses the section away.
-  if (!isCreator || match.court_status === 'reserved' || courtOptions.length === 0) {
+  // Any viewer, on unreserved matches with ≥1 bookable court at the start time.
+  // Anything else (no slots inlined, court already booked) collapses the section
+  // away. The host gets the match-linking booking flow; non-hosts get a plain
+  // external booking (see handleCourtPress).
+  if (match.court_status === 'reserved' || courtOptions.length === 0) {
     return null;
   }
 
@@ -167,45 +256,19 @@ export function MatchAvailableCourtsSection({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tilesRow}
       >
-        {courtOptions.map((court, index) => {
-          const price = court.price;
-          const isFree = price === 0;
-          const hasPrice = typeof price === 'number' && price > 0;
-          return (
-            <Pressable
-              key={`${court.facilityScheduleId}-${court.externalCourtId}-${index}`}
-              onPress={() => {
-                void handleCourtPress(court);
-              }}
-              style={({ pressed }) => [
-                styles.tile,
-                {
-                  backgroundColor: isDark ? neutral[800] : neutral[50],
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              <View style={styles.tileHeader}>
-                <Text size="sm" weight="semibold" color={colors.text} style={styles.tileName}>
-                  {formatCourtLabel(court)}
-                </Text>
-                <Ionicons name="open-outline" size={14} color={colors.iconMuted} />
-              </View>
-              <View style={styles.tileFooter}>
-                {hasPrice ? (
-                  <Text size="sm" weight="semibold" color={colors.text}>
-                    ${price.toFixed(0)}
-                  </Text>
-                ) : isFree ? (
-                  <Text size="sm" weight="semibold" color={colors.textMuted}>
-                    {t('facilityDetail.free')}
-                  </Text>
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
+        {courtOptions.map((court, index) => (
+          <CourtTile
+            key={`${court.facilityScheduleId}-${court.externalCourtId}-${index}`}
+            court={court}
+            label={formatCourtLabel(court)}
+            freeLabel={t('facilityDetail.free')}
+            colors={colors}
+            isDark={isDark}
+            onPress={court => {
+              void handleCourtPress(court);
+            }}
+          />
+        ))}
       </ScrollView>
     </Animated.View>
   );
@@ -232,25 +295,39 @@ const styles = StyleSheet.create({
   },
   tilesRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: spacingPixels[2],
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
     paddingRight: spacingPixels[5],
+    paddingVertical: spacingPixels[1],
   },
   tile: {
-    width: 120,
+    width: 156,
+    minHeight: 96,
     borderRadius: radiusPixels.xl,
     borderWidth: 1,
     padding: spacingPixels[3],
     gap: spacingPixels[2],
-  },
-  tileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tileTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacingPixels[1],
   },
   tileName: {
     flex: 1,
-    marginRight: spacingPixels[1],
+    minHeight: 40,
   },
-  tileFooter: {},
+  pricePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
 });
