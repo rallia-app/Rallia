@@ -251,6 +251,7 @@
       "org_announcement": "Annonce",
       "morning_digest": "Récapitulatif matinal",
       "availability_refresh_reminder": "Rappel de disponibilités",
+      "admin_broadcast": "Annonces",
       "match_time_suggested": "Heure proposée",
       "match_time_suggestion_accepted": "Heure acceptée",
       "match_time_suggestion_declined": "Heure refusée"
@@ -4076,9 +4077,9 @@
       "activate": "Activer"
     },
     "availabilityRefreshBanner": {
-      "title": "C'est l'heure du check-in hebdo 🐿️",
-      "description": "Fixe ton objectif et confirme tes dispos pour la semaine.",
-      "descriptionStreak": "Continue ta séquence de {count} semaines.",
+      "title": "C'est l'heure de ton check-in 🐿️",
+      "description": "Fixe ton objectif et confirme tes dispos pour les prochains jours.",
+      "descriptionStreak": "Tu es sur une séquence de {count} semaines 🔥 Confirme tes prochains jours.",
       "cta": "Commencer"
     },
     "header": {
@@ -9596,28 +9597,28 @@
   "weeklyCheckIn": {
     "exit": {
       "title": "On se reprend plus tard?",
-      "description": "Ace reviendra te voir la semaine prochaine — tes réglages ne seront pas sauvegardés cette fois-ci.",
+      "description": "Ace reviendra te voir dans quelques jours — tes réglages ne seront pas sauvegardés cette fois-ci.",
       "confirm": "Quitter pour cette fois",
       "cancel": "Continuer"
     },
     "step1": {
       "bubbleHit": "Horaire enregistré 🔒 Objectif explosé la semaine passée — la séquence grimpe.",
       "bubbleMet": "Horaire enregistré 🔒 {goal} sessions jouées la semaine passée. La séquence tient bon.",
-      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué, mais pas la séquence. On se replace.",
-      "bubbleFirstTime": "Horaire enregistré 🔒 C'est ton premier check-in — on lance ta séquence.",
+      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué la semaine passée — on se reprend et on vise juste cette semaine. 💪",
+      "bubbleFirstTime": "Horaire enregistré 🔒 Joue tes parties et fais ton check-in cette semaine pour lancer ta séquence. 🔥",
       "streakTitle": "Séquence de {count} semaines",
       "streakTitleZero": "Commence une séquence cette semaine",
       "streakSubtitle": "semaines",
       "streakSubtitleOne": "semaine de suite",
-      "streakLabel": "SEMAINES DE CHECK-IN",
-      "streakLabelOne": "SEMAINE DE CHECK-IN",
+      "streakLabel": "SÉQUENCE D'OBJECTIFS",
+      "streakLabelOne": "SÉQUENCE D'OBJECTIFS",
       "timelineLabel": "Tes derniers check-ins",
       "thisWeek": "Cette sem.",
       "freezeCount": "{count} jokers en réserve",
       "freezeOne": "1 joker en réserve",
       "freezeZero": "0 joker en réserve",
-      "freezeHint": "Tu en gagnes 1 tous les 4 semaines",
-      "freezeFirstTimeInvite": "Ton premier check-in lance ta séquence 🔥",
+      "freezeHint": "Gagne 1 joker pour 4 objectifs atteints de suite",
+      "freezeFirstTimeInvite": "Atteins ton objectif hebdo pour lancer ta séquence 🔥",
       "goalsCardTitle": "SUIVI DES OBJECTIFS",
       "goalsCardLastWeek": "Semaine passée",
       "goalsCardTrendLabel": "Les 4 dernières semaines",
@@ -9625,14 +9626,14 @@
       "goalsCardLastWeekHit": "Objectif atteint ✓",
       "goalsCardLastWeekMiss": "Objectif manqué",
       "goalsCardNoHistory": "Ton historique d'objectifs apparaîtra ici après quelques semaines de jeu. 📈",
-      "freezeTooltip": "Les jokers de séquence te protègent si tu rates un check-in.",
+      "freezeTooltip": "Les jokers de séquence te protègent si tu rates ton objectif hebdo.",
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
       "recapPlayed": "Joué",
       "cta": "Fixons mon objectif 🎯"
     },
     "step2": {
-      "bubble": "Salut 👋 Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages. ✨",
+      "bubble": "Salut 👋 Quand es-tu libre dans les prochains jours? Tape ou glisse pour peindre tes plages. ✨",
       "cta": "Parfait"
     },
     "step3": {
@@ -9657,12 +9658,6 @@
     },
     "step4": {
       "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🎾",
-      "streakHeroCount": "{count} semaines!",
-      "streakHeroCountOne": "1 semaine!",
-      "streakHeroSub": "Séquence prolongée · +1",
-      "streakHeroSubFirst": "Séquence lancée 🌱",
-      "streakHeroSubMilestone": "Étape franchie · +1 joker gagné ❄️",
-      "streakHeroSubMilestoneCapped": "Étape franchie! Jokers au max (2) ❄️❄️",
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",

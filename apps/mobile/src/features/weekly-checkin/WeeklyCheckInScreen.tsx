@@ -158,6 +158,7 @@ export function WeeklyCheckInScreen() {
             availability={wizard.availability}
             onChange={wizard.setAvailability}
             onContinue={wizard.goNext}
+            window={wizard.context?.window ?? []}
           />
         </StepSlot>
 
@@ -176,6 +177,7 @@ export function WeeklyCheckInScreen() {
               setAutoInvite={wizard.setAutoInvite}
               isSubmitting={wizard.isSubmitting}
               onSubmit={handleSubmit}
+              showFrequencyStep={wizard.showFrequencyStep}
             />
           ) : (
             <View style={styles.loading}>
@@ -203,15 +205,8 @@ export function WeeklyCheckInScreen() {
         <StepSlot>
           {wizard.result && (
             <AllSetStep
-              result={wizard.result}
-              // First-ever check-in iff both the new streak AND the longest-
-              // ever streak are 1. After a broken streak the player's
-              // longest_streak is preserved (e.g. 5), so re-starting reads as
-              // streak=1, longest=5 — not first-ever. Only a brand-new player
-              // satisfies both === 1.
-              isFirstEver={wizard.result.newStreak === 1 && wizard.result.longestStreak === 1}
               frequencyGoal={wizard.frequencyGoal}
-              hoursConfirmed={wizard.availability.size}
+              hoursConfirmed={wizard.windowCellCount}
               autoCreate={wizard.autoCreate}
               autoInvite={wizard.autoInvite}
               onDone={handleDone}

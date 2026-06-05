@@ -1158,6 +1158,94 @@ export const OnboardingService = {
   },
 
   /**
+   * Save player availability for a SUBSET of weekdays only.
+   *
+   * Same diff/upsert path as saveAvailability, but scoped to `days`: rows for
+   * weekdays outside that set are never read or touched. Used by the rolling
+   * check-in wizard, which only edits the current window (today + next 3 days)
+   * and must preserve the player's availability on the other weekdays. A window
+   * day with all cells deselected still has its existing rows cleared (it's in
+   * `days` but absent from the desired set).
+   */
+  async saveAvailabilityForDays(
+    days: OnboardingAvailability['day'][],
+    availabilities: OnboardingAvailability[]
+  ): Promise<DatabaseResponse<PlayerAvailability[]>> {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const dayScope = new Set<string>(days);
+      if (dayScope.size === 0) {
+        // No scope → no-op, never a table-wide delete.
+        return { data: [], error: null };
+      }
+
+      const confirmedAt = new Date().toISOString();
+
+      type HourRow = {
+        player_id: string;
+        day: string;
+        hour_of_day: number;
+        is_active: boolean;
+        last_confirmed_at: string;
+      };
+      const desired = new Map<string, HourRow>();
+
+      for (const a of availabilities) {
+        if (!a.is_active) continue;
+        if (!dayScope.has(a.day)) continue; // ignore any out-of-window cells
+        const key = `${a.day}-${a.hour_of_day}`;
+        desired.set(key, {
+          player_id: userId,
+          day: a.day,
+          hour_of_day: a.hour_of_day,
+          is_active: true,
+          last_confirmed_at: confirmedAt,
+        });
+      }
+
+      const desiredRows = Array.from(desired.values());
+
+      let inserted: PlayerAvailability[] = [];
+      if (desiredRows.length > 0) {
+        const { data, error } = await supabase
+          .from('player_availability')
+          .upsert(desiredRows, { onConflict: 'player_id,day,hour_of_day' })
+          .select();
+        if (error) throw error;
+        inserted = data ?? [];
+      }
+
+      // Delete only rows WITHIN the day scope that aren't in the desired set.
+      // The `.in('day', ...)` filter is what keeps out-of-window days intact.
+      const desiredKeys = new Set(desiredRows.map(r => `${r.day}-${r.hour_of_day}`));
+      const { data: existing, error: selErr } = await supabase
+        .from('player_availability')
+        .select('id, day, hour_of_day')
+        .eq('player_id', userId)
+        .in('day', Array.from(dayScope));
+      if (selErr) throw selErr;
+      const toDelete = (existing ?? [])
+        .filter(row => !desiredKeys.has(`${row.day}-${row.hour_of_day}`))
+        .map(row => row.id);
+      if (toDelete.length > 0) {
+        const { error: delErr } = await supabase
+          .from('player_availability')
+          .delete()
+          .in('id', toDelete);
+        if (delErr) throw delErr;
+      }
+
+      return { data: inserted, error: null };
+    } catch (error) {
+      return { data: null, error: handleError(error) };
+    }
+  },
+
+  /**
    * Complete the entire onboarding process
    */
   async completeOnboarding(): Promise<DatabaseResponse<Profile>> {

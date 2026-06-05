@@ -2,25 +2,18 @@
  * weekly-checkin-reminder Edge Function
  *
  * Fires every hour via pg_cron (see 20260521120200_register_checkin_crons.sql).
- * On each tick, identifies players who:
- *   1. Are currently around 9:00 local time on Monday (their timezone)
- *   2. Have at least one active player_availability row
- *   3. Have no player_weekly_checkin row for the current ISO week
- *   4. Have not received a weekly-checkin-reminder push this week
+ * On each tick it asks `players_needing_checkin_reminder()` for players whose
+ * rolling check-in is DUE — i.e. they're past their availability_covered_through
+ * date — at ~9am their local time, with active availability, and not already
+ * reminded within the dedupe window. Each gets one push that deep-links to
+ * `rallia://weekly-checkin` so tapping opens the wizard.
  *
- * Sends a single notification per eligible player via the existing
- * `insert_notifications` RPC. The notification deep-links to
- * `rallia://weekly-checkin` so tapping opens the wizard modal directly.
- *
- * Idempotency: the existing-notification check guards against duplicate
- * pushes if the cron fires twice in the same hour. Re-running on the same
- * data is a no-op.
+ * The targeting + timezone + dedupe logic all live in the RPC (consistent with
+ * players_needing_streak_reset), so this function just sends the notifications.
  *
  * ## Response Format
- * Success (200):
- *   { "success": true, "notificationsSent": N, "errors": [], "duration_ms": X }
- * Error (500):
- *   { "success": false, "error": "...", "duration_ms": X }
+ * Success (200): { "success": true, "notificationsSent": N, "errors": [], "duration_ms": X }
+ * Error (500):   { "success": false, "error": "...", "duration_ms": X }
  */
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -31,12 +24,6 @@ import { reportHeartbeat } from '../_shared/heartbeat.ts';
 // =============================================================================
 // CONFIG
 // =============================================================================
-
-// We fire at minute :10 of each hour (see cron registration). Players are
-// considered "Monday 9am local" if their current local hour is 9 and local
-// day-of-week is Monday.
-const TARGET_LOCAL_HOUR = 9;
-const TARGET_LOCAL_DOW = 1; // Monday (ISO day; Sunday = 0 in JS, ISO = 7)
 
 // Batch size when inserting notifications.
 const BATCH_SIZE = 100;
@@ -57,7 +44,6 @@ const supabase: SupabaseClient = createClient(
 interface EligiblePlayer {
   player_id: string;
   preferred_locale: string;
-  timezone: string;
 }
 
 interface NotificationInput {
@@ -74,63 +60,27 @@ interface NotificationInput {
 // HELPERS
 // =============================================================================
 
-/** Monday of the current ISO week (UTC). */
-function currentWeekStartUtc(): string {
-  const now = new Date();
-  const day = now.getUTCDay(); // Sun=0, Mon=1, ..., Sat=6
-  const diff = day === 0 ? 6 : day - 1; // shift so Monday is 0
-  const monday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff)
-  );
-  return monday.toISOString().slice(0, 10); // YYYY-MM-DD
-}
-
 /**
- * Check if a given timezone is currently at Monday ~9am local time.
- * Uses Intl.DateTimeFormat (Deno-supported) to resolve the player's local
- * day-of-week + hour without any tz library.
- */
-function isAtMondayNineAm(tz: string): boolean {
-  try {
-    const now = new Date();
-    const fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      hour: 'numeric',
-      hour12: false,
-      weekday: 'short',
-    });
-    const parts = fmt.formatToParts(now);
-    const hourPart = parts.find(p => p.type === 'hour')?.value;
-    const weekdayPart = parts.find(p => p.type === 'weekday')?.value;
-    if (!hourPart || !weekdayPart) return false;
-    const hour = parseInt(hourPart, 10);
-    return weekdayPart === 'Mon' && hour === TARGET_LOCAL_HOUR;
-  } catch {
-    // Bad timezone string — fall back to UTC. Skip the player on this tick.
-    return false;
-  }
-}
-
-/**
- * Build the "Time for your weekly check-in 🐿️" notification payload.
- * Localized via the player's preferred_locale; matches the banner copy.
+ * Build the "Time to check in 🐿️" notification payload. Localized via the
+ * player's preferred_locale; matches the home availability banner copy.
  */
 function buildNotification(player: EligiblePlayer): NotificationInput {
   const isFr = player.preferred_locale?.startsWith('fr');
-  const title = isFr ? "C'est l'heure du check-in hebdo 🐿️" : 'Time for your weekly check-in 🐿️';
+  const title = isFr ? "C'est l'heure de ton check-in 🐿️" : 'Time to check in 🐿️';
   const body = isFr
-    ? 'Fixe ton objectif et confirme tes dispos pour la semaine.'
-    : "Set your goal and confirm when you're free this week.";
+    ? 'Fixe ton objectif et confirme tes dispos pour les prochains jours.'
+    : "Set your goal and confirm when you're free over the next few days.";
 
   return {
     user_id: player.player_id,
-    type: 'weekly_checkin_reminder',
+    // Valid notification_type_enum value. The old 'weekly_checkin_reminder'
+    // was NOT a member of the enum, so the previous reminder silently no-op'd.
+    type: 'availability_refresh_reminder',
     target_id: null,
     title,
     body,
     payload: {
       deepLink: 'rallia://weekly-checkin',
-      weekStartDate: currentWeekStartUtc(),
     },
     priority: 'default',
   };
@@ -141,85 +91,16 @@ function buildNotification(player: EligiblePlayer): NotificationInput {
 // =============================================================================
 
 /**
- * Players who: have active availability + no check-in this week + no
- * weekly-checkin-reminder notification this week.
- *
- * We do this as a single query so we don't N+1 over players. The week-start
- * date filter on `notification.created_at` is approximate (any notification
- * of this type in the last 6 days) — good enough for idempotency.
+ * Players whose rolling check-in is due this tick. All targeting (past
+ * coverage + ~9am local + active availability + dedupe) is done in the RPC.
  */
 async function fetchEligiblePlayers(): Promise<EligiblePlayer[]> {
-  const weekStart = currentWeekStartUtc();
-
-  const { data, error } = await supabase.from('player').select(
-    `
-        id,
-        timezone,
-        profile:profile!inner(preferred_locale)
-      `
-  );
-
+  const { data, error } = await supabase.rpc('players_needing_checkin_reminder');
   if (error) {
-    console.error('fetchEligiblePlayers query failed', error);
+    console.error('players_needing_checkin_reminder RPC failed', error);
     throw error;
   }
-
-  // Filter in JS: active availability + no check-in this week + no reminder this week.
-  // (Doing this in one SQL would be cleaner; deferring to a dedicated RPC if/when
-  // the cron's row count makes the JS filter slow.)
-  const candidates = (data ?? []) as Array<{
-    id: string;
-    timezone: string | null;
-    profile: { preferred_locale: string | null }[] | { preferred_locale: string | null } | null;
-  }>;
-
-  // Pre-filter by Monday-9am local before any per-player query.
-  const atMonday9am = candidates.filter(p => isAtMondayNineAm(p.timezone ?? 'UTC'));
-  if (atMonday9am.length === 0) return [];
-
-  // For each candidate, check (a) active availability and (b) no check-in row,
-  // (c) no existing reminder notification this week.
-  const playerIds = atMonday9am.map(p => p.id);
-
-  const [availRes, checkinRes, notifRes] = await Promise.all([
-    supabase
-      .from('player_availability')
-      .select('player_id')
-      .in('player_id', playerIds)
-      .eq('is_active', true),
-    supabase
-      .from('player_weekly_checkin')
-      .select('player_id')
-      .in('player_id', playerIds)
-      .eq('week_start_date', weekStart),
-    supabase
-      .from('notification')
-      .select('user_id')
-      .in('user_id', playerIds)
-      .eq('type', 'weekly_checkin_reminder')
-      .gte('created_at', `${weekStart}T00:00:00Z`),
-  ]);
-
-  if (availRes.error) throw availRes.error;
-  if (checkinRes.error) throw checkinRes.error;
-  if (notifRes.error) throw notifRes.error;
-
-  const hasAvail = new Set(availRes.data?.map(r => r.player_id) ?? []);
-  const hasCheckin = new Set(checkinRes.data?.map(r => r.player_id) ?? []);
-  const alreadyNotified = new Set(notifRes.data?.map(r => r.user_id) ?? []);
-
-  return atMonday9am
-    .filter(p => hasAvail.has(p.id))
-    .filter(p => !hasCheckin.has(p.id))
-    .filter(p => !alreadyNotified.has(p.id))
-    .map(p => {
-      const profile = Array.isArray(p.profile) ? p.profile[0] : p.profile;
-      return {
-        player_id: p.id,
-        preferred_locale: profile?.preferred_locale ?? 'en-US',
-        timezone: p.timezone ?? 'UTC',
-      };
-    });
+  return (data ?? []) as EligiblePlayer[];
 }
 
 // =============================================================================
@@ -259,18 +140,19 @@ async function processReminders(): Promise<{ sent: number; errors: string[] }> {
 
   console.log(`weekly-checkin-reminder: ${eligible.length} eligible player(s)`);
 
-  // Batch the inserts.
   const notifications = eligible.map(buildNotification);
+  let sent = 0;
   for (let i = 0; i < notifications.length; i += BATCH_SIZE) {
     const slice = notifications.slice(i, i + BATCH_SIZE);
     try {
       await sendNotificationsBatch(slice);
+      sent += slice.length;
     } catch (err) {
       errors.push(`batch ${i}: ${err}`);
     }
   }
 
-  return { sent: notifications.length - errors.length * BATCH_SIZE, errors };
+  return { sent, errors };
 }
 
 Deno.serve(async req => {

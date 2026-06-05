@@ -12,7 +12,7 @@
  * MIN_AVAILABILITY_CELLS hours selected (matches onboarding minimum).
  */
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels } from '@rallia/design-system';
@@ -23,6 +23,8 @@ import {
 } from '#/features/onboarding/components/HourlyAvailabilityGrid';
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import { MIN_AVAILABILITY_CELLS } from '#/features/weekly-checkin/useWeeklyCheckInWizard';
+import { countCellsForDays, windowToGridConfig } from '#/features/weekly-checkin/window';
+import type { CheckInWindowDay } from '#/features/weekly-checkin/api';
 import { useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
 
@@ -30,9 +32,16 @@ interface AvailabilityStepProps {
   availability: HourGrid;
   onChange: (next: HourGrid) => void;
   onContinue: () => void;
+  /** Server-computed rolling window (today + next 3 days) to render as columns. */
+  window: CheckInWindowDay[];
 }
 
-export function AvailabilityStep({ availability, onChange, onContinue }: AvailabilityStepProps) {
+export function AvailabilityStep({
+  availability,
+  onChange,
+  onContinue,
+  window,
+}: AvailabilityStepProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
   const { colors } = useThemeStyles();
@@ -49,7 +58,25 @@ export function AvailabilityStep({ availability, onChange, onContinue }: Availab
     [colors]
   );
 
-  const canContinue = availability.size >= MIN_AVAILABILITY_CELLS;
+  // Window → grid columns (4 weekdays) + relative labels (Today/Tomorrow/weekday).
+  const { days, columnLabels } = useMemo(
+    () => windowToGridConfig(window, locale, t),
+    [window, locale, t]
+  );
+
+  // Gate on cells WITHIN the window — the seeded set also carries the player's
+  // other-day availability, which must not count toward the minimum.
+  const canContinue = countCellsForDays(availability, days) >= MIN_AVAILABILITY_CELLS;
+
+  // Window comes from the cold-start context; show a brief loader until it lands
+  // so we never render a zero-column grid.
+  if (days.length === 0) {
+    return (
+      <View style={[styles.root, styles.loading]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -67,6 +94,8 @@ export function AvailabilityStep({ availability, onChange, onContinue }: Availab
             colors={gridColors}
             t={t}
             locale={locale}
+            days={days}
+            columnLabels={columnLabels}
           />
         </View>
       </ScrollView>
@@ -90,6 +119,10 @@ export function AvailabilityStep({ availability, onChange, onContinue }: Availab
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

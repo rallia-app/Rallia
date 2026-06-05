@@ -27,9 +27,29 @@ export const checkInKeys = {
   availability: () => [...checkInKeys.all, 'availability'] as const,
 };
 
+/**
+ * Device IANA timezone (e.g. 'America/Toronto'), or null if it can't resolve.
+ * Sent to both RPCs so the server's date math stays anchored to the player's
+ * actual local frame and `player.timezone` stays current across travel.
+ */
+function getDeviceTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
 // =============================================================================
 // TYPES (mirror the RPC return shapes)
 // =============================================================================
+
+/** One day of the rolling availability window, server-computed in player tz. */
+export interface CheckInWindowDay {
+  /** ISO date `YYYY-MM-DD` (player-local). */
+  date: string;
+  dayOfWeek: DayEnum;
+}
 
 export interface CheckInContext {
   currentStreak: number;
@@ -40,7 +60,27 @@ export interface CheckInContext {
   lastWeekSessionsPlayed: number | null;
   goalsHitLast4Weeks: boolean[];
   lastFrequencyGoal: number | null;
+  /** Coverage-based: the player is past the last date they declared for. */
   isPendingCheckIn: boolean;
+  /** Resolved player timezone (IANA). Used to format the window labels. */
+  timezone: string;
+  /** Last local date the player declared availability for (= last today+3). */
+  availabilityCoveredThrough: string | null;
+  /** True once a real (non-rescue) check-in exists for the current ISO week. */
+  frequencyAlreadySetThisWeek: boolean;
+  /** Rolling window: today + next 3 days, computed server-side in player tz. */
+  window: CheckInWindowDay[];
+}
+
+/** Parse the JSONB `checkin_window` the RPC returns into typed entries. */
+function mapWindow(raw: unknown): CheckInWindowDay[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (d): d is { date: string; day_of_week: string } =>
+        !!d && typeof d.date === 'string' && typeof d.day_of_week === 'string'
+    )
+    .map(d => ({ date: d.date, dayOfWeek: d.day_of_week as DayEnum }));
 }
 
 export interface CheckInResult {
@@ -57,8 +97,10 @@ export interface RecordCheckInInput {
   frequencyGoal: number;
   autoCreate: boolean;
   autoInvite: boolean;
-  /** New HourGrid to persist. Diffs against existing rows via OnboardingService.saveAvailability. */
+  /** New HourGrid to persist. Cells outside `windowDays` are ignored on save. */
   availability: HourGrid;
+  /** The window's weekdays — the save is scoped to these (others preserved). */
+  windowDays: DayEnum[];
 }
 
 // =============================================================================
@@ -72,6 +114,8 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const deviceTimezone = getDeviceTimezone();
+
   if (!user) {
     return {
       currentStreak: 0,
@@ -83,10 +127,16 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       goalsHitLast4Weeks: [],
       lastFrequencyGoal: null,
       isPendingCheckIn: false, // no user → don't trigger the wizard
+      timezone: deviceTimezone ?? 'UTC',
+      availabilityCoveredThrough: null,
+      frequencyAlreadySetThisWeek: false,
+      window: [],
     };
   }
 
-  const { data, error } = await supabase.rpc('get_check_in_context');
+  const { data, error } = await supabase.rpc('get_check_in_context', {
+    p_timezone: deviceTimezone,
+  });
   if (error) {
     Logger.error('[weekly-checkin] get_check_in_context failed', error);
     throw error;
@@ -107,6 +157,10 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       goalsHitLast4Weeks: [],
       lastFrequencyGoal: null,
       isPendingCheckIn: true,
+      timezone: deviceTimezone ?? 'UTC',
+      availabilityCoveredThrough: null,
+      frequencyAlreadySetThisWeek: false,
+      window: [],
     };
   }
 
@@ -120,6 +174,10 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
     goalsHitLast4Weeks: row.goals_hit_last_4_weeks ?? [],
     lastFrequencyGoal: row.last_frequency_goal,
     isPendingCheckIn: row.is_pending_check_in ?? true,
+    timezone: row.timezone ?? deviceTimezone ?? 'UTC',
+    availabilityCoveredThrough: row.availability_covered_through ?? null,
+    frequencyAlreadySetThisWeek: row.frequency_already_set_this_week ?? false,
+    window: mapWindow(row.checkin_window),
   };
 }
 
@@ -188,9 +246,14 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
     availabilityRows.push({ day, hour_of_day: hour, is_active: true });
   });
 
-  const { error: availError } = await OnboardingService.saveAvailability(availabilityRows);
+  // Scope the save to the window's weekdays only — the rolling check-in must
+  // not wipe availability the player declared for days outside the window.
+  const { error: availError } = await OnboardingService.saveAvailabilityForDays(
+    input.windowDays,
+    availabilityRows
+  );
   if (availError) {
-    Logger.error('Weekly check-in: saveAvailability failed', new Error(availError.message));
+    Logger.error('Weekly check-in: saveAvailabilityForDays failed', new Error(availError.message));
     throw new Error(availError.message);
   }
 
