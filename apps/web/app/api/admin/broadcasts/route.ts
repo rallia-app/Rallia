@@ -84,12 +84,35 @@ async function resolveRecipients(
       .map(p => [p.email.toLowerCase(), p])
   );
 
-  return emails.map(email => {
-    const p = byEmail.get(email);
-    return p
-      ? { userId: p.id, email: p.email, firstName: p.first_name, locale: p.preferred_locale }
-      : { userId: null, email, firstName: null, locale: null };
-  });
+  // Honor broadcast opt-out. The in-app settings toggle AND the email
+  // unsubscribe link both write notification_preference(admin_broadcast, email,
+  // enabled=false). Drop those known users so they don't receive the broadcast.
+  // (Default is opt-in, so a missing row = still subscribed; external addresses
+  // with no matching profile can't opt out here and are sent as-is.)
+  const matchedUserIds = [...byEmail.values()].map(p => p.id);
+  const optedOut = new Set<string>();
+  if (matchedUserIds.length > 0) {
+    const { data: prefs, error: prefError } = await adminDb
+      .from('notification_preference')
+      .select('user_id')
+      .eq('notification_type', 'admin_broadcast')
+      .eq('channel', 'email')
+      .eq('enabled', false)
+      .in('user_id', matchedUserIds);
+    if (prefError) {
+      throw new Error(`broadcast opt-out lookup failed: ${prefError.message}`);
+    }
+    for (const row of prefs ?? []) optedOut.add(row.user_id);
+  }
+
+  return emails
+    .map(email => {
+      const p = byEmail.get(email);
+      return p
+        ? { userId: p.id, email: p.email, firstName: p.first_name, locale: p.preferred_locale }
+        : { userId: null, email, firstName: null, locale: null };
+    })
+    .filter(r => !(r.userId !== null && optedOut.has(r.userId)));
 }
 
 /** Invoke the send-broadcast edge function, forwarding the admin session token. */

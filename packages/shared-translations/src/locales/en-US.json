@@ -251,6 +251,7 @@
       "org_announcement": "Announcement",
       "morning_digest": "Morning Digest",
       "availability_refresh_reminder": "Availability refresh",
+      "admin_broadcast": "Announcements",
       "match_time_suggested": "Time change suggested",
       "match_time_suggestion_accepted": "Time change accepted",
       "match_time_suggestion_declined": "Time change declined"
@@ -4076,9 +4077,9 @@
       "activate": "Activate"
     },
     "availabilityRefreshBanner": {
-      "title": "Time for your weekly check-in 🐿️",
-      "description": "Set your goal and confirm when you're free this week.",
-      "descriptionStreak": "Keep your {count}-week streak going.",
+      "title": "Time to check in 🐿️",
+      "description": "Set your goal and confirm when you're free over the next few days.",
+      "descriptionStreak": "You're on a {count}-week streak 🔥 Confirm your next few days.",
       "cta": "Start"
     },
     "header": {
@@ -9596,28 +9597,28 @@
   "weeklyCheckIn": {
     "exit": {
       "title": "Catch you later?",
-      "description": "Ace will check back in next week — your settings won't be saved this time.",
+      "description": "Ace will check back in a few days — your settings won't be saved this time.",
       "confirm": "Exit for now",
       "cancel": "Keep going"
     },
     "step1": {
       "bubbleHit": "Schedule locked 🔒 And last week? You smashed your goal — streak's still climbing.",
       "bubbleMet": "Schedule locked 🔒 Last week you hit all {goal} sessions too. Streak alive and well.",
-      "bubbleMiss": "Schedule locked 🔒 Missed last week's goal, but not the streak. Let's bounce back.",
-      "bubbleFirstTime": "Schedule locked 🔒 This is your first check-in — let's get your streak started.",
+      "bubbleMiss": "Schedule locked 🔒 You missed last week's goal — let's bounce back and nail it this week. 💪",
+      "bubbleFirstTime": "Schedule locked 🔒 Play your games and check in to them this week to start your streak. 🔥",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
       "streakSubtitle": "weeks",
       "streakSubtitleOne": "week streak",
-      "streakLabel": "WEEK CHECK-IN STREAK",
-      "streakLabelOne": "WEEK CHECK-IN STREAK",
+      "streakLabel": "WEEKLY GOAL STREAK",
+      "streakLabelOne": "WEEKLY GOAL STREAK",
       "timelineLabel": "Your check-in history",
       "thisWeek": "This week",
       "freezeCount": "{count} freezes saved",
       "freezeOne": "1 freeze saved",
       "freezeZero": "0 freezes saved",
-      "freezeHint": "Earn 1 every 4-week milestone",
-      "freezeFirstTimeInvite": "Your first check-in starts your streak 🔥",
+      "freezeHint": "Earn 1 for every 4 goals hit in a row",
+      "freezeFirstTimeInvite": "Hit your weekly goal to start your streak 🔥",
       "goalsCardTitle": "GOAL TRACKING",
       "goalsCardLastWeek": "Last week",
       "goalsCardTrendLabel": "Last 4 weeks",
@@ -9625,14 +9626,14 @@
       "goalsCardLastWeekHit": "Goal hit ✓",
       "goalsCardLastWeekMiss": "Goal missed",
       "goalsCardNoHistory": "Your goal-hit history will show up here once you've played a few weeks. 📈",
-      "freezeTooltip": "Streak freezes protect you if you miss a check-in.",
+      "freezeTooltip": "Streak freezes protect you if you miss your weekly goal.",
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
       "recapPlayed": "Played",
       "cta": "Set my goal 🎯"
     },
     "step2": {
-      "bubble": "Hey 👋 When are you free this week? Tap or drag to paint your slots. ✨",
+      "bubble": "Hey 👋 When are you free over the next few days? Tap or drag to paint your slots. ✨",
       "cta": "Looks good"
     },
     "step3": {
@@ -9657,12 +9658,6 @@
     },
     "step4": {
       "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🎾",
-      "streakHeroCount": "{count} weeks!",
-      "streakHeroCountOne": "1 week!",
-      "streakHeroSub": "Streak extended · +1",
-      "streakHeroSubFirst": "Streak started 🌱",
-      "streakHeroSubMilestone": "Streak milestone · +1 freeze earned ❄️",
-      "streakHeroSubMilestoneCapped": "Streak milestone! Freezes maxed at 2 ❄️❄️",
       "summaryGoal": "Goal: {freq}",
       "summarySlots": "{count} hours confirmed",
       "summarySlotsOne": "1 hour confirmed",

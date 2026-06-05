@@ -3,8 +3,8 @@
  *
  * Combines what used to be two separate steps (welcome/recap and frequency)
  * into one to keep the wizard short. Ace opens with the variant-aware recap
- * line, the StreakCard + GoalsCard carry the recap signal, and the weekly goal
- * picker (+ auto-magic opt-ins) is the focus below. The CTA submits.
+ * line, the StreakCard carries the streak + goal-tracking recap, and the weekly
+ * goal picker (+ auto-magic opt-ins) is the focus below. The CTA submits.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -14,7 +14,6 @@ import { spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import { StreakCard } from '#/features/weekly-checkin/components/StreakCard';
-import { GoalsCard } from '#/features/weekly-checkin/components/GoalsCard';
 import { FrequencyPills } from '#/features/weekly-checkin/components/FrequencyPills';
 import { AutoToggleRow } from '#/features/weekly-checkin/components/AutoToggleRow';
 import {
@@ -45,6 +44,8 @@ interface RecapGoalStepProps {
   setAutoInvite: (b: boolean) => void;
   isSubmitting: boolean;
   onSubmit: () => void;
+  /** Show the weekly-goal question. Hidden once it's been set this ISO week. */
+  showFrequencyStep: boolean;
 }
 
 export function RecapGoalStep({
@@ -58,6 +59,7 @@ export function RecapGoalStep({
   setAutoInvite,
   isSubmitting,
   onSubmit,
+  showFrequencyStep,
 }: RecapGoalStepProps) {
   const { t } = useTranslation();
   const { colors } = useThemeStyles();
@@ -91,8 +93,6 @@ export function RecapGoalStep({
           <StreakCard
             currentStreak={context.currentStreak}
             freezeInventory={context.freezeInventory}
-          />
-          <GoalsCard
             lastWeekGoal={context.lastWeekFrequencyGoal}
             lastWeekPlayed={context.lastWeekSessionsPlayed}
             goalsHitLast4Weeks={context.goalsHitLast4Weeks}
@@ -100,15 +100,19 @@ export function RecapGoalStep({
         </View>
 
         <View style={styles.goalSection}>
-          <Text style={[styles.goalHeading, { color: colors.text }]}>
-            {t('weeklyCheckIn.step3.goalHeading')}
-          </Text>
+          {showFrequencyStep && (
+            <>
+              <Text style={[styles.goalHeading, { color: colors.text }]}>
+                {t('weeklyCheckIn.step3.goalHeading')}
+              </Text>
 
-          <FrequencyPills
-            value={frequencyGoal}
-            onChange={setFrequencyGoal}
-            previousGoal={previousGoal}
-          />
+              <FrequencyPills
+                value={frequencyGoal}
+                onChange={setFrequencyGoal}
+                previousGoal={previousGoal}
+              />
+            </>
+          )}
 
           {(WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED ||
             WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED) && (

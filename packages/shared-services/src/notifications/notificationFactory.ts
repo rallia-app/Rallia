@@ -413,6 +413,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   booking_cancelled_by_org: 'high',
   membership_approved: 'normal',
   org_announcement: 'normal',
+  admin_broadcast: 'normal',
 
   // Program notifications
   program_registration_confirmed: 'normal',
@@ -499,6 +500,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   booking_cancelled_by_org: 'Booking Cancelled',
   membership_approved: 'Membership Approved',
   org_announcement: 'Announcement',
+  admin_broadcast: 'Announcement',
 
   // Program notifications
   program_registration_confirmed: 'Registration Confirmed',
@@ -600,6 +602,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Your booking for {resourceName} on {bookingDate} has been cancelled by the organization.',
   membership_approved: 'Your membership at {organizationName} has been approved!',
   org_announcement: '{organizationName}: {message}',
+  admin_broadcast: '{message}',
 
   // Program notifications
   program_registration_confirmed:

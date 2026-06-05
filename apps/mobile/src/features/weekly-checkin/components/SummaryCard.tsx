@@ -1,24 +1,18 @@
 /**
- * SummaryCard — Step 4 success card.
+ * SummaryCard — Step 4 success recap.
  *
- * The streak hero animates from null → newStreak via a one-shot spring bump
- * on mount (scale 0.6 → 1.25 → 1.0). The hero microcopy flexes between the
- * regular "+1" extension and the milestone "+1 freeze earned ❄️" message.
- *
- * Below the hero, a thin divider + 4 summary rows recap the wizard's inputs.
+ * A clean recap of what the check-in just locked in: weekly goal, hours
+ * confirmed, and the auto-create / auto-invite toggles. No streak hero — the
+ * streak is driven by hitting your weekly GAME goal (evaluated at week-end),
+ * not by completing the check-in, so the success screen no longer claims to
+ * have moved it. The current streak lives on step 1's StreakCard.
  */
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import {
-  accent,
-  primary,
-  radiusPixels,
-  spacingPixels,
-  shadowsSemanticNative,
-} from '@rallia/design-system';
+import { primary, radiusPixels, spacingPixels, shadowsSemanticNative } from '@rallia/design-system';
 
 import { useTranslation } from '#/hooks';
 import {
@@ -27,12 +21,6 @@ import {
 } from '#/features/weekly-checkin/featureFlag';
 
 interface SummaryCardProps {
-  newStreak: number;
-  milestoneReached: boolean;
-  /** True iff a freeze was actually earned this call. False when capped. */
-  freezeEarned: boolean;
-  /** True if this is the player's very first check-in (no prior streak). */
-  isFirstEver: boolean;
   frequencyGoal: number;
   hoursConfirmed: number;
   autoCreate: boolean;
@@ -40,10 +28,6 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({
-  newStreak,
-  milestoneReached,
-  freezeEarned,
-  isFirstEver,
   frequencyGoal,
   hoursConfirmed,
   autoCreate,
@@ -51,57 +35,10 @@ export function SummaryCard({
 }: SummaryCardProps) {
   const { t } = useTranslation();
   const { colors, isDark } = useThemeStyles();
-  const scaleAnim = useRef(new Animated.Value(0.6)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const heroColor = isDark ? accent[300] : accent[700];
-  const heroSubColor = isDark ? accent[400] : accent[500];
   const iconBubbleBg = isDark ? `${primary[700]}33` : primary[100];
   // Bright primary tint in dark mode so the icon doesn't blend into the
   // translucent primary[700] bubble underneath.
   const iconColor = isDark ? primary[300] : primary[700];
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.25,
-          duration: 400,
-          easing: Easing.out(Easing.back(2)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 220,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  }, [scaleAnim, opacityAnim]);
-
-  const heroTitle =
-    newStreak === 1
-      ? t('weeklyCheckIn.step4.streakHeroCountOne')
-      : t('weeklyCheckIn.step4.streakHeroCount', { count: newStreak });
-
-  // Hero sub copy priority:
-  //   1. Milestone + freeze earned → "Streak milestone · +1 freeze earned ❄️"
-  //   2. Milestone but freezes capped → "Streak milestone! Freezes maxed ❄️❄️"
-  //   3. First ever check-in → "Streak started 🌱"
-  //   4. Default → "Streak extended · +1"
-  const heroSub = milestoneReached
-    ? freezeEarned
-      ? t('weeklyCheckIn.step4.streakHeroSubMilestone')
-      : t('weeklyCheckIn.step4.streakHeroSubMilestoneCapped')
-    : isFirstEver
-      ? t('weeklyCheckIn.step4.streakHeroSubFirst')
-      : t('weeklyCheckIn.step4.streakHeroSub');
 
   const freqText = t('weeklyCheckIn.step4.summaryGoal', {
     freq: `${frequencyGoal}${frequencyGoal === 5 ? '+' : ''}× sessions`,
@@ -113,28 +50,12 @@ export function SummaryCard({
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card }]}>
-      <View style={[styles.hero, { borderBottomColor: colors.divider }]}>
-        <Animated.Text style={[styles.heroFire, { opacity: opacityAnim }]}>🔥</Animated.Text>
-        <View>
-          <Animated.Text
-            style={[
-              styles.heroNum,
-              { color: heroColor, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
-            ]}
-          >
-            {heroTitle}
-          </Animated.Text>
-          <Text style={[styles.heroSub, { color: heroSubColor }]}>{heroSub}</Text>
-        </View>
-      </View>
-
       <SummaryRow
         icon="trophy"
         text={freqText}
         colors={colors}
         iconBubbleBg={iconBubbleBg}
         iconColor={iconColor}
-        isLast={!autoCreate && !autoInvite && false}
       />
       <SummaryRow
         icon="calendar"
@@ -206,32 +127,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacingPixels[1],
     marginBottom: spacingPixels[3],
     ...shadowsSemanticNative.card,
-  },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[3],
-    paddingBottom: spacingPixels[3],
-    borderBottomWidth: 1,
-    marginBottom: spacingPixels[2],
-  },
-  heroFire: {
-    fontSize: 36,
-    lineHeight: 40,
-  },
-  heroNum: {
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 24,
-  },
-  heroSub: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginTop: 2,
   },
   row: {
     flexDirection: 'row',

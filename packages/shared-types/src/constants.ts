@@ -313,6 +313,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   booking_cancelled_by_org: 'calendar-clear-outline',
   membership_approved: 'checkmark-done-outline',
   org_announcement: 'megaphone-outline',
+  admin_broadcast: 'megaphone-outline',
   // Program notifications
   program_registration_confirmed: 'checkmark-circle-outline',
   program_registration_cancelled: 'close-circle-outline',
@@ -398,6 +399,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   booking_cancelled_by_org: '#F44336', // Red
   membership_approved: '#4CAF50', // Green
   org_announcement: '#2196F3', // Blue
+  admin_broadcast: '#2196F3', // Blue
   // Program notifications
   program_registration_confirmed: '#4CAF50', // Green
   program_registration_cancelled: '#F44336', // Red
@@ -479,6 +481,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   booking_cancelled_by_org: 'Booking Cancelled',
   membership_approved: 'Membership Approved',
   org_announcement: 'Announcement',
+  admin_broadcast: 'Announcement',
   // Program notifications
   program_registration_confirmed: 'Registration Confirmed',
   program_registration_cancelled: 'Registration Cancelled',
@@ -580,6 +583,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   morning_digest: 'system',
   // Weekly availability refresh — also a system-generated nudge
   availability_refresh_reminder: 'system',
+  admin_broadcast: 'system',
   // Stripe JIT reimbursement notifications — system category (money/admin)
   payouts_setup_required: 'system',
   payouts_released: 'system',
@@ -696,6 +700,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   booking_cancelled_by_org: { email: true, push: false, sms: true }, // SMS for cancellations
   membership_approved: { email: true, push: false, sms: false },
   org_announcement: { email: true, push: false, sms: false },
+  admin_broadcast: { email: true, push: false, sms: false }, // broadcasts are email-only
   // Program notifications
   program_registration_confirmed: { email: true, push: true, sms: false },
   program_registration_cancelled: { email: true, push: true, sms: true }, // SMS for cancellations

@@ -89,10 +89,16 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'morning_digest',
   // Weekly availability refresh nudge
   'availability_refresh_reminder',
+  // Platform-wide announcements (email-only broadcasts)
+  'admin_broadcast',
 ] as ExtendedNotificationTypeEnum[]);
 
-// Types where only the email channel is relevant — push and sms toggles are disabled
-const EMAIL_ONLY_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>(['morning_digest']);
+// Types where only the email channel is relevant — push and sms toggles are disabled.
+// Broadcasts are email-only by design.
+const EMAIL_ONLY_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
+  'morning_digest',
+  'admin_broadcast',
+]);
 
 // Design-system colors for active notification types
 // Teal (primary) = invitations/requests, Green (success) = positive outcomes,
@@ -129,6 +135,8 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   match_time_suggestion_declined: secondary[500],
   // Weekly availability refresh
   availability_refresh_reminder: primary[500],
+  // Platform announcements
+  admin_broadcast: status.info.DEFAULT,
 };
 
 // Group notification types by category
@@ -480,6 +488,7 @@ const NotificationPreferencesScreen: React.FC = () => {
         payment: t('notifications.types.payment'),
         support: t('notifications.types.support'),
         system: t('notifications.types.system'),
+        admin_broadcast: t('notifications.types.admin_broadcast'),
       }) as Record<ExtendedNotificationTypeEnum, string>,
     [t]
   );

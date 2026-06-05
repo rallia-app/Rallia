@@ -1302,6 +1302,107 @@ export type Database = {
         }
         Relationships: []
       }
+      email_broadcast: {
+        Row: {
+          audience: Json
+          body: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          cta_text: string | null
+          cta_url: string | null
+          failed_count: number
+          id: string
+          recipients_total: number
+          sent_count: number
+          status: string
+          subject: string
+        }
+        Insert: {
+          audience?: Json
+          body: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          failed_count?: number
+          id?: string
+          recipients_total?: number
+          sent_count?: number
+          status?: string
+          subject: string
+        }
+        Update: {
+          audience?: Json
+          body?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          failed_count?: number
+          id?: string
+          recipients_total?: number
+          sent_count?: number
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_broadcast_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_broadcast_recipient: {
+        Row: {
+          broadcast_id: string
+          email: string
+          id: number
+          resend_id: string | null
+          sent_at: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          broadcast_id: string
+          email: string
+          id?: number
+          resend_id?: string | null
+          sent_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          broadcast_id?: string
+          email?: string
+          id?: number
+          resend_id?: string | null
+          sent_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_broadcast_recipient_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "email_broadcast"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_broadcast_recipient_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facility: {
         Row: {
           address: string | null
@@ -2505,7 +2606,6 @@ export type Database = {
       match_participant: {
         Row: {
           aggregated_at: string | null
-          amount_owed_cents: number | null
           cancellation_notes: string | null
           cancellation_reason:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
@@ -2519,26 +2619,13 @@ export type Database = {
           initial_feedback_notification_sent_at: string | null
           is_host: boolean | null
           joined_at: string | null
-          marked_paid_at: string | null
-          marked_paid_by: string | null
           match_check_in_reminder_sent_at: string | null
           match_id: string
           match_outcome:
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at: string | null
-          payment_currency: string
-          payment_expires_at: string | null
-          payment_failure_reason: string | null
           payment_intent_id: string | null
-          payment_paid_at: string | null
-          payment_provider:
-            | Database["public"]["Enums"]["payment_provider_enum"]
-            | null
-          payment_reference: string | null
-          payment_requested_at: string | null
-          payment_status: Database["public"]["Enums"]["payment_status_enum"]
-          payment_url: string | null
           player_id: string
           score: number | null
           showed_up: boolean | null
@@ -2552,7 +2639,6 @@ export type Database = {
         }
         Insert: {
           aggregated_at?: string | null
-          amount_owed_cents?: number | null
           cancellation_notes?: string | null
           cancellation_reason?:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
@@ -2566,26 +2652,13 @@ export type Database = {
           initial_feedback_notification_sent_at?: string | null
           is_host?: boolean | null
           joined_at?: string | null
-          marked_paid_at?: string | null
-          marked_paid_by?: string | null
           match_check_in_reminder_sent_at?: string | null
           match_id: string
           match_outcome?:
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at?: string | null
-          payment_currency?: string
-          payment_expires_at?: string | null
-          payment_failure_reason?: string | null
           payment_intent_id?: string | null
-          payment_paid_at?: string | null
-          payment_provider?:
-            | Database["public"]["Enums"]["payment_provider_enum"]
-            | null
-          payment_reference?: string | null
-          payment_requested_at?: string | null
-          payment_status?: Database["public"]["Enums"]["payment_status_enum"]
-          payment_url?: string | null
           player_id: string
           score?: number | null
           showed_up?: boolean | null
@@ -2599,7 +2672,6 @@ export type Database = {
         }
         Update: {
           aggregated_at?: string | null
-          amount_owed_cents?: number | null
           cancellation_notes?: string | null
           cancellation_reason?:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
@@ -2613,26 +2685,13 @@ export type Database = {
           initial_feedback_notification_sent_at?: string | null
           is_host?: boolean | null
           joined_at?: string | null
-          marked_paid_at?: string | null
-          marked_paid_by?: string | null
           match_check_in_reminder_sent_at?: string | null
           match_id?: string
           match_outcome?:
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at?: string | null
-          payment_currency?: string
-          payment_expires_at?: string | null
-          payment_failure_reason?: string | null
           payment_intent_id?: string | null
-          payment_paid_at?: string | null
-          payment_provider?:
-            | Database["public"]["Enums"]["payment_provider_enum"]
-            | null
-          payment_reference?: string | null
-          payment_requested_at?: string | null
-          payment_status?: Database["public"]["Enums"]["payment_status_enum"]
-          payment_url?: string | null
           player_id?: string
           score?: number | null
           showed_up?: boolean | null
@@ -2645,13 +2704,6 @@ export type Database = {
           was_late?: boolean | null
         }
         Relationships: [
-          {
-            foreignKeyName: "match_participant_marked_paid_by_fkey"
-            columns: ["marked_paid_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "match_participant_match_id_fkey"
             columns: ["match_id"]
@@ -4037,53 +4089,6 @@ export type Database = {
           },
         ]
       }
-      payment_webhook_event: {
-        Row: {
-          event_type: string
-          external_event_id: string
-          id: string
-          participant_id: string | null
-          payload: Json
-          processed_at: string | null
-          processing_error: string | null
-          provider: Database["public"]["Enums"]["payment_provider_enum"]
-          received_at: string
-          signature_ok: boolean
-        }
-        Insert: {
-          event_type: string
-          external_event_id: string
-          id?: string
-          participant_id?: string | null
-          payload: Json
-          processed_at?: string | null
-          processing_error?: string | null
-          provider: Database["public"]["Enums"]["payment_provider_enum"]
-          received_at?: string
-          signature_ok: boolean
-        }
-        Update: {
-          event_type?: string
-          external_event_id?: string
-          id?: string
-          participant_id?: string | null
-          payload?: Json
-          processed_at?: string | null
-          processing_error?: string | null
-          provider?: Database["public"]["Enums"]["payment_provider_enum"]
-          received_at?: string
-          signature_ok?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_webhook_event_participant_id_fkey"
-            columns: ["participant_id"]
-            isOneToOne: false
-            referencedRelation: "match_participant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       peer_rating_request: {
         Row: {
           assigned_rating_score_id: string | null
@@ -4561,6 +4566,7 @@ export type Database = {
         Row: {
           auto_create_matches: boolean
           auto_invite_players: boolean
+          availability_covered_through: string | null
           last_frequency_goal: number | null
           player_id: string
           updated_at: string
@@ -4568,6 +4574,7 @@ export type Database = {
         Insert: {
           auto_create_matches?: boolean
           auto_invite_players?: boolean
+          availability_covered_through?: string | null
           last_frequency_goal?: number | null
           player_id: string
           updated_at?: string
@@ -4575,6 +4582,7 @@ export type Database = {
         Update: {
           auto_create_matches?: boolean
           auto_invite_players?: boolean
+          availability_covered_through?: string | null
           last_frequency_goal?: number | null
           player_id?: string
           updated_at?: string
@@ -5201,6 +5209,7 @@ export type Database = {
           freeze_cap: number
           freeze_inventory: number
           last_checkin_week_start: string | null
+          last_evaluated_week_start: string | null
           longest_streak: number
           player_id: string
           updated_at: string
@@ -5211,6 +5220,7 @@ export type Database = {
           freeze_cap?: number
           freeze_inventory?: number
           last_checkin_week_start?: string | null
+          last_evaluated_week_start?: string | null
           longest_streak?: number
           player_id: string
           updated_at?: string
@@ -5221,6 +5231,7 @@ export type Database = {
           freeze_cap?: number
           freeze_inventory?: number
           last_checkin_week_start?: string | null
+          last_evaluated_week_start?: string | null
           longest_streak?: number
           player_id?: string
           updated_at?: string
@@ -7173,6 +7184,38 @@ export type Database = {
         }
         Relationships: []
       }
+      summer_league_interest: {
+        Row: {
+          created_at: string
+          id: string
+          locale: string | null
+          player_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locale?: string | null
+          player_id: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locale?: string | null
+          player_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summer_league_interest_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       utm_campaign: {
         Row: {
           archived_at: string | null
@@ -7350,6 +7393,10 @@ export type Database = {
         Args: { p_player_rating_score_id: string }
         Returns: number
       }
+      count_player_sessions_for_week: {
+        Args: { p_player_id: string; p_week_start: string }
+        Returns: number
+      }
       count_valid_proofs_for_level: {
         Args: {
           p_player_rating_score_id: string
@@ -7379,6 +7426,17 @@ export type Database = {
       dispute_rebuttal_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
+      }
+      evaluate_weekly_goals: {
+        Args: never
+        Returns: {
+          hits: number
+          misses: number
+          players_evaluated: number
+          rescued: number
+          resets: number
+          weeks_evaluated: number
+        }[]
       }
       expire_old_reference_requests: { Args: never; Returns: number }
       find_direct_conversation: {
@@ -7525,6 +7583,17 @@ export type Database = {
           total_actions: number
         }[]
       }
+      get_auto_invite_candidates: {
+        Args: {
+          p_exclude?: string[]
+          p_match_id: string
+          p_max?: number
+          p_weekly_cap?: number
+        }
+        Returns: {
+          player_id: string
+        }[]
+      }
       get_availability_refresh_eligible_users: {
         Args: never
         Returns: {
@@ -7565,6 +7634,21 @@ export type Database = {
           total_active_bans: number
         }[]
       }
+      get_broadcast_recipients: {
+        Args: {
+          p_active_since?: string
+          p_city?: string
+          p_locale?: string
+          p_only_subscribers?: boolean
+          p_sport_id?: string
+        }
+        Returns: {
+          email: string
+          first_name: string
+          preferred_locale: string
+          user_id: string
+        }[]
+      }
       get_certification_funnel: {
         Args: never
         Returns: {
@@ -7574,17 +7658,21 @@ export type Database = {
         }[]
       }
       get_check_in_context: {
-        Args: never
+        Args: { p_timezone?: string }
         Returns: {
+          availability_covered_through: string
+          checkin_window: Json
           current_streak: number
           freeze_cap: number
           freeze_inventory: number
+          frequency_already_set_this_week: boolean
           goals_hit_last_4_weeks: boolean[]
           is_pending_check_in: boolean
           last_frequency_goal: number
           last_week_frequency_goal: number
           last_week_sessions_played: number
           longest_streak: number
+          timezone: string
         }[]
       }
       get_compatible_players: {
@@ -7696,6 +7784,7 @@ export type Database = {
       get_just_for_you: {
         Args: {
           p_caller_id: string
+          p_include_suggestions?: boolean
           p_latitude: number
           p_limit?: number
           p_longitude: number
@@ -7910,6 +7999,20 @@ export type Database = {
       get_my_contest_rank: {
         Args: { p_contest_id: string; p_player_id: string }
         Returns: Json
+      }
+      get_nearby_public_matches: {
+        Args: {
+          p_latitude: number
+          p_limit?: number
+          p_longitude: number
+          p_max_distance_km: number
+          p_sport_id: string
+          p_user_gender?: string
+        }
+        Returns: {
+          match_payload: Json
+          score: number
+        }[]
       }
       get_network_growth: {
         Args: { p_end_date: string; p_start_date: string }
@@ -8897,6 +9000,13 @@ export type Database = {
         Args: { p_player_id: string; p_window_days?: number }
         Returns: number
       }
+      players_needing_checkin_reminder: {
+        Args: { p_dedupe_hours?: number; p_target_local_hour?: number }
+        Returns: {
+          player_id: string
+          preferred_locale: string
+        }[]
+      }
       players_needing_streak_reset: {
         Args: never
         Returns: {
@@ -9600,6 +9710,7 @@ export type Database = {
         | "match_time_suggested"
         | "match_time_suggestion_accepted"
         | "match_time_suggestion_declined"
+        | "admin_broadcast"
       organization_nature_enum: "public" | "private"
       organization_type:
         | "club"
@@ -9615,16 +9726,7 @@ export type Database = {
         | "cash"
         | "bank_transfer"
       payment_plan_enum: "full" | "installment"
-      payment_provider_enum: "stripe" | "dwello" | "vopay" | "stub" | "manual"
       payment_status: "pending" | "completed" | "failed" | "refunded"
-      payment_status_enum:
-        | "none"
-        | "requested"
-        | "paid"
-        | "failed"
-        | "expired"
-        | "cancelled"
-        | "manual"
       play_attribute_enum:
         | "serve_speed_and_placement"
         | "net_play"
@@ -10156,6 +10258,7 @@ export const Constants = {
         "match_time_suggested",
         "match_time_suggestion_accepted",
         "match_time_suggestion_declined",
+        "admin_broadcast",
       ],
       organization_nature_enum: ["public", "private"],
       organization_type: [
@@ -10174,17 +10277,7 @@ export const Constants = {
         "bank_transfer",
       ],
       payment_plan_enum: ["full", "installment"],
-      payment_provider_enum: ["stripe", "dwello", "vopay", "stub", "manual"],
       payment_status: ["pending", "completed", "failed", "refunded"],
-      payment_status_enum: [
-        "none",
-        "requested",
-        "paid",
-        "failed",
-        "expired",
-        "cancelled",
-        "manual",
-      ],
       play_attribute_enum: [
         "serve_speed_and_placement",
         "net_play",
