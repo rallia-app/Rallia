@@ -3435,6 +3435,11 @@ export const MatchDetailSheet: React.FC = () => {
           </View>
         </Animated.View>
 
+        {/* Available Courts Section — surfaced high so any viewer sees real-time
+            court availability without scrolling. Renders only when the facility
+            has bookable courts at game time and no court is booked yet. */}
+        <MatchAvailableCourtsSection match={match} isCreator={isCreator} animationDelay={100} />
+
         {/* Score Section - promoted to top for completed matches */}
         {hasResult &&
           match.result &&
@@ -5012,10 +5017,6 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             )}
           </TouchableOpacity>
         </Animated.View>
-
-        {/* Available Courts Section — host-only CTA when facility has real-time
-            availability and no court is booked yet. */}
-        <MatchAvailableCourtsSection match={match} isCreator={isCreator} />
 
         {/* Match Cost Section — merged cost breakdown + reimbursement controls */}
         {hasCostData && (
