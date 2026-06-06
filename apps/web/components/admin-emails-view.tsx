@@ -48,6 +48,28 @@ interface BroadcastHistory {
   created_at: string;
 }
 
+interface DraftAudience {
+  source?: string;
+  emails?: string[];
+  filters?: {
+    sportId?: string | null;
+    city?: string | null;
+    locale?: string | null;
+    activeWithinDays?: number | null;
+    onlySubscribers?: boolean;
+  };
+}
+
+interface DraftItem {
+  id: string;
+  subject: string;
+  body: string;
+  cta_text: string | null;
+  cta_url: string | null;
+  audience: DraftAudience | null;
+  created_at: string;
+}
+
 interface Feedback {
   type: 'success' | 'error';
   message: string;
@@ -117,6 +139,11 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [history, setHistory] = useState<BroadcastHistory[]>([]);
 
+  // ---- Drafts ----
+  const [drafts, setDrafts] = useState<DraftItem[]>([]);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+
   const hasContent = subject.trim().length > 0 && body.trim().length > 0;
 
   const { valid: validEmails, invalid: invalidEmails } = useMemo(
@@ -142,6 +169,15 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
       onlySubscribers: segOnlySubscribers,
     }),
     [segSport, segCity, segLocale, segActive, segOnlySubscribers]
+  );
+
+  /** The audience half of a send/draft payload (segment filters or email list). */
+  const buildAudiencePayload = useCallback(
+    () =>
+      audienceMode === 'segment'
+        ? { audienceMode: 'segment' as const, segment: currentSegment() }
+        : { audienceMode: 'list' as const, emails: validEmails },
+    [audienceMode, currentSegment, validEmails]
   );
 
   // ---- Live segment recipient count (debounced) ----
@@ -226,11 +262,36 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
     }
   }, []);
 
+  const loadDrafts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/broadcasts?status=draft');
+      const data = (await res.json()) as { drafts?: DraftItem[] };
+      if (Array.isArray(data.drafts)) setDrafts(data.drafts);
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
   useEffect(() => {
     void loadHistory();
-  }, [loadHistory]);
+    void loadDrafts();
+  }, [loadHistory, loadDrafts]);
 
   // ---- Actions ----
+  const resetComposer = () => {
+    setSubject('');
+    setBody('');
+    setCtaText('');
+    setCtaUrl('');
+    setRecipientEmails('');
+    setAudienceMode('list');
+    setSegSport('any');
+    setSegCity('');
+    setSegLocale('any');
+    setSegActive('any');
+    setSegOnlySubscribers(false);
+    setDraftId(null);
+  };
   const handleSendTest = async () => {
     if (!hasContent) {
       setFeedback({ type: 'error', message: t('toast.validation') });
@@ -277,30 +338,18 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
     setIsSending(true);
     setFeedback(null);
     try {
-      const payload =
-        audienceMode === 'segment'
-          ? {
-              action: 'send',
-              subject,
-              body,
-              ctaText,
-              ctaUrl,
-              audienceMode: 'segment',
-              segment: currentSegment(),
-            }
-          : {
-              action: 'send',
-              subject,
-              body,
-              ctaText,
-              ctaUrl,
-              audienceMode: 'list',
-              emails: validEmails,
-            };
       const res = await fetch('/api/admin/broadcasts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          action: 'send',
+          subject,
+          body,
+          ctaText,
+          ctaUrl,
+          broadcastId: draftId ?? undefined,
+          ...buildAudiencePayload(),
+        }),
       });
       const data = (await res.json()) as {
         success?: boolean;
@@ -313,7 +362,9 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
           type: 'success',
           message: t('toast.sent', { sent: data.sent ?? 0, total: data.total ?? 0 }),
         });
+        resetComposer();
         void loadHistory();
+        void loadDrafts();
       } else {
         setFeedback({ type: 'error', message: data.error ?? t('toast.sendFailed') });
       }
@@ -321,6 +372,77 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
       setFeedback({ type: 'error', message: t('toast.sendFailed') });
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    setFeedback(null);
+    try {
+      const res = await fetch('/api/admin/broadcasts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'draft',
+          subject,
+          body,
+          ctaText,
+          ctaUrl,
+          broadcastId: draftId ?? undefined,
+          ...buildAudiencePayload(),
+        }),
+      });
+      const data = (await res.json()) as { success?: boolean; draftId?: string; error?: string };
+      if (res.ok && data.success) {
+        if (data.draftId) setDraftId(data.draftId);
+        setFeedback({ type: 'success', message: t('toast.draftSaved') });
+        void loadDrafts();
+      } else {
+        setFeedback({ type: 'error', message: data.error ?? t('toast.draftFailed') });
+      }
+    } catch {
+      setFeedback({ type: 'error', message: t('toast.draftFailed') });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleLoadDraft = (d: DraftItem) => {
+    setSubject(d.subject ?? '');
+    setBody(d.body ?? '');
+    setCtaText(d.cta_text ?? '');
+    setCtaUrl(d.cta_url ?? '');
+    const a = d.audience;
+    if (a?.source === 'segment') {
+      const f = a.filters ?? {};
+      setAudienceMode('segment');
+      setSegSport(f.sportId ?? 'any');
+      setSegCity(f.city ?? '');
+      setSegLocale((f.locale as LocaleFilter) ?? 'any');
+      setSegActive(f.activeWithinDays ? (String(f.activeWithinDays) as ActiveFilter) : 'any');
+      setSegOnlySubscribers(!!f.onlySubscribers);
+      setRecipientEmails('');
+    } else {
+      setAudienceMode('list');
+      setRecipientEmails((a?.emails ?? []).join(', '));
+    }
+    setDraftId(d.id);
+    setFeedback(null);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteDraft = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/broadcasts?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        if (id === draftId) resetComposer();
+        setFeedback({ type: 'success', message: t('toast.draftDeleted') });
+        void loadDrafts();
+      }
+    } catch {
+      /* non-fatal */
     }
   };
 
@@ -542,6 +664,18 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                 placeholder={t('actions.testToPlaceholder')}
               />
             </div>
+            {draftId && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{t('drafts.editing')}</span>
+                <button
+                  type="button"
+                  onClick={resetComposer}
+                  className="underline hover:text-foreground"
+                >
+                  {t('drafts.new')}
+                </button>
+              </div>
+            )}
             <div className="flex flex-wrap gap-3">
               <Button
                 variant="outline"
@@ -549,6 +683,13 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                 disabled={!hasContent || isTesting}
               >
                 {isTesting ? t('actions.sending') : t('actions.sendTest')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void handleSaveDraft()}
+                disabled={isSavingDraft || (!subject.trim() && !body.trim())}
+              >
+                {isSavingDraft ? t('actions.sending') : t('actions.saveDraft')}
               </Button>
               <Button onClick={() => setConfirmOpen(true)} disabled={!canSend}>
                 <Send className="mr-2 size-4" />
@@ -627,6 +768,46 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
           </div>
         </div>
       </div>
+
+      {/* Drafts */}
+      {drafts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('drafts.heading')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y">
+              {drafts.map(d => (
+                <li key={d.id} className="flex items-center justify-between gap-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => handleLoadDraft(d)}
+                    className="flex-1 truncate text-left text-sm font-medium hover:underline"
+                  >
+                    {d.subject?.trim() || t('drafts.untitled')}
+                  </button>
+                  <span className="hidden text-xs text-muted-foreground sm:inline">
+                    {new Date(d.created_at).toLocaleDateString(locale)}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleLoadDraft(d)}>
+                      {t('drafts.edit')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 dark:text-red-400"
+                      onClick={() => void handleDeleteDraft(d.id)}
+                    >
+                      {t('drafts.delete')}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* History */}
       <Card>

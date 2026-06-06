@@ -5830,8 +5830,17 @@
         "sendTest": "Send test",
         "send": "Send broadcast",
         "sending": "Sending…",
+        "saveDraft": "Save draft",
         "testToLabel": "Send test to (optional)",
         "testToPlaceholder": "Defaults to your own email"
+      },
+      "drafts": {
+        "heading": "Drafts",
+        "editing": "Editing a draft",
+        "new": "Start new",
+        "edit": "Edit",
+        "delete": "Delete",
+        "untitled": "(no subject)"
       },
       "confirm": {
         "title": "Send this broadcast?",
@@ -5908,7 +5917,10 @@
         "testFailed": "Couldn't send the test email",
         "sent": "Broadcast sent to {sent} of {total} recipients",
         "sendFailed": "Couldn't send the broadcast",
-        "validation": "Add a subject and message first"
+        "validation": "Add a subject and message first",
+        "draftSaved": "Draft saved",
+        "draftDeleted": "Draft deleted",
+        "draftFailed": "Couldn't save the draft"
       }
     },
     "referralContests": {

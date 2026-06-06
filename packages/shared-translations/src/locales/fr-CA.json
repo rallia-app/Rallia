@@ -5830,8 +5830,17 @@
         "sendTest": "Envoyer un test",
         "send": "Envoyer le courriel",
         "sending": "Envoi en cours…",
+        "saveDraft": "Enregistrer le brouillon",
         "testToLabel": "Envoyer le test à (facultatif)",
         "testToPlaceholder": "Par défaut, votre propre courriel"
+      },
+      "drafts": {
+        "heading": "Brouillons",
+        "editing": "Modification d'un brouillon",
+        "new": "Nouveau",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "untitled": "(sans objet)"
       },
       "confirm": {
         "title": "Envoyer ce courriel ?",
@@ -5908,7 +5917,10 @@
         "testFailed": "Impossible d'envoyer le courriel test",
         "sent": "Courriel envoyé à {sent} des {total} destinataires",
         "sendFailed": "Impossible d'envoyer le courriel",
-        "validation": "Ajoutez d'abord un objet et un message"
+        "validation": "Ajoutez d'abord un objet et un message",
+        "draftSaved": "Brouillon enregistré",
+        "draftDeleted": "Brouillon supprimé",
+        "draftFailed": "Impossible d'enregistrer le brouillon"
       }
     },
     "referralContests": {
