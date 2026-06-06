@@ -5799,7 +5799,26 @@
         "help": "Collez les courriels ciblés, séparés par des virgules, des espaces ou des sauts de ligne.",
         "count": "{count} destinataires valides",
         "invalid": "{count} entrées ignorées (format invalide)",
-        "empty": "Ajoutez au moins un courriel de destinataire."
+        "empty": "Ajoutez au moins un courriel de destinataire.",
+        "modeList": "Coller une liste",
+        "modeSegment": "Cibler un segment",
+        "segment": {
+          "sportLabel": "Sport",
+          "sportAny": "Tous les sports",
+          "localeLabel": "Langue",
+          "localeAny": "Toutes les langues",
+          "cityLabel": "Ville",
+          "cityPlaceholder": "p. ex. Montréal",
+          "activeLabel": "Dernière activité",
+          "activeAny": "N'importe quand",
+          "active7": "7 derniers jours",
+          "active30": "30 derniers jours",
+          "active90": "90 derniers jours",
+          "onlySubscribers": "Abonnés seulement",
+          "count": "Touche {count} personnes",
+          "counting": "Calcul de l'audience…",
+          "countError": "Impossible de calculer l'audience"
+        }
       },
       "preview": {
         "heading": "Aperçu",
@@ -5808,9 +5827,11 @@
         "empty": "Ajoutez un objet et un message pour voir l'aperçu."
       },
       "actions": {
-        "sendTest": "M'envoyer un test",
+        "sendTest": "Envoyer un test",
         "send": "Envoyer le courriel",
-        "sending": "Envoi en cours…"
+        "sending": "Envoi en cours…",
+        "testToLabel": "Envoyer le test à (facultatif)",
+        "testToPlaceholder": "Par défaut, votre propre courriel"
       },
       "confirm": {
         "title": "Envoyer ce courriel ?",
@@ -5822,6 +5843,8 @@
         "heading": "Envois précédents",
         "subject": "Objet",
         "audience": "Audience",
+        "audienceList": "Liste",
+        "audienceSegment": "Segment",
         "recipients": "Destinataires",
         "sent": "Envoyés",
         "failed": "Échecs",

@@ -1,17 +1,12 @@
-import { requireApiRole } from '@/lib/supabase/check-admin';
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import {
+  getAuthedAdminBroadcastDb,
+  parseSegment,
+  resolveSegmentRecipients,
+  type Recipient,
+} from '@/lib/admin/broadcasts';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Json } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Email broadcasts are a high-impact action (can reach every user) — super_admin only.
-const ALLOWED_ROLES = ['super_admin'];
-
-interface Recipient {
-  userId: string | null;
-  email: string;
-  firstName: string | null;
-  locale: string | null;
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -28,34 +23,6 @@ function parseEmails(raw: unknown): string[] {
     if (email && EMAIL_RE.test(email)) seen.add(email);
   }
   return [...seen];
-}
-
-async function getAuthedAdminDb() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { user: null, adminDb: null, accessToken: null, error: 'Unauthorized' as const };
-  }
-
-  const { allowed } = await requireApiRole(user.id, ALLOWED_ROLES);
-  if (!allowed) {
-    return { user: null, adminDb: null, accessToken: null, error: 'Forbidden' as const };
-  }
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  return {
-    user,
-    adminDb: createServiceRoleClient(),
-    accessToken: session?.access_token ?? null,
-    error: null,
-  };
 }
 
 /**
@@ -182,7 +149,7 @@ function parseContent(raw: Record<string, unknown>): {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, adminDb, accessToken, error } = await getAuthedAdminDb();
+    const { user, adminDb, accessToken, error } = await getAuthedAdminBroadcastDb();
     if (error || !adminDb || !user) {
       return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 });
     }
@@ -226,11 +193,31 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- send: resolve recipients, persist campaign, dispatch ------------
-    const emails = parseEmails(raw.emails);
-    if (emails.length === 0) {
-      return NextResponse.json({ error: 'No valid recipient emails provided' }, { status: 400 });
+    // Audience is either a pasted email list or a segment resolved server-side
+    // via get_broadcast_recipients (consent + deliverability baked in).
+    const audienceMode = raw.audienceMode === 'segment' ? 'segment' : 'list';
+    let recipients: Recipient[];
+    let audienceMeta: Record<string, unknown>;
+
+    if (audienceMode === 'segment') {
+      const filters = parseSegment(raw.segment);
+      recipients = await resolveSegmentRecipients(adminDb, filters);
+      audienceMeta = { source: 'segment', count: recipients.length, filters };
+    } else {
+      const emails = parseEmails(raw.emails);
+      if (emails.length === 0) {
+        return NextResponse.json({ error: 'No valid recipient emails provided' }, { status: 400 });
+      }
+      recipients = await resolveRecipients(adminDb, emails);
+      audienceMeta = { source: 'email_list', count: recipients.length };
     }
-    const recipients = await resolveRecipients(adminDb, emails);
+
+    if (recipients.length === 0) {
+      return NextResponse.json(
+        { error: 'No eligible recipients for this audience' },
+        { status: 400 }
+      );
+    }
 
     const { data: broadcast, error: insertError } = await adminDb
       .from('email_broadcast')
@@ -240,7 +227,7 @@ export async function POST(request: NextRequest) {
         body: content.body,
         cta_text: content.ctaText,
         cta_url: content.ctaUrl,
-        audience: { source: 'email_list', count: recipients.length },
+        audience: audienceMeta as unknown as Json,
         recipients_total: recipients.length,
         status: 'sending',
       })
@@ -315,7 +302,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { adminDb, error } = await getAuthedAdminDb();
+    const { adminDb, error } = await getAuthedAdminBroadcastDb();
     if (error || !adminDb) {
       return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 });
     }

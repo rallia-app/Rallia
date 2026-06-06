@@ -13,8 +13,17 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@rallia/shared-hooks';
@@ -22,9 +31,15 @@ import { Moon, Send, Sun, Users } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+interface SportOption {
+  id: string;
+  display_name: string;
+}
+
 interface BroadcastHistory {
   id: string;
   subject: string;
+  audience: { source?: string; count?: number } | null;
   recipients_total: number;
   sent_count: number;
   failed_count: number;
@@ -36,6 +51,10 @@ interface Feedback {
   type: 'success' | 'error';
   message: string;
 }
+
+type AudienceMode = 'list' | 'segment';
+type LocaleFilter = 'any' | 'en-US' | 'fr-CA';
+type ActiveFilter = 'any' | '7' | '30' | '90';
 
 const LOCALE_OPTIONS = ['en-US', 'fr-CA'] as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -60,7 +79,7 @@ function parseEmailList(raw: string): { valid: string[]; invalid: string[] } {
   return { valid, invalid };
 }
 
-export function AdminEmailsView() {
+export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   const t = useTranslations('admin.emails');
   const locale = useLocale();
 
@@ -71,7 +90,20 @@ export function AdminEmailsView() {
   const [ctaUrl, setCtaUrl] = useState('');
 
   // ---- Recipients state ----
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>('list');
   const [recipientEmails, setRecipientEmails] = useState('');
+  // Segment filters
+  const [segSport, setSegSport] = useState('any');
+  const [segCity, setSegCity] = useState('');
+  const [segLocale, setSegLocale] = useState<LocaleFilter>('any');
+  const [segActive, setSegActive] = useState<ActiveFilter>('any');
+  const [segOnlySubscribers, setSegOnlySubscribers] = useState(false);
+  const [segmentCount, setSegmentCount] = useState<number | null>(null);
+  const [segmentCountLoading, setSegmentCountLoading] = useState(false);
+  const [segmentCountError, setSegmentCountError] = useState(false);
+
+  // ---- Test send state ----
+  const [testEmail, setTestEmail] = useState('');
 
   // ---- Preview state ----
   const [previewLocale, setPreviewLocale] = useState(locale === 'fr-CA' ? 'fr-CA' : 'en-US');
@@ -90,7 +122,68 @@ export function AdminEmailsView() {
     () => parseEmailList(recipientEmails),
     [recipientEmails]
   );
-  const recipientCount = validEmails.length;
+  const listCount = validEmails.length;
+
+  const effectiveCount = audienceMode === 'segment' ? (segmentCount ?? 0) : listCount;
+  const canSend =
+    hasContent &&
+    !isSending &&
+    effectiveCount > 0 &&
+    !(audienceMode === 'segment' && segmentCountLoading);
+
+  /** Current segment filters in the API's payload shape. */
+  const currentSegment = useCallback(
+    () => ({
+      sportId: segSport === 'any' ? null : segSport,
+      city: segCity.trim() || null,
+      locale: segLocale === 'any' ? null : segLocale,
+      activeWithinDays: segActive === 'any' ? null : Number(segActive),
+      onlySubscribers: segOnlySubscribers,
+    }),
+    [segSport, segCity, segLocale, segActive, segOnlySubscribers]
+  );
+
+  // ---- Live segment recipient count (debounced) ----
+  const segmentQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (segSport !== 'any') params.set('sportId', segSport);
+    if (segCity.trim()) params.set('city', segCity.trim());
+    if (segLocale !== 'any') params.set('locale', segLocale);
+    if (segActive !== 'any') params.set('activeWithinDays', segActive);
+    if (segOnlySubscribers) params.set('onlySubscribers', 'true');
+    return params.toString();
+  }, [segSport, segCity, segLocale, segActive, segOnlySubscribers]);
+
+  const debouncedQuery = useDebounce(segmentQuery, 400);
+
+  useEffect(() => {
+    if (audienceMode !== 'segment') return;
+    let cancelled = false;
+    setSegmentCountLoading(true);
+    setSegmentCountError(false);
+    fetch(`/api/admin/broadcasts/recipients?${debouncedQuery}`)
+      .then(async res => {
+        const data = (await res.json()) as { count?: number };
+        if (cancelled) return;
+        if (!res.ok || typeof data.count !== 'number') {
+          setSegmentCountError(true);
+          setSegmentCount(null);
+        } else {
+          setSegmentCount(data.count);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSegmentCountError(true);
+        setSegmentCount(null);
+      })
+      .finally(() => {
+        if (!cancelled) setSegmentCountLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [audienceMode, debouncedQuery]);
 
   // ---- Live preview iframe (debounced) ----
   const debouncedSubject = useDebounce(subject, 400);
@@ -155,6 +248,7 @@ export function AdminEmailsView() {
           ctaText,
           ctaUrl,
           locale: previewLocale,
+          testEmail: testEmail.trim() || undefined,
         }),
       });
       const data = (await res.json()) as {
@@ -182,17 +276,30 @@ export function AdminEmailsView() {
     setIsSending(true);
     setFeedback(null);
     try {
+      const payload =
+        audienceMode === 'segment'
+          ? {
+              action: 'send',
+              subject,
+              body,
+              ctaText,
+              ctaUrl,
+              audienceMode: 'segment',
+              segment: currentSegment(),
+            }
+          : {
+              action: 'send',
+              subject,
+              body,
+              ctaText,
+              ctaUrl,
+              audienceMode: 'list',
+              emails: validEmails,
+            };
       const res = await fetch('/api/admin/broadcasts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send',
-          subject,
-          body,
-          ctaText,
-          ctaUrl,
-          emails: validEmails,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json()) as {
         success?: boolean;
@@ -232,6 +339,9 @@ export function AdminEmailsView() {
         return status;
     }
   };
+
+  const audienceLabel = (audience: BroadcastHistory['audience']): string =>
+    audience?.source === 'segment' ? t('history.audienceSegment') : t('history.audienceList');
 
   return (
     <div className="space-y-8">
@@ -294,48 +404,156 @@ export function AdminEmailsView() {
               <CardTitle>{t('recipients.heading')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="broadcast-recipients">{t('recipients.label')}</Label>
-                <Textarea
-                  id="broadcast-recipients"
-                  value={recipientEmails}
-                  onChange={e => setRecipientEmails(e.target.value)}
-                  placeholder={t('recipients.placeholder')}
-                  rows={5}
-                />
-                <p className="text-xs text-muted-foreground">{t('recipients.help')}</p>
-              </div>
+              <Tabs
+                value={audienceMode}
+                onValueChange={value => setAudienceMode(value as AudienceMode)}
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="list">{t('recipients.modeList')}</TabsTrigger>
+                  <TabsTrigger value="segment">{t('recipients.modeSegment')}</TabsTrigger>
+                </TabsList>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
-                <span className="flex items-center gap-2 text-sm font-medium">
-                  <Users className="size-4 text-muted-foreground" />
-                  {t('recipients.count', { count: recipientCount })}
-                </span>
-                {invalidEmails.length > 0 && (
-                  <span className="text-sm text-amber-600 dark:text-amber-400">
-                    {t('recipients.invalid', { count: invalidEmails.length })}
-                  </span>
-                )}
-              </div>
+                {/* Paste list */}
+                <TabsContent value="list" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-recipients">{t('recipients.label')}</Label>
+                    <Textarea
+                      id="broadcast-recipients"
+                      value={recipientEmails}
+                      onChange={e => setRecipientEmails(e.target.value)}
+                      placeholder={t('recipients.placeholder')}
+                      rows={5}
+                    />
+                    <p className="text-xs text-muted-foreground">{t('recipients.help')}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Users className="size-4 text-muted-foreground" />
+                      {t('recipients.count', { count: listCount })}
+                    </span>
+                    {invalidEmails.length > 0 && (
+                      <span className="text-sm text-amber-600 dark:text-amber-400">
+                        {t('recipients.invalid', { count: invalidEmails.length })}
+                      </span>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Segment builder */}
+                <TabsContent value="segment" className="space-y-4 pt-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.sportLabel')}</Label>
+                      <Select value={segSport} onValueChange={setSegSport}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">{t('recipients.segment.sportAny')}</SelectItem>
+                          {sports.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.display_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.localeLabel')}</Label>
+                      <Select
+                        value={segLocale}
+                        onValueChange={value => setSegLocale(value as LocaleFilter)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">{t('recipients.segment.localeAny')}</SelectItem>
+                          <SelectItem value="en-US">English</SelectItem>
+                          <SelectItem value="fr-CA">Français</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="segment-city">{t('recipients.segment.cityLabel')}</Label>
+                      <Input
+                        id="segment-city"
+                        value={segCity}
+                        onChange={e => setSegCity(e.target.value)}
+                        placeholder={t('recipients.segment.cityPlaceholder')}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.activeLabel')}</Label>
+                      <Select
+                        value={segActive}
+                        onValueChange={value => setSegActive(value as ActiveFilter)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">{t('recipients.segment.activeAny')}</SelectItem>
+                          <SelectItem value="7">{t('recipients.segment.active7')}</SelectItem>
+                          <SelectItem value="30">{t('recipients.segment.active30')}</SelectItem>
+                          <SelectItem value="90">{t('recipients.segment.active90')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <Checkbox
+                      checked={segOnlySubscribers}
+                      onCheckedChange={value => setSegOnlySubscribers(value === true)}
+                    />
+                    {t('recipients.segment.onlySubscribers')}
+                  </label>
+
+                  <div className="flex items-center gap-2 pt-1 text-sm font-medium">
+                    <Users className="size-4 text-muted-foreground" />
+                    {segmentCountLoading ? (
+                      <span className="text-muted-foreground">
+                        {t('recipients.segment.counting')}
+                      </span>
+                    ) : segmentCountError ? (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {t('recipients.segment.countError')}
+                      </span>
+                    ) : (
+                      <span>{t('recipients.segment.count', { count: segmentCount ?? 0 })}</span>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-3">
-            <Button
-              variant="outline"
-              onClick={() => void handleSendTest()}
-              disabled={!hasContent || isTesting}
-            >
-              {isTesting ? t('actions.sending') : t('actions.sendTest')}
-            </Button>
-            <Button
-              onClick={() => setConfirmOpen(true)}
-              disabled={!hasContent || isSending || recipientCount === 0}
-            >
-              <Send className="mr-2 size-4" />
-              {isSending ? t('actions.sending') : t('actions.send')}
-            </Button>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="broadcast-test-email">{t('actions.testToLabel')}</Label>
+              <Input
+                id="broadcast-test-email"
+                type="email"
+                value={testEmail}
+                onChange={e => setTestEmail(e.target.value)}
+                placeholder={t('actions.testToPlaceholder')}
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                onClick={() => void handleSendTest()}
+                disabled={!hasContent || isTesting}
+              >
+                {isTesting ? t('actions.sending') : t('actions.sendTest')}
+              </Button>
+              <Button onClick={() => setConfirmOpen(true)} disabled={!canSend}>
+                <Send className="mr-2 size-4" />
+                {isSending ? t('actions.sending') : t('actions.send')}
+              </Button>
+            </div>
           </div>
 
           {feedback && (
@@ -423,6 +641,7 @@ export function AdminEmailsView() {
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="py-2 pr-4 font-medium">{t('history.subject')}</th>
+                    <th className="py-2 pr-4 font-medium">{t('history.audience')}</th>
                     <th className="py-2 pr-4 font-medium">{t('history.recipients')}</th>
                     <th className="py-2 pr-4 font-medium">{t('history.sent')}</th>
                     <th className="py-2 pr-4 font-medium">{t('history.failed')}</th>
@@ -434,6 +653,9 @@ export function AdminEmailsView() {
                   {history.map(b => (
                     <tr key={b.id} className="border-b last:border-0">
                       <td className="py-2 pr-4 max-w-[280px] truncate">{b.subject}</td>
+                      <td className="py-2 pr-4">
+                        <Badge variant="outline">{audienceLabel(b.audience)}</Badge>
+                      </td>
                       <td className="py-2 pr-4">{b.recipients_total}</td>
                       <td className="py-2 pr-4">{b.sent_count}</td>
                       <td className="py-2 pr-4">{b.failed_count}</td>
@@ -457,13 +679,13 @@ export function AdminEmailsView() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('confirm.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('confirm.description', { count: recipientCount })}
+              {t('confirm.description', { count: effectiveCount })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('confirm.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={() => void handleSend()}>
-              {t('confirm.confirm', { count: recipientCount })}
+              {t('confirm.confirm', { count: effectiveCount })}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
