@@ -5853,6 +5853,49 @@
         "empty": "Aucun envoi pour l'instant.",
         "error": "Échec du chargement des envois"
       },
+      "detail": {
+        "titleMeta": "Envoi - Admin - Rallia",
+        "back": "Retour aux envois",
+        "contentHeading": "Contenu",
+        "recipientsHeading": "Destinataires",
+        "noRecipients": "Aucune activité de destinataire enregistrée.",
+        "activeChip": "Actif ≤ {days} j",
+        "stat": {
+          "recipients": "Destinataires",
+          "sent": "Envoyés",
+          "delivered": "Livrés",
+          "opened": "Ouverts",
+          "clicked": "Cliqués",
+          "failed": "Échecs",
+          "bounced": "Rejets",
+          "complained": "Plaintes"
+        },
+        "recipient": {
+          "email": "Courriel",
+          "type": "Type",
+          "status": "Statut",
+          "engagement": "Engagement",
+          "sentAt": "Envoyé le",
+          "user": "Utilisateur",
+          "external": "Externe"
+        },
+        "engagement": {
+          "delivered": "Livré",
+          "opened": "Ouvert",
+          "clicked": "Cliqué"
+        },
+        "recipientStatus": {
+          "sent": "Envoyé",
+          "failed": "Échec",
+          "bounced": "Rejeté",
+          "complained": "Plainte"
+        },
+        "pagination": {
+          "page": "Page {page} sur {total}",
+          "prev": "Précédent",
+          "next": "Suivant"
+        }
+      },
       "status": {
         "queued": "En file",
         "sending": "Envoi",
