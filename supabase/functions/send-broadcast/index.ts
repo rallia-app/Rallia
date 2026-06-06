@@ -46,11 +46,43 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const resend = new Resend(resendApiKey);
 
 /** Bounded concurrency for the per-recipient send loop. */
-const SEND_CONCURRENCY = 8;
+const SEND_CONCURRENCY = 5;
 /** Soft deadline; stop dispatching new recipients when crossed. */
 const MAX_RUN_MS = 240_000;
+/**
+ * Resend's default limit is 5 requests/sec per team — exceeding it returns 429,
+ * which previously failed most recipients of a large broadcast (no pacing, no
+ * retry). Space send start-times under the limit (with headroom) across all
+ * workers, and retry a 429 with backoff. Raise BROADCAST_SEND_RATE_PER_SEC if
+ * your Resend team has a higher limit.
+ */
+const SEND_RATE_PER_SEC = Math.max(1, Number(Deno.env.get('BROADCAST_SEND_RATE_PER_SEC') ?? '4'));
+const MIN_SEND_INTERVAL_MS = Math.ceil(1000 / SEND_RATE_PER_SEC);
+/** Attempts per recipient when Resend returns a rate-limit (429) error. */
+const MAX_SEND_ATTEMPTS = 4;
 
 const ENC = new TextEncoder();
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+/**
+ * Gate that spaces Resend send start-times >= MIN_SEND_INTERVAL_MS apart across
+ * all concurrent workers. JS is single-threaded and there is no await between
+ * reading and bumping nextSendSlot, so the reservation is atomic.
+ */
+let nextSendSlot = 0;
+async function acquireSendSlot(): Promise<void> {
+  const now = Date.now();
+  const slot = Math.max(now, nextSendSlot);
+  nextSendSlot = slot + MIN_SEND_INTERVAL_MS;
+  if (slot > now) await sleep(slot - now);
+}
+
+/** Whether a Resend error looks like a 429 rate-limit response. */
+function isRateLimitError(error: { name?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return /rate.?limit|too many requests|429/i.test(`${error.name ?? ''} ${error.message ?? ''}`);
+}
 
 // =============================================================================
 // TYPES
@@ -274,7 +306,7 @@ Deno.serve(async req => {
         unsubscribeUrl,
       });
 
-      const { data, error } = await resend.emails.send({
+      const emailPayload = {
         from: fromEmail!,
         to: recipient.email,
         subject: s,
@@ -285,7 +317,17 @@ Deno.serve(async req => {
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             }
           : {},
-      });
+      };
+
+      // Paced + retried to stay under Resend's per-second rate limit.
+      let data: Awaited<ReturnType<typeof resend.emails.send>>['data'] = null;
+      let error: Awaited<ReturnType<typeof resend.emails.send>>['error'] = null;
+      for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
+        await acquireSendSlot();
+        ({ data, error } = await resend.emails.send(emailPayload));
+        if (!error || !isRateLimitError(error) || attempt === MAX_SEND_ATTEMPTS) break;
+        await sleep(MIN_SEND_INTERVAL_MS * attempt * 2);
+      }
 
       if (error) {
         failed++;
