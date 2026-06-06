@@ -79,7 +79,7 @@ function cleanIC3Name(name: string | null | undefined): string | undefined {
 // "Tennis #8", "Terrain 2"; lettered courts (pickleball "A") yield undefined.
 function extractCourtNumber(name: string | null | undefined): number | undefined {
   if (!name) return undefined;
-  const cleaned = name.replace(/\([^)]*\)/g, ' '); // drop "(4)"-style court counts
+  const cleaned = name.replace(/\([^()]*\)/g, ' '); // drop "(4)"-style court counts (linear, no ReDoS)
   let m = cleaned.match(/(?:n[o°]\.?\s*|#\s*)(\d{1,3})\b/i); // no.N / no N / n°N / #N
   if (!m) m = cleaned.match(/(?:tennis|pickleball|badminton|squash|terrain|court)\D*?(\d{1,3})\b/i);
   return m && m[1] ? parseInt(m[1], 10) : undefined;
