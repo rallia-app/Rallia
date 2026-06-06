@@ -1256,8 +1256,11 @@ export type Database = {
       email_broadcast_recipient: {
         Row: {
           broadcast_id: string;
+          clicked_at: string | null;
+          delivered_at: string | null;
           email: string;
           id: number;
+          opened_at: string | null;
           resend_id: string | null;
           sent_at: string;
           status: string;
@@ -1265,8 +1268,11 @@ export type Database = {
         };
         Insert: {
           broadcast_id: string;
+          clicked_at?: string | null;
+          delivered_at?: string | null;
           email: string;
           id?: number;
+          opened_at?: string | null;
           resend_id?: string | null;
           sent_at?: string;
           status?: string;
@@ -1274,8 +1280,11 @@ export type Database = {
         };
         Update: {
           broadcast_id?: string;
+          clicked_at?: string | null;
+          delivered_at?: string | null;
           email?: string;
           id?: number;
+          opened_at?: string | null;
           resend_id?: string | null;
           sent_at?: string;
           status?: string;

@@ -5853,6 +5853,49 @@
         "empty": "No broadcasts sent yet.",
         "error": "Failed to load broadcasts"
       },
+      "detail": {
+        "titleMeta": "Broadcast - Admin - Rallia",
+        "back": "Back to broadcasts",
+        "contentHeading": "Content",
+        "recipientsHeading": "Recipients",
+        "noRecipients": "No recipient activity recorded.",
+        "activeChip": "Active ≤ {days}d",
+        "stat": {
+          "recipients": "Recipients",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "opened": "Opened",
+          "clicked": "Clicked",
+          "failed": "Failed",
+          "bounced": "Bounced",
+          "complained": "Complained"
+        },
+        "recipient": {
+          "email": "Email",
+          "type": "Type",
+          "status": "Status",
+          "engagement": "Engagement",
+          "sentAt": "Sent at",
+          "user": "User",
+          "external": "External"
+        },
+        "engagement": {
+          "delivered": "Delivered",
+          "opened": "Opened",
+          "clicked": "Clicked"
+        },
+        "recipientStatus": {
+          "sent": "Sent",
+          "failed": "Failed",
+          "bounced": "Bounced",
+          "complained": "Complained"
+        },
+        "pagination": {
+          "page": "Page {page} of {total}",
+          "prev": "Previous",
+          "next": "Next"
+        }
+      },
       "status": {
         "queued": "Queued",
         "sending": "Sending",

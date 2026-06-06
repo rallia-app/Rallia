@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@rallia/shared-hooks';
 import { Moon, Send, Sun, Users } from 'lucide-react';
@@ -651,8 +652,15 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                 </thead>
                 <tbody>
                   {history.map(b => (
-                    <tr key={b.id} className="border-b last:border-0">
-                      <td className="py-2 pr-4 max-w-[280px] truncate">{b.subject}</td>
+                    <tr key={b.id} className="border-b last:border-0 hover:bg-muted/50">
+                      <td className="py-2 pr-4 max-w-[280px] truncate">
+                        <Link
+                          href={`/admin/emails/${b.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {b.subject}
+                        </Link>
+                      </td>
                       <td className="py-2 pr-4">
                         <Badge variant="outline">{audienceLabel(b.audience)}</Badge>
                       </td>
