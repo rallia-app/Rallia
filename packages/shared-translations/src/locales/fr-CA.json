@@ -3187,6 +3187,18 @@
       "joinWaitlist": "Rejoindre la liste d'attente"
     }
   },
+  "matchChat": {
+    "courtFallback": "le terrain",
+    "courtPrompt": {
+      "title": "Votre partie est complète!",
+      "subtitle": "Aucun terrain réservé à {facility}. Réservez-en un pour confirmer votre partie.",
+      "cta": "Réserver un terrain"
+    },
+    "courtBooked": {
+      "title": "{court} est réservé!",
+      "subtitle": "Rendez-vous sur le terrain à {facility}."
+    }
+  },
   "matchDetail": {
     "title": "Détails de la partie",
     "preferences": "Préférences",
@@ -3196,6 +3208,8 @@
     "availableCourtsHeader": "Terrains disponibles à l'heure de la partie",
     "availableCourtsSubtitle": "Réservez-en un maintenant pour confirmer la partie",
     "availableCourtsLoading": "Vérification des disponibilités…",
+    "nearbyCourtsHeader": "Terrains à proximité à l'heure de la partie",
+    "nearbyCourtsSubtitle": "Aucun terrain disponible à votre établissement — voici des options à proximité",
     "bookingConfirmation": {
       "message": "Confirmer associera le terrain réservé à cette partie.",
       "confirm": "Oui, j'ai réservé",

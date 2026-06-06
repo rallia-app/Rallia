@@ -1244,6 +1244,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       end_time,
       timezone,
       created_by,
+      facility_id,
+      court_status,
       preferred_opponent_gender,
       sport:sport_id (name),
       participants:match_participant (
@@ -1488,24 +1490,34 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       // Calculate spots left after this player joined
       const spotsLeft = availableSpots - 1;
 
+      // When this join fills a facility-linked match with no court reserved, the
+      // server-side "book your court" prompt (Rallia system message, posted by a
+      // trigger on match_participant) becomes the canonical fill notification.
+      // Skip the duplicate body_full "match is full" push in that case so
+      // participants don't get two near-simultaneous notifications.
+      const bookingPromptWillNotify =
+        spotsLeft === 0 && !!match.facility_id && match.court_status !== 'reserved';
+
       // Notify all users (fire and forget - don't block on notification)
-      notifyPlayerJoined(
-        uniqueUserIds,
-        matchId,
-        playerName,
-        sportName,
-        formattedDate,
-        locationName,
-        spotsLeft,
-        {
-          playerAvatarUrl,
-          locationAddress: matchDetails?.location_address ?? undefined,
-          latitude: matchDetails?.custom_latitude ?? undefined,
-          longitude: matchDetails?.custom_longitude ?? undefined,
-        }
-      ).catch(err => {
-        Logger.error('Failed to send player joined notifications:', err);
-      });
+      if (!bookingPromptWillNotify) {
+        notifyPlayerJoined(
+          uniqueUserIds,
+          matchId,
+          playerName,
+          sportName,
+          formattedDate,
+          locationName,
+          spotsLeft,
+          {
+            playerAvatarUrl,
+            locationAddress: matchDetails?.location_address ?? undefined,
+            latitude: matchDetails?.custom_latitude ?? undefined,
+            longitude: matchDetails?.custom_longitude ?? undefined,
+          }
+        ).catch(err => {
+          Logger.error('Failed to send player joined notifications:', err);
+        });
+      }
     }
 
     // Match chat membership is synced by DB triggers on match_participant.

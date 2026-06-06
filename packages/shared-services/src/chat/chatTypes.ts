@@ -49,6 +49,32 @@ export function isGroupConversationType(type: ConversationType): boolean {
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 
 /**
+ * Kind of message. 'user' is a normal chat message; the others are system cards
+ * posted by the "Rallia" sender (see migration 20260605120000) and rendered as
+ * rich cards instead of text bubbles.
+ */
+export type MessageType = 'user' | 'court_booking_prompt' | 'court_booked';
+
+/** metadata for a 'court_booking_prompt' system message. */
+export interface CourtBookingPromptMetadata {
+  match_id: string;
+  facility_name: string | null;
+}
+
+/** metadata for a 'court_booked' system message. */
+export interface CourtBookedMetadata {
+  match_id: string;
+  court_label: string | null;
+  facility_name: string | null;
+  booked_by: string | null;
+}
+
+export type MessageMetadata =
+  | CourtBookingPromptMetadata
+  | CourtBookedMetadata
+  | Record<string, unknown>;
+
+/**
  * Core conversation entity
  * @property id - Unique conversation ID
  * @property conversation_type - Type of conversation (direct, group, match, announcement)
@@ -122,6 +148,10 @@ export interface Message {
   is_edited?: boolean;
   edited_at?: string | null;
   deleted_at?: string | null;
+  /** Defaults to 'user' when absent (e.g. optimistic local messages). */
+  message_type?: MessageType;
+  /** Structured payload for system cards (court booking prompt / booked). */
+  metadata?: MessageMetadata | null;
 }
 
 // ============================================================================

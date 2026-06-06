@@ -15,6 +15,7 @@ import { registerPushToken, supabase, unregisterPushToken, Logger } from '@ralli
 // screen → the '#/hooks' barrel that re-exports this hook.
 import {
   navigateFromOutside,
+  navigateToChatConversationFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
   navigateToUserProfileFromOutside,
@@ -480,7 +481,18 @@ export function usePushNotifications(
       }
     }
 
-    // TODO: Handle other notification types (messages, etc.)
+    // Handle new-message notifications (incl. the "book your court" system card
+    // posted into a match chat) — deep-link straight to the conversation.
+    if (notificationType === 'new_message' || notificationType === 'chat') {
+      const conversationId = data.conversationId ?? (data.targetId as string | undefined);
+      if (conversationId) {
+        navigateToChatConversationFromOutside(conversationId);
+        Logger.logUserAction('push_notification_deep_link', {
+          conversationId,
+          type: notificationType,
+        });
+      }
+    }
   }, []);
 
   // Track if we've already handled the initial notification (to prevent double handling)

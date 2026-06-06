@@ -367,6 +367,24 @@ async function getSportIdByName(name: string): Promise<string | null> {
 }
 
 /**
+ * Best-effort court number parsed from a provider's verbose court name, used as
+ * a fallback when the structured court_number is absent — common for Montreal
+ * IC3 facilities (e.g. "Terrain de tennis no.1", "Tennis #8", "Terrain 2").
+ * Lettered courts (e.g. pickleball "A") correctly yield undefined.
+ *
+ * Mirrors extractCourtNumber in supabase/functions/refresh-facility-availability/
+ * providers.ts — keep the two in sync (the worker fixes stored data; this covers
+ * rows written before the worker change rolled out).
+ */
+export function parseCourtNumber(name: string | null | undefined): number | undefined {
+  if (!name) return undefined;
+  const cleaned = name.replace(/\([^)]*\)/g, ' '); // drop "(4)"-style court counts
+  let m = cleaned.match(/(?:n[o°]\.?\s*|#\s*)(\d{1,3})\b/i); // no.N / no N / n°N / #N
+  if (!m) m = cleaned.match(/(?:tennis|pickleball|badminton|squash|terrain|court)\D*?(\d{1,3})\b/i);
+  return m && m[1] ? parseInt(m[1], 10) : undefined;
+}
+
+/**
  * Convert raw snapshot rows into the AvailabilitySlot shape the rest of the
  * hook (groupSlotsByTime, formatting, etc.) already knows how to consume.
  *
@@ -387,7 +405,7 @@ function snapshotRowsToAvailabilitySlots(rows: SnapshotRow[]): AvailabilitySlot[
       facilityScheduleId: row.external_slot_id ?? row.external_court_id,
       courtName: row.court_name ?? undefined,
       shortCourtName: row.court_name ?? undefined,
-      courtNumber: row.court_number ?? undefined,
+      courtNumber: row.court_number ?? parseCourtNumber(row.court_name),
       bookingUrl: bookingUrl ?? undefined,
       price: row.price_cents != null ? row.price_cents / 100 : undefined,
       currency: row.currency ?? undefined,

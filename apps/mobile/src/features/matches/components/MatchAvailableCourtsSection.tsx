@@ -18,16 +18,30 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { Animated as RNAnimated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated as RNAnimated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, neutral, status, base } from '@rallia/design-system';
 import type { CourtOption, FormattedSlot } from '@rallia/shared-hooks';
 import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
+import { searchFacilitiesNearby } from '@rallia/shared-services';
+import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { useTranslation, useThemeStyles, useOpenExternalBooking } from '#/hooks';
+
+/** Nearby-facility fallback radius + count when the match facility has no courts left at game time. */
+const NEARBY_RADIUS_KM = 25;
+const NEARBY_MAX_FACILITIES = 3;
 
 interface MatchAvailableCourtsSectionProps {
   match: MatchDetailData;
@@ -220,13 +234,78 @@ export function MatchAvailableCourtsSection({
     ]
   );
 
-  // Any viewer, on unreserved matches with ≥1 bookable court at the start time.
-  // Anything else (no slots inlined, court already booked) collapses the section
-  // away. The host gets the match-linking booking flow; non-hosts get a plain
-  // external booking (see handleCourtPress).
-  if (match.court_status === 'reserved' || courtOptions.length === 0) {
-    return null;
-  }
+  // --- Nearby-facility fallback ---------------------------------------------
+  // When the match facility has no bookable court at the game's start time, look
+  // for courts at surrounding facilities (same sport, same slot). Only runs once
+  // the facility itself has come up empty and the match isn't already reserved.
+  const facilityLat = match.facility?.latitude;
+  const facilityLng = match.facility?.longitude;
+  const sportId = match.sport?.id;
+  const needsNearby =
+    match.court_status !== 'reserved' &&
+    courtOptions.length === 0 &&
+    facilityLat != null &&
+    facilityLng != null &&
+    !!sportId;
+
+  const { data: nearbyPage, isLoading: nearbyLoading } = useQuery({
+    queryKey: ['match-nearby-courts', match.id, sportId, match.match_date, match.start_time],
+    queryFn: () =>
+      searchFacilitiesNearby({
+        sportIds: [sportId as string],
+        latitude: Number(facilityLat),
+        longitude: Number(facilityLng),
+        maxDistanceKm: NEARBY_RADIUS_KM,
+        hasOpenSlots: true,
+        // +1 because the origin facility comes back in the results and we filter
+        // it out below; request one extra so we can still show MAX nearby ones.
+        limit: NEARBY_MAX_FACILITIES + 1,
+      }),
+    enabled: needsNearby,
+    staleTime: 60_000,
+  });
+
+  // Per nearby facility, the single slot matching the match's start time.
+  const nearbyOptions = useMemo(() => {
+    const out: Array<{ facility: FacilitySearchResult; slot: FormattedSlot }> = [];
+    if (!nearbyPage) return out;
+    for (const facility of nearbyPage.facilities) {
+      if (out.length >= NEARBY_MAX_FACILITIES) break;
+      if (facility.id === match.facility_id) continue;
+      const facilitySlots = formatInlineSnapshotSlots(
+        facility.availability_slots,
+        facility.timezone
+      ).slots;
+      const slot = facilitySlots.find(s =>
+        slotMatchesMatchStart(s, match.match_date, match.start_time, facility.timezone)
+      );
+      if (slot && slot.courtOptions.length > 0) out.push({ facility, slot });
+    }
+    return out;
+  }, [nearbyPage, match.facility_id, match.match_date, match.start_time]);
+
+  const handleNearbyCourtPress = useCallback(
+    async (facility: FacilitySearchResult, slot: FormattedSlot, court: CourtOption) => {
+      await openExternalBooking({
+        facility: {
+          id: facility.id,
+          name: facility.name,
+          address: facility.address,
+          city: facility.city,
+          timezone: facility.timezone,
+        },
+        slot,
+        selectedCourt: court,
+        // A nearby facility differs from the match's facility, so we don't link
+        // the booking back to the match (that would silently move its location).
+        matchId: undefined,
+        source: 'match_courts',
+        sportId,
+        sportName: match.sport?.name,
+      });
+    },
+    [openExternalBooking, sportId, match.sport?.name]
+  );
 
   const formatCourtLabel = (court: CourtOption) => {
     if (court.courtNumber !== undefined && court.courtNumber !== null) {
@@ -235,43 +314,116 @@ export function MatchAvailableCourtsSection({
     return court.courtName;
   };
 
-  return (
-    <Animated.View
-      entering={FadeInDown.delay(animationDelay).springify()}
-      style={[styles.section, { borderBottomColor: colors.border }]}
-    >
-      <View style={styles.sectionHeader}>
-        <Ionicons name="sparkles-outline" size={20} color={colors.iconMuted} />
-        <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-          {t('matchDetail.availableCourtsHeader')}
-        </Text>
-      </View>
+  // Court already reserved → nothing to do.
+  if (match.court_status === 'reserved') {
+    return null;
+  }
 
-      <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-        {t('matchDetail.availableCourtsSubtitle')}
-      </Text>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tilesRow}
+  // Facility has courts at game time → the primary booking section. The host
+  // gets the match-linking booking flow; non-hosts get a plain external booking.
+  if (courtOptions.length > 0) {
+    return (
+      <Animated.View
+        entering={FadeInDown.delay(animationDelay).springify()}
+        style={[styles.section, { borderBottomColor: colors.border }]}
       >
-        {courtOptions.map((court, index) => (
-          <CourtTile
-            key={`${court.facilityScheduleId}-${court.externalCourtId}-${index}`}
-            court={court}
-            label={formatCourtLabel(court)}
-            freeLabel={t('facilityDetail.free')}
-            colors={colors}
-            isDark={isDark}
-            onPress={court => {
-              void handleCourtPress(court);
-            }}
-          />
-        ))}
-      </ScrollView>
-    </Animated.View>
-  );
+        <View style={styles.sectionHeader}>
+          <Ionicons name="sparkles-outline" size={20} color={colors.iconMuted} />
+          <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+            {t('matchDetail.availableCourtsHeader')}
+          </Text>
+        </View>
+
+        <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+          {t('matchDetail.availableCourtsSubtitle')}
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tilesRow}
+        >
+          {courtOptions.map((court, index) => (
+            <CourtTile
+              key={`${court.facilityScheduleId}-${court.externalCourtId}-${index}`}
+              court={court}
+              label={formatCourtLabel(court)}
+              freeLabel={t('facilityDetail.free')}
+              colors={colors}
+              isDark={isDark}
+              onPress={court => {
+                void handleCourtPress(court);
+              }}
+            />
+          ))}
+        </ScrollView>
+      </Animated.View>
+    );
+  }
+
+  // Facility full at game time → surface nearby facilities (loading or results).
+  if (needsNearby && (nearbyLoading || nearbyOptions.length > 0)) {
+    return (
+      <Animated.View
+        entering={FadeInDown.delay(animationDelay).springify()}
+        style={[styles.section, { borderBottomColor: colors.border }]}
+      >
+        <View style={styles.sectionHeader}>
+          <Ionicons name="navigate-outline" size={20} color={colors.iconMuted} />
+          <Text size="base" weight="semibold" color={colors.text} style={styles.sectionTitle}>
+            {t('matchDetail.nearbyCourtsHeader')}
+          </Text>
+        </View>
+
+        <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+          {t('matchDetail.nearbyCourtsSubtitle')}
+        </Text>
+
+        {nearbyLoading && nearbyOptions.length === 0 ? (
+          <View style={styles.nearbyLoading}>
+            <ActivityIndicator color={colors.textMuted} />
+            <Text size="sm" color={colors.textMuted}>
+              {t('matchDetail.availableCourtsLoading')}
+            </Text>
+          </View>
+        ) : (
+          nearbyOptions.map(({ facility, slot }) => (
+            <View key={facility.id} style={styles.nearbyGroup}>
+              <Text
+                size="sm"
+                weight="semibold"
+                color={colors.text}
+                style={styles.nearbyFacilityName}
+              >
+                {facility.name}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tilesRow}
+              >
+                {slot.courtOptions.map((court, index) => (
+                  <CourtTile
+                    key={`${facility.id}-${court.externalCourtId}-${index}`}
+                    court={court}
+                    label={formatCourtLabel(court)}
+                    freeLabel={t('facilityDetail.free')}
+                    colors={colors}
+                    isDark={isDark}
+                    onPress={court => {
+                      void handleNearbyCourtPress(facility, slot, court);
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ))
+        )}
+      </Animated.View>
+    );
+  }
+
+  return null;
 }
 
 export default MatchAvailableCourtsSection;
@@ -293,6 +445,18 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: spacingPixels[3],
   },
+  nearbyLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[2],
+  },
+  nearbyGroup: {
+    marginBottom: spacingPixels[3],
+  },
+  nearbyFacilityName: {
+    marginBottom: spacingPixels[2],
+  },
   tilesRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -301,13 +465,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[1],
   },
   tile: {
-    width: 156,
-    minHeight: 96,
+    width: 136,
     borderRadius: radiusPixels.xl,
     borderWidth: 1,
     padding: spacingPixels[3],
     gap: spacingPixels[2],
-    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -322,7 +484,6 @@ const styles = StyleSheet.create({
   },
   tileName: {
     flex: 1,
-    minHeight: 40,
   },
   pricePill: {
     alignSelf: 'flex-start',
