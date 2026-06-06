@@ -5840,7 +5840,8 @@
         "new": "Start new",
         "edit": "Edit",
         "delete": "Delete",
-        "untitled": "(no subject)"
+        "untitled": "(no subject)",
+        "empty": "No drafts yet."
       },
       "confirm": {
         "title": "Send this broadcast?",

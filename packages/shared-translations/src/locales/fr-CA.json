@@ -5840,7 +5840,8 @@
         "new": "Nouveau",
         "edit": "Modifier",
         "delete": "Supprimer",
-        "untitled": "(sans objet)"
+        "untitled": "(sans objet)",
+        "empty": "Aucun brouillon."
       },
       "confirm": {
         "title": "Envoyer ce courriel ?",
