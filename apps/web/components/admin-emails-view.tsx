@@ -28,7 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@rallia/shared-hooks';
-import { Moon, Send, Sun, Users } from 'lucide-react';
+import { Eye, Mail, Moon, Save, Send, Sun, Users } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -468,7 +468,7 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Left: compose + recipients */}
         <div className="space-y-6">
           <Card>
@@ -653,45 +653,56 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
           </Card>
 
           {/* Actions */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="broadcast-test-email">{t('actions.testToLabel')}</Label>
-              <Input
-                id="broadcast-test-email"
-                type="email"
-                value={testEmail}
-                onChange={e => setTestEmail(e.target.value)}
-                placeholder={t('actions.testToPlaceholder')}
-              />
-            </div>
+          <div className="space-y-4 rounded-lg border bg-card p-4">
             {draftId && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{t('drafts.editing')}</span>
+              <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+                <span className="font-medium">{t('drafts.editing')}</span>
                 <button
                   type="button"
                   onClick={resetComposer}
-                  className="underline hover:text-foreground"
+                  className="ml-auto text-muted-foreground underline hover:text-foreground"
                 >
                   {t('drafts.new')}
                 </button>
               </div>
             )}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                onClick={() => void handleSendTest()}
-                disabled={!hasContent || isTesting}
-              >
-                {isTesting ? t('actions.sending') : t('actions.sendTest')}
-              </Button>
+
+            {/* Test send: address + button inline */}
+            <div className="space-y-1.5">
+              <Label htmlFor="broadcast-test-email" className="text-xs text-muted-foreground">
+                {t('actions.testToLabel')}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="broadcast-test-email"
+                  type="email"
+                  value={testEmail}
+                  onChange={e => setTestEmail(e.target.value)}
+                  placeholder={t('actions.testToPlaceholder')}
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => void handleSendTest()}
+                  disabled={!hasContent || isTesting}
+                >
+                  <Mail className="mr-2 size-4" />
+                  {isTesting ? t('actions.sending') : t('actions.sendTest')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Primary actions */}
+            <div className="flex items-center gap-3 border-t pt-4">
               <Button
                 variant="outline"
                 onClick={() => void handleSaveDraft()}
                 disabled={isSavingDraft || (!subject.trim() && !body.trim())}
               >
+                <Save className="mr-2 size-4" />
                 {isSavingDraft ? t('actions.sending') : t('actions.saveDraft')}
               </Button>
-              <Button onClick={() => setConfirmOpen(true)} disabled={!canSend}>
+              <Button className="ml-auto" onClick={() => setConfirmOpen(true)} disabled={!canSend}>
                 <Send className="mr-2 size-4" />
                 {isSending ? t('actions.sending') : t('actions.send')}
               </Button>
@@ -715,9 +726,12 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
         </div>
 
         {/* Right: preview */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:sticky lg:top-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">{t('preview.heading')}</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-medium">
+              <Eye className="size-4 text-muted-foreground" />
+              {t('preview.heading')}
+            </h3>
             <div className="flex items-center gap-3">
               <div className="flex items-center rounded-md border">
                 {LOCALE_OPTIONS.map(l => (
@@ -769,97 +783,106 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
         </div>
       </div>
 
-      {/* Drafts */}
-      {drafts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('drafts.heading')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y">
-              {drafts.map(d => (
-                <li key={d.id} className="flex items-center justify-between gap-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => handleLoadDraft(d)}
-                    className="flex-1 truncate text-left text-sm font-medium hover:underline"
-                  >
-                    {d.subject?.trim() || t('drafts.untitled')}
-                  </button>
-                  <span className="hidden text-xs text-muted-foreground sm:inline">
-                    {new Date(d.created_at).toLocaleDateString(locale)}
-                  </span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleLoadDraft(d)}>
-                      {t('drafts.edit')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 dark:text-red-400"
-                      onClick={() => void handleDeleteDraft(d.id)}
-                    >
-                      {t('drafts.delete')}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* History */}
+      {/* Sent broadcasts + drafts */}
       <Card>
-        <CardHeader>
-          <CardTitle>{t('history.heading')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('history.empty')}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">{t('history.subject')}</th>
-                    <th className="py-2 pr-4 font-medium">{t('history.audience')}</th>
-                    <th className="py-2 pr-4 font-medium">{t('history.recipients')}</th>
-                    <th className="py-2 pr-4 font-medium">{t('history.sent')}</th>
-                    <th className="py-2 pr-4 font-medium">{t('history.failed')}</th>
-                    <th className="py-2 pr-4 font-medium">{t('history.status')}</th>
-                    <th className="py-2 pr-4 font-medium">{t('history.date')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map(b => (
-                    <tr key={b.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="py-2 pr-4 max-w-[280px] truncate">
-                        <Link
-                          href={`/admin/emails/${b.id}`}
-                          className="font-medium hover:underline"
+        <CardContent className="pt-6">
+          <Tabs defaultValue="history">
+            <TabsList>
+              <TabsTrigger value="history">{t('history.heading')}</TabsTrigger>
+              <TabsTrigger value="drafts" className="gap-1.5">
+                {t('drafts.heading')}
+                {drafts.length > 0 && (
+                  <Badge variant="secondary" className="px-1.5">
+                    {drafts.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="history" className="pt-4">
+              {history.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('history.empty')}</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="py-2 pr-4 font-medium">{t('history.subject')}</th>
+                        <th className="py-2 pr-4 font-medium">{t('history.audience')}</th>
+                        <th className="py-2 pr-4 font-medium">{t('history.recipients')}</th>
+                        <th className="py-2 pr-4 font-medium">{t('history.sent')}</th>
+                        <th className="py-2 pr-4 font-medium">{t('history.failed')}</th>
+                        <th className="py-2 pr-4 font-medium">{t('history.status')}</th>
+                        <th className="py-2 pr-4 font-medium">{t('history.date')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map(b => (
+                        <tr key={b.id} className="border-b last:border-0 hover:bg-muted/50">
+                          <td className="py-2 pr-4 max-w-[280px] truncate">
+                            <Link
+                              href={`/admin/emails/${b.id}`}
+                              className="font-medium hover:underline"
+                            >
+                              {b.subject}
+                            </Link>
+                          </td>
+                          <td className="py-2 pr-4">
+                            <Badge variant="outline">{audienceLabel(b.audience)}</Badge>
+                          </td>
+                          <td className="py-2 pr-4">{b.recipients_total}</td>
+                          <td className="py-2 pr-4">{b.sent_count}</td>
+                          <td className="py-2 pr-4">{b.failed_count}</td>
+                          <td className="py-2 pr-4">
+                            <Badge variant="secondary">{statusLabel(b.status)}</Badge>
+                          </td>
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {new Date(b.created_at).toLocaleDateString(locale)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="drafts" className="pt-4">
+              {drafts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('drafts.empty')}</p>
+              ) : (
+                <ul className="divide-y">
+                  {drafts.map(d => (
+                    <li key={d.id} className="flex items-center justify-between gap-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadDraft(d)}
+                        className="flex-1 truncate text-left text-sm font-medium hover:underline"
+                      >
+                        {d.subject?.trim() || t('drafts.untitled')}
+                      </button>
+                      <span className="hidden text-xs text-muted-foreground sm:inline">
+                        {new Date(d.created_at).toLocaleDateString(locale)}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleLoadDraft(d)}>
+                          {t('drafts.edit')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 dark:text-red-400"
+                          onClick={() => void handleDeleteDraft(d.id)}
                         >
-                          {b.subject}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-4">
-                        <Badge variant="outline">{audienceLabel(b.audience)}</Badge>
-                      </td>
-                      <td className="py-2 pr-4">{b.recipients_total}</td>
-                      <td className="py-2 pr-4">{b.sent_count}</td>
-                      <td className="py-2 pr-4">{b.failed_count}</td>
-                      <td className="py-2 pr-4">
-                        <Badge variant="secondary">{statusLabel(b.status)}</Badge>
-                      </td>
-                      <td className="py-2 pr-4 text-muted-foreground">
-                        {new Date(b.created_at).toLocaleDateString(locale)}
-                      </td>
-                    </tr>
+                          {t('drafts.delete')}
+                        </Button>
+                      </div>
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </ul>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
