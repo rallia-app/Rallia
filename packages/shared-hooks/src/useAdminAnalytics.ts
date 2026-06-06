@@ -32,6 +32,7 @@ import {
   createUtmCampaign,
   archiveUtmCampaign,
   getMatchFillAnalytics,
+  getMatchQualityAnalytics,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -48,6 +49,7 @@ import {
   type UtmCampaign,
   type UtmTotalsComparison,
   type MatchFillPoint,
+  type MatchQualityPoint,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -1200,6 +1202,49 @@ export function useMatchFillAnalytics(days: number = 30): {
   return { data, loading, error, refetch: fetchData };
 }
 
+// =============================================================================
+// MATCH QUALITY ANALYTICS
+// =============================================================================
+
+export function useMatchQualityAnalytics(days: number = 30): {
+  data: MatchQualityPoint[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<MatchQualityPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const result = await getMatchQualityAnalytics(startDate, endDate);
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching match quality analytics:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
 // Re-export types for convenience
 export type {
   KPISummary,
@@ -1218,6 +1263,7 @@ export type {
   UtmCampaign,
   UtmTotalsComparison,
   MatchFillPoint,
+  MatchQualityPoint,
 } from '@rallia/shared-services';
 
 export default useAdminAnalytics;
