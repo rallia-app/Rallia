@@ -1,3 +1,4 @@
+import { ResendFailedButton } from '@/components/resend-failed-button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
@@ -207,6 +208,9 @@ export default async function AdminEmailDetailPage({
           {audience.source === 'segment' ? t('history.audienceSegment') : t('history.audienceList')}
           {audienceChips.length > 0 && ` · ${audienceChips.join(' · ')}`}
         </p>
+        <div className="pt-1">
+          <ResendFailedButton broadcastId={id} failedCount={failed} />
+        </div>
       </div>
 
       {/* Funnel stat cards */}

@@ -198,6 +198,127 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, draftId: data.id });
     }
 
+    // ---- resend_failed: re-send a past broadcast to its failed recipients only
+    if (action === 'resend_failed') {
+      const broadcastId = typeof raw.broadcastId === 'string' ? raw.broadcastId : null;
+      if (!broadcastId) {
+        return NextResponse.json({ error: 'broadcastId is required' }, { status: 400 });
+      }
+
+      const { data: campaign } = await adminDb
+        .from('email_broadcast')
+        .select('id, subject, body, cta_text, cta_url')
+        .eq('id', broadcastId)
+        .maybeSingle();
+      if (!campaign) {
+        return NextResponse.json({ error: 'Broadcast not found' }, { status: 404 });
+      }
+
+      const { data: failedRows, error: failedErr } = await adminDb
+        .from('email_broadcast_recipient')
+        .select('id, email')
+        .eq('broadcast_id', broadcastId)
+        .eq('status', 'failed');
+      if (failedErr) {
+        return NextResponse.json({ error: failedErr.message }, { status: 500 });
+      }
+      const failedIds = (failedRows ?? []).map(r => r.id);
+      const emails = [...new Set((failedRows ?? []).map(r => r.email.toLowerCase()))];
+      if (emails.length === 0) {
+        return NextResponse.json({ error: 'No failed recipients to resend' }, { status: 400 });
+      }
+
+      // Re-enrich from profile (also drops anyone who has since opted out).
+      const recipients = await resolveRecipients(adminDb, emails);
+      if (recipients.length === 0) {
+        return NextResponse.json(
+          { error: 'No eligible failed recipients remain' },
+          { status: 400 }
+        );
+      }
+
+      await adminDb.from('email_broadcast').update({ status: 'sending' }).eq('id', broadcastId);
+
+      let result: Awaited<ReturnType<typeof invokeSendBroadcast>>;
+      try {
+        result = await invokeSendBroadcast(
+          {
+            broadcastId,
+            subject: campaign.subject,
+            body: campaign.body,
+            ctaText: campaign.cta_text,
+            ctaUrl: campaign.cta_url,
+            recipients,
+          },
+          accessToken ?? ''
+        );
+      } catch (invokeError) {
+        // Dispatch never ran — leave the failed rows intact for another retry.
+        await adminDb.from('email_broadcast').update({ status: 'partial' }).eq('id', broadcastId);
+        return NextResponse.json(
+          {
+            error: invokeError instanceof Error ? invokeError.message : 'Failed to dispatch resend',
+          },
+          { status: 502 }
+        );
+      }
+      if (!result.ok || !result.body.success) {
+        await adminDb.from('email_broadcast').update({ status: 'partial' }).eq('id', broadcastId);
+        return NextResponse.json(
+          { error: (result.body.error as string) ?? 'Resend dispatch failed' },
+          { status: 502 }
+        );
+      }
+
+      // Dispatch logged fresh rows for each resent recipient → remove the old
+      // superseded 'failed' rows, then recompute cumulative counts + status.
+      if (failedIds.length > 0) {
+        await adminDb.from('email_broadcast_recipient').delete().in('id', failedIds);
+      }
+      const countByStatus = async (status: string): Promise<number> => {
+        const { count } = await adminDb
+          .from('email_broadcast_recipient')
+          .select('*', { count: 'exact', head: true })
+          .eq('broadcast_id', broadcastId)
+          .eq('status', status);
+        return count ?? 0;
+      };
+      const [sentNow, failedNow] = await Promise.all([
+        countByStatus('sent'),
+        countByStatus('failed'),
+      ]);
+      const newStatus = failedNow === 0 ? 'sent' : sentNow > 0 ? 'partial' : 'failed';
+      await adminDb
+        .from('email_broadcast')
+        .update({
+          sent_count: sentNow,
+          failed_count: failedNow,
+          status: newStatus,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', broadcastId);
+
+      await adminDb.rpc('log_admin_action', {
+        p_admin_id: user.id,
+        p_action_type: 'send',
+        p_entity_type: 'email_broadcast',
+        p_entity_id: broadcastId,
+        p_new_data: {
+          resend: true,
+          resent: recipients.length,
+          sent: sentNow,
+          failed: failedNow,
+        } as unknown as Json,
+      });
+
+      return NextResponse.json({
+        success: true,
+        resent: recipients.length,
+        sent: sentNow,
+        failed: failedNow,
+      });
+    }
+
     const content = parseContent(raw);
     if (content.error) {
       return NextResponse.json({ error: content.error }, { status: 400 });
