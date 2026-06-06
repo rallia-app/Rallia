@@ -1,17 +1,19 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { supabase, Logger } from '@rallia/shared-services';
 
-const RESIZE_BUCKETS = new Set([
-  'profile-pictures',
-  'facility-images',
-  'group-images',
-  'feedback-screenshots',
-  'report-evidence',
-]);
+// Max stored width per bucket. Avatars display at ≤100pt (~300px @3x), so we store
+// them small and serve raw — no Supabase image transformation needed.
+const RESIZE_WIDTHS: Record<string, number> = {
+  'profile-pictures': 320,
+  'facility-images': 800,
+  'group-images': 800,
+  'feedback-screenshots': 800,
+  'report-evidence': 800,
+};
 
-async function resizeImageForUpload(uri: string): Promise<string> {
+async function resizeImageForUpload(uri: string, maxWidth: number): Promise<string> {
   const context = ImageManipulator.manipulate(uri);
-  const rendered = await context.resize({ width: 800 }).renderAsync();
+  const rendered = await context.resize({ width: maxWidth }).renderAsync();
   const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
   return result.uri;
 }
@@ -117,7 +119,8 @@ export async function uploadImage(
     }
 
     // Resize before upload for relevant buckets to cap stored file size
-    const sourceUri = RESIZE_BUCKETS.has(bucket) ? await resizeImageForUpload(imageUri) : imageUri;
+    const resizeWidth = RESIZE_WIDTHS[bucket];
+    const sourceUri = resizeWidth ? await resizeImageForUpload(imageUri, resizeWidth) : imageUri;
 
     // Create unique filename with folder structure for RLS policy
     // RLS policy expects: (storage.foldername(name))[1] = auth.uid()::text
