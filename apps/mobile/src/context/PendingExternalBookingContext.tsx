@@ -63,6 +63,8 @@ interface PendingBookingData {
   /** Sport context, when known — propagated to analytics on confirm */
   sportId?: string;
   sportName?: string;
+  /** True when confirming relocates the match to a different (nearby) facility. */
+  relocatesMatch?: boolean;
   /** Timestamp when the booking was initiated */
   timestamp: number;
 }
@@ -337,6 +339,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
           void SheetManager.show('match-booking-confirmation', {
             payload: {
               facilityName: booking.facility.name,
+              isRelocation: booking.relocatesMatch ?? false,
               ...buildMatchBookingFields(booking),
               onConfirm: () => handleMatchConfirm(booking),
               onDecline: () => handleMatchDecline(booking),

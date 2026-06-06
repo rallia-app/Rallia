@@ -303,6 +303,8 @@ export function MatchAvailableCourtsSection({
         source: 'match_courts',
         sportId,
         sportName: match.sport?.name,
+        // Tells the confirmation sheet to show the "moving your game" copy.
+        relocatesMatch: true,
       });
     },
     [openExternalBooking, isCreator, match.id, sportId, match.sport?.name]
