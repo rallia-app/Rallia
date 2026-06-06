@@ -157,6 +157,47 @@ export async function POST(request: NextRequest) {
     const raw = (await request.json()) as Record<string, unknown>;
     const action = typeof raw.action === 'string' ? raw.action : 'send';
 
+    // ---- draft: persist an unsent draft (content + audience may be partial) -
+    if (action === 'draft') {
+      const audienceMode = raw.audienceMode === 'segment' ? 'segment' : 'list';
+      const audienceMeta =
+        audienceMode === 'segment'
+          ? { source: 'segment', filters: parseSegment(raw.segment) }
+          : { source: 'email_list', emails: parseEmails(raw.emails) };
+      const draftRow = {
+        subject: typeof raw.subject === 'string' ? raw.subject : '',
+        body: typeof raw.body === 'string' ? raw.body : '',
+        cta_text: typeof raw.ctaText === 'string' && raw.ctaText.trim() ? raw.ctaText.trim() : null,
+        cta_url: typeof raw.ctaUrl === 'string' && raw.ctaUrl.trim() ? raw.ctaUrl.trim() : null,
+        audience: audienceMeta as unknown as Json,
+      };
+      const existingId = typeof raw.broadcastId === 'string' ? raw.broadcastId : null;
+      if (existingId) {
+        const { data, error: updErr } = await adminDb
+          .from('email_broadcast')
+          .update(draftRow)
+          .eq('id', existingId)
+          .eq('status', 'draft')
+          .select('id')
+          .maybeSingle();
+        if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+        if (!data) return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
+        return NextResponse.json({ success: true, draftId: data.id });
+      }
+      const { data, error: insErr } = await adminDb
+        .from('email_broadcast')
+        .insert({ ...draftRow, created_by: user.id, recipients_total: 0, status: 'draft' })
+        .select('id')
+        .single();
+      if (insErr || !data) {
+        return NextResponse.json(
+          { error: insErr?.message ?? 'Failed to save draft' },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ success: true, draftId: data.id });
+    }
+
     const content = parseContent(raw);
     if (content.error) {
       return NextResponse.json({ error: content.error }, { status: 400 });
@@ -219,26 +260,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: broadcast, error: insertError } = await adminDb
-      .from('email_broadcast')
-      .insert({
-        created_by: user.id,
-        subject: content.subject,
-        body: content.body,
-        cta_text: content.ctaText,
-        cta_url: content.ctaUrl,
-        audience: audienceMeta as unknown as Json,
-        recipients_total: recipients.length,
-        status: 'sending',
-      })
-      .select()
-      .single();
+    // Sending a saved draft promotes that same row (draft → sending); otherwise
+    // create a fresh campaign.
+    const draftId = typeof raw.broadcastId === 'string' ? raw.broadcastId : null;
+    const campaignRow = {
+      subject: content.subject,
+      body: content.body,
+      cta_text: content.ctaText,
+      cta_url: content.ctaUrl,
+      audience: audienceMeta as unknown as Json,
+      recipients_total: recipients.length,
+      status: 'sending' as const,
+    };
 
-    if (insertError || !broadcast) {
-      return NextResponse.json(
-        { error: insertError?.message ?? 'Failed to create broadcast' },
-        { status: 500 }
-      );
+    let broadcast = draftId
+      ? (
+          await adminDb
+            .from('email_broadcast')
+            .update(campaignRow)
+            .eq('id', draftId)
+            .eq('status', 'draft')
+            .select()
+            .maybeSingle()
+        ).data
+      : null;
+
+    if (!broadcast) {
+      const { data, error: insertError } = await adminDb
+        .from('email_broadcast')
+        .insert({ ...campaignRow, created_by: user.id })
+        .select()
+        .single();
+      if (insertError) {
+        return NextResponse.json(
+          { error: insertError.message ?? 'Failed to create broadcast' },
+          { status: 500 }
+        );
+      }
+      broadcast = data;
+    }
+
+    if (!broadcast) {
+      return NextResponse.json({ error: 'Failed to create broadcast' }, { status: 500 });
     }
 
     let result: Awaited<ReturnType<typeof invokeSendBroadcast>>;
@@ -300,11 +363,28 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { adminDb, error } = await getAuthedAdminBroadcastDb();
     if (error || !adminDb) {
       return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 });
+    }
+
+    // ?status=draft → resumable drafts (with body/cta for the composer);
+    // otherwise the sent "Past broadcasts" history (drafts excluded).
+    const wantDrafts = new URL(request.url).searchParams.get('status') === 'draft';
+
+    if (wantDrafts) {
+      const { data, error: queryError } = await adminDb
+        .from('email_broadcast')
+        .select('id, subject, body, cta_text, cta_url, audience, created_at')
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (queryError) {
+        return NextResponse.json({ error: queryError.message }, { status: 500 });
+      }
+      return NextResponse.json({ drafts: data ?? [] });
     }
 
     const { data, error: queryError } = await adminDb
@@ -312,6 +392,7 @@ export async function GET() {
       .select(
         'id, subject, audience, recipients_total, sent_count, failed_count, status, created_at, completed_at'
       )
+      .neq('status', 'draft')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -322,6 +403,35 @@ export async function GET() {
     return NextResponse.json({ broadcasts: data ?? [] });
   } catch (err) {
     console.error('[Admin Broadcasts GET]', err);
+    return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
+  }
+}
+
+/** Delete a draft (sent broadcasts are immutable history and cannot be deleted). */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { adminDb, error } = await getAuthedAdminBroadcastDb();
+    if (error || !adminDb) {
+      return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 });
+    }
+
+    const id = new URL(request.url).searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Missing draft id' }, { status: 400 });
+    }
+
+    const { error: delError } = await adminDb
+      .from('email_broadcast')
+      .delete()
+      .eq('id', id)
+      .eq('status', 'draft');
+
+    if (delError) {
+      return NextResponse.json({ error: delError.message }, { status: 500 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('[Admin Broadcasts DELETE]', err);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }
 }
