@@ -3212,6 +3212,7 @@
     "nearbyCourtsSubtitle": "No courts left at your facility — here are nearby options",
     "bookingConfirmation": {
       "message": "Confirming will link the reserved court to this game.",
+      "relocateMessage": "This will move your game to {facility}.",
       "confirm": "Yes, I booked it",
       "decline": "Not yet",
       "error": "Couldn't update the game. Please try again."

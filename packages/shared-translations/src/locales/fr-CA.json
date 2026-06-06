@@ -3212,6 +3212,7 @@
     "nearbyCourtsSubtitle": "Aucun terrain disponible à votre établissement — voici des options à proximité",
     "bookingConfirmation": {
       "message": "Confirmer associera le terrain réservé à cette partie.",
+      "relocateMessage": "Cela déplacera votre partie vers {facility}.",
       "confirm": "Oui, j'ai réservé",
       "decline": "Pas encore",
       "error": "Impossible de mettre à jour la partie. Veuillez réessayer."

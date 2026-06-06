@@ -30,6 +30,7 @@ export function MatchBookingConfirmationActionSheet({
   const dateLabel = payload?.dateLabel;
   const timeLabel = payload?.timeLabel;
   const priceLabel = payload?.priceLabel;
+  const isRelocation = payload?.isRelocation;
   const onConfirm = payload?.onConfirm;
   const onDecline = payload?.onDecline;
   const onDismiss = payload?.onDismiss;
@@ -82,7 +83,9 @@ export function MatchBookingConfirmationActionSheet({
       </Text>
 
       <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-        {t('matchDetail.bookingConfirmation.message')}
+        {isRelocation
+          ? t('matchDetail.bookingConfirmation.relocateMessage').replace('{facility}', facilityName)
+          : t('matchDetail.bookingConfirmation.message')}
       </Text>
 
       <View

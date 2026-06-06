@@ -364,6 +364,8 @@ declare module 'react-native-actions-sheet' {
         dateLabel?: string;
         timeLabel?: string;
         priceLabel?: string;
+        /** True when confirming moves the match to a different facility (nearby booking). */
+        isRelocation?: boolean;
         onConfirm?: () => void | Promise<void>;
         onDecline?: () => void;
         /** Always called when the sheet closes (incl. swipe / backdrop) so the
