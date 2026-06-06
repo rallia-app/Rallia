@@ -5799,7 +5799,26 @@
         "help": "Paste the targeted emails, separated by commas, spaces, or new lines.",
         "count": "{count} valid recipients",
         "invalid": "{count} entries ignored (invalid format)",
-        "empty": "Add at least one recipient email."
+        "empty": "Add at least one recipient email.",
+        "modeList": "Paste list",
+        "modeSegment": "Target a segment",
+        "segment": {
+          "sportLabel": "Sport",
+          "sportAny": "Any sport",
+          "localeLabel": "Language",
+          "localeAny": "Any language",
+          "cityLabel": "City",
+          "cityPlaceholder": "e.g. Montreal",
+          "activeLabel": "Last active",
+          "activeAny": "Any time",
+          "active7": "Last 7 days",
+          "active30": "Last 30 days",
+          "active90": "Last 90 days",
+          "onlySubscribers": "Subscribers only",
+          "count": "This reaches {count} people",
+          "counting": "Calculating audience…",
+          "countError": "Couldn't calculate the audience"
+        }
       },
       "preview": {
         "heading": "Preview",
@@ -5808,9 +5827,11 @@
         "empty": "Add a subject and message to see the preview."
       },
       "actions": {
-        "sendTest": "Send test to me",
+        "sendTest": "Send test",
         "send": "Send broadcast",
-        "sending": "Sending…"
+        "sending": "Sending…",
+        "testToLabel": "Send test to (optional)",
+        "testToPlaceholder": "Defaults to your own email"
       },
       "confirm": {
         "title": "Send this broadcast?",
@@ -5822,6 +5843,8 @@
         "heading": "Past broadcasts",
         "subject": "Subject",
         "audience": "Audience",
+        "audienceList": "List",
+        "audienceSegment": "Segment",
         "recipients": "Recipients",
         "sent": "Sent",
         "failed": "Failed",
