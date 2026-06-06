@@ -13,7 +13,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -52,11 +51,17 @@ interface DraftAudience {
   source?: string;
   emails?: string[];
   filters?: {
-    sportId?: string | null;
+    sportIds?: string[];
+    locales?: string[];
     city?: string | null;
-    locale?: string | null;
-    activeWithinDays?: number | null;
-    onlySubscribers?: boolean;
+    province?: string | null;
+    country?: string | null;
+    activity?: string;
+    joined?: string;
+    subscription?: string;
+    genders?: string[];
+    minAge?: number | null;
+    maxAge?: number | null;
   };
 }
 
@@ -76,10 +81,27 @@ interface Feedback {
 }
 
 type AudienceMode = 'list' | 'segment';
-type LocaleFilter = 'any' | 'en-US' | 'fr-CA';
-type ActiveFilter = 'any' | '7' | '30' | '90';
+type ActivityFilter =
+  | 'any'
+  | 'active_7'
+  | 'active_30'
+  | 'active_90'
+  | 'inactive_30'
+  | 'inactive_90';
+type JoinedFilter = 'any' | 'last_7' | 'last_30' | 'last_90' | 'over_90';
+type SubscriptionFilter = 'all' | 'subscribers' | 'non_subscribers';
 
 const LOCALE_OPTIONS = ['en-US', 'fr-CA'] as const;
+const LOCALE_CHOICES = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'en-CA', label: 'English (CA)' },
+  { value: 'fr-CA', label: 'Français (CA)' },
+  { value: 'fr-FR', label: 'Français (FR)' },
+] as const;
+const GENDER_CHOICES = ['male', 'female', 'other'] as const;
+
+const toggleInArray = (arr: string[], value: string): string[] =>
+  arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Split a free-form list on commas/semicolons/whitespace into deduped valid + invalid entries. */
@@ -116,11 +138,17 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('list');
   const [recipientEmails, setRecipientEmails] = useState('');
   // Segment filters
-  const [segSport, setSegSport] = useState('any');
+  const [segSportIds, setSegSportIds] = useState<string[]>([]);
+  const [segLocales, setSegLocales] = useState<string[]>([]);
   const [segCity, setSegCity] = useState('');
-  const [segLocale, setSegLocale] = useState<LocaleFilter>('any');
-  const [segActive, setSegActive] = useState<ActiveFilter>('any');
-  const [segOnlySubscribers, setSegOnlySubscribers] = useState(false);
+  const [segProvince, setSegProvince] = useState('');
+  const [segCountry, setSegCountry] = useState('');
+  const [segActivity, setSegActivity] = useState<ActivityFilter>('any');
+  const [segJoined, setSegJoined] = useState<JoinedFilter>('any');
+  const [segSubscription, setSegSubscription] = useState<SubscriptionFilter>('all');
+  const [segGenders, setSegGenders] = useState<string[]>([]);
+  const [segMinAge, setSegMinAge] = useState('');
+  const [segMaxAge, setSegMaxAge] = useState('');
   const [segmentCount, setSegmentCount] = useState<number | null>(null);
   const [segmentCountLoading, setSegmentCountLoading] = useState(false);
   const [segmentCountError, setSegmentCountError] = useState(false);
@@ -162,13 +190,31 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   /** Current segment filters in the API's payload shape. */
   const currentSegment = useCallback(
     () => ({
-      sportId: segSport === 'any' ? null : segSport,
+      sportIds: segSportIds,
+      locales: segLocales,
       city: segCity.trim() || null,
-      locale: segLocale === 'any' ? null : segLocale,
-      activeWithinDays: segActive === 'any' ? null : Number(segActive),
-      onlySubscribers: segOnlySubscribers,
+      province: segProvince.trim() || null,
+      country: segCountry.trim() || null,
+      activity: segActivity,
+      joined: segJoined,
+      subscription: segSubscription,
+      genders: segGenders,
+      minAge: segMinAge.trim() ? Number(segMinAge) : null,
+      maxAge: segMaxAge.trim() ? Number(segMaxAge) : null,
     }),
-    [segSport, segCity, segLocale, segActive, segOnlySubscribers]
+    [
+      segSportIds,
+      segLocales,
+      segCity,
+      segProvince,
+      segCountry,
+      segActivity,
+      segJoined,
+      segSubscription,
+      segGenders,
+      segMinAge,
+      segMaxAge,
+    ]
   );
 
   /** The audience half of a send/draft payload (segment filters or email list). */
@@ -183,13 +229,31 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   // ---- Live segment recipient count (debounced) ----
   const segmentQuery = useMemo(() => {
     const params = new URLSearchParams();
-    if (segSport !== 'any') params.set('sportId', segSport);
+    if (segSportIds.length) params.set('sportIds', segSportIds.join(','));
+    if (segLocales.length) params.set('locales', segLocales.join(','));
     if (segCity.trim()) params.set('city', segCity.trim());
-    if (segLocale !== 'any') params.set('locale', segLocale);
-    if (segActive !== 'any') params.set('activeWithinDays', segActive);
-    if (segOnlySubscribers) params.set('onlySubscribers', 'true');
+    if (segProvince.trim()) params.set('province', segProvince.trim());
+    if (segCountry.trim()) params.set('country', segCountry.trim());
+    if (segActivity !== 'any') params.set('activity', segActivity);
+    if (segJoined !== 'any') params.set('joined', segJoined);
+    if (segSubscription !== 'all') params.set('subscription', segSubscription);
+    if (segGenders.length) params.set('genders', segGenders.join(','));
+    if (segMinAge.trim()) params.set('minAge', segMinAge.trim());
+    if (segMaxAge.trim()) params.set('maxAge', segMaxAge.trim());
     return params.toString();
-  }, [segSport, segCity, segLocale, segActive, segOnlySubscribers]);
+  }, [
+    segSportIds,
+    segLocales,
+    segCity,
+    segProvince,
+    segCountry,
+    segActivity,
+    segJoined,
+    segSubscription,
+    segGenders,
+    segMinAge,
+    segMaxAge,
+  ]);
 
   const debouncedQuery = useDebounce(segmentQuery, 400);
 
@@ -285,11 +349,17 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
     setCtaUrl('');
     setRecipientEmails('');
     setAudienceMode('list');
-    setSegSport('any');
+    setSegSportIds([]);
+    setSegLocales([]);
     setSegCity('');
-    setSegLocale('any');
-    setSegActive('any');
-    setSegOnlySubscribers(false);
+    setSegProvince('');
+    setSegCountry('');
+    setSegActivity('any');
+    setSegJoined('any');
+    setSegSubscription('all');
+    setSegGenders([]);
+    setSegMinAge('');
+    setSegMaxAge('');
     setDraftId(null);
   };
   const handleSendTest = async () => {
@@ -416,11 +486,17 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
     if (a?.source === 'segment') {
       const f = a.filters ?? {};
       setAudienceMode('segment');
-      setSegSport(f.sportId ?? 'any');
+      setSegSportIds(Array.isArray(f.sportIds) ? f.sportIds : []);
+      setSegLocales(Array.isArray(f.locales) ? f.locales : []);
       setSegCity(f.city ?? '');
-      setSegLocale((f.locale as LocaleFilter) ?? 'any');
-      setSegActive(f.activeWithinDays ? (String(f.activeWithinDays) as ActiveFilter) : 'any');
-      setSegOnlySubscribers(!!f.onlySubscribers);
+      setSegProvince(f.province ?? '');
+      setSegCountry(f.country ?? '');
+      setSegActivity((f.activity as ActivityFilter) ?? 'any');
+      setSegJoined((f.joined as JoinedFilter) ?? 'any');
+      setSegSubscription((f.subscription as SubscriptionFilter) ?? 'all');
+      setSegGenders(Array.isArray(f.genders) ? f.genders : []);
+      setSegMinAge(f.minAge != null ? String(f.minAge) : '');
+      setSegMaxAge(f.maxAge != null ? String(f.maxAge) : '');
       setRecipientEmails('');
     } else {
       setAudienceMode('list');
@@ -563,40 +639,49 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                 </TabsContent>
 
                 {/* Segment builder */}
-                <TabsContent value="segment" className="space-y-4 pt-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <TabsContent value="segment" className="space-y-5 pt-4">
+                  {/* Sports (multi) */}
+                  {sports.length > 0 && (
                     <div className="space-y-2">
                       <Label>{t('recipients.segment.sportLabel')}</Label>
-                      <Select value={segSport} onValueChange={setSegSport}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="any">{t('recipients.segment.sportAny')}</SelectItem>
-                          {sports.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.display_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-wrap gap-2">
+                        {sports.map(s => (
+                          <Button
+                            key={s.id}
+                            type="button"
+                            variant={segSportIds.includes(s.id) ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-7"
+                            onClick={() => setSegSportIds(prev => toggleInArray(prev, s.id))}
+                          >
+                            {s.display_name}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>{t('recipients.segment.localeLabel')}</Label>
-                      <Select
-                        value={segLocale}
-                        onValueChange={value => setSegLocale(value as LocaleFilter)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="any">{t('recipients.segment.localeAny')}</SelectItem>
-                          <SelectItem value="en-US">English</SelectItem>
-                          <SelectItem value="fr-CA">Français</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  )}
+
+                  {/* Languages (multi) */}
+                  <div className="space-y-2">
+                    <Label>{t('recipients.segment.localeLabel')}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {LOCALE_CHOICES.map(l => (
+                        <Button
+                          key={l.value}
+                          type="button"
+                          variant={segLocales.includes(l.value) ? 'default' : 'outline'}
+                          size="sm"
+                          className="h-7"
+                          onClick={() => setSegLocales(prev => toggleInArray(prev, l.value))}
+                        >
+                          {l.label}
+                        </Button>
+                      ))}
                     </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div className="space-y-2">
                       <Label htmlFor="segment-city">{t('recipients.segment.cityLabel')}</Label>
                       <Input
@@ -607,33 +692,157 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t('recipients.segment.activeLabel')}</Label>
+                      <Label htmlFor="segment-province">
+                        {t('recipients.segment.provinceLabel')}
+                      </Label>
+                      <Input
+                        id="segment-province"
+                        value={segProvince}
+                        onChange={e => setSegProvince(e.target.value)}
+                        placeholder={t('recipients.segment.provincePlaceholder')}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="segment-country">
+                        {t('recipients.segment.countryLabel')}
+                      </Label>
+                      <Input
+                        id="segment-country"
+                        value={segCountry}
+                        onChange={e => setSegCountry(e.target.value)}
+                        placeholder={t('recipients.segment.countryPlaceholder')}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Activity / Joined / Subscription */}
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.activityLabel')}</Label>
                       <Select
-                        value={segActive}
-                        onValueChange={value => setSegActive(value as ActiveFilter)}
+                        value={segActivity}
+                        onValueChange={v => setSegActivity(v as ActivityFilter)}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="any">{t('recipients.segment.activeAny')}</SelectItem>
-                          <SelectItem value="7">{t('recipients.segment.active7')}</SelectItem>
-                          <SelectItem value="30">{t('recipients.segment.active30')}</SelectItem>
-                          <SelectItem value="90">{t('recipients.segment.active90')}</SelectItem>
+                          <SelectItem value="any">{t('recipients.segment.activityAny')}</SelectItem>
+                          <SelectItem value="active_7">
+                            {t('recipients.segment.active7')}
+                          </SelectItem>
+                          <SelectItem value="active_30">
+                            {t('recipients.segment.active30')}
+                          </SelectItem>
+                          <SelectItem value="active_90">
+                            {t('recipients.segment.active90')}
+                          </SelectItem>
+                          <SelectItem value="inactive_30">
+                            {t('recipients.segment.inactive30')}
+                          </SelectItem>
+                          <SelectItem value="inactive_90">
+                            {t('recipients.segment.inactive90')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.joinedLabel')}</Label>
+                      <Select
+                        value={segJoined}
+                        onValueChange={v => setSegJoined(v as JoinedFilter)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">{t('recipients.segment.joinedAny')}</SelectItem>
+                          <SelectItem value="last_7">{t('recipients.segment.joined7')}</SelectItem>
+                          <SelectItem value="last_30">
+                            {t('recipients.segment.joined30')}
+                          </SelectItem>
+                          <SelectItem value="last_90">
+                            {t('recipients.segment.joined90')}
+                          </SelectItem>
+                          <SelectItem value="over_90">
+                            {t('recipients.segment.joinedOver90')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.subscriptionLabel')}</Label>
+                      <Select
+                        value={segSubscription}
+                        onValueChange={v => setSegSubscription(v as SubscriptionFilter)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t('recipients.segment.subAll')}</SelectItem>
+                          <SelectItem value="subscribers">
+                            {t('recipients.segment.subscribers')}
+                          </SelectItem>
+                          <SelectItem value="non_subscribers">
+                            {t('recipients.segment.nonSubscribers')}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <Checkbox
-                      checked={segOnlySubscribers}
-                      onCheckedChange={value => setSegOnlySubscribers(value === true)}
-                    />
-                    {t('recipients.segment.onlySubscribers')}
-                  </label>
+                  {/* Demographics */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.genderLabel')}</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {GENDER_CHOICES.map(g => (
+                          <Button
+                            key={g}
+                            type="button"
+                            variant={segGenders.includes(g) ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-7"
+                            onClick={() => setSegGenders(prev => toggleInArray(prev, g))}
+                          >
+                            {t(
+                              `recipients.segment.gender.${g}` as 'recipients.segment.gender.male'
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('recipients.segment.ageLabel')}</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={120}
+                          value={segMinAge}
+                          onChange={e => setSegMinAge(e.target.value)}
+                          placeholder={t('recipients.segment.ageMin')}
+                          className="w-24"
+                        />
+                        <span className="text-muted-foreground">–</span>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={120}
+                          value={segMaxAge}
+                          onChange={e => setSegMaxAge(e.target.value)}
+                          placeholder={t('recipients.segment.ageMax')}
+                          className="w-24"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                  <div className="flex items-center gap-2 pt-1 text-sm font-medium">
+                  {/* Live count */}
+                  <div className="flex items-center gap-2 border-t pt-3 text-sm font-medium">
                     <Users className="size-4 text-muted-foreground" />
                     {segmentCountLoading ? (
                       <span className="text-muted-foreground">

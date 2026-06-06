@@ -12,20 +12,68 @@ export interface Recipient {
   locale: string | null;
 }
 
+export type ActivityFilter =
+  | 'any'
+  | 'active_7'
+  | 'active_30'
+  | 'active_90'
+  | 'inactive_30'
+  | 'inactive_90';
+export type JoinedFilter = 'any' | 'last_7' | 'last_30' | 'last_90' | 'over_90';
+export type SubscriptionFilter = 'all' | 'subscribers' | 'non_subscribers';
+
 /** Audience filters that map 1:1 onto the get_broadcast_recipients RPC. */
 export interface SegmentFilters {
-  sportId: string | null;
+  sportIds: string[];
+  locales: string[];
   city: string | null;
-  locale: string | null;
-  activeWithinDays: number | null;
-  onlySubscribers: boolean;
+  province: string | null;
+  country: string | null;
+  activity: ActivityFilter;
+  joined: JoinedFilter;
+  subscription: SubscriptionFilter;
+  genders: string[];
+  minAge: number | null;
+  maxAge: number | null;
 }
 
 type AdminDb = ReturnType<typeof createServiceRoleClient>;
 type SegmentArgs = Database['public']['Functions']['get_broadcast_recipients']['Args'];
 
-const VALID_ACTIVE_DAYS = new Set([7, 30, 90]);
-const VALID_LOCALES = new Set(['en-US', 'fr-CA']);
+const ACTIVITY_VALUES = new Set([
+  'active_7',
+  'active_30',
+  'active_90',
+  'inactive_30',
+  'inactive_90',
+]);
+const JOINED_VALUES = new Set(['last_7', 'last_30', 'last_90', 'over_90']);
+const LOCALE_VALUES = new Set(['en-US', 'en-CA', 'fr-CA', 'fr-FR']);
+const GENDER_VALUES = new Set(['male', 'female', 'other']);
+
+function toStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v
+      .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      .map(x => x.trim());
+  }
+  if (typeof v === 'string' && v.trim()) {
+    return v
+      .split(',')
+      .map(x => x.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function toTrimmed(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
+
+function toAge(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 && n <= 120 ? Math.floor(n) : null;
+}
 
 /**
  * Authenticate the caller, confirm super_admin, and return a service-role DB
@@ -70,39 +118,78 @@ export async function getAuthedAdminBroadcastDb(): Promise<{
 /** Coerce an arbitrary JSON body's `segment` object into validated SegmentFilters. */
 export function parseSegment(raw: unknown): SegmentFilters {
   const s = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const days = typeof s.activeWithinDays === 'number' ? s.activeWithinDays : null;
+  const activity =
+    typeof s.activity === 'string' && ACTIVITY_VALUES.has(s.activity)
+      ? (s.activity as ActivityFilter)
+      : 'any';
+  const joined =
+    typeof s.joined === 'string' && JOINED_VALUES.has(s.joined)
+      ? (s.joined as JoinedFilter)
+      : 'any';
+  const subscription =
+    s.subscription === 'subscribers' || s.subscription === 'non_subscribers'
+      ? (s.subscription as SubscriptionFilter)
+      : 'all';
   return {
-    sportId: typeof s.sportId === 'string' && s.sportId.trim() ? s.sportId.trim() : null,
-    city: typeof s.city === 'string' && s.city.trim() ? s.city.trim() : null,
-    locale: typeof s.locale === 'string' && VALID_LOCALES.has(s.locale) ? s.locale : null,
-    activeWithinDays: days !== null && VALID_ACTIVE_DAYS.has(days) ? days : null,
-    onlySubscribers: s.onlySubscribers === true,
+    sportIds: toStringArray(s.sportIds),
+    locales: toStringArray(s.locales).filter(v => LOCALE_VALUES.has(v)),
+    city: toTrimmed(s.city),
+    province: toTrimmed(s.province),
+    country: toTrimmed(s.country),
+    activity,
+    joined,
+    subscription,
+    genders: toStringArray(s.genders).filter(v => GENDER_VALUES.has(v)),
+    minAge: toAge(s.minAge),
+    maxAge: toAge(s.maxAge),
   };
 }
 
 /** Same as parseSegment but reading from URL query params (the count endpoint). */
 export function parseSegmentFromQuery(params: URLSearchParams): SegmentFilters {
-  const days = Number(params.get('activeWithinDays'));
-  const locale = params.get('locale');
-  return {
-    sportId: params.get('sportId')?.trim() || null,
-    city: params.get('city')?.trim() || null,
-    locale: locale && VALID_LOCALES.has(locale) ? locale : null,
-    activeWithinDays: VALID_ACTIVE_DAYS.has(days) ? days : null,
-    onlySubscribers: params.get('onlySubscribers') === 'true',
-  };
+  return parseSegment({
+    sportIds: params.get('sportIds') ?? undefined,
+    locales: params.get('locales') ?? undefined,
+    city: params.get('city') ?? undefined,
+    province: params.get('province') ?? undefined,
+    country: params.get('country') ?? undefined,
+    activity: params.get('activity') ?? undefined,
+    joined: params.get('joined') ?? undefined,
+    subscription: params.get('subscription') ?? undefined,
+    genders: params.get('genders') ?? undefined,
+    minAge: params.get('minAge') ?? undefined,
+    maxAge: params.get('maxAge') ?? undefined,
+  });
 }
 
 /** Translate filters into RPC args, omitting unset filters so defaults apply. */
 function buildSegmentArgs(f: SegmentFilters): SegmentArgs {
   const args: SegmentArgs = {};
-  if (f.sportId) args.p_sport_id = f.sportId;
+  const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+  if (f.sportIds.length) args.p_sport_ids = f.sportIds;
+  if (f.locales.length) args.p_locales = f.locales;
   if (f.city) args.p_city = f.city;
-  if (f.locale) args.p_locale = f.locale;
-  if (f.activeWithinDays) {
-    args.p_active_since = new Date(Date.now() - f.activeWithinDays * 86_400_000).toISOString();
-  }
-  if (f.onlySubscribers) args.p_only_subscribers = true;
+  if (f.province) args.p_province = f.province;
+  if (f.country) args.p_country = f.country;
+
+  if (f.activity === 'active_7') args.p_active_since = ago(7);
+  else if (f.activity === 'active_30') args.p_active_since = ago(30);
+  else if (f.activity === 'active_90') args.p_active_since = ago(90);
+  else if (f.activity === 'inactive_30') args.p_inactive_before = ago(30);
+  else if (f.activity === 'inactive_90') args.p_inactive_before = ago(90);
+
+  if (f.joined === 'last_7') args.p_joined_since = ago(7);
+  else if (f.joined === 'last_30') args.p_joined_since = ago(30);
+  else if (f.joined === 'last_90') args.p_joined_since = ago(90);
+  else if (f.joined === 'over_90') args.p_joined_before = ago(90);
+
+  if (f.subscription === 'subscribers') args.p_subscription = 'subscribers';
+  else if (f.subscription === 'non_subscribers') args.p_subscription = 'non_subscribers';
+
+  if (f.genders.length) args.p_genders = f.genders;
+  if (f.minAge != null) args.p_min_age = f.minAge;
+  if (f.maxAge != null) args.p_max_age = f.maxAge;
   return args;
 }
 
