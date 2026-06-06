@@ -157,15 +157,18 @@ export function getStorageImageUrl(
 }
 
 /**
- * Get the normalized profile picture URL for a user
- * Convenience function that normalizes URLs specifically for profile pictures
+ * Get the normalized profile picture URL for a user.
+ *
+ * Avatars are resized to 320px (~display size) at upload, so we serve the raw
+ * storage object rather than the render endpoint — this avoids a billable
+ * Supabase image transformation per origin image. The render endpoint stays
+ * reserved for large, low-volume images (covers, OG cards) via getStorageImageUrl.
  *
  * @param profilePictureUrl - The URL stored in the profile table
- * @returns Normalized URL or null
+ * @returns Normalized raw URL or null
  */
 export function getProfilePictureUrl(profilePictureUrl: string | null | undefined): string | null {
-  const normalized = normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
-  return getStorageImageUrl(normalized, { width: 400, height: 400, quality: 75 });
+  return normalizeStorageUrl(profilePictureUrl, 'profile-pictures');
 }
 
 /**
