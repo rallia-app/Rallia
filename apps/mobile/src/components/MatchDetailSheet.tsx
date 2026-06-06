@@ -5480,21 +5480,37 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
           ]}
         >
           {canSuggestTime && (
-            <TouchableOpacity
+            <Button
+              variant="secondary"
               onPress={handleOpenSuggestTime}
               style={styles.suggestTimeButton}
-              activeOpacity={0.7}
-              accessibilityRole="button"
+              themeColors={{
+                primary: isDark ? accent[400] : accent[500],
+                primaryForeground: base.white,
+                buttonActive: isDark ? accent[400] : accent[500],
+                buttonInactive: neutral[300],
+                buttonTextActive: base.white,
+                buttonTextInactive: neutral[500],
+                text: colors.text,
+                textMuted: colors.textMuted,
+                border: colors.border,
+                background: colors.cardBackground,
+              }}
+              isDark={isDark}
+              leftIcon={
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={isDark ? accent[400] : accent[500]}
+                />
+              }
             >
-              <Ionicons name="time-outline" size={16} color={accent[500]} />
-              <Text size="sm" weight="semibold" color={accent[500]}>
-                {myPendingSuggestion
-                  ? t('matchActions.viewYourSuggestion', {
-                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
-                    })
-                  : t('matchActions.suggestDifferentTime')}
-              </Text>
-            </TouchableOpacity>
+              {myPendingSuggestion
+                ? t('matchActions.viewYourSuggestion', {
+                    time: myPendingSuggestion.suggested_start_time.slice(0, 5),
+                  })
+                : t('matchActions.suggestDifferentTime')}
+            </Button>
           )}
           <View
             style={[
@@ -6307,14 +6323,9 @@ const styles = StyleSheet.create({
     flex: 0,
     width: '100%',
   },
-  // Tertiary "Suggest a different time" link — full-width tappable row,
-  // with a touch of breathing room before the primary CTA row below.
+  // Secondary "Suggest a different time" button — sits above the primary CTA
+  // row with a touch of breathing room. Layout/padding handled by Button itself.
   suggestTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[2],
   },
   matchEndedContainer: {
