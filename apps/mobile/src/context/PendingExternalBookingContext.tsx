@@ -174,6 +174,10 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
         // when we actually know the slot price.
         const payload: Partial<CreateMatchInput> = {
           courtStatus: 'booked',
+          // The booked facility may differ from the match's current one (when the
+          // user booked a nearby alternative) — relocate the match to where the
+          // court was actually booked. No-op when it's the same facility.
+          facilityId: facility.id,
         };
         if (courtId) payload.courtId = courtId;
 

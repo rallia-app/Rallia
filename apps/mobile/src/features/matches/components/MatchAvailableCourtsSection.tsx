@@ -296,15 +296,16 @@ export function MatchAvailableCourtsSection({
         },
         slot,
         selectedCourt: court,
-        // A nearby facility differs from the match's facility, so we don't link
-        // the booking back to the match (that would silently move its location).
-        matchId: undefined,
+        // Booking a nearby alternative relocates the host's match to that
+        // facility on return (the confirm flow updates facility_id + court_id).
+        // Host only — RLS restricts match updates to the creator.
+        matchId: isCreator ? match.id : undefined,
         source: 'match_courts',
         sportId,
         sportName: match.sport?.name,
       });
     },
-    [openExternalBooking, sportId, match.sport?.name]
+    [openExternalBooking, isCreator, match.id, sportId, match.sport?.name]
   );
 
   const formatCourtLabel = (court: CourtOption) => {
