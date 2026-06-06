@@ -33,11 +33,17 @@ interface AudienceMeta {
   source?: string;
   count?: number;
   filters?: {
-    sportId?: string | null;
+    sportIds?: string[];
+    locales?: string[];
     city?: string | null;
-    locale?: string | null;
-    activeWithinDays?: number | null;
-    onlySubscribers?: boolean;
+    province?: string | null;
+    country?: string | null;
+    activity?: string;
+    joined?: string;
+    subscription?: string;
+    genders?: string[];
+    minAge?: number | null;
+    maxAge?: number | null;
   };
 }
 
@@ -115,15 +121,17 @@ export default async function AdminEmailDetailPage({
       .eq('broadcast_id', id)
       .order('sent_at', { ascending: false })
       .range(from, to),
-    audience.filters?.sportId
-      ? db.from('sport').select('display_name').eq('id', audience.filters.sportId).maybeSingle()
+    audience.filters?.sportIds?.length
+      ? db.from('sport').select('display_name').in('id', audience.filters.sportIds)
       : Promise.resolve({ data: null }),
   ]);
 
   const recipients = recipientsResult.data ?? [];
   const totalRecipients = recipientsResult.count ?? b.recipients_total;
   const totalPages = Math.max(1, Math.ceil(totalRecipients / PAGE_SIZE));
-  const sportName = (sportRow.data as { display_name?: string } | null)?.display_name ?? null;
+  const sportNames = ((sportRow.data as { display_name?: string }[] | null) ?? [])
+    .map(s => s.display_name)
+    .filter((n): n is string => Boolean(n));
 
   // Rates are over Sent (emails Resend accepted) for a stable denominator that
   // never goes undefined even before delivered events arrive.
@@ -142,15 +150,42 @@ export default async function AdminEmailDetailPage({
   ];
 
   // Compact, human summary of the audience filters for a segment send.
+  const activityLabels: Record<string, string> = {
+    active_7: t('recipients.segment.active7'),
+    active_30: t('recipients.segment.active30'),
+    active_90: t('recipients.segment.active90'),
+    inactive_30: t('recipients.segment.inactive30'),
+    inactive_90: t('recipients.segment.inactive90'),
+  };
+  const joinedLabels: Record<string, string> = {
+    last_7: t('recipients.segment.joined7'),
+    last_30: t('recipients.segment.joined30'),
+    last_90: t('recipients.segment.joined90'),
+    over_90: t('recipients.segment.joinedOver90'),
+  };
   const audienceChips: string[] = [];
   if (audience.source === 'segment' && audience.filters) {
     const f = audience.filters;
-    if (sportName) audienceChips.push(sportName);
-    if (f.locale) audienceChips.push(f.locale);
+    audienceChips.push(...sportNames);
+    if (f.locales?.length) audienceChips.push(...f.locales);
     if (f.city) audienceChips.push(f.city);
-    if (f.activeWithinDays)
-      audienceChips.push(t('detail.activeChip', { days: f.activeWithinDays }));
-    if (f.onlySubscribers) audienceChips.push(t('recipients.segment.onlySubscribers'));
+    if (f.province) audienceChips.push(f.province);
+    if (f.country) audienceChips.push(f.country);
+    if (f.activity && activityLabels[f.activity]) audienceChips.push(activityLabels[f.activity]);
+    if (f.joined && joinedLabels[f.joined]) audienceChips.push(joinedLabels[f.joined]);
+    if (f.subscription === 'subscribers') audienceChips.push(t('recipients.segment.subscribers'));
+    if (f.subscription === 'non_subscribers')
+      audienceChips.push(t('recipients.segment.nonSubscribers'));
+    if (f.genders?.length) {
+      audienceChips.push(
+        ...f.genders.map(g =>
+          t(`recipients.segment.gender.${g}` as 'recipients.segment.gender.male')
+        )
+      );
+    }
+    if (f.minAge != null || f.maxAge != null) {
+      audienceChips.push(`${f.minAge ?? 0}–${f.maxAge ?? 120}`);
+    }
   }
 
   return (

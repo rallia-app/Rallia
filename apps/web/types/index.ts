@@ -7225,9 +7225,17 @@ export type Database = {
         Args: {
           p_active_since?: string;
           p_city?: string;
-          p_locale?: string;
-          p_only_subscribers?: boolean;
-          p_sport_id?: string;
+          p_country?: string;
+          p_genders?: string[];
+          p_inactive_before?: string;
+          p_joined_before?: string;
+          p_joined_since?: string;
+          p_locales?: string[];
+          p_max_age?: number;
+          p_min_age?: number;
+          p_province?: string;
+          p_sport_ids?: string[];
+          p_subscription?: string;
         };
         Returns: {
           email: string;
