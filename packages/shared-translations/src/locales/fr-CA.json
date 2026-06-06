@@ -9747,6 +9747,7 @@
       "goalsCardLastWeekHit": "Objectif atteint ✓",
       "goalsCardLastWeekMiss": "Objectif manqué",
       "goalsCardNoHistory": "Ton historique d'objectifs apparaîtra ici après quelques semaines de jeu. 📈",
+      "checkInNote": "📍 À noter : une partie ne compte pour ta séquence que si tu fais ton check-in au terrain.",
       "freezeTooltip": "Les jokers de séquence te protègent si tu rates ton objectif hebdo.",
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",

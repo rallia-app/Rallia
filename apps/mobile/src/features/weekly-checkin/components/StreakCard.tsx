@@ -7,7 +7,9 @@
  *   • goal tracking: last-week result + the 4-week hit/miss history strip
  *
  * The streak advances at week-end when sessions_played >= frequency_goal
- * (evaluate_weekly_goals) — NOT by checking in. A freeze auto-rescues one miss.
+ * (evaluate_weekly_goals). Only games the player checked into count as sessions,
+ * so checking in at the court is what makes a game count — completing this weekly
+ * wizard does not itself advance the streak. A freeze auto-rescues one miss.
  *
  *   ┌────────────────────────────────────────────────┐
  *   │  🔥  4                                         │
@@ -74,6 +76,7 @@ export function StreakCard({
   const dateLabelColor = isDark ? `${accent[200]}99` : `${accent[800]}88`;
   const dividerColor = isDark ? `${accent[700]}66` : `${accent[300]}99`;
   const emptyBorderColor = isDark ? `${accent[300]}66` : `${accent[700]}55`;
+  const noteColor = isDark ? accent[200] : accent[800];
 
   // Count-up animation on streak number
   const countAnim = useRef(new Animated.Value(0)).current;
@@ -215,6 +218,12 @@ export function StreakCard({
           </View>
         )
       )}
+
+      {/* How games count — checking in at the court is what advances the streak */}
+      <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+      <Text style={[styles.checkInNote, { color: noteColor }]}>
+        {t('weeklyCheckIn.step1.checkInNote')}
+      </Text>
     </View>
   );
 }
@@ -369,5 +378,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 18,
+  },
+  checkInNote: {
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
   },
 });

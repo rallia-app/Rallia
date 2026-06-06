@@ -9747,6 +9747,7 @@
       "goalsCardLastWeekHit": "Goal hit ✓",
       "goalsCardLastWeekMiss": "Goal missed",
       "goalsCardNoHistory": "Your goal-hit history will show up here once you've played a few weeks. 📈",
+      "checkInNote": "📍 Heads up: a game only counts toward your streak if you check in at the court.",
       "freezeTooltip": "Streak freezes protect you if you miss your weekly goal.",
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",

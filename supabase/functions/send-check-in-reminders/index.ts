@@ -129,10 +129,10 @@ async function buildNotificationInput(
 
   if (locale.startsWith('fr')) {
     title = "C'est presque l'heure!";
-    body = "Rendez-vous au terrain et enregistrez-vous dans l'app";
+    body = 'Enregistre-toi au terrain pour que cette partie compte dans ta séquence 🔥';
   } else {
     title = 'Almost game time!';
-    body = 'Head to the court and check in on the app';
+    body = 'Check in at the court to make this game count toward your streak 🔥';
   }
 
   return {
