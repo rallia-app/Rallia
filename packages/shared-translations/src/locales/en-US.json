@@ -3187,6 +3187,18 @@
       "joinWaitlist": "Join Waitlist"
     }
   },
+  "matchChat": {
+    "courtFallback": "the court",
+    "courtPrompt": {
+      "title": "Your match is full!",
+      "subtitle": "No court booked yet at {facility}. Grab one to lock in your game.",
+      "cta": "Book a court"
+    },
+    "courtBooked": {
+      "title": "{court} is booked!",
+      "subtitle": "See you on the court at {facility}."
+    }
+  },
   "matchDetail": {
     "title": "Game details",
     "preferences": "Preferences",
@@ -3196,6 +3208,8 @@
     "availableCourtsHeader": "Available courts at game time",
     "availableCourtsSubtitle": "Reserve one now to confirm your game",
     "availableCourtsLoading": "Checking availability…",
+    "nearbyCourtsHeader": "Courts nearby at game time",
+    "nearbyCourtsSubtitle": "No courts left at your facility — here are nearby options",
     "bookingConfirmation": {
       "message": "Confirming will link the reserved court to this game.",
       "confirm": "Yes, I booked it",

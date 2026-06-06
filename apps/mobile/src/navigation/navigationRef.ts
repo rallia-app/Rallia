@@ -93,3 +93,14 @@ export function navigateToUserProfileFromOutside() {
     navigationRef.navigate('UserProfile', {});
   }
 }
+
+/**
+ * Navigate to a ChatConversation from outside the NavigationContainer.
+ * Used for new-message push notification tap handling (e.g. the "book your
+ * court" system message posted into a match chat).
+ */
+export function navigateToChatConversationFromOutside(conversationId: string, title?: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('ChatConversation', { conversationId, title });
+  }
+}

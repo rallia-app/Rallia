@@ -2270,6 +2270,7 @@ export type Database = {
       }
       match: {
         Row: {
+          booking_captain_id: string | null
           booking_id: string | null
           cancelled_at: string | null
           closed_at: string | null
@@ -2318,6 +2319,7 @@ export type Database = {
           visible_in_groups: boolean
         }
         Insert: {
+          booking_captain_id?: string | null
           booking_id?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
@@ -2366,6 +2368,7 @@ export type Database = {
           visible_in_groups?: boolean
         }
         Update: {
+          booking_captain_id?: string | null
           booking_id?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
@@ -2414,6 +2417,13 @@ export type Database = {
           visible_in_groups?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "match_booking_captain_id_fkey"
+            columns: ["booking_captain_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "match_booking_id_fkey"
             columns: ["booking_id"]
@@ -3128,6 +3138,8 @@ export type Database = {
           edited_at: string | null
           id: string
           is_edited: boolean | null
+          message_type: string
+          metadata: Json | null
           read_by: Json | null
           reply_to_message_id: string | null
           search_vector: unknown
@@ -3143,6 +3155,8 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_edited?: boolean | null
+          message_type?: string
+          metadata?: Json | null
           read_by?: Json | null
           reply_to_message_id?: string | null
           search_vector?: unknown
@@ -3158,6 +3172,8 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_edited?: boolean | null
+          message_type?: string
+          metadata?: Json | null
           read_by?: Json | null
           reply_to_message_id?: string | null
           search_vector?: unknown
