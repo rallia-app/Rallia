@@ -7880,6 +7880,31 @@ export type Database = {
           sport_name: string
         }[]
       }
+      get_match_quality_analytics: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          date: string
+          feedback_expected: number
+          feedback_present: number
+          is_auto_generated: boolean
+          matches_cancelled: number
+          matches_created: number
+          matches_fell_through: number
+          matches_filled: number
+          matches_mutual_cancel: number
+          matches_pending: number
+          matches_played: number
+          matches_quality: number
+          played_late: number
+          played_low_rating: number
+          played_no_show: number
+          played_reported: number
+          rating_count: number
+          rating_sum: number
+          sport_id: string
+          sport_name: string
+        }[]
+      }
       get_match_statistics: {
         Args: { p_days?: number; p_sport_id?: string }
         Returns: {

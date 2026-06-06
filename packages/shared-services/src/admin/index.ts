@@ -82,6 +82,7 @@ export type {
   UtmCampaign,
   UtmTotalsComparison,
   MatchFillPoint,
+  MatchQualityPoint,
 } from './analyticsService';
 
 // Analytics Service - Functions
@@ -136,6 +137,7 @@ export {
   createUtmCampaign,
   archiveUtmCampaign,
   getMatchFillAnalytics,
+  getMatchQualityAnalytics,
 } from './analyticsService';
 
 // Audit Service - Types
