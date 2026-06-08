@@ -61,10 +61,43 @@ export interface PrimaryRating {
   maxValue?: number;
 }
 
+/** A parsed player_rating_score row tagged with its sport, ready for selection. */
+export interface ParsedSportRating {
+  sportId: string;
+  playerRatingScoreId: string;
+  primary: PrimaryRating;
+}
+
+/**
+ * Pick one rating per sport: the player's explicitly-active rating wins; sports
+ * without an active choice fall back to the heuristic — the first parsed row for
+ * that sport, which (given the certified-then-most-recent query order) is the
+ * heuristic winner. Pure + exported for unit testing.
+ */
+export function buildActiveSportRatings(
+  parsed: ParsedSportRating[],
+  activeRatingBySport: Record<string, string | null>
+): Record<string, PrimaryRating> {
+  const map: Record<string, PrimaryRating> = {};
+  for (const r of parsed) {
+    if (activeRatingBySport[r.sportId] === r.playerRatingScoreId) {
+      map[r.sportId] = r.primary;
+    }
+  }
+  for (const r of parsed) {
+    if (!map[r.sportId]) {
+      map[r.sportId] = r.primary;
+    }
+  }
+  return map;
+}
+
 export interface SportPreferences {
   playerSportId: string;
   isActive: boolean;
   isPrimary: boolean;
+  /** The player_rating_score marked active for this sport (null = none chosen). */
+  activeRatingScoreId: string | null;
   matchDuration: string | null;
   matchType: string | null;
   playStyle: { id: string; name: string; description: string } | null;
@@ -188,6 +221,7 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
             `
             id,
             sport_id,
+            active_rating_score_id,
             is_active,
             is_primary,
             preferred_match_duration,
@@ -253,57 +287,77 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
         setReputationTotalEvents(0);
       }
 
-      // Build sport ratings map from all ratings
-      const ratingsMap: Record<string, PrimaryRating> = {};
-      if (ratingsResult.data) {
-        for (const rating of ratingsResult.data) {
-          const ratingScore = rating.rating_score as {
-            id?: string;
-            label?: string;
-            value?: number | null;
-            skill_level?: string | null;
-            description?: string | null;
-            rating_system?: {
-              code?: string;
-              name?: string;
-              description?: string;
-              min_value?: number;
-              max_value?: number;
-              sport_id?: string;
-            };
-          } | null;
-          const ratingSystem = ratingScore?.rating_system;
-          const sportId = ratingSystem?.sport_id;
-          if (sportId && !ratingsMap[sportId]) {
-            const badge_status = computeBadgeStatus({
-              rawBadgeStatus: rating.badge_status,
-              isCertified: rating.is_certified ?? false,
-              referralsCount: rating.referrals_count ?? 0,
-              approvedProofsCount: rating.approved_proofs_count ?? 0,
-            });
-            ratingsMap[sportId] = {
-              value: ratingScore?.value ?? null,
-              label: ratingScore?.label ?? '',
-              badge_status,
-              playerRatingScoreId: rating.id,
-              ratingScoreId: ratingScore?.id,
-              isCertified: rating.is_certified ?? false,
-              certifiedAt: rating.certified_at ?? null,
-              referralsCount: rating.referrals_count ?? 0,
-              approvedProofsCount: rating.approved_proofs_count ?? 0,
-              peerEvaluationAverage: rating.peer_evaluation_average ?? null,
-              peerEvaluationCount: rating.peer_evaluation_count ?? 0,
-              skillLevel: ratingScore?.skill_level ?? null,
-              scoreDescription: ratingScore?.description ?? null,
-              ratingSystemCode: ratingSystem?.code ?? null,
-              ratingSystemName: ratingSystem?.name ?? null,
-              ratingSystemDescription: ratingSystem?.description ?? null,
-              minValue: ratingSystem?.min_value ?? 0,
-              maxValue: ratingSystem?.max_value ?? 10,
-            };
-          }
-        }
+      // Map a single player_rating_score row to a PrimaryRating + its sport.
+      type RatingRow = NonNullable<typeof ratingsResult.data>[number];
+      const toSportRating = (
+        rating: RatingRow
+      ): { sportId: string; playerRatingScoreId: string; primary: PrimaryRating } | null => {
+        const ratingScore = rating.rating_score as {
+          id?: string;
+          label?: string;
+          value?: number | null;
+          skill_level?: string | null;
+          description?: string | null;
+          rating_system?: {
+            code?: string;
+            name?: string;
+            description?: string;
+            min_value?: number;
+            max_value?: number;
+            sport_id?: string;
+          };
+        } | null;
+        const ratingSystem = ratingScore?.rating_system;
+        const sportId = ratingSystem?.sport_id;
+        if (!sportId) return null;
+        const badge_status = computeBadgeStatus({
+          rawBadgeStatus: rating.badge_status,
+          isCertified: rating.is_certified ?? false,
+          referralsCount: rating.referrals_count ?? 0,
+          approvedProofsCount: rating.approved_proofs_count ?? 0,
+        });
+        return {
+          sportId,
+          playerRatingScoreId: rating.id,
+          primary: {
+            value: ratingScore?.value ?? null,
+            label: ratingScore?.label ?? '',
+            badge_status,
+            playerRatingScoreId: rating.id,
+            ratingScoreId: ratingScore?.id,
+            isCertified: rating.is_certified ?? false,
+            certifiedAt: rating.certified_at ?? null,
+            referralsCount: rating.referrals_count ?? 0,
+            approvedProofsCount: rating.approved_proofs_count ?? 0,
+            peerEvaluationAverage: rating.peer_evaluation_average ?? null,
+            peerEvaluationCount: rating.peer_evaluation_count ?? 0,
+            skillLevel: ratingScore?.skill_level ?? null,
+            scoreDescription: ratingScore?.description ?? null,
+            ratingSystemCode: ratingSystem?.code ?? null,
+            ratingSystemName: ratingSystem?.name ?? null,
+            ratingSystemDescription: ratingSystem?.description ?? null,
+            minValue: ratingSystem?.min_value ?? 0,
+            maxValue: ratingSystem?.max_value ?? 10,
+          },
+        };
+      };
+
+      // Which player_rating_score each sport has marked active (the player's
+      // explicit choice, from player_sport.active_rating_score_id).
+      const activeRatingBySport: Record<string, string | null> = {};
+      for (const ps of preferencesResult.data ?? []) {
+        const sid = ps.sport_id as string | undefined;
+        if (sid) activeRatingBySport[sid] = (ps.active_rating_score_id ?? null) as string | null;
       }
+
+      // Build the sport→rating map: the player's explicitly-active rating wins
+      // per sport; otherwise fall back to the certified-then-most-recent
+      // heuristic (the query is ordered is_certified DESC, created_at DESC, so
+      // the first parsed row per sport is the heuristic winner).
+      const parsedRatings = (ratingsResult.data ?? [])
+        .map(toSportRating)
+        .filter((r): r is ParsedSportRating => r !== null);
+      const ratingsMap = buildActiveSportRatings(parsedRatings, activeRatingBySport);
       setSportRatings(ratingsMap);
 
       // Build sport preferences map
@@ -339,6 +393,7 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
             playerSportId: ps.id,
             isActive: ps.is_active ?? false,
             isPrimary: ps.is_primary ?? false,
+            activeRatingScoreId: (ps.active_rating_score_id ?? null) as string | null,
             matchDuration: ps.preferred_match_duration ?? null,
             matchType: ps.preferred_match_type ?? null,
             playStyle,

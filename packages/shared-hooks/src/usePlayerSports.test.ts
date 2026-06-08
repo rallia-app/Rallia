@@ -40,6 +40,7 @@ describe('usePlayerSports', () => {
       player_id: 'player-123',
       sport_id: 'sport-1',
       is_primary: true,
+      active_rating_score_id: 'prs-1',
       preferred_match_duration: 90,
       preferred_match_type: 'competitive' as const,
       sport: {
@@ -53,6 +54,7 @@ describe('usePlayerSports', () => {
       player_id: 'player-123',
       sport_id: 'sport-2',
       is_primary: false,
+      active_rating_score_id: null,
       preferred_match_duration: 60,
       preferred_match_type: 'casual' as const,
       sport: {
@@ -429,6 +431,7 @@ describe('usePlayerSports', () => {
         expect(ps).toHaveProperty('player_id');
         expect(ps).toHaveProperty('sport_id');
         expect(ps).toHaveProperty('is_primary');
+        expect(ps).toHaveProperty('active_rating_score_id');
         expect(ps).toHaveProperty('preferred_match_duration');
         expect(ps).toHaveProperty('preferred_match_type');
         expect(ps).toHaveProperty('sport');

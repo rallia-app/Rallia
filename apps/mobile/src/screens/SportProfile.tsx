@@ -499,6 +499,10 @@ const SportProfile = () => {
 
       Logger.debug('player_ratings_fetched', { count: allPlayerRatings?.length });
 
+      // The player_rating_score row that ends up representing the chosen rating;
+      // used below to keep this sport's active rating pointer correct.
+      let chosenRatingId: string | null = null;
+
       // Step 2: Find existing self_reported rating for this sport (to UPDATE instead of DELETE)
       // This preserves the player_rating_score_id and keeps proofs linked!
       const existingSelfReportedRating = allPlayerRatings?.find(item => {
@@ -530,6 +534,7 @@ const SportProfile = () => {
             existingId: existingSelfReportedRating.id,
             ratingScoreId,
           });
+          chosenRatingId = existingSelfReportedRating.id;
         } else {
           // UPDATE the existing record instead of deleting it
           // This preserves the player_rating_score_id and keeps all proofs linked!
@@ -559,6 +564,7 @@ const SportProfile = () => {
               10000,
               'Failed to remove duplicate rating - connection timeout'
             );
+            chosenRatingId = existingDuplicate.id;
           } else {
             // Only update rating_score_id - let DB trigger handle certification logic
             const updateResult = await withTimeout(
@@ -581,6 +587,7 @@ const SportProfile = () => {
               });
               throw updateResult.error;
             }
+            chosenRatingId = existingSelfReportedRating.id;
           }
         }
 
@@ -601,17 +608,22 @@ const SportProfile = () => {
             ratingScoreId,
           });
           // Rating already exists from another source, no need to insert
+          chosenRatingId = existingWithSameScore.id;
         } else {
           // INSERT a new one
           Logger.debug('inserting_new_rating', { ratingScoreId, playerId: userId });
           const insertResult = await withTimeout(
             (async () =>
-              supabase.from('player_rating_score').insert({
-                player_id: userId,
-                rating_score_id: ratingScoreId,
-                source: 'self_reported',
-                is_certified: false,
-              }))(),
+              supabase
+                .from('player_rating_score')
+                .insert({
+                  player_id: userId,
+                  rating_score_id: ratingScoreId,
+                  source: 'self_reported',
+                  is_certified: false,
+                })
+                .select('id')
+                .single())(),
             10000,
             'Failed to save rating - connection timeout'
           );
@@ -625,6 +637,30 @@ const SportProfile = () => {
           }
 
           Logger.info('rating_inserted', { ratingScoreId, sportId });
+          chosenRatingId = insertResult.data?.id ?? null;
+        }
+      }
+
+      // Make the chosen rating this sport's active rating so the rest of the app
+      // (nearby-match notifications, suggestions, profile) reflects the player's
+      // explicit choice. The DB trigger only auto-activates a sport's FIRST
+      // rating, so set it here on change — but never silently demote a *different*
+      // active rating (e.g. a certified one); only update when the active rating
+      // was unset or was the row we just edited/replaced.
+      const activeWasEditedRow =
+        !playerRatingScoreId ||
+        playerRatingScoreId === existingSelfReportedRating?.id ||
+        playerRatingScoreId === chosenRatingId;
+      if (chosenRatingId && playerSportId && activeWasEditedRow) {
+        const activeResult = await supabase
+          .from('player_sport')
+          .update({ active_rating_score_id: chosenRatingId })
+          .eq('id', playerSportId);
+        if (activeResult.error) {
+          Logger.error('Failed to set active rating', activeResult.error, {
+            playerSportId,
+            chosenRatingId,
+          });
         }
       }
 
