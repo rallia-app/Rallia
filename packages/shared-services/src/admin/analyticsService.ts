@@ -3090,8 +3090,14 @@ export interface UtmSignupStat {
   medium: string;
   campaign: string;
   signups: number;
+  /** Total matches created by the cohort (event sum). */
   matchesCreated: number;
+  /** Total matches played by the cohort (event sum). */
   matchesPlayed: number;
+  /** Distinct cohort users who created >=1 match (for the activation funnel). */
+  matchCreators: number;
+  /** Distinct cohort users who played >=1 match (for the activation funnel). */
+  matchPlayers: number;
 }
 
 /**
@@ -3127,6 +3133,8 @@ export async function getUtmSignupStats(days: number = 30): Promise<UtmSignupSta
         signups: Number(row.signups) || 0,
         matchesCreated: Number(row.matches_created) || 0,
         matchesPlayed: Number(row.matches_played) || 0,
+        matchCreators: Number(row.match_creators) || 0,
+        matchPlayers: Number(row.match_players) || 0,
       };
     });
   } catch (error) {

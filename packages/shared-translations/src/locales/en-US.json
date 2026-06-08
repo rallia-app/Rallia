@@ -7288,6 +7288,8 @@
         "title": "UTM Monitoring",
         "description": "Pre-signup landings (PostHog) joined with downstream signups & matches per campaign.",
         "landings": "Landings",
+        "visitors": "Visitors",
+        "visitorsHint": "{landings} landings",
         "signups": "Signups",
         "signupsToday": "Signups today",
         "conversionRate": "Conv. rate",
@@ -7320,8 +7322,8 @@
         "funnel": {
           "landings": "Landings",
           "signups": "Signups",
-          "firstMatch": "Matches created",
-          "firstMatchPlayed": "Matches played"
+          "created": "Created a match",
+          "played": "Played a match"
         }
       },
       "invitationType": {

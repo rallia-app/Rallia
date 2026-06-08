@@ -8788,6 +8788,8 @@ export type Database = {
       get_utm_signup_stats: {
         Args: { p_days?: number }
         Returns: {
+          match_creators: number
+          match_players: number
           matches_created: number
           matches_played: number
           signups: number
