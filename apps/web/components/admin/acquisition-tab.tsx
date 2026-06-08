@@ -18,7 +18,7 @@ import { UtmMonitoringSection } from '@/components/admin/utm-monitoring-section'
  * a page refresh.
  */
 export function AcquisitionTab() {
-  const [window, setWindow] = useState<WindowOption>('7d');
+  const [window, setWindow] = useState<WindowOption>('30d');
   // Off by default — a forgotten open tab polling every 60s was the top driver
   // of Vercel Fluid Active CPU. Admins opt in via the filter bar toggle.
   const [autoRefresh, setAutoRefresh] = useState<boolean>(false);
