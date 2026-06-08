@@ -7288,6 +7288,8 @@
         "title": "Suivi UTM",
         "description": "Atterrissages avant inscription (PostHog) joints aux inscriptions et parties par campagne.",
         "landings": "Atterrissages",
+        "visitors": "Visiteurs",
+        "visitorsHint": "{landings} atterrissages",
         "signups": "Inscriptions",
         "signupsToday": "Inscriptions aujourd'hui",
         "conversionRate": "Taux de conv.",
@@ -7320,8 +7322,8 @@
         "funnel": {
           "landings": "Atterrissages",
           "signups": "Inscriptions",
-          "firstMatch": "Parties créées",
-          "firstMatchPlayed": "Parties jouées"
+          "created": "A créé une partie",
+          "played": "A joué une partie"
         }
       },
       "invitationType": {

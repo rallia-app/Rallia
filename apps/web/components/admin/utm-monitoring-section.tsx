@@ -17,7 +17,6 @@ import {
   type ChartPoint,
   type ChartSeries,
 } from '@/components/admin/multi-series-area-chart';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -52,6 +51,8 @@ export interface UtmMonitoringSectionProps {
   autoRefresh: boolean;
   demo?: boolean;
   onLastFetchedAt?: (ts: number | null) => void;
+  /** Incremented by the filter bar's "Refresh" button to force an immediate refetch. */
+  refreshSignal?: number;
 }
 
 /**
@@ -67,6 +68,7 @@ export function UtmMonitoringSection({
   autoRefresh,
   demo = false,
   onLastFetchedAt,
+  refreshSignal = 0,
 }: UtmMonitoringSectionProps) {
   const t = useTranslations('admin.analytics');
   const refetchInterval = autoRefresh ? 60_000 : null;
@@ -76,13 +78,26 @@ export function UtmMonitoringSection({
     data: landings,
     loading: landingsLoading,
     lastFetchedAt: landingsTs,
+    refetch: refetchLandings,
   } = useUtmLandings(window, { refetchInterval, demo, compare: true });
   const {
     stats: signups,
     loading: signupsLoading,
     lastFetchedAt: signupsTs,
+    refetch: refetchSignups,
   } = useUtmSignupStats(days, { refetchInterval });
-  const { data: comparison } = useUtmTotalsComparison(days, { refetchInterval });
+  const { data: comparison, refetch: refetchComparison } = useUtmTotalsComparison(days, {
+    refetchInterval,
+  });
+
+  // Manual refresh from the filter bar — fires on every increment after mount.
+  useEffect(() => {
+    if (refreshSignal <= 0) return;
+    void refetchLandings();
+    void refetchSignups();
+    void refetchComparison();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   // Surface the most recent of the two timestamps to the parent filter bar.
   const lastFetchedAt = useMemo(() => {
@@ -100,6 +115,10 @@ export function UtmMonitoringSection({
   const aggregated = useAggregated(landings, signups, dimension);
   const totalSignups = signups.reduce((acc, row) => acc + row.signups, 0);
   const totalLandings = landings?.totals.landings ?? 0;
+  // Unique visitors (distinct PostHog persons) is the honest top-line traffic
+  // number; `landings` is the event count, which reloads/multi-page sessions
+  // inflate. We show visitors as the headline and landings as the hint.
+  const totalVisitors = landings?.totals.uniqueVisitors ?? 0;
   // Attribution rate = attributed signups / total signups in the window.
   // Replaces the prior "Conversion Rate" (landings/signups) which divided
   // a PostHog count by a Supabase count — two different cohorts, two
@@ -123,12 +142,13 @@ export function UtmMonitoringSection({
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
-            label={t('utm.landings')}
-            value={landingsLoading ? null : totalLandings}
+            label={t('utm.visitors')}
+            value={landingsLoading ? null : totalVisitors}
+            hint={landingsLoading ? undefined : t('utm.visitorsHint', { landings: totalLandings })}
             loading={landingsLoading}
             delta={
               landings?.previousTotals
-                ? { current: totalLandings, previous: landings.previousTotals.landings }
+                ? { current: totalVisitors, previous: landings.previousTotals.uniqueVisitors }
                 : null
             }
           />
@@ -225,14 +245,12 @@ export function UtmMonitoringSection({
                   <TableHead>{t(`utm.dimensions.${dimension}`)}</TableHead>
                   <TableHead className="text-right">{t('utm.landings')}</TableHead>
                   <TableHead className="text-right">{t('utm.signups')}</TableHead>
-                  <TableHead className="text-right">{t('utm.conversionRate')}</TableHead>
                   <TableHead className="text-right">{t('utm.matchesCreated')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {aggregated.map(row => {
                   const isSelected = drilldownKey === row.key;
-                  const conv = row.landings > 0 ? row.signups / row.landings : null;
                   return (
                     <TableRow
                       key={row.key}
@@ -242,11 +260,6 @@ export function UtmMonitoringSection({
                       <TableCell className="font-medium">{row.label}</TableCell>
                       <TableCell className="text-right">{row.landings}</TableCell>
                       <TableCell className="text-right">{row.signups}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline" className="text-xs">
-                          {conv != null ? `${(conv * 100).toFixed(1)}%` : '—'}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="text-right">{row.matchesCreated}</TableCell>
                     </TableRow>
                   );
@@ -261,12 +274,15 @@ export function UtmMonitoringSection({
             <p className="text-xs font-medium text-muted-foreground m-0 mb-2">
               {t('utm.drilldownTitle', { value: drilldownRow.label })}
             </p>
+            {/* Activation funnel: distinct signed-up users from this campaign's
+                first-touch cohort. Landings live on the web/PostHog side and
+                would mix anonymous event counts into a user funnel, so they're
+                shown in the KPI strip + chart, not here. */}
             <FunnelStrip
               stages={[
-                { label: t('utm.funnel.landings'), value: drilldownRow.landings },
                 { label: t('utm.funnel.signups'), value: drilldownRow.signups },
-                { label: t('utm.funnel.firstMatch'), value: drilldownRow.matchesCreated },
-                { label: t('utm.funnel.firstMatchPlayed'), value: drilldownRow.matchesPlayed },
+                { label: t('utm.funnel.created'), value: drilldownRow.matchCreators },
+                { label: t('utm.funnel.played'), value: drilldownRow.matchPlayers },
               ]}
             />
           </div>
@@ -283,6 +299,9 @@ interface AggregatedRow {
   signups: number;
   matchesCreated: number;
   matchesPlayed: number;
+  /** Distinct users who created / played >=1 match — used by the activation funnel. */
+  matchCreators: number;
+  matchPlayers: number;
 }
 
 function useAggregated(
@@ -303,6 +322,8 @@ function useAggregated(
         signups: 0,
         matchesCreated: 0,
         matchesPlayed: 0,
+        matchCreators: 0,
+        matchPlayers: 0,
       };
       map.set(key, fresh);
       return fresh;
@@ -318,6 +339,10 @@ function useAggregated(
       r.signups += row.signups;
       r.matchesCreated += row.matchesCreated;
       r.matchesPlayed += row.matchesPlayed;
+      // Each signup has exactly one first-touch UTM tuple, so distinct-user
+      // counts never overlap across rows sharing a dimension key — summing is safe.
+      r.matchCreators += row.matchCreators;
+      r.matchPlayers += row.matchPlayers;
     }
 
     return Array.from(map.values()).sort((a, b) => {
