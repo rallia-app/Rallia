@@ -7887,6 +7887,8 @@ export type Database = {
           feedback_expected: number
           feedback_present: number
           is_auto_generated: boolean
+          matches_all_checked_in: number
+          matches_all_feedback: number
           matches_cancelled: number
           matches_created: number
           matches_fell_through: number
