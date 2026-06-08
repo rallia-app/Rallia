@@ -29,9 +29,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DAY_OPTIONS = [7, 30, 90] as const;
 type DaysWindow = (typeof DAY_OPTIONS)[number];
+
+const SEGMENTS = ['all', 'auto', 'nonAuto'] as const;
+type Segment = (typeof SEGMENTS)[number];
+const SEGMENT_LABEL: Record<Segment, string> = {
+  all: 'matchesTab.segmentAll',
+  auto: 'matchesTab.sourceAuto',
+  nonAuto: 'matchesTab.sourceOrganic',
+};
 
 export function MatchesTab() {
   const t = useTranslations('admin.analytics');
@@ -39,7 +48,17 @@ export function MatchesTab() {
 
   const { data, loading } = useMatchQualityAnalytics(days);
 
-  const { totals, bySport, bySource } = useMemo(() => aggregate(data), [data]);
+  const { totals, autoTotals, nonAutoTotals, bySport, bySource } = useMemo(
+    () => aggregate(data),
+    [data]
+  );
+  const [segment, setSegment] = useState<Segment>('all');
+  const funnelTotals =
+    segment === 'auto' ? autoTotals : segment === 'nonAuto' ? nonAutoTotals : totals;
+  const funnelCoverage =
+    funnelTotals.feedbackExpected > 0
+      ? (funnelTotals.feedbackPresent / funnelTotals.feedbackExpected) * 100
+      : null;
   const chart = useCreatedVsQualityChart(data, t);
 
   const qualityRate = totals.played > 0 ? (totals.quality / totals.played) * 100 : null;
@@ -102,23 +121,36 @@ export function MatchesTab() {
         />
       </div>
 
-      {/* Lifecycle funnel */}
+      {/* Lifecycle funnel — segmented by match source */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t('matchesTab.funnelTitle')}</CardTitle>
-          <p className="text-xs text-muted-foreground m-0 mt-1">{t('matchesTab.funnelHint')}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">{t('matchesTab.funnelTitle')}</CardTitle>
+              <p className="text-xs text-muted-foreground m-0 mt-1">{t('matchesTab.funnelHint')}</p>
+            </div>
+            <Tabs value={segment} onValueChange={v => setSegment(v as Segment)}>
+              <TabsList className="h-8">
+                {SEGMENTS.map(s => (
+                  <TabsTrigger key={s} value={s} className="text-xs">
+                    {t(SEGMENT_LABEL[s])}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
+              {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-8 w-full" />
               ))}
             </div>
-          ) : totals.created === 0 ? (
+          ) : funnelTotals.created === 0 ? (
             <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
           ) : (
-            <Funnel totals={totals} coverage={coverage} t={t} />
+            <Funnel totals={funnelTotals} coverage={funnelCoverage} t={t} />
           )}
         </CardContent>
       </Card>
@@ -317,7 +349,7 @@ function Funnel({
   coverage: number | null;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
-  const stages = [
+  const stages: FunnelStage[] = [
     {
       key: 'created',
       label: t('matchesTab.stageCreated'),
@@ -327,12 +359,22 @@ function Funnel({
     { key: 'filled', label: t('matchesTab.stageFilled'), count: totals.filled, feedbackDep: false },
     { key: 'played', label: t('matchesTab.stagePlayed'), count: totals.played, feedbackDep: true },
     {
+      key: 'feedback',
+      label: t('matchesTab.stageAllFeedback'),
+      count: totals.allFeedback,
+      feedbackDep: true,
+    },
+    {
       key: 'quality',
       label: t('matchesTab.stageQuality'),
       count: totals.quality,
       feedbackDep: true,
     },
   ];
+
+  // Check-in is a geofenced/optional action, so it sits beside the funnel as an
+  // adoption stat rather than on the critical path to a quality game.
+  const checkedInPct = totals.filled > 0 ? (totals.allCheckedIn / totals.filled) * 100 : null;
 
   const outcomes = [
     { label: t('matchesTab.outcomeFellThrough'), count: totals.fellThrough },
@@ -343,27 +385,16 @@ function Funnel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="space-y-3">
-        {stages.map(s => {
-          const pct = totals.created > 0 ? (s.count / totals.created) * 100 : 0;
-          return (
-            <div key={s.key}>
-              <div className="flex items-baseline justify-between text-xs mb-1">
-                <span className="font-medium">{s.label}</span>
-                <span className="text-muted-foreground tabular-nums">
-                  {s.count.toLocaleString()} · {t('matchesTab.funnelOf', { pct: pct.toFixed(0) })}
-                </span>
-              </div>
-              <div className="h-2.5 rounded bg-muted overflow-hidden">
-                <div
-                  className={s.feedbackDep ? 'h-full bg-primary/55' : 'h-full bg-primary'}
-                  style={{ width: `${Math.max(pct, s.count > 0 ? 1.5 : 0)}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <FunnelBars stages={stages} baseline={totals.created} t={t} />
+
+      {checkedInPct != null && (
+        <p className="text-[11px] text-muted-foreground m-0">
+          {t('matchesTab.checkedInStat', {
+            count: totals.allCheckedIn.toLocaleString(),
+            pct: checkedInPct.toFixed(0),
+          })}
+        </p>
+      )}
 
       {/* Where the unplayed games went */}
       <div className="flex flex-col gap-1.5">
@@ -384,6 +415,48 @@ function Funnel({
           {t('matchesTab.funnelConfidence', { pct: coverage.toFixed(0) })}
         </p>
       )}
+    </div>
+  );
+}
+
+interface FunnelStage {
+  key: string;
+  label: string;
+  count: number;
+  // Confirmation-dependent stages render as a "floor" (lighter bar).
+  feedbackDep: boolean;
+}
+
+function FunnelBars({
+  stages,
+  baseline,
+  t,
+}: {
+  stages: FunnelStage[];
+  baseline: number;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="space-y-3">
+      {stages.map(s => {
+        const pct = baseline > 0 ? (s.count / baseline) * 100 : 0;
+        return (
+          <div key={s.key}>
+            <div className="flex items-baseline justify-between text-xs mb-1">
+              <span className="font-medium">{s.label}</span>
+              <span className="text-muted-foreground tabular-nums">
+                {s.count.toLocaleString()} · {t('matchesTab.funnelOf', { pct: pct.toFixed(0) })}
+              </span>
+            </div>
+            <div className="h-2.5 rounded bg-muted overflow-hidden">
+              <div
+                className={s.feedbackDep ? 'h-full bg-primary/55' : 'h-full bg-primary'}
+                style={{ width: `${Math.max(pct, s.count > 0 ? 1.5 : 0)}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -423,6 +496,8 @@ function BarRow({
 interface Totals {
   created: number;
   filled: number;
+  allCheckedIn: number;
+  allFeedback: number;
   played: number;
   quality: number;
   cancelled: number;
@@ -459,6 +534,8 @@ function emptyTotals(): Totals {
   return {
     created: 0,
     filled: 0,
+    allCheckedIn: 0,
+    allFeedback: 0,
     played: 0,
     quality: 0,
     cancelled: 0,
@@ -476,33 +553,45 @@ function emptyTotals(): Totals {
   };
 }
 
+function addToTotals(t: Totals, row: MatchQualityPoint): void {
+  t.created += row.matchesCreated;
+  t.filled += row.matchesFilled;
+  t.allCheckedIn += row.matchesAllCheckedIn;
+  t.allFeedback += row.matchesAllFeedback;
+  t.played += row.matchesPlayed;
+  t.quality += row.matchesQuality;
+  t.cancelled += row.matchesCancelled;
+  t.mutualCancel += row.matchesMutualCancel;
+  t.fellThrough += row.matchesFellThrough;
+  t.pending += row.matchesPending;
+  t.playedNoShow += row.playedNoShow;
+  t.playedLate += row.playedLate;
+  t.playedLowRating += row.playedLowRating;
+  t.playedReported += row.playedReported;
+  t.ratingSum += row.ratingSum;
+  t.ratingCount += row.ratingCount;
+  t.feedbackExpected += row.feedbackExpected;
+  t.feedbackPresent += row.feedbackPresent;
+}
+
 function aggregate(data: MatchQualityPoint[]): {
   totals: Totals;
+  autoTotals: Totals;
+  nonAutoTotals: Totals;
   bySport: SportAggregate[];
   bySource: { auto: SourceAggregate; organic: SourceAggregate };
 } {
   const totals = emptyTotals();
+  const autoTotals = emptyTotals();
+  const nonAutoTotals = emptyTotals();
   const sportMap = new Map<string, SportAggregate>();
   const auto: SourceAggregate = { played: 0, quality: 0, ratingSum: 0, ratingCount: 0 };
   const organic: SourceAggregate = { played: 0, quality: 0, ratingSum: 0, ratingCount: 0 };
 
   for (const row of data) {
-    totals.created += row.matchesCreated;
-    totals.filled += row.matchesFilled;
-    totals.played += row.matchesPlayed;
-    totals.quality += row.matchesQuality;
-    totals.cancelled += row.matchesCancelled;
-    totals.mutualCancel += row.matchesMutualCancel;
-    totals.fellThrough += row.matchesFellThrough;
-    totals.pending += row.matchesPending;
-    totals.playedNoShow += row.playedNoShow;
-    totals.playedLate += row.playedLate;
-    totals.playedLowRating += row.playedLowRating;
-    totals.playedReported += row.playedReported;
-    totals.ratingSum += row.ratingSum;
-    totals.ratingCount += row.ratingCount;
-    totals.feedbackExpected += row.feedbackExpected;
-    totals.feedbackPresent += row.feedbackPresent;
+    addToTotals(totals, row);
+    if (row.isAutoGenerated) addToTotals(autoTotals, row);
+    else addToTotals(nonAutoTotals, row);
 
     const sport = sportMap.get(row.sportId);
     if (sport) {
@@ -530,6 +619,8 @@ function aggregate(data: MatchQualityPoint[]): {
 
   return {
     totals,
+    autoTotals,
+    nonAutoTotals,
     bySport: Array.from(sportMap.values())
       .filter(s => s.played > 0 || s.quality > 0)
       .sort((a, b) => b.played - a.played),
