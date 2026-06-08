@@ -4761,6 +4761,7 @@ export type Database = {
       };
       player_sport: {
         Row: {
+          active_rating_score_id: string | null;
           created_at: string | null;
           id: string;
           is_active: boolean | null;
@@ -4776,6 +4777,7 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
+          active_rating_score_id?: string | null;
           created_at?: string | null;
           id?: string;
           is_active?: boolean | null;
@@ -4791,6 +4793,7 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
+          active_rating_score_id?: string | null;
           created_at?: string | null;
           id?: string;
           is_active?: boolean | null;
@@ -4806,6 +4809,13 @@ export type Database = {
           updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'player_sport_active_rating_score_id_fkey';
+            columns: ['active_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'player_rating_score';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'player_sport_player_id_fkey';
             columns: ['player_id'];
