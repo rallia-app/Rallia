@@ -3109,14 +3109,26 @@ export async function getUtmSignupStats(days: number = 30): Promise<UtmSignupSta
       return [];
     }
     if (!data) return [];
-    return (data as Array<Record<string, unknown>>).map(row => ({
-      source: String(row.utm_source ?? '(none)'),
-      medium: String(row.utm_medium ?? '(none)'),
-      campaign: String(row.utm_campaign ?? '(none)'),
-      signups: Number(row.signups) || 0,
-      matchesCreated: Number(row.matches_created) || 0,
-      matchesPlayed: Number(row.matches_played) || 0,
-    }));
+    return (data as Array<Record<string, unknown>>).map(row => {
+      const source = row.utm_source != null ? String(row.utm_source) : null;
+      const medium = row.utm_medium != null ? String(row.utm_medium) : null;
+      // Mirror the campaign label in /api/admin/analytics/utm: when utm_campaign
+      // is absent, bucket by real source/medium instead of '(none)'. Keep this
+      // string byte-for-byte identical so landings and signups join on the same
+      // campaign key in the dashboard's campaign table.
+      const campaign =
+        row.utm_campaign != null
+          ? String(row.utm_campaign)
+          : `(no campaign) ${source ?? '?'} / ${medium ?? '?'}`;
+      return {
+        source: source ?? '(none)',
+        medium: medium ?? '(none)',
+        campaign,
+        signups: Number(row.signups) || 0,
+        matchesCreated: Number(row.matches_created) || 0,
+        matchesPlayed: Number(row.matches_played) || 0,
+      };
+    });
   } catch (error) {
     console.error('Error in getUtmSignupStats:', error);
     return [];

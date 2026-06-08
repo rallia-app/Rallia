@@ -45,6 +45,15 @@ type PreviousTotalsRow = {
   previousUniqueVisitors: number;
 };
 
+// Campaign label for grouping/series. When utm_campaign is absent — e.g. Meta
+// ad clicks land with only an fbclid, from which utm-capture infers
+// source/medium but never a campaign — bucket by the real source/medium instead
+// of collapsing every untagged channel into one opaque '(none)'. No campaign
+// name is invented; the row is explicitly marked "(no campaign)".
+// Must stay byte-for-byte identical to the label in getUtmSignupStats so the
+// PostHog landings and Supabase signups join on the same campaign key.
+const campaignLabel = `coalesce(properties.utm_campaign, concat('(no campaign) ', coalesce(properties.utm_source, '?'), ' / ', coalesce(properties.utm_medium, '?')))`;
+
 /**
  * Run the UTM aggregation queries against PostHog. Wrapped in `unstable_cache`
  * keyed by window+compare so 60s of polling from any number of admins collapses
@@ -89,7 +98,7 @@ const getUtmAggregates = (window: WindowParam, compare: boolean) =>
           SELECT
             coalesce(properties.utm_source,   '(none)') AS source,
             coalesce(properties.utm_medium,   '(none)') AS medium,
-            coalesce(properties.utm_campaign, '(none)') AS campaign,
+            ${campaignLabel} AS campaign,
             count() AS count
           FROM events
           WHERE ${whereClause}
@@ -106,7 +115,7 @@ const getUtmAggregates = (window: WindowParam, compare: boolean) =>
         `),
         runHogQL<TimeseriesRow>(`
           WITH top_campaigns AS (
-            SELECT coalesce(properties.utm_campaign, '(none)') AS campaign
+            SELECT ${campaignLabel} AS campaign
             FROM events
             WHERE ${whereClause}
             GROUP BY campaign
@@ -115,11 +124,11 @@ const getUtmAggregates = (window: WindowParam, compare: boolean) =>
           )
           SELECT
             toStartOfDay(timestamp) AS day,
-            coalesce(properties.utm_campaign, '(none)') AS campaign,
+            ${campaignLabel} AS campaign,
             count() AS landings
           FROM events
           WHERE ${whereClause}
-            AND coalesce(properties.utm_campaign, '(none)') IN (SELECT campaign FROM top_campaigns)
+            AND ${campaignLabel} IN (SELECT campaign FROM top_campaigns)
           GROUP BY day, campaign
           ORDER BY day ASC, campaign
         `),
