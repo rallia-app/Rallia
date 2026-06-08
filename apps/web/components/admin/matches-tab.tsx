@@ -353,28 +353,37 @@ function Funnel({
     {
       key: 'created',
       label: t('matchesTab.stageCreated'),
+      description: t('matchesTab.stageCreatedDesc'),
       count: totals.created,
       feedbackDep: false,
     },
-    { key: 'filled', label: t('matchesTab.stageFilled'), count: totals.filled, feedbackDep: false },
-    { key: 'played', label: t('matchesTab.stagePlayed'), count: totals.played, feedbackDep: true },
     {
-      key: 'feedback',
-      label: t('matchesTab.stageAllFeedback'),
-      count: totals.allFeedback,
+      key: 'filled',
+      label: t('matchesTab.stageFilled'),
+      description: t('matchesTab.stageFilledDesc'),
+      count: totals.filled,
+      feedbackDep: false,
+    },
+    {
+      key: 'played',
+      label: t('matchesTab.stagePlayed'),
+      description: t('matchesTab.stagePlayedDesc'),
+      count: totals.played,
       feedbackDep: true,
     },
     {
       key: 'quality',
       label: t('matchesTab.stageQuality'),
+      description: t('matchesTab.stageQualityDesc'),
       count: totals.quality,
       feedbackDep: true,
     },
   ];
 
-  // Check-in is a geofenced/optional action, so it sits beside the funnel as an
-  // adoption stat rather than on the critical path to a quality game.
+  // Full check-in and full feedback are data-completeness signals, not lifecycle
+  // gates toward a quality game, so they sit beside the funnel as health stats.
   const checkedInPct = totals.filled > 0 ? (totals.allCheckedIn / totals.filled) * 100 : null;
+  const feedbackPct = totals.filled > 0 ? (totals.allFeedback / totals.filled) * 100 : null;
 
   const outcomes = [
     { label: t('matchesTab.outcomeFellThrough'), count: totals.fellThrough },
@@ -387,13 +396,25 @@ function Funnel({
     <div className="flex flex-col gap-4">
       <FunnelBars stages={stages} baseline={totals.created} t={t} />
 
-      {checkedInPct != null && (
-        <p className="text-[11px] text-muted-foreground m-0">
-          {t('matchesTab.checkedInStat', {
-            count: totals.allCheckedIn.toLocaleString(),
-            pct: checkedInPct.toFixed(0),
-          })}
-        </p>
+      {(checkedInPct != null || feedbackPct != null) && (
+        <div className="flex flex-col gap-1">
+          {checkedInPct != null && (
+            <p className="text-[11px] text-muted-foreground m-0">
+              {t('matchesTab.checkedInStat', {
+                count: totals.allCheckedIn.toLocaleString(),
+                pct: checkedInPct.toFixed(0),
+              })}
+            </p>
+          )}
+          {feedbackPct != null && (
+            <p className="text-[11px] text-muted-foreground m-0">
+              {t('matchesTab.feedbackStat', {
+                count: totals.allFeedback.toLocaleString(),
+                pct: feedbackPct.toFixed(0),
+              })}
+            </p>
+          )}
+        </div>
       )}
 
       {/* Where the unplayed games went */}
@@ -422,6 +443,8 @@ function Funnel({
 interface FunnelStage {
   key: string;
   label: string;
+  // Muted one-liner explaining what the bucket counts.
+  description: string;
   count: number;
   // Confirmation-dependent stages render as a "floor" (lighter bar).
   feedbackDep: boolean;
@@ -442,12 +465,13 @@ function FunnelBars({
         const pct = baseline > 0 ? (s.count / baseline) * 100 : 0;
         return (
           <div key={s.key}>
-            <div className="flex items-baseline justify-between text-xs mb-1">
+            <div className="flex items-baseline justify-between gap-3 text-xs mb-0.5">
               <span className="font-medium">{s.label}</span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="text-muted-foreground tabular-nums whitespace-nowrap">
                 {s.count.toLocaleString()} · {t('matchesTab.funnelOf', { pct: pct.toFixed(0) })}
               </span>
             </div>
+            <p className="text-[11px] text-muted-foreground m-0 mb-1">{s.description}</p>
             <div className="h-2.5 rounded bg-muted overflow-hidden">
               <div
                 className={s.feedbackDep ? 'h-full bg-primary/55' : 'h-full bg-primary'}
