@@ -35,6 +35,7 @@ interface NotificationPayload {
   conversationId?: string;
   playerId?: string;
   communityId?: string;
+  notificationId?: string;
   [key: string]: unknown;
 }
 
@@ -391,7 +392,10 @@ export function usePushNotifications(
     const notificationType = data.type as string | undefined;
 
     Logger.logUserAction('push_notification_tapped', { data, type: notificationType });
-    Analytics.pushNotificationOpened({ type: notificationType ?? 'unknown' });
+    Analytics.pushNotificationOpened({
+      type: notificationType ?? 'unknown',
+      notification_id: data.notificationId,
+    });
 
     // Handle match-related notifications
     if (data.matchId && notificationType) {
