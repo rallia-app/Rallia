@@ -4,6 +4,7 @@ import { useMatchQualityAnalytics, type MatchQualityPoint } from '@rallia/shared
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
+import { AutoInviteFunnel } from '@/components/admin/auto-invite-funnel';
 import { KpiCard } from '@/components/admin/kpi-card';
 import {
   MultiSeriesAreaChart,
@@ -154,6 +155,9 @@ export function MatchesTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Auto-generation invitation funnel (own time window + settle cohort) */}
+      <AutoInviteFunnel />
 
       {/* Played vs quality over time */}
       <Card>

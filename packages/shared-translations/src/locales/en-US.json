@@ -7337,6 +7337,7 @@
       },
       "timeRange": {
         "7d": "7 Days",
+        "14d": "14 Days",
         "30d": "30 Days",
         "90d": "90 Days",
         "ytd": "Year to Date",
@@ -7749,6 +7750,30 @@
         "scheduling": "Scheduling",
         "injury": "Injury",
         "other": "Other"
+      },
+      "autoInvite": {
+        "title": "Auto-generation — invitations",
+        "hint": "Invitations sent by auto-generated matches and how players respond. Cohorts are anchored on send time; rates use only invites old enough to have had a fair chance to respond.",
+        "matchesCreated": "Matches created",
+        "matchesCreatedHint": "Auto-generated in this window",
+        "invitesSent": "Invitations sent",
+        "invitesSentHint": "{avg} per match on average",
+        "responseRate": "Response rate",
+        "responseRateHint": "{responded} of {settled} eligible invites",
+        "settleNote": "{inFlight} invitation(s) sent in the last 48h are still in-flight and excluded from the rates below.",
+        "allInFlight": "All invitations in this window are too recent to measure responses yet.",
+        "stageEligible": "Eligible invitations",
+        "stageEligibleDesc": "Sent long enough ago to have had a fair chance to respond.",
+        "stageResponded": "Responded",
+        "catOui": "Yes (accepted)",
+        "catNon": "No (declined)",
+        "catNouvelHoraire": "Proposed new time",
+        "noResponse": "No response",
+        "requestsTitle": "Request-to-join (self-requesters)",
+        "requestsHint": "A separate group: players who found the open match and asked to join, then the host approved or refused.",
+        "requestsApproved": "Approved",
+        "requestsRefused": "Refused",
+        "requestsPending": "Pending"
       },
       "matchesTab": {
         "title": "Match Quality",

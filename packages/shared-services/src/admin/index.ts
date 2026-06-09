@@ -83,6 +83,7 @@ export type {
   UtmTotalsComparison,
   MatchFillPoint,
   MatchQualityPoint,
+  AutoInviteFunnelPoint,
 } from './analyticsService';
 
 // Analytics Service - Functions
@@ -138,6 +139,7 @@ export {
   archiveUtmCampaign,
   getMatchFillAnalytics,
   getMatchQualityAnalytics,
+  getAutoInviteFunnel,
 } from './analyticsService';
 
 // Audit Service - Types
