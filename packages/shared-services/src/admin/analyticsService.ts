@@ -3466,13 +3466,15 @@ export interface AutoInviteFunnelPoint {
 export async function getAutoInviteFunnel(
   startDate: Date,
   endDate: Date,
-  settleHours = 48
+  settleHours = 48,
+  isAuto: boolean | null = true
 ): Promise<AutoInviteFunnelPoint[]> {
   try {
     const { data, error } = await supabase.rpc('get_auto_invite_funnel', {
       p_start_date: startDate.toISOString().split('T')[0],
       p_end_date: endDate.toISOString().split('T')[0],
       p_settle_hours: settleHours,
+      p_is_auto: isAuto,
     });
 
     if (error) {

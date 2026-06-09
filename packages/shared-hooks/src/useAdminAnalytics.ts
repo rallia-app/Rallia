@@ -1253,7 +1253,8 @@ export function useMatchQualityAnalytics(days: number = 30): {
 
 export function useAutoInviteFunnel(
   days: number = 14,
-  settleHours: number = 48
+  settleHours: number = 48,
+  isAuto: boolean | null = true
 ): {
   data: AutoInviteFunnelPoint[];
   loading: boolean;
@@ -1271,7 +1272,7 @@ export function useAutoInviteFunnel(
       setError(null);
       const endDate = new Date();
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      const result = await getAutoInviteFunnel(startDate, endDate, settleHours);
+      const result = await getAutoInviteFunnel(startDate, endDate, settleHours, isAuto);
       if (isMounted.current) setData(result);
     } catch (err) {
       console.error('Error fetching auto invite funnel:', err);
@@ -1279,7 +1280,7 @@ export function useAutoInviteFunnel(
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [days, settleHours]);
+  }, [days, settleHours, isAuto]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -1288,7 +1289,7 @@ export function useAutoInviteFunnel(
       isMounted.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, settleHours]);
+  }, [days, settleHours, isAuto]);
 
   return { data, loading, error, refetch: fetchData };
 }
