@@ -93,6 +93,7 @@ import {
   listTimeSuggestionsForMatch,
   respondToTimeSuggestion,
   type MatchTimeSuggestionWithSuggester,
+  type DeclineReason,
 } from '@rallia/shared-services';
 import { useStripe } from '@stripe/stripe-react-native';
 import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
@@ -818,6 +819,7 @@ export const MatchDetailSheet: React.FC = () => {
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
   const [showDeclineInviteModal, setShowDeclineInviteModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState<DeclineReason | null>(null);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
@@ -1535,6 +1537,7 @@ export const MatchDetailSheet: React.FC = () => {
   const handleDeclineInvite = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
+    setDeclineReason(null);
     setShowDeclineInviteModal(true);
   }, [selectedMatch]);
 
@@ -1542,12 +1545,14 @@ export const MatchDetailSheet: React.FC = () => {
   const handleConfirmDeclineInvite = useCallback(() => {
     if (!playerId) return;
     Analytics.matchDeclined({
+      match_id: selectedMatch?.id,
       sport_id: selectedMatch?.sport?.id ?? 'unknown',
       sport_name: selectedMatch?.sport?.name ?? 'unknown',
       is_auto_generated: selectedMatch?.is_auto_generated ?? false,
+      decline_reason: declineReason ?? undefined,
     });
-    declineInvite(playerId);
-  }, [playerId, declineInvite, selectedMatch]);
+    declineInvite({ playerId, reason: declineReason });
+  }, [playerId, declineInvite, selectedMatch, declineReason]);
 
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {
@@ -5684,7 +5689,10 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
       {/* Decline Invitation Confirmation Modal */}
       <ConfirmationModal
         visible={showDeclineInviteModal}
-        onClose={() => setShowDeclineInviteModal(false)}
+        onClose={() => {
+          setShowDeclineInviteModal(false);
+          setDeclineReason(null);
+        }}
         onConfirm={handleConfirmDeclineInvite}
         title={t('matchActions.declineInviteConfirmTitle')}
         message={t('matchActions.declineInviteConfirmMessage')}
@@ -5692,7 +5700,55 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         cancelLabel={t('common.goBack')}
         destructive
         isLoading={isDecliningInvite}
-      />
+      >
+        <View style={{ width: '100%', marginBottom: spacingPixels[4] }}>
+          <Text
+            size="sm"
+            weight="medium"
+            style={{
+              textAlign: 'center',
+              marginBottom: spacingPixels[2],
+              color: isDark ? neutral[400] : neutral[500],
+            }}
+          >
+            {t('matchActions.declineReasonPrompt')}
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: spacingPixels[2],
+            }}
+          >
+            {(
+              [
+                'bad_timing',
+                'too_far',
+                'skill_mismatch',
+                'dont_know_player',
+                'cost',
+                'changed_mind',
+                'other',
+              ] as const
+            ).map(reason => (
+              <Button
+                key={reason}
+                variant={declineReason === reason ? 'primary' : 'outline'}
+                size="sm"
+                isDark={isDark}
+                disabled={isDecliningInvite}
+                onPress={() => {
+                  selectionHaptic();
+                  setDeclineReason(prev => (prev === reason ? null : reason));
+                }}
+              >
+                {t(`matchActions.declineReasons.${reason}`)}
+              </Button>
+            ))}
+          </View>
+        </View>
+      </ConfirmationModal>
 
       {/* Dispute Score Confirmation Modal */}
       <ConfirmationModal

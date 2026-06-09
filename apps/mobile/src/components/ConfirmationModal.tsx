@@ -84,6 +84,11 @@ export interface ConfirmationModalProps {
    * @default true when isLoading
    */
   disabled?: boolean;
+
+  /**
+   * Optional custom content rendered above the action buttons (e.g. reason chips).
+   */
+  children?: React.ReactNode;
 }
 
 // =============================================================================
@@ -102,6 +107,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   destructive = false,
   isLoading = false,
   disabled,
+  children,
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -184,6 +190,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   </Text>
                 </View>
               )}
+
+              {/* Optional custom content (e.g. reason chips) */}
+              {children}
 
               {/* Buttons */}
               <View style={styles.buttonContainer}>

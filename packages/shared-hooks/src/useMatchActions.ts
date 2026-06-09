@@ -16,6 +16,7 @@ import {
   kickParticipant,
   cancelInvitation,
   declineInvitation,
+  type DeclineReason,
   resendInvitation,
   checkInToMatch,
   type JoinMatchResult,
@@ -457,10 +458,14 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
   });
 
   // Decline Invitation Mutation - for invitees declining a pending invitation
-  const declineInviteMutation = useMutation<MatchParticipant, Error, string>({
-    mutationFn: async (playerId: string) => {
+  const declineInviteMutation = useMutation<
+    MatchParticipant,
+    Error,
+    { playerId: string; reason?: DeclineReason | null }
+  >({
+    mutationFn: async ({ playerId, reason }) => {
       if (!matchId) throw new Error('Match ID is required');
-      return declineInvitation(matchId, playerId);
+      return declineInvitation(matchId, playerId, reason);
     },
     onSuccess: async participant => {
       await invalidateMatchQueries();

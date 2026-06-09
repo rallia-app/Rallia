@@ -200,9 +200,12 @@ export function matchShared(props: { sport_id: string; sport_name: string }): vo
 }
 
 export function matchDeclined(props: {
+  match_id?: string;
   sport_id: string;
   sport_name: string;
   is_auto_generated: boolean;
+  /** Optional invitee-decline reason (cancellation_reason_enum subset). */
+  decline_reason?: string;
 }): void {
   capture('match_declined', props);
 }
