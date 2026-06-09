@@ -76,4 +76,24 @@ describe('SentryTransport error normalization', () => {
     expect(captured.message).toContain('plain string failure');
     expect(ctx.fingerprint).toEqual(['logged-primitive-error', 'Failed to update player']);
   });
+
+  it('suppresses transient network noise as a breadcrumb regardless of app state', () => {
+    // No getAppState configured → treated as foreground; still suppressed.
+    new SentryTransport().log(makeEntry(new Error('Network request timed out')));
+
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.addBreadcrumb).toHaveBeenCalledTimes(1);
+    const [crumb] = sentry.addBreadcrumb.mock.calls[0];
+    expect(crumb.level).toBe('warning');
+    expect(crumb.message).toContain('[suppressed network error]');
+  });
+
+  it('suppresses a Supabase fetch-failure object whose details carry the network error', () => {
+    new SentryTransport().log(
+      makeEntry({ code: '', details: 'TypeError: Network request failed', message: '' })
+    );
+
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.addBreadcrumb).toHaveBeenCalledTimes(1);
+  });
 });

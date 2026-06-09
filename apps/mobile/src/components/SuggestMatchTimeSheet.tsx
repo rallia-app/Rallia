@@ -167,11 +167,16 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
         SheetManager.hide('suggest-match-time');
       }, 500);
     } catch (err) {
-      Logger.error(
-        'Suggest match time failed',
-        err instanceof Error ? err : new Error(String(err))
-      );
       const errMsg = err instanceof Error ? err.message : '';
+      // Expected validation rejections, not bugs — keep them out of Sentry's error stream.
+      if (errMsg === 'already_pending' || errMsg === 'same_as_current_time') {
+        Logger.warn('Suggest match time rejected', { reason: errMsg });
+      } else {
+        Logger.error(
+          'Suggest match time failed',
+          err instanceof Error ? err : new Error(String(err))
+        );
+      }
       const msg =
         errMsg === 'already_pending'
           ? t('matchDetail.timeSuggestion.alreadyPending')

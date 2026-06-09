@@ -27,6 +27,21 @@ const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: !isRunningInExpoGo(),
 });
 
+// Transient connectivity (timeouts, suspended-runtime fetch failures, Supabase
+// auth retries) is not an actionable bug — drop it at the global chokepoint so
+// auto-instrumented captures don't create issues. Logger-routed copies are
+// already filtered to a breadcrumb in SentryTransport.
+const TRANSIENT_NETWORK_ERROR = /Network request (failed|timed out)/i;
+function dropTransientNetworkNoise(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
+  const hasNetworkNoise = event.exception?.values?.some(
+    v =>
+      v.type === 'NetworkTimeoutError' ||
+      v.type === 'AuthRetryableFetchError' ||
+      (typeof v.value === 'string' && TRANSIENT_NETWORK_ERROR.test(v.value))
+  );
+  return hasNetworkNoise ? null : event;
+}
+
 if (!__DEV__ && !process.env.EXPO_PUBLIC_SENTRY_DSN) {
   console.warn('[Sentry] EXPO_PUBLIC_SENTRY_DSN is missing — events will not be reported.');
 }
@@ -44,6 +59,7 @@ Sentry.init({
   ],
   enableNativeFramesTracking: !__DEV__ && !isRunningInExpoGo(),
   sendDefaultPii: true,
+  beforeSend: dropTransientNetworkNoise,
 });
 
 // Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
