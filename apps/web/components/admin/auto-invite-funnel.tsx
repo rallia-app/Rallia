@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DAY_OPTIONS = [7, 14, 30] as const;
 type DaysWindow = (typeof DAY_OPTIONS)[number];
@@ -75,7 +76,8 @@ function aggregate(rows: AutoInviteFunnelPoint[]): AutoInviteTotals {
 export function AutoInviteFunnel() {
   const t = useTranslations('admin.analytics');
   const [days, setDays] = useState<DaysWindow>(14);
-  const { data, loading } = useAutoInviteFunnel(days);
+  const [source, setSource] = useState<'auto' | 'human'>('auto');
+  const { data, loading } = useAutoInviteFunnel(days, 48, source === 'auto');
   const totals = useMemo(() => aggregate(data), [data]);
 
   const responseRate =
@@ -87,13 +89,27 @@ export function AutoInviteFunnel() {
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-base">{t('autoInvite.title')}</CardTitle>
-            <p className="text-xs text-muted-foreground m-0 mt-1">{t('autoInvite.hint')}</p>
+            <CardTitle className="text-base">
+              {t(source === 'auto' ? 'autoInvite.title' : 'autoInvite.titleHuman')}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground m-0 mt-1">
+              {t(source === 'auto' ? 'autoInvite.hint' : 'autoInvite.hintHuman')}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">{t('utm.timeWindow')}</Label>
+            <Tabs value={source} onValueChange={v => setSource(v as 'auto' | 'human')}>
+              <TabsList className="h-8">
+                <TabsTrigger value="auto" className="text-xs">
+                  {t('autoInvite.srcAuto')}
+                </TabsTrigger>
+                <TabsTrigger value="human" className="text-xs">
+                  {t('autoInvite.srcHuman')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Label className="text-xs text-muted-foreground shrink-0">{t('utm.timeWindow')}</Label>
             <Select value={String(days)} onValueChange={v => setDays(Number(v) as DaysWindow)}>
-              <SelectTrigger className="h-8 w-[110px]">
+              <SelectTrigger className="h-8 w-[150px] shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -123,7 +139,11 @@ export function AutoInviteFunnel() {
               <KpiCard
                 label={t('autoInvite.matchesCreated')}
                 value={totals.matchesCreated}
-                hint={t('autoInvite.matchesCreatedHint')}
+                hint={t(
+                  source === 'auto'
+                    ? 'autoInvite.matchesCreatedHint'
+                    : 'autoInvite.matchesCreatedHintHuman'
+                )}
               />
               <KpiCard
                 label={t('autoInvite.invitesSent')}

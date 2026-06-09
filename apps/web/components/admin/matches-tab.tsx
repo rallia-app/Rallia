@@ -67,6 +67,13 @@ export function MatchesTab() {
   const coverage =
     totals.feedbackExpected > 0 ? (totals.feedbackPresent / totals.feedbackExpected) * 100 : null;
 
+  // North star: created matches that get a second player to commit (= filled).
+  const commitmentRate = totals.created > 0 ? (totals.filled / totals.created) * 100 : null;
+  const autoCommitment =
+    autoTotals.created > 0 ? (autoTotals.filled / autoTotals.created) * 100 : null;
+  const humanCommitment =
+    nonAutoTotals.created > 0 ? (nonAutoTotals.filled / nonAutoTotals.created) * 100 : null;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Time window selector */}
@@ -86,8 +93,19 @@ export function MatchesTab() {
         </Select>
       </div>
 
-      {/* KPI strip — quality game north star */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* KPI strip — 2nd-player commitment north star + quality */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard
+          label={t('matchesTab.commitmentRate')}
+          value={commitmentRate != null ? `${commitmentRate.toFixed(0)}%` : '—'}
+          hint={t('matchesTab.commitmentRateHint', {
+            filled: totals.filled,
+            created: totals.created,
+            human: humanCommitment != null ? `${humanCommitment.toFixed(0)}%` : '—',
+            auto: autoCommitment != null ? `${autoCommitment.toFixed(0)}%` : '—',
+          })}
+          loading={loading}
+        />
         <KpiCard
           label={t('matchesTab.qualityGames')}
           value={loading ? null : totals.quality}
