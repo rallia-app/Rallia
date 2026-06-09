@@ -1955,6 +1955,16 @@
     "declineInvite": "Refuser",
     "declineInviteConfirmTitle": "Refuser l'invitation?",
     "declineInviteConfirmMessage": "Vous ne pourrez pas rejoindre cette partie via cette invitation.",
+    "declineReasonPrompt": "Optionnel — dites-nous pourquoi (nous aide à améliorer vos matchs)",
+    "declineReasons": {
+      "bad_timing": "Mauvais moment",
+      "too_far": "Trop loin",
+      "skill_mismatch": "Niveau différent",
+      "dont_know_player": "Joueur inconnu",
+      "cost": "Coût",
+      "changed_mind": "J'ai changé d'avis",
+      "other": "Autre"
+    },
     "declineInviteSuccess": "Invitation refusée",
     "resendInviteSuccess": "Invitation renvoyée",
     "showMoreInvitations": "+{count} autres invitations",

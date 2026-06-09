@@ -1955,6 +1955,16 @@
     "declineInvite": "Decline",
     "declineInviteConfirmTitle": "Decline Invitation?",
     "declineInviteConfirmMessage": "You won't be able to join this game through this invitation.",
+    "declineReasonPrompt": "Optional — tell us why (helps us improve your matches)",
+    "declineReasons": {
+      "bad_timing": "Bad timing",
+      "too_far": "Too far",
+      "skill_mismatch": "Skill mismatch",
+      "dont_know_player": "Don't know them",
+      "cost": "Cost",
+      "changed_mind": "Changed my mind",
+      "other": "Other"
+    },
     "declineInviteSuccess": "Invitation declined",
     "resendInviteSuccess": "Invitation resent",
     "showMoreInvitations": "+{count} more invitations",

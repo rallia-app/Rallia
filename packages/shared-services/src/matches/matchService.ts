@@ -2293,9 +2293,20 @@ export async function cancelInvitation(
  * @param playerId - The ID of the player declining the invitation
  * @throws Error if participant not found or not in 'pending' status
  */
+/** Invitee-decline reasons (subset of cancellation_reason_enum). Optional. */
+export type DeclineReason =
+  | 'bad_timing'
+  | 'too_far'
+  | 'skill_mismatch'
+  | 'dont_know_player'
+  | 'cost'
+  | 'changed_mind'
+  | 'other';
+
 export async function declineInvitation(
   matchId: string,
-  playerId: string
+  playerId: string,
+  reason?: DeclineReason | null
 ): Promise<MatchParticipant> {
   // Find the player's pending invitation
   const { data: participant, error: participantError } = await supabase
@@ -2314,11 +2325,12 @@ export async function declineInvitation(
     throw new Error('No pending invitation to decline');
   }
 
-  // Update the participant status to 'declined'
+  // Update the participant status to 'declined', capturing why (optional).
   const { data: updatedParticipant, error: updateError } = await supabase
     .from('match_participant')
     .update({
       status: 'declined',
+      cancellation_reason: reason ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', participant.id)
