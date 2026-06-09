@@ -340,6 +340,8 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
 
   // 3. Process each channel
   let attemptNumber = 1;
+  // Collect captures to flush before the isolate is torn down (fire-and-forget drops events).
+  const analyticsCaptures: Promise<void>[] = [];
   for (const channel of channels) {
     let status: DeliveryStatus;
     let errorMessage: string | null = null;
@@ -392,20 +394,27 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
     // (not skipped). Successful or failed delivery still counts as a "send
     // attempt" from the user's POV — `status` differentiates.
     if (status !== 'skipped_preference' && status !== 'skipped_missing_contact') {
-      void captureEvent({
-        distinctId: userId,
-        event: 'notification_sent',
-        properties: {
-          channel,
-          notification_type: notificationType,
-          status,
-          notification_id: notificationId,
-          is_org_notification: isOrgNotif,
-        },
-      });
+      analyticsCaptures.push(
+        captureEvent({
+          distinctId: userId,
+          event: 'notification_sent',
+          properties: {
+            channel,
+            notification_type: notificationType,
+            status,
+            notification_id: notificationId,
+            is_org_notification: isOrgNotif,
+          },
+        })
+      );
     }
 
     attemptNumber++;
+  }
+
+  // Flush analytics before the isolate is frozen.
+  if (analyticsCaptures.length > 0) {
+    await Promise.allSettled(analyticsCaptures);
   }
 
   console.log(`Finished processing notification ${notificationId}`);

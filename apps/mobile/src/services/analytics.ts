@@ -497,7 +497,7 @@ export function matchOpenedFromQR(): void {
 
 // ---- Notifications ----
 
-export function pushNotificationOpened(props: { type: string }): void {
+export function pushNotificationOpened(props: { type: string; notification_id?: string }): void {
   capture('push_notification_opened', props);
 }
 

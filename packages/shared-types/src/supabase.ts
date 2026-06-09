@@ -2646,6 +2646,7 @@ export type Database = {
           match_starting_soon_sent_at: string | null
           payment_intent_id: string | null
           player_id: string
+          requested_at: string | null
           score: number | null
           showed_up: boolean | null
           star_rating: number | null
@@ -2679,6 +2680,7 @@ export type Database = {
           match_starting_soon_sent_at?: string | null
           payment_intent_id?: string | null
           player_id: string
+          requested_at?: string | null
           score?: number | null
           showed_up?: boolean | null
           star_rating?: number | null
@@ -2712,6 +2714,7 @@ export type Database = {
           match_starting_soon_sent_at?: string | null
           payment_intent_id?: string | null
           player_id?: string
+          requested_at?: string | null
           score?: number | null
           showed_up?: boolean | null
           star_rating?: number | null
@@ -7627,6 +7630,30 @@ export type Database = {
         }
         Returns: {
           player_id: string
+        }[]
+      }
+      get_auto_invite_funnel: {
+        Args: {
+          p_end_date: string
+          p_settle_hours?: number
+          p_start_date: string
+        }
+        Returns: {
+          accepted: number
+          declined: number
+          invites_in_flight: number
+          invites_sent: number
+          invites_settled: number
+          matches_created: number
+          no_response: number
+          requests_approved: number
+          requests_pending: number
+          requests_refused: number
+          requests_total: number
+          responded: number
+          sport_id: string
+          sport_name: string
+          time_suggested: number
         }[]
       }
       get_availability_refresh_eligible_users: {

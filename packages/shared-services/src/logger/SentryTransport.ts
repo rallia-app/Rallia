@@ -78,9 +78,8 @@ function normalizeForCapture(entry: LogEntry): NormalizedCapture {
 export interface SentryTransportOptions {
   /**
    * Returns the current foreground/background state of the host app. On RN,
-   * pass `() => AppState.currentState`. On web, leave undefined — every entry
-   * is treated as foreground. Used to drop network-failure noise that fires
-   * only because iOS suspended the JS runtime mid-fetch.
+   * pass `() => AppState.currentState`. On web, leave undefined. Recorded on
+   * suppressed network-noise breadcrumbs for context.
    */
   getAppState?: () => string;
 }
@@ -95,11 +94,12 @@ function getBreadcrumbCategory(context?: Record<string, unknown>): string {
   return 'app';
 }
 
-// iOS pauses XHRs when the app suspends, then resumes with "Network request
-// failed" or a fired wall-clock timeout. Those aren't real failures — drop
-// them when we know the app wasn't in front. Pattern is checked against
-// either an Error instance or the raw object Supabase throws on fetch failure.
-function isBackgroundNetworkNoise(entry: LogEntry): boolean {
+// "Network request failed" / "Network request timed out" are transient
+// connectivity blips (iOS suspending the runtime mid-fetch, flaky signal),
+// never an actionable app bug — match them so they stay out of the issue
+// stream. Checked against either an Error instance or the raw object Supabase
+// throws on fetch failure.
+function isNetworkNoise(entry: LogEntry): boolean {
   const err = entry.error as unknown;
   if (!err || typeof err !== 'object') return false;
 
@@ -144,17 +144,18 @@ export class SentryTransport implements Transport {
 
     try {
       if (entry.level === LogLevel.ERROR) {
-        const appState = SentryTransport.getAppState?.();
-        if (appState === 'background' && isBackgroundNetworkNoise(entry)) {
+        if (isNetworkNoise(entry)) {
           // Don't surface as an issue — keep a breadcrumb so context survives
           // if a real error fires later in the same session.
+          const appState = SentryTransport.getAppState?.();
           const err = entry.error as { name?: unknown; message?: unknown } | undefined;
           SentryTransport.sentry.addBreadcrumb({
             category: 'app',
-            message: `[suppressed bg network error] ${entry.message}`,
+            message: `[suppressed network error] ${entry.message}`,
             level: 'warning',
             data: {
               ...entry.context,
+              appState,
               errorName: err?.name,
               errorMessage: err?.message,
             },

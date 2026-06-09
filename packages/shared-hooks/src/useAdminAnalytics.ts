@@ -33,6 +33,7 @@ import {
   archiveUtmCampaign,
   getMatchFillAnalytics,
   getMatchQualityAnalytics,
+  getAutoInviteFunnel,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -50,6 +51,7 @@ import {
   type UtmTotalsComparison,
   type MatchFillPoint,
   type MatchQualityPoint,
+  type AutoInviteFunnelPoint,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -1245,6 +1247,52 @@ export function useMatchQualityAnalytics(days: number = 30): {
   return { data, loading, error, refetch: fetchData };
 }
 
+// =============================================================================
+// AUTO-GENERATION INVITATION FUNNEL
+// =============================================================================
+
+export function useAutoInviteFunnel(
+  days: number = 14,
+  settleHours: number = 48
+): {
+  data: AutoInviteFunnelPoint[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<AutoInviteFunnelPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const result = await getAutoInviteFunnel(startDate, endDate, settleHours);
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching auto invite funnel:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days, settleHours]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, settleHours]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
 // Re-export types for convenience
 export type {
   KPISummary,
@@ -1264,6 +1312,7 @@ export type {
   UtmTotalsComparison,
   MatchFillPoint,
   MatchQualityPoint,
+  AutoInviteFunnelPoint,
 } from '@rallia/shared-services';
 
 export default useAdminAnalytics;

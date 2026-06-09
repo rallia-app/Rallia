@@ -3436,6 +3436,78 @@ export async function getMatchQualityAnalytics(
   }
 }
 
+/**
+ * Auto-generation invitation funnel point (one row per sport).
+ *
+ * Anchored on invite-sent time. Response rates are over the SETTLED cohort
+ * (invites old enough to have had a fair chance to convert); `invitesInFlight`
+ * are too recent and excluded from rate denominators. `accepted`/`declined`/
+ * `timeSuggested` partition `responded` under precedence oui > non > nouvel horaire.
+ * `requests*` is the separate self-request → host-approval population.
+ */
+export interface AutoInviteFunnelPoint {
+  sportId: string;
+  sportName: string;
+  matchesCreated: number;
+  invitesSent: number;
+  invitesSettled: number;
+  invitesInFlight: number;
+  responded: number;
+  accepted: number;
+  declined: number;
+  timeSuggested: number;
+  noResponse: number;
+  requestsTotal: number;
+  requestsApproved: number;
+  requestsRefused: number;
+  requestsPending: number;
+}
+
+export async function getAutoInviteFunnel(
+  startDate: Date,
+  endDate: Date,
+  settleHours = 48
+): Promise<AutoInviteFunnelPoint[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_auto_invite_funnel', {
+      p_start_date: startDate.toISOString().split('T')[0],
+      p_end_date: endDate.toISOString().split('T')[0],
+      p_settle_hours: settleHours,
+    });
+
+    if (error) {
+      console.error('Error in getAutoInviteFunnel:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      return [];
+    }
+
+    return (data || []).map((row: Record<string, unknown>) => ({
+      sportId: row.sport_id as string,
+      sportName: row.sport_name as string,
+      matchesCreated: Number(row.matches_created) || 0,
+      invitesSent: Number(row.invites_sent) || 0,
+      invitesSettled: Number(row.invites_settled) || 0,
+      invitesInFlight: Number(row.invites_in_flight) || 0,
+      responded: Number(row.responded) || 0,
+      accepted: Number(row.accepted) || 0,
+      declined: Number(row.declined) || 0,
+      timeSuggested: Number(row.time_suggested) || 0,
+      noResponse: Number(row.no_response) || 0,
+      requestsTotal: Number(row.requests_total) || 0,
+      requestsApproved: Number(row.requests_approved) || 0,
+      requestsRefused: Number(row.requests_refused) || 0,
+      requestsPending: Number(row.requests_pending) || 0,
+    }));
+  } catch (error) {
+    console.error('Error in getAutoInviteFunnel (thrown):', error);
+    return [];
+  }
+}
+
 export default {
   getRealtimeUserStats,
   getMatchStatistics,
@@ -3496,4 +3568,6 @@ export default {
   getMatchFillAnalytics,
   // Match quality analytics
   getMatchQualityAnalytics,
+  // Auto-generation invitation funnel
+  getAutoInviteFunnel,
 };

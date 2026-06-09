@@ -7337,6 +7337,7 @@
       },
       "timeRange": {
         "7d": "7 jours",
+        "14d": "14 jours",
         "30d": "30 jours",
         "90d": "90 jours",
         "ytd": "Depuis le début de l'année",
@@ -7749,6 +7750,30 @@
         "scheduling": "Horaire",
         "injury": "Blessure",
         "other": "Autre"
+      },
+      "autoInvite": {
+        "title": "Génération auto — invitations",
+        "hint": "Invitations envoyées par les matchs générés automatiquement et la façon dont les joueurs répondent. Les cohortes sont ancrées sur l'heure d'envoi; les taux n'utilisent que les invitations assez anciennes pour avoir eu une vraie chance d'obtenir une réponse.",
+        "matchesCreated": "Matchs créés",
+        "matchesCreatedHint": "Générés automatiquement dans cette fenêtre",
+        "invitesSent": "Invitations envoyées",
+        "invitesSentHint": "{avg} par match en moyenne",
+        "responseRate": "Taux de réponse",
+        "responseRateHint": "{responded} sur {settled} invitations admissibles",
+        "settleNote": "{inFlight} invitation(s) envoyée(s) dans les dernières 48 h sont encore en attente et exclues des taux ci-dessous.",
+        "allInFlight": "Toutes les invitations de cette fenêtre sont trop récentes pour mesurer les réponses.",
+        "stageEligible": "Invitations admissibles",
+        "stageEligibleDesc": "Envoyées assez tôt pour avoir eu une vraie chance d'obtenir une réponse.",
+        "stageResponded": "Ont répondu",
+        "catOui": "Oui (accepté)",
+        "catNon": "Non (refusé)",
+        "catNouvelHoraire": "Nouvel horaire proposé",
+        "noResponse": "Sans réponse",
+        "requestsTitle": "Demandes de jointure (auto-demandeurs)",
+        "requestsHint": "Un groupe distinct : les joueurs qui ont trouvé le match ouvert et demandé à se joindre, puis l'hôte a approuvé ou refusé.",
+        "requestsApproved": "Approuvées",
+        "requestsRefused": "Refusées",
+        "requestsPending": "En attente"
       },
       "matchesTab": {
         "title": "Qualité des matchs",
