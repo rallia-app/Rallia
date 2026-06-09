@@ -207,6 +207,12 @@ export const CANCELLATION_REASON_LABELS: Record<CancellationReasonEnum, string> 
   court_unavailable: 'Court unavailable',
   emergency: 'Personal emergency',
   other: 'Other reason',
+  bad_timing: 'Bad timing',
+  too_far: 'Too far',
+  skill_mismatch: 'Skill mismatch',
+  dont_know_player: "Don't know them",
+  cost: 'Cost',
+  changed_mind: 'Changed my mind',
 };
 
 /**
@@ -217,6 +223,12 @@ export const CANCELLATION_REASON_ICONS: Record<CancellationReasonEnum, string> =
   court_unavailable: 'close-circle-outline',
   emergency: 'warning-outline',
   other: 'chatbox-ellipses-outline',
+  bad_timing: 'time-outline',
+  too_far: 'navigate-outline',
+  skill_mismatch: 'stats-chart-outline',
+  dont_know_player: 'person-outline',
+  cost: 'cash-outline',
+  changed_mind: 'swap-horizontal-outline',
 };
 
 // ============================================
