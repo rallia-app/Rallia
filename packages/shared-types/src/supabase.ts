@@ -7629,12 +7629,7 @@ export type Database = {
         }[]
       }
       get_auto_invite_candidates: {
-        Args: {
-          p_exclude?: string[]
-          p_match_id: string
-          p_max?: number
-          p_weekly_cap?: number
-        }
+        Args: { p_match_id: string; p_max?: number }
         Returns: {
           player_id: string
         }[]
