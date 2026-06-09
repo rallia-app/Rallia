@@ -2631,6 +2631,7 @@ export type Database = {
             | null
           checked_in_at: string | null
           created_at: string | null
+          expired_at: string | null
           feedback_completed: boolean
           feedback_reminder_sent_at: string | null
           has_paid: boolean
@@ -2647,6 +2648,7 @@ export type Database = {
           payment_intent_id: string | null
           player_id: string
           requested_at: string | null
+          responded_at: string | null
           score: number | null
           showed_up: boolean | null
           star_rating: number | null
@@ -2665,6 +2667,7 @@ export type Database = {
             | null
           checked_in_at?: string | null
           created_at?: string | null
+          expired_at?: string | null
           feedback_completed?: boolean
           feedback_reminder_sent_at?: string | null
           has_paid?: boolean
@@ -2681,6 +2684,7 @@ export type Database = {
           payment_intent_id?: string | null
           player_id: string
           requested_at?: string | null
+          responded_at?: string | null
           score?: number | null
           showed_up?: boolean | null
           star_rating?: number | null
@@ -2699,6 +2703,7 @@ export type Database = {
             | null
           checked_in_at?: string | null
           created_at?: string | null
+          expired_at?: string | null
           feedback_completed?: boolean
           feedback_reminder_sent_at?: string | null
           has_paid?: boolean
@@ -2715,6 +2720,7 @@ export type Database = {
           payment_intent_id?: string | null
           player_id?: string
           requested_at?: string | null
+          responded_at?: string | null
           score?: number | null
           showed_up?: boolean | null
           star_rating?: number | null
@@ -7477,6 +7483,7 @@ export type Database = {
         }[]
       }
       expire_old_reference_requests: { Args: never; Returns: number }
+      expire_stale_match_invites: { Args: never; Returns: number }
       find_direct_conversation: {
         Args: { p_player1: string; p_player2: string }
         Returns: string
@@ -7635,6 +7642,7 @@ export type Database = {
       get_auto_invite_funnel: {
         Args: {
           p_end_date: string
+          p_is_auto?: boolean
           p_settle_hours?: number
           p_start_date: string
         }
@@ -9616,6 +9624,12 @@ export type Database = {
         | "court_unavailable"
         | "emergency"
         | "other"
+        | "too_far"
+        | "skill_mismatch"
+        | "changed_mind"
+        | "bad_timing"
+        | "dont_know_player"
+        | "cost"
       conversation_type:
         | "direct"
         | "group"
@@ -10149,6 +10163,12 @@ export const Constants = {
         "court_unavailable",
         "emergency",
         "other",
+        "too_far",
+        "skill_mismatch",
+        "changed_mind",
+        "bad_timing",
+        "dont_know_player",
+        "cost",
       ],
       conversation_type: [
         "direct",

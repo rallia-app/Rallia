@@ -46,14 +46,20 @@ is therefore constructable today:
 | Opened    | `push_notification_opened` / `match_viewed`  | `match_id` + person |
 | Decided   | `match_joined` / `match_declined` (+ reason) | `match_id` + person |
 
-**Remaining (need server work — true `invite_id` parity):**
+- **A1 transition timestamps + explicit expiry** — migration `20260609170000`:
+  `responded_at` (stamped by trigger on pending→joined/declined and on time-suggestion insert),
+  `joined_at` now stamped on any transition to joined, and `expired_at` stamped by an hourly
+  pg_cron sweep (`expire_stale_match_invites()`) for unanswered invites whose match started or
+  was cancelled — status intentionally stays `pending`, so read **no-response** as
+  `status='pending' AND expired_at IS NOT NULL`. Best-effort backfill from `updated_at`
+  (hosts and approved self-requesters excluded). This unlocks **time-to-respond** and makes the
+  silent-ignore cohort (the largest funnel segment) explicit.
 
-- `invite_id` on the notification events requires the **push payload** to include the recipient's
-  `match_participant.id` (server / edge-function change) — the payload currently carries only `matchId`.
-- Per-invitee `invite_to_match_sent` with `invite_id` / `invitee_id` requires `invitePlayers` to
-  **return the created participant rows** (currently fire-and-forget).
-- **A1 transition timestamps** (`responded_at` / `invite_expired`) for time-to-respond and the
-  explicit **no-response** cohort — the larger blind spot (decline reasons only cover active decliners).
+**Consciously skipped (diminishing returns — `match_id` + person already joins every stage):**
+
+- `invite_id` on notification events (needs push payload to carry `match_participant.id`).
+- Per-invitee `invite_to_match_sent` (needs `invitePlayers` to return created rows).
+- B5 invite-impression event (delivered/opened approximate it).
 
 ---
 

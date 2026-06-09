@@ -144,7 +144,18 @@ export function matchFeedbackSubmitted(props: { sport_id: string; sport_name: st
 }
 
 export type MatchOutcomeKind = 'played' | 'mutual_cancel' | 'opponent_no_show';
-export type CancellationReasonKind = 'weather' | 'court_unavailable' | 'emergency' | 'other';
+/** Mirrors cancellation_reason_enum (outcome + invitee-decline values). */
+export type CancellationReasonKind =
+  | 'weather'
+  | 'court_unavailable'
+  | 'emergency'
+  | 'bad_timing'
+  | 'too_far'
+  | 'skill_mismatch'
+  | 'dont_know_player'
+  | 'cost'
+  | 'changed_mind'
+  | 'other';
 
 export function matchOutcomeSubmitted(props: {
   match_id: string;
