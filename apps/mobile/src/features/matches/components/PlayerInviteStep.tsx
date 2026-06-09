@@ -374,7 +374,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   // Handle send invitations
   const handleSendInvitations = useCallback(() => {
     if (selectedPlayers.length === 0) return;
-    Analytics.inviteToMatchSent({ invite_count: selectedPlayers.length });
+    Analytics.inviteToMatchSent({ invite_count: selectedPlayers.length, match_id: matchId });
     const playerIds = selectedPlayers.map(p => p.id);
     invitePlayers({ matchId, playerIds });
   }, [selectedPlayers, invitePlayers]);
