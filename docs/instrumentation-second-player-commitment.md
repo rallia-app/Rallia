@@ -23,6 +23,38 @@ uninstrumented (see Current State). This spec closes that.
 (then fill → played downstream). Tracked weekly, segmented **auto vs human**, and broken down
 by the funnel below. Everything else here exists to explain movements in this number.
 
+## Implementation status (2026-06-09)
+
+**Shipped (PR #459):**
+
+- **A4 commitment KPI** + **A3 human/auto invite funnel** on the admin Matches tab.
+- **A2 / B2 decline reasons** — `cancellation_reason_enum` extended (`bad_timing`, `too_far`,
+  `skill_mismatch`, `dont_know_player`, `cost`, `changed_mind`); persisted on decline; reason
+  chips in the decline modal; `match_declined` now carries `match_id` + `decline_reason`.
+- **B4 join key (P1 / P2)** — `match_id` added to `notification_received`,
+  `push_notification_opened`, and `invite_to_match_sent`. **Every stage of the recipient funnel
+  now carries `match_id`.**
+
+**Join-key decision:** the recipient experience funnel joins on **`match_id` + person** (each
+person has exactly one invite per match), so `match_id` — not `invite_id` — is the practical
+PostHog join key, and it is now present on every stage. The delivered → opened → decided funnel
+is therefore constructable today:
+
+| Stage     | Event(s)                                     | Join key            |
+| --------- | -------------------------------------------- | ------------------- |
+| Delivered | `notification_received`                      | `match_id` + person |
+| Opened    | `push_notification_opened` / `match_viewed`  | `match_id` + person |
+| Decided   | `match_joined` / `match_declined` (+ reason) | `match_id` + person |
+
+**Remaining (need server work — true `invite_id` parity):**
+
+- `invite_id` on the notification events requires the **push payload** to include the recipient's
+  `match_participant.id` (server / edge-function change) — the payload currently carries only `matchId`.
+- Per-invitee `invite_to_match_sent` with `invite_id` / `invitee_id` requires `invitePlayers` to
+  **return the created participant rows** (currently fire-and-forget).
+- **A1 transition timestamps** (`responded_at` / `invite_expired`) for time-to-respond and the
+  explicit **no-response** cohort — the larger blind spot (decline reasons only cover active decliners).
+
 ---
 
 ## Current state (audit — build on this, don't rebuild)

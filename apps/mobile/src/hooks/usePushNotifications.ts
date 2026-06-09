@@ -395,6 +395,7 @@ export function usePushNotifications(
     Analytics.pushNotificationOpened({
       type: notificationType ?? 'unknown',
       notification_id: data.notificationId,
+      match_id: data.matchId,
     });
 
     // Handle match-related notifications
@@ -514,7 +515,7 @@ export function usePushNotifications(
         title: notification.request.content.title,
         data: notification.request.content.data,
       });
-      Analytics.notificationReceived({ type, channel: 'push' });
+      Analytics.notificationReceived({ type, channel: 'push', match_id: data.matchId });
     });
 
     // Listen for user interactions with notifications (while app is running/backgrounded)

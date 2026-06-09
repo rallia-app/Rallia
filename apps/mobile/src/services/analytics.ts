@@ -476,7 +476,7 @@ export function deepLinkOpened(props: {
   capture('deep_link_opened', props);
 }
 
-export function inviteToMatchSent(props: { invite_count: number }): void {
+export function inviteToMatchSent(props: { invite_count: number; match_id?: string }): void {
   capture('invite_to_match_sent', props);
 }
 
@@ -500,11 +500,21 @@ export function matchOpenedFromQR(): void {
 
 // ---- Notifications ----
 
-export function pushNotificationOpened(props: { type: string; notification_id?: string }): void {
+export function pushNotificationOpened(props: {
+  type: string;
+  notification_id?: string;
+  /** Recipient-funnel join key (+ person). Present for match notifications. */
+  match_id?: string;
+}): void {
   capture('push_notification_opened', props);
 }
 
-export function notificationReceived(props: { type: string; channel: 'push' | 'in_app' }): void {
+export function notificationReceived(props: {
+  type: string;
+  channel: 'push' | 'in_app';
+  /** Recipient-funnel join key (+ person). Present for match notifications. */
+  match_id?: string;
+}): void {
   capture('notification_received', props);
 }
 
