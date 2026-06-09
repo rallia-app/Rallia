@@ -35,10 +35,16 @@ interface AutoInviteTotals {
   requestsApproved: number;
   requestsRefused: number;
   requestsPending: number;
+  declineReasons: Record<string, number>;
+  noResponseExpired: number;
+  /** Responded-count-weighted median across sports (approximation). */
+  medianResponseHours: number | null;
 }
 
 function aggregate(rows: AutoInviteFunnelPoint[]): AutoInviteTotals {
-  return rows.reduce<AutoInviteTotals>(
+  let medianWeighted = 0;
+  let medianWeight = 0;
+  const totals = rows.reduce<AutoInviteTotals>(
     (acc, r) => {
       acc.matchesCreated += r.matchesCreated;
       acc.invitesSent += r.invitesSent;
@@ -53,6 +59,14 @@ function aggregate(rows: AutoInviteFunnelPoint[]): AutoInviteTotals {
       acc.requestsApproved += r.requestsApproved;
       acc.requestsRefused += r.requestsRefused;
       acc.requestsPending += r.requestsPending;
+      acc.noResponseExpired += r.noResponseExpired;
+      for (const [reason, n] of Object.entries(r.declineReasons)) {
+        acc.declineReasons[reason] = (acc.declineReasons[reason] ?? 0) + n;
+      }
+      if (r.medianResponseHours != null && r.responded > 0) {
+        medianWeighted += r.medianResponseHours * r.responded;
+        medianWeight += r.responded;
+      }
       return acc;
     },
     {
@@ -69,16 +83,45 @@ function aggregate(rows: AutoInviteFunnelPoint[]): AutoInviteTotals {
       requestsApproved: 0,
       requestsRefused: 0,
       requestsPending: 0,
+      declineReasons: {},
+      noResponseExpired: 0,
+      medianResponseHours: null,
     }
   );
+  totals.medianResponseHours = medianWeight > 0 ? medianWeighted / medianWeight : null;
+  return totals;
 }
+
+const KNOWN_DECLINE_REASONS = [
+  'bad_timing',
+  'too_far',
+  'skill_mismatch',
+  'dont_know_player',
+  'cost',
+  'changed_mind',
+  'other',
+] as const;
 
 export function AutoInviteFunnel() {
   const t = useTranslations('admin.analytics');
+  const tReasons = useTranslations('matchActions.declineReasons');
   const [days, setDays] = useState<DaysWindow>(14);
   const [source, setSource] = useState<'auto' | 'human'>('auto');
   const { data, loading } = useAutoInviteFunnel(days, 48, source === 'auto');
   const totals = useMemo(() => aggregate(data), [data]);
+
+  const reasonRows = useMemo(() => {
+    const entries = Object.entries(totals.declineReasons).sort((a, b) => b[1] - a[1]);
+    const base = entries.reduce((sum, [, n]) => sum + n, 0);
+    return { entries, base };
+  }, [totals.declineReasons]);
+
+  const reasonLabel = (reason: string): string => {
+    if (reason === 'unspecified') return t('autoInvite.reasonUnspecified');
+    return (KNOWN_DECLINE_REASONS as readonly string[]).includes(reason)
+      ? tReasons(reason as (typeof KNOWN_DECLINE_REASONS)[number])
+      : reason;
+  };
 
   const responseRate =
     totals.invitesSettled > 0 ? (totals.responded / totals.invitesSettled) * 100 : null;
@@ -220,6 +263,39 @@ export function AutoInviteFunnel() {
                 />
               </div>
             )}
+
+            {/* Why invites die — decline reasons, response latency, lapsed-unanswered */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {t('autoInvite.whyTitle')}
+              </span>
+              <p className="text-[11px] text-muted-foreground m-0">{t('autoInvite.whyHint')}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <KpiCard
+                  label={t('autoInvite.medianResponse')}
+                  value={
+                    totals.medianResponseHours != null
+                      ? `${totals.medianResponseHours.toFixed(1)}h`
+                      : '—'
+                  }
+                />
+                <KpiCard label={t('autoInvite.lapsedExpired')} value={totals.noResponseExpired} />
+              </div>
+              {reasonRows.base > 0 && (
+                <div className="space-y-2 mt-1">
+                  {reasonRows.entries.map(([reason, n]) => (
+                    <Bar
+                      key={reason}
+                      label={reasonLabel(reason)}
+                      count={n}
+                      base={reasonRows.base}
+                      tone={reason === 'unspecified' ? 'muted' : 'rose'}
+                      small
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Self-request approval flow — a separate population from invited candidates */}
             <div className="flex flex-col gap-1.5">
