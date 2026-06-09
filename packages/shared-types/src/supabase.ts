@@ -7648,12 +7648,15 @@ export type Database = {
         }
         Returns: {
           accepted: number
+          decline_reasons: Json
           declined: number
           invites_in_flight: number
           invites_sent: number
           invites_settled: number
           matches_created: number
+          median_response_hours: number
           no_response: number
+          no_response_expired: number
           requests_approved: number
           requests_pending: number
           requests_refused: number

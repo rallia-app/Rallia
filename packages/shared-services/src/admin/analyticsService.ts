@@ -3461,6 +3461,12 @@ export interface AutoInviteFunnelPoint {
   requestsApproved: number;
   requestsRefused: number;
   requestsPending: number;
+  /** Decline-reason mix over declined invites; 'unspecified' = no reason given. */
+  declineReasons: Record<string, number>;
+  /** Median (responded_at - created_at) in hours over invites that responded. */
+  medianResponseHours: number | null;
+  /** Pending invites that lapsed unanswered (expired_at stamped by the hourly sweep). */
+  noResponseExpired: number;
 }
 
 export async function getAutoInviteFunnel(
@@ -3503,6 +3509,10 @@ export async function getAutoInviteFunnel(
       requestsApproved: Number(row.requests_approved) || 0,
       requestsRefused: Number(row.requests_refused) || 0,
       requestsPending: Number(row.requests_pending) || 0,
+      declineReasons: (row.decline_reasons ?? {}) as Record<string, number>,
+      medianResponseHours:
+        row.median_response_hours != null ? Number(row.median_response_hours) : null,
+      noResponseExpired: Number(row.no_response_expired) || 0,
     }));
   } catch (error) {
     console.error('Error in getAutoInviteFunnel (thrown):', error);
