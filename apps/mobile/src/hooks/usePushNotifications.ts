@@ -15,6 +15,7 @@ import { registerPushToken, supabase, unregisterPushToken, Logger } from '@ralli
 // screen → the '#/hooks' barrel that re-exports this hook.
 import {
   navigateFromOutside,
+  navigateToChatConversationFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
   navigateToUserProfileFromOutside,
@@ -34,6 +35,7 @@ interface NotificationPayload {
   conversationId?: string;
   playerId?: string;
   communityId?: string;
+  notificationId?: string;
   [key: string]: unknown;
 }
 
@@ -164,6 +166,30 @@ export interface UsePushNotificationsOptions {
 }
 
 /**
+ * Expo's push registration endpoint returns transient 503s ("upstream connect
+ * error / connection timeout"). Retry with backoff before giving up.
+ */
+async function getExpoPushTokenWithRetry(
+  options?: Parameters<typeof Notifications.getExpoPushTokenAsync>[0]
+): Promise<Awaited<ReturnType<typeof Notifications.getExpoPushTokenAsync>>> {
+  const backoffMs = [500, 1500, 3000];
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= backoffMs.length; attempt++) {
+    try {
+      return options
+        ? await Notifications.getExpoPushTokenAsync(options)
+        : await Notifications.getExpoPushTokenAsync();
+    } catch (error) {
+      lastError = error;
+      if (attempt < backoffMs.length) {
+        await new Promise(resolve => setTimeout(resolve, backoffMs[attempt]));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Get the Expo push token for this device
  */
 async function getExpoPushToken(): Promise<string | null> {
@@ -194,17 +220,20 @@ async function getExpoPushToken(): Promise<string | null> {
     if (!projectId) {
       Logger.warn('EAS project ID not found in app config');
       // Fallback for development
-      const token = await Notifications.getExpoPushTokenAsync();
+      const token = await getExpoPushTokenWithRetry();
       return token.data;
     }
 
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
+    const token = await getExpoPushTokenWithRetry({ projectId });
 
     return token.data;
   } catch (error) {
-    Logger.error('Failed to get Expo push token', error as Error);
+    // After retries this is Expo-side / network flakiness, not an app bug —
+    // warn so it stays a breadcrumb instead of opening a Sentry issue. Push
+    // simply won't register this session; the app degrades gracefully.
+    Logger.warn('Failed to get Expo push token after retries', {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
@@ -363,7 +392,11 @@ export function usePushNotifications(
     const notificationType = data.type as string | undefined;
 
     Logger.logUserAction('push_notification_tapped', { data, type: notificationType });
-    Analytics.pushNotificationOpened({ type: notificationType ?? 'unknown' });
+    Analytics.pushNotificationOpened({
+      type: notificationType ?? 'unknown',
+      notification_id: data.notificationId,
+      match_id: data.matchId,
+    });
 
     // Handle match-related notifications
     if (data.matchId && notificationType) {
@@ -453,7 +486,18 @@ export function usePushNotifications(
       }
     }
 
-    // TODO: Handle other notification types (messages, etc.)
+    // Handle new-message notifications (incl. the "book your court" system card
+    // posted into a match chat) — deep-link straight to the conversation.
+    if (notificationType === 'new_message' || notificationType === 'chat') {
+      const conversationId = data.conversationId ?? (data.targetId as string | undefined);
+      if (conversationId) {
+        navigateToChatConversationFromOutside(conversationId);
+        Logger.logUserAction('push_notification_deep_link', {
+          conversationId,
+          type: notificationType,
+        });
+      }
+    }
   }, []);
 
   // Track if we've already handled the initial notification (to prevent double handling)
@@ -471,7 +515,7 @@ export function usePushNotifications(
         title: notification.request.content.title,
         data: notification.request.content.data,
       });
-      Analytics.notificationReceived({ type, channel: 'push' });
+      Analytics.notificationReceived({ type, channel: 'push', match_id: data.matchId });
     });
 
     // Listen for user interactions with notifications (while app is running/backgrounded)

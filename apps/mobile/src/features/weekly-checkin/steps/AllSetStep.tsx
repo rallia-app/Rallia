@@ -1,8 +1,9 @@
 /**
  * Step 4 — Success / All Set.
  *
- * Plays a celebratory bubble + the streak hero animation + summary recap.
- * CTA dismisses the modal (returns the user to Home).
+ * Celebratory bubble + a recap of what the check-in locked in (goal, hours,
+ * auto-create/invite). No streak hero — the streak is driven by hitting your
+ * weekly game goal at week-end, not by checking in. CTA dismisses the modal.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -11,13 +12,9 @@ import { spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import { SummaryCard } from '#/features/weekly-checkin/components/SummaryCard';
-import type { CheckInResult } from '#/features/weekly-checkin/api';
 import { useTranslation } from '#/hooks';
 
 interface AllSetStepProps {
-  result: CheckInResult;
-  /** True if the player had no streak before this submit (first-ever check-in). */
-  isFirstEver: boolean;
   frequencyGoal: number;
   hoursConfirmed: number;
   autoCreate: boolean;
@@ -26,8 +23,6 @@ interface AllSetStepProps {
 }
 
 export function AllSetStep({
-  result,
-  isFirstEver,
   frequencyGoal,
   hoursConfirmed,
   autoCreate,
@@ -47,10 +42,6 @@ export function AllSetStep({
 
         <View style={styles.section}>
           <SummaryCard
-            newStreak={result.newStreak}
-            milestoneReached={result.milestoneReached}
-            freezeEarned={result.freezeEarned}
-            isFirstEver={isFirstEver}
             frequencyGoal={frequencyGoal}
             hoursConfirmed={hoursConfirmed}
             autoCreate={autoCreate}

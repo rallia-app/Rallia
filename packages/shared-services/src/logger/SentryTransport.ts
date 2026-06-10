@@ -33,12 +33,53 @@ interface SentryLike {
   addBreadcrumb: (breadcrumb: SentryBreadcrumb) => void;
 }
 
+interface NormalizedCapture {
+  error: Error;
+  extra: Record<string, unknown>;
+  fingerprint?: string[];
+}
+
+// Supabase/PostgREST reject with a plain { code, details, hint, message } object
+// (not an Error). Sentry can't build a stack from those, so it titles them
+// "Object captured as exception with keys: ..." and groups every unrelated
+// failure under whichever incidental JS frame is on top (SentryTransport, a
+// useMemo, etc). Wrap any non-Error value in a real Error and pin a stable
+// fingerprint from the call-site message + code so distinct failures stay split.
+function normalizeForCapture(entry: LogEntry): NormalizedCapture {
+  const raw = entry.error as unknown;
+  const extra: Record<string, unknown> = { ...entry.context };
+
+  if (raw instanceof Error) {
+    return { error: raw, extra };
+  }
+
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const code = typeof obj.code === 'string' ? obj.code : undefined;
+    const detail =
+      (typeof obj.message === 'string' && obj.message) ||
+      (typeof obj.error_description === 'string' && obj.error_description) ||
+      (typeof obj.details === 'string' && obj.details) ||
+      'non-Error object captured';
+
+    extra.originalError = obj;
+    const error = new Error(`${entry.message}: ${detail}`);
+    error.name = code ? 'SupabaseError' : 'CapturedObjectError';
+    return { error, extra, fingerprint: ['logged-object-error', entry.message, code ?? ''] };
+  }
+
+  return {
+    error: new Error(`${entry.message}: ${String(raw)}`),
+    extra,
+    fingerprint: ['logged-primitive-error', entry.message],
+  };
+}
+
 export interface SentryTransportOptions {
   /**
    * Returns the current foreground/background state of the host app. On RN,
-   * pass `() => AppState.currentState`. On web, leave undefined — every entry
-   * is treated as foreground. Used to drop network-failure noise that fires
-   * only because iOS suspended the JS runtime mid-fetch.
+   * pass `() => AppState.currentState`. On web, leave undefined. Recorded on
+   * suppressed network-noise breadcrumbs for context.
    */
   getAppState?: () => string;
 }
@@ -53,11 +94,12 @@ function getBreadcrumbCategory(context?: Record<string, unknown>): string {
   return 'app';
 }
 
-// iOS pauses XHRs when the app suspends, then resumes with "Network request
-// failed" or a fired wall-clock timeout. Those aren't real failures — drop
-// them when we know the app wasn't in front. Pattern is checked against
-// either an Error instance or the raw object Supabase throws on fetch failure.
-function isBackgroundNetworkNoise(entry: LogEntry): boolean {
+// "Network request failed" / "Network request timed out" are transient
+// connectivity blips (iOS suspending the runtime mid-fetch, flaky signal),
+// never an actionable app bug — match them so they stay out of the issue
+// stream. Checked against either an Error instance or the raw object Supabase
+// throws on fetch failure.
+function isNetworkNoise(entry: LogEntry): boolean {
   const err = entry.error as unknown;
   if (!err || typeof err !== 'object') return false;
 
@@ -102,17 +144,18 @@ export class SentryTransport implements Transport {
 
     try {
       if (entry.level === LogLevel.ERROR) {
-        const appState = SentryTransport.getAppState?.();
-        if (appState === 'background' && isBackgroundNetworkNoise(entry)) {
+        if (isNetworkNoise(entry)) {
           // Don't surface as an issue — keep a breadcrumb so context survives
           // if a real error fires later in the same session.
+          const appState = SentryTransport.getAppState?.();
           const err = entry.error as { name?: unknown; message?: unknown } | undefined;
           SentryTransport.sentry.addBreadcrumb({
             category: 'app',
-            message: `[suppressed bg network error] ${entry.message}`,
+            message: `[suppressed network error] ${entry.message}`,
             level: 'warning',
             data: {
               ...entry.context,
+              appState,
               errorName: err?.name,
               errorMessage: err?.message,
             },
@@ -122,8 +165,10 @@ export class SentryTransport implements Transport {
 
         // Capture errors as Sentry issues
         if (entry.error) {
-          SentryTransport.sentry.captureException(entry.error, {
-            extra: entry.context,
+          const { error, extra, fingerprint } = normalizeForCapture(entry);
+          SentryTransport.sentry.captureException(error, {
+            extra,
+            ...(fingerprint ? { fingerprint } : {}),
           });
         } else {
           SentryTransport.sentry.captureMessage(entry.message, {

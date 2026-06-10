@@ -92,6 +92,11 @@ export interface ConfirmationModalProps {
    * deserves its own dedicated sheet.
    */
   extraContent?: React.ReactNode;
+
+  /**
+   * Optional custom content rendered above the action buttons (e.g. reason chips).
+   */
+  children?: React.ReactNode;
 }
 
 // =============================================================================
@@ -111,6 +116,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isLoading = false,
   disabled,
   extraContent,
+  children,
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -196,6 +202,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
               {/* Optional extra content (e.g. a reason input) */}
               {extraContent}
+
+              {/* Optional custom content (e.g. reason chips) */}
+              {children}
 
               {/* Buttons */}
               <View style={styles.buttonContainer}>

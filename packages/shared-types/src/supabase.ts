@@ -1361,8 +1361,11 @@ export type Database = {
       email_broadcast_recipient: {
         Row: {
           broadcast_id: string
+          clicked_at: string | null
+          delivered_at: string | null
           email: string
           id: number
+          opened_at: string | null
           resend_id: string | null
           sent_at: string
           status: string
@@ -1370,8 +1373,11 @@ export type Database = {
         }
         Insert: {
           broadcast_id: string
+          clicked_at?: string | null
+          delivered_at?: string | null
           email: string
           id?: number
+          opened_at?: string | null
           resend_id?: string | null
           sent_at?: string
           status?: string
@@ -1379,8 +1385,11 @@ export type Database = {
         }
         Update: {
           broadcast_id?: string
+          clicked_at?: string | null
+          delivered_at?: string | null
           email?: string
           id?: number
+          opened_at?: string | null
           resend_id?: string | null
           sent_at?: string
           status?: string
@@ -2584,6 +2593,7 @@ export type Database = {
       }
       match: {
         Row: {
+          booking_captain_id: string | null
           booking_id: string | null
           cancelled_at: string | null
           closed_at: string | null
@@ -2632,6 +2642,7 @@ export type Database = {
           visible_in_groups: boolean
         }
         Insert: {
+          booking_captain_id?: string | null
           booking_id?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
@@ -2680,6 +2691,7 @@ export type Database = {
           visible_in_groups?: boolean
         }
         Update: {
+          booking_captain_id?: string | null
           booking_id?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
@@ -2728,6 +2740,13 @@ export type Database = {
           visible_in_groups?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "match_booking_captain_id_fkey"
+            columns: ["booking_captain_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "match_booking_id_fkey"
             columns: ["booking_id"]
@@ -2926,6 +2945,7 @@ export type Database = {
             | null
           checked_in_at: string | null
           created_at: string | null
+          expired_at: string | null
           feedback_completed: boolean
           feedback_reminder_sent_at: string | null
           has_paid: boolean
@@ -2941,6 +2961,8 @@ export type Database = {
           match_starting_soon_sent_at: string | null
           payment_intent_id: string | null
           player_id: string
+          requested_at: string | null
+          responded_at: string | null
           score: number | null
           showed_up: boolean | null
           star_rating: number | null
@@ -2959,6 +2981,7 @@ export type Database = {
             | null
           checked_in_at?: string | null
           created_at?: string | null
+          expired_at?: string | null
           feedback_completed?: boolean
           feedback_reminder_sent_at?: string | null
           has_paid?: boolean
@@ -2974,6 +2997,8 @@ export type Database = {
           match_starting_soon_sent_at?: string | null
           payment_intent_id?: string | null
           player_id: string
+          requested_at?: string | null
+          responded_at?: string | null
           score?: number | null
           showed_up?: boolean | null
           star_rating?: number | null
@@ -2992,6 +3017,7 @@ export type Database = {
             | null
           checked_in_at?: string | null
           created_at?: string | null
+          expired_at?: string | null
           feedback_completed?: boolean
           feedback_reminder_sent_at?: string | null
           has_paid?: boolean
@@ -3007,6 +3033,8 @@ export type Database = {
           match_starting_soon_sent_at?: string | null
           payment_intent_id?: string | null
           player_id?: string
+          requested_at?: string | null
+          responded_at?: string | null
           score?: number | null
           showed_up?: boolean | null
           star_rating?: number | null
@@ -3442,6 +3470,8 @@ export type Database = {
           edited_at: string | null
           id: string
           is_edited: boolean | null
+          message_type: string
+          metadata: Json | null
           read_by: Json | null
           reply_to_message_id: string | null
           search_vector: unknown
@@ -3457,6 +3487,8 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_edited?: boolean | null
+          message_type?: string
+          metadata?: Json | null
           read_by?: Json | null
           reply_to_message_id?: string | null
           search_vector?: unknown
@@ -3472,6 +3504,8 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_edited?: boolean | null
+          message_type?: string
+          metadata?: Json | null
           read_by?: Json | null
           reply_to_message_id?: string | null
           search_vector?: unknown
@@ -4880,6 +4914,7 @@ export type Database = {
         Row: {
           auto_create_matches: boolean
           auto_invite_players: boolean
+          availability_covered_through: string | null
           last_frequency_goal: number | null
           player_id: string
           updated_at: string
@@ -4887,6 +4922,7 @@ export type Database = {
         Insert: {
           auto_create_matches?: boolean
           auto_invite_players?: boolean
+          availability_covered_through?: string | null
           last_frequency_goal?: number | null
           player_id: string
           updated_at?: string
@@ -4894,6 +4930,7 @@ export type Database = {
         Update: {
           auto_create_matches?: boolean
           auto_invite_players?: boolean
+          availability_covered_through?: string | null
           last_frequency_goal?: number | null
           player_id?: string
           updated_at?: string
@@ -5343,6 +5380,7 @@ export type Database = {
       }
       player_sport: {
         Row: {
+          active_rating_score_id: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -5366,6 +5404,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          active_rating_score_id?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -5389,6 +5428,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          active_rating_score_id?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -5412,6 +5452,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "player_sport_active_rating_score_id_fkey"
+            columns: ["active_rating_score_id"]
+            isOneToOne: false
+            referencedRelation: "player_rating_score"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_sport_player_id_fkey"
             columns: ["player_id"]
@@ -5520,6 +5567,7 @@ export type Database = {
           freeze_cap: number
           freeze_inventory: number
           last_checkin_week_start: string | null
+          last_evaluated_week_start: string | null
           longest_streak: number
           player_id: string
           updated_at: string
@@ -5530,6 +5578,7 @@ export type Database = {
           freeze_cap?: number
           freeze_inventory?: number
           last_checkin_week_start?: string | null
+          last_evaluated_week_start?: string | null
           longest_streak?: number
           player_id: string
           updated_at?: string
@@ -5540,6 +5589,7 @@ export type Database = {
           freeze_cap?: number
           freeze_inventory?: number
           last_checkin_week_start?: string | null
+          last_evaluated_week_start?: string | null
           longest_streak?: number
           player_id?: string
           updated_at?: string
@@ -7980,6 +8030,38 @@ export type Database = {
         }
         Relationships: []
       }
+      summer_league_interest: {
+        Row: {
+          created_at: string
+          id: string
+          locale: string | null
+          player_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locale?: string | null
+          player_id: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locale?: string | null
+          player_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summer_league_interest_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_co_organizers: {
         Row: {
           added_at: string
@@ -8750,6 +8832,10 @@ export type Database = {
         Args: { p_player_rating_score_id: string }
         Returns: number
       }
+      count_player_sessions_for_week: {
+        Args: { p_player_id: string; p_week_start: string }
+        Returns: number
+      }
       count_valid_proofs_for_level: {
         Args: {
           p_player_rating_score_id: string
@@ -8780,7 +8866,19 @@ export type Database = {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
       }
+      evaluate_weekly_goals: {
+        Args: never
+        Returns: {
+          hits: number
+          misses: number
+          players_evaluated: number
+          rescued: number
+          resets: number
+          weeks_evaluated: number
+        }[]
+      }
       expire_old_reference_requests: { Args: never; Returns: number }
+      expire_stale_match_invites: { Args: never; Returns: number }
       find_direct_conversation: {
         Args: { p_player1: string; p_player2: string }
         Returns: string
@@ -8926,14 +9024,37 @@ export type Database = {
         }[]
       }
       get_auto_invite_candidates: {
-        Args: {
-          p_exclude?: string[]
-          p_match_id: string
-          p_max?: number
-          p_weekly_cap?: number
-        }
+        Args: { p_match_id: string; p_max?: number }
         Returns: {
           player_id: string
+        }[]
+      }
+      get_auto_invite_funnel: {
+        Args: {
+          p_end_date: string
+          p_is_auto?: boolean
+          p_settle_hours?: number
+          p_start_date: string
+        }
+        Returns: {
+          accepted: number
+          decline_reasons: Json
+          declined: number
+          invites_in_flight: number
+          invites_sent: number
+          invites_settled: number
+          matches_created: number
+          median_response_hours: number
+          no_response: number
+          no_response_expired: number
+          requests_approved: number
+          requests_pending: number
+          requests_refused: number
+          requests_total: number
+          responded: number
+          sport_id: string
+          sport_name: string
+          time_suggested: number
         }[]
       }
       get_availability_refresh_eligible_users: {
@@ -8980,9 +9101,17 @@ export type Database = {
         Args: {
           p_active_since?: string
           p_city?: string
-          p_locale?: string
-          p_only_subscribers?: boolean
-          p_sport_id?: string
+          p_country?: string
+          p_genders?: string[]
+          p_inactive_before?: string
+          p_joined_before?: string
+          p_joined_since?: string
+          p_locales?: string[]
+          p_max_age?: number
+          p_min_age?: number
+          p_province?: string
+          p_sport_ids?: string[]
+          p_subscription?: string
         }
         Returns: {
           email: string
@@ -9000,17 +9129,21 @@ export type Database = {
         }[]
       }
       get_check_in_context: {
-        Args: never
+        Args: { p_timezone?: string }
         Returns: {
+          availability_covered_through: string
+          checkin_window: Json
           current_streak: number
           freeze_cap: number
           freeze_inventory: number
+          frequency_already_set_this_week: boolean
           goals_hit_last_4_weeks: boolean[]
           is_pending_check_in: boolean
           last_frequency_goal: number
           last_week_frequency_goal: number
           last_week_sessions_played: number
           longest_streak: number
+          timezone: string
         }[]
       }
       get_compatible_players: {
@@ -9181,6 +9314,33 @@ export type Database = {
           date: string
           matches_created: number
           matches_filled: number
+          sport_id: string
+          sport_name: string
+        }[]
+      }
+      get_match_quality_analytics: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          date: string
+          feedback_expected: number
+          feedback_present: number
+          is_auto_generated: boolean
+          matches_all_checked_in: number
+          matches_all_feedback: number
+          matches_cancelled: number
+          matches_created: number
+          matches_fell_through: number
+          matches_filled: number
+          matches_mutual_cancel: number
+          matches_pending: number
+          matches_played: number
+          matches_quality: number
+          played_late: number
+          played_low_rating: number
+          played_no_show: number
+          played_reported: number
+          rating_count: number
+          rating_sum: number
           sport_id: string
           sport_name: string
         }[]
@@ -10068,6 +10228,8 @@ export type Database = {
       get_utm_signup_stats: {
         Args: { p_days?: number }
         Returns: {
+          match_creators: number
+          match_players: number
           matches_created: number
           matches_played: number
           signups: number
@@ -10362,6 +10524,13 @@ export type Database = {
       player_responsiveness_score: {
         Args: { p_player_id: string; p_window_days?: number }
         Returns: number
+      }
+      players_needing_checkin_reminder: {
+        Args: { p_dedupe_hours?: number; p_target_local_hour?: number }
+        Returns: {
+          player_id: string
+          preferred_locale: string
+        }[]
       }
       players_needing_streak_reset: {
         Args: never
@@ -11302,6 +11471,12 @@ export type Database = {
         | "court_unavailable"
         | "emergency"
         | "other"
+        | "bad_timing"
+        | "too_far"
+        | "skill_mismatch"
+        | "dont_know_player"
+        | "cost"
+        | "changed_mind"
       conversation_type:
         | "direct"
         | "group"
@@ -11911,6 +12086,12 @@ export const Constants = {
         "court_unavailable",
         "emergency",
         "other",
+        "bad_timing",
+        "too_far",
+        "skill_mismatch",
+        "dont_know_player",
+        "cost",
+        "changed_mind",
       ],
       conversation_type: [
         "direct",

@@ -16,14 +16,12 @@ export default async function AdminEmailsPage() {
   await requireAdminRole(['super_admin']);
   const t = await getTranslations('admin.emails');
 
-  const adminDb = createServiceRoleClient();
-  const { data: sports } = await adminDb
+  // Active sports power the segment builder's sport filter.
+  const { data: sports } = await createServiceRoleClient()
     .from('sport')
     .select('id, display_name')
     .eq('is_active', true)
-    .order('display_name', { ascending: true });
-
-  const sportOptions = (sports ?? []).map(s => ({ id: s.id, name: s.display_name }));
+    .order('display_name');
 
   return (
     <div className="flex flex-col w-full gap-8">
@@ -32,7 +30,7 @@ export default async function AdminEmailsPage() {
         <p className="text-muted-foreground mt-2">{t('description')}</p>
       </div>
 
-      <AdminEmailsView sports={sportOptions} />
+      <AdminEmailsView sports={sports ?? []} />
     </div>
   );
 }

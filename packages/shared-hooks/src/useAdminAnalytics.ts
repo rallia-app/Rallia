@@ -32,6 +32,8 @@ import {
   createUtmCampaign,
   archiveUtmCampaign,
   getMatchFillAnalytics,
+  getMatchQualityAnalytics,
+  getAutoInviteFunnel,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -48,6 +50,8 @@ import {
   type UtmCampaign,
   type UtmTotalsComparison,
   type MatchFillPoint,
+  type MatchQualityPoint,
+  type AutoInviteFunnelPoint,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -193,6 +197,39 @@ function getCached<T>(key: string, maxAge: number): T | null {
 
 function setCache<T>(key: string, data: T): void {
   cache.set(key, { data, timestamp: Date.now() });
+}
+
+// =============================================================================
+// POLLING
+// =============================================================================
+
+/**
+ * Polling effect that pauses while the tab is backgrounded and refetches on
+ * refocus — stops a forgotten admin tab from hammering the API 24/7. Pass
+ * `null`/`0` to disable.
+ */
+function usePollingEffect(
+  fetchData: () => void | Promise<void>,
+  interval: number | null | undefined
+): void {
+  useEffect(() => {
+    if (!interval || interval <= 0) return;
+    if (typeof document === 'undefined') return;
+
+    const handle = setInterval(() => {
+      if (!document.hidden) void fetchData();
+    }, interval);
+
+    const onVisibility = () => {
+      if (!document.hidden) void fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(handle);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [interval, fetchData]);
 }
 
 // =============================================================================
@@ -958,12 +995,7 @@ export function useUtmLandings(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [window, demo, compare]);
 
-  const interval = options.refetchInterval;
-  useEffect(() => {
-    if (!interval || interval <= 0) return;
-    const handle = setInterval(fetchData, interval);
-    return () => clearInterval(handle);
-  }, [interval, fetchData]);
+  usePollingEffect(fetchData, options.refetchInterval);
 
   return { data, loading, error, lastFetchedAt, refetch: fetchData };
 }
@@ -1008,12 +1040,7 @@ export function useUtmTotalsComparison(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
-  const interval = options.refetchInterval;
-  useEffect(() => {
-    if (!interval || interval <= 0) return;
-    const handle = setInterval(fetchData, interval);
-    return () => clearInterval(handle);
-  }, [interval, fetchData]);
+  usePollingEffect(fetchData, options.refetchInterval);
 
   return { data, loading, error, refetch: fetchData };
 }
@@ -1064,12 +1091,7 @@ export function useUtmSignupStats(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
-  const interval = options.refetchInterval;
-  useEffect(() => {
-    if (!interval || interval <= 0) return;
-    const handle = setInterval(fetchData, interval);
-    return () => clearInterval(handle);
-  }, [interval, fetchData]);
+  usePollingEffect(fetchData, options.refetchInterval);
 
   return { stats, loading, error, lastFetchedAt, refetch: fetchData };
 }
@@ -1182,6 +1204,96 @@ export function useMatchFillAnalytics(days: number = 30): {
   return { data, loading, error, refetch: fetchData };
 }
 
+// =============================================================================
+// MATCH QUALITY ANALYTICS
+// =============================================================================
+
+export function useMatchQualityAnalytics(days: number = 30): {
+  data: MatchQualityPoint[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<MatchQualityPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const result = await getMatchQualityAnalytics(startDate, endDate);
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching match quality analytics:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+// =============================================================================
+// AUTO-GENERATION INVITATION FUNNEL
+// =============================================================================
+
+export function useAutoInviteFunnel(
+  days: number = 14,
+  settleHours: number = 48,
+  isAuto: boolean | null = true
+): {
+  data: AutoInviteFunnelPoint[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<AutoInviteFunnelPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const result = await getAutoInviteFunnel(startDate, endDate, settleHours, isAuto);
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching auto invite funnel:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days, settleHours, isAuto]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, settleHours, isAuto]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
 // Re-export types for convenience
 export type {
   KPISummary,
@@ -1200,6 +1312,8 @@ export type {
   UtmCampaign,
   UtmTotalsComparison,
   MatchFillPoint,
+  MatchQualityPoint,
+  AutoInviteFunnelPoint,
 } from '@rallia/shared-services';
 
 export default useAdminAnalytics;

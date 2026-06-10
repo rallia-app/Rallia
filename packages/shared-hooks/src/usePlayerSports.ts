@@ -28,6 +28,8 @@ export interface PlayerSport {
   sport_id: string;
   is_primary: boolean;
   is_active: boolean;
+  /** The player_rating_score the player has marked active for this sport (null = none chosen). */
+  active_rating_score_id?: string | null;
   preferred_match_duration?: string;
   preferred_match_type?: string;
   preferred_facility_id?: string | null;
@@ -82,6 +84,7 @@ async function fetchPlayerSportsData(playerId: string): Promise<PlayerSport[]> {
       sport_id,
       is_primary,
       is_active,
+      active_rating_score_id,
       preferred_match_duration,
       preferred_match_type,
       preferred_facility_id,

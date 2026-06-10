@@ -40,6 +40,8 @@ export async function getMessages(
       is_edited,
       edited_at,
       deleted_at,
+      message_type,
+      metadata,
       sender:player!message_sender_id_fkey (
         id,
         profile (
@@ -150,6 +152,8 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
       is_edited,
       edited_at,
       deleted_at,
+      message_type,
+      metadata,
       sender:player!message_sender_id_fkey (
         id,
         profile (

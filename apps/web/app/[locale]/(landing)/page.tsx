@@ -15,7 +15,7 @@ import {
   Users,
   UserX,
 } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { buildPageMetadata } from '@/lib/seo';
 import { JsonLd, faqPageJsonLd } from '@/components/json-ld';
@@ -43,7 +43,9 @@ export async function generateMetadata({
 
 const FAQ_KEYS = ['cost', 'sports', 'matching', 'privacy', 'getStarted', 'platforms'] as const;
 
-export default async function Home() {
+export default async function Home({ params }: { params: Promise<{ locale: Locale }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations('home');
 
   const faqItems = FAQ_KEYS.map(key => ({

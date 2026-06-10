@@ -9,8 +9,9 @@
  * Inference order (lowest precedence wins):
  *   1. Raw `utm_*` query params (canonical — used as-is when present)
  *   2. Paid-ad click ID present → infer source+medium
- *   3. `document.referrer` host matches a known network → infer source+medium
- *   4. `document.referrer` is any other external host → source='referral',
+ *   3. Offline channel `?type` tag (flyer/poster/social) → infer source+medium
+ *   4. `document.referrer` host matches a known network → infer source+medium
+ *   5. `document.referrer` is any other external host → source='referral',
  *      medium='referral', hostname captured as `referrer_host`
  *
  * Returns `null` only when there's literally nothing to record (no UTM, no
@@ -90,7 +91,21 @@ export function inferInboundAttribution(
     }
   }
 
-  // Tier 3 + 4: referrer-based inference.
+  // Tier 3: offline channels self-tag via ?type on the QR (flyer/poster/social).
+  // They land with no UTM, no click ID, and no referrer, so synthesize a
+  // canonical source/medium from the type param.
+  if (!result.utm_source) {
+    const type = params.get('type');
+    if (type === 'flyer' || type === 'poster') {
+      result.utm_source = type;
+      result.utm_medium = 'qr';
+    } else if (type === 'social') {
+      result.utm_source = 'social';
+      result.utm_medium = 'social';
+    }
+  }
+
+  // Tier 4 + 5: referrer-based inference.
   if (!result.utm_source && referrer) {
     try {
       const refUrl = new URL(referrer);

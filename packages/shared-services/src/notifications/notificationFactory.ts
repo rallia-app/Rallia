@@ -388,7 +388,6 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 
   // Low - informational
   system: 'low',
-  admin_broadcast: 'high',
 
   // Feedback - normal priority
   feedback_request: 'normal',
@@ -414,6 +413,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   booking_cancelled_by_org: 'high',
   membership_approved: 'normal',
   org_announcement: 'normal',
+  admin_broadcast: 'normal',
 
   // Program notifications
   program_registration_confirmed: 'normal',
@@ -477,7 +477,6 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Payment update',
   support: 'Message from Rallia',
   system: 'Rallia Update',
-  admin_broadcast: 'Rallia Announcement',
   feedback_request: 'How was your game?',
   feedback_reminder: 'Your game still needs a score',
   score_confirmation: 'Confirm your score',
@@ -501,6 +500,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   booking_cancelled_by_org: 'Booking Cancelled',
   membership_approved: 'Membership Approved',
   org_announcement: 'Announcement',
+  admin_broadcast: 'Announcement',
 
   // Program notifications
   program_registration_confirmed: 'Registration Confirmed',
@@ -572,7 +572,6 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Your payment status has been updated. Tap to view details.',
   support: 'Our support team has sent you a message. Tap to read.',
   system: 'We have an update for you. Tap to learn more.',
-  admin_broadcast: 'You have a new announcement from Rallia.',
   feedback_request:
     "Submit your score and rate your {sportName} game with {opponentNames} while it's fresh!",
   feedback_reminder:
@@ -603,6 +602,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     'Your booking for {resourceName} on {bookingDate} has been cancelled by the organization.',
   membership_approved: 'Your membership at {organizationName} has been approved!',
   org_announcement: '{organizationName}: {message}',
+  admin_broadcast: '{message}',
 
   // Program notifications
   program_registration_confirmed:

@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { defaultLocale, locales, type Locale } from '@rallia/shared-translations';
 
 import { getAllGuideSlugs, getGuideBySlug } from '../_content';
 
-import { JsonLd, articleJsonLd } from '@/components/json-ld';
+import { JsonLd, articleJsonLd, breadcrumbJsonLd } from '@/components/json-ld';
 import {
   buildAlternates,
   ogAlternateLocales,
@@ -71,6 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function GuidePage({ params }: Props) {
   const { locale, slug } = await params;
+  setRequestLocale(locale);
   const guide = getGuideBySlug(slug);
   if (!guide) notFound();
 
@@ -78,8 +80,19 @@ export default async function GuidePage({ params }: Props) {
   const url = `${SITE_URL}/${locale}/guides/${slug}`;
   const { image } = guide.meta;
 
+  // Home › Guides › Article. Rendered here (not in the shared client
+  // BreadcrumbsJsonLd) so the article title can be included server-side.
+  const tNav = await getTranslations({ locale, namespace: 'home.header.nav' });
+  const tGuides = await getTranslations({ locale, namespace: 'seo.guides' });
+  const breadcrumb = breadcrumbJsonLd([
+    { name: tNav('home'), url: `${SITE_URL}/${locale}` },
+    { name: tGuides('title'), url: `${SITE_URL}/${locale}/guides` },
+    { name: content.title, url },
+  ]);
+
   return (
     <>
+      <JsonLd data={breadcrumb} />
       <JsonLd
         data={articleJsonLd({
           url,

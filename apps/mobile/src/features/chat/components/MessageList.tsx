@@ -30,6 +30,7 @@ import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services
 
 import { useThemeStyles } from '#/hooks';
 
+import { CourtSystemMessageCard } from './CourtSystemMessageCard';
 import { MessageBubble } from './MessageBubble';
 
 export interface MessageListRef {
@@ -253,6 +254,15 @@ function MessageListComponent(
       }
 
       if (item.message) {
+        // System cards (court booking prompt / booked) render full-width,
+        // not as a sender bubble.
+        if (
+          item.message.message_type === 'court_booking_prompt' ||
+          item.message.message_type === 'court_booked'
+        ) {
+          return <CourtSystemMessageCard message={item.message} />;
+        }
+
         const messageReactions = reactions.get(item.message.id) || [];
         const isHighlighted = highlightedSet.has(item.message.id);
         const isCurrentHighlight = item.message.id === currentHighlightedId;

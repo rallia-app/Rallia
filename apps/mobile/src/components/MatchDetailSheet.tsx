@@ -93,6 +93,7 @@ import {
   listTimeSuggestionsForMatch,
   respondToTimeSuggestion,
   type MatchTimeSuggestionWithSuggester,
+  type DeclineReason,
 } from '@rallia/shared-services';
 import { useStripe } from '@stripe/stripe-react-native';
 import type { PlayerWithProfile, OpponentForFeedback } from '@rallia/shared-types';
@@ -818,6 +819,7 @@ export const MatchDetailSheet: React.FC = () => {
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
   const [showDeclineInviteModal, setShowDeclineInviteModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState<DeclineReason | null>(null);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
@@ -1535,6 +1537,7 @@ export const MatchDetailSheet: React.FC = () => {
   const handleDeclineInvite = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
+    setDeclineReason(null);
     setShowDeclineInviteModal(true);
   }, [selectedMatch]);
 
@@ -1542,12 +1545,14 @@ export const MatchDetailSheet: React.FC = () => {
   const handleConfirmDeclineInvite = useCallback(() => {
     if (!playerId) return;
     Analytics.matchDeclined({
+      match_id: selectedMatch?.id,
       sport_id: selectedMatch?.sport?.id ?? 'unknown',
       sport_name: selectedMatch?.sport?.name ?? 'unknown',
       is_auto_generated: selectedMatch?.is_auto_generated ?? false,
+      decline_reason: declineReason ?? undefined,
     });
-    declineInvite(playerId);
-  }, [playerId, declineInvite, selectedMatch]);
+    declineInvite({ playerId, reason: declineReason });
+  }, [playerId, declineInvite, selectedMatch, declineReason]);
 
   // Handle open in maps
   const handleOpenMaps = useCallback(() => {
@@ -3435,6 +3440,11 @@ export const MatchDetailSheet: React.FC = () => {
           </View>
         </Animated.View>
 
+        {/* Available Courts Section — surfaced high so any viewer sees real-time
+            court availability without scrolling. Renders only when the facility
+            has bookable courts at game time and no court is booked yet. */}
+        <MatchAvailableCourtsSection match={match} isCreator={isCreator} animationDelay={100} />
+
         {/* Score Section - promoted to top for completed matches */}
         {hasResult &&
           match.result &&
@@ -5013,10 +5023,6 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Available Courts Section — host-only CTA when facility has real-time
-            availability and no court is booked yet. */}
-        <MatchAvailableCourtsSection match={match} isCreator={isCreator} />
-
         {/* Match Cost Section — merged cost breakdown + reimbursement controls */}
         {hasCostData && (
           <Animated.View
@@ -5472,23 +5478,44 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
             {t('matchDetail.provideFeedbackOnly')}
           </Button>
         )}
-        <View style={styles.footerActionsColumn}>
+        <View
+          style={[
+            styles.footerActionsColumn,
+            needsScoreConfirmAndFeedback && hasTwoScoreActions && styles.footerActionsColumnStacked,
+          ]}
+        >
           {canSuggestTime && (
-            <TouchableOpacity
+            <Button
+              variant="secondary"
               onPress={handleOpenSuggestTime}
               style={styles.suggestTimeButton}
-              activeOpacity={0.7}
-              accessibilityRole="button"
+              themeColors={{
+                primary: isDark ? accent[400] : accent[500],
+                primaryForeground: base.white,
+                buttonActive: isDark ? accent[400] : accent[500],
+                buttonInactive: neutral[300],
+                buttonTextActive: base.white,
+                buttonTextInactive: neutral[500],
+                text: colors.text,
+                textMuted: colors.textMuted,
+                border: colors.border,
+                background: colors.cardBackground,
+              }}
+              isDark={isDark}
+              leftIcon={
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={isDark ? accent[400] : accent[500]}
+                />
+              }
             >
-              <Ionicons name="time-outline" size={16} color={accent[500]} />
-              <Text size="sm" weight="semibold" color={accent[500]}>
-                {myPendingSuggestion
-                  ? t('matchActions.viewYourSuggestion', {
-                      time: myPendingSuggestion.suggested_start_time.slice(0, 5),
-                    })
-                  : t('matchActions.suggestDifferentTime')}
-              </Text>
-            </TouchableOpacity>
+              {myPendingSuggestion
+                ? t('matchActions.viewYourSuggestion', {
+                    time: myPendingSuggestion.suggested_start_time.slice(0, 5),
+                  })
+                : t('matchActions.suggestDifferentTime')}
+            </Button>
           )}
           <View
             style={[
@@ -5662,7 +5689,10 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
       {/* Decline Invitation Confirmation Modal */}
       <ConfirmationModal
         visible={showDeclineInviteModal}
-        onClose={() => setShowDeclineInviteModal(false)}
+        onClose={() => {
+          setShowDeclineInviteModal(false);
+          setDeclineReason(null);
+        }}
         onConfirm={handleConfirmDeclineInvite}
         title={t('matchActions.declineInviteConfirmTitle')}
         message={t('matchActions.declineInviteConfirmMessage')}
@@ -5670,7 +5700,55 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         cancelLabel={t('common.goBack')}
         destructive
         isLoading={isDecliningInvite}
-      />
+      >
+        <View style={{ width: '100%', marginBottom: spacingPixels[4] }}>
+          <Text
+            size="sm"
+            weight="medium"
+            style={{
+              textAlign: 'center',
+              marginBottom: spacingPixels[2],
+              color: isDark ? neutral[400] : neutral[500],
+            }}
+          >
+            {t('matchActions.declineReasonPrompt')}
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: spacingPixels[2],
+            }}
+          >
+            {(
+              [
+                'bad_timing',
+                'too_far',
+                'skill_mismatch',
+                'dont_know_player',
+                'cost',
+                'changed_mind',
+                'other',
+              ] as const
+            ).map(reason => (
+              <Button
+                key={reason}
+                variant={declineReason === reason ? 'primary' : 'outline'}
+                size="sm"
+                isDark={isDark}
+                disabled={isDecliningInvite}
+                onPress={() => {
+                  selectionHaptic();
+                  setDeclineReason(prev => (prev === reason ? null : reason));
+                }}
+              >
+                {t(`matchActions.declineReasons.${reason}`)}
+              </Button>
+            ))}
+          </View>
+        </View>
+      </ConfirmationModal>
 
       {/* Dispute Score Confirmation Modal */}
       <ConfirmationModal
@@ -6292,14 +6370,18 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     minWidth: 0,
   },
-  // Tertiary "Suggest a different time" link — full-width tappable row,
-  // with a touch of breathing room before the primary CTA row below.
+  // When the sticky footer flips to a column (feedback stacked above the two
+  // score CTAs), this wrapper must size to its content vertically. Keeping
+  // `flex: 1` here would make it claim vertical space with flexBasis: 0 and
+  // collapse — since the parent has no fixed height — squishing the button row
+  // inside. Full width still comes from the parent's `alignItems: 'stretch'`.
+  footerActionsColumnStacked: {
+    flex: 0,
+    width: '100%',
+  },
+  // Secondary "Suggest a different time" button — sits above the primary CTA
+  // row with a touch of breathing room. Layout/padding handled by Button itself.
   suggestTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[2],
   },
   matchEndedContainer: {

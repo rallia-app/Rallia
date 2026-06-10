@@ -7,9 +7,9 @@ import { getProfilePictureUrl } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
 import {
-  attachAvailableCourtCounts,
-  fetchAvailableCourtCountsForMatches,
-  applyCourtCounts,
+  attachAvailableCourtSlots,
+  fetchAvailableCourtSlotsForMatches,
+  applyCourtSlots,
 } from './availableCourts';
 import { Logger } from '../logger';
 import {
@@ -451,6 +451,12 @@ export async function getMatchWithDetails(matchId: string) {
     });
   }
 
+  // Attach open-court availability (count + raw rows) so MatchDetailSheet's
+  // available-courts section can render tiles inline. This path replaces the
+  // sheet's match on refetch, so without it the inline slots from the list
+  // fetch would be wiped.
+  await attachAvailableCourtSlots([data as unknown as MatchWithDetails]);
+
   return data;
 }
 
@@ -622,7 +628,7 @@ export async function getMatchesWithDetails(
   // Attach open-court counts for unreserved future matches so MatchCard can
   // surface a "N courts available" chip (parity with suggestion cards). A
   // failed/empty lookup simply leaves the field undefined — the chip hides.
-  await attachAvailableCourtCounts(enrichedData);
+  await attachAvailableCourtSlots(enrichedData);
 
   return enrichedData;
 }
@@ -1220,6 +1226,7 @@ export interface JoinMatchResult {
  * Join a match as a participant.
  * - For direct join mode: Creates participant with 'joined' status
  * - For request join mode: Creates participant with 'requested' status (pending host approval)
+ * - Accepting a pending invitation: lands as 'joined' regardless of join mode
  *
  * @throws Error if match is full, already joined, or match not found
  */
@@ -1238,6 +1245,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       end_time,
       timezone,
       created_by,
+      facility_id,
+      court_status,
       preferred_opponent_gender,
       sport:sport_id (name),
       participants:match_participant (
@@ -1340,6 +1349,10 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   if (availableSpots <= 0) {
     // Match is full - add to waitlist
     participantStatus = 'waitlisted';
+  } else if (existingParticipant?.status === 'pending') {
+    // Accepting a host-initiated invitation joins directly — the invite is the
+    // approval, so no second hop through 'requested' even in request mode
+    participantStatus = 'joined';
   } else if (match.join_mode === 'request') {
     // Match has spots but requires host approval
     participantStatus = 'requested';
@@ -1482,24 +1495,34 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       // Calculate spots left after this player joined
       const spotsLeft = availableSpots - 1;
 
+      // When this join fills a facility-linked match with no court reserved, the
+      // server-side "book your court" prompt (Rallia system message, posted by a
+      // trigger on match_participant) becomes the canonical fill notification.
+      // Skip the duplicate body_full "match is full" push in that case so
+      // participants don't get two near-simultaneous notifications.
+      const bookingPromptWillNotify =
+        spotsLeft === 0 && !!match.facility_id && match.court_status !== 'reserved';
+
       // Notify all users (fire and forget - don't block on notification)
-      notifyPlayerJoined(
-        uniqueUserIds,
-        matchId,
-        playerName,
-        sportName,
-        formattedDate,
-        locationName,
-        spotsLeft,
-        {
-          playerAvatarUrl,
-          locationAddress: matchDetails?.location_address ?? undefined,
-          latitude: matchDetails?.custom_latitude ?? undefined,
-          longitude: matchDetails?.custom_longitude ?? undefined,
-        }
-      ).catch(err => {
-        Logger.error('Failed to send player joined notifications:', err);
-      });
+      if (!bookingPromptWillNotify) {
+        notifyPlayerJoined(
+          uniqueUserIds,
+          matchId,
+          playerName,
+          sportName,
+          formattedDate,
+          locationName,
+          spotsLeft,
+          {
+            playerAvatarUrl,
+            locationAddress: matchDetails?.location_address ?? undefined,
+            latitude: matchDetails?.custom_latitude ?? undefined,
+            longitude: matchDetails?.custom_longitude ?? undefined,
+          }
+        ).catch(err => {
+          Logger.error('Failed to send player joined notifications:', err);
+        });
+      }
     }
 
     // Match chat membership is synced by DB triggers on match_participant.
@@ -2275,9 +2298,20 @@ export async function cancelInvitation(
  * @param playerId - The ID of the player declining the invitation
  * @throws Error if participant not found or not in 'pending' status
  */
+/** Invitee-decline reasons (subset of cancellation_reason_enum). Optional. */
+export type DeclineReason =
+  | 'bad_timing'
+  | 'too_far'
+  | 'skill_mismatch'
+  | 'dont_know_player'
+  | 'cost'
+  | 'changed_mind'
+  | 'other';
+
 export async function declineInvitation(
   matchId: string,
-  playerId: string
+  playerId: string,
+  reason?: DeclineReason | null
 ): Promise<MatchParticipant> {
   // Find the player's pending invitation
   const { data: participant, error: participantError } = await supabase
@@ -2296,11 +2330,12 @@ export async function declineInvitation(
     throw new Error('No pending invitation to decline');
   }
 
-  // Update the participant status to 'declined'
+  // Update the participant status to 'declined', capturing why (optional).
   const { data: updatedParticipant, error: updateError } = await supabase
     .from('match_participant')
     .update({
       status: 'declined',
+      cancellation_reason: reason ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', participant.id)
@@ -2761,9 +2796,10 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
   }
 
   // Kick off the open-court snapshot read now so it overlaps the ratings query
-  // and the enrichment below instead of adding a round-trip to the tail. It only
-  // needs the raw match rows; applied once the ordered list is built.
-  const courtCountsPromise = fetchAvailableCourtCountsForMatches(matchesData);
+  // and the enrichment below instead of adding a round-trip to the tail. Returns
+  // full snapshot rows so both the card chip and the detail sheet's available-
+  // courts tiles can read them inline; applied once the ordered list is built.
+  const courtSlotsPromise = fetchAvailableCourtSlotsForMatches(matchesData);
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
@@ -2879,9 +2915,9 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
 
-  // Apply the open-court counts kicked off above so MatchCard can show a
+  // Apply the open-court availability kicked off above so MatchCard can show a
   // "N courts available" chip for unreserved future matches.
-  applyCourtCounts(orderedMatches, await courtCountsPromise);
+  applyCourtSlots(orderedMatches, await courtSlotsPromise);
 
   if (isScoredPath) {
     return {
@@ -3231,10 +3267,10 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
     return match;
   });
 
-  // Attach open-court counts so MatchCard can show a "N courts available" chip
+  // Attach open-court availability so MatchCard can show a "N courts available" chip
   // for unreserved future matches (parity with suggestion cards). Past matches
   // in this list are naturally skipped (future-only inside the helper).
-  await attachAvailableCourtCounts(enrichedData);
+  await attachAvailableCourtSlots(enrichedData);
 
   return {
     matches: enrichedData as MatchWithDetails[],
@@ -3530,9 +3566,10 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   }
 
   // Kick off the open-court snapshot read now so it overlaps the ratings query
-  // and the enrichment below instead of adding a round-trip to the tail. It only
-  // needs the raw match rows; applied once the ordered list is built.
-  const courtCountsPromise = fetchAvailableCourtCountsForMatches(matchesData);
+  // and the enrichment below instead of adding a round-trip to the tail. Returns
+  // full snapshot rows so both the card chip and the detail sheet's available-
+  // courts tiles can read them inline; applied once the ordered list is built.
+  const courtSlotsPromise = fetchAvailableCourtSlotsForMatches(matchesData);
 
   // Fetch player ratings for the match's sport (for displaying in request cards)
   // All matches in this result are for the same sport (params.sportId)
@@ -3647,9 +3684,9 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
 
-  // Apply the open-court counts kicked off above so MatchCard can show a
+  // Apply the open-court availability kicked off above so MatchCard can show a
   // "N courts available" chip for unreserved future matches.
-  applyCourtCounts(orderedMatches, await courtCountsPromise);
+  applyCourtSlots(orderedMatches, await courtSlotsPromise);
 
   return {
     matches: orderedMatches,

@@ -39,6 +39,7 @@ import { ReportIssueActionSheet } from '#/features/matches/components/feedback-s
 import { ExternalBookingActionSheet } from '#/features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '#/features/facilities/components/CourtBookingSheet';
 import { BookingConfirmationActionSheet } from '#/features/facilities/components/BookingConfirmationSheet';
+import { MatchBookingConfirmationActionSheet } from '#/features/matches/components/MatchBookingConfirmationSheet';
 import { ReportFacilityActionSheet } from '#/features/facilities/components/ReportFacilitySheet';
 // Booking components
 import { BookingDetailActionSheet } from '#/features/bookings/components/BookingDetailSheet';
@@ -354,6 +355,22 @@ declare module 'react-native-actions-sheet' {
         slotDate?: string;
         onConfirm?: () => void;
         onDecline?: () => void;
+      };
+    }>;
+    'match-booking-confirmation': SheetDefinition<{
+      payload: {
+        facilityName: string;
+        courtLabel?: string;
+        dateLabel?: string;
+        timeLabel?: string;
+        priceLabel?: string;
+        /** True when confirming moves the match to a different facility (nearby booking). */
+        isRelocation?: boolean;
+        onConfirm?: () => void | Promise<void>;
+        onDecline?: () => void;
+        /** Always called when the sheet closes (incl. swipe / backdrop) so the
+         *  provider can reset its pending-booking state. */
+        onDismiss?: () => void;
       };
     }>;
     'court-booking': SheetDefinition<{
@@ -793,6 +810,7 @@ export const Sheets = () => {
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,
         'booking-confirmation': BookingConfirmationActionSheet,
+        'match-booking-confirmation': MatchBookingConfirmationActionSheet,
         'court-booking': CourtBookingActionSheet,
         'report-facility': ReportFacilityActionSheet,
         'image-picker': ImagePickerActionSheet,

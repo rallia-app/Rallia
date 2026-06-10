@@ -22,7 +22,7 @@ import * as Analytics from '#/services/analytics';
  * AsyncStorage key written by pre-onboarding's SportStep (via SportContext).
  * Kept in sync with `GUEST_SPORTS_STORAGE_KEY` in apps/mobile/src/context/SportContext.tsx.
  */
-const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
+export const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
 
 interface GuestSportEntry {
   id: string;
@@ -134,7 +134,7 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   tennisRatingId: null,
   pickleballRatingId: null,
   playingHand: 'right',
-  maxTravelDistance: 20,
+  maxTravelDistance: 10,
   matchDuration: '90', // Legacy field (90 = 1.5h)
   tennisMatchDuration: '90',
   pickleballMatchDuration: '90',

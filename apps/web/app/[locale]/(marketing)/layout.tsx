@@ -1,9 +1,22 @@
+import type { Locale } from 'next-intl';
+import { setRequestLocale } from 'next-intl/server';
+
 import { BreadcrumbsJsonLd } from '@/components/breadcrumbs-json-ld';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { SmartAppBanner } from '@/components/smart-app-banner';
 
-export default function MarketingLayout({ children }: { children: React.ReactNode }) {
+export default async function MarketingLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: Locale }>;
+}) {
+  // Prime the locale so the shared Footer (and these pages) render statically.
+  const { locale } = await params;
+  setRequestLocale(locale);
+
   return (
     <>
       <BreadcrumbsJsonLd />

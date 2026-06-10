@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { errorHaptic, mediumHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
+import type { DayEnum } from '@rallia/shared-types';
 
 import * as Analytics from '#/services/analytics';
 
@@ -27,6 +28,7 @@ import {
   type CheckInResult,
   type HourGrid,
 } from './api';
+import { countCellsForDays } from './window';
 
 // Analytics step labels, keyed by step index. Availability leads so the player
 // updates their schedule first (the wizard's primary goal); the recap + goal
@@ -42,9 +44,10 @@ const STEP_NAMES: Record<WizardStep, string> = {
 // avoid nagging right after a dismissal.
 export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 
-// Same as MIN_AVAILABILITIES in onboarding — the wizard requires at least
-// 6 free hours per week so the match-creation logic has something to work with.
-export const MIN_AVAILABILITY_CELLS = 6;
+// The rolling check-in only edits a 4-day window, so the floor is lower than
+// onboarding's 6/week — a few slots across the window is enough for the
+// match-creation logic to have something to work with.
+export const MIN_AVAILABILITY_CELLS = 3;
 
 export type WizardStep = 1 | 2 | 3;
 const TOTAL_STEPS: WizardStep = 3;
@@ -82,6 +85,13 @@ export interface UseWeeklyCheckInWizard {
 
   // Validation per step (gates the Continue CTA)
   canAdvance: boolean;
+
+  /** The window's weekdays (today + next 3), from the server context. */
+  windowDays: DayEnum[];
+  /** Selected cells within the window — the real gate for step 1's CTA. */
+  windowCellCount: number;
+  /** Whether to show the "sessions this week" question (once per ISO week). */
+  showFrequencyStep: boolean;
 
   /** Epoch ms when the wizard opened (analytics duration). */
   startedAt: number;
@@ -148,6 +158,21 @@ export function useWeeklyCheckInWizard(
     seededFrequency.current = true;
   }, [context]);
 
+  // Server-computed rolling window (today + next 3) → the weekdays we edit.
+  const windowDays = useMemo<DayEnum[]>(
+    () => (context?.window ?? []).map(w => w.dayOfWeek),
+    [context?.window]
+  );
+  // Step 1 gates on cells WITHIN the window — the seeded set also holds the
+  // player's other-day availability, which must not count toward the minimum.
+  const windowCellCount = useMemo(
+    () => countCellsForDays(availability, windowDays),
+    [availability, windowDays]
+  );
+  // The weekly objective is asked once per ISO week. Default to showing it when
+  // context hasn't loaded so a first-time player is never silently skipped.
+  const showFrequencyStep = !context?.frequencyAlreadySetThisWeek;
+
   // Submission
   const { mutateAsync: recordCheckIn, isPending: isSubmitting } = useRecordCheckIn();
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -193,7 +218,7 @@ export function useWeeklyCheckInWizard(
   const canAdvance = useMemo(() => {
     switch (currentStep) {
       case 1:
-        return availability.size >= MIN_AVAILABILITY_CELLS;
+        return windowCellCount >= MIN_AVAILABILITY_CELLS;
       case 2:
         return frequencyGoal >= 1 && frequencyGoal <= 5;
       case 3:
@@ -201,7 +226,7 @@ export function useWeeklyCheckInWizard(
       default:
         return false;
     }
-  }, [currentStep, availability.size, frequencyGoal]);
+  }, [currentStep, windowCellCount, frequencyGoal]);
 
   // Submit handler — called when the user taps the CTA on the recap+goal step.
   // Runs the availability save + RPC, then advances to the All-Set step.
@@ -212,6 +237,7 @@ export function useWeeklyCheckInWizard(
         autoCreate,
         autoInvite,
         availability,
+        windowDays,
       });
       // The recap+goal step (step 2) completes on a successful submit.
       Analytics.weeklyCheckinStepCompleted({
@@ -240,7 +266,7 @@ export function useWeeklyCheckInWizard(
       Logger.error('Weekly check-in submit failed', err as Error);
       throw err;
     }
-  }, [recordCheckIn, frequencyGoal, autoCreate, autoInvite, availability, onComplete]);
+  }, [recordCheckIn, frequencyGoal, autoCreate, autoInvite, availability, windowDays, onComplete]);
 
   return {
     currentStep,
@@ -269,6 +295,10 @@ export function useWeeklyCheckInWizard(
     result,
 
     canAdvance,
+
+    windowDays,
+    windowCellCount,
+    showFrequencyStep,
 
     // Epoch ms when the wizard opened — for analytics duration on completion.
     startedAt: startedAtRef.current,

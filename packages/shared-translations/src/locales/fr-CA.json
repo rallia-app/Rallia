@@ -251,6 +251,7 @@
       "org_announcement": "Annonce",
       "morning_digest": "Récapitulatif matinal",
       "availability_refresh_reminder": "Rappel de disponibilités",
+      "admin_broadcast": "Annonces",
       "match_time_suggested": "Heure proposée",
       "match_time_suggestion_accepted": "Heure acceptée",
       "match_time_suggestion_declined": "Heure refusée"
@@ -1954,6 +1955,16 @@
     "declineInvite": "Refuser",
     "declineInviteConfirmTitle": "Refuser l'invitation?",
     "declineInviteConfirmMessage": "Vous ne pourrez pas rejoindre cette partie via cette invitation.",
+    "declineReasonPrompt": "Optionnel — dites-nous pourquoi (nous aide à améliorer vos matchs)",
+    "declineReasons": {
+      "bad_timing": "Mauvais moment",
+      "too_far": "Trop loin",
+      "skill_mismatch": "Niveau différent",
+      "dont_know_player": "Joueur inconnu",
+      "cost": "Coût",
+      "changed_mind": "J'ai changé d'avis",
+      "other": "Autre"
+    },
     "declineInviteSuccess": "Invitation refusée",
     "resendInviteSuccess": "Invitation renvoyée",
     "showMoreInvitations": "+{count} autres invitations",
@@ -3186,6 +3197,18 @@
       "joinWaitlist": "Rejoindre la liste d'attente"
     }
   },
+  "matchChat": {
+    "courtFallback": "le terrain",
+    "courtPrompt": {
+      "title": "Votre partie est complète!",
+      "subtitle": "Aucun terrain réservé à {facility}. Réservez-en un pour confirmer votre partie.",
+      "cta": "Réserver un terrain"
+    },
+    "courtBooked": {
+      "title": "{court} est réservé!",
+      "subtitle": "Rendez-vous sur le terrain à {facility}."
+    }
+  },
   "matchDetail": {
     "title": "Détails de la partie",
     "preferences": "Préférences",
@@ -3195,8 +3218,11 @@
     "availableCourtsHeader": "Terrains disponibles à l'heure de la partie",
     "availableCourtsSubtitle": "Réservez-en un maintenant pour confirmer la partie",
     "availableCourtsLoading": "Vérification des disponibilités…",
+    "nearbyCourtsHeader": "Terrains à proximité à l'heure de la partie",
+    "nearbyCourtsSubtitle": "Aucun terrain disponible à votre établissement — voici des options à proximité",
     "bookingConfirmation": {
       "message": "Confirmer associera le terrain réservé à cette partie.",
+      "relocateMessage": "Cela déplacera votre partie vers {facility}.",
       "confirm": "Oui, j'ai réservé",
       "decline": "Pas encore",
       "error": "Impossible de mettre à jour la partie. Veuillez réessayer."
@@ -4296,9 +4322,9 @@
       "activate": "Activer"
     },
     "availabilityRefreshBanner": {
-      "title": "C'est l'heure du check-in hebdo 🐿️",
-      "description": "Fixe ton objectif et confirme tes dispos pour la semaine.",
-      "descriptionStreak": "Continue ta séquence de {count} semaines.",
+      "title": "C'est l'heure de ton check-in 🐿️",
+      "description": "Fixe ton objectif et confirme tes dispos pour les prochains jours.",
+      "descriptionStreak": "Tu es sur une séquence de {count} semaines 🔥 Confirme tes prochains jours.",
       "cta": "Commencer"
     },
     "header": {
@@ -5983,7 +6009,7 @@
       "titleMeta": "Courriels - Admin - Rallia",
       "descriptionMeta": "Composer et envoyer des courriels en lot aux utilisateurs",
       "title": "Courriels",
-      "description": "Composez et envoyez un courriel en lot à un segment d'utilisateurs.",
+      "description": "Composez et envoyez un courriel en lot à une liste de destinataires.",
       "compose": {
         "heading": "Composer",
         "subjectLabel": "Objet",
@@ -5996,22 +6022,60 @@
         "ctaUrlLabel": "Lien du bouton",
         "ctaUrlPlaceholder": "https://rallia.app/…"
       },
-      "audience": {
-        "heading": "Audience",
-        "everyone": "Tout le monde",
-        "sport": "Sport",
-        "anySport": "Tous les sports",
-        "city": "Ville",
-        "cityPlaceholder": "p. ex. Montréal",
-        "locale": "Langue",
-        "anyLocale": "Toutes les langues",
-        "activeSince": "Actif depuis",
-        "activeAny": "N'importe quand",
-        "active30": "30 derniers jours",
-        "active90": "90 derniers jours",
-        "onlySubscribers": "Abonnés Premium seulement",
-        "recipients": "{count} destinataires",
-        "recipientsLoading": "Calcul des destinataires…"
+      "recipients": {
+        "heading": "Destinataires",
+        "label": "Adresses courriel",
+        "placeholder": "alex@example.com, sam@example.com…",
+        "help": "Collez les courriels ciblés, séparés par des virgules, des espaces ou des sauts de ligne.",
+        "count": "{count} destinataires valides",
+        "invalid": "{count} entrées ignorées (format invalide)",
+        "empty": "Ajoutez au moins un courriel de destinataire.",
+        "modeList": "Coller une liste",
+        "modeSegment": "Cibler un segment",
+        "segment": {
+          "sportLabel": "Sports",
+          "sportAny": "Tous les sports",
+          "localeLabel": "Langues",
+          "localeAny": "Toutes les langues",
+          "cityLabel": "Ville",
+          "cityPlaceholder": "p. ex. Montréal",
+          "provinceLabel": "Province / État",
+          "provincePlaceholder": "p. ex. QC",
+          "countryLabel": "Pays",
+          "countryPlaceholder": "p. ex. CA",
+          "activeLabel": "Dernière activité",
+          "activeAny": "N'importe quand",
+          "activityLabel": "Activité",
+          "activityAny": "Toute activité",
+          "active7": "Actif depuis 7 jours",
+          "active30": "Actif depuis 30 jours",
+          "active90": "Actif depuis 90 jours",
+          "inactive30": "Inactif 30+ jours",
+          "inactive90": "Inactif 90+ jours",
+          "joinedLabel": "Inscription",
+          "joinedAny": "N'importe quand",
+          "joined7": "7 derniers jours",
+          "joined30": "30 derniers jours",
+          "joined90": "90 derniers jours",
+          "joinedOver90": "Il y a plus de 90 jours",
+          "subscriptionLabel": "Abonnement",
+          "subAll": "Tout le monde",
+          "subscribers": "Abonnés",
+          "nonSubscribers": "Non-abonnés",
+          "onlySubscribers": "Abonnés seulement",
+          "genderLabel": "Genre",
+          "gender": {
+            "male": "Homme",
+            "female": "Femme",
+            "other": "Autre"
+          },
+          "ageLabel": "Tranche d'âge",
+          "ageMin": "Min",
+          "ageMax": "Max",
+          "count": "Touche {count} personnes",
+          "counting": "Calcul de l'audience…",
+          "countError": "Impossible de calculer l'audience"
+        }
       },
       "preview": {
         "heading": "Aperçu",
@@ -6020,9 +6084,21 @@
         "empty": "Ajoutez un objet et un message pour voir l'aperçu."
       },
       "actions": {
-        "sendTest": "M'envoyer un test",
+        "sendTest": "Envoyer un test",
         "send": "Envoyer le courriel",
-        "sending": "Envoi en cours…"
+        "sending": "Envoi en cours…",
+        "saveDraft": "Enregistrer le brouillon",
+        "testToLabel": "Envoyer le test à (facultatif)",
+        "testToPlaceholder": "Par défaut, votre propre courriel"
+      },
+      "drafts": {
+        "heading": "Brouillons",
+        "editing": "Modification d'un brouillon",
+        "new": "Nouveau",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "untitled": "(sans objet)",
+        "empty": "Aucun brouillon."
       },
       "confirm": {
         "title": "Envoyer ce courriel ?",
@@ -6034,6 +6110,8 @@
         "heading": "Envois précédents",
         "subject": "Objet",
         "audience": "Audience",
+        "audienceList": "Liste",
+        "audienceSegment": "Segment",
         "recipients": "Destinataires",
         "sent": "Envoyés",
         "failed": "Échecs",
@@ -6041,6 +6119,56 @@
         "date": "Date",
         "empty": "Aucun envoi pour l'instant.",
         "error": "Échec du chargement des envois"
+      },
+      "detail": {
+        "titleMeta": "Envoi - Admin - Rallia",
+        "back": "Retour aux envois",
+        "resendFailedButton": "Renvoyer aux {count} en échec",
+        "resending": "Renvoi en cours…",
+        "resendConfirmTitle": "Renvoyer aux destinataires en échec ?",
+        "resendConfirmBody": "Renvoyer ce courriel aux {count} destinataires dont la dernière tentative a échoué. Les personnes qui l'ont déjà reçu — ou qui se sont depuis désabonnées — ne seront pas recontactées.",
+        "resendConfirmAction": "Renvoyer",
+        "resendDone": "Renvoyé à {resent} destinataires",
+        "resendFailed": "Impossible de renvoyer aux destinataires en échec",
+        "contentHeading": "Contenu",
+        "recipientsHeading": "Destinataires",
+        "noRecipients": "Aucune activité de destinataire enregistrée.",
+        "activeChip": "Actif ≤ {days} j",
+        "stat": {
+          "recipients": "Destinataires",
+          "sent": "Envoyés",
+          "delivered": "Livrés",
+          "opened": "Ouverts",
+          "clicked": "Cliqués",
+          "failed": "Échecs",
+          "bounced": "Rejets",
+          "complained": "Plaintes"
+        },
+        "recipient": {
+          "email": "Courriel",
+          "type": "Type",
+          "status": "Statut",
+          "engagement": "Engagement",
+          "sentAt": "Envoyé le",
+          "user": "Utilisateur",
+          "external": "Externe"
+        },
+        "engagement": {
+          "delivered": "Livré",
+          "opened": "Ouvert",
+          "clicked": "Cliqué"
+        },
+        "recipientStatus": {
+          "sent": "Envoyé",
+          "failed": "Échec",
+          "bounced": "Rejeté",
+          "complained": "Plainte"
+        },
+        "pagination": {
+          "page": "Page {page} sur {total}",
+          "prev": "Précédent",
+          "next": "Suivant"
+        }
       },
       "status": {
         "queued": "En file",
@@ -6054,7 +6182,10 @@
         "testFailed": "Impossible d'envoyer le courriel test",
         "sent": "Courriel envoyé à {sent} des {total} destinataires",
         "sendFailed": "Impossible d'envoyer le courriel",
-        "validation": "Ajoutez d'abord un objet et un message"
+        "validation": "Ajoutez d'abord un objet et un message",
+        "draftSaved": "Brouillon enregistré",
+        "draftDeleted": "Brouillon supprimé",
+        "draftFailed": "Impossible d'enregistrer le brouillon"
       }
     },
     "referralContests": {
@@ -7387,6 +7518,8 @@
         "title": "Suivi UTM",
         "description": "Atterrissages avant inscription (PostHog) joints aux inscriptions et parties par campagne.",
         "landings": "Atterrissages",
+        "visitors": "Visiteurs",
+        "visitorsHint": "{landings} atterrissages",
         "signups": "Inscriptions",
         "signupsToday": "Inscriptions aujourd'hui",
         "conversionRate": "Taux de conv.",
@@ -7419,8 +7552,8 @@
         "funnel": {
           "landings": "Atterrissages",
           "signups": "Inscriptions",
-          "firstMatch": "Parties créées",
-          "firstMatchPlayed": "Parties jouées"
+          "created": "A créé une partie",
+          "played": "A joué une partie"
         }
       },
       "invitationType": {
@@ -7434,6 +7567,7 @@
       },
       "timeRange": {
         "7d": "7 jours",
+        "14d": "14 jours",
         "30d": "30 jours",
         "90d": "90 jours",
         "ytd": "Depuis le début de l'année",
@@ -7847,21 +7981,95 @@
         "injury": "Blessure",
         "other": "Autre"
       },
+      "autoInvite": {
+        "title": "Génération auto — invitations",
+        "titleHuman": "Créés par des joueurs — invitations",
+        "hint": "Invitations envoyées par les matchs générés automatiquement et la façon dont les joueurs répondent. Les cohortes sont ancrées sur l'heure d'envoi; les taux n'utilisent que les invitations assez anciennes pour avoir eu une vraie chance d'obtenir une réponse.",
+        "hintHuman": "Invitations envoyées par les matchs créés par des joueurs et la façon dont les joueurs répondent. Les cohortes sont ancrées sur l'heure d'envoi; les taux n'utilisent que les invitations assez anciennes pour avoir eu une vraie chance d'obtenir une réponse.",
+        "srcAuto": "Auto",
+        "srcHuman": "Joueurs",
+        "matchesCreated": "Matchs créés",
+        "matchesCreatedHint": "Générés automatiquement dans cette fenêtre",
+        "matchesCreatedHintHuman": "Créés par des joueurs dans cette fenêtre",
+        "invitesSent": "Invitations envoyées",
+        "invitesSentHint": "{avg} par match en moyenne",
+        "responseRate": "Taux de réponse",
+        "responseRateHint": "{responded} sur {settled} invitations admissibles",
+        "settleNote": "{inFlight} invitation(s) envoyée(s) dans les dernières 48 h sont encore en attente et exclues des taux ci-dessous.",
+        "allInFlight": "Toutes les invitations de cette fenêtre sont trop récentes pour mesurer les réponses.",
+        "stageEligible": "Invitations admissibles",
+        "stageEligibleDesc": "Envoyées assez tôt pour avoir eu une vraie chance d'obtenir une réponse.",
+        "stageResponded": "Ont répondu",
+        "catOui": "Oui (accepté)",
+        "catNon": "Non (refusé)",
+        "catNouvelHoraire": "Nouvel horaire proposé",
+        "noResponse": "Sans réponse",
+        "whyTitle": "Pourquoi les invitations meurent",
+        "whyHint": "Les raisons de refus s'accumulent à mesure que les joueurs répondent avec l'app à jour; expirées = invitations en attente dont le match a commencé sans réponse.",
+        "medianResponse": "Délai médian de réponse",
+        "lapsedExpired": "Expirées sans réponse",
+        "reasonUnspecified": "Aucune raison donnée",
+        "requestsTitle": "Demandes de jointure (auto-demandeurs)",
+        "requestsHint": "Un groupe distinct : les joueurs qui ont trouvé le match ouvert et demandé à se joindre, puis l'hôte a approuvé ou refusé.",
+        "requestsApproved": "Approuvées",
+        "requestsRefused": "Refusées",
+        "requestsPending": "En attente"
+      },
       "matchesTab": {
-        "title": "Activité des matchs",
-        "description": "Matchs créés vs remplis au fil du temps, par sport.",
-        "totalCreated": "Créés",
-        "totalFilled": "Remplis",
-        "fillRate": "Taux de remplissage",
-        "avgParticipants": "Moy. participants",
-        "fillRateHint": "{filled} de {created} matchs remplis",
-        "chartTitle": "Créés vs remplis par jour",
-        "chartHint": "Matchs non annulés sur la fenêtre sélectionnée, par sport.",
+        "title": "Qualité des matchs",
+        "description": "Parties de qualité complétées et l'entonnoir qui les produit, évaluées ~48 h après chaque match.",
+        "qualityGames": "Parties de qualité",
+        "qualityGamesHint": "Strict : jouée, présence complète, à l'heure, ≥4★, aucun signalement",
+        "qualityRate": "Taux de qualité",
+        "qualityRateHint": "{quality} de {played} matchs joués",
+        "played": "Joués",
+        "playedHint": "≥2 présences confirmées",
+        "avgRating": "Note moy.",
+        "feedbackCoverage": "Couverture des avis",
+        "feedbackCoverageHint": "{present} de {expected} ont laissé un avis",
+        "commitmentRate": "Engagement du 2e joueur",
+        "commitmentRateHint": "{filled} de {created} matchs créés ont obtenu un 2e joueur — humain {human} vs auto {auto}",
+        "commitmentNorthStar": "Étoile polaire — matchs créés qui obtiennent l'engagement d'un 2e joueur",
+        "funnelTitle": "Entonnoir du cycle de vie",
+        "funnelHint": "Parties planifiées dans cette fenêtre, par issue à la clôture.",
+        "funnelOf": "{pct} % des créés",
+        "funnelConfidence": "Joués et qualité sont confirmés par les avis — un plancher, pas un plafond (couverture {pct} %).",
+        "segmentAll": "Tous",
+        "checkedInStat": "Présence confirmée par tous : {count} matchs ({pct} % des remplis)",
+        "feedbackStat": "Tous ont laissé un avis : {count} matchs ({pct} % des remplis)",
+        "stageCreated": "Créés",
+        "stageCreatedDesc": "Tous les matchs planifiés dans cette fenêtre, selon la date de jeu.",
+        "stageFilled": "Remplis",
+        "stageFilledDesc": "Assez de joueurs inscrits — 2 en simple, 4 en double.",
+        "stagePlayed": "Joués",
+        "stagePlayedDesc": "Clôturé avec au moins 2 participants confirmés présents.",
+        "stageQuality": "Qualité",
+        "stageQualityDesc": "Joué, présence complète, à l'heure, note moy. ≥4★, aucun signalement.",
+        "outcomesTitle": "Issues sans partie",
+        "outcomeCancelled": "Annulés",
+        "outcomeMutualCancel": "Annulation mutuelle",
+        "outcomeFellThrough": "Sans suite / sans avis",
+        "outcomePending": "Clôture en attente",
+        "chartTitle": "Joués vs qualité par jour",
+        "chartHint": "Parties jouées confirmées et de qualité stricte sur la fenêtre sélectionnée.",
+        "seriesPlayed": "Joués",
+        "seriesQuality": "Qualité",
+        "dropoffTitle": "Pourquoi des matchs joués ratent la barre",
+        "dropoffHint": "Sur {played} matchs joués — les raisons se chevauchent.",
+        "dropNoShow": "Une absence",
+        "dropLate": "Un retard",
+        "dropLowRating": "Noté sous 4★",
+        "dropReported": "Un signalement déposé",
         "sportBreakdown": "Par sport",
-        "noData": "Aucune donnée de match dans cette fenêtre.",
-        "created": "Créés",
-        "filled": "Remplis",
-        "rate": "% rempli"
+        "colSport": "Sport",
+        "colPlayed": "Joués",
+        "colQuality": "Qualité",
+        "colRate": "% qualité",
+        "colAvgRating": "★ moy.",
+        "sourceTitle": "Auto-générés vs organiques",
+        "sourceAuto": "Auto-générés",
+        "sourceOrganic": "Organiques",
+        "noData": "Aucune donnée de match dans cette fenêtre."
       }
     },
     "settings": {
@@ -9824,28 +10032,28 @@
   "weeklyCheckIn": {
     "exit": {
       "title": "On se reprend plus tard?",
-      "description": "Ace reviendra te voir la semaine prochaine — tes réglages ne seront pas sauvegardés cette fois-ci.",
+      "description": "Ace reviendra te voir dans quelques jours — tes réglages ne seront pas sauvegardés cette fois-ci.",
       "confirm": "Quitter pour cette fois",
       "cancel": "Continuer"
     },
     "step1": {
       "bubbleHit": "Horaire enregistré 🔒 Objectif explosé la semaine passée — la séquence grimpe.",
       "bubbleMet": "Horaire enregistré 🔒 {goal} sessions jouées la semaine passée. La séquence tient bon.",
-      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué, mais pas la séquence. On se replace.",
-      "bubbleFirstTime": "Horaire enregistré 🔒 C'est ton premier check-in — on lance ta séquence.",
+      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué la semaine passée — on se reprend et on vise juste cette semaine. 💪",
+      "bubbleFirstTime": "Horaire enregistré 🔒 Joue tes parties et fais ton check-in cette semaine pour lancer ta séquence. 🔥",
       "streakTitle": "Séquence de {count} semaines",
       "streakTitleZero": "Commence une séquence cette semaine",
       "streakSubtitle": "semaines",
       "streakSubtitleOne": "semaine de suite",
-      "streakLabel": "SEMAINES DE CHECK-IN",
-      "streakLabelOne": "SEMAINE DE CHECK-IN",
+      "streakLabel": "SÉQUENCE D'OBJECTIFS",
+      "streakLabelOne": "SÉQUENCE D'OBJECTIFS",
       "timelineLabel": "Tes derniers check-ins",
       "thisWeek": "Cette sem.",
       "freezeCount": "{count} jokers en réserve",
       "freezeOne": "1 joker en réserve",
       "freezeZero": "0 joker en réserve",
-      "freezeHint": "Tu en gagnes 1 tous les 4 semaines",
-      "freezeFirstTimeInvite": "Ton premier check-in lance ta séquence 🔥",
+      "freezeHint": "Gagne 1 joker pour 4 objectifs atteints de suite",
+      "freezeFirstTimeInvite": "Atteins ton objectif hebdo pour lancer ta séquence 🔥",
       "goalsCardTitle": "SUIVI DES OBJECTIFS",
       "goalsCardLastWeek": "Semaine passée",
       "goalsCardTrendLabel": "Les 4 dernières semaines",
@@ -9853,14 +10061,15 @@
       "goalsCardLastWeekHit": "Objectif atteint ✓",
       "goalsCardLastWeekMiss": "Objectif manqué",
       "goalsCardNoHistory": "Ton historique d'objectifs apparaîtra ici après quelques semaines de jeu. 📈",
-      "freezeTooltip": "Les jokers de séquence te protègent si tu rates un check-in.",
+      "checkInNote": "📍 À noter : une partie ne compte pour ta séquence que si tu fais ton check-in au terrain.",
+      "freezeTooltip": "Les jokers de séquence te protègent si tu rates ton objectif hebdo.",
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
       "recapPlayed": "Joué",
       "cta": "Fixons mon objectif 🎯"
     },
     "step2": {
-      "bubble": "Salut 👋 Quand es-tu libre cette semaine? Tape ou glisse pour peindre tes plages. ✨",
+      "bubble": "Salut 👋 Quand es-tu libre dans les prochains jours? Tape ou glisse pour peindre tes plages. ✨",
       "cta": "Parfait"
     },
     "step3": {
@@ -9885,12 +10094,6 @@
     },
     "step4": {
       "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🎾",
-      "streakHeroCount": "{count} semaines!",
-      "streakHeroCountOne": "1 semaine!",
-      "streakHeroSub": "Séquence prolongée · +1",
-      "streakHeroSubFirst": "Séquence lancée 🌱",
-      "streakHeroSubMilestone": "Étape franchie · +1 joker gagné ❄️",
-      "streakHeroSubMilestoneCapped": "Étape franchie! Jokers au max (2) ❄️❄️",
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",

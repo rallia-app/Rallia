@@ -109,6 +109,7 @@ export default async function UserDetailPage({
     id: string;
     is_primary: boolean | null;
     is_active: boolean | null;
+    active_rating_score_id: string | null;
     preferred_match_type: string | null;
     preferred_match_duration: string | null;
     preferred_play_style: string | null;
@@ -237,6 +238,7 @@ export default async function UserDetailPage({
         .select(
           `
           id, is_primary, is_active,
+          active_rating_score_id,
           preferred_match_type, preferred_match_duration,
           preferred_play_style, preferred_play_attributes,
           preferred_court,
@@ -270,8 +272,7 @@ export default async function UserDetailPage({
         `
         )
         .eq('player_id', id)
-        .limit(1)
-        .maybeSingle(),
+        .order('assigned_at', { ascending: false }),
       // Reports about this player
       adminDb
         .from('player_report')
@@ -297,7 +298,16 @@ export default async function UserDetailPage({
     ]);
 
     playerSports = (sportsRes.data ?? []) as typeof playerSports;
-    const ratingRaw = ratingRes.data as unknown as PlayerRatingData | null;
+    // Show the player's ACTIVE rating for their primary sport
+    // (player_sport.active_rating_score_id), falling back to the most recently
+    // assigned rating when no active one is set.
+    const allRatings = (ratingRes.data ?? []) as unknown as PlayerRatingData[];
+    const primaryActiveRatingId =
+      playerSports.find(ps => ps.is_primary)?.active_rating_score_id ?? null;
+    const ratingRaw =
+      (primaryActiveRatingId ? allRatings.find(r => r.id === primaryActiveRatingId) : null) ??
+      allRatings[0] ??
+      null;
     if (ratingRaw) {
       playerRatingData = ratingRaw;
     }

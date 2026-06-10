@@ -1256,8 +1256,11 @@ export type Database = {
       email_broadcast_recipient: {
         Row: {
           broadcast_id: string;
+          clicked_at: string | null;
+          delivered_at: string | null;
           email: string;
           id: number;
+          opened_at: string | null;
           resend_id: string | null;
           sent_at: string;
           status: string;
@@ -1265,8 +1268,11 @@ export type Database = {
         };
         Insert: {
           broadcast_id: string;
+          clicked_at?: string | null;
+          delivered_at?: string | null;
           email: string;
           id?: number;
+          opened_at?: string | null;
           resend_id?: string | null;
           sent_at?: string;
           status?: string;
@@ -1274,8 +1280,11 @@ export type Database = {
         };
         Update: {
           broadcast_id?: string;
+          clicked_at?: string | null;
+          delivered_at?: string | null;
           email?: string;
           id?: number;
+          opened_at?: string | null;
           resend_id?: string | null;
           sent_at?: string;
           status?: string;
@@ -4752,6 +4761,7 @@ export type Database = {
       };
       player_sport: {
         Row: {
+          active_rating_score_id: string | null;
           created_at: string | null;
           id: string;
           is_active: boolean | null;
@@ -4767,6 +4777,7 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
+          active_rating_score_id?: string | null;
           created_at?: string | null;
           id?: string;
           is_active?: boolean | null;
@@ -4782,6 +4793,7 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
+          active_rating_score_id?: string | null;
           created_at?: string | null;
           id?: string;
           is_active?: boolean | null;
@@ -4797,6 +4809,13 @@ export type Database = {
           updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'player_sport_active_rating_score_id_fkey';
+            columns: ['active_rating_score_id'];
+            isOneToOne: false;
+            referencedRelation: 'player_rating_score';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'player_sport_player_id_fkey';
             columns: ['player_id'];
@@ -7216,9 +7235,17 @@ export type Database = {
         Args: {
           p_active_since?: string;
           p_city?: string;
-          p_locale?: string;
-          p_only_subscribers?: boolean;
-          p_sport_id?: string;
+          p_country?: string;
+          p_genders?: string[];
+          p_inactive_before?: string;
+          p_joined_before?: string;
+          p_joined_since?: string;
+          p_locales?: string[];
+          p_max_age?: number;
+          p_min_age?: number;
+          p_province?: string;
+          p_sport_ids?: string[];
+          p_subscription?: string;
         };
         Returns: {
           email: string;

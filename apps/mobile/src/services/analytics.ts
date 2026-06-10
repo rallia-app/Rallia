@@ -144,7 +144,18 @@ export function matchFeedbackSubmitted(props: { sport_id: string; sport_name: st
 }
 
 export type MatchOutcomeKind = 'played' | 'mutual_cancel' | 'opponent_no_show';
-export type CancellationReasonKind = 'weather' | 'court_unavailable' | 'emergency' | 'other';
+/** Mirrors cancellation_reason_enum (outcome + invitee-decline values). */
+export type CancellationReasonKind =
+  | 'weather'
+  | 'court_unavailable'
+  | 'emergency'
+  | 'bad_timing'
+  | 'too_far'
+  | 'skill_mismatch'
+  | 'dont_know_player'
+  | 'cost'
+  | 'changed_mind'
+  | 'other';
 
 export function matchOutcomeSubmitted(props: {
   match_id: string;
@@ -200,9 +211,12 @@ export function matchShared(props: { sport_id: string; sport_name: string }): vo
 }
 
 export function matchDeclined(props: {
+  match_id?: string;
   sport_id: string;
   sport_name: string;
   is_auto_generated: boolean;
+  /** Optional invitee-decline reason (cancellation_reason_enum subset). */
+  decline_reason?: string;
 }): void {
   capture('match_declined', props);
 }
@@ -473,7 +487,7 @@ export function deepLinkOpened(props: {
   capture('deep_link_opened', props);
 }
 
-export function inviteToMatchSent(props: { invite_count: number }): void {
+export function inviteToMatchSent(props: { invite_count: number; match_id?: string }): void {
   capture('invite_to_match_sent', props);
 }
 
@@ -497,11 +511,21 @@ export function matchOpenedFromQR(): void {
 
 // ---- Notifications ----
 
-export function pushNotificationOpened(props: { type: string }): void {
+export function pushNotificationOpened(props: {
+  type: string;
+  notification_id?: string;
+  /** Recipient-funnel join key (+ person). Present for match notifications. */
+  match_id?: string;
+}): void {
   capture('push_notification_opened', props);
 }
 
-export function notificationReceived(props: { type: string; channel: 'push' | 'in_app' }): void {
+export function notificationReceived(props: {
+  type: string;
+  channel: 'push' | 'in_app';
+  /** Recipient-funnel join key (+ person). Present for match notifications. */
+  match_id?: string;
+}): void {
   capture('notification_received', props);
 }
 

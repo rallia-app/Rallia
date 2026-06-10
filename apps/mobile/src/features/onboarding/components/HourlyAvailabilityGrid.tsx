@@ -115,6 +115,19 @@ interface HourlyAvailabilityGridProps {
   t: (key: TranslationKey) => string;
   /** Locale (e.g. 'en-US', 'fr-CA') — drives the hour label formatter. */
   locale: string;
+  /**
+   * Which day columns to render, in order. Defaults to the full Mon–Sun week
+   * (onboarding / profile edit). The rolling check-in passes the 4-day window
+   * (today + next 3). Cell keys are still `${day}-${hour}`, so a subset here
+   * only changes which columns are shown/edited — never the key format.
+   */
+  days?: DayEnum[];
+  /**
+   * Optional per-day column header text (e.g. "Fri 20"). When a day is absent
+   * the header falls back to the localized day letter. Used by the check-in
+   * window to show concrete dates while keeping day-of-week semantics.
+   */
+  columnLabels?: Partial<Record<DayEnum, string>>;
 }
 
 // =============================================================================
@@ -156,7 +169,16 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   colors,
   t,
   locale,
+  days: daysProp,
+  columnLabels,
 }) => {
+  // Effective day columns. Defaults to the full week. Pinned via a ref so the
+  // gesture callbacks (memoized) always read the current set without forcing a
+  // gesture rebuild mid-drag when the parent passes a fresh array identity.
+  const days = daysProp ?? ORDERED_DAYS;
+  const daysRef = useRef<DayEnum[]>(days);
+  daysRef.current = days;
+
   // ─── Refs the gesture closures read from ──────────────────────────────────
   //
   // The gesture is created via useMemo and rebuilt only when its deps change.
@@ -206,7 +228,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   const onCellsLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const { width } = e.nativeEvent.layout;
-      cellWidthRef.current = width / 7;
+      cellWidthRef.current = width / daysRef.current.length;
       // useScrollHandlers tracks layout for the draggable-node registration
       // (which the sheet uses to defer to nested scrollables on web).
       scrollHandlers.onLayout();
@@ -218,14 +240,15 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
 
   const computeCellFromLocal = useCallback(
     (localX: number, localY: number): { day: DayEnum; hour: number } | null => {
+      const cols = daysRef.current;
       const cellW = cellWidthRef.current;
       if (cellW <= 0) return null;
       if (localX < 0 || localY < 0) return null;
       const dayIdx = Math.floor(localX / cellW);
       const hourIdx = Math.floor(localY / CELL_HEIGHT);
-      if (dayIdx < 0 || dayIdx >= ORDERED_DAYS.length) return null;
+      if (dayIdx < 0 || dayIdx >= cols.length) return null;
       if (hourIdx < 0 || hourIdx >= SUPPORTED_HOURS.length) return null;
-      return { day: ORDERED_DAYS[dayIdx], hour: SUPPORTED_HOURS[hourIdx] };
+      return { day: cols[dayIdx], hour: SUPPORTED_HOURS[hourIdx] };
     },
     []
   );
@@ -260,11 +283,12 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
       // previous on-grid cell, walk the line from there to currentCell so
       // fast drags don't skip rows. Otherwise (first touch, or re-entry
       // after an off-grid excursion) just touch currentCell.
+      const cols = daysRef.current;
       const cells: { day: DayEnum; hour: number }[] = [];
       if (prevCell) {
-        const fromDayIdx = ORDERED_DAYS.indexOf(prevCell.day);
+        const fromDayIdx = cols.indexOf(prevCell.day);
         const fromHourIdx = SUPPORTED_HOURS.indexOf(prevCell.hour);
-        const toDayIdx = ORDERED_DAYS.indexOf(currentCell.day);
+        const toDayIdx = cols.indexOf(currentCell.day);
         const toHourIdx = SUPPORTED_HOURS.indexOf(currentCell.hour);
         const dx = toDayIdx - fromDayIdx;
         const dy = toHourIdx - fromHourIdx;
@@ -276,7 +300,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
             const t = i / steps;
             const dIdx = fromDayIdx + Math.round(dx * t);
             const hIdx = fromHourIdx + Math.round(dy * t);
-            cells.push({ day: ORDERED_DAYS[dIdx], hour: SUPPORTED_HOURS[hIdx] });
+            cells.push({ day: cols[dIdx], hour: SUPPORTED_HOURS[hIdx] });
           }
         }
       } else {
@@ -357,12 +381,13 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
 
   const toggleHour = useCallback((hour: number) => {
     void selectionHaptic();
+    const cols = daysRef.current;
     const next = new Set(valueRef.current);
-    const allFilled = ORDERED_DAYS.every(d => next.has(cellKey(d, hour)));
+    const allFilled = cols.every(d => next.has(cellKey(d, hour)));
     if (allFilled) {
-      for (const d of ORDERED_DAYS) next.delete(cellKey(d, hour));
+      for (const d of cols) next.delete(cellKey(d, hour));
     } else {
-      for (const d of ORDERED_DAYS) next.add(cellKey(d, hour));
+      for (const d of cols) next.add(cellKey(d, hour));
     }
     onChangeRef.current(next);
   }, []);
@@ -395,20 +420,23 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
         {/* Day-letter headers — tappable to bulk-toggle the day. Outside
             the GestureDetector so they don't compete with the pan gesture. */}
         <View style={styles.headerRow}>
-          {ORDERED_DAYS.map(day => (
-            <TouchableOpacity
-              key={`hdr-${day}`}
-              style={styles.dayHeader}
-              onPress={() => toggleDay(day)}
-              activeOpacity={0.6}
-              accessibilityRole="button"
-              accessibilityLabel={t(DAY_LETTER_KEY[day])}
-            >
-              <Text size="xs" weight="semibold" color={colors.textMuted}>
-                {t(DAY_LETTER_KEY[day])}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {days.map(day => {
+            const label = columnLabels?.[day] ?? t(DAY_LETTER_KEY[day]);
+            return (
+              <TouchableOpacity
+                key={`hdr-${day}`}
+                style={styles.dayHeader}
+                onPress={() => toggleDay(day)}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+              >
+                <Text size="xs" weight="semibold" color={colors.textMuted}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Cells. GestureDetector wraps ONLY this container, so the pan
@@ -418,7 +446,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
           <View ref={scrollHandlers.ref} onLayout={onCellsLayout} collapsable={false}>
             {SUPPORTED_HOURS.map(hour => (
               <View key={`row-${hour}`} style={[styles.row, { height: CELL_HEIGHT }]}>
-                {ORDERED_DAYS.map(day => {
+                {days.map(day => {
                   const filled = value.has(cellKey(day, hour));
                   return (
                     <View

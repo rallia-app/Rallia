@@ -115,6 +115,37 @@ async function updateSendStatus(
   await supabase.from(table).update({ status }).eq('resend_id', resendId);
 }
 
+/** Resend delivery events → the column they stamp on email_broadcast_recipient. */
+const BROADCAST_STAMP_COLUMN: Record<string, 'delivered_at' | 'opened_at' | 'clicked_at'> = {
+  'email.delivered': 'delivered_at',
+  'email.opened': 'opened_at',
+  'email.clicked': 'clicked_at',
+};
+
+/**
+ * Record a broadcast email's delivery lifecycle on its recipient row so the
+ * admin broadcast detail page can show a delivery funnel without scanning the
+ * high-write digest_event table. First-event-wins (guarded on NULL); no-ops for
+ * event types that don't map to a column (e.g. bounced/complained).
+ */
+async function stampBroadcastDelivery(
+  supabase: SupabaseClient,
+  resendId: string,
+  eventType: string,
+  occurredAt: string
+): Promise<void> {
+  const column = BROADCAST_STAMP_COLUMN[eventType];
+  if (!column) return;
+  const { error } = await supabase
+    .from('email_broadcast_recipient')
+    .update({ [column]: occurredAt })
+    .eq('resend_id', resendId)
+    .is(column, null);
+  if (error) {
+    console.warn(`[resend-webhook] broadcast ${column} stamp failed: ${error.message}`);
+  }
+}
+
 async function markBounced(
   supabase: SupabaseClient,
   userId: string | null,
@@ -245,6 +276,12 @@ Deno.serve(async req => {
       console.log(
         `[resend-webhook] complained: user=${userId} source=${source} resend=${resendId}`
       );
+    }
+
+    // Stamp delivered/opened/clicked on the broadcast recipient row (drives the
+    // admin broadcast delivery funnel). No-ops for digest sends + other events.
+    if (source === 'broadcast') {
+      await stampBroadcastDelivery(supabase, resendId, event.type, event.created_at);
     }
 
     await logEvent(supabase, userId, resendId, event.type, event.created_at, event);

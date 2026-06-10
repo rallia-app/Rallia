@@ -3,7 +3,7 @@ import { routing } from '@/i18n/routing';
 
 import { getTranslations, type Locale as SharedLocale } from '@rallia/shared-translations';
 import type { Metadata } from 'next';
-import { getTranslations as getServerTranslations } from 'next-intl/server';
+import { getTranslations as getServerTranslations, setRequestLocale } from 'next-intl/server';
 import { Locale, NextIntlClientProvider } from 'next-intl';
 import { Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
 import { notFound } from 'next/navigation';
@@ -128,33 +128,6 @@ export async function generateMetadata({
       shortcut: '/favicon-16x16.png',
       apple: '/apple-touch-icon.png',
     },
-    verification: {
-      // Plug in once Search Console / Bing verification codes are issued.
-      // google: 'GOOGLE_SITE_VERIFICATION_TOKEN',
-      //
-      // Meta Business Manager domain verification — required to associate
-      // each owned domain with our Meta app for iOS app linkage and to
-      // unlock attribution features. We serve the same Next.js app under
-      // multiple hosts (rallia.app + rallia.ca), and Meta issues one token
-      // per domain. Rather than detect the request host (which would force
-      // the layout into dynamic rendering and break SSG), we emit ALL
-      // tokens as separate meta tags. Meta's crawler at each domain only
-      // matches its own token and ignores the others.
-      //
-      // Tokens come from: Meta Business Manager → Brand Safety → Domains
-      // → Verify your domain → Meta-tag method.
-      ...((process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION ??
-      process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION_CA)
-        ? {
-            other: {
-              'facebook-domain-verification': [
-                process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION,
-                process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION_CA,
-              ].filter((v): v is string => Boolean(v)),
-            },
-          }
-        : {}),
-    },
   };
 }
 
@@ -175,6 +148,10 @@ export default async function LocaleLayout({
   if (!(routing.locales as readonly string[]).includes(locale)) {
     notFound();
   }
+
+  // Enable static rendering: primes the locale so next-intl reads it instead of
+  // request headers, which would otherwise force every page into dynamic mode.
+  setRequestLocale(locale);
 
   // Get translations from shared package
   const messages = getTranslations(locale as SharedLocale);

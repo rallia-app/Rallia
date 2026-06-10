@@ -29,13 +29,15 @@ export default async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh the auth token if expired. Best-effort: a transient
-  // Vercel ↔ Supabase network blip shouldn't crash the page render —
-  // the next request will retry, and SSR helpers handle unauth downstream.
+  // Refresh the auth token if expired. getClaims() verifies the JWT locally
+  // (WebCrypto + cached JWKS) and only hits the network when a refresh is
+  // actually needed — Supabase's recommended SSR proxy method, far cheaper
+  // than getUser()'s per-request network call. Best-effort: a transient blip
+  // shouldn't crash the render, and route handlers re-validate with getUser().
   try {
-    await supabase.auth.getUser();
+    await supabase.auth.getClaims();
   } catch (err) {
-    console.warn('[proxy] supabase.auth.getUser() failed:', err);
+    console.warn('[proxy] supabase.auth.getClaims() failed:', err);
   }
 
   // For API routes, Sentry tunnel, and the PostHog ingest proxy, return the
@@ -66,10 +68,14 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all pathnames except for:
-    // - _next (Next.js internals)
-    // - _vercel (Vercel internals)
-    // - Files with extensions (like favicon.ico)
-    '/((?!_next|_vercel|.*\\..*).*)',
+    // Match page routes only. Everything below handles its own concerns and
+    // doesn't need the session-refresh pass here — running it on these was
+    // spawning a Fluid invocation (+ Supabase auth call) per request:
+    // - api        → route handlers validate auth themselves
+    // - ingest     → PostHog proxy rewrite (served at the routing layer, no fn)
+    // - monitoring → Sentry browser tunnel
+    // - _next / _vercel → framework internals
+    // - anything with a file extension (favicon.ico, etc.)
+    '/((?!api|_next|_vercel|monitoring|ingest|.*\\..*).*)',
   ],
 };

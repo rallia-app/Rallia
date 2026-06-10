@@ -35,6 +35,8 @@ interface OpenExternalBookingParams {
   /** Sport context, when known */
   sportId?: string;
   sportName?: string;
+  /** True when confirming should relocate the match to this facility (nearby alternative). */
+  relocatesMatch?: boolean;
 }
 
 export function useOpenExternalBooking() {
@@ -50,6 +52,7 @@ export function useOpenExternalBooking() {
       source,
       sportId,
       sportName,
+      relocatesMatch,
     }: OpenExternalBookingParams) => {
       // Resolve booking URL
       const url =
@@ -65,7 +68,15 @@ export function useOpenExternalBooking() {
         if (!canOpen) return false;
 
         // Store pending booking context before leaving the app
-        setPendingBooking({ facility, slot, selectedCourt, matchId, sportId, sportName });
+        setPendingBooking({
+          facility,
+          slot,
+          selectedCourt,
+          matchId,
+          sportId,
+          sportName,
+          relocatesMatch,
+        });
 
         Logger.logUserAction('external_booking_opened', {
           facilityId: facility.id,

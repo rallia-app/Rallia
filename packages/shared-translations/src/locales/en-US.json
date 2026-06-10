@@ -251,6 +251,7 @@
       "org_announcement": "Announcement",
       "morning_digest": "Morning Digest",
       "availability_refresh_reminder": "Availability refresh",
+      "admin_broadcast": "Announcements",
       "match_time_suggested": "Time change suggested",
       "match_time_suggestion_accepted": "Time change accepted",
       "match_time_suggestion_declined": "Time change declined"
@@ -1954,6 +1955,16 @@
     "declineInvite": "Decline",
     "declineInviteConfirmTitle": "Decline Invitation?",
     "declineInviteConfirmMessage": "You won't be able to join this game through this invitation.",
+    "declineReasonPrompt": "Optional — tell us why (helps us improve your matches)",
+    "declineReasons": {
+      "bad_timing": "Bad timing",
+      "too_far": "Too far",
+      "skill_mismatch": "Skill mismatch",
+      "dont_know_player": "Don't know them",
+      "cost": "Cost",
+      "changed_mind": "Changed my mind",
+      "other": "Other"
+    },
     "declineInviteSuccess": "Invitation declined",
     "resendInviteSuccess": "Invitation resent",
     "showMoreInvitations": "+{count} more invitations",
@@ -3186,6 +3197,18 @@
       "joinWaitlist": "Join Waitlist"
     }
   },
+  "matchChat": {
+    "courtFallback": "the court",
+    "courtPrompt": {
+      "title": "Your match is full!",
+      "subtitle": "No court booked yet at {facility}. Grab one to lock in your game.",
+      "cta": "Book a court"
+    },
+    "courtBooked": {
+      "title": "{court} is booked!",
+      "subtitle": "See you on the court at {facility}."
+    }
+  },
   "matchDetail": {
     "title": "Game details",
     "preferences": "Preferences",
@@ -3195,8 +3218,11 @@
     "availableCourtsHeader": "Available courts at game time",
     "availableCourtsSubtitle": "Reserve one now to confirm your game",
     "availableCourtsLoading": "Checking availability…",
+    "nearbyCourtsHeader": "Courts nearby at game time",
+    "nearbyCourtsSubtitle": "No courts left at your facility — here are nearby options",
     "bookingConfirmation": {
       "message": "Confirming will link the reserved court to this game.",
+      "relocateMessage": "This will move your game to {facility}.",
       "confirm": "Yes, I booked it",
       "decline": "Not yet",
       "error": "Couldn't update the game. Please try again."
@@ -4296,9 +4322,9 @@
       "activate": "Activate"
     },
     "availabilityRefreshBanner": {
-      "title": "Time for your weekly check-in 🐿️",
-      "description": "Set your goal and confirm when you're free this week.",
-      "descriptionStreak": "Keep your {count}-week streak going.",
+      "title": "Time to check in 🐿️",
+      "description": "Set your goal and confirm when you're free over the next few days.",
+      "descriptionStreak": "You're on a {count}-week streak 🔥 Confirm your next few days.",
       "cta": "Start"
     },
     "header": {
@@ -5983,7 +6009,7 @@
       "titleMeta": "Emails - Admin - Rallia",
       "descriptionMeta": "Compose and send email broadcasts to users",
       "title": "Emails",
-      "description": "Compose and send an email broadcast to a segment of users.",
+      "description": "Compose and send an email broadcast to a list of recipients.",
       "compose": {
         "heading": "Compose",
         "subjectLabel": "Subject",
@@ -5996,22 +6022,60 @@
         "ctaUrlLabel": "Button link",
         "ctaUrlPlaceholder": "https://rallia.app/…"
       },
-      "audience": {
-        "heading": "Audience",
-        "everyone": "Everyone",
-        "sport": "Sport",
-        "anySport": "Any sport",
-        "city": "City",
-        "cityPlaceholder": "e.g. Montréal",
-        "locale": "Language",
-        "anyLocale": "Any language",
-        "activeSince": "Active since",
-        "activeAny": "Any time",
-        "active30": "Last 30 days",
-        "active90": "Last 90 days",
-        "onlySubscribers": "Premium subscribers only",
-        "recipients": "{count} recipients",
-        "recipientsLoading": "Counting recipients…"
+      "recipients": {
+        "heading": "Recipients",
+        "label": "Email addresses",
+        "placeholder": "alex@example.com, sam@example.com…",
+        "help": "Paste the targeted emails, separated by commas, spaces, or new lines.",
+        "count": "{count} valid recipients",
+        "invalid": "{count} entries ignored (invalid format)",
+        "empty": "Add at least one recipient email.",
+        "modeList": "Paste list",
+        "modeSegment": "Target a segment",
+        "segment": {
+          "sportLabel": "Sports",
+          "sportAny": "Any sport",
+          "localeLabel": "Languages",
+          "localeAny": "Any language",
+          "cityLabel": "City",
+          "cityPlaceholder": "e.g. Montreal",
+          "provinceLabel": "Province / State",
+          "provincePlaceholder": "e.g. QC",
+          "countryLabel": "Country",
+          "countryPlaceholder": "e.g. CA",
+          "activeLabel": "Last active",
+          "activeAny": "Any time",
+          "activityLabel": "Activity",
+          "activityAny": "Any activity",
+          "active7": "Active last 7 days",
+          "active30": "Active last 30 days",
+          "active90": "Active last 90 days",
+          "inactive30": "Inactive 30+ days",
+          "inactive90": "Inactive 90+ days",
+          "joinedLabel": "Joined",
+          "joinedAny": "Any time",
+          "joined7": "Last 7 days",
+          "joined30": "Last 30 days",
+          "joined90": "Last 90 days",
+          "joinedOver90": "Over 90 days ago",
+          "subscriptionLabel": "Subscription",
+          "subAll": "Everyone",
+          "subscribers": "Subscribers",
+          "nonSubscribers": "Non-subscribers",
+          "onlySubscribers": "Subscribers only",
+          "genderLabel": "Gender",
+          "gender": {
+            "male": "Male",
+            "female": "Female",
+            "other": "Other"
+          },
+          "ageLabel": "Age range",
+          "ageMin": "Min",
+          "ageMax": "Max",
+          "count": "This reaches {count} people",
+          "counting": "Calculating audience…",
+          "countError": "Couldn't calculate the audience"
+        }
       },
       "preview": {
         "heading": "Preview",
@@ -6020,9 +6084,21 @@
         "empty": "Add a subject and message to see the preview."
       },
       "actions": {
-        "sendTest": "Send test to me",
+        "sendTest": "Send test",
         "send": "Send broadcast",
-        "sending": "Sending…"
+        "sending": "Sending…",
+        "saveDraft": "Save draft",
+        "testToLabel": "Send test to (optional)",
+        "testToPlaceholder": "Defaults to your own email"
+      },
+      "drafts": {
+        "heading": "Drafts",
+        "editing": "Editing a draft",
+        "new": "Start new",
+        "edit": "Edit",
+        "delete": "Delete",
+        "untitled": "(no subject)",
+        "empty": "No drafts yet."
       },
       "confirm": {
         "title": "Send this broadcast?",
@@ -6034,6 +6110,8 @@
         "heading": "Past broadcasts",
         "subject": "Subject",
         "audience": "Audience",
+        "audienceList": "List",
+        "audienceSegment": "Segment",
         "recipients": "Recipients",
         "sent": "Sent",
         "failed": "Failed",
@@ -6041,6 +6119,56 @@
         "date": "Date",
         "empty": "No broadcasts sent yet.",
         "error": "Failed to load broadcasts"
+      },
+      "detail": {
+        "titleMeta": "Broadcast - Admin - Rallia",
+        "back": "Back to broadcasts",
+        "resendFailedButton": "Resend to {count} failed",
+        "resending": "Resending…",
+        "resendConfirmTitle": "Resend to failed recipients?",
+        "resendConfirmBody": "Re-send this email to the {count} recipients whose last attempt failed. Anyone who already received it — or has since unsubscribed — won't be emailed again.",
+        "resendConfirmAction": "Resend",
+        "resendDone": "Re-sent to {resent} recipients",
+        "resendFailed": "Couldn't resend to failed recipients",
+        "contentHeading": "Content",
+        "recipientsHeading": "Recipients",
+        "noRecipients": "No recipient activity recorded.",
+        "activeChip": "Active ≤ {days}d",
+        "stat": {
+          "recipients": "Recipients",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "opened": "Opened",
+          "clicked": "Clicked",
+          "failed": "Failed",
+          "bounced": "Bounced",
+          "complained": "Complained"
+        },
+        "recipient": {
+          "email": "Email",
+          "type": "Type",
+          "status": "Status",
+          "engagement": "Engagement",
+          "sentAt": "Sent at",
+          "user": "User",
+          "external": "External"
+        },
+        "engagement": {
+          "delivered": "Delivered",
+          "opened": "Opened",
+          "clicked": "Clicked"
+        },
+        "recipientStatus": {
+          "sent": "Sent",
+          "failed": "Failed",
+          "bounced": "Bounced",
+          "complained": "Complained"
+        },
+        "pagination": {
+          "page": "Page {page} of {total}",
+          "prev": "Previous",
+          "next": "Next"
+        }
       },
       "status": {
         "queued": "Queued",
@@ -6054,7 +6182,10 @@
         "testFailed": "Couldn't send the test email",
         "sent": "Broadcast sent to {sent} of {total} recipients",
         "sendFailed": "Couldn't send the broadcast",
-        "validation": "Add a subject and message first"
+        "validation": "Add a subject and message first",
+        "draftSaved": "Draft saved",
+        "draftDeleted": "Draft deleted",
+        "draftFailed": "Couldn't save the draft"
       }
     },
     "referralContests": {
@@ -7387,6 +7518,8 @@
         "title": "UTM Monitoring",
         "description": "Pre-signup landings (PostHog) joined with downstream signups & matches per campaign.",
         "landings": "Landings",
+        "visitors": "Visitors",
+        "visitorsHint": "{landings} landings",
         "signups": "Signups",
         "signupsToday": "Signups today",
         "conversionRate": "Conv. rate",
@@ -7419,8 +7552,8 @@
         "funnel": {
           "landings": "Landings",
           "signups": "Signups",
-          "firstMatch": "Matches created",
-          "firstMatchPlayed": "Matches played"
+          "created": "Created a match",
+          "played": "Played a match"
         }
       },
       "invitationType": {
@@ -7434,6 +7567,7 @@
       },
       "timeRange": {
         "7d": "7 Days",
+        "14d": "14 Days",
         "30d": "30 Days",
         "90d": "90 Days",
         "ytd": "Year to Date",
@@ -7847,21 +7981,95 @@
         "injury": "Injury",
         "other": "Other"
       },
+      "autoInvite": {
+        "title": "Auto-generation — invitations",
+        "titleHuman": "Human-created — invitations",
+        "hint": "Invitations sent by auto-generated matches and how players respond. Cohorts are anchored on send time; rates use only invites old enough to have had a fair chance to respond.",
+        "hintHuman": "Invitations sent by player-created matches and how players respond. Cohorts are anchored on send time; rates use only invites old enough to have had a fair chance to respond.",
+        "srcAuto": "Auto",
+        "srcHuman": "Human",
+        "matchesCreated": "Matches created",
+        "matchesCreatedHint": "Auto-generated in this window",
+        "matchesCreatedHintHuman": "Created by players in this window",
+        "invitesSent": "Invitations sent",
+        "invitesSentHint": "{avg} per match on average",
+        "responseRate": "Response rate",
+        "responseRateHint": "{responded} of {settled} eligible invites",
+        "settleNote": "{inFlight} invitation(s) sent in the last 48h are still in-flight and excluded from the rates below.",
+        "allInFlight": "All invitations in this window are too recent to measure responses yet.",
+        "stageEligible": "Eligible invitations",
+        "stageEligibleDesc": "Sent long enough ago to have had a fair chance to respond.",
+        "stageResponded": "Responded",
+        "catOui": "Yes (accepted)",
+        "catNon": "No (declined)",
+        "catNouvelHoraire": "Proposed new time",
+        "noResponse": "No response",
+        "whyTitle": "Why invites die",
+        "whyHint": "Decline reasons accrue as players respond with the updated app; lapsed = pending invites whose match started without any response.",
+        "medianResponse": "Median time to respond",
+        "lapsedExpired": "Lapsed unanswered",
+        "reasonUnspecified": "No reason given",
+        "requestsTitle": "Request-to-join (self-requesters)",
+        "requestsHint": "A separate group: players who found the open match and asked to join, then the host approved or refused.",
+        "requestsApproved": "Approved",
+        "requestsRefused": "Refused",
+        "requestsPending": "Pending"
+      },
       "matchesTab": {
-        "title": "Match Activity",
-        "description": "Created vs filled matches over time, broken down by sport.",
-        "totalCreated": "Created",
-        "totalFilled": "Filled",
-        "fillRate": "Fill rate",
-        "avgParticipants": "Avg. participants",
-        "fillRateHint": "{filled} of {created} matches filled",
-        "chartTitle": "Created vs filled per day",
-        "chartHint": "Non-cancelled matches over the selected window, by sport.",
+        "title": "Match Quality",
+        "description": "Completed quality games and the lifecycle funnel that produces them, judged ~48h after each match.",
+        "qualityGames": "Quality games",
+        "qualityGamesHint": "Strict: played, full attendance, on time, ≥4★, no reports",
+        "qualityRate": "Quality rate",
+        "qualityRateHint": "{quality} of {played} played matches",
+        "played": "Played",
+        "playedHint": "≥2 confirmed present",
+        "avgRating": "Avg. rating",
+        "feedbackCoverage": "Feedback coverage",
+        "feedbackCoverageHint": "{present} of {expected} left feedback",
+        "commitmentRate": "2nd-player commitment",
+        "commitmentRateHint": "{filled} of {created} created matches got a 2nd player — human {human} vs auto {auto}",
+        "commitmentNorthStar": "North star — created matches that get a second player to commit",
+        "funnelTitle": "Lifecycle funnel",
+        "funnelHint": "Games scheduled in this window, by closure outcome.",
+        "funnelOf": "{pct}% of created",
+        "funnelConfidence": "Played & quality are feedback-confirmed — a floor, not a ceiling (coverage {pct}%).",
+        "segmentAll": "All",
+        "checkedInStat": "All checked in: {count} matches ({pct}% of filled)",
+        "feedbackStat": "All gave feedback: {count} matches ({pct}% of filled)",
+        "stageCreated": "Created",
+        "stageCreatedDesc": "All matches scheduled in this window, counted by play date.",
+        "stageFilled": "Filled",
+        "stageFilledDesc": "Enough players joined — 2 for singles, 4 for doubles.",
+        "stagePlayed": "Played",
+        "stagePlayedDesc": "Reached closure with at least 2 participants confirmed present.",
+        "stageQuality": "Quality",
+        "stageQualityDesc": "Played, full attendance, on time, avg rating ≥4★, and no reports.",
+        "outcomesTitle": "Unplayed outcomes",
+        "outcomeCancelled": "Cancelled",
+        "outcomeMutualCancel": "Mutual cancel",
+        "outcomeFellThrough": "Fell through / no feedback",
+        "outcomePending": "Pending closure",
+        "chartTitle": "Played vs quality per day",
+        "chartHint": "Confirmed-played and strict-quality games over the selected window.",
+        "seriesPlayed": "Played",
+        "seriesQuality": "Quality",
+        "dropoffTitle": "Why played matches missed the bar",
+        "dropoffHint": "Of {played} played matches — reasons overlap.",
+        "dropNoShow": "Had a no-show",
+        "dropLate": "Someone arrived late",
+        "dropLowRating": "Rated under 4★",
+        "dropReported": "A report was filed",
         "sportBreakdown": "By sport",
-        "noData": "No match data in this window yet.",
-        "created": "Created",
-        "filled": "Filled",
-        "rate": "Fill %"
+        "colSport": "Sport",
+        "colPlayed": "Played",
+        "colQuality": "Quality",
+        "colRate": "Quality %",
+        "colAvgRating": "Avg ★",
+        "sourceTitle": "Auto-matched vs organic",
+        "sourceAuto": "Auto-generated",
+        "sourceOrganic": "Organic",
+        "noData": "No match data in this window yet."
       }
     },
     "settings": {
@@ -9824,28 +10032,28 @@
   "weeklyCheckIn": {
     "exit": {
       "title": "Catch you later?",
-      "description": "Ace will check back in next week — your settings won't be saved this time.",
+      "description": "Ace will check back in a few days — your settings won't be saved this time.",
       "confirm": "Exit for now",
       "cancel": "Keep going"
     },
     "step1": {
       "bubbleHit": "Schedule locked 🔒 And last week? You smashed your goal — streak's still climbing.",
       "bubbleMet": "Schedule locked 🔒 Last week you hit all {goal} sessions too. Streak alive and well.",
-      "bubbleMiss": "Schedule locked 🔒 Missed last week's goal, but not the streak. Let's bounce back.",
-      "bubbleFirstTime": "Schedule locked 🔒 This is your first check-in — let's get your streak started.",
+      "bubbleMiss": "Schedule locked 🔒 You missed last week's goal — let's bounce back and nail it this week. 💪",
+      "bubbleFirstTime": "Schedule locked 🔒 Play your games and check in to them this week to start your streak. 🔥",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
       "streakSubtitle": "weeks",
       "streakSubtitleOne": "week streak",
-      "streakLabel": "WEEK CHECK-IN STREAK",
-      "streakLabelOne": "WEEK CHECK-IN STREAK",
+      "streakLabel": "WEEKLY GOAL STREAK",
+      "streakLabelOne": "WEEKLY GOAL STREAK",
       "timelineLabel": "Your check-in history",
       "thisWeek": "This week",
       "freezeCount": "{count} freezes saved",
       "freezeOne": "1 freeze saved",
       "freezeZero": "0 freezes saved",
-      "freezeHint": "Earn 1 every 4-week milestone",
-      "freezeFirstTimeInvite": "Your first check-in starts your streak 🔥",
+      "freezeHint": "Earn 1 for every 4 goals hit in a row",
+      "freezeFirstTimeInvite": "Hit your weekly goal to start your streak 🔥",
       "goalsCardTitle": "GOAL TRACKING",
       "goalsCardLastWeek": "Last week",
       "goalsCardTrendLabel": "Last 4 weeks",
@@ -9853,14 +10061,15 @@
       "goalsCardLastWeekHit": "Goal hit ✓",
       "goalsCardLastWeekMiss": "Goal missed",
       "goalsCardNoHistory": "Your goal-hit history will show up here once you've played a few weeks. 📈",
-      "freezeTooltip": "Streak freezes protect you if you miss a check-in.",
+      "checkInNote": "📍 Heads up: a game only counts toward your streak if you check in at the court.",
+      "freezeTooltip": "Streak freezes protect you if you miss your weekly goal.",
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
       "recapPlayed": "Played",
       "cta": "Set my goal 🎯"
     },
     "step2": {
-      "bubble": "Hey 👋 When are you free this week? Tap or drag to paint your slots. ✨",
+      "bubble": "Hey 👋 When are you free over the next few days? Tap or drag to paint your slots. ✨",
       "cta": "Looks good"
     },
     "step3": {
@@ -9885,12 +10094,6 @@
     },
     "step4": {
       "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🎾",
-      "streakHeroCount": "{count} weeks!",
-      "streakHeroCountOne": "1 week!",
-      "streakHeroSub": "Streak extended · +1",
-      "streakHeroSubFirst": "Streak started 🌱",
-      "streakHeroSubMilestone": "Streak milestone · +1 freeze earned ❄️",
-      "streakHeroSubMilestoneCapped": "Streak milestone! Freezes maxed at 2 ❄️❄️",
       "summaryGoal": "Goal: {freq}",
       "summarySlots": "{count} hours confirmed",
       "summarySlotsOne": "1 hour confirmed",
