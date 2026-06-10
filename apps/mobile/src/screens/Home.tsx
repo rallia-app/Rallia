@@ -1359,15 +1359,7 @@ const Home = () => {
         <QuickNavButton
           icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
           label={t('home.quickNav.tournaments')}
-          onPress={() =>
-            appNavigation.navigate('Main', {
-              screen: 'Community',
-              params: {
-                screen: 'Tournaments',
-                initial: false,
-              },
-            } as never)
-          }
+          onPress={() => appNavigation.navigate('Tournaments')}
         />
       </ScrollView>
     );

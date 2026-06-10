@@ -53,6 +53,7 @@ export type RootStackParamList = {
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string; fromChat?: boolean }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
+  Tournaments: undefined; // Tournament list — full-screen, reached from Home quick-nav (back returns to Home)
   TournamentDetail: { tournamentId: string; tournamentName?: string }; // Tournament detail view
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
@@ -149,7 +150,6 @@ export type CommunityStackParamList = {
   SharedListDetail: { listId: string; listName: string };
   Groups: undefined;
   Communities: undefined;
-  Tournaments: undefined;
   Leagues: undefined;
   CommunityDetail: { communityId: string; fromChat?: boolean };
   TournamentDetail: { tournamentId: string };

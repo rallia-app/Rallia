@@ -699,15 +699,6 @@ function CommunityStack() {
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
-      <CommunityStackNavigator.Screen
-        name="Tournaments"
-        component={Tournaments}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('tournamentList.title'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
-      />
     </CommunityStackNavigator.Navigator>
   );
 }
@@ -1529,6 +1520,16 @@ export default function AppNavigator() {
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.communityName || t('community.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Tournaments"
+        component={Tournaments}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('tournamentList.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

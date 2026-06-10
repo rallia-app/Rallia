@@ -117,16 +117,19 @@ export interface PlayerProfile {
  * registrant lists, etc. display_name is intentionally excluded — see
  * @rallia/shared-utils/getHumanName for the app-wide convention.
  */
-export async function getProfilesByIds(ids: string[]): Promise<Map<string, PlayerProfile>> {
-  if (ids.length === 0) return new Map();
+export async function getProfilesByIds(ids: string[]): Promise<Record<string, PlayerProfile>> {
+  if (ids.length === 0) return {};
   const { data, error } = await supabase
     .from('profile')
     .select('id, first_name, last_name, profile_picture_url')
     .in('id', ids);
   if (error) throw new Error(error.message);
-  const map = new Map<string, PlayerProfile>();
-  for (const p of data ?? []) map.set(p.id, p as PlayerProfile);
-  return map;
+  // Plain object (not a Map): React Query persists this query to AsyncStorage,
+  // and a Map serializes to `{}` then rehydrates without its methods — which
+  // crashes consumers calling `.get`. A Record round-trips cleanly as JSON.
+  const byId: Record<string, PlayerProfile> = {};
+  for (const p of data ?? []) byId[p.id] = p as PlayerProfile;
+  return byId;
 }
 
 /**

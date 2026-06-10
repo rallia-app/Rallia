@@ -263,6 +263,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   support: 'help-circle-outline',
   chat: 'chatbubble-outline',
   system: 'information-circle-outline',
+  admin_broadcast: 'megaphone-outline',
   // Match lifecycle types
   match_join_request: 'person-add-outline',
   match_join_accepted: 'checkmark-circle-outline',
@@ -348,6 +349,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   support: '#2196F3', // Blue
   chat: '#9C27B0', // Purple
   system: '#607D8B', // Blue Grey
+  admin_broadcast: '#607D8B', // Blue Grey — admin/system broadcast
   // Match lifecycle types
   match_join_request: '#4DB8A8', // Teal
   match_join_accepted: '#4CAF50', // Green
@@ -432,6 +434,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   support: 'Support',
   chat: 'Chat',
   system: 'System',
+  admin_broadcast: 'Broadcast',
   match_join_request: 'Join Request',
   match_join_accepted: 'Request Accepted',
   match_join_rejected: 'Request Rejected',
@@ -547,6 +550,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   payment: 'system',
   support: 'system',
   system: 'system',
+  admin_broadcast: 'system',
   // Feedback (match-related)
   feedback_request: 'match',
   feedback_reminder: 'match',
@@ -674,6 +678,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   payment: { email: true, push: true, sms: false },
   support: { email: true, push: false, sms: false },
   system: { email: true, push: false, sms: false },
+  admin_broadcast: { email: false, push: true, sms: false }, // push broadcast to all users
   // Feedback types - both email and push for feedback reminders
   feedback_request: { email: true, push: true, sms: false },
   feedback_reminder: { email: true, push: true, sms: false },

@@ -382,7 +382,7 @@ export const TournamentDetail: React.FC = () => {
   const nameByRegId = useMemo(() => {
     const map = new Map<string, string>();
     for (const r of registrations) {
-      const p = profiles?.get(r.user_id);
+      const p = profiles?.[r.user_id];
       // Always use first (+ last). display_name is intentionally ignored
       // per the app-wide convention in @rallia/shared-utils/getHumanName.
       const name = p ? getHumanName(p, '') : '';
@@ -656,109 +656,159 @@ export const TournamentDetail: React.FC = () => {
           />
         )}
 
-        {/* Action panel */}
-        {(() => {
-          // Organizer actions
-          if (isOrganizer && tournament.status === 'draft') {
-            return (
-              <PrimaryActionButton
-                label={
-                  open.isPending
-                    ? t('tournamentDetail.actions.opening' as TranslationKey)
-                    : t('tournamentDetail.actions.openRegistration' as TranslationKey)
-                }
-                icon="lock-open-outline"
-                onPress={onOpen}
-                disabled={open.isPending}
-                colors={colors}
-              />
-            );
-          }
-          if (isOrganizer && tournament.status === 'registration_open') {
-            return (
-              <PrimaryActionButton
-                label={
-                  close.isPending
-                    ? t('tournamentDetail.actions.closing' as TranslationKey)
-                    : t('tournamentDetail.actions.closeRegistration' as TranslationKey)
-                }
-                icon="lock-closed-outline"
-                onPress={onClose}
-                disabled={close.isPending}
-                colors={colors}
-              />
-            );
-          }
-          if (isOrganizer && tournament.status === 'registration_closed') {
-            return (
-              <PrimaryActionButton
-                label={
-                  generateBracket.isPending
-                    ? t('tournamentDetail.actions.generating' as TranslationKey)
-                    : t('tournamentDetail.actions.generateBracket' as TranslationKey)
-                }
-                icon="git-network-outline"
-                onPress={onGenerateBracket}
-                disabled={generateBracket.isPending}
-                colors={colors}
-              />
-            );
-          }
-
-          // Registrant actions
-          if (!isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration) {
-            return (
-              <PrimaryActionButton
-                label={
-                  register.isPending
-                    ? t('tournamentDetail.actions.registering' as TranslationKey)
-                    : t('tournamentDetail.actions.register' as TranslationKey)
-                }
-                icon="person-add-outline"
-                onPress={onRegister}
-                disabled={register.isPending}
-                colors={colors}
-              />
-            );
-          }
-          if (
-            !isOrganizer &&
-            myActiveRegistration &&
-            tournament.status !== 'cancelled' &&
-            tournament.status !== 'archived'
-          ) {
-            const statusLabelKey =
-              myActiveRegistration.status === 'pending'
-                ? 'tournamentDetail.actions.registrationPendingLabel'
-                : 'tournamentDetail.actions.registeredLabel';
-            return (
-              <View style={styles.section}>
-                <View style={[styles.statusInline, { backgroundColor: colors.statusPositiveBg }]}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                    {t(statusLabelKey as TranslationKey)}
-                  </Text>
-                </View>
-                <SecondaryActionButton
+        {/* Action panel — registrant actions (organizer actions live in the Manage section) */}
+        {!isOrganizer &&
+          (() => {
+            if (tournament.status === 'registration_open' && !myActiveRegistration) {
+              return (
+                <PrimaryActionButton
                   label={
-                    withdraw.isPending
-                      ? t('tournamentDetail.actions.withdrawing' as TranslationKey)
-                      : t('tournamentDetail.actions.withdraw' as TranslationKey)
+                    register.isPending
+                      ? t('tournamentDetail.actions.registering' as TranslationKey)
+                      : t('tournamentDetail.actions.register' as TranslationKey)
                   }
-                  icon="exit-outline"
-                  onPress={onWithdraw}
-                  disabled={withdraw.isPending}
+                  icon="person-add-outline"
+                  onPress={onRegister}
+                  disabled={register.isPending}
                   colors={colors}
                 />
-              </View>
-            );
-          }
-          return null;
-        })()}
+              );
+            }
+            if (
+              myActiveRegistration &&
+              tournament.status !== 'cancelled' &&
+              tournament.status !== 'archived'
+            ) {
+              const statusLabelKey =
+                myActiveRegistration.status === 'pending'
+                  ? 'tournamentDetail.actions.registrationPendingLabel'
+                  : 'tournamentDetail.actions.registeredLabel';
+              return (
+                <View style={styles.section}>
+                  <View style={[styles.statusInline, { backgroundColor: colors.statusPositiveBg }]}>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
+                    <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
+                      {t(statusLabelKey as TranslationKey)}
+                    </Text>
+                  </View>
+                  <SecondaryActionButton
+                    label={
+                      withdraw.isPending
+                        ? t('tournamentDetail.actions.withdrawing' as TranslationKey)
+                        : t('tournamentDetail.actions.withdraw' as TranslationKey)
+                    }
+                    icon="exit-outline"
+                    onPress={onWithdraw}
+                    disabled={withdraw.isPending}
+                    colors={colors}
+                  />
+                </View>
+              );
+            }
+            return null;
+          })()}
 
-        {/* Manage card: organizer destructive actions grouped together */}
+        {/* Manage card: all organizer actions grouped together */}
         {isOrganizer &&
           (() => {
+            let primaryAction: React.ReactNode = null;
+            if (tournament.status === 'draft') {
+              primaryAction = (
+                <PrimaryActionButton
+                  bare
+                  label={
+                    open.isPending
+                      ? t('tournamentDetail.actions.opening' as TranslationKey)
+                      : t('tournamentDetail.actions.openRegistration' as TranslationKey)
+                  }
+                  icon="lock-open-outline"
+                  onPress={onOpen}
+                  disabled={open.isPending}
+                  colors={colors}
+                />
+              );
+            } else if (tournament.status === 'registration_open') {
+              primaryAction = (
+                <PrimaryActionButton
+                  bare
+                  label={
+                    close.isPending
+                      ? t('tournamentDetail.actions.closing' as TranslationKey)
+                      : t('tournamentDetail.actions.closeRegistration' as TranslationKey)
+                  }
+                  icon="lock-closed-outline"
+                  onPress={onClose}
+                  disabled={close.isPending}
+                  colors={colors}
+                />
+              );
+            } else if (tournament.status === 'registration_closed') {
+              primaryAction = (
+                <PrimaryActionButton
+                  bare
+                  label={
+                    generateBracket.isPending
+                      ? t('tournamentDetail.actions.generating' as TranslationKey)
+                      : t('tournamentDetail.actions.generateBracket' as TranslationKey)
+                  }
+                  icon="git-network-outline"
+                  onPress={onGenerateBracket}
+                  disabled={generateBracket.isPending}
+                  colors={colors}
+                />
+              );
+            }
+
+            // Organizers can also join their own tournament as a participant.
+            // The server (tournament_register) registers them directly,
+            // regardless of registration_mode.
+            let selfParticipation: React.ReactNode = null;
+            if (
+              myActiveRegistration &&
+              tournament.status !== 'cancelled' &&
+              tournament.status !== 'archived'
+            ) {
+              const statusLabelKey =
+                myActiveRegistration.status === 'pending'
+                  ? 'tournamentDetail.actions.registrationPendingLabel'
+                  : 'tournamentDetail.actions.registeredLabel';
+              selfParticipation = (
+                <View>
+                  <View style={[styles.statusInline, { backgroundColor: colors.statusPositiveBg }]}>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
+                    <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
+                      {t(statusLabelKey as TranslationKey)}
+                    </Text>
+                  </View>
+                  <SecondaryActionButton
+                    label={
+                      withdraw.isPending
+                        ? t('tournamentDetail.actions.withdrawing' as TranslationKey)
+                        : t('tournamentDetail.actions.withdraw' as TranslationKey)
+                    }
+                    icon="exit-outline"
+                    onPress={onWithdraw}
+                    disabled={withdraw.isPending}
+                    colors={colors}
+                  />
+                </View>
+              );
+            } else if (tournament.status === 'registration_open') {
+              selfParticipation = (
+                <SecondaryActionButton
+                  label={
+                    register.isPending
+                      ? t('tournamentDetail.actions.registering' as TranslationKey)
+                      : t('tournamentDetail.actions.addMyself' as TranslationKey)
+                  }
+                  icon="person-add-outline"
+                  onPress={onRegister}
+                  disabled={register.isPending}
+                  colors={colors}
+                />
+              );
+            }
+
             const showCancel = [
               'draft',
               'registration_open',
@@ -767,13 +817,15 @@ export const TournamentDetail: React.FC = () => {
             ].includes(tournament.status);
             const showArchive =
               tournament.status === 'completed' || tournament.status === 'cancelled';
-            if (!showCancel && !showArchive) return null;
+            if (!primaryAction && !selfParticipation && !showCancel && !showArchive) return null;
             return (
               <Section
                 title={t('tournamentDetail.sections.manage' as TranslationKey)}
                 colors={colors}
               >
                 <View style={styles.manageCardInner}>
+                  {primaryAction}
+                  {selfParticipation}
                   {showCancel && (
                     <SecondaryActionButton
                       label={t('tournamentDetail.actions.cancelTournament' as TranslationKey)}
@@ -1498,8 +1550,13 @@ const PrimaryActionButton: React.FC<{
   onPress: () => void;
   disabled?: boolean;
   colors: ScreenColors;
-}> = ({ label, icon, onPress, disabled, colors }) => (
-  <View style={styles.section}>
+  /**
+   * When true, render only the button without the surrounding section wrapper.
+   * Used inside the Manage section card, where spacing is handled by the card.
+   */
+  bare?: boolean;
+}> = ({ label, icon, onPress, disabled, colors, bare }) => {
+  const button = (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
@@ -1516,8 +1573,9 @@ const PrimaryActionButton: React.FC<{
         {label}
       </Text>
     </TouchableOpacity>
-  </View>
-);
+  );
+  return bare ? button : <View style={styles.section}>{button}</View>;
+};
 
 const SecondaryActionButton: React.FC<{
   label: string;

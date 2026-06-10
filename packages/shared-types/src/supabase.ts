@@ -1302,6 +1302,107 @@ export type Database = {
         }
         Relationships: []
       }
+      email_broadcast: {
+        Row: {
+          audience: Json
+          body: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          cta_text: string | null
+          cta_url: string | null
+          failed_count: number
+          id: string
+          recipients_total: number
+          sent_count: number
+          status: string
+          subject: string
+        }
+        Insert: {
+          audience?: Json
+          body: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          failed_count?: number
+          id?: string
+          recipients_total?: number
+          sent_count?: number
+          status?: string
+          subject: string
+        }
+        Update: {
+          audience?: Json
+          body?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          failed_count?: number
+          id?: string
+          recipients_total?: number
+          sent_count?: number
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_broadcast_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_broadcast_recipient: {
+        Row: {
+          broadcast_id: string
+          email: string
+          id: number
+          resend_id: string | null
+          sent_at: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          broadcast_id: string
+          email: string
+          id?: number
+          resend_id?: string | null
+          sent_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          broadcast_id?: string
+          email?: string
+          id?: number
+          resend_id?: string | null
+          sent_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_broadcast_recipient_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "email_broadcast"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_broadcast_recipient_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facility: {
         Row: {
           address: string | null
@@ -2167,6 +2268,320 @@ export type Database = {
           },
         ]
       }
+      league_invite_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          label: string | null
+          league_id: string
+          max_uses: number | null
+          revoked_at: string | null
+          token: string
+          uses: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          league_id: string
+          max_uses?: number | null
+          revoked_at?: string | null
+          token: string
+          uses?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          league_id?: string
+          max_uses?: number | null
+          revoked_at?: string | null
+          token?: string
+          uses?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_invite_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_invite_links_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_member_waitlist: {
+        Row: {
+          id: string
+          joined_at: string
+          league_id: string
+          position: number
+          promoted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          league_id: string
+          position: number
+          promoted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          league_id?: string
+          position?: number
+          promoted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_member_waitlist_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_member_waitlist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_members: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          joined_at?: string
+          league_id: string
+          left_at?: string | null
+          role?: Database["public"]["Enums"]["league_role"]
+          status?: Database["public"]["Enums"]["league_member_status"]
+          suspended_at?: string | null
+          suspended_reason?: string | null
+          suspended_until?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          joined_at?: string
+          league_id?: string
+          left_at?: string | null
+          role?: Database["public"]["Enums"]["league_role"]
+          status?: Database["public"]["Enums"]["league_member_status"]
+          suspended_at?: string | null
+          suspended_reason?: string | null
+          suspended_until?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_members_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_members_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leagues: {
+        Row: {
+          categories: string[]
+          created_at: string
+          default_rules: Json
+          description: string | null
+          facility_id: string | null
+          id: string
+          join_mode: Database["public"]["Enums"]["tournament_registration_mode"]
+          level: string | null
+          logo_url: string | null
+          member_capacity: number | null
+          name: string
+          network_id: string | null
+          organizer_id: string
+          sport_id: string
+          status: Database["public"]["Enums"]["league_status"]
+          surfaces: string[]
+          updated_at: string
+          venue_name: string | null
+          version: number
+          visibility: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled: boolean
+        }
+        Insert: {
+          categories?: string[]
+          created_at?: string
+          default_rules?: Json
+          description?: string | null
+          facility_id?: string | null
+          id?: string
+          join_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
+          level?: string | null
+          logo_url?: string | null
+          member_capacity?: number | null
+          name: string
+          network_id?: string | null
+          organizer_id: string
+          sport_id: string
+          status?: Database["public"]["Enums"]["league_status"]
+          surfaces?: string[]
+          updated_at?: string
+          venue_name?: string | null
+          version?: number
+          visibility?: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled?: boolean
+        }
+        Update: {
+          categories?: string[]
+          created_at?: string
+          default_rules?: Json
+          description?: string | null
+          facility_id?: string | null
+          id?: string
+          join_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
+          level?: string | null
+          logo_url?: string | null
+          member_capacity?: number | null
+          name?: string
+          network_id?: string | null
+          organizer_id?: string
+          sport_id?: string
+          status?: Database["public"]["Enums"]["league_status"]
+          surfaces?: string[]
+          updated_at?: string
+          venue_name?: string | null
+          version?: number
+          visibility?: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leagues_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_network_id_fkey"
+            columns: ["network_id"]
+            isOneToOne: false
+            referencedRelation: "network"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leagues_tournaments_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          entity_id: string
+          id: string
+          occurred_at: string
+          payload_after: Json | null
+          payload_before: Json | null
+          scope: Database["public"]["Enums"]["audit_scope"]
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          entity_id: string
+          id?: string
+          occurred_at?: string
+          payload_after?: Json | null
+          payload_before?: Json | null
+          scope: Database["public"]["Enums"]["audit_scope"]
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          entity_id?: string
+          id?: string
+          occurred_at?: string
+          payload_after?: Json | null
+          payload_before?: Json | null
+          scope?: Database["public"]["Enums"]["audit_scope"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leagues_tournaments_audit_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match: {
         Row: {
           booking_id: string | null
@@ -2505,7 +2920,6 @@ export type Database = {
       match_participant: {
         Row: {
           aggregated_at: string | null
-          amount_owed_cents: number | null
           cancellation_notes: string | null
           cancellation_reason:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
@@ -2519,26 +2933,13 @@ export type Database = {
           initial_feedback_notification_sent_at: string | null
           is_host: boolean | null
           joined_at: string | null
-          marked_paid_at: string | null
-          marked_paid_by: string | null
           match_check_in_reminder_sent_at: string | null
           match_id: string
           match_outcome:
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at: string | null
-          payment_currency: string
-          payment_expires_at: string | null
-          payment_failure_reason: string | null
           payment_intent_id: string | null
-          payment_paid_at: string | null
-          payment_provider:
-            | Database["public"]["Enums"]["payment_provider_enum"]
-            | null
-          payment_reference: string | null
-          payment_requested_at: string | null
-          payment_status: Database["public"]["Enums"]["payment_status_enum"]
-          payment_url: string | null
           player_id: string
           score: number | null
           showed_up: boolean | null
@@ -2552,7 +2953,6 @@ export type Database = {
         }
         Insert: {
           aggregated_at?: string | null
-          amount_owed_cents?: number | null
           cancellation_notes?: string | null
           cancellation_reason?:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
@@ -2566,26 +2966,13 @@ export type Database = {
           initial_feedback_notification_sent_at?: string | null
           is_host?: boolean | null
           joined_at?: string | null
-          marked_paid_at?: string | null
-          marked_paid_by?: string | null
           match_check_in_reminder_sent_at?: string | null
           match_id: string
           match_outcome?:
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at?: string | null
-          payment_currency?: string
-          payment_expires_at?: string | null
-          payment_failure_reason?: string | null
           payment_intent_id?: string | null
-          payment_paid_at?: string | null
-          payment_provider?:
-            | Database["public"]["Enums"]["payment_provider_enum"]
-            | null
-          payment_reference?: string | null
-          payment_requested_at?: string | null
-          payment_status?: Database["public"]["Enums"]["payment_status_enum"]
-          payment_url?: string | null
           player_id: string
           score?: number | null
           showed_up?: boolean | null
@@ -2599,7 +2986,6 @@ export type Database = {
         }
         Update: {
           aggregated_at?: string | null
-          amount_owed_cents?: number | null
           cancellation_notes?: string | null
           cancellation_reason?:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
@@ -2613,26 +2999,13 @@ export type Database = {
           initial_feedback_notification_sent_at?: string | null
           is_host?: boolean | null
           joined_at?: string | null
-          marked_paid_at?: string | null
-          marked_paid_by?: string | null
           match_check_in_reminder_sent_at?: string | null
           match_id?: string
           match_outcome?:
             | Database["public"]["Enums"]["match_outcome_enum"]
             | null
           match_starting_soon_sent_at?: string | null
-          payment_currency?: string
-          payment_expires_at?: string | null
-          payment_failure_reason?: string | null
           payment_intent_id?: string | null
-          payment_paid_at?: string | null
-          payment_provider?:
-            | Database["public"]["Enums"]["payment_provider_enum"]
-            | null
-          payment_reference?: string | null
-          payment_requested_at?: string | null
-          payment_status?: Database["public"]["Enums"]["payment_status_enum"]
-          payment_url?: string | null
           player_id?: string
           score?: number | null
           showed_up?: boolean | null
@@ -2645,13 +3018,6 @@ export type Database = {
           was_late?: boolean | null
         }
         Relationships: [
-          {
-            foreignKeyName: "match_participant_marked_paid_by_fkey"
-            columns: ["marked_paid_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "match_participant_match_id_fkey"
             columns: ["match_id"]
@@ -4033,53 +4399,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: true
             referencedRelation: "organization"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_webhook_event: {
-        Row: {
-          event_type: string
-          external_event_id: string
-          id: string
-          participant_id: string | null
-          payload: Json
-          processed_at: string | null
-          processing_error: string | null
-          provider: Database["public"]["Enums"]["payment_provider_enum"]
-          received_at: string
-          signature_ok: boolean
-        }
-        Insert: {
-          event_type: string
-          external_event_id: string
-          id?: string
-          participant_id?: string | null
-          payload: Json
-          processed_at?: string | null
-          processing_error?: string | null
-          provider: Database["public"]["Enums"]["payment_provider_enum"]
-          received_at?: string
-          signature_ok: boolean
-        }
-        Update: {
-          event_type?: string
-          external_event_id?: string
-          id?: string
-          participant_id?: string | null
-          payload?: Json
-          processed_at?: string | null
-          processing_error?: string | null
-          provider?: Database["public"]["Enums"]["payment_provider_enum"]
-          received_at?: string
-          signature_ok?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_webhook_event_participant_id_fkey"
-            columns: ["participant_id"]
-            isOneToOne: false
-            referencedRelation: "match_participant"
             referencedColumns: ["id"]
           },
         ]
@@ -6994,6 +7313,146 @@ export type Database = {
           },
         ]
       }
+      season_rankings: {
+        Row: {
+          created_at: string
+          draws: number
+          games_lost: number
+          games_won: number
+          id: string
+          last_recalculated_at: string
+          losses: number
+          matches_played: number
+          no_shows: number
+          points: number
+          rank: number | null
+          season_id: string
+          sessions_attended: number
+          sessions_eligible: number
+          sets_lost: number
+          sets_won: number
+          tiebreak_seed: number | null
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          created_at?: string
+          draws?: number
+          games_lost?: number
+          games_won?: number
+          id?: string
+          last_recalculated_at?: string
+          losses?: number
+          matches_played?: number
+          no_shows?: number
+          points?: number
+          rank?: number | null
+          season_id: string
+          sessions_attended?: number
+          sessions_eligible?: number
+          sets_lost?: number
+          sets_won?: number
+          tiebreak_seed?: number | null
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          created_at?: string
+          draws?: number
+          games_lost?: number
+          games_won?: number
+          id?: string
+          last_recalculated_at?: string
+          losses?: number
+          matches_played?: number
+          no_shows?: number
+          points?: number
+          rank?: number | null
+          season_id?: string
+          sessions_attended?: number
+          sessions_eligible?: number
+          sets_lost?: number
+          sets_won?: number
+          tiebreak_seed?: number | null
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_rankings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_rankings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seasons: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          end_date: string
+          final_standings: Json | null
+          id: string
+          league_id: string
+          name: string
+          rules: Json
+          rules_locked_at: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["season_status"]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          end_date: string
+          final_standings?: Json | null
+          id?: string
+          league_id: string
+          name: string
+          rules?: Json
+          rules_locked_at?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["season_status"]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          end_date?: string
+          final_standings?: Json | null
+          id?: string
+          league_id?: string
+          name?: string
+          rules?: Json
+          rules_locked_at?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["season_status"]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_attendance: {
         Row: {
           attended: boolean | null
@@ -7045,6 +7504,354 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "program_session"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_courts: {
+        Row: {
+          court_id: string
+          session_id: string
+        }
+        Insert: {
+          court_id: string
+          session_id: string
+        }
+        Update: {
+          court_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_courts_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: false
+            referencedRelation: "court"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_courts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_match_scores: {
+        Row: {
+          created_at: string
+          id: string
+          outcome_team: Database["public"]["Enums"]["pairing_team"] | null
+          rejection_reason: string | null
+          retired_team: Database["public"]["Enums"]["pairing_team"] | null
+          score: string
+          session_match_id: string
+          status: Database["public"]["Enums"]["score_validation_status"]
+          submitted_by: string
+          validated_at: string | null
+          validated_by: string | null
+          walkover_team: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outcome_team?: Database["public"]["Enums"]["pairing_team"] | null
+          rejection_reason?: string | null
+          retired_team?: Database["public"]["Enums"]["pairing_team"] | null
+          score: string
+          session_match_id: string
+          status?: Database["public"]["Enums"]["score_validation_status"]
+          submitted_by: string
+          validated_at?: string | null
+          validated_by?: string | null
+          walkover_team?: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outcome_team?: Database["public"]["Enums"]["pairing_team"] | null
+          rejection_reason?: string | null
+          retired_team?: Database["public"]["Enums"]["pairing_team"] | null
+          score?: string
+          session_match_id?: string
+          status?: Database["public"]["Enums"]["score_validation_status"]
+          submitted_by?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          walkover_team?: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_match_scores_session_match_id_fkey"
+            columns: ["session_match_id"]
+            isOneToOne: false
+            referencedRelation: "session_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_match_scores_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_match_scores_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_matches: {
+        Row: {
+          court_id: string | null
+          court_label: string | null
+          created_at: string
+          format: Database["public"]["Enums"]["entry_format"]
+          id: string
+          is_drill: boolean
+          is_three_player: boolean
+          locked: boolean
+          played_at: string | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["session_match_status"]
+          team_a_user_ids: string[]
+          team_b_user_ids: string[]
+          updated_at: string
+          version: number
+          winner_team: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        Insert: {
+          court_id?: string | null
+          court_label?: string | null
+          created_at?: string
+          format?: Database["public"]["Enums"]["entry_format"]
+          id?: string
+          is_drill?: boolean
+          is_three_player?: boolean
+          locked?: boolean
+          played_at?: string | null
+          round_number?: number
+          scheduled_at?: string | null
+          score?: string | null
+          session_id: string
+          status?: Database["public"]["Enums"]["session_match_status"]
+          team_a_user_ids: string[]
+          team_b_user_ids: string[]
+          updated_at?: string
+          version?: number
+          winner_team?: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        Update: {
+          court_id?: string | null
+          court_label?: string | null
+          created_at?: string
+          format?: Database["public"]["Enums"]["entry_format"]
+          id?: string
+          is_drill?: boolean
+          is_three_player?: boolean
+          locked?: boolean
+          played_at?: string | null
+          round_number?: number
+          scheduled_at?: string | null
+          score?: string | null
+          session_id?: string
+          status?: Database["public"]["Enums"]["session_match_status"]
+          team_a_user_ids?: string[]
+          team_b_user_ids?: string[]
+          updated_at?: string
+          version?: number
+          winner_team?: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_matches_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: false
+            referencedRelation: "court"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_matches_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_presence: {
+        Row: {
+          created_at: string
+          guest_invited_by: string | null
+          id: string
+          is_guest: boolean
+          preferred_partner_id: string | null
+          responded_at: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["session_presence_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          waitlist_position: number | null
+        }
+        Insert: {
+          created_at?: string
+          guest_invited_by?: string | null
+          id?: string
+          is_guest?: boolean
+          preferred_partner_id?: string | null
+          responded_at?: string | null
+          session_id: string
+          status?: Database["public"]["Enums"]["session_presence_status"]
+          updated_at?: string
+          user_id: string
+          version?: number
+          waitlist_position?: number | null
+        }
+        Update: {
+          created_at?: string
+          guest_invited_by?: string | null
+          id?: string
+          is_guest?: boolean
+          preferred_partner_id?: string | null
+          responded_at?: string | null
+          session_id?: string
+          status?: Database["public"]["Enums"]["session_presence_status"]
+          updated_at?: string
+          user_id?: string
+          version?: number
+          waitlist_position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_presence_guest_invited_by_fkey"
+            columns: ["guest_invited_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_presence_preferred_partner_id_fkey"
+            columns: ["preferred_partner_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_presence_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_presence_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          allow_guests: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          capacity: number | null
+          completed_at: string | null
+          confirmation_deadline_at: string | null
+          created_at: string
+          duration_minutes: number
+          facility_id: string | null
+          formats_allowed: Database["public"]["Enums"]["entry_format"][]
+          id: string
+          match_format: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          published_at: string | null
+          rounds: number
+          scheduled_at: string
+          season_id: string
+          status: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at: string
+          venue_name: string | null
+          version: number
+        }
+        Insert: {
+          allow_guests?: boolean
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          capacity?: number | null
+          completed_at?: string | null
+          confirmation_deadline_at?: string | null
+          created_at?: string
+          duration_minutes?: number
+          facility_id?: string | null
+          formats_allowed?: Database["public"]["Enums"]["entry_format"][]
+          id?: string
+          match_format?: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          published_at?: string | null
+          rounds?: number
+          scheduled_at: string
+          season_id: string
+          status?: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at?: string
+          venue_name?: string | null
+          version?: number
+        }
+        Update: {
+          allow_guests?: boolean
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          capacity?: number | null
+          completed_at?: string | null
+          confirmation_deadline_at?: string | null
+          created_at?: string
+          duration_minutes?: number
+          facility_id?: string | null
+          formats_allowed?: Database["public"]["Enums"]["entry_format"][]
+          id?: string
+          match_format?: Database["public"]["Enums"]["match_format"] | null
+          name?: string
+          odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          published_at?: string | null
+          rounds?: number
+          scheduled_at?: string
+          season_id?: string
+          status?: Database["public"]["Enums"]["session_status"]
+          timezone?: string
+          updated_at?: string
+          venue_name?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
         ]
@@ -7878,6 +8685,10 @@ export type Database = {
         Returns: boolean
       }
       archive_utm_campaign: { Args: { p_id: string }; Returns: undefined }
+      assert_caller_plays_sport: {
+        Args: { p_sport_id: string }
+        Returns: undefined
+      }
       attribute_referral: {
         Args: {
           p_invitation_type?: string
@@ -8114,6 +8925,17 @@ export type Database = {
           total_actions: number
         }[]
       }
+      get_auto_invite_candidates: {
+        Args: {
+          p_exclude?: string[]
+          p_match_id: string
+          p_max?: number
+          p_weekly_cap?: number
+        }
+        Returns: {
+          player_id: string
+        }[]
+      }
       get_availability_refresh_eligible_users: {
         Args: never
         Returns: {
@@ -8152,6 +8974,21 @@ export type Database = {
           recidivism_rate: number
           temporary_bans: number
           total_active_bans: number
+        }[]
+      }
+      get_broadcast_recipients: {
+        Args: {
+          p_active_since?: string
+          p_city?: string
+          p_locale?: string
+          p_only_subscribers?: boolean
+          p_sport_id?: string
+        }
+        Returns: {
+          email: string
+          first_name: string
+          preferred_locale: string
+          user_id: string
         }[]
       }
       get_certification_funnel: {
@@ -8285,6 +9122,7 @@ export type Database = {
       get_just_for_you: {
         Args: {
           p_caller_id: string
+          p_include_suggestions?: boolean
           p_latitude: number
           p_limit?: number
           p_longitude: number
@@ -8499,6 +9337,20 @@ export type Database = {
       get_my_contest_rank: {
         Args: { p_contest_id: string; p_player_id: string }
         Returns: Json
+      }
+      get_nearby_public_matches: {
+        Args: {
+          p_latitude: number
+          p_limit?: number
+          p_longitude: number
+          p_max_distance_km: number
+          p_sport_id: string
+          p_user_gender?: string
+        }
+        Returns: {
+          match_payload: Json
+          score: number
+        }[]
       }
       get_network_growth: {
         Args: { p_end_date: string; p_start_date: string }
@@ -9340,11 +10192,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      is_active_league_member: {
+        Args: { p_league_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: { check_uid?: string }; Returns: boolean }
       is_conversation_participant: {
         Args: { conversation_id_param: string; user_id_param: string }
         Returns: boolean
       }
+      is_league_organizer: { Args: { p_league_id: string }; Returns: boolean }
       is_match_creator: {
         Args: { p_match_id: string; p_player_id: string }
         Returns: boolean
@@ -9380,6 +10237,14 @@ export type Database = {
       is_player_banned: { Args: { p_player_id: string }; Returns: boolean }
       is_player_online: { Args: { player_uuid: string }; Returns: boolean }
       is_public_match: { Args: { p_match_id: string }; Returns: boolean }
+      is_tournament_organizer: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
+      is_tournament_registrant: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       join_group_by_invite_code: {
         Args: { p_invite_code: string; p_player_id: string }
         Returns: Json
@@ -9892,26 +10757,16 @@ export type Database = {
         Args: { p_facility_id: string }
         Returns: boolean
       }
-      submit_match_result_for_match:
-        | {
-            Args: {
-              p_match_id: string
-              p_sets: Json
-              p_submitted_by: string
-              p_winning_team: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_match_id: string
-              p_partner_id?: string
-              p_sets: Json
-              p_submitted_by: string
-              p_winning_team: number
-            }
-            Returns: string
-          }
+      submit_match_result_for_match: {
+        Args: {
+          p_match_id: string
+          p_partner_id?: string
+          p_sets: Json
+          p_submitted_by: string
+          p_winning_team: number
+        }
+        Returns: string
+      }
       tournament_archive: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -9963,43 +10818,6 @@ export type Database = {
       }
       tournament_attach_match: {
         Args: { p_match_id: string; p_tournament_match_id: string }
-        Returns: {
-          bracket_side: string
-          court_id: string | null
-          created_at: string
-          id: string
-          loser_next_match_id: string | null
-          match_id: string | null
-          match_position: number
-          next_match_id: string | null
-          next_match_slot: number | null
-          played_at: string | null
-          player1_is_bye: boolean
-          player1_registration_id: string | null
-          player2_is_bye: boolean
-          player2_registration_id: string | null
-          round_number: number
-          scheduled_at: string | null
-          score: string | null
-          status: Database["public"]["Enums"]["tournament_match_status"]
-          tournament_id: string
-          updated_at: string
-          version: number
-          winner_registration_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "tournament_matches"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      tournament_override_score: {
-        Args: {
-          p_score?: string
-          p_tournament_match_id: string
-          p_winner_registration_id: string
-        }
         Returns: {
           bracket_side: string
           court_id: string | null
@@ -10281,6 +11099,43 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "tournaments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      tournament_override_score: {
+        Args: {
+          p_score?: string
+          p_tournament_match_id: string
+          p_winner_registration_id: string
+        }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -10652,6 +11507,7 @@ export type Database = {
         | "match_time_suggested"
         | "match_time_suggestion_accepted"
         | "match_time_suggestion_declined"
+        | "admin_broadcast"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       organization_nature_enum: "public" | "private"
       organization_type:
@@ -10675,17 +11531,7 @@ export type Database = {
         | "cash"
         | "bank_transfer"
       payment_plan_enum: "full" | "installment"
-      payment_provider_enum: "stripe" | "dwello" | "vopay" | "stub" | "manual"
       payment_status: "pending" | "completed" | "failed" | "refunded"
-      payment_status_enum:
-        | "none"
-        | "requested"
-        | "paid"
-        | "failed"
-        | "expired"
-        | "cancelled"
-        | "manual"
-      period_enum: "morning" | "afternoon" | "evening"
       play_attribute_enum:
         | "serve_speed_and_placement"
         | "net_play"
@@ -11286,6 +12132,7 @@ export const Constants = {
         "match_time_suggested",
         "match_time_suggestion_accepted",
         "match_time_suggestion_declined",
+        "admin_broadcast",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       organization_nature_enum: ["public", "private"],
@@ -11313,18 +12160,7 @@ export const Constants = {
         "bank_transfer",
       ],
       payment_plan_enum: ["full", "installment"],
-      payment_provider_enum: ["stripe", "dwello", "vopay", "stub", "manual"],
       payment_status: ["pending", "completed", "failed", "refunded"],
-      payment_status_enum: [
-        "none",
-        "requested",
-        "paid",
-        "failed",
-        "expired",
-        "cancelled",
-        "manual",
-      ],
-      period_enum: ["morning", "afternoon", "evening"],
       play_attribute_enum: [
         "serve_speed_and_placement",
         "net_play",

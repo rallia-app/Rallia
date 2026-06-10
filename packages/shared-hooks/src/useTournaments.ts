@@ -54,7 +54,7 @@ export const tournamentKeys = {
 export function useProfilesByIds(ids: string[]) {
   // Stable key: sorted unique ids joined.
   const sortedIds = [...new Set(ids)].sort();
-  return useQuery<Map<string, PlayerProfile>>({
+  return useQuery<Record<string, PlayerProfile>>({
     queryKey: ['profiles', 'byIds', sortedIds.join(',')],
     queryFn: () => getProfilesByIds(sortedIds),
     enabled: sortedIds.length > 0,

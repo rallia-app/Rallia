@@ -388,6 +388,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
 
   // Low - informational
   system: 'low',
+  admin_broadcast: 'high',
 
   // Feedback - normal priority
   feedback_request: 'normal',
@@ -476,6 +477,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Payment update',
   support: 'Message from Rallia',
   system: 'Rallia Update',
+  admin_broadcast: 'Rallia Announcement',
   feedback_request: 'How was your game?',
   feedback_reminder: 'Your game still needs a score',
   score_confirmation: 'Confirm your score',
@@ -570,6 +572,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   payment: 'Your payment status has been updated. Tap to view details.',
   support: 'Our support team has sent you a message. Tap to read.',
   system: 'We have an update for you. Tap to learn more.',
+  admin_broadcast: 'You have a new announcement from Rallia.',
   feedback_request:
     "Submit your score and rate your {sportName} game with {opponentNames} while it's fresh!",
   feedback_reminder:

@@ -220,11 +220,11 @@ describe('createTournament', () => {
 describe('getProfilesByIds', () => {
   it('short-circuits on empty input — does not query Supabase', async () => {
     const out = await getProfilesByIds([]);
-    expect(out.size).toBe(0);
+    expect(Object.keys(out)).toHaveLength(0);
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
-  it('returns a Map keyed by id', async () => {
+  it('returns a record keyed by id', async () => {
     const rows = [
       { id: 'u1', first_name: 'Ada', last_name: 'L', profile_picture_url: null },
       { id: 'u2', first_name: 'Bo', last_name: null, profile_picture_url: 'a.jpg' },
@@ -233,16 +233,16 @@ describe('getProfilesByIds', () => {
     mockFrom.mockReturnValue(p);
 
     const out = await getProfilesByIds(['u1', 'u2']);
-    expect(out.size).toBe(2);
-    expect(out.get('u1')?.first_name).toBe('Ada');
-    expect(out.get('u2')?.profile_picture_url).toBe('a.jpg');
+    expect(Object.keys(out)).toHaveLength(2);
+    expect(out['u1']?.first_name).toBe('Ada');
+    expect(out['u2']?.profile_picture_url).toBe('a.jpg');
   });
 
-  it('returns empty Map when supabase returns null data', async () => {
+  it('returns empty record when supabase returns null data', async () => {
     const { p } = chain({ data: null, error: null });
     mockFrom.mockReturnValue(p);
     const out = await getProfilesByIds(['u1']);
-    expect(out.size).toBe(0);
+    expect(Object.keys(out)).toHaveLength(0);
   });
 
   it('throws on supabase error', async () => {

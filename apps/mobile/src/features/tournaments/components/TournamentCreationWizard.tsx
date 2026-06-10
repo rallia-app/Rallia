@@ -496,11 +496,9 @@ const DetailsStep: React.FC<{
 const VisibilityStep: React.FC<{
   visibility: Visibility;
   setVisibility: (v: Visibility) => void;
-  registrationMode: RegistrationMode;
-  setRegistrationMode: (v: RegistrationMode) => void;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
-}> = ({ visibility, setVisibility, registrationMode, setRegistrationMode, colors, t }) => (
+}> = ({ visibility, setVisibility, colors, t }) => (
   <SheetScrollView
     style={styles.stepContainer}
     contentContainerStyle={styles.stepContent}
@@ -542,43 +540,15 @@ const VisibilityStep: React.FC<{
       </View>
     </View>
 
-    <View style={styles.fieldGroup}>
-      <FieldLabel colors={colors}>
-        {t('tournamentCreation.fields.registrationMode' as TranslationKey)}
-      </FieldLabel>
-      <View style={styles.optionsColumn}>
-        <OptionCard
-          icon="enter-outline"
-          title={t('tournamentCreation.fields.registrationModeOpen' as TranslationKey)}
-          description={t(
-            'tournamentCreation.fields.registrationModeOpenDescription' as TranslationKey
-          )}
-          selected={registrationMode === 'open'}
-          onPress={() => setRegistrationMode('open')}
-          colors={colors}
-        />
-        <OptionCard
-          icon="checkmark-done-outline"
-          title={t('tournamentCreation.fields.registrationModeApproval' as TranslationKey)}
-          description={t(
-            'tournamentCreation.fields.registrationModeApprovalDescription' as TranslationKey
-          )}
-          selected={registrationMode === 'approval'}
-          onPress={() => setRegistrationMode('approval')}
-          colors={colors}
-        />
-        <OptionCard
-          icon="mail-outline"
-          title={t('tournamentCreation.fields.registrationModeInviteOnly' as TranslationKey)}
-          description={t(
-            'tournamentCreation.fields.registrationModeInviteOnlyDescription' as TranslationKey
-          )}
-          selected={registrationMode === 'invite_only'}
-          onPress={() => setRegistrationMode('invite_only')}
-          colors={colors}
-        />
-      </View>
-    </View>
+    {/*
+      The registration-mode picker (open / approval / invite_only) is hidden:
+      only 'open' is shippable, so there's no selection to make. The wizard
+      forces registrationMode='open' (see useState below). Restore the picker
+      here when the organizer-side flows for the other modes are built
+      (approve/reject pending registrations; issue/redeem invites) — the
+      tournament_register RPC already branches on all three modes server-side.
+      See tournamentService.registerForTournament.
+    */}
   </SheetScrollView>
 );
 
@@ -625,6 +595,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [visibility, setVisibility] = useState<Visibility>('private');
+  // Fixed to 'open' — the registration-mode picker is hidden in VisibilityStep
+  // until the approval/invite_only organizer flows exist. Kept as state so the
+  // create payload and resetForm wiring stay intact for an easy restore.
   const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('open');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
@@ -833,8 +806,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           <VisibilityStep
             visibility={visibility}
             setVisibility={setVisibility}
-            registrationMode={registrationMode}
-            setRegistrationMode={setRegistrationMode}
             colors={colors}
             t={t}
           />
