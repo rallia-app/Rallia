@@ -9,7 +9,7 @@
  *   new    = profile.created_at between <newMaxDays> and <newMinDays> days ago (default 21..7,
  *            i.e. old enough to have real experience, recent enough to still be new)
  *   active = signed up more than <newMaxDays> days ago AND profile.last_active_at within
- *            the last <activeDays> days (default 30)
+ *            the last <activeDays> days (default 14)
  *   Both require account_status='active' and a non-empty first_name, and exclude the founders.
  *
  * IMPORTANT caveat for 'active': profile.last_active_at undercounts real activity (the mobile
@@ -34,7 +34,7 @@ import { createClient } from '@supabase/supabase-js';
 const FOUNDER_EMAILS = ['lefrancmathis@gmail.com', 'jdl.sonkin@gmail.com'];
 
 function parseArgs(argv) {
-  const o = { cohort: null, out: null, newMinDays: 7, newMaxDays: 21, activeDays: 30, limit: null };
+  const o = { cohort: null, out: null, newMinDays: 7, newMaxDays: 21, activeDays: 14, limit: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--cohort') o.cohort = argv[++i];
@@ -54,7 +54,7 @@ const refFromUrl = url => { try { return new URL(url).hostname.split('.')[0]; } 
 
 async function main() {
   const o = parseArgs(process.argv.slice(2));
-  if (o.help) { console.log('Usage: --cohort new|active [--out path] [--limit N] [--newMinDays 7] [--newMaxDays 21] [--activeDays 30]'); return; }
+  if (o.help) { console.log('Usage: --cohort new|active [--out path] [--limit N] [--newMinDays 7] [--newMaxDays 21] [--activeDays 14]'); return; }
   if (o.cohort !== 'new' && o.cohort !== 'active') {
     console.error('Pass --cohort new  or  --cohort active'); process.exit(1);
   }

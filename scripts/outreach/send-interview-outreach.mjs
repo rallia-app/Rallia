@@ -62,15 +62,13 @@ const MESSAGES = {
   active: {
     fr: [
       'Salut {{name}}!',
-      "Nous c'est Jean et Mathis, l'équipe derrière Rallia. Ça fait un bout qu'on voulait avoir ton avis pour vrai.",
-      "On aimerait savoir comment tu organises tes parties et ce qui t'accroche des fois. Aurais-tu 15 min cette semaine pour qu'on s'appelle?",
-      `Choisis le moment qui fait ton affaire ici: ${CALENDLY} 🙌`,
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
+      "Qu'est-ce qui marche bien pour toi, pis qu'est-ce qui t'accroche des fois?",
     ],
     en: [
       'Hey {{name}}!',
-      "We're Jean and Mathis, the team behind Rallia. We've been wanting to get your honest take for a while now.",
-      "We'd love to hear how you organize your games and what trips you up sometimes. Would you have 15 min this week for a quick call?",
-      `Pick whatever time works for you here: ${CALENDLY} 🙌`,
+      "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
+      "What's been working well for you, and what trips you up sometimes?",
     ],
   },
   one_session: {
