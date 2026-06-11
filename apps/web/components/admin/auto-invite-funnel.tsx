@@ -4,6 +4,13 @@ import { useAutoInviteFunnel, type AutoInviteFunnelPoint } from '@rallia/shared-
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
+import {
+  daysCoveringLastNWeeks,
+  formatWeekLabel,
+  lastNWeekStarts,
+  weekStartOf,
+} from './week-utils';
+
 import { KpiCard } from '@/components/admin/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +27,10 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DAY_OPTIONS = [7, 14, 30] as const;
 type DaysWindow = (typeof DAY_OPTIONS)[number];
+
+type FunnelView = 'cumulative' | 'weekly';
+
+const WEEKS_SHOWN = 6;
 
 interface AutoInviteTotals {
   matchesCreated: number;
@@ -107,8 +118,29 @@ export function AutoInviteFunnel() {
   const tReasons = useTranslations('matchActions.declineReasons');
   const [days, setDays] = useState<DaysWindow>(14);
   const [source, setSource] = useState<'auto' | 'human'>('auto');
-  const { data, loading } = useAutoInviteFunnel(days, 48, source === 'auto');
+  const [view, setView] = useState<FunnelView>('cumulative');
+  // Weekly view always covers the last 6 ISO weeks, independent of the window.
+  const { data, loading } = useAutoInviteFunnel(
+    view === 'weekly' ? daysCoveringLastNWeeks(WEEKS_SHOWN) : days,
+    48,
+    source === 'auto',
+    view === 'weekly' ? 'week' : 'total'
+  );
   const totals = useMemo(() => aggregate(data), [data]);
+  const weekly = useMemo(() => {
+    // Exactly the last WEEKS_SHOWN tiles, zero-filled; rows outside are dropped.
+    const map = new Map<string, AutoInviteFunnelPoint[]>(
+      lastNWeekStarts(WEEKS_SHOWN).map(week => [week, [] as AutoInviteFunnelPoint[]])
+    );
+    for (const row of data) {
+      if (!row.bucketStart) continue;
+      map.get(row.bucketStart)?.push(row);
+    }
+    return Array.from(map.entries()).map(([weekStart, rows]) => ({
+      weekStart,
+      totals: aggregate(rows),
+    }));
+  }, [data]);
 
   const reasonRows = useMemo(() => {
     const entries = Object.entries(totals.declineReasons).sort((a, b) => b[1] - a[1]);
@@ -136,10 +168,12 @@ export function AutoInviteFunnel() {
               {t(source === 'auto' ? 'autoInvite.title' : 'autoInvite.titleHuman')}
             </CardTitle>
             <p className="text-xs text-muted-foreground m-0 mt-1">
-              {t(source === 'auto' ? 'autoInvite.hint' : 'autoInvite.hintHuman')}
+              {view === 'weekly'
+                ? t('autoInvite.weeklyHint')
+                : t(source === 'auto' ? 'autoInvite.hint' : 'autoInvite.hintHuman')}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Tabs value={source} onValueChange={v => setSource(v as 'auto' | 'human')}>
               <TabsList className="h-8">
                 <TabsTrigger value="auto" className="text-xs">
@@ -150,19 +184,35 @@ export function AutoInviteFunnel() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Label className="text-xs text-muted-foreground shrink-0">{t('utm.timeWindow')}</Label>
-            <Select value={String(days)} onValueChange={v => setDays(Number(v) as DaysWindow)}>
-              <SelectTrigger className="h-8 w-[150px] shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DAY_OPTIONS.map(option => (
-                  <SelectItem key={option} value={String(option)}>
-                    {t(`timeRange.${option}d`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Tabs value={view} onValueChange={v => setView(v as FunnelView)}>
+              <TabsList className="h-8">
+                <TabsTrigger value="cumulative" className="text-xs">
+                  {t('matchesTab.viewCumulative')}
+                </TabsTrigger>
+                <TabsTrigger value="weekly" className="text-xs">
+                  {t('matchesTab.viewWeekly')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {view === 'cumulative' && (
+              <>
+                <Label className="text-xs text-muted-foreground shrink-0">
+                  {t('utm.timeWindow')}
+                </Label>
+                <Select value={String(days)} onValueChange={v => setDays(Number(v) as DaysWindow)}>
+                  <SelectTrigger className="h-8 w-[150px] shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAY_OPTIONS.map(option => (
+                      <SelectItem key={option} value={String(option)}>
+                        {t(`timeRange.${option}d`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -213,110 +263,119 @@ export function AutoInviteFunnel() {
               </p>
             )}
 
-            {/* Response funnel over the settled cohort */}
-            {totals.invitesSettled === 0 ? (
-              <p className="text-sm text-muted-foreground m-0">{t('autoInvite.allInFlight')}</p>
+            {view === 'weekly' ? (
+              <WeeklyInviteFunnels weeks={weekly} t={t} />
             ) : (
-              <div className="space-y-3">
-                <Bar
-                  label={t('autoInvite.stageEligible')}
-                  description={t('autoInvite.stageEligibleDesc')}
-                  count={totals.invitesSettled}
-                  base={totals.invitesSettled}
-                  tone="primary"
-                />
-                <Bar
-                  label={t('autoInvite.stageResponded')}
-                  count={totals.responded}
-                  base={totals.invitesSettled}
-                  tone="primary"
-                />
-                {/* Category split (precedence oui > non > nouvel horaire), base = responses */}
-                <div className="space-y-2 pl-3 border-l">
-                  <Bar
-                    label={t('autoInvite.catOui')}
-                    count={totals.accepted}
-                    base={totals.responded}
-                    tone="emerald"
-                    small
-                  />
-                  <Bar
-                    label={t('autoInvite.catNon')}
-                    count={totals.declined}
-                    base={totals.responded}
-                    tone="rose"
-                    small
-                  />
-                  <Bar
-                    label={t('autoInvite.catNouvelHoraire')}
-                    count={totals.timeSuggested}
-                    base={totals.responded}
-                    tone="amber"
-                    small
-                  />
-                </div>
-                <Bar
-                  label={t('autoInvite.noResponse')}
-                  count={totals.noResponse}
-                  base={totals.invitesSettled}
-                  tone="muted"
-                />
-              </div>
-            )}
-
-            {/* Why invites die — decline reasons, response latency, lapsed-unanswered */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                {t('autoInvite.whyTitle')}
-              </span>
-              <p className="text-[11px] text-muted-foreground m-0">{t('autoInvite.whyHint')}</p>
-              <div className="grid grid-cols-2 gap-3">
-                <KpiCard
-                  label={t('autoInvite.medianResponse')}
-                  value={
-                    totals.medianResponseHours != null
-                      ? `${totals.medianResponseHours.toFixed(1)}h`
-                      : '—'
-                  }
-                />
-                <KpiCard label={t('autoInvite.lapsedExpired')} value={totals.noResponseExpired} />
-              </div>
-              {reasonRows.base > 0 && (
-                <div className="space-y-2 mt-1">
-                  {reasonRows.entries.map(([reason, n]) => (
+              <>
+                {/* Response funnel over the settled cohort */}
+                {totals.invitesSettled === 0 ? (
+                  <p className="text-sm text-muted-foreground m-0">{t('autoInvite.allInFlight')}</p>
+                ) : (
+                  <div className="space-y-3">
                     <Bar
-                      key={reason}
-                      label={reasonLabel(reason)}
-                      count={n}
-                      base={reasonRows.base}
-                      tone={reason === 'unspecified' ? 'muted' : 'rose'}
-                      small
+                      label={t('autoInvite.stageEligible')}
+                      description={t('autoInvite.stageEligibleDesc')}
+                      count={totals.invitesSettled}
+                      base={totals.invitesSettled}
+                      tone="primary"
                     />
-                  ))}
-                </div>
-              )}
-            </div>
+                    <Bar
+                      label={t('autoInvite.stageResponded')}
+                      count={totals.responded}
+                      base={totals.invitesSettled}
+                      tone="primary"
+                    />
+                    {/* Category split (precedence oui > non > nouvel horaire), base = responses */}
+                    <div className="space-y-2 pl-3 border-l">
+                      <Bar
+                        label={t('autoInvite.catOui')}
+                        count={totals.accepted}
+                        base={totals.responded}
+                        tone="emerald"
+                        small
+                      />
+                      <Bar
+                        label={t('autoInvite.catNon')}
+                        count={totals.declined}
+                        base={totals.responded}
+                        tone="rose"
+                        small
+                      />
+                      <Bar
+                        label={t('autoInvite.catNouvelHoraire')}
+                        count={totals.timeSuggested}
+                        base={totals.responded}
+                        tone="amber"
+                        small
+                      />
+                    </div>
+                    <Bar
+                      label={t('autoInvite.noResponse')}
+                      count={totals.noResponse}
+                      base={totals.invitesSettled}
+                      tone="muted"
+                    />
+                  </div>
+                )}
 
-            {/* Self-request approval flow — a separate population from invited candidates */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                {t('autoInvite.requestsTitle')}
-              </span>
-              <p className="text-[11px] text-muted-foreground m-0">
-                {t('autoInvite.requestsHint')}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="outline" className="text-[11px] font-normal">
-                  {t('autoInvite.requestsApproved')}: {totals.requestsApproved.toLocaleString()}
-                </Badge>
-                <Badge variant="outline" className="text-[11px] font-normal">
-                  {t('autoInvite.requestsRefused')}: {totals.requestsRefused.toLocaleString()}
-                </Badge>
-                <Badge variant="outline" className="text-[11px] font-normal">
-                  {t('autoInvite.requestsPending')}: {totals.requestsPending.toLocaleString()}
-                </Badge>
-              </div>
-            </div>
+                {/* Why invites die — decline reasons, response latency, lapsed-unanswered */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {t('autoInvite.whyTitle')}
+                  </span>
+                  <p className="text-[11px] text-muted-foreground m-0">{t('autoInvite.whyHint')}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <KpiCard
+                      label={t('autoInvite.medianResponse')}
+                      value={
+                        totals.medianResponseHours != null
+                          ? `${totals.medianResponseHours.toFixed(1)}h`
+                          : '—'
+                      }
+                    />
+                    <KpiCard
+                      label={t('autoInvite.lapsedExpired')}
+                      value={totals.noResponseExpired}
+                    />
+                  </div>
+                  {reasonRows.base > 0 && (
+                    <div className="space-y-2 mt-1">
+                      {reasonRows.entries.map(([reason, n]) => (
+                        <Bar
+                          key={reason}
+                          label={reasonLabel(reason)}
+                          count={n}
+                          base={reasonRows.base}
+                          tone={reason === 'unspecified' ? 'muted' : 'rose'}
+                          small
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Self-request approval flow — a separate population from invited candidates */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {t('autoInvite.requestsTitle')}
+                  </span>
+                  <p className="text-[11px] text-muted-foreground m-0">
+                    {t('autoInvite.requestsHint')}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="outline" className="text-[11px] font-normal">
+                      {t('autoInvite.requestsApproved')}: {totals.requestsApproved.toLocaleString()}
+                    </Badge>
+                    <Badge variant="outline" className="text-[11px] font-normal">
+                      {t('autoInvite.requestsRefused')}: {totals.requestsRefused.toLocaleString()}
+                    </Badge>
+                    <Badge variant="outline" className="text-[11px] font-normal">
+                      {t('autoInvite.requestsPending')}: {totals.requestsPending.toLocaleString()}
+                    </Badge>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </CardContent>
@@ -331,6 +390,96 @@ const TONE_CLASS: Record<string, string> = {
   amber: 'bg-amber-500/70',
   muted: 'bg-muted-foreground/40',
 };
+
+function WeeklyInviteFunnels({
+  weeks,
+  t,
+}: {
+  weeks: { weekStart: string; totals: AutoInviteTotals }[];
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const currentWeek = weekStartOf(new Date().toISOString().split('T')[0]);
+  if (weeks.length === 0) {
+    return <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>;
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      {weeks.map(({ weekStart, totals }) => {
+        const rate =
+          totals.invitesSettled > 0 ? (totals.responded / totals.invitesSettled) * 100 : null;
+        return (
+          <div key={weekStart} className="rounded-md border p-3 flex flex-col gap-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs font-medium">
+                {formatWeekLabel(weekStart)}
+                {weekStart === currentWeek && (
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                    ({t('matchesTab.weekCurrent')})
+                  </span>
+                )}
+              </span>
+              {rate != null && (
+                <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                  {t('autoInvite.weekResponded', { pct: rate.toFixed(0) })}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground m-0">
+              {t('autoInvite.weekStats', {
+                matches: totals.matchesCreated,
+                invites: totals.invitesSent,
+                settled: totals.invitesSettled,
+              })}
+              {totals.invitesInFlight > 0 && (
+                <> · {t('autoInvite.weekInFlight', { inFlight: totals.invitesInFlight })}</>
+              )}
+            </p>
+            {totals.invitesSent === 0 ? (
+              <p className="text-[11px] text-muted-foreground m-0">
+                {t('autoInvite.weekNoInvites')}
+              </p>
+            ) : totals.invitesSettled === 0 ? (
+              <p className="text-[11px] text-muted-foreground m-0">
+                {t('autoInvite.weekAllInFlight')}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <Bar
+                  label={t('autoInvite.stageResponded')}
+                  count={totals.responded}
+                  base={totals.invitesSettled}
+                  tone="primary"
+                  small
+                />
+                <Bar
+                  label={t('autoInvite.catOui')}
+                  count={totals.accepted}
+                  base={totals.invitesSettled}
+                  tone="emerald"
+                  small
+                />
+                <Bar
+                  label={t('autoInvite.catNon')}
+                  count={totals.declined}
+                  base={totals.invitesSettled}
+                  tone="rose"
+                  small
+                />
+                <Bar
+                  label={t('autoInvite.catNouvelHoraire')}
+                  count={totals.timeSuggested}
+                  base={totals.invitesSettled}
+                  tone="amber"
+                  small
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function Bar({
   label,

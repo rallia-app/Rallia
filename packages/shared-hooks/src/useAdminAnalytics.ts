@@ -1208,7 +1208,14 @@ export function useMatchFillAnalytics(days: number = 30): {
 // MATCH QUALITY ANALYTICS
 // =============================================================================
 
-export function useMatchQualityAnalytics(days: number = 30): {
+export function useMatchQualityAnalytics(
+  days: number = 30,
+  // Extend the window through the end of the current ISO week so matches
+  // scheduled later this week (bucketed by play date) are included.
+  includeCurrentWeek: boolean = false,
+  // When false, skip fetching (for lazily-loaded secondary views).
+  enabled: boolean = true
+): {
   data: MatchQualityPoint[];
   loading: boolean;
   error: Error | null;
@@ -1224,6 +1231,9 @@ export function useMatchQualityAnalytics(days: number = 30): {
       setLoading(true);
       setError(null);
       const endDate = new Date();
+      if (includeCurrentWeek) {
+        endDate.setUTCDate(endDate.getUTCDate() + (6 - ((endDate.getUTCDay() + 6) % 7)));
+      }
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const result = await getMatchQualityAnalytics(startDate, endDate);
       if (isMounted.current) setData(result);
@@ -1233,16 +1243,16 @@ export function useMatchQualityAnalytics(days: number = 30): {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [days]);
+  }, [days, includeCurrentWeek]);
 
   useEffect(() => {
     isMounted.current = true;
-    fetchData();
+    if (enabled) fetchData();
     return () => {
       isMounted.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days]);
+  }, [days, includeCurrentWeek, enabled]);
 
   return { data, loading, error, refetch: fetchData };
 }
@@ -1254,7 +1264,8 @@ export function useMatchQualityAnalytics(days: number = 30): {
 export function useAutoInviteFunnel(
   days: number = 14,
   settleHours: number = 48,
-  isAuto: boolean | null = true
+  isAuto: boolean | null = true,
+  bucket: 'total' | 'week' = 'total'
 ): {
   data: AutoInviteFunnelPoint[];
   loading: boolean;
@@ -1272,7 +1283,7 @@ export function useAutoInviteFunnel(
       setError(null);
       const endDate = new Date();
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      const result = await getAutoInviteFunnel(startDate, endDate, settleHours, isAuto);
+      const result = await getAutoInviteFunnel(startDate, endDate, settleHours, isAuto, bucket);
       if (isMounted.current) setData(result);
     } catch (err) {
       console.error('Error fetching auto invite funnel:', err);
@@ -1280,7 +1291,7 @@ export function useAutoInviteFunnel(
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [days, settleHours, isAuto]);
+  }, [days, settleHours, isAuto, bucket]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -1289,7 +1300,7 @@ export function useAutoInviteFunnel(
       isMounted.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, settleHours, isAuto]);
+  }, [days, settleHours, isAuto, bucket]);
 
   return { data, loading, error, refetch: fetchData };
 }
