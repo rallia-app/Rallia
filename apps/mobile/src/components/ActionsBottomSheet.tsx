@@ -365,6 +365,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle invite players - show invite wizard with slide animation
   const handleInvitePlayers = useCallback(() => {
     lightHaptic();
+    Analytics.referralInviteOpened({ source: 'actions_sheet' });
     setInviteInitialTab(undefined);
     setShowInviteWizard(true);
     slideIn();

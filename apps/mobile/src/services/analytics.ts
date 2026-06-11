@@ -547,6 +547,12 @@ export function invitationLinkGenerated(props: { invitation_type: string; channe
   capture('invitation_link_generated', props);
 }
 
+export function referralInviteOpened(props: {
+  source: 'profile_header' | 'actions_sheet' | 'auto_popup';
+}): void {
+  capture('referral_invite_opened', props);
+}
+
 export function onboardingShareSkipped(): void {
   capture('onboarding_share_skipped', {});
 }
