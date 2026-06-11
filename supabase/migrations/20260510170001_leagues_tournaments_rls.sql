@@ -133,6 +133,7 @@ ALTER TABLE leagues_tournaments_audit ENABLE ROW LEVEL SECURITY;
 -- TOURNAMENT POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS tournaments_select ON tournaments;
 CREATE POLICY tournaments_select ON tournaments FOR SELECT
 USING (
     public.is_admin()
@@ -155,24 +156,30 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS tournaments_insert ON tournaments;
 CREATE POLICY tournaments_insert ON tournaments FOR INSERT
 WITH CHECK (organizer_id = auth.uid());
 
+DROP POLICY IF EXISTS tournaments_update ON tournaments;
 CREATE POLICY tournaments_update ON tournaments FOR UPDATE
 USING     (public.is_admin() OR public.is_tournament_organizer(id))
 WITH CHECK (public.is_admin() OR public.is_tournament_organizer(id));
 
+DROP POLICY IF EXISTS tournaments_delete ON tournaments;
 CREATE POLICY tournaments_delete ON tournaments FOR DELETE
 USING (public.is_admin() OR organizer_id = auth.uid());
 
 
+DROP POLICY IF EXISTS tinvite_select ON tournament_invite_links;
 CREATE POLICY tinvite_select ON tournament_invite_links FOR SELECT
 USING (public.is_admin() OR public.is_tournament_organizer(tournament_id));
 
+DROP POLICY IF EXISTS tinvite_no_direct_write ON tournament_invite_links;
 CREATE POLICY tinvite_no_direct_write ON tournament_invite_links FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS tco_select ON tournament_co_organizers;
 CREATE POLICY tco_select ON tournament_co_organizers FOR SELECT
 USING (
     public.is_admin()
@@ -180,10 +187,12 @@ USING (
     OR public.is_tournament_organizer(tournament_id)
 );
 
+DROP POLICY IF EXISTS tco_no_direct_write ON tournament_co_organizers;
 CREATE POLICY tco_no_direct_write ON tournament_co_organizers FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS treg_select ON tournament_registrations;
 CREATE POLICY treg_select ON tournament_registrations FOR SELECT
 USING (
     public.is_admin()
@@ -196,10 +205,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS treg_no_direct_write ON tournament_registrations;
 CREATE POLICY treg_no_direct_write ON tournament_registrations FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS twait_select ON tournament_waitlist;
 CREATE POLICY twait_select ON tournament_waitlist FOR SELECT
 USING (
     public.is_admin()
@@ -207,10 +218,12 @@ USING (
     OR public.is_tournament_organizer(tournament_id)
 );
 
+DROP POLICY IF EXISTS twait_no_direct_write ON tournament_waitlist;
 CREATE POLICY twait_no_direct_write ON tournament_waitlist FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS tmatches_select ON tournament_matches;
 CREATE POLICY tmatches_select ON tournament_matches FOR SELECT
 USING (
     public.is_admin()
@@ -227,10 +240,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS tmatches_no_direct_write ON tournament_matches;
 CREATE POLICY tmatches_no_direct_write ON tournament_matches FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS tmscores_select ON tournament_match_scores;
 CREATE POLICY tmscores_select ON tournament_match_scores FOR SELECT
 USING (
     public.is_admin()
@@ -243,6 +258,7 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS tmscores_no_direct_write ON tournament_match_scores;
 CREATE POLICY tmscores_no_direct_write ON tournament_match_scores FOR ALL
 USING (false) WITH CHECK (false);
 
@@ -251,6 +267,7 @@ USING (false) WITH CHECK (false);
 -- LEAGUE POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS leagues_select ON leagues;
 CREATE POLICY leagues_select ON leagues FOR SELECT
 USING (
     public.is_admin()
@@ -272,24 +289,30 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS leagues_insert ON leagues;
 CREATE POLICY leagues_insert ON leagues FOR INSERT
 WITH CHECK (organizer_id = auth.uid());
 
+DROP POLICY IF EXISTS leagues_update ON leagues;
 CREATE POLICY leagues_update ON leagues FOR UPDATE
 USING     (public.is_admin() OR public.is_league_organizer(id))
 WITH CHECK (public.is_admin() OR public.is_league_organizer(id));
 
+DROP POLICY IF EXISTS leagues_delete ON leagues;
 CREATE POLICY leagues_delete ON leagues FOR DELETE
 USING (public.is_admin() OR organizer_id = auth.uid());
 
 
+DROP POLICY IF EXISTS linvite_select ON league_invite_links;
 CREATE POLICY linvite_select ON league_invite_links FOR SELECT
 USING (public.is_admin() OR public.is_league_organizer(league_id));
 
+DROP POLICY IF EXISTS linvite_no_direct_write ON league_invite_links;
 CREATE POLICY linvite_no_direct_write ON league_invite_links FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS lm_select ON league_members;
 CREATE POLICY lm_select ON league_members FOR SELECT
 USING (
     public.is_admin()
@@ -298,10 +321,12 @@ USING (
     OR public.is_active_league_member(league_id)
 );
 
+DROP POLICY IF EXISTS lm_no_direct_write ON league_members;
 CREATE POLICY lm_no_direct_write ON league_members FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS lmw_select ON league_member_waitlist;
 CREATE POLICY lmw_select ON league_member_waitlist FOR SELECT
 USING (
     public.is_admin()
@@ -309,6 +334,7 @@ USING (
     OR public.is_league_organizer(league_id)
 );
 
+DROP POLICY IF EXISTS lmw_no_direct_write ON league_member_waitlist;
 CREATE POLICY lmw_no_direct_write ON league_member_waitlist FOR ALL
 USING (false) WITH CHECK (false);
 
@@ -317,6 +343,7 @@ USING (false) WITH CHECK (false);
 -- SEASON / SESSION POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS seasons_select ON seasons;
 CREATE POLICY seasons_select ON seasons FOR SELECT
 USING (
     public.is_admin()
@@ -328,10 +355,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS seasons_no_direct_write ON seasons;
 CREATE POLICY seasons_no_direct_write ON seasons FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS sessions_select ON sessions;
 CREATE POLICY sessions_select ON sessions FOR SELECT
 USING (
     public.is_admin()
@@ -347,10 +376,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS sessions_no_direct_write ON sessions;
 CREATE POLICY sessions_no_direct_write ON sessions FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS scourts_select ON session_courts;
 CREATE POLICY scourts_select ON session_courts FOR SELECT
 USING (
     public.is_admin()
@@ -368,10 +399,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS scourts_no_direct_write ON session_courts;
 CREATE POLICY scourts_no_direct_write ON session_courts FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS spresence_select ON session_presence;
 CREATE POLICY spresence_select ON session_presence FOR SELECT
 USING (
     public.is_admin()
@@ -386,10 +419,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS spresence_no_direct_write ON session_presence;
 CREATE POLICY spresence_no_direct_write ON session_presence FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS smatches_select ON session_matches;
 CREATE POLICY smatches_select ON session_matches FOR SELECT
 USING (
     public.is_admin()
@@ -407,10 +442,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS smatches_no_direct_write ON session_matches;
 CREATE POLICY smatches_no_direct_write ON session_matches FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS smscores_select ON session_match_scores;
 CREATE POLICY smscores_select ON session_match_scores FOR SELECT
 USING (
     public.is_admin()
@@ -426,10 +463,12 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS smscores_no_direct_write ON session_match_scores;
 CREATE POLICY smscores_no_direct_write ON session_match_scores FOR ALL
 USING (false) WITH CHECK (false);
 
 
+DROP POLICY IF EXISTS rankings_select ON season_rankings;
 CREATE POLICY rankings_select ON season_rankings FOR SELECT
 USING (
     public.is_admin()
@@ -445,6 +484,7 @@ USING (
     )
 );
 
+DROP POLICY IF EXISTS rankings_no_direct_write ON season_rankings;
 CREATE POLICY rankings_no_direct_write ON season_rankings FOR ALL
 USING (false) WITH CHECK (false);
 
@@ -453,6 +493,7 @@ USING (false) WITH CHECK (false);
 -- AUDIT POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS audit_select ON leagues_tournaments_audit;
 CREATE POLICY audit_select ON leagues_tournaments_audit FOR SELECT
 USING (
     public.is_admin()
@@ -460,5 +501,6 @@ USING (
     OR (scope = 'league'     AND public.is_league_organizer(entity_id))
 );
 
+DROP POLICY IF EXISTS audit_no_direct_write ON leagues_tournaments_audit;
 CREATE POLICY audit_no_direct_write ON leagues_tournaments_audit FOR ALL
 USING (false) WITH CHECK (false);

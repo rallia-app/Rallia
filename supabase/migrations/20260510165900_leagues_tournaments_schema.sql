@@ -25,100 +25,163 @@
 -- ENUMS
 -- ============================================
 
-CREATE TYPE tournament_status AS ENUM (
-    'draft',
-    'registration_open',
-    'registration_closed',
-    'in_progress',
-    'completed',
-    'cancelled',
-    'archived'
-);
+DO $$ BEGIN
+    CREATE TYPE tournament_status AS ENUM (
+        'draft',
+        'registration_open',
+        'registration_closed',
+        'in_progress',
+        'completed',
+        'cancelled',
+        'archived'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE tournament_visibility AS ENUM ('public', 'private', 'community');
+DO $$ BEGIN
+    CREATE TYPE tournament_visibility AS ENUM ('public', 'private', 'community');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE tournament_registration_mode AS ENUM ('open', 'invite_only', 'approval');
+DO $$ BEGIN
+    CREATE TYPE tournament_registration_mode AS ENUM ('open', 'invite_only', 'approval');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE bracket_type AS ENUM ('single_elimination', 'double_elimination');
+DO $$ BEGIN
+    CREATE TYPE bracket_type AS ENUM ('single_elimination', 'double_elimination');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE match_format AS ENUM (
-    'one_set',
-    'two_of_three',
-    'three_of_five',
-    'pickleball_to_11',
-    'pickleball_to_15',
-    'pickleball_to_21'
-);
+DO $$ BEGIN
+    CREATE TYPE match_format AS ENUM (
+        'one_set',
+        'two_of_three',
+        'three_of_five',
+        'pickleball_to_11',
+        'pickleball_to_15',
+        'pickleball_to_21'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE final_set_tiebreak AS ENUM ('none', 'standard_7pt', 'super_tb_10pt');
+DO $$ BEGIN
+    CREATE TYPE final_set_tiebreak AS ENUM ('none', 'standard_7pt', 'super_tb_10pt');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE entry_format AS ENUM ('singles', 'doubles', 'mixed_doubles');
+DO $$ BEGIN
+    CREATE TYPE entry_format AS ENUM ('singles', 'doubles', 'mixed_doubles');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE registration_status AS ENUM (
-    'registered',
-    'pending',
-    'waitlisted',
-    'withdrawn',
-    'disqualified'
-);
+DO $$ BEGIN
+    CREATE TYPE registration_status AS ENUM (
+        'registered',
+        'pending',
+        'waitlisted',
+        'withdrawn',
+        'disqualified'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE tournament_match_status AS ENUM (
-    'pending',
-    'in_progress',
-    'completed',
-    'retired',
-    'walkover',
-    'disputed',
-    'cancelled'
-);
+DO $$ BEGIN
+    CREATE TYPE tournament_match_status AS ENUM (
+        'pending',
+        'in_progress',
+        'completed',
+        'retired',
+        'walkover',
+        'disputed',
+        'cancelled'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE league_status AS ENUM ('active', 'paused', 'closed');
+DO $$ BEGIN
+    CREATE TYPE league_status AS ENUM ('active', 'paused', 'closed');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE league_role AS ENUM ('organizer', 'co_organizer', 'member');
+DO $$ BEGIN
+    CREATE TYPE league_role AS ENUM ('organizer', 'co_organizer', 'member');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE league_member_status AS ENUM ('active', 'pending', 'suspended', 'inactive');
+DO $$ BEGIN
+    CREATE TYPE league_member_status AS ENUM ('active', 'pending', 'suspended', 'inactive');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE season_status AS ENUM ('draft', 'open', 'closed');
+DO $$ BEGIN
+    CREATE TYPE season_status AS ENUM ('draft', 'open', 'closed');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE session_status AS ENUM ('draft', 'published', 'in_progress', 'completed', 'cancelled');
+DO $$ BEGIN
+    CREATE TYPE session_status AS ENUM ('draft', 'published', 'in_progress', 'completed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE session_presence_status AS ENUM ('confirmed', 'declined', 'pending', 'waitlisted');
+DO $$ BEGIN
+    CREATE TYPE session_presence_status AS ENUM ('confirmed', 'declined', 'pending', 'waitlisted');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE pairing_mode AS ENUM ('random', 'by_rank', 'avoid_repeat', 'swiss', 'balanced_doubles');
+DO $$ BEGIN
+    CREATE TYPE pairing_mode AS ENUM ('random', 'by_rank', 'avoid_repeat', 'swiss', 'balanced_doubles');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE session_match_status AS ENUM (
-    'pending',
-    'in_progress',
-    'completed',
-    'retired',
-    'walkover',
-    'disputed',
-    'cancelled'
-);
+DO $$ BEGIN
+    CREATE TYPE session_match_status AS ENUM (
+        'pending',
+        'in_progress',
+        'completed',
+        'retired',
+        'walkover',
+        'disputed',
+        'cancelled'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE score_validation_status AS ENUM ('pending_validation', 'validated', 'rejected');
+DO $$ BEGIN
+    CREATE TYPE score_validation_status AS ENUM ('pending_validation', 'validated', 'rejected');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE pairing_team AS ENUM ('a', 'b');
+DO $$ BEGIN
+    CREATE TYPE pairing_team AS ENUM ('a', 'b');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE odd_cardinality_mode AS ENUM ('bye', 'three_player', 'drill');
+DO $$ BEGIN
+    CREATE TYPE odd_cardinality_mode AS ENUM ('bye', 'three_player', 'drill');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE audit_scope AS ENUM (
-    'tournament',
-    'league',
-    'season',
-    'session',
-    'tournament_match',
-    'session_match',
-    'registration',
-    'membership'
-);
+DO $$ BEGIN
+    CREATE TYPE audit_scope AS ENUM (
+        'tournament',
+        'league',
+        'season',
+        'session',
+        'tournament_match',
+        'session_match',
+        'registration',
+        'membership'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 
 -- ============================================
 -- TOURNAMENT TABLES
 -- ============================================
 
-CREATE TABLE tournaments (
+CREATE TABLE IF NOT EXISTS tournaments (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
     description text,
@@ -178,18 +241,18 @@ CREATE TABLE tournaments (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX tournaments_sport_status_idx
+CREATE INDEX IF NOT EXISTS tournaments_sport_status_idx
     ON tournaments(sport_id, status)
     WHERE status NOT IN ('archived', 'cancelled');
-CREATE INDEX tournaments_organizer_idx ON tournaments(organizer_id);
-CREATE INDEX tournaments_network_idx ON tournaments(network_id) WHERE network_id IS NOT NULL;
-CREATE INDEX tournaments_facility_idx ON tournaments(facility_id) WHERE facility_id IS NOT NULL;
-CREATE INDEX tournaments_dates_idx
+CREATE INDEX IF NOT EXISTS tournaments_organizer_idx ON tournaments(organizer_id);
+CREATE INDEX IF NOT EXISTS tournaments_network_idx ON tournaments(network_id) WHERE network_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS tournaments_facility_idx ON tournaments(facility_id) WHERE facility_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS tournaments_dates_idx
     ON tournaments(start_date, end_date)
     WHERE status NOT IN ('archived', 'cancelled');
 
 
-CREATE TABLE tournament_invite_links (
+CREATE TABLE IF NOT EXISTS tournament_invite_links (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
     token text NOT NULL UNIQUE,
@@ -202,10 +265,10 @@ CREATE TABLE tournament_invite_links (
     revoked_at timestamptz
 );
 
-CREATE INDEX tournament_invite_links_tournament_idx ON tournament_invite_links(tournament_id);
+CREATE INDEX IF NOT EXISTS tournament_invite_links_tournament_idx ON tournament_invite_links(tournament_id);
 
 
-CREATE TABLE tournament_co_organizers (
+CREATE TABLE IF NOT EXISTS tournament_co_organizers (
     tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
     added_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
@@ -214,7 +277,7 @@ CREATE TABLE tournament_co_organizers (
 );
 
 
-CREATE TABLE tournament_registrations (
+CREATE TABLE IF NOT EXISTS tournament_registrations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
@@ -246,11 +309,11 @@ CREATE TABLE tournament_registrations (
     ) WHERE (bracket_position IS NOT NULL)
 );
 
-CREATE INDEX tournament_registrations_status_idx ON tournament_registrations(tournament_id, status);
-CREATE INDEX tournament_registrations_user_idx ON tournament_registrations(user_id);
+CREATE INDEX IF NOT EXISTS tournament_registrations_status_idx ON tournament_registrations(tournament_id, status);
+CREATE INDEX IF NOT EXISTS tournament_registrations_user_idx ON tournament_registrations(user_id);
 
 
-CREATE TABLE tournament_waitlist (
+CREATE TABLE IF NOT EXISTS tournament_waitlist (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
@@ -265,7 +328,7 @@ CREATE TABLE tournament_waitlist (
 );
 
 
-CREATE TABLE tournament_matches (
+CREATE TABLE IF NOT EXISTS tournament_matches (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
 
@@ -297,14 +360,14 @@ CREATE TABLE tournament_matches (
     UNIQUE (tournament_id, bracket_side, round_number, match_position)
 );
 
-CREATE INDEX tournament_matches_tournament_idx ON tournament_matches(tournament_id);
-CREATE INDEX tournament_matches_status_idx
+CREATE INDEX IF NOT EXISTS tournament_matches_tournament_idx ON tournament_matches(tournament_id);
+CREATE INDEX IF NOT EXISTS tournament_matches_status_idx
     ON tournament_matches(tournament_id, status)
     WHERE status IN ('pending', 'in_progress', 'disputed');
-CREATE INDEX tournament_matches_player1_idx
+CREATE INDEX IF NOT EXISTS tournament_matches_player1_idx
     ON tournament_matches(player1_registration_id)
     WHERE player1_registration_id IS NOT NULL;
-CREATE INDEX tournament_matches_player2_idx
+CREATE INDEX IF NOT EXISTS tournament_matches_player2_idx
     ON tournament_matches(player2_registration_id)
     WHERE player2_registration_id IS NOT NULL;
 
@@ -313,7 +376,7 @@ CREATE INDEX tournament_matches_player2_idx
 -- LEAGUE TABLES
 -- ============================================
 
-CREATE TABLE leagues (
+CREATE TABLE IF NOT EXISTS leagues (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
     description text,
@@ -346,12 +409,12 @@ CREATE TABLE leagues (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX leagues_sport_status_idx ON leagues(sport_id, status);
-CREATE INDEX leagues_organizer_idx ON leagues(organizer_id);
-CREATE INDEX leagues_network_idx ON leagues(network_id) WHERE network_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS leagues_sport_status_idx ON leagues(sport_id, status);
+CREATE INDEX IF NOT EXISTS leagues_organizer_idx ON leagues(organizer_id);
+CREATE INDEX IF NOT EXISTS leagues_network_idx ON leagues(network_id) WHERE network_id IS NOT NULL;
 
 
-CREATE TABLE league_invite_links (
+CREATE TABLE IF NOT EXISTS league_invite_links (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     token text NOT NULL UNIQUE,
@@ -364,10 +427,10 @@ CREATE TABLE league_invite_links (
     revoked_at timestamptz
 );
 
-CREATE INDEX league_invite_links_league_idx ON league_invite_links(league_id);
+CREATE INDEX IF NOT EXISTS league_invite_links_league_idx ON league_invite_links(league_id);
 
 
-CREATE TABLE league_members (
+CREATE TABLE IF NOT EXISTS league_members (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
@@ -389,11 +452,11 @@ CREATE TABLE league_members (
     UNIQUE (league_id, user_id)
 );
 
-CREATE INDEX league_members_status_idx ON league_members(league_id, status);
-CREATE INDEX league_members_user_idx ON league_members(user_id, status);
+CREATE INDEX IF NOT EXISTS league_members_status_idx ON league_members(league_id, status);
+CREATE INDEX IF NOT EXISTS league_members_user_idx ON league_members(user_id, status);
 
 
-CREATE TABLE league_member_waitlist (
+CREATE TABLE IF NOT EXISTS league_member_waitlist (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
@@ -406,12 +469,12 @@ CREATE TABLE league_member_waitlist (
     ) WHERE (promoted_at IS NULL)
 );
 
-CREATE INDEX league_member_waitlist_league_idx
+CREATE INDEX IF NOT EXISTS league_member_waitlist_league_idx
     ON league_member_waitlist(league_id)
     WHERE promoted_at IS NULL;
 
 
-CREATE TABLE seasons (
+CREATE TABLE IF NOT EXISTS seasons (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     league_id uuid NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     name text NOT NULL,
@@ -432,10 +495,10 @@ CREATE TABLE seasons (
     UNIQUE (league_id, name)
 );
 
-CREATE INDEX seasons_league_status_idx ON seasons(league_id, status);
+CREATE INDEX IF NOT EXISTS seasons_league_status_idx ON seasons(league_id, status);
 
 
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     season_id uuid NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
     name text NOT NULL,
@@ -467,21 +530,21 @@ CREATE TABLE sessions (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX sessions_season_status_idx ON sessions(season_id, status);
-CREATE INDEX sessions_scheduled_idx
+CREATE INDEX IF NOT EXISTS sessions_season_status_idx ON sessions(season_id, status);
+CREATE INDEX IF NOT EXISTS sessions_scheduled_idx
     ON sessions(scheduled_at)
     WHERE status NOT IN ('completed', 'cancelled');
-CREATE INDEX sessions_facility_idx ON sessions(facility_id) WHERE facility_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS sessions_facility_idx ON sessions(facility_id) WHERE facility_id IS NOT NULL;
 
 
-CREATE TABLE session_courts (
+CREATE TABLE IF NOT EXISTS session_courts (
     session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     court_id uuid NOT NULL REFERENCES court(id) ON DELETE RESTRICT,
     PRIMARY KEY (session_id, court_id)
 );
 
 
-CREATE TABLE session_presence (
+CREATE TABLE IF NOT EXISTS session_presence (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
@@ -502,11 +565,11 @@ CREATE TABLE session_presence (
     UNIQUE (session_id, user_id)
 );
 
-CREATE INDEX session_presence_session_status_idx ON session_presence(session_id, status);
-CREATE INDEX session_presence_user_idx ON session_presence(user_id);
+CREATE INDEX IF NOT EXISTS session_presence_session_status_idx ON session_presence(session_id, status);
+CREATE INDEX IF NOT EXISTS session_presence_user_idx ON session_presence(user_id);
 
 
-CREATE TABLE session_matches (
+CREATE TABLE IF NOT EXISTS session_matches (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     round_number smallint NOT NULL DEFAULT 1,
@@ -539,12 +602,12 @@ CREATE TABLE session_matches (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX session_matches_session_idx ON session_matches(session_id);
-CREATE INDEX session_matches_session_round_idx ON session_matches(session_id, round_number);
-CREATE INDEX session_matches_status_idx ON session_matches(status);
+CREATE INDEX IF NOT EXISTS session_matches_session_idx ON session_matches(session_id);
+CREATE INDEX IF NOT EXISTS session_matches_session_round_idx ON session_matches(session_id, round_number);
+CREATE INDEX IF NOT EXISTS session_matches_status_idx ON session_matches(status);
 
 
-CREATE TABLE session_match_scores (
+CREATE TABLE IF NOT EXISTS session_match_scores (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     session_match_id uuid NOT NULL REFERENCES session_matches(id) ON DELETE CASCADE,
     submitted_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
@@ -559,11 +622,11 @@ CREATE TABLE session_match_scores (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX session_match_scores_match_idx
+CREATE INDEX IF NOT EXISTS session_match_scores_match_idx
     ON session_match_scores(session_match_id, created_at DESC);
 
 
-CREATE TABLE tournament_match_scores (
+CREATE TABLE IF NOT EXISTS tournament_match_scores (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_match_id uuid NOT NULL REFERENCES tournament_matches(id) ON DELETE CASCADE,
     submitted_by uuid NOT NULL REFERENCES player(id) ON DELETE RESTRICT,
@@ -578,11 +641,11 @@ CREATE TABLE tournament_match_scores (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX tournament_match_scores_match_idx
+CREATE INDEX IF NOT EXISTS tournament_match_scores_match_idx
     ON tournament_match_scores(tournament_match_id, created_at DESC);
 
 
-CREATE TABLE season_rankings (
+CREATE TABLE IF NOT EXISTS season_rankings (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     season_id uuid NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES player(id) ON DELETE CASCADE,
@@ -612,15 +675,15 @@ CREATE TABLE season_rankings (
     UNIQUE (season_id, user_id)
 );
 
-CREATE INDEX season_rankings_season_rank_idx ON season_rankings(season_id, rank);
-CREATE INDEX season_rankings_user_idx ON season_rankings(user_id);
+CREATE INDEX IF NOT EXISTS season_rankings_season_rank_idx ON season_rankings(season_id, rank);
+CREATE INDEX IF NOT EXISTS season_rankings_user_idx ON season_rankings(user_id);
 
 
 -- ============================================
 -- AUDIT LOG
 -- ============================================
 
-CREATE TABLE leagues_tournaments_audit (
+CREATE TABLE IF NOT EXISTS leagues_tournaments_audit (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     scope audit_scope NOT NULL,
     entity_id uuid NOT NULL,
@@ -631,9 +694,9 @@ CREATE TABLE leagues_tournaments_audit (
     occurred_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX audit_scope_entity_idx
+CREATE INDEX IF NOT EXISTS audit_scope_entity_idx
     ON leagues_tournaments_audit(scope, entity_id, occurred_at DESC);
-CREATE INDEX audit_actor_idx ON leagues_tournaments_audit(actor_id);
+CREATE INDEX IF NOT EXISTS audit_actor_idx ON leagues_tournaments_audit(actor_id);
 
 
 -- ============================================
@@ -641,33 +704,43 @@ CREATE INDEX audit_actor_idx ON leagues_tournaments_audit(actor_id);
 -- ============================================
 -- Reuses public.update_updated_at_column() defined in 20241124000000_initial_schema.sql.
 
+DROP TRIGGER IF EXISTS update_tournaments_updated_at ON tournaments;
 CREATE TRIGGER update_tournaments_updated_at BEFORE UPDATE ON tournaments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_tournament_registrations_updated_at ON tournament_registrations;
 CREATE TRIGGER update_tournament_registrations_updated_at BEFORE UPDATE ON tournament_registrations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_tournament_matches_updated_at ON tournament_matches;
 CREATE TRIGGER update_tournament_matches_updated_at BEFORE UPDATE ON tournament_matches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_leagues_updated_at ON leagues;
 CREATE TRIGGER update_leagues_updated_at BEFORE UPDATE ON leagues
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_league_members_updated_at ON league_members;
 CREATE TRIGGER update_league_members_updated_at BEFORE UPDATE ON league_members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_seasons_updated_at ON seasons;
 CREATE TRIGGER update_seasons_updated_at BEFORE UPDATE ON seasons
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_sessions_updated_at ON sessions;
 CREATE TRIGGER update_sessions_updated_at BEFORE UPDATE ON sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_session_presence_updated_at ON session_presence;
 CREATE TRIGGER update_session_presence_updated_at BEFORE UPDATE ON session_presence
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_session_matches_updated_at ON session_matches;
 CREATE TRIGGER update_session_matches_updated_at BEFORE UPDATE ON session_matches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_season_rankings_updated_at ON season_rankings;
 CREATE TRIGGER update_season_rankings_updated_at BEFORE UPDATE ON season_rankings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
