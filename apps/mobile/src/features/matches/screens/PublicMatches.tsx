@@ -591,7 +591,7 @@ export default function PublicMatches() {
           getInviteState={getInviteState}
           onMatchPress={match => {
             Logger.logUserAction('public_match_pressed', { matchId: match.id });
-            openMatchDetail(match);
+            openMatchDetail(match, { source: 'public_matches_feed' });
           }}
           onSendInvite={handleSendInvite}
           suggestionSource="public_matches_feed"

@@ -181,7 +181,7 @@ export default function PlayerMatches() {
         }
         onPress={() => {
           Logger.logUserAction('player_match_pressed', { matchId: item.id });
-          openMatchDetail(item);
+          openMatchDetail(item, { source: 'my_matches' });
         }}
       />
     ),

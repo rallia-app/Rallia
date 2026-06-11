@@ -180,7 +180,7 @@ export default function NetworkMatchesScreen() {
     (match: NetworkMemberMatch) => {
       void lightHaptic();
       Logger.logUserAction('network_match_pressed', { matchId: match.id, networkId, networkType });
-      openMatchDetail(match);
+      openMatchDetail(match, { source: 'network' });
     },
     [openMatchDetail, networkId, networkType]
   );

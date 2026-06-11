@@ -39,7 +39,7 @@ interface MatchDetailSheetContextType {
   /** Open the Match Detail bottom sheet with the specified match */
   openSheet: (
     match: MatchDetailData,
-    options?: { onMatchRemoved?: () => void; onDismiss?: () => void }
+    options?: { onMatchRemoved?: () => void; onDismiss?: () => void; source?: string }
   ) => void;
 
   /** Close the Match Detail bottom sheet */
@@ -56,6 +56,10 @@ interface MatchDetailSheetContextType {
 
   /** Callback fired when the user leaves or cancels the match from the sheet */
   onMatchRemovedRef: React.RefObject<(() => void) | null>;
+
+  /** Surface the current match was opened from — read by the sheet's join
+   *  handlers so match_joined/match_join_requested carry discovery_source. */
+  discoverySourceRef: React.RefObject<string>;
 }
 
 // =============================================================================
@@ -75,6 +79,7 @@ interface MatchDetailSheetProviderProps {
 export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> = ({ children }) => {
   const onMatchRemovedRef = React.useRef<(() => void) | null>(null);
   const onDismissRef = React.useRef<(() => void) | null>(null);
+  const discoverySourceRef = React.useRef<string>('match_card');
   const [selectedMatch, setSelectedMatch] = useState<MatchDetailData | null>(null);
 
   /**
@@ -84,10 +89,14 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    * result so we still get scores for lists that don't include the result relation.
    */
   const openSheet = useCallback(
-    (match: MatchDetailData, options?: { onMatchRemoved?: () => void; onDismiss?: () => void }) => {
+    (
+      match: MatchDetailData,
+      options?: { onMatchRemoved?: () => void; onDismiss?: () => void; source?: string }
+    ) => {
+      discoverySourceRef.current = options?.source ?? 'match_card';
       Analytics.matchViewed({
         match_id: match.id,
-        source: 'match_card',
+        source: discoverySourceRef.current,
         is_auto_generated: match.is_auto_generated ?? false,
       });
       onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
@@ -125,6 +134,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
    */
   const handleSheetDismiss = useCallback(() => {
     setSelectedMatch(null);
+    discoverySourceRef.current = 'match_card';
     if (onDismissRef.current) {
       onDismissRef.current();
       onDismissRef.current = null;
@@ -145,6 +155,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     updateSelectedMatch,
     handleSheetDismiss,
     onMatchRemovedRef,
+    discoverySourceRef,
   };
 
   return (

@@ -350,7 +350,7 @@ const Notifications: React.FC = () => {
       } else {
         // Same sport — open directly
         Logger.logUserAction('notification_match_opened', { matchId: selectedMatchId });
-        openMatchDetail(selectedMatch);
+        openMatchDetail(selectedMatch, { source: 'notification' });
         setSelectedMatchId(null);
       }
     }
@@ -365,7 +365,7 @@ const Notifications: React.FC = () => {
       toSport: pendingMatch.sport?.id,
     });
     await setSelectedSport(pendingMatch.sport);
-    openMatchDetail(pendingMatch);
+    openMatchDetail(pendingMatch, { source: 'notification' });
     setShowSportSwitchConfirm(false);
     setPendingMatch(null);
   };

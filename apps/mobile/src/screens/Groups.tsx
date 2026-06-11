@@ -245,7 +245,7 @@ export default function GroupsScreen() {
 
   const handleMatchScanned = useCallback(
     (match: MatchDetailData) => {
-      openMatchDetail(match);
+      openMatchDetail(match, { source: 'group' });
     },
     [openMatchDetail]
   );

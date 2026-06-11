@@ -734,6 +734,7 @@ export const MatchDetailSheet: React.FC = () => {
     updateSelectedMatch,
     handleSheetDismiss,
     onMatchRemovedRef,
+    discoverySourceRef,
   } = useMatchDetailSheet();
   const { openSheetForEdit, openSheet: openActionsSheet } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
@@ -896,8 +897,15 @@ export const MatchDetailSheet: React.FC = () => {
       const sport_name = selectedMatch?.sport?.name ?? 'unknown';
       const match_id = selectedMatch?.id ?? 'unknown';
       const is_auto_generated = selectedMatch?.is_auto_generated ?? false;
+      const discovery_source = discoverySourceRef.current;
       if (result.status === 'joined') {
-        Analytics.matchJoined({ match_id, sport_id, sport_name, is_auto_generated });
+        Analytics.matchJoined({
+          match_id,
+          sport_id,
+          sport_name,
+          is_auto_generated,
+          discovery_source,
+        });
         if (selectedMatch && getParticipantInfo(selectedMatch).spotsLeft === 1) {
           Analytics.matchFilled({
             match_id: selectedMatch.id,
@@ -905,12 +913,19 @@ export const MatchDetailSheet: React.FC = () => {
             sport_name,
             format: selectedMatch.format ?? 'unknown',
             is_auto_generated,
+            discovery_source,
           });
         }
       } else if (result.status === 'waitlisted') {
         Analytics.waitlistJoined({ match_id, sport_id, sport_name });
       } else {
-        Analytics.matchJoinRequested({ match_id, sport_id, sport_name, is_auto_generated });
+        Analytics.matchJoinRequested({
+          match_id,
+          sport_id,
+          sport_name,
+          is_auto_generated,
+          discovery_source,
+        });
       }
       successHaptic();
       closeSheet();

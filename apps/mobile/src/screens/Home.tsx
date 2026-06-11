@@ -334,7 +334,7 @@ const Home = () => {
           } else if (nav.screen === 'MatchDetail' && nav.params?.matchId) {
             getMatchWithDetails(nav.params.matchId).then(match => {
               if (match) {
-                openMatchDetail(match as MatchDetailData);
+                openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
               }
             });
           }
@@ -363,7 +363,7 @@ const Home = () => {
           if (pending.type === 'match') {
             getMatchWithDetails(pending.targetId).then(match => {
               if (match) {
-                openMatchDetail(match as MatchDetailData);
+                openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
               }
             });
           } else if (pending.type === 'group' && player?.id) {
@@ -462,7 +462,7 @@ const Home = () => {
       switch (payload.type) {
         case 'match': {
           const match = await getMatchWithDetails(payload.matchId);
-          if (match) openMatchDetail(match as MatchDetailData);
+          if (match) openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
           break;
         }
         case 'group': {
@@ -529,7 +529,7 @@ const Home = () => {
         case 'invitation': {
           if (payload.invitationType === 'match' && payload.targetId) {
             const match = await getMatchWithDetails(payload.targetId);
-            if (match) openMatchDetail(match as MatchDetailData);
+            if (match) openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
           } else if (
             payload.invitationType === 'group' &&
             payload.targetId &&
@@ -1236,7 +1236,7 @@ const Home = () => {
                         pendingRequestCount={pendingRequestCount}
                         onPress={() => {
                           Logger.logUserAction('my_match_pressed', { matchId: match.id });
-                          openMatchDetail(match);
+                          openMatchDetail(match, { source: 'my_matches' });
                         }}
                       />
                     );
@@ -1739,7 +1739,7 @@ const Home = () => {
                           }
                           onPress={() => {
                             Logger.logUserAction('match_pressed', { matchId: item.data.id });
-                            openMatchDetail(item.data);
+                            openMatchDetail(item.data, { source: 'home_carousel' });
                           }}
                         />
                       </View>

@@ -453,7 +453,7 @@ export const ActionsBottomSheet: React.FC = () => {
           navigateFromOutside('PlayerMatches');
           // Small delay to ensure navigation completes before opening sheet
           setTimeout(() => {
-            openMatchDetail(matchDetails);
+            openMatchDetail(matchDetails, { source: 'match_creation' });
           }, 300);
         }
       } catch (error) {

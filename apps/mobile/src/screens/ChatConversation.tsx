@@ -424,6 +424,7 @@ export default function ChatConversationScreen() {
         const match = await getMatchWithDetails(conversation.match_id);
         if (match) {
           openMatchDetailSheet(match as MatchDetailData, {
+            source: 'chat',
             onMatchRemoved: () => {
               // Optimistically remove this conversation from the cached list
               if (playerId) {
