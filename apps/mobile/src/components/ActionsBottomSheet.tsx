@@ -37,7 +37,7 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '#/hooks';
@@ -136,6 +136,7 @@ interface ActionsContentProps {
   onCreateTournament: () => void;
   onInvitePlayers: () => void;
   onCreateNetwork: () => void;
+  showCreateTournament: boolean;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
@@ -146,6 +147,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
   onCreateTournament,
   onInvitePlayers,
   onCreateNetwork,
+  showCreateTournament,
   colors,
   t,
 }) => {
@@ -160,13 +162,15 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
           colors={colors}
         />
 
-        <ActionItem
-          icon="trophy-outline"
-          title={t('actions.createTournament')}
-          description={t('actions.createTournamentDescription')}
-          onPress={onCreateTournament}
-          colors={colors}
-        />
+        {showCreateTournament && (
+          <ActionItem
+            icon="trophy-outline"
+            title={t('actions.createTournament')}
+            description={t('actions.createTournamentDescription')}
+            onPress={onCreateTournament}
+            colors={colors}
+          />
+        )}
 
         <ActionItem
           icon="person-add-outline"
@@ -214,6 +218,7 @@ export const ActionsBottomSheet: React.FC = () => {
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const { isAdmin } = useAdminStatus();
   const isDark = theme === 'dark';
 
   // Wizard state for all sliding panels (local, only for slide animation)
@@ -610,6 +615,7 @@ export const ActionsBottomSheet: React.FC = () => {
             onCreateTournament={handleCreateTournament}
             onInvitePlayers={handleInvitePlayers}
             onCreateNetwork={handleCreateNetwork}
+            showCreateTournament={isAdmin}
             colors={colors}
             t={t}
           />

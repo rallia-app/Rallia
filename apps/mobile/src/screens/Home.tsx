@@ -37,6 +37,7 @@ import {
   useSports,
   useProfileCompleteness,
   useReferral,
+  useAdminStatus,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { MatchScoringPreferences } from '@rallia/shared-hooks';
@@ -272,6 +273,7 @@ const Home = () => {
   // Use custom hooks for auth, profile, and overlay context
   const { session, loading: authLoading } = useAuth();
   const { profile } = useProfile();
+  const { isAdmin } = useAdminStatus();
   const { setOnHomeScreen } = useOverlay();
   const { openSheet, openSheetForMatchCreation } = useActionsSheet();
   const { subscriptionStatus } = useSubscription();
@@ -1356,11 +1358,13 @@ const Home = () => {
             } as never)
           }
         />
-        <QuickNavButton
-          icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-          label={t('home.quickNav.tournaments')}
-          onPress={() => appNavigation.navigate('Tournaments')}
-        />
+        {isAdmin && (
+          <QuickNavButton
+            icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+            label={t('home.quickNav.tournaments')}
+            onPress={() => appNavigation.navigate('Tournaments')}
+          />
+        )}
       </ScrollView>
     );
 
@@ -1444,6 +1448,7 @@ const Home = () => {
   }, [
     session,
     isOnboarded,
+    isAdmin,
     showNearbySection,
     colors.card,
     colors.border,
