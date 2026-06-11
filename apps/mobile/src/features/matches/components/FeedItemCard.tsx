@@ -34,6 +34,8 @@ export interface FeedItemCardProps {
   onSendInvite: (payload: InvitePayload) => void;
   /** Surface hosting this feed — drives analytics source attribution. */
   suggestionSource: SuggestionSource;
+  /** Pass false when the surface fires viewability-gated impressions itself. */
+  trackSuggestionImpressionOnMount?: boolean;
   /** Optional sport context for suggestion analytics breakdowns. */
   sportId?: string;
   sportName?: string;
@@ -53,6 +55,7 @@ function FeedItemCardImpl({
   onMatchPress,
   onSendInvite,
   suggestionSource,
+  trackSuggestionImpressionOnMount,
   sportId,
   sportName,
   defaultMatchType,
@@ -103,6 +106,7 @@ function FeedItemCardImpl({
         onSendInvite={onSendInvite}
         inviteState={inviteState}
         source={suggestionSource}
+        trackImpressionOnMount={trackSuggestionImpressionOnMount}
         sportId={sportId}
         sportName={sportName}
         defaultMatchType={defaultMatchType}

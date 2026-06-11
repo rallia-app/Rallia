@@ -34,7 +34,9 @@ import {
   useTranslation,
   useEffectiveLocation,
   useSuggestionInviteHandler,
+  useImpressionTracker,
 } from '#/hooks';
+import * as Analytics from '#/services/analytics';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
@@ -308,12 +310,14 @@ export default function PublicMatches() {
   // then a single light "Suggestions for you" divider, then up-to-N suggestions
   // padding to a minimum of 30 total — but only once matches finish paginating.
   type PublicFeedRow =
-    | { kind: 'item'; key: string; data: UnifiedFeedItem }
+    | { kind: 'item'; key: string; rank: number; data: UnifiedFeedItem }
     | { kind: 'section-header'; key: string; title: string }
     | { kind: 'frontier'; key: string };
   const feed = useMemo<PublicFeedRow[]>(() => {
     const matchItems: PublicFeedRow[] = [];
     let currentSection = '';
+    // 1-indexed position among cards only — headers/frontier excluded.
+    let rank = 0;
 
     sortedMatches.forEach(m => {
       const section = getUpcomingDateSection(m.match_date);
@@ -322,9 +326,11 @@ export default function PublicMatches() {
         currentSection = label;
         matchItems.push({ kind: 'section-header', key: `section:${section}`, title: label });
       }
+      rank += 1;
       matchItems.push({
         kind: 'item',
         key: `match:${m.id}`,
+        rank,
         data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
       });
     });
@@ -334,9 +340,10 @@ export default function PublicMatches() {
     const padCount = Math.max(0, 30 - sortedMatches.length);
     if (padCount === 0 || hasNextPage) return matchItems;
 
-    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map(s => ({
+    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map((s, i) => ({
       kind: 'item' as const,
       key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
+      rank: rank + i + 1,
       data: {
         kind: 'suggestion',
         key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
@@ -370,6 +377,60 @@ export default function PublicMatches() {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Viewability-gated impressions: a card counts as shown once it's ≥50%
+  // visible for 500ms, at most once per focus session. Stable row keys make
+  // the dedup survive background-refetch remounts.
+  const { track } = useImpressionTracker();
+  const maxIndexViewedRef = useRef(0);
+  const impressionCtx = useRef<{ sportId?: string; sportName?: string }>({});
+  useEffect(() => {
+    impressionCtx.current = { sportId: selectedSport?.id, sportName: selectedSport?.name };
+  }, [selectedSport?.id, selectedSport?.name]);
+
+  // Both viewability props must keep a stable identity for the lifetime of
+  // the FlatList — changing them mid-flight is a runtime crash, so neither
+  // can be a useCallback with deps.
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 500,
+  }).current;
+  const onViewableItemsChanged = useRef(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<{ item: PublicFeedRow; index: number | null; isViewable: boolean }>;
+    }) => {
+      const { sportId, sportName } = impressionCtx.current;
+      for (const token of viewableItems) {
+        if (!token.isViewable || token.item.kind !== 'item') continue;
+        if (token.index != null && token.index > maxIndexViewedRef.current) {
+          maxIndexViewedRef.current = token.index;
+        }
+        const row = token.item;
+        if (row.data.kind === 'suggestion') {
+          const s = row.data.data;
+          track(row.key, () =>
+            Analytics.matchSuggestionShown(
+              Analytics.buildSuggestionEventProps(s, 'public_matches_feed', sportId, sportName)
+            )
+          );
+        } else {
+          const m = row.data.data;
+          track(row.key, () =>
+            Analytics.matchCardShown({
+              match_id: m.id,
+              sport_id: m.sport?.id ?? sportId ?? 'unknown',
+              sport_name: m.sport?.name ?? sportName ?? 'unknown',
+              is_auto_generated: m.is_auto_generated ?? false,
+              surface: 'public_matches_feed',
+              rank: row.rank,
+            })
+          );
+        }
+      }
+    }
+  ).current;
 
   // Render feed row — either a match/suggestion card or the single hairline
   // divider between the match block and the suggestion tail.
@@ -411,6 +472,7 @@ export default function PublicMatches() {
           }}
           onSendInvite={handleSendInvite}
           suggestionSource="public_matches_feed"
+          trackSuggestionImpressionOnMount={false}
           sportId={selectedSport?.id}
           sportName={selectedSport?.name}
           defaultMatchType={callerMatchType}
@@ -575,6 +637,8 @@ export default function PublicMatches() {
           ListFooterComponent={renderFooter}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={onViewableItemsChanged}
           contentContainerStyle={[styles.listContent, feed.length === 0 && styles.emptyListContent]}
           showsVerticalScrollIndicator={false}
           refreshControl={
