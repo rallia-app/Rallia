@@ -694,7 +694,7 @@ export function getSupportedDocumentFormats(): string[] {
  */
 export function getMaxFileSizes(): Record<ProofFileType, number> {
   return {
-    video: 250 * 1024 * 1024, // 250 MB
+    video: 50 * 1024 * 1024, // 50 MB (project-global Supabase storage upload cap)
     image: 10 * 1024 * 1024, // 10 MB
     document: 25 * 1024 * 1024, // 25 MB
   };
