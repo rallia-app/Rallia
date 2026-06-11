@@ -9031,6 +9031,7 @@ export type Database = {
       }
       get_auto_invite_funnel: {
         Args: {
+          p_bucket?: string
           p_end_date: string
           p_is_auto?: boolean
           p_settle_hours?: number
@@ -9038,6 +9039,7 @@ export type Database = {
         }
         Returns: {
           accepted: number
+          bucket_start: string
           decline_reasons: Json
           declined: number
           invites_in_flight: number
