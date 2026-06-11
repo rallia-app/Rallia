@@ -25,19 +25,50 @@ Flag rollout strategy:
 | 3     | All Quebec users                             | 4 weeks  | Same                                                        |
 | 4     | All Canada users                             | rolling  | —                                                           |
 
-## Migration
+## Implementation phasing (vertical slices)
 
-A single SQL migration `supabase/migrations/<ts>_leagues_tournaments_v2.sql` introduces all enums, tables, indexes, RLS, triggers, and RPCs. Estimated ~1500 lines of SQL.
+Implementation ships in vertical slices: each slice delivers one user-visible flow end-to-end (migration + RPC + hook + screen) before the next slice starts. Stub RPCs / placeholder screens are explicitly avoided — anything we build, we ship as something a real user can click. The foundation slices (schema, RLS) are the only horizontal layers; everything after them is feature-by-feature.
 
-Before deploy:
+| Slice                                      | Scope                                                                                                                                                                                                                                        | Migration files                                        | UI                                       |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------- |
+| **F1 — Schema**                            | Enums, tables, indexes, `updated_at` triggers. No business logic.                                                                                                                                                                            | `<ts>_leagues_tournaments_schema.sql`                  | None                                     |
+| **F2 — RLS**                               | Helper functions (`is_tournament_organizer`, `is_league_organizer`, `is_active_league_member`, `assert_caller_plays_sport`), RLS enabled on all tables, SELECT policies, deny-direct-write on children. Reuses existing `public.is_admin()`. | `<ts>_leagues_tournaments_rls.sql`                     | None                                     |
+| **V1 — Tournament create**                 | `tournament_create` RPC. Mobile + web create form. Detail screen with read-only view of the draft.                                                                                                                                           | `<ts>_lt_tournament_create_rpc.sql`                    | Tournament-create + draft-detail screens |
+| **V2 — Open registration & self-register** | `tournament_open_registration`, `tournament_register`, `tournament_close_registration`, `tournament_withdraw`. Registration list view.                                                                                                       | `<ts>_lt_tournament_registration_rpcs.sql`             | Registration CTA + list                  |
+| **V3 — Bracket**                           | `tournament_generate_bracket`, `tournament_reset_bracket`, `tournament_swap_players`, score validators in `shared-utils`. Bracket viewer.                                                                                                    | `<ts>_lt_tournament_bracket_rpcs.sql`                  | Bracket render + organizer edit          |
+| **V4 — Score entry & completion**          | `tournament_submit_match_score`, `tournament_validate_score`, `tournament_override_score`, `tournament_dispute_score`, advance-winner trigger. Score-entry sheet.                                                                            | `<ts>_lt_tournament_scoring_rpcs.sql` (+ trigger)      | Score-entry + result display             |
+| **V5 — Tournament cancel / archive**       | `tournament_cancel`, `tournament_archive`, `tournament_reschedule`, audit emit on organizer mutations. Cancel CTA + archive cron.                                                                                                            | `<ts>_lt_tournament_lifecycle_rpcs.sql`                | Cancel button + archive banner           |
+| **V6 — League create + season open**       | `league_create`, `league_join`, `league_approve_member`, `season_create`, `season_open`. League list + season toggle.                                                                                                                        | `<ts>_lt_league_create_rpcs.sql`                       | League create + member list              |
+| **V7 — Session publish + confirmations**   | `session_create`, `session_publish`, `session_confirm_presence`, `lt-close-confirmations` cron. Confirmation push.                                                                                                                           | `<ts>_lt_session_lifecycle_rpcs.sql` (+ edge function) | Session detail + confirm CTA             |
+| **V8 — Match sheet (BY_RANK only)**        | `session_generate_sheet`, `session_regenerate_sheet`, BY_RANK pairing in `shared-utils`. Match-sheet viewer.                                                                                                                                 | `<ts>_lt_session_sheet_rpcs.sql`                       | Sheet display + lock toggle              |
+| **V9 — League scoring + ranking**          | `session_submit_match_score`, `session_validate_score`, `recalc_season_ranking`. Ranking screen with tie-breakers 1–4.                                                                                                                       | `<ts>_lt_league_scoring_rpcs.sql`                      | Score-entry + ranking display            |
+| **V10 — Notifications + analytics**        | All notification payloads from notifications.md wired up. PostHog events from analytics.md emitted.                                                                                                                                          | (no schema)                                            | Notification action handlers             |
 
-1. `npx supabase db reset` locally; verify migration applies cleanly.
+Each `V*` slice is an independent commit-and-ship unit. The user-visible deliverable at the end of every slice is verifiable in the running app — no unwired RPCs, no half-built screens, no speculative stubs.
+
+Slices not in this list (waitlist, invite links, doubles, BALANCED_DOUBLES, exports, etc.) ship as v1.1 vertical slices following the same pattern. The "Phasing" table in [README.md](./README.md#phasing) lists the v1.1 / v2 capability set; this table is the implementation-order plan within v1.
+
+### Per-slice flow
+
+For every `V*` slice:
+
+1. Migration: only the schema/RPC objects this slice needs.
+2. Apply locally via `npx supabase migration up`; smoke-test the RPC via psql / Supabase Studio.
+3. Add the React Query hook in `packages/shared-hooks` or `apps/<app>/src/hooks` consuming the RPC.
+4. Build the screen / dialog / button. Reuse the [initialData dialog pattern](../../.claude/projects/-Users-mathis-dev-startups-rallia-rallia/memory/MEMORY.md) where applicable.
+5. Manually verify the flow in the running app (mobile sim or web dev server).
+6. Commit. Move on.
+
+## Migration deployment
+
+Each slice's migration is deployed the same way:
+
+1. `npx supabase migration up` locally; verify the migration applies cleanly and the next slice's smoke test passes.
 2. `npx supabase migration up` on staging.
-3. Run smoke tests (see Test plan below).
-4. Apply to prod via `npx supabase migration up`.
-5. Toggle PostHog flag for Phase 1 cohort.
+3. Apply to prod via `npx supabase migration up`.
+4. (Once flag is wired: toggle PostHog for the next cohort.)
 
-The migration is non-destructive — it only adds tables. There is no backfill from existing data.
+All migrations are non-destructive — they only add objects. There is no backfill from existing data.
 
 ## Backfill
 

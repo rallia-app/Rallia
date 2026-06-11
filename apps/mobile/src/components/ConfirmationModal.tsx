@@ -86,6 +86,14 @@ export interface ConfirmationModalProps {
   disabled?: boolean;
 
   /**
+   * Optional extra content rendered between the message/info box and the
+   * action buttons. Use sparingly — for things like a one-line input that
+   * the confirm action needs (e.g. a cancellation reason). Anything richer
+   * deserves its own dedicated sheet.
+   */
+  extraContent?: React.ReactNode;
+
+  /**
    * Optional custom content rendered above the action buttons (e.g. reason chips).
    */
   children?: React.ReactNode;
@@ -107,6 +115,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   destructive = false,
   isLoading = false,
   disabled,
+  extraContent,
   children,
 }) => {
   const { theme } = useTheme();
@@ -190,6 +199,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   </Text>
                 </View>
               )}
+
+              {/* Optional extra content (e.g. a reason input) */}
+              {extraContent}
 
               {/* Optional custom content (e.g. reason chips) */}
               {children}

@@ -3704,6 +3704,8 @@
     "createShareListDescription": "Create a list of people outside the app to invite to your games",
     "createNetwork": "Create Network",
     "createNetworkDescription": "Start a group or community to organize regular games with others",
+    "createTournament": "Create Tournament",
+    "createTournamentDescription": "Organize a tournament with a bracket and registrations",
     "createEvent": "Create Event",
     "createEventDescription": "Organize a tournament or league and manage brackets and schedules",
     "selectNetworkType": "Create Network",
@@ -4052,6 +4054,223 @@
       "selectContactsFromLists": "Select contacts from your lists"
     }
   },
+  "tournamentList": {
+    "title": "Tournaments",
+    "loading": "Loading tournaments...",
+    "loadError": "Couldn't load tournaments",
+    "retry": "Try again",
+    "empty": "No tournaments yet",
+    "emptyDescription": "Create one from the action menu to get started.",
+    "sectionRegistered": "You're registered",
+    "sectionMine": "Yours",
+    "sectionOpen": "Open for registration",
+    "sectionUpcoming": "Upcoming",
+    "sectionPast": "Completed",
+    "sectionCancelled": "Cancelled",
+    "sectionDraft": "Drafts",
+    "dateRange": "{start} – {end}"
+  },
+  "tournamentDetail": {
+    "title": "Tournament",
+    "loading": "Loading tournament...",
+    "notFound": "Tournament not found",
+    "notFoundDescription": "This tournament may have been deleted or you don't have permission to view it.",
+    "loadError": "Couldn't load the tournament",
+    "retry": "Try again",
+    "status": {
+      "draft": "Draft",
+      "registration_open": "Registration open",
+      "registration_closed": "Registration closed",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "archived": "Archived"
+    },
+    "sections": {
+      "format": "Format",
+      "schedule": "Schedule",
+      "visibility": "Visibility & registration",
+      "organizer": "Organizer",
+      "manage": "Manage"
+    },
+    "labels": {
+      "bracketSize": "Bracket size",
+      "bracketType": "Bracket type",
+      "matchFormat": "Match format",
+      "entryFormat": "Entry format",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "visibility": "Visibility",
+      "registrationMode": "Registration mode"
+    },
+    "values": {
+      "singleElimination": "Single elimination",
+      "doubleElimination": "Double elimination",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "mixedDoubles": "Mixed doubles",
+      "private": "Private",
+      "public": "Public",
+      "community": "Community",
+      "open": "Open",
+      "approval": "Approval required",
+      "inviteOnly": "Invite only"
+    },
+    "actions": {
+      "openRegistration": "Open registration",
+      "closeRegistration": "Close registration",
+      "register": "Register",
+      "addMyself": "Add myself",
+      "withdraw": "Withdraw",
+      "registering": "Registering...",
+      "withdrawing": "Withdrawing...",
+      "opening": "Opening...",
+      "closing": "Closing...",
+      "registrationPendingLabel": "Registration pending approval",
+      "registeredLabel": "You're registered",
+      "generateBracket": "Generate bracket",
+      "generating": "Generating bracket...",
+      "cancelTournament": "Cancel tournament",
+      "archiveTournament": "Archive tournament"
+    },
+    "cancelModal": {
+      "title": "Cancel this tournament?",
+      "description": "All pending and in-progress matches will be cancelled. Players will keep their registration history. This can't be undone.",
+      "reasonPlaceholder": "Optional: short reason shown to participants",
+      "confirm": "Cancel tournament",
+      "keepIt": "Keep it",
+      "errorGeneric": "Couldn't cancel the tournament. Please try again.",
+      "errorNotCancellable": "This tournament can't be cancelled in its current state.",
+      "errorLockConflict": "Someone else made changes — please refresh and try again."
+    },
+    "archiveModal": {
+      "title": "Archive this tournament?",
+      "description": "Archived tournaments hide from active feeds but stay accessible by direct link.",
+      "confirm": "Archive",
+      "keepIt": "Keep visible",
+      "errorGeneric": "Couldn't archive the tournament. Please try again.",
+      "errorNotArchivable": "This tournament can't be archived yet.",
+      "errorLockConflict": "Someone else made changes — please refresh and try again."
+    },
+    "cancelledNotice": {
+      "title": "Tournament cancelled",
+      "reason": "Reason: {reason}"
+    },
+    "registrations": {
+      "sectionTitle": "Registrations",
+      "count": "{count} of {max} registered"
+    },
+    "bracket": {
+      "sectionTitle": "Bracket",
+      "round": "Round {n}",
+      "final": "Final",
+      "semifinal": "Semifinal",
+      "quarterfinal": "Quarterfinal",
+      "bye": "BYE",
+      "tbd": "TBD",
+      "phantom": "—",
+      "linkMatch": "Link a played match to this slot",
+      "overrideMatch": "Record the result as organizer"
+    },
+    "linkPicker": {
+      "title": "Link a played match",
+      "empty": "No matches found",
+      "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
+      "attachFailed": "Couldn't link the match"
+    },
+    "override": {
+      "title": "Record the result",
+      "subtitle": "Set the winner for this match. Use this when players can't confirm a score themselves.",
+      "winnerLabel": "Winner",
+      "scoreLabel": "Score (optional)",
+      "scorePlaceholder": "e.g., 6-4 6-2",
+      "confirm": "Save result",
+      "confirming": "Saving...",
+      "pickWinner": "Select the winner",
+      "errors": {
+        "notOverridable": "This match can't be edited anymore.",
+        "winnerNotInMatch": "Pick one of the two players in this match.",
+        "notInProgress": "The tournament isn't in progress.",
+        "slotsIncomplete": "Both players aren't set yet for this match.",
+        "generic": "Couldn't save the result. Please try again."
+      }
+    },
+    "generateBracketErrors": {
+      "insufficientParticipants": "At least 2 players must be registered.",
+      "alreadyGenerated": "The bracket already exists.",
+      "wrongStatus": "Close registration first to generate the bracket.",
+      "generic": "Couldn't generate the bracket. Please try again."
+    },
+    "errors": {
+      "openFailed": "Couldn't open registration. Please try again.",
+      "closeFailed": "Couldn't close registration. Please try again.",
+      "registerFailed": "Couldn't complete registration. Please try again.",
+      "withdrawFailed": "Couldn't withdraw. Please try again.",
+      "tournamentFull": "This tournament is full.",
+      "alreadyRegistered": "You're already registered for this tournament.",
+      "sportMismatch": "You don't have this sport active on your profile.",
+      "regClosed": "Registration is no longer open.",
+      "notInvited": "This tournament is invite-only and you haven't been invited.",
+      "lockConflict": "Someone else made changes — please refresh and try again."
+    }
+  },
+  "tournamentCreation": {
+    "title": "Create a tournament",
+    "forSport": "Creating tournament for {sport}",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "details": "Details",
+      "visibility": "Visibility"
+    },
+    "step1Title": "Details",
+    "step1Description": "Name your tournament, pick a bracket size, and set the dates",
+    "step2Title": "Visibility",
+    "step2Description": "Who can see and register?",
+    "next": "Next",
+    "back": "Back",
+    "createTournament": "Create tournament",
+    "creating": "Creating...",
+    "success": "Tournament created!",
+    "successDescription": "Your draft tournament is ready. Open registration when you're ready to invite players.",
+    "viewTournament": "View tournament",
+    "createAnother": "Create another",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g., Spring Singles 2026",
+      "maxParticipants": "Bracket size",
+      "maxParticipantsHint": "Number of players the bracket holds",
+      "startDate": "Start date",
+      "startDatePlaceholder": "Select date",
+      "endDate": "End date",
+      "endDatePlaceholder": "Select date",
+      "visibility": "Visibility",
+      "visibilityPrivate": "Private",
+      "visibilityPrivateDescription": "Only people you invite can see this",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Anyone in your sport can find and register",
+      "visibilityCommunity": "Community",
+      "visibilityCommunityDescription": "Visible to members of a community you choose",
+      "registrationMode": "Registration mode",
+      "registrationModeOpen": "Open",
+      "registrationModeOpenDescription": "Anyone visible can self-register",
+      "registrationModeApproval": "Approval",
+      "registrationModeApprovalDescription": "You approve each registration",
+      "registrationModeInviteOnly": "Invite only",
+      "registrationModeInviteOnlyDescription": "Only people you invite can register"
+    },
+    "validation": {
+      "nameRequired": "Tournament name is required",
+      "nameTooLong": "Name must be 100 characters or fewer",
+      "datesRequired": "Both start and end dates are required",
+      "endBeforeStart": "End date must be on or after the start date",
+      "startInPast": "Start date must be in the future"
+    },
+    "errors": {
+      "sportMismatch": "You don't have this sport active on your profile",
+      "rateLimited": "You've created the maximum number of tournaments today. Try again tomorrow.",
+      "generic": "Couldn't create the tournament. Please try again."
+    }
+  },
   "home": {
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "Your Games",
@@ -4069,7 +4288,8 @@
       "joinCommunity": "Join a community",
       "bookCourt": "Reserve a court",
       "findGame": "Find a game nearby",
-      "browseSuggestions": "Discover suggestions"
+      "browseSuggestions": "Discover suggestions",
+      "tournaments": "Join a tournament"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",

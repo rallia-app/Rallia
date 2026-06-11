@@ -47,18 +47,18 @@ stateDiagram-v2
 
 ### Optional fields
 
-| Field              | Default                                      | Notes                                                       |
-| ------------------ | -------------------------------------------- | ----------------------------------------------------------- |
-| `description`      | empty                                        |                                                             |
-| `logo_url`         | NULL                                         | Supabase Storage `league-logos/`                            |
-| `facility_id`      | NULL                                         | Anchors map placement and default session venue             |
-| `surfaces`         | `{}`                                         | Surface preferences                                         |
-| `categories`       | `{}`                                         | Filtering metadata                                          |
-| `level`            | `open`                                       |                                                             |
-| `community_id`     | NULL                                         | If set, visibility defaults to `community`                  |
-| `default_rules`    | (see [ranking.md](./ranking.md#rules-shape)) | Cloned to each season at OPEN                               |
-| `member_capacity`  | NULL                                         | Max active members; NULL = unlimited (per co-founder brief) |
-| `waitlist_enabled` | `false`                                      | If true, joins past `member_capacity` go to waitlist        |
+| Field              | Default                                      | Notes                                                                                                           |
+| ------------------ | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `description`      | empty                                        |                                                                                                                 |
+| `logo_url`         | NULL                                         | Supabase Storage `league-logos/`                                                                                |
+| `facility_id`      | NULL                                         | Anchors map placement and default session venue                                                                 |
+| `surfaces`         | `{}`                                         | Surface preferences                                                                                             |
+| `categories`       | `{}`                                         | Filtering metadata                                                                                              |
+| `level`            | `open`                                       |                                                                                                                 |
+| `network_id`       | NULL                                         | If set, visibility defaults to `community`. Must reference a `network` whose `network_type.code = 'community'`. |
+| `default_rules`    | (see [ranking.md](./ranking.md#rules-shape)) | Cloned to each season at OPEN                                                                                   |
+| `member_capacity`  | NULL                                         | Max active members; NULL = unlimited (per co-founder brief)                                                     |
+| `waitlist_enabled` | `false`                                      | If true, joins past `member_capacity` go to waitlist                                                            |
 
 ### League capacity & member waitlist
 
@@ -367,7 +367,7 @@ Sessions appear in user calendar (system 12) for confirmed members:
 | `visibility` | Ranking visible to                          |
 | ------------ | ------------------------------------------- |
 | `public`     | Everyone (guest + authenticated)            |
-| `community`  | Active members of `community_id`            |
+| `community`  | Active members of `network_id`              |
 | `private`    | League organizers and active league members |
 
 Member-level "hide my rank" (privacy mode) is **not** offered in v1; spec for v2 in [edge-cases.md](./edge-cases.md#privacy).

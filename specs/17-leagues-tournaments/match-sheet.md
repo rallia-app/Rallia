@@ -12,7 +12,7 @@ This file specifies the pairing algorithms precisely enough that two implementat
 | Player rankings     | `season_rankings` (current as of generation time)                                           |
 | Pre-paired partners | `session_presence.preferred_partner_id` (doubles only)                                      |
 | Session config      | `sessions.rounds`, `formats_allowed`, `match_format`, `pairing_mode`                        |
-| Court inventory     | `session_courts` join with `facility_courts`                                                |
+| Court inventory     | `session_courts` join with `court`                                                          |
 | H2H history         | `session_matches` aggregated for last `N` sessions of season                                |
 | Locked rows         | `session_matches` where `locked = true`                                                     |
 | Deterministic seed  | `hashtext(session_id::text)::bigint` for reproducible RNG                                   |

@@ -69,23 +69,23 @@ The `cancelled` state was missing from the V1 spec; it is now a first-class stat
 
 ### Optional fields with defaults
 
-| Field                    | Default                                                   | Notes                                                            |
-| ------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------- |
-| `visibility`             | `private`                                                 | `public` shows in directory; `community` requires `community_id` |
-| `registration_mode`      | `open`                                                    |                                                                  |
-| `registration_opens_at`  | now()                                                     |                                                                  |
-| `registration_closes_at` | `start_date - 24h`                                        |                                                                  |
-| `bracket_type`           | `single_elimination`                                      | `double_elimination` is v2                                       |
-| `match_format`           | `two_of_three` (tennis) / `pickleball_to_11` (pickleball) | sport-aware default                                              |
-| `games_per_set`          | `6` (tennis); not used for pickleball                     |                                                                  |
-| `final_set_tiebreak`     | `super_tb_10pt` (tennis); n/a (pickleball)                |                                                                  |
-| `entry_format`           | `singles`                                                 | `doubles` and `mixed_doubles` available v1.1                     |
-| `seeding_enabled`        | `true`                                                    |                                                                  |
-| `max_seeds`              | `4`                                                       | `0`, `2`, `4`, or `8`                                            |
-| `min_rating`             | NULL                                                      | Floor on participant rating                                      |
-| `max_rating`             | NULL                                                      | Cap on participant rating                                        |
-| `min_reputation`         | NULL                                                      | Floor on participant reputation score                            |
-| `categories`             | `{}`                                                      | Filtering metadata (junior/senior/etc.)                          |
+| Field                    | Default                                                   | Notes                                                          |
+| ------------------------ | --------------------------------------------------------- | -------------------------------------------------------------- |
+| `visibility`             | `private`                                                 | `public` shows in directory; `community` requires `network_id` |
+| `registration_mode`      | `open`                                                    |                                                                |
+| `registration_opens_at`  | now()                                                     |                                                                |
+| `registration_closes_at` | `start_date - 24h`                                        |                                                                |
+| `bracket_type`           | `single_elimination`                                      | `double_elimination` is v2                                     |
+| `match_format`           | `two_of_three` (tennis) / `pickleball_to_11` (pickleball) | sport-aware default                                            |
+| `games_per_set`          | `6` (tennis); not used for pickleball                     |                                                                |
+| `final_set_tiebreak`     | `super_tb_10pt` (tennis); n/a (pickleball)                |                                                                |
+| `entry_format`           | `singles`                                                 | `doubles` and `mixed_doubles` available v1.1                   |
+| `seeding_enabled`        | `true`                                                    |                                                                |
+| `max_seeds`              | `4`                                                       | `0`, `2`, `4`, or `8`                                          |
+| `min_rating`             | NULL                                                      | Floor on participant rating                                    |
+| `max_rating`             | NULL                                                      | Cap on participant rating                                      |
+| `min_reputation`         | NULL                                                      | Floor on participant reputation score                          |
+| `categories`             | `{}`                                                      | Filtering metadata (junior/senior/etc.)                        |
 
 ### Editable fields by state
 
@@ -100,7 +100,7 @@ The `cancelled` state was missing from the V1 spec; it is now a first-class stat
 | `bracket_type`, `match_format`, `games_per_set`, `final_set_tiebreak`, `entry_format` |   ✅    |         ❌          |          ❌           |      ❌       |     ❌      |
 | `min_rating`, `max_rating`, `min_reputation`                                          |   ✅    |         ✅¹         |          ❌           |      ❌       |     ❌      |
 | `facility_id`, `venue_*`                                                              |   ✅    |         ✅          |          ✅           |      ✅       |     ❌      |
-| `community_id`                                                                        |   ✅    |         ❌          |          ❌           |      ❌       |     ❌      |
+| `network_id`                                                                          |   ✅    |         ❌          |          ❌           |      ❌       |     ❌      |
 
 ¹ Requires impactful-change confirmation dialog (mirrors [match-creation.md](../09-matches/match-creation.md#impactful-change-confirmation)) and triggers `tournament_updated` notifications to participants.
 
@@ -197,7 +197,7 @@ Organizer can cancel from any non-terminal state.
 | Source state          | Side effects                                                                                                               |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `draft`               | None                                                                                                                       |
-| `registration_open`   | Notify all `registered`/`pending`/`waitlisted` users; refund hook (see [monetization.md](./monetization.md))               |
+| `registration_open`   | Notify all `registered`/`pending`/`waitlisted` users                                                                       |
 | `registration_closed` | Same as above                                                                                                              |
 | `in_progress`         | Same as above + close all `pending`/`in_progress` matches as `cancelled`; partial results retained for organizer reference |
 

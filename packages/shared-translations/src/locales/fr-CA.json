@@ -3704,6 +3704,8 @@
     "createShareListDescription": "Créez une liste de personnes hors application à inviter à vos parties",
     "createNetwork": "Créer un réseau",
     "createNetworkDescription": "Créez un groupe ou une communauté pour organiser des parties régulières",
+    "createTournament": "Créer un tournoi",
+    "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
     "createEvent": "Créer un événement",
     "createEventDescription": "Organisez un tournoi ou une ligue et gérez les tableaux et horaires",
     "selectNetworkType": "Créer un réseau",
@@ -4052,6 +4054,223 @@
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
     }
   },
+  "tournamentList": {
+    "title": "Tournois",
+    "loading": "Chargement des tournois...",
+    "loadError": "Impossible de charger les tournois",
+    "retry": "Réessayer",
+    "empty": "Aucun tournoi pour le moment",
+    "emptyDescription": "Créez-en un depuis le menu d'actions pour commencer.",
+    "sectionRegistered": "Vous êtes inscrit",
+    "sectionMine": "Les vôtres",
+    "sectionOpen": "Inscriptions ouvertes",
+    "sectionUpcoming": "À venir",
+    "sectionPast": "Terminés",
+    "sectionCancelled": "Annulés",
+    "sectionDraft": "Brouillons",
+    "dateRange": "{start} – {end}"
+  },
+  "tournamentDetail": {
+    "title": "Tournoi",
+    "loading": "Chargement du tournoi...",
+    "notFound": "Tournoi introuvable",
+    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
+    "loadError": "Impossible de charger le tournoi",
+    "retry": "Réessayer",
+    "status": {
+      "draft": "Brouillon",
+      "registration_open": "Inscriptions ouvertes",
+      "registration_closed": "Inscriptions fermées",
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "archived": "Archivé"
+    },
+    "sections": {
+      "format": "Format",
+      "schedule": "Calendrier",
+      "visibility": "Visibilité et inscriptions",
+      "organizer": "Organisateur",
+      "manage": "Gestion"
+    },
+    "labels": {
+      "bracketSize": "Taille du tableau",
+      "bracketType": "Type de tableau",
+      "matchFormat": "Format des matchs",
+      "entryFormat": "Type d'inscription",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "visibility": "Visibilité",
+      "registrationMode": "Mode d'inscription"
+    },
+    "values": {
+      "singleElimination": "Élimination simple",
+      "doubleElimination": "Élimination double",
+      "singles": "Simples",
+      "doubles": "Doubles",
+      "mixedDoubles": "Double mixte",
+      "private": "Privé",
+      "public": "Public",
+      "community": "Communauté",
+      "open": "Ouvert",
+      "approval": "Approbation requise",
+      "inviteOnly": "Sur invitation"
+    },
+    "actions": {
+      "openRegistration": "Ouvrir les inscriptions",
+      "closeRegistration": "Fermer les inscriptions",
+      "register": "S'inscrire",
+      "addMyself": "M'ajouter",
+      "withdraw": "Se retirer",
+      "registering": "Inscription...",
+      "withdrawing": "Retrait...",
+      "opening": "Ouverture...",
+      "closing": "Fermeture...",
+      "registrationPendingLabel": "Inscription en attente d'approbation",
+      "registeredLabel": "Vous êtes inscrit",
+      "generateBracket": "Générer le tableau",
+      "generating": "Génération du tableau...",
+      "cancelTournament": "Annuler le tournoi",
+      "archiveTournament": "Archiver le tournoi"
+    },
+    "cancelModal": {
+      "title": "Annuler ce tournoi ?",
+      "description": "Tous les matchs en attente ou en cours seront annulés. Les joueurs conservent leur historique d'inscription. Cette action est irréversible.",
+      "reasonPlaceholder": "Optionnel : courte raison communiquée aux participants",
+      "confirm": "Annuler le tournoi",
+      "keepIt": "Garder",
+      "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
+      "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    },
+    "archiveModal": {
+      "title": "Archiver ce tournoi ?",
+      "description": "Les tournois archivés sont retirés des flux actifs mais restent accessibles par lien direct.",
+      "confirm": "Archiver",
+      "keepIt": "Garder visible",
+      "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
+      "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    },
+    "cancelledNotice": {
+      "title": "Tournoi annulé",
+      "reason": "Raison : {reason}"
+    },
+    "registrations": {
+      "sectionTitle": "Inscriptions",
+      "count": "{count} sur {max} inscrits"
+    },
+    "bracket": {
+      "sectionTitle": "Tableau",
+      "round": "Tour {n}",
+      "final": "Finale",
+      "semifinal": "Demi-finale",
+      "quarterfinal": "Quart de finale",
+      "bye": "EXEMPT",
+      "tbd": "À déterminer",
+      "phantom": "—",
+      "linkMatch": "Lier une partie jouée à ce slot",
+      "overrideMatch": "Inscrire le résultat (organisateur)"
+    },
+    "linkPicker": {
+      "title": "Lier une partie jouée",
+      "empty": "Aucune partie trouvée",
+      "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
+      "attachFailed": "Impossible de lier la partie"
+    },
+    "override": {
+      "title": "Inscrire le résultat",
+      "subtitle": "Désignez le gagnant de cette partie. À utiliser quand les joueurs ne peuvent pas confirmer un score eux-mêmes.",
+      "winnerLabel": "Gagnant",
+      "scoreLabel": "Score (facultatif)",
+      "scorePlaceholder": "ex. : 6-4 6-2",
+      "confirm": "Enregistrer le résultat",
+      "confirming": "Enregistrement...",
+      "pickWinner": "Sélectionnez le gagnant",
+      "errors": {
+        "notOverridable": "Cette partie ne peut plus être modifiée.",
+        "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
+        "notInProgress": "Le tournoi n'est pas en cours.",
+        "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
+        "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
+      }
+    },
+    "generateBracketErrors": {
+      "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
+      "alreadyGenerated": "Le tableau existe déjà.",
+      "wrongStatus": "Fermez les inscriptions avant de générer le tableau.",
+      "generic": "Impossible de générer le tableau. Veuillez réessayer."
+    },
+    "errors": {
+      "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",
+      "closeFailed": "Impossible de fermer les inscriptions. Veuillez réessayer.",
+      "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
+      "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
+      "tournamentFull": "Ce tournoi est complet.",
+      "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",
+      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil.",
+      "regClosed": "Les inscriptions ne sont plus ouvertes.",
+      "notInvited": "Ce tournoi est sur invitation et vous n'avez pas été invité.",
+      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    }
+  },
+  "tournamentCreation": {
+    "title": "Créer un tournoi",
+    "forSport": "Création d'un tournoi pour {sport}",
+    "step": "Étape {current} sur {total}",
+    "stepNames": {
+      "details": "Détails",
+      "visibility": "Visibilité"
+    },
+    "step1Title": "Détails",
+    "step1Description": "Nommez votre tournoi, choisissez la taille du tableau et fixez les dates",
+    "step2Title": "Visibilité",
+    "step2Description": "Qui peut le voir et s'inscrire?",
+    "next": "Suivant",
+    "back": "Retour",
+    "createTournament": "Créer le tournoi",
+    "creating": "Création...",
+    "success": "Tournoi créé!",
+    "successDescription": "Votre brouillon de tournoi est prêt. Ouvrez les inscriptions quand vous voulez inviter des joueurs.",
+    "viewTournament": "Voir le tournoi",
+    "createAnother": "En créer un autre",
+    "fields": {
+      "name": "Nom",
+      "namePlaceholder": "ex. : Simples du printemps 2026",
+      "maxParticipants": "Taille du tableau",
+      "maxParticipantsHint": "Nombre de joueurs que le tableau accueille",
+      "startDate": "Date de début",
+      "startDatePlaceholder": "Choisir une date",
+      "endDate": "Date de fin",
+      "endDatePlaceholder": "Choisir une date",
+      "visibility": "Visibilité",
+      "visibilityPrivate": "Privé",
+      "visibilityPrivateDescription": "Seules les personnes que vous invitez le voient",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Toute personne dans votre sport peut le trouver et s'inscrire",
+      "visibilityCommunity": "Communauté",
+      "visibilityCommunityDescription": "Visible aux membres d'une communauté que vous choisissez",
+      "registrationMode": "Mode d'inscription",
+      "registrationModeOpen": "Ouvert",
+      "registrationModeOpenDescription": "Toute personne qui voit le tournoi peut s'inscrire",
+      "registrationModeApproval": "Approbation",
+      "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
+      "registrationModeInviteOnly": "Sur invitation",
+      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire"
+    },
+    "validation": {
+      "nameRequired": "Le nom du tournoi est requis",
+      "nameTooLong": "Le nom doit contenir au plus 100 caractères",
+      "datesRequired": "Les dates de début et de fin sont requises",
+      "endBeforeStart": "La date de fin doit être après ou égale à la date de début",
+      "startInPast": "La date de début doit être dans le futur"
+    },
+    "errors": {
+      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
+      "rateLimited": "Vous avez créé le nombre maximal de tournois pour aujourd'hui. Réessayez demain.",
+      "generic": "Impossible de créer le tournoi. Veuillez réessayer."
+    }
+  },
   "home": {
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "Vos parties",
@@ -4069,7 +4288,8 @@
       "joinCommunity": "Rejoindre une communauté",
       "bookCourt": "Réserver un terrain",
       "findGame": "Trouver une partie",
-      "browseSuggestions": "Découvrir mes suggestions"
+      "browseSuggestions": "Découvrir mes suggestions",
+      "tournaments": "Rejoindre un tournoi"
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
