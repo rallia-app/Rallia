@@ -6,6 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   ActivityIndicator,
   Modal,
 } from 'react-native';
@@ -48,6 +49,7 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
+import type { JustForYouItem } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -79,7 +81,9 @@ import {
   useTourSequence,
   usePendingReferenceRequestsCount,
   useSuggestionInviteHandler,
+  useImpressionTracker,
 } from '#/hooks';
+import * as Analytics from '#/services/analytics';
 import { SportIcon } from '#/components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
 import { useTabPreload } from '#/navigation/useTabPreload';
@@ -252,6 +256,13 @@ const quickNavStyles = StyleSheet.create({
 });
 
 // AsyncStorage key for second sport banner cooldown
+// Stable identity for JFY carousel items — used as both the FlatList key and
+// the impression-dedup key, so dedup survives data-refetch remounts.
+const jfyItemKey = (item: JustForYouItem): string =>
+  item.kind === 'match'
+    ? `match:${item.data.id}`
+    : `suggestion:${item.data.opponentId}:${item.data.slot.datetime.getTime?.() ?? 0}`;
+
 const SECOND_SPORT_BANNER_COOLDOWN_KEY = '@rallia/second-sport-banner-cooldown';
 const SECOND_SPORT_BANNER_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
 const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
@@ -486,6 +497,7 @@ const Home = () => {
           break;
         }
         case 'publicMatches': {
+          Analytics.publicMatchesOpened({ cta: 'deep_link' });
           appNavigation.navigate('Main', {
             screen: 'Home',
             params: { screen: 'PublicMatches' },
@@ -964,6 +976,92 @@ const Home = () => {
     }
   }, [isRefetching]);
 
+  // Viewability-gated impressions for the JFY carousel. Home stays mounted in
+  // the tab navigator and the carousel can sit below the fold, so fires are
+  // gated on (a) the screen being focused and (b) the section being at least
+  // half vertically visible; anything else buffers until the gate opens.
+  const { track: trackJfyImpression, setGate: setJfyGate } = useImpressionTracker({
+    gatedByDefault: true,
+  });
+  const jfySectionLayoutRef = useRef<{ y: number; height: number } | null>(null);
+  const homeScrollYRef = useRef(0);
+  const homeViewportHRef = useRef(0);
+  const recomputeJfyGate = useCallback(() => {
+    const layout = jfySectionLayoutRef.current;
+    if (!layout || layout.height === 0 || homeViewportHRef.current === 0) return;
+    const viewTop = homeScrollYRef.current;
+    const viewBottom = viewTop + homeViewportHRef.current;
+    const overlap = Math.min(viewBottom, layout.y + layout.height) - Math.max(viewTop, layout.y);
+    setJfyGate(overlap >= layout.height * 0.5);
+  }, [setJfyGate]);
+
+  const jfyImpressionCtx = useRef<{ sportId?: string; sportName?: string }>({});
+  useEffect(() => {
+    jfyImpressionCtx.current = { sportId: selectedSport?.id, sportName: selectedSport?.name };
+  }, [selectedSport?.id, selectedSport?.name]);
+
+  const fireJfyImpression = useRef((item: JustForYouItem, index: number | null) => {
+    const { sportId, sportName } = jfyImpressionCtx.current;
+    if (item.kind === 'suggestion') {
+      const s = item.data;
+      trackJfyImpression(jfyItemKey(item), () =>
+        Analytics.matchSuggestionShown(
+          Analytics.buildSuggestionEventProps(s, 'home_carousel', sportId, sportName)
+        )
+      );
+    } else {
+      const m = item.data;
+      trackJfyImpression(jfyItemKey(item), () =>
+        Analytics.matchCardShown({
+          match_id: m.id,
+          sport_id: m.sport?.id ?? sportId ?? 'unknown',
+          sport_name: m.sport?.name ?? sportName ?? 'unknown',
+          is_auto_generated: m.is_auto_generated ?? false,
+          surface: 'home_carousel',
+          rank: index != null ? index + 1 : undefined,
+        })
+      );
+    }
+  }).current;
+
+  // Both viewability props must keep a stable identity for the lifetime of
+  // the FlatList — changing them mid-flight is a runtime crash.
+  const lastJfyViewableRef = useRef<Array<{ item: JustForYouItem; index: number | null }>>([]);
+  const jfyViewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 500,
+  }).current;
+  const onJfyViewableItemsChanged = useRef(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<{ item: JustForYouItem; index: number | null; isViewable: boolean }>;
+    }) => {
+      lastJfyViewableRef.current = viewableItems
+        .filter(token => token.isViewable)
+        .map(token => ({ item: token.item, index: token.index }));
+      for (const token of lastJfyViewableRef.current) {
+        fireJfyImpression(token.item, token.index);
+      }
+    }
+  ).current;
+
+  // Focus session boundary: tab switches keep Home mounted, so the FlatList
+  // won't re-emit viewability on refocus — replay the last viewable snapshot
+  // into the fresh session instead, and close the gate while away so
+  // background refetches can't fire impressions (the prod inflation bug).
+  const [homeFocusNonce, setHomeFocusNonce] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setHomeFocusNonce(n => n + 1);
+      for (const token of lastJfyViewableRef.current) {
+        fireJfyImpression(token.item, token.index);
+      }
+      recomputeJfyGate();
+      return () => setJfyGate(false);
+    }, [fireJfyImpression, recomputeJfyGate, setJfyGate])
+  );
+
   // Notify OverlayContext that we're on Home screen (safe to show permission overlays)
   useEffect(() => {
     setOnHomeScreen(true);
@@ -1010,6 +1108,7 @@ const Home = () => {
           style={styles.viewAllButton}
           onPress={() => {
             lightHaptic();
+            Analytics.publicMatchesOpened({ cta: 'view_all' });
             navigation.navigate('PublicMatches');
           }}
           activeOpacity={0.7}
@@ -1341,7 +1440,10 @@ const Home = () => {
         <QuickNavButton
           icon={color => <SportIconComponent width={24} height={24} fill={color} />}
           label={t('home.quickNav.findGame')}
-          onPress={() => navigation.navigate('PublicMatches')}
+          onPress={() => {
+            Analytics.publicMatchesOpened({ cta: 'find_game' });
+            navigation.navigate('PublicMatches');
+          }}
         />
         <QuickNavButton
           icon={color => <Ionicons name="people-outline" size={24} color={color} />}
@@ -1498,6 +1600,23 @@ const Home = () => {
   const showJfyLoading = loadingJustForYou || !isNearbyFetchReady || jfyGatedWaiting;
   const showJfyEmpty = !showJfyLoading && justForYouItems.length === 0;
 
+  // jfy_section_viewed: once per focus session, after the section settles.
+  // "Viewed" here means Home focused with data resolved — per-card visibility
+  // lives in the impression events.
+  const jfyViewedForNonce = useRef(0);
+  useEffect(() => {
+    if (homeFocusNonce === 0 || jfyViewedForNonce.current === homeFocusNonce) return;
+    if (!showNearbySection || showJfyLoading) return;
+    jfyViewedForNonce.current = homeFocusNonce;
+    const matchCount = justForYouItems.filter(i => i.kind === 'match').length;
+    Analytics.jfySectionViewed({
+      item_count: justForYouItems.length,
+      match_count: matchCount,
+      suggestion_count: justForYouItems.length - matchCount,
+      is_empty: justForYouItems.length === 0,
+    });
+  }, [homeFocusNonce, showNearbySection, showJfyLoading, justForYouItems]);
+
   const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
@@ -1505,11 +1624,21 @@ const Home = () => {
         style={{ backgroundColor: colors.background }}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        onLayout={e => {
+          homeViewportHRef.current = e.nativeEvent.layout.height;
+          recomputeJfyGate();
+        }}
+        onScroll={e => {
+          homeScrollYRef.current = e.nativeEvent.contentOffset.y;
+          recomputeJfyGate();
+        }}
+        scrollEventThrottle={100}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching && isManualRefresh.current}
             onRefresh={() => {
               isManualRefresh.current = true;
+              Analytics.feedRefreshed({ screen: 'home' });
               refetchJustForYou();
               if (session?.user?.id) refetchMyMatches();
             }}
@@ -1521,7 +1650,13 @@ const Home = () => {
         {renderListHeader()}
 
         {showNearbySection && (
-          <>
+          <View
+            onLayout={e => {
+              const { y, height } = e.nativeEvent.layout;
+              jfySectionLayoutRef.current = { y, height };
+              recomputeJfyGate();
+            }}
+          >
             {showJfyEmpty ? (
               <View
                 style={[
@@ -1534,100 +1669,105 @@ const Home = () => {
                   {t('home.nearbyEmpty.title')}
                 </Text>
               </View>
-            ) : (
-              /* Single horizontal ScrollView always rendered — only its children
-             change between loading / real states. Avoids layout
-             shift and preserves horizontal scroll position across transitions. */
+            ) : showJfyLoading ? (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.justForYouScrollContent}
               >
-                {showJfyLoading
-                  ? [1, 2, 3].map(i => (
-                      <View key={i} style={styles.jfyCardWrapper}>
-                        <SkeletonMatchCard
-                          backgroundColor={skeletonShimmerBg}
-                          highlightColor={skeletonShimmerHighlight}
-                          style={{
-                            backgroundColor: skeletonCardBg,
-                            borderColor: skeletonCardBorder,
-                            borderWidth: 1.5,
-                            borderRadius: radiusPixels.xl,
+                {[1, 2, 3].map(i => (
+                  <View key={i} style={styles.jfyCardWrapper}>
+                    <SkeletonMatchCard
+                      backgroundColor={skeletonShimmerBg}
+                      highlightColor={skeletonShimmerHighlight}
+                      style={{
+                        backgroundColor: skeletonCardBg,
+                        borderColor: skeletonCardBorder,
+                        borderWidth: 1.5,
+                        borderRadius: radiusPixels.xl,
+                      }}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              /* FlatList (not ScrollView) so card impressions ride on the
+                 native viewability callbacks. ≤5 fixed-width items — the
+                 virtualization itself is moot. */
+              <FlatList
+                horizontal
+                data={justForYouItems}
+                keyExtractor={jfyItemKey}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.justForYouScrollContent}
+                viewabilityConfig={jfyViewabilityConfig}
+                onViewableItemsChanged={onJfyViewableItemsChanged}
+                renderItem={({ item }) =>
+                  item.kind === 'match' ? (
+                    <View style={styles.jfyCardWrapper}>
+                      {/* MatchCard has built-in marginHorizontal:16; the
+                      negative wrapper margin neutralizes it so the card
+                      fills our 340px slot exactly. */}
+                      <View style={styles.jfyMatchInner}>
+                        <MatchCard
+                          match={item.data}
+                          isDark={isDark}
+                          t={
+                            t as (
+                              key: string,
+                              options?: Record<string, string | number | boolean>
+                            ) => string
+                          }
+                          locale={locale}
+                          currentPlayerId={player?.id}
+                          sportIcon={
+                            <SportIcon
+                              sportName={item.data.sport?.name ?? selectedSport?.name ?? 'tennis'}
+                              size={100}
+                              color={isDark ? neutral[600] : neutral[400]}
+                            />
+                          }
+                          onPress={() => {
+                            Logger.logUserAction('match_pressed', { matchId: item.data.id });
+                            openMatchDetail(item.data);
                           }}
                         />
                       </View>
-                    ))
-                  : justForYouItems.map(item =>
-                      item.kind === 'match' ? (
-                        <View key={`match:${item.data.id}`} style={styles.jfyCardWrapper}>
-                          {/* MatchCard has built-in marginHorizontal:16; the
-                          negative wrapper margin neutralizes it so the card
-                          fills our 340px slot exactly. */}
-                          <View style={styles.jfyMatchInner}>
-                            <MatchCard
-                              match={item.data}
-                              isDark={isDark}
-                              t={
-                                t as (
-                                  key: string,
-                                  options?: Record<string, string | number | boolean>
-                                ) => string
-                              }
-                              locale={locale}
-                              currentPlayerId={player?.id}
-                              sportIcon={
-                                <SportIcon
-                                  sportName={
-                                    item.data.sport?.name ?? selectedSport?.name ?? 'tennis'
-                                  }
-                                  size={100}
-                                  color={isDark ? neutral[600] : neutral[400]}
-                                />
-                              }
-                              onPress={() => {
-                                Logger.logUserAction('match_pressed', { matchId: item.data.id });
-                                openMatchDetail(item.data);
-                              }}
-                            />
-                          </View>
-                        </View>
-                      ) : (
-                        <View
-                          key={`suggestion:${item.data.opponentId}:${item.data.slot.datetime.getTime?.() ?? 0}`}
-                          style={styles.jfyCardWrapper}
-                        >
-                          <SuggestionCard
-                            suggestion={item.data}
-                            colors={{
-                              cardBackground: colors.cardBackground,
-                              text: colors.foreground,
-                              textSecondary: colors.textSecondary,
-                              textMuted: colors.textMuted,
-                              border: colors.border,
-                              buttonActive: colors.primary,
-                              buttonTextActive: '#ffffff',
-                            }}
-                            isDark={isDark}
-                            labels={suggestionLabels}
-                            locale={locale}
-                            onSendInvite={handleSendInvite}
-                            inviteState={getInviteState(
-                              item.data.opponentId,
-                              item.data.facility.facilityId,
-                              item.data.slot.datetime
-                            )}
-                            source="home_carousel"
-                            sportId={selectedSport?.id}
-                            sportName={selectedSport?.name}
-                            defaultMatchType={callerMatchType}
-                          />
-                        </View>
-                      )
-                    )}
-              </ScrollView>
+                    </View>
+                  ) : (
+                    <View style={styles.jfyCardWrapper}>
+                      <SuggestionCard
+                        suggestion={item.data}
+                        colors={{
+                          cardBackground: colors.cardBackground,
+                          text: colors.foreground,
+                          textSecondary: colors.textSecondary,
+                          textMuted: colors.textMuted,
+                          border: colors.border,
+                          buttonActive: colors.primary,
+                          buttonTextActive: '#ffffff',
+                        }}
+                        isDark={isDark}
+                        labels={suggestionLabels}
+                        locale={locale}
+                        onSendInvite={handleSendInvite}
+                        inviteState={getInviteState(
+                          item.data.opponentId,
+                          item.data.facility.facilityId,
+                          item.data.slot.datetime
+                        )}
+                        source="home_carousel"
+                        sportId={selectedSport?.id}
+                        sportName={selectedSport?.name}
+                        defaultMatchType={callerMatchType}
+                        trackImpressionOnMount={false}
+                      />
+                    </View>
+                  )
+                }
+              />
             )}
-          </>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
