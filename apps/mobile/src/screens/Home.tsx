@@ -257,6 +257,10 @@ const quickNavStyles = StyleSheet.create({
 });
 
 // AsyncStorage key for second sport banner cooldown
+// A card counts as shown once it's ≥50% visible for 500ms. Module constant so
+// the FlatList viewability config never changes identity (a runtime crash).
+const JFY_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTime: 500 };
+
 // Stable identity for JFY carousel items — used as both the FlatList key and
 // the impression-dedup key, so dedup survives data-refetch remounts.
 const jfyItemKey = (item: JustForYouItem): string =>
@@ -1002,38 +1006,37 @@ const Home = () => {
     jfyImpressionCtx.current = { sportId: selectedSport?.id, sportName: selectedSport?.name };
   }, [selectedSport?.id, selectedSport?.name]);
 
-  const fireJfyImpression = useRef((item: JustForYouItem, index: number | null) => {
-    const { sportId, sportName } = jfyImpressionCtx.current;
-    if (item.kind === 'suggestion') {
-      const s = item.data;
-      trackJfyImpression(jfyItemKey(item), () =>
-        Analytics.matchSuggestionShown(
-          Analytics.buildSuggestionEventProps(s, 'home_carousel', sportId, sportName)
-        )
-      );
-    } else {
-      const m = item.data;
-      trackJfyImpression(jfyItemKey(item), () =>
-        Analytics.matchCardShown({
-          match_id: m.id,
-          sport_id: m.sport?.id ?? sportId ?? 'unknown',
-          sport_name: m.sport?.name ?? sportName ?? 'unknown',
-          is_auto_generated: m.is_auto_generated ?? false,
-          surface: 'home_carousel',
-          rank: index != null ? index + 1 : undefined,
-        })
-      );
-    }
-  }).current;
+  const fireJfyImpression = useCallback(
+    (item: JustForYouItem, index: number | null) => {
+      const { sportId, sportName } = jfyImpressionCtx.current;
+      if (item.kind === 'suggestion') {
+        const s = item.data;
+        trackJfyImpression(jfyItemKey(item), () =>
+          Analytics.matchSuggestionShown(
+            Analytics.buildSuggestionEventProps(s, 'home_carousel', sportId, sportName)
+          )
+        );
+      } else {
+        const m = item.data;
+        trackJfyImpression(jfyItemKey(item), () =>
+          Analytics.matchCardShown({
+            match_id: m.id,
+            sport_id: m.sport?.id ?? sportId ?? 'unknown',
+            sport_name: m.sport?.name ?? sportName ?? 'unknown',
+            is_auto_generated: m.is_auto_generated ?? false,
+            surface: 'home_carousel',
+            rank: index != null ? index + 1 : undefined,
+          })
+        );
+      }
+    },
+    [trackJfyImpression]
+  );
 
-  // Both viewability props must keep a stable identity for the lifetime of
-  // the FlatList — changing them mid-flight is a runtime crash.
+  // Must keep a stable identity for the lifetime of the FlatList — changing
+  // it mid-flight is a runtime crash. Every captured value is itself stable.
   const lastJfyViewableRef = useRef<Array<{ item: JustForYouItem; index: number | null }>>([]);
-  const jfyViewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-    minimumViewTime: 500,
-  }).current;
-  const onJfyViewableItemsChanged = useRef(
+  const onJfyViewableItemsChanged = useCallback(
     ({
       viewableItems,
     }: {
@@ -1045,8 +1048,9 @@ const Home = () => {
       for (const token of lastJfyViewableRef.current) {
         fireJfyImpression(token.item, token.index);
       }
-    }
-  ).current;
+    },
+    [fireJfyImpression]
+  );
 
   // Focus session boundary: tab switches keep Home mounted, so the FlatList
   // won't re-emit viewability on refocus — replay the last viewable snapshot
@@ -1710,7 +1714,7 @@ const Home = () => {
                 keyExtractor={jfyItemKey}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.justForYouScrollContent}
-                viewabilityConfig={jfyViewabilityConfig}
+                viewabilityConfig={JFY_VIEWABILITY_CONFIG}
                 onViewableItemsChanged={onJfyViewableItemsChanged}
                 renderItem={({ item }) =>
                   item.kind === 'match' ? (

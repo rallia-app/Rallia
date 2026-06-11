@@ -42,6 +42,10 @@ import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
 import { FeedItemCard } from '#/features/matches/components/FeedItemCard';
 
+// A card counts as shown once it's ≥50% visible for 500ms. Module constant so
+// the FlatList viewability config never changes identity (a runtime crash).
+const FEED_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTime: 500 };
+
 // =============================================================================
 // HELPER COMPONENTS
 // =============================================================================
@@ -489,14 +493,9 @@ export default function PublicMatches() {
     impressionCtx.current = { sportId: selectedSport?.id, sportName: selectedSport?.name };
   }, [selectedSport?.id, selectedSport?.name]);
 
-  // Both viewability props must keep a stable identity for the lifetime of
-  // the FlatList — changing them mid-flight is a runtime crash, so neither
-  // can be a useCallback with deps.
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-    minimumViewTime: 500,
-  }).current;
-  const onViewableItemsChanged = useRef(
+  // Must keep a stable identity for the lifetime of the FlatList — changing
+  // it mid-flight is a runtime crash. Every captured value is itself stable.
+  const onViewableItemsChanged = useCallback(
     ({
       viewableItems,
     }: {
@@ -530,8 +529,9 @@ export default function PublicMatches() {
           );
         }
       }
-    }
-  ).current;
+    },
+    [track]
+  );
 
   // Scroll-depth summary per focus session (pushing a profile blurs the
   // screen, so one visit can emit several rows).
@@ -773,7 +773,7 @@ export default function PublicMatches() {
           ListFooterComponent={renderFooter}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
-          viewabilityConfig={viewabilityConfig}
+          viewabilityConfig={FEED_VIEWABILITY_CONFIG}
           onViewableItemsChanged={onViewableItemsChanged}
           contentContainerStyle={[styles.listContent, feed.length === 0 && styles.emptyListContent]}
           showsVerticalScrollIndicator={false}
