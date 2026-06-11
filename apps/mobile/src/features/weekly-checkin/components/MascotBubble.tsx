@@ -155,6 +155,8 @@ export function MascotBubble({ text, textKey, children }: MascotBubbleProps) {
         {children ? (
           <View>{children}</View>
         ) : (
+          // No scaling/truncation here by design — the 4-row max is a COPY
+          // budget: keep every bubble string ≲85 characters (see locales).
           <Text style={[styles.bubbleText, { color: colors.text }]}>
             {typedText}
             {isTyping && (

@@ -4324,7 +4324,7 @@
     "availabilityRefreshBanner": {
       "title": "C'est l'heure de ton check-in 🐿️",
       "description": "Fixe ton objectif et confirme tes dispos pour les prochains jours.",
-      "descriptionStreak": "Tu es sur une séquence de {count} semaines 🔥 Confirme tes prochains jours.",
+      "descriptionStreak": "Tu es sur une streak de {count} semaines 🔥 Confirme tes prochains jours.",
       "cta": "Commencer"
     },
     "header": {
@@ -10041,6 +10041,7 @@
     "terms_of_service": "Conditions d'utilisation"
   },
   "weeklyCheckIn": {
+    "loadError": "Impossible de charger ton check-in",
     "exit": {
       "title": "On se reprend plus tard?",
       "description": "Ace reviendra te voir dans quelques jours — tes réglages ne seront pas sauvegardés cette fois-ci.",
@@ -10048,39 +10049,34 @@
       "cancel": "Continuer"
     },
     "step1": {
-      "bubbleHit": "Horaire enregistré 🔒 Objectif explosé la semaine passée — la séquence grimpe.",
-      "bubbleMet": "Horaire enregistré 🔒 {goal} sessions jouées la semaine passée. La séquence tient bon.",
-      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué la semaine passée — on se reprend et on vise juste cette semaine. 💪",
-      "bubbleFirstTime": "Horaire enregistré 🔒 Joue tes parties et fais ton check-in cette semaine pour lancer ta séquence. 🔥",
-      "streakTitle": "Séquence de {count} semaines",
-      "streakTitleZero": "Commence une séquence cette semaine",
-      "streakSubtitle": "semaines",
-      "streakSubtitleOne": "semaine de suite",
-      "streakLabel": "SÉQUENCE D'OBJECTIFS",
-      "streakLabelOne": "SÉQUENCE D'OBJECTIFS",
+      "bubbleHit": "Salut 👋 Objectif explosé la semaine passée — ta streak grimpe. 🔥",
+      "bubbleMet": "Salut 👋 {goal} sessions jouées la semaine passée. Ta streak tient bon. 💪",
+      "bubbleMiss": "Salut 👋 Objectif manqué la semaine passée — on se reprend! 💪",
+      "bubbleFrozen": "Salut 👋 Un joker a sauvé ta streak ❄️ On se reprend cette semaine!",
+      "bubbleBack": "Salut 👋 Content de te revoir! On te ramène sur le terrain. 💪",
+      "bubbleFirstTime": "Salut 👋 Joue tes parties et fais ton check-in pour lancer ta streak. 🔥",
+      "streakTitle": "Streak de {count} semaines",
+      "streakTitleZero": "Commence une streak cette semaine",
+      "streakLabel": "STREAK D'OBJECTIFS",
+      "streakLabelOne": "STREAK D'OBJECTIFS",
       "timelineLabel": "Tes derniers check-ins",
       "thisWeek": "Cette sem.",
       "freezeCount": "{count} jokers en réserve",
       "freezeOne": "1 joker en réserve",
       "freezeZero": "0 joker en réserve",
-      "freezeHint": "Gagne 1 joker pour 4 objectifs atteints de suite",
-      "freezeFirstTimeInvite": "Atteins ton objectif hebdo pour lancer ta séquence 🔥",
-      "goalsCardTitle": "SUIVI DES OBJECTIFS",
-      "goalsCardLastWeek": "Semaine passée",
+      "freezeFirstTimeInvite": "Atteins ton objectif hebdo pour lancer ta streak 🔥",
+      "goalsCardLastWeekResult": "Semaine passée : {played} jouées · objectif {goal}",
       "goalsCardTrendLabel": "Les 4 dernières semaines",
-      "goalsCardLastWeekSummary": "{played} sur {goal} sessions",
-      "goalsCardLastWeekHit": "Objectif atteint ✓",
-      "goalsCardLastWeekMiss": "Objectif manqué",
       "goalsCardNoHistory": "Ton historique d'objectifs apparaîtra ici après quelques semaines de jeu. 📈",
-      "checkInNote": "📍 À noter : une partie ne compte pour ta séquence que si tu fais ton check-in au terrain.",
-      "freezeTooltip": "Les jokers de séquence te protègent si tu rates ton objectif hebdo.",
+      "checkInNote": "📍 Ta partie compte juste avec un check-in au terrain.",
+      "freezeTooltip": "Les jokers de streak te protègent si tu rates ton objectif hebdo.",
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
       "recapPlayed": "Joué",
       "cta": "Fixons mon objectif 🎯"
     },
     "step2": {
-      "bubble": "Salut 👋 Quand es-tu libre dans les prochains jours? Tape ou glisse pour peindre tes plages. ✨",
+      "bubble": "Quand es-tu libre dans les prochains jours? Tape ou glisse pour peindre tes plages. ✨",
       "cta": "Parfait"
     },
     "step3": {
@@ -10092,19 +10088,30 @@
         "4": "4×",
         "5plus": "5+×"
       },
-      "frequencyContextSame": "Comme la semaine passée — la régularité paie! 🌱",
+      "frequencyContextSame": "Comme la dernière fois — la régularité paie! 🌱",
       "frequencyContextUp": "On monte de {last} → {current}. J'adore l'ambition! 🔥",
       "frequencyContextDown": "On revient à {current}. Mieux vaut tenir la cadence. 💆",
-      "frequencyContextFirstTime": "Choisis ce qui te convient — tu peux ajuster à chaque semaine. ✨",
-      "opsLabel": "Pour te simplifier la vie",
-      "autoCreateTitle": "Créer des matchs ouverts automatiquement",
-      "autoCreateDesc": "Publie des matchs request-to-join à tes heures libres.",
+      "frequencyContextFirstTime": "Choisis ce qui te convient — tu peux ajuster à chaque semaine. ✨"
+    },
+    "autoMatch": {
+      "bubble": "Veux-tu que je fasse le travail? Voici mon plan. 👇",
+      "howLabel": "Voici ce que je ferai",
+      "howCreateTitle": "Créer des parties pour toi",
+      "howCreateDesc": "À tes heures libres, dans Mes parties.",
+      "howInviteTitle": "Inviter les bons joueurs",
+      "howInviteDesc": "Les plus compatibles, selon mon algorithme.",
+      "howNotifyTitle": "Te tenir au courant",
+      "howNotifyDesc": "Je t'avise dès que quelqu'un se joint.",
+      "togglesLabel": "À toi de décider",
+      "autoCreateTitle": "Créer des parties ouvertes automatiquement",
+      "autoCreateDesc": "Publie des parties request-to-join à tes heures libres.",
       "autoInviteTitle": "Inviter des joueurs compatibles automatiquement",
       "autoInviteDesc": "Trouve des joueurs de ton niveau et envoie-leur une invitation.",
+      "reassurance": "Tu peux changer d'avis chaque semaine — rien ne se passe si c'est désactivé.",
       "cta": "Lancer ma semaine"
     },
     "step4": {
-      "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🎾",
+      "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🙌",
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",

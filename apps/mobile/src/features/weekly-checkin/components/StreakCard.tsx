@@ -11,14 +11,21 @@
  * so checking in at the court is what makes a game count — completing this weekly
  * wizard does not itself advance the streak. A freeze auto-rescues one miss.
  *
+ * History markers are three-state so the strip always justifies the streak
+ * number: ✓ hit, ❄️ missed-but-rescued (streak survived), ✗ missed (streak
+ * broke). Counting non-✗ from the right = min(streak, 4).
+ *
+ * Deliberately compact — the goal picker below must stay on screen without
+ * scrolling, so everything is single-purpose: one hero row (streak + freeze
+ * chip), one last-week line, one marker strip, one short court-check-in note.
+ *
  *   ┌────────────────────────────────────────────────┐
- *   │  🔥  4                                         │
- *   │      WEEKLY GOAL STREAK                        │
- *   │  ❄️ 1 freeze saved · Earn 1 every 4 ...        │
+ *   │  🔥 4 WEEKLY GOAL STREAK              ❄️ ×1   │
  *   │  ────────────────────────────────────────────  │
- *   │  GOAL TRACKING                 Last week 2/3 ✓ │
- *   │   ✓     ✓     ✗     ✗                          │
+ *   │  Last week: 2 played · goal 3  ✗               │
+ *   │   ✓     ✓     ❄️    ✗                          │
  *   │  May4  May11 May18 May25                        │
+ *   │  📍 Games only count with an on-court check-in.│
  *   └────────────────────────────────────────────────┘
  */
 import React, { useEffect, useRef, useState } from 'react';
@@ -42,6 +49,8 @@ import { useLocale } from '#/context';
 const COUNT_UP_DURATION_MS = 800;
 const HISTORY_WEEKS = 4;
 
+type WeekMark = 'hit' | 'frozen' | 'miss';
+
 interface StreakCardProps {
   currentStreak: number;
   freezeInventory: number;
@@ -49,6 +58,8 @@ interface StreakCardProps {
   lastWeekPlayed: number | null;
   /** Newest-first array of booleans from get_check_in_context RPC. */
   goalsHitLast4Weeks: boolean[];
+  /** Parallel to goalsHitLast4Weeks: TRUE where a freeze rescued that miss. */
+  freezesUsedLast4Weeks: boolean[];
 }
 
 export function StreakCard({
@@ -57,6 +68,7 @@ export function StreakCard({
   lastWeekGoal,
   lastWeekPlayed,
   goalsHitLast4Weeks,
+  freezesUsedLast4Weeks,
 }: StreakCardProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
@@ -72,7 +84,6 @@ export function StreakCard({
   const heroLabelColor = isDark ? accent[300] : accent[700];
   const freezeTextColor = isDark ? primary[200] : primary[700];
   const freezeHintColor = isDark ? `${accent[200]}99` : `${accent[800]}88`;
-  const sectionLabelColor = isDark ? accent[300] : accent[700];
   const dateLabelColor = isDark ? `${accent[200]}99` : `${accent[800]}88`;
   const dividerColor = isDark ? `${accent[700]}66` : `${accent[300]}99`;
   const emptyBorderColor = isDark ? `${accent[300]}66` : `${accent[700]}55`;
@@ -102,8 +113,12 @@ export function StreakCard({
         : t('weeklyCheckIn.step1.freezeCount', { count: freezeInventory });
 
   // ── Goal-hit history ──────────────────────────────────────────────────────
-  // Reverse the newest-first array to render left-to-right chronological.
-  const historyOldestFirst = goalsHitLast4Weeks.slice(0, HISTORY_WEEKS).slice().reverse();
+  // Fold hit + freeze-used into one mark per week, then reverse the
+  // newest-first arrays to render left-to-right chronological.
+  const marks: WeekMark[] = goalsHitLast4Weeks
+    .slice(0, HISTORY_WEEKS)
+    .map((hit, i) => (hit ? 'hit' : freezesUsedLast4Weeks[i] ? 'frozen' : 'miss'));
+  const historyOldestFirst = marks.slice().reverse();
   const emptySlots = HISTORY_WEEKS - historyOldestFirst.length;
   const dateFormatter = new Intl.DateTimeFormat(locale ?? 'en-US', {
     month: 'short',
@@ -137,7 +152,7 @@ export function StreakCard({
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Streak hero */}
+      {/* Hero row: streak + freeze-inventory chip (returning players only) */}
       <View style={styles.hero}>
         <Text style={styles.flame}>🔥</Text>
         {isFresh ? (
@@ -154,36 +169,37 @@ export function StreakCard({
             </Text>
           </View>
         )}
-      </View>
-
-      {/* Freeze footer — returning players only */}
-      {!isFresh && (
-        <View style={styles.freezeRow}>
-          <Text style={[styles.freezePrimary, { color: freezeTextColor }]}>❄️ {freezeLabel}</Text>
-          <Text style={[styles.freezeHint, { color: freezeHintColor }]}>
-            {t('weeklyCheckIn.step1.freezeHint')}
-          </Text>
-        </View>
-      )}
-
-      <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-      {/* Goal tracking */}
-      <View style={styles.goalHeaderRow}>
-        <Text style={[styles.goalTitle, { color: sectionLabelColor }]}>
-          {t('weeklyCheckIn.step1.goalsCardTitle')}
-        </Text>
-        {!isFirstTimeGoals && hasLastWeek && (
-          <View style={styles.lastWeekInline}>
-            <Text style={[styles.lastWeekLabel, { color: dateLabelColor }]}>
-              {t('weeklyCheckIn.step1.goalsCardLastWeek')}
-            </Text>
-            <Text style={[styles.lastWeekValue, { color: lastWeekStatusColor }]}>
-              {playedCount}/{lastWeekGoal} {lastWeekHit ? '✓' : '✗'}
+        {!isFresh && (
+          <View
+            style={[
+              styles.freezeChip,
+              { backgroundColor: isDark ? `${primary[700]}33` : primary[50] },
+            ]}
+            accessibilityLabel={freezeLabel}
+          >
+            <Text style={[styles.freezeChipText, { color: freezeTextColor }]}>
+              ❄️ ×{freezeInventory}
             </Text>
           </View>
         )}
       </View>
+
+      <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+      {/* Last week, goal-anchored — avoids the "4/3" broken-fraction read. */}
+      {!isFirstTimeGoals && hasLastWeek && (
+        <View style={styles.lastWeekRow}>
+          <Text style={[styles.lastWeekLabel, { color: dateLabelColor }]}>
+            {t('weeklyCheckIn.step1.goalsCardLastWeekResult', {
+              played: playedCount,
+              goal: lastWeekGoal,
+            })}
+          </Text>
+          <Text style={[styles.lastWeekValue, { color: lastWeekStatusColor }]}>
+            {lastWeekHit ? '✓' : '✗'}
+          </Text>
+        </View>
+      )}
 
       {isFirstTimeGoals ? (
         <Text style={[styles.placeholder, { color: freezeHintColor }]}>
@@ -202,13 +218,29 @@ export function StreakCard({
                 </Text>
               </View>
             ))}
-            {historyOldestFirst.map((hit, i) => {
+            {historyOldestFirst.map((mark, i) => {
               const date = historyDates[emptySlots + i];
               return (
                 <View key={`h-${i}`} style={styles.markerCol}>
-                  <View style={[styles.marker, hit ? styles.markerHit : styles.markerMiss]}>
-                    <Text style={styles.markerText}>{hit ? '✓' : '✗'}</Text>
-                  </View>
+                  {mark === 'frozen' ? (
+                    // Missed but a freeze rescued it — the streak survived this
+                    // week, so it must not read as a break.
+                    <View
+                      style={[
+                        styles.marker,
+                        styles.markerFrozen,
+                        { borderColor: isDark ? primary[300] : primary[400] },
+                      ]}
+                    >
+                      <Text style={styles.markerFrozenText}>❄️</Text>
+                    </View>
+                  ) : (
+                    <View
+                      style={[styles.marker, mark === 'hit' ? styles.markerHit : styles.markerMiss]}
+                    >
+                      <Text style={styles.markerText}>{mark === 'hit' ? '✓' : '✗'}</Text>
+                    </View>
+                  )}
                   <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
                     {dateFormatter.format(date)}
                   </Text>
@@ -220,7 +252,6 @@ export function StreakCard({
       )}
 
       {/* How games count — checking in at the court is what advances the streak */}
-      <View style={[styles.divider, { backgroundColor: dividerColor }]} />
       <Text style={[styles.checkInNote, { color: noteColor }]}>
         {t('weeklyCheckIn.step1.checkInNote')}
       </Text>
@@ -247,7 +278,7 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1.5,
     borderRadius: radiusPixels.xl,
-    paddingVertical: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     marginHorizontal: spacingPixels[1],
     marginBottom: spacingPixels[3],
@@ -257,11 +288,11 @@ const styles = StyleSheet.create({
   hero: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[3],
+    gap: spacingPixels[2.5],
   },
   flame: {
-    fontSize: 36,
-    lineHeight: 40,
+    fontSize: 26,
+    lineHeight: 30,
   },
   heroText: {
     flex: 1,
@@ -270,65 +301,46 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   bigNumber: {
-    fontSize: 44,
+    fontSize: 30,
     fontWeight: '900',
-    letterSpacing: -1.5,
-    lineHeight: 46,
+    letterSpacing: -1,
+    lineHeight: 34,
     fontVariant: ['tabular-nums'],
   },
   heroLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     flexShrink: 1,
   },
   freshTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
-  freezeRow: {
-    marginTop: spacingPixels[3],
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: spacingPixels[2],
+  freezeChip: {
+    paddingVertical: 3,
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: radiusPixels.full,
   },
-  freezePrimary: {
+  freezeChipText: {
     fontSize: 12,
     fontWeight: '700',
   },
-  freezeHint: {
-    fontSize: 11,
-    fontWeight: '500',
-    flexShrink: 1,
-  },
   divider: {
     height: 1,
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[3],
+    marginTop: spacingPixels[2.5],
+    marginBottom: spacingPixels[2.5],
   },
-  goalHeaderRow: {
+  lastWeekRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacingPixels[2],
-    marginBottom: spacingPixels[3],
-  },
-  goalTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-  },
-  lastWeekInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
+    gap: spacingPixels[1.5],
+    marginBottom: spacingPixels[2],
   },
   lastWeekLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   lastWeekValue: {
@@ -346,9 +358,9 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1],
   },
   marker: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -359,29 +371,38 @@ const styles = StyleSheet.create({
     backgroundColor: secondary[500],
     opacity: 0.9,
   },
+  markerFrozen: {
+    borderWidth: 1.5,
+    backgroundColor: 'transparent',
+  },
+  markerFrozenText: {
+    fontSize: 12,
+    lineHeight: 14,
+  },
   markerEmpty: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
   },
   markerText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
     color: base.white,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   markerDate: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     letterSpacing: 0.1,
   },
   placeholder: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
-    lineHeight: 18,
+    lineHeight: 17,
   },
   checkInNote: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
-    lineHeight: 16,
+    lineHeight: 14,
+    marginTop: spacingPixels[2.5],
   },
 });

@@ -59,6 +59,8 @@ export interface CheckInContext {
   lastWeekFrequencyGoal: number | null;
   lastWeekSessionsPlayed: number | null;
   goalsHitLast4Weeks: boolean[];
+  /** Parallel to goalsHitLast4Weeks: TRUE where a freeze rescued that miss. */
+  freezesUsedLast4Weeks: boolean[];
   lastFrequencyGoal: number | null;
   /** Coverage-based: the player is past the last date they declared for. */
   isPendingCheckIn: boolean;
@@ -125,6 +127,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       lastWeekFrequencyGoal: null,
       lastWeekSessionsPlayed: null,
       goalsHitLast4Weeks: [],
+      freezesUsedLast4Weeks: [],
       lastFrequencyGoal: null,
       isPendingCheckIn: false, // no user → don't trigger the wizard
       timezone: deviceTimezone ?? 'UTC',
@@ -155,6 +158,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       lastWeekFrequencyGoal: null,
       lastWeekSessionsPlayed: null,
       goalsHitLast4Weeks: [],
+      freezesUsedLast4Weeks: [],
       lastFrequencyGoal: null,
       isPendingCheckIn: true,
       timezone: deviceTimezone ?? 'UTC',
@@ -172,6 +176,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
     lastWeekFrequencyGoal: row.last_week_frequency_goal,
     lastWeekSessionsPlayed: row.last_week_sessions_played,
     goalsHitLast4Weeks: row.goals_hit_last_4_weeks ?? [],
+    freezesUsedLast4Weeks: row.freezes_used_last_4_weeks ?? [],
     lastFrequencyGoal: row.last_frequency_goal,
     isPendingCheckIn: row.is_pending_check_in ?? true,
     timezone: row.timezone ?? deviceTimezone ?? 'UTC',

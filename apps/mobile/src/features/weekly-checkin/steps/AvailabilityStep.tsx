@@ -1,8 +1,8 @@
 /**
- * Step 1 — Confirm availability.
+ * Step 2 — Confirm availability.
  *
- * Leads the wizard: updating the player's weekly schedule is the primary goal,
- * so we ask for it before the recap/streak context.
+ * Follows the streak recap: with the week's goal set, the player paints the
+ * hours that the auto-match step will plan around.
  *
  * Reuses HourlyAvailabilityGrid from the onboarding feature folder. The
  * grid's drag-to-paint mechanic is the same one used in onboarding + the

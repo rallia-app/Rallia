@@ -1,10 +1,13 @@
 /**
- * Step 2 — Slim recap + weekly goal (merged).
+ * Step 1 — Slim recap + weekly goal (merged).
  *
- * Combines what used to be two separate steps (welcome/recap and frequency)
- * into one to keep the wizard short. Ace opens with the variant-aware recap
- * line, the StreakCard carries the streak + goal-tracking recap, and the weekly
- * goal picker (+ auto-magic opt-ins) is the focus below. The CTA submits.
+ * Opens the wizard: Ace greets with the variant-aware recap line, the
+ * StreakCard carries the streak + goal-tracking recap (the motivational hook),
+ * and the weekly goal picker is the focus below. The CTA advances to the
+ * availability step.
+ *
+ * Only rendered when the goal hasn't been set this ISO week — otherwise the
+ * wizard skips straight to availability (skipRecapStep in the hook).
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -15,22 +18,26 @@ import { spacingPixels } from '@rallia/design-system';
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import { StreakCard } from '#/features/weekly-checkin/components/StreakCard';
 import { FrequencyPills } from '#/features/weekly-checkin/components/FrequencyPills';
-import { AutoToggleRow } from '#/features/weekly-checkin/components/AutoToggleRow';
-import {
-  WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED,
-  WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED,
-} from '#/features/weekly-checkin/featureFlag';
 import type { CheckInContext } from '#/features/weekly-checkin/api';
 import { useTranslation } from '#/hooks';
 
-export type RecapVariant = 'hit' | 'met' | 'miss' | 'first';
+export type RecapVariant = 'hit' | 'met' | 'miss' | 'frozen' | 'back' | 'first';
 
 export function deriveVariant(ctx: CheckInContext): RecapVariant {
-  if (ctx.lastWeekFrequencyGoal == null) return 'first';
+  if (ctx.lastWeekFrequencyGoal == null) {
+    // The RPC only surfaces last week once the hourly evaluator has folded it
+    // in, so this bucket holds true first-timers AND returning players (lapsed,
+    // or last week simply not evaluated yet). Greet returners as such.
+    const hasHistory =
+      ctx.lastFrequencyGoal != null || ctx.goalsHitLast4Weeks.length > 0 || ctx.currentStreak > 0;
+    return hasHistory ? 'back' : 'first';
+  }
   const played = ctx.lastWeekSessionsPlayed ?? 0;
   if (played > ctx.lastWeekFrequencyGoal) return 'hit';
   if (played === ctx.lastWeekFrequencyGoal) return 'met';
-  return 'miss';
+  // Missed — and since last week only surfaces post-evaluation, a streak that
+  // survived the miss means a freeze auto-rescued it at week-end.
+  return ctx.currentStreak > 0 ? 'frozen' : 'miss';
 }
 
 interface RecapGoalStepProps {
@@ -38,14 +45,7 @@ interface RecapGoalStepProps {
   frequencyGoal: number;
   setFrequencyGoal: (n: number) => void;
   previousGoal: number | null;
-  autoCreate: boolean;
-  setAutoCreate: (b: boolean) => void;
-  autoInvite: boolean;
-  setAutoInvite: (b: boolean) => void;
-  isSubmitting: boolean;
-  onSubmit: () => void;
-  /** Show the weekly-goal question. Hidden once it's been set this ISO week. */
-  showFrequencyStep: boolean;
+  onContinue: () => void;
 }
 
 export function RecapGoalStep({
@@ -53,13 +53,7 @@ export function RecapGoalStep({
   frequencyGoal,
   setFrequencyGoal,
   previousGoal,
-  autoCreate,
-  setAutoCreate,
-  autoInvite,
-  setAutoInvite,
-  isSubmitting,
-  onSubmit,
-  showFrequencyStep,
+  onContinue,
 }: RecapGoalStepProps) {
   const { t } = useTranslation();
   const { colors } = useThemeStyles();
@@ -75,6 +69,10 @@ export function RecapGoalStep({
         });
       case 'miss':
         return t('weeklyCheckIn.step1.bubbleMiss');
+      case 'frozen':
+        return t('weeklyCheckIn.step1.bubbleFrozen');
+      case 'back':
+        return t('weeklyCheckIn.step1.bubbleBack');
       case 'first':
         return t('weeklyCheckIn.step1.bubbleFirstTime');
     }
@@ -96,63 +94,26 @@ export function RecapGoalStep({
             lastWeekGoal={context.lastWeekFrequencyGoal}
             lastWeekPlayed={context.lastWeekSessionsPlayed}
             goalsHitLast4Weeks={context.goalsHitLast4Weeks}
+            freezesUsedLast4Weeks={context.freezesUsedLast4Weeks}
           />
         </View>
 
         <View style={styles.goalSection}>
-          {showFrequencyStep && (
-            <>
-              <Text style={[styles.goalHeading, { color: colors.text }]}>
-                {t('weeklyCheckIn.step3.goalHeading')}
-              </Text>
+          <Text style={[styles.goalHeading, { color: colors.text }]}>
+            {t('weeklyCheckIn.step3.goalHeading')}
+          </Text>
 
-              <FrequencyPills
-                value={frequencyGoal}
-                onChange={setFrequencyGoal}
-                previousGoal={previousGoal}
-              />
-            </>
-          )}
-
-          {(WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED ||
-            WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED) && (
-            <>
-              <Text style={[styles.opsLabel, { color: colors.textMuted }]}>
-                {t('weeklyCheckIn.step3.opsLabel')}
-              </Text>
-
-              {WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && (
-                <AutoToggleRow
-                  title={t('weeklyCheckIn.step3.autoCreateTitle')}
-                  description={t('weeklyCheckIn.step3.autoCreateDesc')}
-                  checked={autoCreate}
-                  onChange={setAutoCreate}
-                />
-              )}
-              {WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && (
-                <AutoToggleRow
-                  title={t('weeklyCheckIn.step3.autoInviteTitle')}
-                  description={t('weeklyCheckIn.step3.autoInviteDesc')}
-                  checked={autoInvite}
-                  onChange={setAutoInvite}
-                />
-              )}
-            </>
-          )}
+          <FrequencyPills
+            value={frequencyGoal}
+            onChange={setFrequencyGoal}
+            previousGoal={previousGoal}
+          />
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          rounded
-          loading={isSubmitting}
-          disabled={isSubmitting}
-          onPress={onSubmit}
-        >
-          {t('weeklyCheckIn.step3.cta')}
+        <Button variant="primary" size="lg" fullWidth rounded onPress={onContinue}>
+          {t('weeklyCheckIn.step1.cta')}
         </Button>
       </View>
     </View>
@@ -183,15 +144,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     marginHorizontal: spacingPixels[1],
     marginBottom: spacingPixels[3],
-  },
-  opsLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    marginHorizontal: spacingPixels[1],
-    marginTop: spacingPixels[2],
-    marginBottom: spacingPixels[2],
   },
   footer: {
     paddingHorizontal: spacingPixels[5],

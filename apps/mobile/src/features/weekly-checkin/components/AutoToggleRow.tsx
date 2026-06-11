@@ -1,12 +1,10 @@
 /**
- * AutoToggleRow — Compact opt-in card used in the bottom section of Step 3.
+ * AutoToggleRow — Compact opt-in card used on the auto-match step (Step 3).
  *
- * Two of these render under the "Make this easier" label, both checked by
- * default. Tapping anywhere on the card toggles the checked state.
- *
- * The corresponding match-creation logic that ACTS on these toggles is a
- * follow-up; for now the values are simply persisted into
- * player_check_in_preferences by record_weekly_checkin.
+ * Two of these render under the toggles label, both checked by default.
+ * Tapping anywhere on the card toggles the checked state. The values are
+ * persisted into player_check_in_preferences by record_weekly_checkin, where
+ * the weekly match-generation pipeline reads them.
  */
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';

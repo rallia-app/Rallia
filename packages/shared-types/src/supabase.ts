@@ -5708,6 +5708,7 @@ export type Database = {
         Row: {
           completed_at: string
           freeze_consumed: boolean
+          freeze_used: boolean
           frequency_goal: number | null
           player_id: string
           sessions_played: number | null
@@ -5716,6 +5717,7 @@ export type Database = {
         Insert: {
           completed_at?: string
           freeze_consumed?: boolean
+          freeze_used?: boolean
           frequency_goal?: number | null
           player_id: string
           sessions_played?: number | null
@@ -5724,6 +5726,7 @@ export type Database = {
         Update: {
           completed_at?: string
           freeze_consumed?: boolean
+          freeze_used?: boolean
           frequency_goal?: number | null
           player_id?: string
           sessions_played?: number | null
@@ -9138,6 +9141,7 @@ export type Database = {
           current_streak: number
           freeze_cap: number
           freeze_inventory: number
+          freezes_used_last_4_weeks: boolean[]
           frequency_already_set_this_week: boolean
           goals_hit_last_4_weeks: boolean[]
           is_pending_check_in: boolean

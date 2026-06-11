@@ -811,13 +811,13 @@ export function billingIssueEncountered(): void {
 export function weeklyCheckinOpened(props: {
   source: string; // 'auto_opener' | 'banner' | 'manual' | 'unknown'
   current_streak: number;
-  recap_variant: string; // 'hit' | 'met' | 'miss' | 'first'
+  recap_variant: string; // 'hit' | 'met' | 'miss' | 'frozen' | 'back' | 'first'
 }): void {
   capture('weekly_checkin_opened', props);
 }
 
 export function weeklyCheckinStepCompleted(props: {
-  step_name: string; // 'welcome_recap' | 'availability' | 'frequency_auto'
+  step_name: string; // 'availability' | 'recap_goal' | 'auto_match'
   step_index: number;
   availability_cells?: number;
   frequency_goal?: number;

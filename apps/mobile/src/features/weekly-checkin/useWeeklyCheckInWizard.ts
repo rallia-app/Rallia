@@ -30,13 +30,15 @@ import {
 } from './api';
 import { countCellsForDays } from './window';
 
-// Analytics step labels, keyed by step index. Availability leads so the player
-// updates their schedule first (the wizard's primary goal); the recap + goal
-// are merged into one step to keep the wizard short.
+// Analytics step labels, keyed by step index. The streak recap leads as the
+// motivational hook, then the schedule, then the auto-match planning step —
+// which gets its own step so players actually see (and consciously opt into)
+// the auto-create/auto-invite behaviour.
 const STEP_NAMES: Record<WizardStep, string> = {
-  1: 'availability',
-  2: 'recap_goal',
-  3: 'all_set',
+  1: 'recap_goal',
+  2: 'availability',
+  3: 'auto_match',
+  4: 'all_set',
 };
 
 // Shared with apps/mobile/src/screens/Home.tsx (AVAILABILITY_BANNER_COOLDOWN_KEY).
@@ -49,8 +51,8 @@ export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-
 // match-creation logic to have something to work with.
 export const MIN_AVAILABILITY_CELLS = 3;
 
-export type WizardStep = 1 | 2 | 3;
-const TOTAL_STEPS: WizardStep = 3;
+export type WizardStep = 1 | 2 | 3 | 4;
+const TOTAL_STEPS: WizardStep = 4;
 
 export interface UseWeeklyCheckInWizard {
   // Step navigation
@@ -65,14 +67,15 @@ export interface UseWeeklyCheckInWizard {
   isContextLoading: boolean;
   contextError: Error | null;
 
+  // Form state — Step 1 frequency goal
+  frequencyGoal: number;
+  setFrequencyGoal: (n: number) => void;
+
   // Form state — Step 2 availability
   availability: HourGrid;
   setAvailability: (next: HourGrid) => void;
   availabilityLoading: boolean;
-
-  // Form state — Step 3 frequency + opt-ins
-  frequencyGoal: number;
-  setFrequencyGoal: (n: number) => void;
+  // Form state — Step 3 auto-match opt-ins
   autoCreate: boolean;
   setAutoCreate: (b: boolean) => void;
   autoInvite: boolean;
@@ -88,10 +91,14 @@ export interface UseWeeklyCheckInWizard {
 
   /** The window's weekdays (today + next 3), from the server context. */
   windowDays: DayEnum[];
-  /** Selected cells within the window — the real gate for step 1's CTA. */
+  /** Selected cells within the window — the real gate for the availability CTA. */
   windowCellCount: number;
-  /** Whether to show the "sessions this week" question (once per ISO week). */
-  showFrequencyStep: boolean;
+  /**
+   * The goal was already set this ISO week, so the recap+goal step is skipped
+   * entirely — the wizard opens on availability and back stops there. Drives
+   * the header's step numbering (3 dots instead of 4).
+   */
+  skipRecapStep: boolean;
 
   /** Epoch ms when the wizard opened (analytics duration). */
   startedAt: number;
@@ -163,15 +170,29 @@ export function useWeeklyCheckInWizard(
     () => (context?.window ?? []).map(w => w.dayOfWeek),
     [context?.window]
   );
-  // Step 1 gates on cells WITHIN the window — the seeded set also holds the
-  // player's other-day availability, which must not count toward the minimum.
+  // The availability step gates on cells WITHIN the window — the seeded set
+  // also holds the player's other-day availability, which must not count
+  // toward the minimum.
   const windowCellCount = useMemo(
     () => countCellsForDays(availability, windowDays),
     [availability, windowDays]
   );
-  // The weekly objective is asked once per ISO week. Default to showing it when
-  // context hasn't loaded so a first-time player is never silently skipped.
-  const showFrequencyStep = !context?.frequencyAlreadySetThisWeek;
+  // The weekly objective is asked once per ISO week. Once it's set, the whole
+  // recap+goal step is skipped — a re-opened wizard (rolling availability
+  // coverage ran out mid-week) goes straight to the availability step instead
+  // of replaying a recap with nothing to decide.
+  const skipRecapStep = !!context?.frequencyAlreadySetThisWeek;
+
+  // Jump past the recap step once the context lands (only if the user is still
+  // sitting on step 1, which they are — step 1 shows a loader until context).
+  const skipDecidedRef = useRef(false);
+  useEffect(() => {
+    if (skipDecidedRef.current || !context) return;
+    skipDecidedRef.current = true;
+    if (context.frequencyAlreadySetThisWeek) {
+      setCurrentStep(prev => (prev === 1 ? 2 : prev));
+    }
+  }, [context]);
 
   // Submission
   const { mutateAsync: recordCheckIn, isPending: isSubmitting } = useRecordCheckIn();
@@ -196,39 +217,50 @@ export function useWeeklyCheckInWizard(
     setCurrentStep(step);
   }, []);
   const goNext = useCallback(() => {
-    // Funnel step_completed for the step being left. Only step 1 (availability)
-    // advances via goNext; step 2 (recap_goal) completes via submit().
+    // Funnel step_completed for the step being left. Steps 1 (recap_goal) and
+    // 2 (availability) advance via goNext; step 3 (auto_match) completes via submit().
     if (currentStep === 1) {
       Analytics.weeklyCheckinStepCompleted({
         step_name: STEP_NAMES[1],
         step_index: 1,
+        frequency_goal: frequencyGoal,
+      });
+    } else if (currentStep === 2) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[2],
+        step_index: 2,
         availability_cells: availability.size,
       });
     }
     setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
     mediumHaptic();
-  }, [currentStep, availability]);
+  }, [currentStep, availability, frequencyGoal]);
   const goBack = useCallback(() => {
-    setCurrentStep(prev => (prev > 1 ? ((prev - 1) as WizardStep) : prev));
-  }, []);
+    // When the recap step is skipped, availability (step 2) is the floor.
+    const minStep = skipRecapStep ? 2 : 1;
+    setCurrentStep(prev => (prev > minStep ? ((prev - 1) as WizardStep) : prev));
+  }, [skipRecapStep]);
 
-  // Validation — step 1 (availability) gates on ≥ MIN_AVAILABILITY_CELLS.
-  // Step 2 (recap + goal) gates on a valid frequency (defaults are valid).
-  // Step 3 has no CTA — it's the success state.
+  // Validation — step 1 (recap + goal) gates on a valid frequency (defaults are
+  // valid). Step 2 (availability) gates on ≥ MIN_AVAILABILITY_CELLS.
+  // Step 3 (auto-match) is always valid — both opt-in states are submittable.
+  // Step 4 has no CTA — it's the success state.
   const canAdvance = useMemo(() => {
     switch (currentStep) {
       case 1:
-        return windowCellCount >= MIN_AVAILABILITY_CELLS;
-      case 2:
         return frequencyGoal >= 1 && frequencyGoal <= 5;
+      case 2:
+        return windowCellCount >= MIN_AVAILABILITY_CELLS;
       case 3:
+        return true;
+      case 4:
         return false; // no advance from the success step
       default:
         return false;
     }
   }, [currentStep, windowCellCount, frequencyGoal]);
 
-  // Submit handler — called when the user taps the CTA on the recap+goal step.
+  // Submit handler — called when the user taps the CTA on the auto-match step.
   // Runs the availability save + RPC, then advances to the All-Set step.
   const submit = useCallback(async () => {
     try {
@@ -239,11 +271,10 @@ export function useWeeklyCheckInWizard(
         availability,
         windowDays,
       });
-      // The recap+goal step (step 2) completes on a successful submit.
+      // The auto-match step (step 3) completes on a successful submit.
       Analytics.weeklyCheckinStepCompleted({
-        step_name: STEP_NAMES[2],
-        step_index: 2,
-        frequency_goal: frequencyGoal,
+        step_name: STEP_NAMES[3],
+        step_index: 3,
         auto_create: autoCreate,
         auto_invite: autoInvite,
       });
@@ -258,7 +289,7 @@ export function useWeeklyCheckInWizard(
       });
       setResult(res);
       successHaptic();
-      setCurrentStep(3);
+      setCurrentStep(4);
       onComplete?.(res);
     } catch (err) {
       errorHaptic();
@@ -298,7 +329,7 @@ export function useWeeklyCheckInWizard(
 
     windowDays,
     windowCellCount,
-    showFrequencyStep,
+    skipRecapStep,
 
     // Epoch ms when the wizard opened — for analytics duration on completion.
     startedAt: startedAtRef.current,

@@ -10041,6 +10041,7 @@
     "terms_of_service": "Terms of Service"
   },
   "weeklyCheckIn": {
+    "loadError": "Couldn't load your check-in",
     "exit": {
       "title": "Catch you later?",
       "description": "Ace will check back in a few days — your settings won't be saved this time.",
@@ -10048,14 +10049,14 @@
       "cancel": "Keep going"
     },
     "step1": {
-      "bubbleHit": "Schedule locked 🔒 And last week? You smashed your goal — streak's still climbing.",
-      "bubbleMet": "Schedule locked 🔒 Last week you hit all {goal} sessions too. Streak alive and well.",
-      "bubbleMiss": "Schedule locked 🔒 You missed last week's goal — let's bounce back and nail it this week. 💪",
-      "bubbleFirstTime": "Schedule locked 🔒 Play your games and check in to them this week to start your streak. 🔥",
+      "bubbleHit": "Hey 👋 Last week you smashed your goal — streak's still climbing. 🔥",
+      "bubbleMet": "Hey 👋 You hit all {goal} sessions last week. Streak alive and well. 💪",
+      "bubbleMiss": "Hey 👋 You missed last week's goal — let's bounce back! 💪",
+      "bubbleFrozen": "Hey 👋 A freeze saved your streak ❄️ Let's bounce back this week!",
+      "bubbleBack": "Hey 👋 Good to see you! Let's get you back on court. 💪",
+      "bubbleFirstTime": "Hey 👋 Play your games and check in to start your streak. 🔥",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
-      "streakSubtitle": "weeks",
-      "streakSubtitleOne": "week streak",
       "streakLabel": "WEEKLY GOAL STREAK",
       "streakLabelOne": "WEEKLY GOAL STREAK",
       "timelineLabel": "Your check-in history",
@@ -10063,16 +10064,11 @@
       "freezeCount": "{count} freezes saved",
       "freezeOne": "1 freeze saved",
       "freezeZero": "0 freezes saved",
-      "freezeHint": "Earn 1 for every 4 goals hit in a row",
       "freezeFirstTimeInvite": "Hit your weekly goal to start your streak 🔥",
-      "goalsCardTitle": "GOAL TRACKING",
-      "goalsCardLastWeek": "Last week",
+      "goalsCardLastWeekResult": "Last week: {played} played · goal {goal}",
       "goalsCardTrendLabel": "Last 4 weeks",
-      "goalsCardLastWeekSummary": "{played} of {goal} sessions",
-      "goalsCardLastWeekHit": "Goal hit ✓",
-      "goalsCardLastWeekMiss": "Goal missed",
       "goalsCardNoHistory": "Your goal-hit history will show up here once you've played a few weeks. 📈",
-      "checkInNote": "📍 Heads up: a game only counts toward your streak if you check in at the court.",
+      "checkInNote": "📍 Games only count with an on-court check-in.",
       "freezeTooltip": "Streak freezes protect you if you miss your weekly goal.",
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
@@ -10080,7 +10076,7 @@
       "cta": "Set my goal 🎯"
     },
     "step2": {
-      "bubble": "Hey 👋 When are you free over the next few days? Tap or drag to paint your slots. ✨",
+      "bubble": "When are you free over the next few days? Tap or drag to paint your slots. ✨",
       "cta": "Looks good"
     },
     "step3": {
@@ -10092,19 +10088,30 @@
         "4": "4×",
         "5plus": "5+×"
       },
-      "frequencyContextSame": "Same as last week — consistency wins! 🌱",
+      "frequencyContextSame": "Same as last time — consistency wins! 🌱",
       "frequencyContextUp": "Stepping it up from {last} → {current}. I love the ambition! 🔥",
       "frequencyContextDown": "Dialing back to {current}. Sustainable beats burnout. 💆",
-      "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨",
-      "opsLabel": "Make this easier",
-      "autoCreateTitle": "Auto-create open matches",
-      "autoCreateDesc": "Post request-to-join matches at your free times.",
+      "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨"
+    },
+    "autoMatch": {
+      "bubble": "Want me to do the legwork? Here's my game plan. 👇",
+      "howLabel": "Here's what I'll do",
+      "howCreateTitle": "Create games for you",
+      "howCreateDesc": "Open games at your free times, in My Games.",
+      "howInviteTitle": "Invite the right players",
+      "howInviteDesc": "My algorithm picks your most compatible players.",
+      "howNotifyTitle": "Keep you posted",
+      "howNotifyDesc": "I ping you the moment someone joins.",
+      "togglesLabel": "Your call",
+      "autoCreateTitle": "Auto-create open games",
+      "autoCreateDesc": "Post request-to-join games at your free times.",
       "autoInviteTitle": "Auto-invite compatible players",
       "autoInviteDesc": "Find players at your level nearby and ping them.",
+      "reassurance": "You can change these every week — nothing happens unless they're on.",
       "cta": "Set my week"
     },
     "step4": {
-      "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🎾",
+      "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🙌",
       "summaryGoal": "Goal: {freq}",
       "summarySlots": "{count} hours confirmed",
       "summarySlotsOne": "1 hour confirmed",
