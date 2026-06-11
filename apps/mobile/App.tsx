@@ -880,6 +880,14 @@ function AppContent() {
         ref={navigationRef}
         linking={linking}
         theme={navigationTheme}
+        onReady={() => {
+          // onStateChange never fires for the initial state, so the first
+          // screen of every session would otherwise go untracked in PostHog.
+          const initialRoute = navigationRef.current?.getCurrentRoute();
+          if (initialRoute?.name) {
+            posthogClient?.screen(initialRoute.name);
+          }
+        }}
         onStateChange={() => {
           // Notify React Query of navigation state changes so stale queries
           // refetch when the user navigates back to a screen.
