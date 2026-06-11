@@ -357,7 +357,7 @@ export default function PublicMatches() {
     handleSendInvite,
     getInviteState,
     callerMatchType,
-  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'public_matches_feed' });
 
   // Pagination is driven by FlatList `onEndReached` so the first page renders
   // immediately and additional pages only fetch as the user scrolls. Padding
@@ -410,6 +410,7 @@ export default function PublicMatches() {
             openMatchDetail(match);
           }}
           onSendInvite={handleSendInvite}
+          suggestionSource="public_matches_feed"
           sportId={selectedSport?.id}
           sportName={selectedSport?.name}
           defaultMatchType={callerMatchType}

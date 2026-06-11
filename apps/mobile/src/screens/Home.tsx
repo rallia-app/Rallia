@@ -937,7 +937,7 @@ const Home = () => {
     handleSendInvite,
     getInviteState,
     callerMatchType,
-  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'home_carousel' });
 
   // Use TanStack Query hook for fetching player's upcoming matches
   // Filters by selected sport to match the Soon & Nearby section
@@ -1617,7 +1617,7 @@ const Home = () => {
                               item.data.facility.facilityId,
                               item.data.slot.datetime
                             )}
-                            source="feed"
+                            source="home_carousel"
                             sportId={selectedSport?.id}
                             sportName={selectedSport?.name}
                             defaultMatchType={callerMatchType}
