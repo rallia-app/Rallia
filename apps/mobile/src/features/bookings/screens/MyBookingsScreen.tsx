@@ -20,6 +20,7 @@ import { useTheme, usePlayerBookingsByTab, usePlayerBookingFilters } from '@rall
 import type { BookingWithDetails, BookingTab } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { spacingPixels } from '@rallia/design-system';
+import { lightHaptic } from '@rallia/shared-utils';
 
 import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
 import { BookingCard, BookingFilterChips, BookingEmptyState } from '#/features/bookings/components';
@@ -160,6 +161,7 @@ export default function MyBookingsScreen() {
   const handleTabChange = useCallback(
     (tab: BookingTab) => {
       if (tab !== activeTab) {
+        void lightHaptic();
         setActiveTab(tab);
         if (activeTab === 'upcoming') {
           resetUpcomingFilter();

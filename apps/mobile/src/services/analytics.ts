@@ -857,3 +857,38 @@ export function weeklyCheckinAbandoned(props: {
 }): void {
   capture('weekly_checkin_abandoned', props);
 }
+
+// ---- Leagues & Tournaments ----
+// Event names follow the lt.<entity>.<verb> taxonomy from
+// specs/17-leagues-tournaments/analytics.md (camelCase props per spec).
+
+export function tournamentCreationStarted(props: { sportId: string; sportName: string }): void {
+  capture('lt.tournament.creation_started', props);
+}
+
+export function tournamentCreationStepCompleted(props: {
+  stepIndex: number;
+  stepName: 'details' | 'visibility';
+  sportName: string;
+}): void {
+  capture('lt.tournament.creation_step_completed', props);
+}
+
+export function tournamentCreationAbandoned(props: {
+  lastStep: number;
+  durationSeconds: number;
+  sportName: string;
+}): void {
+  capture('lt.tournament.creation_abandoned', props);
+}
+
+export function tournamentCreated(props: {
+  tournamentId: string;
+  sportId: string;
+  sportName: string;
+  maxParticipants: number;
+  matchFormat: string;
+  visibility: string;
+}): void {
+  capture('lt.tournament.created', props);
+}

@@ -10,7 +10,7 @@
  * Spec: specs/17-leagues-tournaments/rollout.md §V1, §V2
  */
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,12 +18,17 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Modal,
+  Platform,
   Pressable,
   TextInput,
+  Animated,
+  Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Text, useToast } from '@rallia/shared-components';
 import {
@@ -32,7 +37,10 @@ import {
   spacingPixels,
   radiusPixels,
   primary,
+  accent,
   neutral,
+  secondary,
+  duration,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic, getHumanName } from '@rallia/shared-utils';
 import {
@@ -46,30 +54,37 @@ import {
   useWithdrawFromTournament,
   useTournamentMatches,
   useGenerateTournamentBracket,
-  useLinkableMatchesForSlot,
-  useAttachMatchToTournamentSlot,
-  useOverrideTournamentMatchScore,
   useCancelTournament,
   useArchiveTournament,
   useProfilesByIds,
+  useTournamentParticipants,
   useSports,
   useAuth,
 } from '@rallia/shared-hooks';
 import type { Enums, Tables } from '@rallia/shared-types';
-import type { LinkableMatch } from '@rallia/shared-services';
+import { getTierConfig } from '@rallia/shared-services';
+import type {
+  PlayerSearchResult,
+  ReputationDisplay,
+  ReputationTier,
+} from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../hooks';
-import { SportIcon } from '../components/SportIcon';
+import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import PlayerCard from '../features/community/components/PlayerCard';
+import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type Status = Enums<'tournament_status'>;
 type Visibility = Enums<'tournament_visibility'>;
 type RegistrationMode = Enums<'tournament_registration_mode'>;
 type BracketType = Enums<'bracket_type'>;
 type EntryFormat = Enums<'entry_format'>;
+type MatchFormat = Enums<'match_format'>;
 
 const VISIBILITY_LABEL_KEY: Record<Visibility, string> = {
   private: 'tournamentDetail.values.private',
@@ -90,6 +105,14 @@ const ENTRY_FORMAT_LABEL_KEY: Record<EntryFormat, string> = {
   doubles: 'tournamentDetail.values.doubles',
   mixed_doubles: 'tournamentDetail.values.mixedDoubles',
 };
+const MATCH_FORMAT_LABEL_KEY: Record<MatchFormat, string> = {
+  one_set: 'tournamentDetail.values.oneSet',
+  two_of_three: 'tournamentDetail.values.twoOfThree',
+  three_of_five: 'tournamentDetail.values.threeOfFive',
+  pickleball_to_11: 'tournamentDetail.values.pickleballTo11',
+  pickleball_to_15: 'tournamentDetail.values.pickleballTo15',
+  pickleball_to_21: 'tournamentDetail.values.pickleballTo21',
+};
 
 const STATUS_TONE: Record<Status, 'neutral' | 'positive' | 'active' | 'muted'> = {
   draft: 'neutral',
@@ -109,7 +132,6 @@ interface ScreenColors {
   textMuted: string;
   border: string;
   primary: string;
-  badgeBg: string;
   statusNeutralBg: string;
   statusNeutralText: string;
   statusPositiveBg: string;
@@ -121,6 +143,12 @@ interface ScreenColors {
   cancelledBg: string;
   cancelledBorder: string;
   cancelledText: string;
+  highlightBg: string;
+  highlightBorder: string;
+  championBg: string;
+  championText: string;
+  danger: string;
+  dangerBg: string;
 }
 
 // =============================================================================
@@ -182,8 +210,282 @@ const StatusBadge: React.FC<{
   return (
     <View style={[styles.statusBadge, { backgroundColor: bg }]}>
       <Text size="xs" weight="semibold" color={fg}>
-        {t(`tournamentDetail.status.${status}` as TranslationKey)}
+        {t(`tournamentDetail.status.${status}`)}
       </Text>
+    </View>
+  );
+};
+
+/**
+ * Live "in progress" chip with a pulsing dot, mirroring the ongoing-match
+ * indicator in MatchCard (coral/red `secondary` palette, expanding ring +
+ * core glow).
+ */
+const LiveBadge: React.FC<{ label: string; isDark: boolean }> = ({ label, isDark }) => {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const liveColor = isDark ? secondary[400] : secondary[500];
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [pulse]);
+
+  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] });
+  const ringOpacity = pulse.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.6, 0.3, 0] });
+  const dotOpacity = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.7, 1] });
+
+  return (
+    <View
+      style={[styles.liveBadge, { backgroundColor: `${secondary[500]}${isDark ? '30' : '1f'}` }]}
+    >
+      <View style={styles.liveIndicatorContainer}>
+        <Animated.View
+          style={[
+            styles.liveRing,
+            { backgroundColor: liveColor, transform: [{ scale: ringScale }], opacity: ringOpacity },
+          ]}
+        />
+        <Animated.View
+          style={[styles.liveDot, { backgroundColor: liveColor, opacity: dotOpacity }]}
+        />
+      </View>
+      <Text size="xs" weight="bold" color={liveColor}>
+        {label}
+      </Text>
+    </View>
+  );
+};
+
+// =============================================================================
+// DASHBOARD COMPONENTS
+// =============================================================================
+
+const STEP_ICONS: ReadonlyArray<keyof typeof Ionicons.glyphMap> = [
+  'create-outline',
+  'people-outline',
+  'git-network-outline',
+  'trophy-outline',
+];
+
+/** Draft → Registration → Play → Done lifecycle pipeline. */
+const LifecycleStepper: React.FC<{
+  stepIndex: number;
+  colors: ScreenColors;
+  t: (k: TranslationKey) => string;
+}> = ({ stepIndex, colors, t }) => {
+  const labels = [
+    t('tournamentDetail.dashboard.steps.draft'),
+    t('tournamentDetail.dashboard.steps.registration'),
+    t('tournamentDetail.dashboard.steps.play'),
+    t('tournamentDetail.dashboard.steps.done'),
+  ];
+  return (
+    <View style={styles.stepperRow}>
+      {labels.map((label, i) => {
+        const done = i < stepIndex;
+        const active = i === stepIndex;
+        return (
+          <React.Fragment key={label}>
+            {i > 0 && (
+              <View
+                style={[
+                  styles.stepperConnector,
+                  { backgroundColor: i <= stepIndex ? colors.primary : colors.border },
+                ]}
+              />
+            )}
+            <View style={styles.stepperStep}>
+              <View
+                style={[
+                  styles.stepperDot,
+                  {
+                    backgroundColor: active ? colors.statusActiveBg : 'transparent',
+                    borderColor: active || done ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={done ? 'checkmark' : STEP_ICONS[i]}
+                  size={14}
+                  color={active || done ? colors.primary : colors.textMuted}
+                />
+              </View>
+              <Text
+                size="xs"
+                weight={active ? 'semibold' : 'regular'}
+                color={active ? colors.primary : colors.textMuted}
+              >
+                {label}
+              </Text>
+            </View>
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+};
+
+const StatTile: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  value: string;
+  label: string;
+  colors: ScreenColors;
+}> = ({ icon, value, label, colors }) => (
+  <View
+    style={[
+      styles.statTile,
+      { backgroundColor: colors.cardBackground, borderColor: colors.border },
+    ]}
+  >
+    <Ionicons name={icon} size={18} color={colors.primary} />
+    <Text size="lg" weight="bold" color={colors.text}>
+      {value}
+    </Text>
+    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+      {label}
+    </Text>
+  </View>
+);
+
+/**
+ * Primary-tinted callout used as the organizer's "what's next" card and the
+ * participant's register CTA: icon circle, title, description, optional CTA.
+ */
+const DashboardCtaCard: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description: string;
+  buttonLabel?: string;
+  buttonIcon?: keyof typeof Ionicons.glyphMap;
+  onPress?: () => void;
+  disabled?: boolean;
+  /** Coral "leave" tone (plain card + coral button) — used for withdraw. */
+  destructive?: boolean;
+  colors: ScreenColors;
+}> = ({
+  icon,
+  title,
+  description,
+  buttonLabel,
+  buttonIcon,
+  onPress,
+  disabled,
+  destructive,
+  colors,
+}) => (
+  <View
+    style={[
+      styles.section,
+      styles.ctaCard,
+      destructive
+        ? { backgroundColor: colors.cardBackground, borderColor: colors.border }
+        : { backgroundColor: colors.highlightBg, borderColor: colors.highlightBorder },
+    ]}
+  >
+    <View style={styles.ctaCardHeader}>
+      <View
+        style={[
+          styles.ctaCardIcon,
+          { backgroundColor: destructive ? colors.dangerBg : colors.statusActiveBg },
+        ]}
+      >
+        <Ionicons name={icon} size={22} color={destructive ? colors.danger : colors.primary} />
+      </View>
+      <View style={styles.ctaCardTextBlock}>
+        <Text size="base" weight="bold" color={colors.text}>
+          {title}
+        </Text>
+        <Text size="sm" color={colors.textMuted} style={styles.ctaCardDescription}>
+          {description}
+        </Text>
+      </View>
+    </View>
+    {buttonLabel && onPress && (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.7}
+        style={[
+          styles.primaryButton,
+          { backgroundColor: destructive ? colors.danger : colors.primary },
+          disabled && styles.buttonDisabled,
+        ]}
+        accessibilityRole="button"
+      >
+        {buttonIcon && <Ionicons name={buttonIcon} size={20} color="#ffffff" />}
+        <Text size="base" weight="semibold" color="#ffffff">
+          {buttonLabel}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+);
+
+// Mirror PlayerDirectory: derive reputation display straight from the row,
+// no extra API call. Hidden unless the player's reputation is public.
+function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | undefined {
+  if (!player.reputation_tier || !player.reputation_is_public) return undefined;
+  const tier = player.reputation_tier as ReputationTier;
+  const cfg = getTierConfig(tier);
+  return {
+    tier,
+    score: player.reputation_score ?? 100,
+    isVisible: player.reputation_is_public,
+    tierLabel: cfg.label,
+    tierColor: cfg.color,
+    tierIcon: cfg.icon,
+  };
+}
+
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+/** Registered players rendered with the shared community PlayerCard. */
+const ParticipantsSection: React.FC<{
+  players: PlayerSearchResult[];
+  onPlayerPress: (player: PlayerSearchResult) => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey) => string;
+}> = ({ players, onPlayerPress, colors, t }) => {
+  if (players.length === 0) {
+    return (
+      <View style={styles.participantEmpty}>
+        <Text size="sm" color={colors.textMuted}>
+          {t('tournamentDetail.dashboard.participants.empty')}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View>
+      {players.map(player => (
+        <PlayerCard
+          key={player.id}
+          player={player}
+          onPress={onPlayerPress}
+          reputationDisplay={reputationDisplayFor(player)}
+          isOnline={
+            player.last_seen_at
+              ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
+              : false
+          }
+        />
+      ))}
     </View>
   );
 };
@@ -192,6 +494,7 @@ const StatusBadge: React.FC<{
 
 export const TournamentDetail: React.FC = () => {
   const { params } = useRoute<TournamentDetailRoute>();
+  const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { session } = useAuth();
@@ -203,6 +506,7 @@ export const TournamentDetail: React.FC = () => {
   const { data: registrations = [] } = useTournamentRegistrations(params.tournamentId);
   const { data: myRegistration } = useMyTournamentRegistration(params.tournamentId, userId);
   const { sports } = useSports();
+  const { openSheetForTournamentEdit } = useActionsSheet();
 
   const isOrganizer = !!tournament && !!userId && tournament.organizer_id === userId;
   const myActiveRegistration =
@@ -216,18 +520,22 @@ export const TournamentDetail: React.FC = () => {
     (errMsg: string, fallbackKey: TranslationKey) => {
       const lower = errMsg.toLowerCase();
       const key: TranslationKey = lower.includes('sport_mismatch')
-        ? ('tournamentDetail.errors.sportMismatch' as TranslationKey)
+        ? 'tournamentDetail.errors.sportMismatch'
         : lower.includes('tournament_full')
-          ? ('tournamentDetail.errors.tournamentFull' as TranslationKey)
+          ? 'tournamentDetail.errors.tournamentFull'
           : lower.includes('already_registered')
-            ? ('tournamentDetail.errors.alreadyRegistered' as TranslationKey)
+            ? 'tournamentDetail.errors.alreadyRegistered'
             : lower.includes('not_invited')
-              ? ('tournamentDetail.errors.notInvited' as TranslationKey)
+              ? 'tournamentDetail.errors.notInvited'
               : lower.includes('optimistic_lock')
-                ? ('tournamentDetail.errors.lockConflict' as TranslationKey)
-                : lower.includes('tournament_reg_closed') || lower.includes('reg_closed')
-                  ? ('tournamentDetail.errors.regClosed' as TranslationKey)
-                  : fallbackKey;
+                ? 'tournamentDetail.errors.lockConflict'
+                : lower.includes('start_passed')
+                  ? 'tournamentDetail.errors.startPassed'
+                  : lower.includes('withdraw_not_allowed')
+                    ? 'tournamentDetail.errors.withdrawClosed'
+                    : lower.includes('tournament_reg_closed') || lower.includes('reg_closed')
+                      ? 'tournamentDetail.errors.regClosed'
+                      : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -236,23 +544,25 @@ export const TournamentDetail: React.FC = () => {
 
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
-    onError: e => showError(e.message, 'tournamentDetail.errors.openFailed' as TranslationKey),
+    onError: e => showError(e.message, 'tournamentDetail.errors.openFailed'),
   });
   const close = useCloseTournamentRegistration({
     onSuccess: () => successHaptic(),
-    onError: e => showError(e.message, 'tournamentDetail.errors.closeFailed' as TranslationKey),
+    onError: e => showError(e.message, 'tournamentDetail.errors.closeFailed'),
   });
   const register = useRegisterForTournament({
     onSuccess: () => successHaptic(),
-    onError: e => showError(e.message, 'tournamentDetail.errors.registerFailed' as TranslationKey),
+    onError: e => showError(e.message, 'tournamentDetail.errors.registerFailed'),
   });
   const withdraw = useWithdrawFromTournament({
     onSuccess: () => successHaptic(),
-    onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed' as TranslationKey),
+    onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed'),
   });
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const cancel = useCancelTournament({
     onSuccess: () => {
@@ -263,10 +573,10 @@ export const TournamentDetail: React.FC = () => {
     onError: e => {
       const msg = e.message.toLowerCase();
       const key: TranslationKey = msg.includes('not_cancellable')
-        ? ('tournamentDetail.cancelModal.errorNotCancellable' as TranslationKey)
+        ? 'tournamentDetail.cancelModal.errorNotCancellable'
         : msg.includes('optimistic_lock')
-          ? ('tournamentDetail.cancelModal.errorLockConflict' as TranslationKey)
-          : ('tournamentDetail.cancelModal.errorGeneric' as TranslationKey);
+          ? 'tournamentDetail.cancelModal.errorLockConflict'
+          : 'tournamentDetail.cancelModal.errorGeneric';
       warningHaptic();
       toast.error(t(key));
     },
@@ -280,10 +590,10 @@ export const TournamentDetail: React.FC = () => {
     onError: e => {
       const msg = e.message.toLowerCase();
       const key: TranslationKey = msg.includes('not_archivable')
-        ? ('tournamentDetail.archiveModal.errorNotArchivable' as TranslationKey)
+        ? 'tournamentDetail.archiveModal.errorNotArchivable'
         : msg.includes('optimistic_lock')
-          ? ('tournamentDetail.archiveModal.errorLockConflict' as TranslationKey)
-          : ('tournamentDetail.archiveModal.errorGeneric' as TranslationKey);
+          ? 'tournamentDetail.archiveModal.errorLockConflict'
+          : 'tournamentDetail.archiveModal.errorGeneric';
       warningHaptic();
       toast.error(t(key));
     },
@@ -294,12 +604,12 @@ export const TournamentDetail: React.FC = () => {
     onError: e => {
       const lower = e.message.toLowerCase();
       const key: TranslationKey = lower.includes('insufficient_participants')
-        ? ('tournamentDetail.generateBracketErrors.insufficientParticipants' as TranslationKey)
+        ? 'tournamentDetail.generateBracketErrors.insufficientParticipants'
         : lower.includes('bracket_already_generated')
-          ? ('tournamentDetail.generateBracketErrors.alreadyGenerated' as TranslationKey)
+          ? 'tournamentDetail.generateBracketErrors.alreadyGenerated'
           : lower.includes('tournament_not_draft')
-            ? ('tournamentDetail.generateBracketErrors.wrongStatus' as TranslationKey)
-            : ('tournamentDetail.generateBracketErrors.generic' as TranslationKey);
+            ? 'tournamentDetail.generateBracketErrors.wrongStatus'
+            : 'tournamentDetail.generateBracketErrors.generic';
       warningHaptic();
       toast.error(t(key));
     },
@@ -341,6 +651,7 @@ export const TournamentDetail: React.FC = () => {
 
   // Bracket: only fetch when the bracket has been generated (status >= in_progress).
   const bracketStatuses: ReadonlyArray<Enums<'tournament_status'>> = [
+    'registration_closed',
     'in_progress',
     'completed',
     'archived',
@@ -376,8 +687,12 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations]);
 
-  // Batch-fetch player profiles so the bracket can render real names.
-  const userIds = useMemo(() => registrations.map(r => r.user_id), [registrations]);
+  // Batch-fetch player profiles so the bracket and players list can render
+  // real names; includes the organizer for the hero byline.
+  const userIds = useMemo(
+    () => [...registrations.map(r => r.user_id), ...(tournament ? [tournament.organizer_id] : [])],
+    [registrations, tournament]
+  );
   const { data: profiles } = useProfilesByIds(userIds);
   const nameByRegId = useMemo(() => {
     const map = new Map<string, string>();
@@ -391,44 +706,142 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations, profiles]);
 
-  const [pickerSlot, setPickerSlot] = useState<{
-    tournamentMatchId: string;
-    player1RegId: string;
-    player2RegId: string;
-    player1UserId: string;
-    player2UserId: string;
-  } | null>(null);
+  // Seed-ordered participants enriched with rating/reputation/online, fetched
+  // server-side so the Players tab renders full community PlayerCards.
+  const { data: participantPlayers = [] } = useTournamentParticipants(params.tournamentId);
+
+  const handlePlayerPress = useCallback(
+    (player: PlayerSearchResult) => {
+      if (!tournament) return;
+      lightHaptic();
+      navigation.navigate('PlayerProfile', {
+        playerId: player.id,
+        sportId: tournament.sport_id,
+      });
+    },
+    [navigation, tournament]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Dashboard-derived state
+  // ---------------------------------------------------------------------------
+
+  const organizerName = useMemo(() => {
+    if (!tournament) return '';
+    const p = profiles?.[tournament.organizer_id];
+    return p ? getHumanName(p, '') : '';
+  }, [profiles, tournament]);
+
+  const myRegId = myActiveRegistration?.id ?? null;
+
+  const totalRounds = useMemo(
+    () => matches.reduce((max, m) => Math.max(max, m.round_number), 0),
+    [matches]
+  );
+
+  const championName = useMemo(() => {
+    if (!totalRounds) return null;
+    const final = matches.find(m => m.round_number === totalRounds && m.winner_registration_id);
+    if (!final?.winner_registration_id) return null;
+    return (
+      nameByRegId.get(final.winner_registration_id) ??
+      `Seed ${seedByRegId.get(final.winner_registration_id) ?? '?'}`
+    );
+  }, [matches, totalRounds, nameByRegId, seedByRegId]);
+
+  // Playable games only — bye/phantom slots auto-advance and are never played.
+  const matchProgress = useMemo(() => {
+    const real = matches.filter(m => !m.player1_is_bye && !m.player2_is_bye);
+    return { done: real.filter(m => !!m.winner_registration_id).length, total: real.length };
+  }, [matches]);
+
+  const myNextMatch = useMemo(() => {
+    if (!myRegId) return null;
+    return (
+      matches
+        .filter(
+          m =>
+            m.status === 'pending' &&
+            !m.player1_is_bye &&
+            !m.player2_is_bye &&
+            (m.player1_registration_id === myRegId || m.player2_registration_id === myRegId)
+        )
+        .sort((a, b) => a.round_number - b.round_number)[0] ?? null
+    );
+  }, [matches, myRegId]);
+
+  const myBracketState = useMemo<'next' | 'waiting' | 'eliminated' | 'champion' | null>(() => {
+    if (!myRegId || tournament?.status !== 'in_progress') return null;
+    if (myNextMatch) {
+      return myNextMatch.player1_registration_id && myNextMatch.player2_registration_id
+        ? 'next'
+        : 'waiting';
+    }
+    const mine = matches.filter(
+      m => m.player1_registration_id === myRegId || m.player2_registration_id === myRegId
+    );
+    if (mine.some(m => m.winner_registration_id && m.winner_registration_id !== myRegId)) {
+      return 'eliminated';
+    }
+    const final = matches.find(m => m.round_number === totalRounds);
+    return final?.winner_registration_id === myRegId ? 'champion' : 'waiting';
+  }, [myRegId, tournament?.status, myNextMatch, matches, totalRounds]);
+
+  const myOpponentLabel = useMemo(() => {
+    if (!myNextMatch || !myRegId) return null;
+    const oppId =
+      myNextMatch.player1_registration_id === myRegId
+        ? myNextMatch.player2_registration_id
+        : myNextMatch.player1_registration_id;
+    if (!oppId) return null;
+    return nameByRegId.get(oppId) ?? `Seed ${seedByRegId.get(oppId) ?? '?'}`;
+  }, [myNextMatch, myRegId, nameByRegId, seedByRegId]);
+
+  // Flashscore-style content tabs (Overview / Bracket / Players / Details)
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
 
   const handleBracketMatchTap = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
       const p1User = userByRegId.get(p1RegId);
       const p2User = userByRegId.get(p2RegId);
-      if (!p1User || !p2User) return;
+      if (!p1User || !p2User || !tournament) return;
       lightHaptic();
-      setPickerSlot({
-        tournamentMatchId,
-        player1RegId: p1RegId,
-        player2RegId: p2RegId,
-        player1UserId: p1User,
-        player2UserId: p2User,
+      SheetManager.show('tournament-link-match', {
+        payload: {
+          tournamentMatchId,
+          tournamentId: tournament.id,
+          sportId: tournament.sport_id,
+          player1UserId: p1User,
+          player2UserId: p2User,
+        },
       });
     },
-    [userByRegId]
+    [userByRegId, tournament]
   );
 
-  // Organizer-only: declare a result for a stalled/disputed bracket match.
-  const [overrideSlot, setOverrideSlot] = useState<{
-    tournamentMatchId: string;
-    player1RegId: string;
-    player2RegId: string;
-  } | null>(null);
-
+  // Organizer-only: record an authoritative result for a stalled/disputed
+  // bracket match via the structured set-entry sheet.
   const handleOrganizerOverride = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
+      if (!tournament) return;
       lightHaptic();
-      setOverrideSlot({ tournamentMatchId, player1RegId: p1RegId, player2RegId: p2RegId });
+      const sportName = sports.find(s => s.id === tournament.sport_id)?.name;
+      SheetManager.show('tournament-record-score', {
+        payload: {
+          tournamentMatchId,
+          tournamentId: tournament.id,
+          player1RegId: p1RegId,
+          player2RegId: p2RegId,
+          player1Name: nameByRegId.get(p1RegId) ?? `Seed ${seedByRegId.get(p1RegId) ?? '?'}`,
+          player2Name: nameByRegId.get(p2RegId) ?? `Seed ${seedByRegId.get(p2RegId) ?? '?'}`,
+          isPickleball: sportName === 'pickleball',
+          onSuccess: () => {
+            successHaptic();
+          },
+        },
+      });
     },
-    []
+    [tournament, sports, nameByRegId, seedByRegId]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -441,7 +854,6 @@ export const TournamentDetail: React.FC = () => {
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       primary: isDark ? primary[500] : primary[600],
-      badgeBg: isDark ? primary[500] : primary[600],
       statusNeutralBg: isDark ? neutral[700] : neutral[200],
       statusNeutralText: isDark ? neutral[100] : neutral[700],
       statusPositiveBg: isDark ? '#16a34a30' : '#dcfce7',
@@ -453,9 +865,51 @@ export const TournamentDetail: React.FC = () => {
       cancelledBg: isDark ? '#7c2d1230' : '#fef3c7',
       cancelledBorder: isDark ? '#f59e0b' : '#fbbf24',
       cancelledText: isDark ? '#fbbf24' : '#92400e',
+      highlightBg: isDark ? primary[950] : primary[50],
+      highlightBorder: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+      championBg: isDark ? `${accent[400]}25` : `${accent[500]}15`,
+      championText: isDark ? accent[400] : accent[600],
+      danger: isDark ? secondary[400] : secondary[500],
+      dangerBg: isDark ? `${secondary[500]}30` : `${secondary[500]}1f`,
     }),
     [themeColors, isDark]
   );
+
+  // Organizer admin actions surfaced via the header "⋯" overflow menu.
+  const adminActions = useMemo(() => {
+    const s = tournament?.status;
+    // Details are only editable before registration closes (draft / open).
+    const canEdit = s === 'draft' || s === 'registration_open';
+    const canCancel =
+      s === 'draft' ||
+      s === 'registration_open' ||
+      s === 'registration_closed' ||
+      s === 'in_progress';
+    const canArchive = s === 'completed' || s === 'cancelled';
+    const enabled = isOrganizer && (canEdit || canCancel || canArchive);
+    return { canEdit, canCancel, canArchive, enabled };
+  }, [isOrganizer, tournament?.status]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: adminActions.enabled
+        ? () => (
+            <TouchableOpacity
+              onPress={() => {
+                lightHaptic();
+                setShowActionsMenu(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('tournamentDetail.sections.manage')}
+              style={styles.headerMenuButton}
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, adminActions.enabled, colors.text, t]);
 
   const sport = useMemo(
     () => sports.find(s => s.id === tournament?.sport_id),
@@ -467,14 +921,11 @@ export const TournamentDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        edges={['bottom']}
-        style={[styles.root, { backgroundColor: colors.background }]}
-      >
+      <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text size="sm" color={colors.textMuted} style={styles.centeredText}>
-            {t('tournamentDetail.loading' as TranslationKey)}
+            {t('tournamentDetail.loading')}
           </Text>
         </View>
       </SafeAreaView>
@@ -483,21 +934,18 @@ export const TournamentDetail: React.FC = () => {
 
   if (isError) {
     return (
-      <SafeAreaView
-        edges={['bottom']}
-        style={[styles.root, { backgroundColor: colors.background }]}
-      >
+      <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-            {t('tournamentDetail.loadError' as TranslationKey)}
+            {t('tournamentDetail.loadError')}
           </Text>
           <TouchableOpacity
             onPress={() => refetch()}
             style={[styles.retryButton, { backgroundColor: colors.primary }]}
           >
             <Text size="base" weight="semibold" color="#ffffff">
-              {t('tournamentDetail.retry' as TranslationKey)}
+              {t('tournamentDetail.retry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -507,402 +955,668 @@ export const TournamentDetail: React.FC = () => {
 
   if (!tournament) {
     return (
-      <SafeAreaView
-        edges={['bottom']}
-        style={[styles.root, { backgroundColor: colors.background }]}
-      >
+      <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
         <View style={styles.centered}>
           <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
           <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-            {t('tournamentDetail.notFound' as TranslationKey)}
+            {t('tournamentDetail.notFound')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.centeredSubtext}>
-            {t('tournamentDetail.notFoundDescription' as TranslationKey)}
+            {t('tournamentDetail.notFoundDescription')}
           </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Hero */}
-        <View style={styles.hero}>
-          <View style={styles.heroBadgesRow}>
-            <View style={[styles.sportBadge, { backgroundColor: colors.badgeBg }]}>
-              <SportIcon sportName={sport?.name ?? 'tennis'} size={14} color="#ffffff" />
-              <Text size="sm" weight="semibold" color="#ffffff">
-                {sport?.display_name ?? sport?.name ?? ''}
-              </Text>
-            </View>
-            <StatusBadge status={tournament.status} colors={colors} t={t} />
-          </View>
-          <Text size="2xl" weight="bold" color={colors.text} style={styles.heroTitle}>
-            {tournament.name}
-          </Text>
-          {tournament.description ? (
-            <Text size="sm" color={colors.textMuted} style={styles.heroDescription}>
-              {tournament.description}
-            </Text>
-          ) : null}
-        </View>
+  const daysToStart = Math.round(
+    (new Date(tournament.start_date).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) /
+      86_400_000
+  );
+  const spotsLeft = Math.max(0, tournament.max_participants - activeCount);
+  const isLive = tournament.status === 'in_progress';
+  const isFinished = tournament.status === 'completed' || tournament.status === 'archived';
+  // Cancellation survives archival (status flips to 'archived', cancelled_at stays set),
+  // so drive cancelled-state UI off the timestamp, not the live status.
+  const wasCancelled = tournament.status === 'cancelled' || tournament.cancelled_at != null;
+  const stepIndex =
+    tournament.status === 'draft'
+      ? 0
+      : tournament.status === 'registration_open' || tournament.status === 'registration_closed'
+        ? 1
+        : isLive
+          ? 2
+          : 3;
+  const startTileValue = isLive
+    ? t('tournamentDetail.dashboard.stats.live')
+    : isFinished
+      ? t('tournamentDetail.dashboard.stats.ended')
+      : daysToStart > 0
+        ? t('tournamentDetail.dashboard.stats.startsInDays').replace('{n}', String(daysToStart))
+        : daysToStart === 0
+          ? t('tournamentDetail.dashboard.stats.startsToday')
+          : new Date(tournament.start_date).toLocaleDateString(locale, {
+              month: 'short',
+              day: 'numeric',
+            });
+  const myMatchP1 = myNextMatch?.player1_registration_id ?? null;
+  const myMatchP2 = myNextMatch?.player2_registration_id ?? null;
+  const registerCloseHint = tournament.registration_closes_at
+    ? t('tournamentList.registerBy').replace(
+        '{date}',
+        formatDate(tournament.registration_closes_at)
+      )
+    : null;
 
-        {/* Cancelled-state notice (shown immediately under hero) */}
-        {tournament.status === 'cancelled' && (
+  const showBracketTab = shouldFetchBracket && matches.length > 0;
+  const showPlayersTab = tournament.status !== 'draft';
+  const tabs: Array<{ key: 'overview' | 'bracket' | 'players' | 'details'; label: string }> = [
+    { key: 'overview', label: t('tournamentDetail.tabs.overview') },
+    ...(showBracketTab
+      ? [{ key: 'bracket' as const, label: t('tournamentDetail.tabs.bracket') }]
+      : []),
+    ...(showPlayersTab
+      ? [{ key: 'players' as const, label: t('tournamentDetail.tabs.players') }]
+      : []),
+    { key: 'details', label: t('tournamentDetail.tabs.details') },
+  ];
+  const currentTabIdx = Math.min(activeTabIdx, tabs.length - 1);
+  const currentTabKey = tabs[currentTabIdx].key;
+
+  const goToTab = (idx: number) => {
+    void lightHaptic();
+    setActiveTabIdx(idx);
+  };
+
+  return (
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={styles.screenScroll}
+        contentContainerStyle={styles.screenScrollContent}
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
+      >
+        {/* Hero */}
+        <View style={styles.heroFixed}>
           <View
             style={[
-              styles.section,
-              styles.cancelledNotice,
-              { backgroundColor: colors.cancelledBg, borderColor: colors.cancelledBorder },
+              styles.heroCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
           >
-            <Ionicons name="alert-circle-outline" size={20} color={colors.cancelledText} />
-            <View style={{ flex: 1 }}>
-              <Text size="sm" weight="semibold" color={colors.cancelledText}>
-                {t('tournamentDetail.cancelledNotice.title' as TranslationKey)}
+            <View style={styles.heroTopRow}>
+              {isLive ? (
+                <LiveBadge label={t('tournamentDetail.status.in_progress')} isDark={isDark} />
+              ) : (
+                <StatusBadge status={tournament.status} colors={colors} t={t} />
+              )}
+            </View>
+
+            <Text size="2xl" weight="bold" color={colors.text} style={styles.heroTitle}>
+              {tournament.name}
+            </Text>
+            {tournament.description ? (
+              <Text
+                size="sm"
+                color={colors.textMuted}
+                style={styles.heroDescription}
+                numberOfLines={2}
+              >
+                {tournament.description}
               </Text>
-              {tournament.cancelled_reason ? (
-                <Text size="xs" color={colors.cancelledText}>
-                  {t('tournamentDetail.cancelledNotice.reason' as TranslationKey).replace(
-                    '{reason}',
-                    tournament.cancelled_reason
-                  )}
+            ) : null}
+
+            <View style={[styles.heroDivider, { backgroundColor: colors.border }]} />
+
+            <View style={styles.heroMetaRows}>
+              <View style={styles.heroMetaRow}>
+                <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusActiveBg }]}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                </View>
+                <Text size="sm" weight="medium" color={colors.text} style={styles.heroMetaText}>
+                  {formatDate(tournament.start_date)} – {formatDate(tournament.end_date)}
                 </Text>
+              </View>
+              {tournament.venue_name ? (
+                <View style={styles.heroMetaRow}>
+                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
+                    <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                  </View>
+                  <Text
+                    size="sm"
+                    color={colors.textMuted}
+                    numberOfLines={1}
+                    style={styles.heroMetaText}
+                  >
+                    {tournament.venue_name}
+                  </Text>
+                </View>
               ) : null}
+              {organizerName ? (
+                <View style={styles.heroMetaRow}>
+                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
+                    <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                  </View>
+                  <Text
+                    size="sm"
+                    color={colors.textMuted}
+                    numberOfLines={1}
+                    style={styles.heroMetaText}
+                  >
+                    {t('tournamentDetail.dashboard.organizedBy').replace('{name}', organizerName)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {!isOrganizer &&
+              myActiveRegistration &&
+              tournament.status !== 'cancelled' &&
+              tournament.status !== 'archived' && (
+                <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
+                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
+                    {t(
+                      myActiveRegistration.status === 'pending'
+                        ? 'tournamentDetail.actions.registrationPendingLabel'
+                        : 'tournamentDetail.actions.registeredLabel'
+                    )}
+                  </Text>
+                </View>
+              )}
+          </View>
+        </View>
+
+        {/* Sticky tab bar */}
+        <View style={[styles.tabTrackSticky, { backgroundColor: colors.background }]}>
+          <View style={[styles.tabTrack, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+            {tabs.map((tab, i) => {
+              const selected = i === currentTabIdx;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => goToTab(i)}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.tabPill,
+                    selected && [
+                      styles.tabPillActive,
+                      { backgroundColor: isDark ? darkTheme.card : lightTheme.card },
+                    ],
+                  ]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                >
+                  <Text
+                    size="sm"
+                    weight={selected ? 'semibold' : 'medium'}
+                    color={selected ? colors.primary : colors.textMuted}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ============================ OVERVIEW ============================ */}
+        {currentTabKey === 'overview' && (
+          <View style={styles.tabContent}>
+            {/* Cancelled-state notice (shown immediately under hero) */}
+            {wasCancelled && (
+              <View
+                style={[
+                  styles.section,
+                  styles.cancelledNotice,
+                  { backgroundColor: colors.cancelledBg, borderColor: colors.cancelledBorder },
+                ]}
+              >
+                <Ionicons name="alert-circle-outline" size={20} color={colors.cancelledText} />
+                <View style={{ flex: 1 }}>
+                  <Text size="sm" weight="semibold" color={colors.cancelledText}>
+                    {t('tournamentDetail.cancelledNotice.title')}
+                  </Text>
+                  {tournament.cancelled_reason ? (
+                    <Text size="xs" color={colors.cancelledText}>
+                      {t('tournamentDetail.cancelledNotice.reason').replace(
+                        '{reason}',
+                        tournament.cancelled_reason
+                      )}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            )}
+
+            {/* Lifecycle pipeline */}
+            {!wasCancelled && (
+              <View
+                style={[
+                  styles.section,
+                  styles.stepperCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                <LifecycleStepper stepIndex={stepIndex} colors={colors} t={t} />
+              </View>
+            )}
+
+            {/* Champion banner */}
+            {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
+
+            {/* Organizer: what's next */}
+            {isOrganizer && tournament.status === 'draft' && (
+              <DashboardCtaCard
+                icon="rocket-outline"
+                title={t('tournamentDetail.dashboard.nextStep.draftTitle')}
+                description={t('tournamentDetail.dashboard.nextStep.draftDescription')}
+                buttonLabel={
+                  open.isPending
+                    ? t('tournamentDetail.actions.opening')
+                    : t('tournamentDetail.actions.openRegistration')
+                }
+                buttonIcon="lock-open-outline"
+                onPress={onOpen}
+                disabled={open.isPending}
+                colors={colors}
+              />
+            )}
+            {isOrganizer && tournament.status === 'registration_open' && (
+              <DashboardCtaCard
+                icon="people-outline"
+                title={t('tournamentDetail.dashboard.nextStep.openTitle')}
+                description={t('tournamentDetail.dashboard.nextStep.openDescription')
+                  .replace('{count}', String(activeCount))
+                  .replace('{max}', String(tournament.max_participants))}
+                buttonLabel={
+                  close.isPending
+                    ? t('tournamentDetail.actions.closing')
+                    : t('tournamentDetail.actions.closeRegistration')
+                }
+                buttonIcon="lock-closed-outline"
+                onPress={onClose}
+                disabled={close.isPending}
+                colors={colors}
+              />
+            )}
+            {isOrganizer && tournament.status === 'registration_closed' && (
+              <DashboardCtaCard
+                icon="git-network-outline"
+                title={t('tournamentDetail.dashboard.nextStep.closedTitle')}
+                description={t('tournamentDetail.dashboard.nextStep.closedDescription').replace(
+                  '{count}',
+                  String(activeCount)
+                )}
+                buttonLabel={
+                  generateBracket.isPending
+                    ? t('tournamentDetail.actions.generating')
+                    : t('tournamentDetail.actions.generateBracket')
+                }
+                buttonIcon="git-network-outline"
+                onPress={onGenerateBracket}
+                disabled={generateBracket.isPending}
+                colors={colors}
+              />
+            )}
+            {isOrganizer && isLive && (
+              <DashboardCtaCard
+                icon="play-outline"
+                title={t('tournamentDetail.dashboard.nextStep.liveTitle')}
+                description={t('tournamentDetail.dashboard.nextStep.liveDescription')
+                  .replace('{done}', String(matchProgress.done))
+                  .replace('{total}', String(matchProgress.total))}
+                colors={colors}
+              />
+            )}
+
+            {/* Participant: register CTA */}
+            {!isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
+              <DashboardCtaCard
+                icon="person-add-outline"
+                title={
+                  spotsLeft > 0
+                    ? t('tournamentDetail.dashboard.registerCta.title')
+                    : t('tournamentDetail.dashboard.registerCta.full')
+                }
+                description={
+                  spotsLeft > 0
+                    ? [
+                        t('tournamentDetail.dashboard.registerCta.spotsLeft').replace(
+                          '{n}',
+                          String(spotsLeft)
+                        ),
+                        registerCloseHint,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : t('tournamentDetail.dashboard.registerCta.fullDescription')
+                }
+                buttonLabel={
+                  spotsLeft > 0
+                    ? register.isPending
+                      ? t('tournamentDetail.actions.registering')
+                      : t('tournamentDetail.actions.register')
+                    : undefined
+                }
+                buttonIcon="person-add-outline"
+                onPress={spotsLeft > 0 ? onRegister : undefined}
+                disabled={register.isPending}
+                colors={colors}
+              />
+            )}
+
+            {/* Organizer: add myself as a player */}
+            {isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
+              <DashboardCtaCard
+                icon="person-add-outline"
+                title={t('tournamentDetail.dashboard.addMyselfCta.title')}
+                description={t('tournamentDetail.dashboard.addMyselfCta.description')}
+                buttonLabel={
+                  register.isPending
+                    ? t('tournamentDetail.actions.registering')
+                    : t('tournamentDetail.actions.addMyself')
+                }
+                buttonIcon="person-add-outline"
+                onPress={onRegister}
+                disabled={register.isPending}
+                colors={colors}
+              />
+            )}
+
+            {/* Registered (any persona): withdraw card — only while registration is open */}
+            {myActiveRegistration && tournament.status === 'registration_open' && (
+              <DashboardCtaCard
+                icon="checkmark-circle-outline"
+                title={
+                  myActiveRegistration.status === 'pending'
+                    ? t('tournamentDetail.dashboard.withdrawCta.titlePending')
+                    : t('tournamentDetail.dashboard.withdrawCta.title')
+                }
+                description={
+                  myActiveRegistration.status === 'pending'
+                    ? t('tournamentDetail.dashboard.withdrawCta.descriptionPending')
+                    : t('tournamentDetail.dashboard.withdrawCta.description')
+                }
+                buttonLabel={
+                  withdraw.isPending
+                    ? t('tournamentDetail.actions.withdrawing')
+                    : t('tournamentDetail.actions.withdraw')
+                }
+                buttonIcon="exit-outline"
+                onPress={onWithdraw}
+                disabled={withdraw.isPending}
+                destructive
+                colors={colors}
+              />
+            )}
+
+            {/* Participant: my next game */}
+            {!isOrganizer && myBracketState && (
+              <View style={styles.section}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionTitle}
+                >
+                  {t('tournamentDetail.dashboard.myMatch.title').toUpperCase()}
+                </Text>
+                {myBracketState === 'next' && myNextMatch && myMatchP1 && myMatchP2 ? (
+                  <TouchableOpacity
+                    onPress={() => handleBracketMatchTap(myNextMatch.id, myMatchP1, myMatchP2)}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.card,
+                      styles.myMatchCard,
+                      { backgroundColor: colors.highlightBg, borderColor: colors.primary },
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.myMatchMain}>
+                      <Text size="lg" weight="bold" color={colors.text}>
+                        {t('tournamentDetail.dashboard.myMatch.vs').replace(
+                          '{name}',
+                          myOpponentLabel ?? '?'
+                        )}
+                      </Text>
+                      <Text size="xs" color={colors.textMuted}>
+                        {roundLabel(myNextMatch.round_number, totalRounds, t)} ·{' '}
+                        {t('tournamentDetail.dashboard.myMatch.hint')}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                ) : (
+                  <View
+                    style={[
+                      styles.card,
+                      styles.myMatchCard,
+                      { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        myBracketState === 'eliminated'
+                          ? 'flag-outline'
+                          : myBracketState === 'champion'
+                            ? 'trophy-outline'
+                            : 'hourglass-outline'
+                      }
+                      size={18}
+                      color={colors.textMuted}
+                    />
+                    <Text size="sm" color={colors.textMuted} style={styles.myMatchStateText}>
+                      {t(
+                        myBracketState === 'eliminated'
+                          ? 'tournamentDetail.dashboard.myMatch.eliminated'
+                          : myBracketState === 'champion'
+                            ? 'tournamentDetail.dashboard.myMatch.champion'
+                            : 'tournamentDetail.dashboard.myMatch.waiting'
+                      )}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Stats */}
+            <View style={[styles.section, styles.statsRow]}>
+              <StatTile
+                icon="people-outline"
+                value={`${activeCount}/${tournament.max_participants}`}
+                label={t('tournamentDetail.dashboard.stats.registered')}
+                colors={colors}
+              />
+              {(isLive || isFinished) && !wasCancelled && (
+                <StatTile
+                  icon="checkmark-done-outline"
+                  value={`${matchProgress.done}/${matchProgress.total}`}
+                  label={t('tournamentDetail.dashboard.stats.games')}
+                  colors={colors}
+                />
+              )}
+              <StatTile
+                icon="calendar-outline"
+                value={startTileValue}
+                label={t('tournamentDetail.dashboard.stats.start')}
+                colors={colors}
+              />
             </View>
           </View>
         )}
 
-        <Section title={t('tournamentDetail.sections.format' as TranslationKey)} colors={colors}>
-          <InfoRow
-            label={t('tournamentDetail.labels.bracketSize' as TranslationKey)}
-            value={String(tournament.max_participants)}
-            colors={colors}
-          />
-          <InfoRow
-            label={t('tournamentDetail.labels.bracketType' as TranslationKey)}
-            value={t(BRACKET_TYPE_LABEL_KEY[tournament.bracket_type] as TranslationKey)}
-            colors={colors}
-          />
-          <InfoRow
-            label={t('tournamentDetail.labels.entryFormat' as TranslationKey)}
-            value={t(ENTRY_FORMAT_LABEL_KEY[tournament.entry_format] as TranslationKey)}
-            colors={colors}
-          />
-        </Section>
-
-        <Section title={t('tournamentDetail.sections.schedule' as TranslationKey)} colors={colors}>
-          <InfoRow
-            label={t('tournamentDetail.labels.startDate' as TranslationKey)}
-            value={formatDate(tournament.start_date)}
-            colors={colors}
-          />
-          <InfoRow
-            label={t('tournamentDetail.labels.endDate' as TranslationKey)}
-            value={formatDate(tournament.end_date)}
-            colors={colors}
-          />
-        </Section>
-
-        <Section
-          title={t('tournamentDetail.sections.visibility' as TranslationKey)}
-          colors={colors}
-        >
-          <InfoRow
-            label={t('tournamentDetail.labels.visibility' as TranslationKey)}
-            value={t(VISIBILITY_LABEL_KEY[tournament.visibility] as TranslationKey)}
-            colors={colors}
-          />
-          <InfoRow
-            label={t('tournamentDetail.labels.registrationMode' as TranslationKey)}
-            value={t(REG_MODE_LABEL_KEY[tournament.registration_mode] as TranslationKey)}
-            colors={colors}
-          />
-        </Section>
-
-        {/* Registrations summary */}
-        {(tournament.status === 'registration_open' ||
-          tournament.status === 'registration_closed' ||
-          tournament.status === 'in_progress') && (
-          <Section
-            title={t('tournamentDetail.registrations.sectionTitle' as TranslationKey)}
-            colors={colors}
-          >
-            <View style={styles.registrationsRow}>
-              <Ionicons name="people-outline" size={20} color={colors.textMuted} />
-              <Text size="base" weight="semibold" color={colors.text}>
-                {t('tournamentDetail.registrations.count' as TranslationKey)
-                  .replace('{count}', String(activeCount))
-                  .replace('{max}', String(tournament.max_participants))}
-              </Text>
-            </View>
-          </Section>
+        {/* ============================ BRACKET ============================= */}
+        {currentTabKey === 'bracket' && showBracketTab && (
+          <View style={styles.tabContent}>
+            <BracketSection
+              matches={matches}
+              seedByRegId={seedByRegId}
+              nameByRegId={nameByRegId}
+              userByRegId={userByRegId}
+              currentUserId={userId}
+              isOrganizer={isOrganizer}
+              onMatchPress={handleBracketMatchTap}
+              onOrganizerOverride={handleOrganizerOverride}
+              colors={colors}
+              t={t}
+              showTitle={false}
+            />
+          </View>
         )}
 
-        {/* Bracket */}
-        {shouldFetchBracket && matches.length > 0 && (
-          <BracketSection
-            matches={matches}
-            seedByRegId={seedByRegId}
-            nameByRegId={nameByRegId}
-            userByRegId={userByRegId}
-            currentUserId={userId}
-            isOrganizer={isOrganizer}
-            onMatchPress={handleBracketMatchTap}
-            onOrganizerOverride={handleOrganizerOverride}
-            colors={colors}
-            t={t}
-          />
+        {/* ============================ PLAYERS ============================= */}
+        {currentTabKey === 'players' && showPlayersTab && (
+          <View style={styles.playersTabContent}>
+            <ParticipantsSection
+              players={participantPlayers}
+              onPlayerPress={handlePlayerPress}
+              colors={colors}
+              t={t}
+            />
+          </View>
         )}
 
-        {/* Action panel — registrant actions (organizer actions live in the Manage section) */}
-        {!isOrganizer &&
-          (() => {
-            if (tournament.status === 'registration_open' && !myActiveRegistration) {
-              return (
-                <PrimaryActionButton
-                  label={
-                    register.isPending
-                      ? t('tournamentDetail.actions.registering' as TranslationKey)
-                      : t('tournamentDetail.actions.register' as TranslationKey)
-                  }
-                  icon="person-add-outline"
-                  onPress={onRegister}
-                  disabled={register.isPending}
-                  colors={colors}
-                />
-              );
-            }
-            if (
-              myActiveRegistration &&
-              tournament.status !== 'cancelled' &&
-              tournament.status !== 'archived'
-            ) {
-              const statusLabelKey =
-                myActiveRegistration.status === 'pending'
-                  ? 'tournamentDetail.actions.registrationPendingLabel'
-                  : 'tournamentDetail.actions.registeredLabel';
-              return (
-                <View style={styles.section}>
-                  <View style={[styles.statusInline, { backgroundColor: colors.statusPositiveBg }]}>
-                    <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                    <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                      {t(statusLabelKey as TranslationKey)}
-                    </Text>
-                  </View>
-                  <SecondaryActionButton
-                    label={
-                      withdraw.isPending
-                        ? t('tournamentDetail.actions.withdrawing' as TranslationKey)
-                        : t('tournamentDetail.actions.withdraw' as TranslationKey)
-                    }
-                    icon="exit-outline"
-                    onPress={onWithdraw}
-                    disabled={withdraw.isPending}
-                    colors={colors}
-                  />
-                </View>
-              );
-            }
-            return null;
-          })()}
-
-        {/* Manage card: all organizer actions grouped together */}
-        {isOrganizer &&
-          (() => {
-            let primaryAction: React.ReactNode = null;
-            if (tournament.status === 'draft') {
-              primaryAction = (
-                <PrimaryActionButton
-                  bare
-                  label={
-                    open.isPending
-                      ? t('tournamentDetail.actions.opening' as TranslationKey)
-                      : t('tournamentDetail.actions.openRegistration' as TranslationKey)
-                  }
-                  icon="lock-open-outline"
-                  onPress={onOpen}
-                  disabled={open.isPending}
-                  colors={colors}
-                />
-              );
-            } else if (tournament.status === 'registration_open') {
-              primaryAction = (
-                <PrimaryActionButton
-                  bare
-                  label={
-                    close.isPending
-                      ? t('tournamentDetail.actions.closing' as TranslationKey)
-                      : t('tournamentDetail.actions.closeRegistration' as TranslationKey)
-                  }
-                  icon="lock-closed-outline"
-                  onPress={onClose}
-                  disabled={close.isPending}
-                  colors={colors}
-                />
-              );
-            } else if (tournament.status === 'registration_closed') {
-              primaryAction = (
-                <PrimaryActionButton
-                  bare
-                  label={
-                    generateBracket.isPending
-                      ? t('tournamentDetail.actions.generating' as TranslationKey)
-                      : t('tournamentDetail.actions.generateBracket' as TranslationKey)
-                  }
-                  icon="git-network-outline"
-                  onPress={onGenerateBracket}
-                  disabled={generateBracket.isPending}
-                  colors={colors}
-                />
-              );
-            }
-
-            // Organizers can also join their own tournament as a participant.
-            // The server (tournament_register) registers them directly,
-            // regardless of registration_mode.
-            let selfParticipation: React.ReactNode = null;
-            if (
-              myActiveRegistration &&
-              tournament.status !== 'cancelled' &&
-              tournament.status !== 'archived'
-            ) {
-              const statusLabelKey =
-                myActiveRegistration.status === 'pending'
-                  ? 'tournamentDetail.actions.registrationPendingLabel'
-                  : 'tournamentDetail.actions.registeredLabel';
-              selfParticipation = (
-                <View>
-                  <View style={[styles.statusInline, { backgroundColor: colors.statusPositiveBg }]}>
-                    <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                    <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                      {t(statusLabelKey as TranslationKey)}
-                    </Text>
-                  </View>
-                  <SecondaryActionButton
-                    label={
-                      withdraw.isPending
-                        ? t('tournamentDetail.actions.withdrawing' as TranslationKey)
-                        : t('tournamentDetail.actions.withdraw' as TranslationKey)
-                    }
-                    icon="exit-outline"
-                    onPress={onWithdraw}
-                    disabled={withdraw.isPending}
-                    colors={colors}
-                  />
-                </View>
-              );
-            } else if (tournament.status === 'registration_open') {
-              selfParticipation = (
-                <SecondaryActionButton
-                  label={
-                    register.isPending
-                      ? t('tournamentDetail.actions.registering' as TranslationKey)
-                      : t('tournamentDetail.actions.addMyself' as TranslationKey)
-                  }
-                  icon="person-add-outline"
-                  onPress={onRegister}
-                  disabled={register.isPending}
-                  colors={colors}
-                />
-              );
-            }
-
-            const showCancel = [
-              'draft',
-              'registration_open',
-              'registration_closed',
-              'in_progress',
-            ].includes(tournament.status);
-            const showArchive =
-              tournament.status === 'completed' || tournament.status === 'cancelled';
-            if (!primaryAction && !selfParticipation && !showCancel && !showArchive) return null;
-            return (
-              <Section
-                title={t('tournamentDetail.sections.manage' as TranslationKey)}
+        {/* ============================ DETAILS ============================= */}
+        {currentTabKey === 'details' && (
+          <View style={styles.tabContent}>
+            <Section title={t('tournamentDetail.dashboard.details')} colors={colors}>
+              <InfoRow
+                label={t('tournamentDetail.labels.startDate')}
+                value={formatDate(tournament.start_date)}
                 colors={colors}
-              >
-                <View style={styles.manageCardInner}>
-                  {primaryAction}
-                  {selfParticipation}
-                  {showCancel && (
-                    <SecondaryActionButton
-                      label={t('tournamentDetail.actions.cancelTournament' as TranslationKey)}
-                      icon="close-circle-outline"
-                      onPress={() => {
-                        lightHaptic();
-                        setShowCancelModal(true);
-                      }}
-                      colors={colors}
-                      destructive
-                    />
-                  )}
-                  {showArchive && (
-                    <SecondaryActionButton
-                      label={t('tournamentDetail.actions.archiveTournament' as TranslationKey)}
-                      icon="archive-outline"
-                      onPress={() => {
-                        lightHaptic();
-                        setShowArchiveModal(true);
-                      }}
-                      colors={colors}
-                    />
-                  )}
-                </View>
-              </Section>
-            );
-          })()}
+              />
+              <InfoRow
+                label={t('tournamentDetail.labels.endDate')}
+                value={formatDate(tournament.end_date)}
+                colors={colors}
+              />
+              {tournament.registration_closes_at &&
+                (tournament.status === 'draft' || tournament.status === 'registration_open') && (
+                  <InfoRow
+                    label={t('tournamentDetail.labels.registrationCloses')}
+                    value={formatDate(tournament.registration_closes_at)}
+                    colors={colors}
+                  />
+                )}
+              <InfoRow
+                label={t('tournamentDetail.labels.bracketSize')}
+                value={String(tournament.max_participants)}
+                colors={colors}
+              />
+              <InfoRow
+                label={t('tournamentDetail.labels.bracketType')}
+                value={t(BRACKET_TYPE_LABEL_KEY[tournament.bracket_type] as TranslationKey)}
+                colors={colors}
+              />
+              <InfoRow
+                label={t('tournamentDetail.labels.entryFormat')}
+                value={t(ENTRY_FORMAT_LABEL_KEY[tournament.entry_format] as TranslationKey)}
+                colors={colors}
+              />
+              <InfoRow
+                label={t('tournamentDetail.labels.matchFormat')}
+                value={t(MATCH_FORMAT_LABEL_KEY[tournament.match_format] as TranslationKey)}
+                colors={colors}
+              />
+              <InfoRow
+                label={t('tournamentDetail.labels.visibility')}
+                value={t(VISIBILITY_LABEL_KEY[tournament.visibility] as TranslationKey)}
+                colors={colors}
+              />
+              <InfoRow
+                label={t('tournamentDetail.labels.registrationMode')}
+                value={t(REG_MODE_LABEL_KEY[tournament.registration_mode] as TranslationKey)}
+                colors={colors}
+              />
+            </Section>
+          </View>
+        )}
       </ScrollView>
 
-      {pickerSlot && tournament && (
-        <LinkMatchPickerModal
-          slot={pickerSlot}
-          sportId={tournament.sport_id}
-          tournamentId={tournament.id}
-          seedByRegId={seedByRegId}
-          nameByRegId={nameByRegId}
-          onDismiss={() => setPickerSlot(null)}
-          colors={colors}
-          t={t}
-          locale={locale}
-          onError={msg => {
-            warningHaptic();
-            toast.error(msg);
-          }}
-          onSuccess={() => {
-            successHaptic();
-            setPickerSlot(null);
-          }}
-        />
-      )}
-
-      {overrideSlot && tournament && (
-        <OverrideScoreModal
-          slot={overrideSlot}
-          tournamentId={tournament.id}
-          seedByRegId={seedByRegId}
-          nameByRegId={nameByRegId}
-          onDismiss={() => setOverrideSlot(null)}
-          colors={colors}
-          t={t}
-          onError={msg => {
-            warningHaptic();
-            toast.error(msg);
-          }}
-          onSuccess={() => {
-            successHaptic();
-            setOverrideSlot(null);
-          }}
-        />
-      )}
+      {/* Organizer admin overflow menu (anchored under the header "⋯") */}
+      <Modal
+        visible={showActionsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowActionsMenu(false)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setShowActionsMenu(false)}>
+          <View
+            style={[
+              styles.menuCard,
+              {
+                top: insets.top + (Platform.OS === 'ios' ? 44 : 56),
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {adminActions.canEdit && (
+              <MenuItem
+                icon="create-outline"
+                label={t('tournamentDetail.actions.editDetails')}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  lightHaptic();
+                  openSheetForTournamentEdit({
+                    id: tournament.id,
+                    version: tournament.version,
+                    status: tournament.status,
+                    name: tournament.name,
+                    description: tournament.description,
+                    visibility: tournament.visibility,
+                    startDate: tournament.start_date,
+                    endDate: tournament.end_date,
+                    maxParticipants: tournament.max_participants,
+                    matchFormat: tournament.match_format,
+                    sport: {
+                      id: tournament.sport_id,
+                      name: sport?.name ?? '',
+                      display_name: sport?.display_name ?? '',
+                    },
+                  });
+                }}
+                colors={colors}
+              />
+            )}
+            {adminActions.canCancel && (
+              <MenuItem
+                icon="close-circle-outline"
+                label={t('tournamentDetail.actions.cancelTournament')}
+                destructive
+                showDivider={adminActions.canEdit}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  lightHaptic();
+                  setShowCancelModal(true);
+                }}
+                colors={colors}
+              />
+            )}
+            {adminActions.canArchive && (
+              <MenuItem
+                icon="archive-outline"
+                label={t('tournamentDetail.actions.archiveTournament')}
+                showDivider={adminActions.canEdit || adminActions.canCancel}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  lightHaptic();
+                  setShowArchiveModal(true);
+                }}
+                colors={colors}
+              />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
 
       <ConfirmationModal
         visible={showCancelModal && !!tournament}
-        title={t('tournamentDetail.cancelModal.title' as TranslationKey)}
-        message={t('tournamentDetail.cancelModal.description' as TranslationKey)}
-        confirmLabel={t('tournamentDetail.cancelModal.confirm' as TranslationKey)}
-        cancelLabel={t('tournamentDetail.cancelModal.keepIt' as TranslationKey)}
+        title={t('tournamentDetail.cancelModal.title')}
+        message={t('tournamentDetail.cancelModal.description')}
+        confirmLabel={t('tournamentDetail.cancelModal.confirm')}
+        cancelLabel={t('tournamentDetail.cancelModal.keepIt')}
         destructive
         isLoading={cancel.isPending}
         onClose={() => {
@@ -927,7 +1641,7 @@ export const TournamentDetail: React.FC = () => {
                 color: colors.text,
               },
             ]}
-            placeholder={t('tournamentDetail.cancelModal.reasonPlaceholder' as TranslationKey)}
+            placeholder={t('tournamentDetail.cancelModal.reasonPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={cancelReason}
             onChangeText={setCancelReason}
@@ -940,10 +1654,10 @@ export const TournamentDetail: React.FC = () => {
 
       <ConfirmationModal
         visible={showArchiveModal && !!tournament}
-        title={t('tournamentDetail.archiveModal.title' as TranslationKey)}
-        message={t('tournamentDetail.archiveModal.description' as TranslationKey)}
-        confirmLabel={t('tournamentDetail.archiveModal.confirm' as TranslationKey)}
-        cancelLabel={t('tournamentDetail.archiveModal.keepIt' as TranslationKey)}
+        title={t('tournamentDetail.archiveModal.title')}
+        message={t('tournamentDetail.archiveModal.description')}
+        confirmLabel={t('tournamentDetail.archiveModal.confirm')}
+        cancelLabel={t('tournamentDetail.archiveModal.keepIt')}
         isLoading={archive.isPending}
         onClose={() => setShowArchiveModal(false)}
         onConfirm={() => {
@@ -955,369 +1669,6 @@ export const TournamentDetail: React.FC = () => {
   );
 };
 
-interface PickerSlot {
-  tournamentMatchId: string;
-  player1RegId: string;
-  player2RegId: string;
-  player1UserId: string;
-  player2UserId: string;
-}
-
-const LinkMatchPickerModal: React.FC<{
-  slot: PickerSlot;
-  sportId: string;
-  tournamentId: string;
-  seedByRegId: Map<string, number>;
-  nameByRegId: Map<string, string>;
-  onDismiss: () => void;
-  colors: ScreenColors;
-  t: (k: TranslationKey) => string;
-  locale: string;
-  onError: (msg: string) => void;
-  onSuccess: () => void;
-}> = ({
-  slot,
-  sportId,
-  tournamentId,
-  seedByRegId,
-  nameByRegId,
-  onDismiss,
-  colors,
-  t,
-  locale,
-  onError,
-  onSuccess,
-}) => {
-  const { data: matches = [], isLoading } = useLinkableMatchesForSlot({
-    tournamentMatchId: slot.tournamentMatchId,
-    player1UserId: slot.player1UserId,
-    player2UserId: slot.player2UserId,
-    sportId,
-  });
-
-  const attach = useAttachMatchToTournamentSlot({
-    onSuccess: onSuccess,
-    onError: e =>
-      onError(t('tournamentDetail.linkPicker.attachFailed' as TranslationKey) + ` (${e.message})`),
-  });
-
-  const seed1 = seedByRegId.get(slot.player1RegId);
-  const seed2 = seedByRegId.get(slot.player2RegId);
-  const name1 = nameByRegId.get(slot.player1RegId) ?? `Seed ${seed1 ?? '?'}`;
-  const name2 = nameByRegId.get(slot.player2RegId) ?? `Seed ${seed2 ?? '?'}`;
-  const matchupLabel = `${name1} vs ${name2}`;
-
-  const handlePick = useCallback(
-    (matchId: string) => {
-      lightHaptic();
-      attach.mutate({
-        tournamentMatchId: slot.tournamentMatchId,
-        matchId,
-        tournamentId,
-      });
-    },
-    [attach, slot.tournamentMatchId, tournamentId]
-  );
-
-  return (
-    <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
-      <Pressable style={styles.modalBackdrop} onPress={onDismiss}>
-        <Pressable
-          style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}
-          onPress={e => e.stopPropagation()}
-        >
-          <View style={styles.modalHeader}>
-            <View style={{ flex: 1 }}>
-              <Text size="lg" weight="bold" color={colors.text}>
-                {t('tournamentDetail.linkPicker.title' as TranslationKey)}
-              </Text>
-              <Text size="sm" color={colors.textMuted}>
-                {matchupLabel}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={onDismiss}
-              style={styles.iconButton}
-              accessibilityRole="button"
-            >
-              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-
-          {isLoading && (
-            <View style={styles.modalLoading}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          )}
-
-          {!isLoading && matches.length === 0 && (
-            <View style={styles.modalEmpty}>
-              <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-              <Text
-                size="base"
-                weight="semibold"
-                color={colors.text}
-                style={{ marginTop: spacingPixels[3], textAlign: 'center' }}
-              >
-                {t('tournamentDetail.linkPicker.empty' as TranslationKey)}
-              </Text>
-              <Text
-                size="sm"
-                color={colors.textMuted}
-                style={{ marginTop: spacingPixels[2], textAlign: 'center' }}
-              >
-                {t('tournamentDetail.linkPicker.emptyHint' as TranslationKey)}
-              </Text>
-            </View>
-          )}
-
-          {!isLoading && matches.length > 0 && (
-            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
-              {matches.map(m => (
-                <LinkableMatchRow
-                  key={m.id}
-                  match={m}
-                  onPick={() => handlePick(m.id)}
-                  disabled={attach.isPending}
-                  colors={colors}
-                  locale={locale}
-                />
-              ))}
-            </ScrollView>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-};
-
-const LinkableMatchRow: React.FC<{
-  match: LinkableMatch;
-  onPick: () => void;
-  disabled?: boolean;
-  colors: ScreenColors;
-  locale: string;
-}> = ({ match, onPick, disabled, colors, locale }) => {
-  const dateLabel = useMemo(
-    () =>
-      new Date(match.match_date).toLocaleDateString(locale, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }),
-    [match.match_date, locale]
-  );
-  const scoreLabel =
-    match.team1_score !== null && match.team2_score !== null
-      ? `${match.team1_score}–${match.team2_score}`
-      : '';
-  const winnerLabel =
-    match.winning_team === 1 ? 'Team 1' : match.winning_team === 2 ? 'Team 2' : '';
-
-  return (
-    <TouchableOpacity
-      onPress={onPick}
-      disabled={disabled}
-      activeOpacity={0.7}
-      style={[
-        styles.linkableMatchRow,
-        { borderColor: colors.border, backgroundColor: colors.cardBackground },
-        disabled && styles.buttonDisabled,
-      ]}
-    >
-      <View style={{ flex: 1 }}>
-        <Text size="base" weight="semibold" color={colors.text}>
-          {dateLabel}
-        </Text>
-        <Text size="xs" color={colors.textMuted}>
-          {match.start_time} — {scoreLabel} {winnerLabel}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  );
-};
-
-const OverrideScoreModal: React.FC<{
-  slot: { tournamentMatchId: string; player1RegId: string; player2RegId: string };
-  tournamentId: string;
-  seedByRegId: Map<string, number>;
-  nameByRegId: Map<string, string>;
-  onDismiss: () => void;
-  colors: ScreenColors;
-  t: (k: TranslationKey) => string;
-  onError: (msg: string) => void;
-  onSuccess: () => void;
-}> = ({
-  slot,
-  tournamentId,
-  seedByRegId,
-  nameByRegId,
-  onDismiss,
-  colors,
-  t,
-  onError,
-  onSuccess,
-}) => {
-  const [winnerRegId, setWinnerRegId] = useState<string | null>(null);
-  const [score, setScore] = useState('');
-
-  const override = useOverrideTournamentMatchScore({
-    onSuccess,
-    onError: e => {
-      const msg = e.message || '';
-      const key = msg.includes('MATCH_NOT_OVERRIDABLE')
-        ? 'tournamentDetail.override.errors.notOverridable'
-        : msg.includes('WINNER_NOT_IN_MATCH')
-          ? 'tournamentDetail.override.errors.winnerNotInMatch'
-          : msg.includes('TOURNAMENT_NOT_IN_PROGRESS')
-            ? 'tournamentDetail.override.errors.notInProgress'
-            : msg.includes('MATCH_SLOTS_INCOMPLETE')
-              ? 'tournamentDetail.override.errors.slotsIncomplete'
-              : 'tournamentDetail.override.errors.generic';
-      onError(t(key as TranslationKey));
-    },
-  });
-
-  const optionLabel = useCallback(
-    (regId: string): string => {
-      const name = nameByRegId.get(regId);
-      if (name) return name;
-      const seed = seedByRegId.get(regId);
-      return seed !== undefined ? `Seed ${seed}` : regId;
-    },
-    [nameByRegId, seedByRegId]
-  );
-
-  const handleConfirm = useCallback(() => {
-    if (!winnerRegId) return;
-    lightHaptic();
-    override.mutate({
-      tournamentMatchId: slot.tournamentMatchId,
-      winnerRegistrationId: winnerRegId,
-      score: score.trim() || undefined,
-      tournamentId,
-    });
-  }, [override, slot.tournamentMatchId, tournamentId, winnerRegId, score]);
-
-  const renderOption = (regId: string) => {
-    const selected = winnerRegId === regId;
-    return (
-      <TouchableOpacity
-        key={regId}
-        onPress={() => {
-          lightHaptic();
-          setWinnerRegId(regId);
-        }}
-        activeOpacity={0.7}
-        style={[
-          styles.linkableMatchRow,
-          {
-            borderColor: selected ? colors.primary : colors.border,
-            backgroundColor: selected ? colors.statusActiveBg : colors.cardBackground,
-          },
-        ]}
-        accessibilityRole="radio"
-        accessibilityState={{ selected }}
-      >
-        <Text
-          size="base"
-          weight={selected ? 'semibold' : 'regular'}
-          color={selected ? colors.primary : colors.text}
-          style={{ flex: 1 }}
-        >
-          {optionLabel(regId)}
-        </Text>
-        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <Modal visible transparent animationType="slide" onRequestClose={onDismiss}>
-      <Pressable style={styles.modalBackdrop} onPress={onDismiss}>
-        <Pressable
-          style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}
-          onPress={e => e.stopPropagation()}
-        >
-          <View style={styles.modalHeader}>
-            <View style={{ flex: 1 }}>
-              <Text size="lg" weight="bold" color={colors.text}>
-                {t('tournamentDetail.override.title' as TranslationKey)}
-              </Text>
-              <Text size="sm" color={colors.textMuted}>
-                {t('tournamentDetail.override.subtitle' as TranslationKey)}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={onDismiss}
-              style={styles.iconButton}
-              accessibilityRole="button"
-            >
-              <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-
-          <Text
-            size="xs"
-            weight="semibold"
-            color={colors.textMuted}
-            style={{ marginTop: spacingPixels[2], marginBottom: spacingPixels[2] }}
-          >
-            {t('tournamentDetail.override.winnerLabel' as TranslationKey).toUpperCase()}
-          </Text>
-          {renderOption(slot.player1RegId)}
-          {renderOption(slot.player2RegId)}
-
-          <Text
-            size="xs"
-            weight="semibold"
-            color={colors.textMuted}
-            style={{ marginTop: spacingPixels[4], marginBottom: spacingPixels[2] }}
-          >
-            {t('tournamentDetail.override.scoreLabel' as TranslationKey).toUpperCase()}
-          </Text>
-          <TextInput
-            style={[
-              styles.reasonInput,
-              {
-                backgroundColor: colors.statusMutedBg,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={score}
-            onChangeText={setScore}
-            placeholder={t('tournamentDetail.override.scorePlaceholder' as TranslationKey)}
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-          />
-
-          <TouchableOpacity
-            onPress={handleConfirm}
-            disabled={!winnerRegId || override.isPending}
-            activeOpacity={0.8}
-            style={[
-              styles.overrideConfirm,
-              { backgroundColor: colors.primary },
-              (!winnerRegId || override.isPending) && styles.buttonDisabled,
-            ]}
-            accessibilityRole="button"
-          >
-            <Text size="base" weight="semibold" color="#ffffff">
-              {override.isPending
-                ? t('tournamentDetail.override.confirming' as TranslationKey)
-                : !winnerRegId
-                  ? t('tournamentDetail.override.pickWinner' as TranslationKey)
-                  : t('tournamentDetail.override.confirm' as TranslationKey)}
-            </Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-};
-
 type MatchRow = Tables<'tournament_matches'>;
 
 const roundLabel = (
@@ -1325,11 +1676,10 @@ const roundLabel = (
   totalRounds: number,
   t: (k: TranslationKey) => string
 ): string => {
-  if (round === totalRounds) return t('tournamentDetail.bracket.final' as TranslationKey);
-  if (round === totalRounds - 1) return t('tournamentDetail.bracket.semifinal' as TranslationKey);
-  if (round === totalRounds - 2)
-    return t('tournamentDetail.bracket.quarterfinal' as TranslationKey);
-  return t('tournamentDetail.bracket.round' as TranslationKey).replace('{n}', String(round));
+  if (round === totalRounds) return t('tournamentDetail.bracket.final');
+  if (round === totalRounds - 1) return t('tournamentDetail.bracket.semifinal');
+  if (round === totalRounds - 2) return t('tournamentDetail.bracket.quarterfinal');
+  return t('tournamentDetail.bracket.round').replace('{n}', String(round));
 };
 
 const slotLabel = (
@@ -1340,13 +1690,36 @@ const slotLabel = (
   nameByRegId: Map<string, string>,
   t: (k: TranslationKey) => string
 ): string => {
-  if (isPhantom) return t('tournamentDetail.bracket.phantom' as TranslationKey);
-  if (isBye) return t('tournamentDetail.bracket.bye' as TranslationKey);
-  if (!regId) return t('tournamentDetail.bracket.tbd' as TranslationKey);
+  if (isPhantom) return t('tournamentDetail.bracket.phantom');
+  if (isBye) return t('tournamentDetail.bracket.bye');
+  if (!regId) return t('tournamentDetail.bracket.tbd');
   const name = nameByRegId.get(regId);
   if (name) return name;
   const seed = seedByRegId.get(regId);
-  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd' as TranslationKey);
+  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
+};
+
+type SlotKind = 'player' | 'bye' | 'tbd' | 'phantom';
+
+const slotKind = (regId: string | null, isBye: boolean, isPhantom: boolean): SlotKind => {
+  if (isPhantom) return 'phantom';
+  if (isBye) return 'bye';
+  if (!regId) return 'tbd';
+  return 'player';
+};
+
+// The bracket score is a free-form string the organizer types ("e.g., 6-4
+// 6-2"). We split it into per-set pairs in written order; the caller orients
+// each set onto the right player's row using the known match winner.
+const parseScoreSets = (score: string | null): Array<{ a: number; b: number }> => {
+  if (!score) return [];
+  const sets: Array<{ a: number; b: number }> = [];
+  const re = /(\d{1,2})\s*[-–:]\s*(\d{1,2})/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(score)) !== null) {
+    sets.push({ a: parseInt(m[1], 10), b: parseInt(m[2], 10) });
+  }
+  return sets;
 };
 
 const BracketSection: React.FC<{
@@ -1360,6 +1733,7 @@ const BracketSection: React.FC<{
   onOrganizerOverride: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
+  showTitle?: boolean;
 }> = ({
   matches,
   seedByRegId,
@@ -1371,6 +1745,7 @@ const BracketSection: React.FC<{
   onOrganizerOverride,
   colors,
   t,
+  showTitle = true,
 }) => {
   const totalRounds = matches.reduce((max, m) => Math.max(max, m.round_number), 0);
   const byRound = new Map<number, MatchRow[]>();
@@ -1381,226 +1756,442 @@ const BracketSection: React.FC<{
   }
   const roundNumbers = [...byRound.keys()].sort((a, b) => a - b);
 
-  return (
-    <View style={styles.section}>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-        {t('tournamentDetail.bracket.sectionTitle' as TranslationKey).toUpperCase()}
-      </Text>
+  // Flashscore-style round pager: open on the first round still being played.
+  const [selectedIdx, setSelectedIdx] = useState(() => {
+    const idx = roundNumbers.findIndex(r =>
+      (byRound.get(r) ?? []).some(
+        m => !m.winner_registration_id && !(m.player1_is_bye && m.player2_is_bye)
+      )
+    );
+    return idx === -1 ? Math.max(0, roundNumbers.length - 1) : idx;
+  });
+  const [pageWidth, setPageWidth] = useState(0);
+  const pagerRef = useRef<ScrollView>(null);
+
+  // Snap to the selected page once the pager is measured (no animation).
+  useEffect(() => {
+    if (pageWidth > 0) {
+      pagerRef.current?.scrollTo({ x: selectedIdx * pageWidth, animated: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageWidth]);
+
+  const goToRound = (idx: number) => {
+    void lightHaptic();
+    setSelectedIdx(idx);
+    pagerRef.current?.scrollTo({ x: idx * pageWidth, animated: true });
+  };
+
+  const onPagerSettle = (offsetX: number) => {
+    if (pageWidth <= 0) return;
+    const idx = Math.min(roundNumbers.length - 1, Math.max(0, Math.round(offsetX / pageWidth)));
+    if (idx !== selectedIdx) setSelectedIdx(idx);
+  };
+
+  // Round is "complete" once every real (non-bye) game has a winner — used to
+  // mark the chip with a check and drive the per-round progress pill.
+  const roundProgress = (round: number) => {
+    const real = (byRound.get(round) ?? []).filter(m => !(m.player1_is_bye && m.player2_is_bye));
+    const done = real.filter(m => m.winner_registration_id).length;
+    return { done, total: real.length, complete: real.length > 0 && done === real.length };
+  };
+
+  // Final-round winner → celebratory champion header at the top of the bracket.
+  const finalMatch = matches.find(m => m.round_number === totalRounds && m.winner_registration_id);
+  const championRegId = finalMatch?.winner_registration_id ?? null;
+  const championName = championRegId
+    ? (nameByRegId.get(championRegId) ?? `Seed ${seedByRegId.get(championRegId) ?? '?'}`)
+    : null;
+
+  const renderMatch = (m: MatchRow) => {
+    const isPhantom = m.player1_is_bye && m.player2_is_bye && m.winner_registration_id === null;
+    const winnerSlot = !m.winner_registration_id
+      ? 0
+      : m.winner_registration_id === m.player1_registration_id
+        ? 1
+        : m.winner_registration_id === m.player2_registration_id
+          ? 2
+          : 0;
+    const isFinalRound = m.round_number === totalRounds;
+
+    const p1User = m.player1_registration_id
+      ? userByRegId.get(m.player1_registration_id)
+      : undefined;
+    const p2User = m.player2_registration_id
+      ? userByRegId.get(m.player2_registration_id)
+      : undefined;
+    const callerIsParticipant =
+      !!currentUserId && (currentUserId === p1User || currentUserId === p2User);
+    const isPlayable =
+      m.status === 'pending' &&
+      !m.player1_is_bye &&
+      !m.player2_is_bye &&
+      !!m.player1_registration_id &&
+      !!m.player2_registration_id;
+    // Organizers record results (override); non-organizer
+    // participants link their own played match.
+    const canOrganizerOverride = isPlayable && isOrganizer;
+    const canParticipantAttach = isPlayable && callerIsParticipant && !isOrganizer;
+    const isTappable = canOrganizerOverride || canParticipantAttach;
+
+    const isLive = m.status === 'in_progress';
+    const isDisputed = m.status === 'disputed';
+
+    const headerRight = isLive ? (
+      <View style={[styles.bmStatusPill, { backgroundColor: colors.statusActiveBg }]}>
+        <View style={[styles.bmLiveDot, { backgroundColor: colors.primary }]} />
+        <Text size="xs" weight="bold" color={colors.primary}>
+          {t('tournamentDetail.bracket.live')}
+        </Text>
+      </View>
+    ) : isDisputed ? (
+      <View style={[styles.bmStatusPill, { backgroundColor: colors.cancelledBg }]}>
+        <Ionicons name="alert-circle" size={12} color={colors.cancelledText} />
+        <Text size="xs" weight="bold" color={colors.cancelledText}>
+          {t('tournamentDetail.bracket.disputed')}
+        </Text>
+      </View>
+    ) : null;
+
+    // Per-player set scores: each set's games sit on that player's own row, the
+    // set-winner's number bolded per column. The raw string has no fixed player
+    // order, so we orient it by the known match winner — whichever side took
+    // more sets is the winner's — then map onto rows. A winner with no parseable
+    // score gets a check instead.
+    const sets = parseScoreSets(m.score);
+    const aWins = sets.filter(s => s.a > s.b).length;
+    const bWins = sets.filter(s => s.b > s.a).length;
+    const winnerOnSideA = aWins >= bWins;
+    const winnerGames = sets.map(s => (winnerOnSideA ? s.a : s.b));
+    const loserGames = sets.map(s => (winnerOnSideA ? s.b : s.a));
+    const p1Games =
+      winnerSlot === 1 ? winnerGames : winnerSlot === 2 ? loserGames : sets.map(s => s.a);
+    const p2Games =
+      winnerSlot === 2 ? winnerGames : winnerSlot === 1 ? loserGames : sets.map(s => s.b);
+    const cells1 = p1Games.map((v, i) => ({ value: v, won: v > p2Games[i] }));
+    const cells2 = p2Games.map((v, i) => ({ value: v, won: v > p1Games[i] }));
+
+    const statusStrip =
+      isLive || isDisputed ? <View style={styles.bmStatusStrip}>{headerRight}</View> : null;
+
+    const matchInner = (
+      <>
+        {statusStrip}
+        <BracketPlayerRow
+          label={slotLabel(
+            m.player1_registration_id,
+            m.player1_is_bye,
+            isPhantom,
+            seedByRegId,
+            nameByRegId,
+            t
+          )}
+          seed={m.player1_registration_id ? seedByRegId.get(m.player1_registration_id) : undefined}
+          kind={slotKind(m.player1_registration_id, m.player1_is_bye, isPhantom)}
+          isWinner={winnerSlot === 1}
+          isFinalWinner={winnerSlot === 1 && isFinalRound}
+          decided={winnerSlot !== 0}
+          cells={cells1}
+          showCheck={winnerSlot === 1 && sets.length === 0}
+          colors={colors}
+        />
+        <View style={[styles.bmRowDivider, { backgroundColor: colors.border }]} />
+        <BracketPlayerRow
+          label={slotLabel(
+            m.player2_registration_id,
+            m.player2_is_bye,
+            isPhantom,
+            seedByRegId,
+            nameByRegId,
+            t
+          )}
+          seed={m.player2_registration_id ? seedByRegId.get(m.player2_registration_id) : undefined}
+          kind={slotKind(m.player2_registration_id, m.player2_is_bye, isPhantom)}
+          isWinner={winnerSlot === 2}
+          isFinalWinner={winnerSlot === 2 && isFinalRound}
+          decided={winnerSlot !== 0}
+          cells={cells2}
+          showCheck={winnerSlot === 2 && sets.length === 0}
+          colors={colors}
+        />
+      </>
+    );
+
+    if (isTappable && m.player1_registration_id && m.player2_registration_id) {
+      const p1RegId = m.player1_registration_id;
+      const p2RegId = m.player2_registration_id;
+      const handlePress = canOrganizerOverride
+        ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
+        : () => onMatchPress(m.id, p1RegId, p2RegId);
+      const a11yLabel = canOrganizerOverride
+        ? t('tournamentDetail.bracket.overrideMatch')
+        : t('tournamentDetail.bracket.linkMatch');
+      const ctaLabel = canOrganizerOverride
+        ? t('tournamentDetail.bracket.recordResult')
+        : t('tournamentDetail.bracket.addResult');
+      return (
+        <TouchableOpacity
+          key={m.id}
+          onPress={handlePress}
+          activeOpacity={0.7}
+          style={[
+            styles.bmCard,
+            styles.bmCardPlayable,
+            { backgroundColor: colors.cardBackground, borderColor: colors.primary },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={a11yLabel}
+        >
+          {matchInner}
+          <View
+            style={[
+              styles.bmFooter,
+              { backgroundColor: colors.highlightBg, borderTopColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name={canOrganizerOverride ? 'create-outline' : 'add-circle-outline'}
+              size={16}
+              color={colors.primary}
+            />
+            <Text size="sm" weight="semibold" color={colors.primary} style={styles.bmFooterLabel}>
+              {ctaLabel}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
       <View
+        key={m.id}
         style={[
-          styles.card,
+          styles.bmCard,
           { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
+        {matchInner}
+      </View>
+    );
+  };
+
+  // Each pair of sibling matches feeds one match in the next round — group them
+  // with a connector + chevron that advances the pager, mirroring a real tree.
+  const renderRoundPage = (round: number, roundIdx: number) => {
+    const roundMatches = (byRound.get(round) ?? []).sort(
+      (a, b) => a.match_position - b.match_position
+    );
+    const hasNextRound = roundIdx < roundNumbers.length - 1;
+    const pairs: MatchRow[][] = [];
+    for (let i = 0; i < roundMatches.length; i += 2) {
+      pairs.push(roundMatches.slice(i, i + 2));
+    }
+    return (
+      <View key={round} style={[styles.bracketPage, { width: pageWidth }]}>
+        {pairs.map(pair => (
+          <View key={pair[0].id} style={styles.bmPair}>
+            <View style={styles.bmPairCards}>{pair.map(renderMatch)}</View>
+            {hasNextRound && pair.length === 2 && (
+              <View style={styles.bmConnector}>
+                <View style={[styles.bmConnectorSpine, { backgroundColor: colors.border }]} />
+                <View style={[styles.bmConnectorArm, { backgroundColor: colors.border }]} />
+                <TouchableOpacity
+                  onPress={() => goToRound(roundIdx + 1)}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.bmConnectorBtn,
+                    { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={roundLabel(roundNumbers[roundIdx + 1], totalRounds, t)}
+                >
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const sel = roundProgress(roundNumbers[selectedIdx] ?? totalRounds);
+
+  return (
+    <View style={styles.section}>
+      {showTitle && (
+        <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
+          {t('tournamentDetail.bracket.sectionTitle').toUpperCase()}
+        </Text>
+      )}
+
+      {/* Round selector chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.bracketChipsRow}
+      >
         {roundNumbers.map((round, idx) => {
-          const roundMatches = (byRound.get(round) ?? []).sort(
-            (a, b) => a.match_position - b.match_position
-          );
+          const selected = idx === selectedIdx;
+          const { complete } = roundProgress(round);
           return (
-            <View
+            <TouchableOpacity
               key={round}
+              onPress={() => goToRound(idx)}
+              activeOpacity={0.85}
               style={[
-                styles.bracketRound,
-                idx > 0 && {
-                  borderTopColor: colors.border,
-                  borderTopWidth: StyleSheet.hairlineWidth,
+                styles.bracketChip,
+                {
+                  backgroundColor: selected ? colors.primary : colors.cardBackground,
+                  borderColor: selected ? colors.primary : colors.border,
                 },
               ]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
             >
+              {complete && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={13}
+                  color={selected ? '#ffffff' : colors.primary}
+                />
+              )}
               <Text
                 size="xs"
-                weight="semibold"
-                color={colors.primary}
-                style={styles.bracketRoundLabel}
+                weight={selected ? 'semibold' : 'medium'}
+                color={selected ? '#ffffff' : colors.textMuted}
               >
-                {roundLabel(round, totalRounds, t).toUpperCase()}
+                {roundLabel(round, totalRounds, t)}
               </Text>
-              {roundMatches.map(m => {
-                const isPhantom =
-                  m.player1_is_bye && m.player2_is_bye && m.winner_registration_id === null;
-                const winnerSlot = !m.winner_registration_id
-                  ? 0
-                  : m.winner_registration_id === m.player1_registration_id
-                    ? 1
-                    : m.winner_registration_id === m.player2_registration_id
-                      ? 2
-                      : 0;
-
-                const p1User = m.player1_registration_id
-                  ? userByRegId.get(m.player1_registration_id)
-                  : undefined;
-                const p2User = m.player2_registration_id
-                  ? userByRegId.get(m.player2_registration_id)
-                  : undefined;
-                const callerIsParticipant =
-                  !!currentUserId && (currentUserId === p1User || currentUserId === p2User);
-                const isPlayable =
-                  m.status === 'pending' &&
-                  !m.player1_is_bye &&
-                  !m.player2_is_bye &&
-                  !!m.player1_registration_id &&
-                  !!m.player2_registration_id;
-                // Organizers record results (override); non-organizer
-                // participants link their own played match.
-                const canOrganizerOverride = isPlayable && isOrganizer;
-                const canParticipantAttach = isPlayable && callerIsParticipant && !isOrganizer;
-                const isTappable = canOrganizerOverride || canParticipantAttach;
-
-                const matchInner = (
-                  <>
-                    <BracketSlot
-                      label={slotLabel(
-                        m.player1_registration_id,
-                        m.player1_is_bye,
-                        isPhantom,
-                        seedByRegId,
-                        nameByRegId,
-                        t
-                      )}
-                      isWinner={winnerSlot === 1}
-                      isBye={m.player1_is_bye}
-                      colors={colors}
-                    />
-                    <View style={[styles.bracketSlotDivider, { backgroundColor: colors.border }]} />
-                    <BracketSlot
-                      label={slotLabel(
-                        m.player2_registration_id,
-                        m.player2_is_bye,
-                        isPhantom,
-                        seedByRegId,
-                        nameByRegId,
-                        t
-                      )}
-                      isWinner={winnerSlot === 2}
-                      isBye={m.player2_is_bye}
-                      colors={colors}
-                    />
-                    {m.score && (
-                      <View style={[styles.bracketScoreRow, { borderTopColor: colors.border }]}>
-                        <Text size="xs" color={colors.textMuted}>
-                          {m.score}
-                        </Text>
-                      </View>
-                    )}
-                  </>
-                );
-
-                if (isTappable && m.player1_registration_id && m.player2_registration_id) {
-                  const p1RegId = m.player1_registration_id;
-                  const p2RegId = m.player2_registration_id;
-                  const handlePress = canOrganizerOverride
-                    ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
-                    : () => onMatchPress(m.id, p1RegId, p2RegId);
-                  const a11yLabel = canOrganizerOverride
-                    ? t('tournamentDetail.bracket.overrideMatch' as TranslationKey)
-                    : t('tournamentDetail.bracket.linkMatch' as TranslationKey);
-                  return (
-                    <TouchableOpacity
-                      key={m.id}
-                      onPress={handlePress}
-                      activeOpacity={0.7}
-                      style={[
-                        styles.bracketMatch,
-                        styles.bracketMatchPlayable,
-                        { borderColor: colors.primary },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={a11yLabel}
-                    >
-                      {matchInner}
-                    </TouchableOpacity>
-                  );
-                }
-
-                return (
-                  <View key={m.id} style={[styles.bracketMatch, { borderColor: colors.border }]}>
-                    {matchInner}
-                  </View>
-                );
-              })}
-            </View>
+            </TouchableOpacity>
           );
         })}
+      </ScrollView>
+
+      {/* Selected-round header with progress */}
+      <View style={styles.bmRoundHeader}>
+        <Text size="base" weight="bold" color={colors.text}>
+          {roundLabel(roundNumbers[selectedIdx] ?? totalRounds, totalRounds, t)}
+        </Text>
+        {sel.total > 0 && (
+          <View style={[styles.bmProgressPill, { backgroundColor: colors.statusMutedBg }]}>
+            <Ionicons
+              name={sel.complete ? 'checkmark-done' : 'ellipse-outline'}
+              size={12}
+              color={sel.complete ? colors.statusPositiveText : colors.textMuted}
+            />
+            <Text size="xs" weight="semibold" color={colors.textMuted}>
+              {t('tournamentDetail.bracket.gamesProgress')
+                .replace('{done}', String(sel.done))
+                .replace('{total}', String(sel.total))}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Round pager — swipe or tap a chip to slide between rounds */}
+      <View style={styles.bmPager} onLayout={e => setPageWidth(e.nativeEvent.layout.width)}>
+        {pageWidth > 0 && (
+          <ScrollView
+            ref={pagerRef}
+            horizontal
+            pagingEnabled
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={e => onPagerSettle(e.nativeEvent.contentOffset.x)}
+          >
+            {roundNumbers.map((round, roundIdx) => renderRoundPage(round, roundIdx))}
+          </ScrollView>
+        )}
       </View>
     </View>
   );
 };
 
-const BracketSlot: React.FC<{
+const BracketPlayerRow: React.FC<{
   label: string;
+  seed?: number;
+  kind: SlotKind;
   isWinner: boolean;
-  isBye: boolean;
+  isFinalWinner: boolean;
+  decided: boolean;
+  cells: Array<{ value: number; won: boolean }>;
+  showCheck: boolean;
   colors: ScreenColors;
-}> = ({ label, isWinner, isBye, colors }) => (
-  <View style={styles.bracketSlot}>
-    <Text
-      size="sm"
-      weight={isWinner ? 'semibold' : 'regular'}
-      color={isBye ? colors.textMuted : isWinner ? colors.primary : colors.text}
-    >
-      {label}
-    </Text>
-    {isWinner && <Ionicons name="checkmark-circle" size={14} color={colors.primary} />}
-  </View>
-);
+}> = ({ label, seed, kind, isWinner, isFinalWinner, decided, cells, showCheck, colors }) => {
+  const isPlayer = kind === 'player';
+  const isLoser = decided && isPlayer && !isWinner;
+  const winnerColor = isFinalWinner ? colors.championText : colors.primary;
+  // Winner: bright + bold. Loser: muted. Undecided / non-player: neutral.
+  const nameColor = !isPlayer || isLoser ? colors.textMuted : colors.text;
+  // Within the score column, the set-winner's number is emphasized per column.
+  const wonColor = isFinalWinner ? colors.championText : colors.text;
 
-const PrimaryActionButton: React.FC<{
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-  disabled?: boolean;
-  colors: ScreenColors;
-  /**
-   * When true, render only the button without the surrounding section wrapper.
-   * Used inside the Manage section card, where spacing is handled by the card.
-   */
-  bare?: boolean;
-}> = ({ label, icon, onPress, disabled, colors, bare }) => {
-  const button = (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}
-      style={[
-        styles.primaryButton,
-        { backgroundColor: colors.primary },
-        disabled && styles.buttonDisabled,
-      ]}
-      accessibilityRole="button"
-    >
-      <Ionicons name={icon} size={20} color="#ffffff" />
-      <Text size="base" weight="semibold" color="#ffffff">
-        {label}
-      </Text>
-    </TouchableOpacity>
+  return (
+    <View style={styles.bmRow}>
+      {isFinalWinner && (
+        <Ionicons name="trophy" size={14} color={colors.championText} style={styles.bmRowCrown} />
+      )}
+      <View style={styles.bmNameWrap}>
+        <Text
+          size="sm"
+          weight={isWinner ? 'bold' : 'medium'}
+          color={nameColor}
+          numberOfLines={1}
+          style={styles.bmNameText}
+        >
+          {label}
+        </Text>
+        {isPlayer && seed !== undefined && (
+          <Text size="xs" weight="medium" color={colors.textMuted}>
+            ({seed})
+          </Text>
+        )}
+      </View>
+      {cells.length > 0 ? (
+        <View style={styles.bmSetRow}>
+          {cells.map((c, i) => (
+            <Text
+              key={i}
+              size="sm"
+              weight={c.won ? 'bold' : 'regular'}
+              color={c.won ? wonColor : colors.textMuted}
+              style={styles.bmSetCell}
+            >
+              {c.value}
+            </Text>
+          ))}
+        </View>
+      ) : showCheck ? (
+        <Ionicons name="checkmark" size={16} color={winnerColor} style={styles.bmScore} />
+      ) : null}
+    </View>
   );
-  return bare ? button : <View style={styles.section}>{button}</View>;
 };
 
-const SecondaryActionButton: React.FC<{
+/** Row inside the header "⋯" overflow menu. */
+const MenuItem: React.FC<{
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
-  disabled?: boolean;
   destructive?: boolean;
+  showDivider?: boolean;
   colors: ScreenColors;
-}> = ({ label, icon, onPress, disabled, destructive, colors }) => {
-  const fg = destructive ? colors.statusMutedText : colors.text;
-  const border = destructive ? colors.statusMutedBg : colors.border;
+}> = ({ label, icon, onPress, destructive, showDivider, colors }) => {
+  const fg = destructive ? colors.danger : colors.text;
   return (
     <TouchableOpacity
       onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}
+      activeOpacity={0.6}
       style={[
-        styles.secondaryButton,
-        { borderColor: border, backgroundColor: colors.cardBackground },
-        disabled && styles.buttonDisabled,
+        styles.menuItem,
+        showDivider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
       ]}
       accessibilityRole="button"
     >
       <Ionicons name={icon} size={18} color={fg} />
-      <Text size="base" weight="semibold" color={fg}>
+      <Text size="base" weight="medium" color={fg}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -1623,38 +2214,114 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
   },
-  scrollContent: {
+  heroFixed: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[5],
+    paddingBottom: spacingPixels[4],
+  },
+  heroCard: {
+    borderRadius: radiusPixels['2xl'],
+    borderWidth: 1,
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  screenScroll: {
+    flex: 1,
+  },
+  screenScrollContent: {
+    flexGrow: 1,
+  },
+  tabTrackSticky: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[1],
+    paddingBottom: spacingPixels[2],
+  },
+  tabTrack: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tabPill: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
+    borderRadius: 10,
+  },
+  tabPillActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabContent: {
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
-  hero: {
-    marginBottom: spacingPixels[6],
+  // Players tab: no horizontal padding — PlayerCard supplies its own 16px
+  // side margins so the cards align with the rest of the app.
+  playersTabContent: {
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
   },
-  heroBadgesRow: {
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2],
     marginBottom: spacingPixels[3],
-    flexWrap: 'wrap',
-  },
-  sportBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: radiusPixels.full,
-    gap: spacingPixels[1.5],
   },
   statusBadge: {
     paddingHorizontal: spacingPixels[3],
     paddingVertical: spacingPixels[1.5],
     borderRadius: radiusPixels.full,
   },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
+  },
+  liveIndicatorContainer: {
+    width: 10,
+    height: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveRing: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    shadowColor: secondary[500],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   heroTitle: {
-    marginBottom: spacingPixels[2],
+    marginBottom: spacingPixels[1.5],
+    lineHeight: 30,
   },
   heroDescription: {
     lineHeight: 20,
+  },
+  heroDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: spacingPixels[4],
+    marginBottom: spacingPixels[3],
   },
   section: {
     marginBottom: spacingPixels[5],
@@ -1676,12 +2343,110 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  registrationsRow: {
+  heroMetaRows: {
+    gap: spacingPixels[2.5],
+  },
+  heroMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacingPixels[2.5],
+  },
+  heroMetaIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radiusPixels.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroMetaText: {
+    flex: 1,
+  },
+  stepperCard: {
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  stepperStep: {
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    width: 72,
+  },
+  stepperDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperConnector: {
+    flex: 1,
+    height: 2,
+    borderRadius: 1,
+    marginTop: 15,
+    marginHorizontal: -spacingPixels[3],
+  },
+  ctaCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
+    padding: spacingPixels[4],
+    gap: spacingPixels[3],
+  },
+  ctaCardHeader: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+  },
+  ctaCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaCardTextBlock: {
+    flex: 1,
+    gap: spacingPixels[0.5],
+  },
+  ctaCardDescription: {
+    lineHeight: 19,
+  },
+  statsRow: {
+    flexDirection: 'row',
     gap: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
+  },
+  statTile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  participantEmpty: {
+    padding: spacingPixels[4],
+    alignItems: 'center',
+  },
+  myMatchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    padding: spacingPixels[4],
+    borderWidth: 1.5,
+  },
+  myMatchMain: {
+    flex: 1,
+    gap: spacingPixels[0.5],
+  },
+  myMatchStateText: {
+    flex: 1,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -1691,70 +2456,202 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     borderRadius: radiusPixels.lg,
   },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
   buttonDisabled: { opacity: 0.6 },
-  statusInline: {
+  headerMenuButton: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+  },
+  menuBackdrop: {
+    flex: 1,
+  },
+  menuCard: {
+    position: 'absolute',
+    right: spacingPixels[3],
+    minWidth: 210,
+    borderRadius: radiusPixels.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: spacingPixels[1],
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3.5],
+  },
+  heroRegistered: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
-    marginBottom: spacingPixels[3],
+    marginTop: spacingPixels[4],
   },
-  bracketRound: {
-    paddingVertical: spacingPixels[3],
+  bracketChipsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    paddingBottom: spacingPixels[3],
+  },
+  bracketChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
     paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  bmRoundHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacingPixels[2],
+    paddingHorizontal: spacingPixels[1],
+  },
+  bmProgressPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+  },
+  bmPager: {
+    minHeight: 1,
+  },
+  bracketPage: {
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[1],
+    paddingHorizontal: spacingPixels[1],
+  },
+  bmPair: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginBottom: spacingPixels[5],
+  },
+  bmPairCards: {
+    flex: 1,
     gap: spacingPixels[2],
   },
-  bracketRoundLabel: {
-    letterSpacing: 0.5,
+  bmConnector: {
+    width: 48,
   },
-  bracketMatch: {
+  bmConnectorSpine: {
+    position: 'absolute',
+    left: 8,
+    top: '25%',
+    bottom: '25%',
+    width: 2,
+    borderRadius: 1,
+  },
+  bmConnectorArm: {
+    position: 'absolute',
+    left: 8,
+    top: '50%',
+    width: 16,
+    height: 2,
+    marginTop: -1,
+  },
+  bmConnectorBtn: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    width: 30,
+    height: 30,
+    marginTop: -15,
+    borderRadius: 15,
     borderWidth: 1,
-    borderRadius: radiusPixels.md,
-    overflow: 'hidden',
-  },
-  bracketMatchPlayable: {
-    borderWidth: 2,
-  },
-  bracketScoreRow: {
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+  bmCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  modalSheet: {
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
-    borderTopLeftRadius: radiusPixels['2xl'],
-    borderTopRightRadius: radiusPixels['2xl'],
-    maxHeight: '70%',
+  bmCardPlayable: {
+    borderWidth: 1.5,
   },
-  modalHeader: {
+  bmStatusStrip: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacingPixels[4],
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacingPixels[3],
+    paddingTop: spacingPixels[2],
   },
-  iconButton: { padding: spacingPixels[1] },
-  modalLoading: { padding: spacingPixels[8], alignItems: 'center' },
-  modalEmpty: { padding: spacingPixels[6], alignItems: 'center' },
-  modalList: { maxHeight: 400 },
+  bmStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+  },
+  bmLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  bmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
+  },
+  bmRowCrown: {
+    marginRight: -spacingPixels[1],
+  },
+  bmRowDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: spacingPixels[3],
+  },
+  bmNameWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+  },
+  bmNameText: {
+    flexShrink: 1,
+  },
+  bmScore: {
+    minWidth: 18,
+    textAlign: 'right',
+  },
+  bmSetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  bmSetCell: {
+    minWidth: 14,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  bmFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  bmFooterLabel: {
+    flex: 1,
+  },
   cancelledNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1762,10 +2659,6 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-  },
-  manageCardInner: {
-    padding: spacingPixels[3],
-    gap: spacingPixels[2],
   },
   reasonInput: {
     borderWidth: 1,
@@ -1776,31 +2669,6 @@ const styles = StyleSheet.create({
     minHeight: 72,
     marginBottom: spacingPixels[4],
     textAlignVertical: 'top',
-  },
-  linkableMatchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginBottom: spacingPixels[2],
-  },
-  overrideConfirm: {
-    marginTop: spacingPixels[5],
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
-  },
-  bracketSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[3],
-  },
-  bracketSlotDivider: {
-    height: StyleSheet.hairlineWidth,
   },
 });
 

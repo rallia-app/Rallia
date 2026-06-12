@@ -10,7 +10,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createTournament,
   getTournament,
-  listVisibleTournaments,
+  listPublicTournaments,
+  listMyTournaments,
   listActiveRegistrations,
   listMyActiveRegistrations,
   getMyRegistration,
@@ -25,22 +26,32 @@ import {
   overrideTournamentMatchScore,
   cancelTournament,
   archiveTournament,
+  updateTournament,
   getProfilesByIds,
+  listTournamentParticipants,
   type CreateTournamentInput,
+  type TournamentUpdatePatch,
   type Tournament,
+  type TournamentListItem,
   type TournamentRegistration,
   type TournamentMatch,
   type LinkableMatch,
   type PlayerProfile,
+  type PlayerSearchResult,
 } from '@rallia/shared-services';
 
 export const tournamentKeys = {
   all: ['tournaments'] as const,
   lists: () => [...tournamentKeys.all, 'list'] as const,
-  list: (sportId?: string) => [...tournamentKeys.lists(), sportId ?? 'all'] as const,
+  publicList: (sportId?: string) =>
+    [...tournamentKeys.lists(), 'public', sportId ?? 'all'] as const,
+  myList: (userId: string, sportId?: string) =>
+    [...tournamentKeys.lists(), 'mine', userId, sportId ?? 'all'] as const,
   detail: (tournamentId: string) => [...tournamentKeys.all, 'detail', tournamentId] as const,
   registrations: (tournamentId: string) =>
     [...tournamentKeys.all, 'registrations', tournamentId] as const,
+  participants: (tournamentId: string) =>
+    [...tournamentKeys.all, 'participants', tournamentId] as const,
   myRegistration: (tournamentId: string, userId: string) =>
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
   myActiveRegistrations: (userId: string) =>
@@ -62,6 +73,18 @@ export function useProfilesByIds(ids: string[]) {
 }
 
 /**
+ * Visible tournament participants enriched with rating/reputation/online so the
+ * Players tab can render them with the shared community PlayerCard. Seed-ordered.
+ */
+export function useTournamentParticipants(tournamentId: string | undefined) {
+  return useQuery<PlayerSearchResult[]>({
+    queryKey: tournamentKeys.participants(tournamentId ?? ''),
+    queryFn: () => listTournamentParticipants(tournamentId!),
+    enabled: !!tournamentId,
+  });
+}
+
+/**
  * List all of the caller's active registrations across visible tournaments.
  */
 export function useMyActiveRegistrations(userId: string | undefined) {
@@ -73,12 +96,23 @@ export function useMyActiveRegistrations(userId: string | undefined) {
 }
 
 /**
- * List tournaments visible to the caller, optionally scoped to a sport.
+ * List public tournaments for the discovery surface, optionally scoped to a sport.
  */
-export function useVisibleTournaments(sportId?: string) {
-  return useQuery<Tournament[]>({
-    queryKey: tournamentKeys.list(sportId),
-    queryFn: () => listVisibleTournaments({ sportId, excludeArchived: true }),
+export function usePublicTournaments(sportId?: string) {
+  return useQuery<TournamentListItem[]>({
+    queryKey: tournamentKeys.publicList(sportId),
+    queryFn: () => listPublicTournaments({ sportId }),
+  });
+}
+
+/**
+ * List the caller's tournaments — organized (incl. drafts) plus registered.
+ */
+export function useMyTournaments(userId: string | undefined, sportId?: string) {
+  return useQuery<TournamentListItem[]>({
+    queryKey: tournamentKeys.myList(userId ?? '', sportId),
+    queryFn: () => listMyTournaments(userId!, { sportId }),
+    enabled: !!userId,
   });
 }
 
@@ -181,6 +215,34 @@ export function useLinkableMatchesForSlot(params: {
       }),
     enabled,
   });
+}
+
+/**
+ * Organizer partial-update of tournament fields. The server enforces which
+ * fields are editable in the tournament's current state.
+ */
+export function useUpdateTournament(options: MutationOptions<Tournament> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    Tournament,
+    Error,
+    { tournamentId: string; versionWas: number; patch: TournamentUpdatePatch }
+  >({
+    mutationFn: ({ tournamentId, versionWas, patch }) =>
+      updateTournament(tournamentId, versionWas, patch),
+    onSuccess: t => {
+      invalidate(t.id);
+      qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
 }
 
 export function useCancelTournament(options: MutationOptions<Tournament> = {}) {

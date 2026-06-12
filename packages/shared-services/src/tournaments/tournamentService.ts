@@ -8,10 +8,26 @@
 import type { Tables, Enums } from '@rallia/shared-types';
 
 import { supabase } from '../supabase';
+import type { PlayerSearchResult } from '../players/playerService';
 
 export type Tournament = Tables<'tournaments'>;
 export type TournamentRegistration = Tables<'tournament_registrations'>;
 export type TournamentMatch = Tables<'tournament_matches'>;
+
+/** List-surface row: tournament plus its confirmed-registration count. */
+export type TournamentListItem = Tournament & { registration_count: number };
+
+const LIST_SELECT = '*, tournament_registrations(count)';
+
+function toListItem(row: Record<string, unknown>): TournamentListItem {
+  const { tournament_registrations, ...tournament } = row as Tournament & {
+    tournament_registrations?: { count: number }[];
+  };
+  return {
+    ...(tournament as Tournament),
+    registration_count: tournament_registrations?.[0]?.count ?? 0,
+  };
+}
 
 export interface CreateTournamentInput {
   name: string;
@@ -33,23 +49,58 @@ export interface CreateTournamentInput {
 }
 
 /**
- * List tournaments visible to the caller, optionally scoped to a sport.
- * RLS gates which rows are returned (organizer / public / community-member /
- * registrant). Most-recent first.
+ * List public tournaments for the discovery surface, optionally scoped to a
+ * sport. Only upcoming/live tournaments: drafts, completed, cancelled and
+ * archived are excluded; soonest start date first.
  */
-export async function listVisibleTournaments(
-  opts: {
-    sportId?: string;
-    excludeArchived?: boolean;
-  } = {}
-): Promise<Tournament[]> {
-  let query = supabase.from('tournaments').select('*').order('created_at', { ascending: false });
+export async function listPublicTournaments(
+  opts: { sportId?: string } = {}
+): Promise<TournamentListItem[]> {
+  let query = supabase
+    .from('tournaments')
+    .select(LIST_SELECT)
+    .eq('visibility', 'public')
+    .in('status', ['registration_open', 'registration_closed', 'in_progress'])
+    .eq('tournament_registrations.status', 'registered')
+    .order('start_date', { ascending: true });
   if (opts.sportId) query = query.eq('sport_id', opts.sportId);
-  if (opts.excludeArchived) query = query.neq('status', 'archived');
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []) as Tournament[];
+  return ((data ?? []) as Record<string, unknown>[]).map(toListItem);
+}
+
+/**
+ * List the caller's tournaments — ones they organize (any status, incl.
+ * drafts) plus ones they hold an active registration in. Archived rows are
+ * excluded; most-recent first.
+ */
+export async function listMyTournaments(
+  userId: string,
+  opts: { sportId?: string } = {}
+): Promise<TournamentListItem[]> {
+  const { data: regs, error: regsError } = await supabase
+    .from('tournament_registrations')
+    .select('tournament_id')
+    .eq('user_id', userId)
+    .in('status', ['registered', 'pending']);
+  if (regsError) throw new Error(regsError.message);
+
+  const registeredIds = [...new Set((regs ?? []).map(r => r.tournament_id))];
+  let query = supabase
+    .from('tournaments')
+    .select(LIST_SELECT)
+    .neq('status', 'archived')
+    .eq('tournament_registrations.status', 'registered')
+    .order('created_at', { ascending: false });
+  query = registeredIds.length
+    ? query.or(`organizer_id.eq.${userId},id.in.(${registeredIds.join(',')})`)
+    : query.eq('organizer_id', userId);
+  if (opts.sportId) query = query.eq('sport_id', opts.sportId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map(toListItem);
 }
 
 /**
@@ -104,6 +155,70 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
   return data as Tournament;
 }
 
+export interface TournamentUpdatePatch {
+  name?: string;
+  description?: string | null;
+  visibility?: Enums<'tournament_visibility'>;
+  registrationMode?: Enums<'tournament_registration_mode'>;
+  registrationOpensAt?: string | null;
+  registrationClosesAt?: string | null;
+  startDate?: string;
+  endDate?: string;
+  maxParticipants?: 4 | 8 | 16 | 32 | 64 | 128;
+  bracketType?: Enums<'bracket_type'>;
+  matchFormat?: Enums<'match_format'>;
+  facilityId?: string | null;
+  venueName?: string | null;
+  venueAddress?: string | null;
+}
+
+const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
+  name: 'name',
+  description: 'description',
+  visibility: 'visibility',
+  registrationMode: 'registration_mode',
+  registrationOpensAt: 'registration_opens_at',
+  registrationClosesAt: 'registration_closes_at',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  maxParticipants: 'max_participants',
+  bracketType: 'bracket_type',
+  matchFormat: 'match_format',
+  facilityId: 'facility_id',
+  venueName: 'venue_name',
+  venueAddress: 'venue_address',
+};
+
+/**
+ * Organizer partial-update. Only keys present in the patch are sent; the
+ * server gates each field on the tournament's current status (the
+ * editable-fields-by-state matrix) and bumps `version`.
+ */
+export async function updateTournament(
+  tournamentId: string,
+  versionWas: number,
+  patch: TournamentUpdatePatch
+): Promise<Tournament> {
+  const snakePatch: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined) {
+      snakePatch[UPDATE_PATCH_COLUMNS[key as keyof TournamentUpdatePatch]] = value as
+        | string
+        | number
+        | boolean
+        | null;
+    }
+  }
+
+  const { data, error } = await supabase.rpc('tournament_update', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+    p_patch: snakePatch,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
 export interface PlayerProfile {
   id: string;
   first_name: string | null;
@@ -130,6 +245,120 @@ export async function getProfilesByIds(ids: string[]): Promise<Record<string, Pl
   const byId: Record<string, PlayerProfile> = {};
   for (const p of data ?? []) byId[p.id] = p as PlayerProfile;
   return byId;
+}
+
+/**
+ * Visible participants of a tournament as PlayerSearchResult rows, enriched
+ * with sport rating, reputation, and online status so the Players tab can
+ * render them with the shared community PlayerCard.
+ *
+ * Which registrants are visible is RLS-gated by the registrations select
+ * (same treg_select policy as listActiveRegistrations). The per-player card
+ * data — profile, rating (via player_sport.active_rating_score_id, the
+ * canonical read path), reputation, last_seen_at — is public and batch-fetched
+ * by id, mirroring getProfilesByIds. Rows return in seed order (seed_rank then
+ * registration time) so the list matches the bracket.
+ */
+export async function listTournamentParticipants(
+  tournamentId: string
+): Promise<PlayerSearchResult[]> {
+  const { data: regs, error: regErr } = await supabase
+    .from('tournament_registrations')
+    .select('user_id, seed_rank, registered_at, id')
+    .eq('tournament_id', tournamentId)
+    .in('status', ['registered', 'pending']);
+  if (regErr) throw new Error(regErr.message);
+  if (!regs || regs.length === 0) return [];
+
+  // Seed order: seed_rank asc (nulls last), then earliest registration, then id.
+  const ordered = [...regs].sort((a, b) => {
+    const sa = a.seed_rank ?? Number.MAX_SAFE_INTEGER;
+    const sb = b.seed_rank ?? Number.MAX_SAFE_INTEGER;
+    if (sa !== sb) return sa - sb;
+    const ta = new Date(a.registered_at).getTime();
+    const tb = new Date(b.registered_at).getTime();
+    if (ta !== tb) return ta - tb;
+    return a.id.localeCompare(b.id);
+  });
+  const playerIds = ordered.map(r => r.user_id);
+
+  // Sport drives the rating lookup (ratings are per-sport).
+  const { data: tourney, error: tErr } = await supabase
+    .from('tournaments')
+    .select('sport_id')
+    .eq('id', tournamentId)
+    .single();
+  if (tErr) throw new Error(tErr.message);
+  const sportId = tourney.sport_id;
+
+  const [profilesRes, playersRes, repRes, ratingRes] = await Promise.all([
+    supabase
+      .from('profile')
+      .select('id, first_name, last_name, profile_picture_url')
+      .in('id', playerIds),
+    supabase.from('player').select('id, last_seen_at').in('id', playerIds),
+    supabase
+      .from('player_reputation')
+      .select('player_id, reputation_tier, reputation_score, is_public')
+      .in('player_id', playerIds),
+    supabase
+      .from('player_sport')
+      .select(
+        'player_id, player_rating_score!active_rating_score_id ( is_certified, badge_status, rating_score!rating_score_id ( label, value ) )'
+      )
+      .in('player_id', playerIds)
+      .eq('sport_id', sportId),
+  ]);
+  for (const res of [profilesRes, playersRes, repRes, ratingRes]) {
+    if (res.error) throw new Error(res.error.message);
+  }
+
+  const profileById = new Map((profilesRes.data ?? []).map(p => [p.id, p]));
+  const lastSeenById = new Map((playersRes.data ?? []).map(p => [p.id, p.last_seen_at]));
+  const repById = new Map((repRes.data ?? []).map(r => [r.player_id, r]));
+
+  type RatingRow = {
+    player_id: string;
+    player_rating_score: {
+      is_certified: boolean | null;
+      badge_status: Enums<'badge_status_enum'> | null;
+      rating_score: { label: string | null; value: number | null } | null;
+    } | null;
+  };
+  const ratingByPlayer = new Map<string, PlayerSearchResult['rating']>();
+  for (const row of (ratingRes.data ?? []) as unknown as RatingRow[]) {
+    const prs = row.player_rating_score;
+    const rs = prs?.rating_score;
+    if (!prs || !rs?.label) continue;
+    ratingByPlayer.set(row.player_id, {
+      label: rs.label,
+      value: rs.value,
+      is_certified: prs.is_certified ?? false,
+      badge_status: prs.badge_status ?? 'self_declared',
+    });
+  }
+
+  return ordered.map(r => {
+    const prof = profileById.get(r.user_id);
+    const rep = repById.get(r.user_id);
+    return {
+      id: r.user_id,
+      first_name: prof?.first_name ?? '',
+      last_name: prof?.last_name ?? '',
+      display_name: null,
+      profile_picture_url: prof?.profile_picture_url ?? null,
+      city: null,
+      gender: null,
+      rating: ratingByPlayer.get(r.user_id) ?? null,
+      latitude: null,
+      longitude: null,
+      distance_meters: null,
+      reputation_tier: rep?.reputation_tier ?? null,
+      reputation_score: rep?.reputation_score ?? null,
+      reputation_is_public: rep?.is_public ?? false,
+      last_seen_at: lastSeenById.get(r.user_id) ?? null,
+    };
+  });
 }
 
 /**
@@ -265,6 +494,11 @@ export interface LinkableMatch {
   team1_score: number | null;
   team2_score: number | null;
   verified_at: string | null;
+  /** User id on each team, so callers can show the right player by score. */
+  team1_user_id: string | null;
+  team2_user_id: string | null;
+  /** Per-set scores (team1 vs team2), ordered by set number. */
+  sets: Array<{ team1: number; team2: number }>;
 }
 
 /**
@@ -290,8 +524,9 @@ export async function listLinkableMatchesForSlot(params: {
     .from('match')
     .select(
       `id, match_date, start_time, end_time,
-       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score ),
-       match_participant!inner ( player_id, status )`
+       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
+         match_set ( set_number, team1_score, team2_score ) ),
+       match_participant!inner ( player_id, status, team_number )`
     )
     .eq('sport_id', params.sportId)
     .order('match_date', { ascending: false })
@@ -308,6 +543,7 @@ export async function listLinkableMatchesForSlot(params: {
     winning_team: number | null;
     team1_score: number | null;
     team2_score: number | null;
+    match_set?: Array<{ set_number: number; team1_score: number; team2_score: number }> | null;
   };
   type Row = {
     id: string;
@@ -315,7 +551,7 @@ export async function listLinkableMatchesForSlot(params: {
     start_time: string;
     end_time: string;
     match_result: MatchResultEmbed | MatchResultEmbed[] | null;
-    match_participant: Array<{ player_id: string; status: string }>;
+    match_participant: Array<{ player_id: string; status: string; team_number: number | null }>;
   };
 
   const rows = (data ?? []) as unknown as Row[];
@@ -327,12 +563,23 @@ export async function listLinkableMatchesForSlot(params: {
     const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
     if (!mr || !mr.is_verified) continue;
 
-    const joinedUsers = row.match_participant
-      .filter(p => p.status === 'joined')
-      .map(p => p.player_id);
+    const joined = row.match_participant.filter(p => p.status === 'joined');
+    const joinedUsers = joined.map(p => p.player_id);
     if (joinedUsers.length !== 2) continue;
     if (!joinedUsers.every(u => expected.has(u))) continue;
     if (!Array.from(expected).every(u => joinedUsers.includes(u))) continue;
+
+    // Map each score column to its player via team_number. Fall back to join
+    // order if team_number is missing so the card still labels both sides.
+    const t1 = joined.find(p => p.team_number === 1)?.player_id ?? null;
+    const t2 = joined.find(p => p.team_number === 2)?.player_id ?? null;
+    const team1_user_id = t1 ?? joinedUsers.find(u => u !== t2) ?? null;
+    const team2_user_id = t2 ?? joinedUsers.find(u => u !== team1_user_id) ?? null;
+
+    const sets = (mr.match_set ?? [])
+      .slice()
+      .sort((a, b) => a.set_number - b.set_number)
+      .map(s => ({ team1: s.team1_score, team2: s.team2_score }));
 
     eligible.push({
       id: row.id,
@@ -344,6 +591,9 @@ export async function listLinkableMatchesForSlot(params: {
       team1_score: mr.team1_score,
       team2_score: mr.team2_score,
       verified_at: mr.verified_at,
+      team1_user_id,
+      team2_user_id,
+      sets,
     });
   }
 

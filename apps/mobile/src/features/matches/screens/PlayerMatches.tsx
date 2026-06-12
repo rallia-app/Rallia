@@ -21,6 +21,7 @@ import {
   getPastDateSection,
   UPCOMING_SECTION_ORDER,
   PAST_SECTION_ORDER,
+  lightHaptic,
   type UpcomingDateSection,
   type PastDateSection,
 } from '@rallia/shared-utils';
@@ -97,6 +98,7 @@ export default function PlayerMatches() {
   const handleTabChange = useCallback(
     (tab: TimeFilter) => {
       if (tab !== activeTab) {
+        void lightHaptic();
         setActiveTab(tab);
       }
     },

@@ -1,173 +1,61 @@
 /**
- * Tournaments List
+ * Tournaments List — public discovery
  *
- * Discovery surface for tournaments visible to the caller (RLS-gated).
- * Reached from the Home quick-nav FAB row. Tap a row → TournamentDetail.
- *
- * V2 scope: scoped to the active sport, grouped by status:
- *   - Yours (you organize)
- *   - Open for registration
- *   - Upcoming (registration_closed / in_progress)
- *   - Drafts (yours only — RLS hides others' drafts anyway)
- *   - Completed
+ * Shows upcoming/live public tournaments for the active sport, mirroring
+ * the PublicMatches UX: fixed search bar + filter chips (status, entry
+ * format, open spots) above a list grouped by actionability — Open for
+ * registration (soonest-closing deadline first), In progress, Starting
+ * soon. Completed, cancelled, self-organized and already-registered
+ * tournaments never surface here (those live in MyTournaments, like
+ * PublicMatches hiding own matches). Reached from the Home quick-nav FAB
+ * row. Tap a row →
+ * TournamentDetail. The top button leads to MyTournaments.
  *
  * Spec: specs/17-leagues-tournaments/rollout.md §V2 (discovery slice)
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
-import {
-  lightTheme,
-  darkTheme,
-  spacingPixels,
-  radiusPixels,
-  primary,
-  neutral,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import {
   useTheme,
-  useVisibleTournaments,
-  useMyActiveRegistrations,
   useAuth,
+  useDebounce,
+  usePublicTournaments,
+  useMyActiveRegistrations,
+  useRatingScoresForSport,
 } from '@rallia/shared-hooks';
-import type { Tables, Enums } from '@rallia/shared-types';
+import type { TournamentListItem } from '@rallia/shared-services';
 
-import { useTranslation, type TranslationKey } from '../hooks';
+import {
+  TournamentListScaffold,
+  useTournamentListColors,
+  type TournamentSection,
+} from '../features/tournaments/components/TournamentListScaffold';
+import {
+  TournamentFiltersBar,
+  type TournamentStatusFilter,
+  type TournamentFormatFilter,
+} from '../features/tournaments/components/TournamentFiltersBar';
+import { SearchBar } from '../features/matches/components';
+import { SportIcon } from '../components/SportIcon';
+import { useTranslation } from '../hooks';
 import { useSport } from '../context';
+import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
 
-type Tournament = Tables<'tournaments'>;
-type Status = Enums<'tournament_status'>;
-
-const STATUS_TONE: Record<Status, 'neutral' | 'positive' | 'active' | 'muted'> = {
-  draft: 'neutral',
-  registration_open: 'positive',
-  registration_closed: 'neutral',
-  in_progress: 'active',
-  completed: 'muted',
-  cancelled: 'muted',
-  archived: 'muted',
-};
-
-interface ListColors {
-  background: string;
-  cardBackground: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  primary: string;
-  positiveBg: string;
-  positiveText: string;
-  activeBg: string;
-  activeText: string;
-  neutralBg: string;
-  neutralText: string;
-  mutedBg: string;
-  mutedText: string;
-}
-
-// =============================================================================
-
-const StatusPill: React.FC<{
-  status: Status;
-  colors: ListColors;
-  t: (k: TranslationKey) => string;
-}> = ({ status, colors, t }) => {
-  const tone = STATUS_TONE[status];
-  const bg =
-    tone === 'positive'
-      ? colors.positiveBg
-      : tone === 'active'
-        ? colors.activeBg
-        : tone === 'muted'
-          ? colors.mutedBg
-          : colors.neutralBg;
-  const fg =
-    tone === 'positive'
-      ? colors.positiveText
-      : tone === 'active'
-        ? colors.activeText
-        : tone === 'muted'
-          ? colors.mutedText
-          : colors.neutralText;
-  return (
-    <View style={[styles.statusPill, { backgroundColor: bg }]}>
-      <Text size="xs" weight="semibold" color={fg}>
-        {t(`tournamentDetail.status.${status}` as TranslationKey)}
-      </Text>
-    </View>
-  );
-};
-
-const TournamentRow: React.FC<{
-  tournament: Tournament;
-  colors: ListColors;
-  locale: string;
-  t: (k: TranslationKey) => string;
-  onPress: () => void;
-}> = ({ tournament, colors, locale, t, onPress }) => {
-  const dateRange = useMemo(() => {
-    const fmt = (iso: string) =>
-      new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-    return t('tournamentList.dateRange' as TranslationKey)
-      .replace('{start}', fmt(tournament.start_date))
-      .replace('{end}', fmt(tournament.end_date));
-  }, [tournament.start_date, tournament.end_date, locale, t]);
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={[styles.row, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-    >
-      <View style={styles.rowMain}>
-        <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
-          {tournament.name}
-        </Text>
-        <View style={styles.rowMeta}>
-          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-          <Text size="xs" color={colors.textMuted}>
-            {dateRange}
-          </Text>
-          <View style={styles.metaSeparator} />
-          <Ionicons name="people-outline" size={14} color={colors.textMuted} />
-          <Text size="xs" color={colors.textMuted}>
-            {tournament.max_participants}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.rowRight}>
-        <StatusPill status={tournament.status} colors={colors} t={t} />
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-interface Section {
-  titleKey: TranslationKey;
-  items: Tournament[];
-}
-
-// =============================================================================
+type Tournament = TournamentListItem;
 
 export const Tournaments: React.FC = () => {
+  const { t } = useTranslation();
   const { theme } = useTheme();
-  const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const { session } = useAuth();
+  const colors = useTournamentListColors();
   const isDark = theme === 'dark';
   const userId = session?.user?.id;
 
@@ -177,276 +65,227 @@ export const Tournaments: React.FC = () => {
     isLoading,
     isError,
     refetch,
-    isRefetching,
-  } = useVisibleTournaments(selectedSport?.id);
+  } = usePublicTournaments(selectedSport?.id);
   const { data: myRegistrations = [] } = useMyActiveRegistrations(userId);
-  const registeredIds = useMemo(
+  const registeredTournamentIds = useMemo(
     () => new Set(myRegistrations.map(r => r.tournament_id)),
     [myRegistrations]
   );
-  const [refreshing, setRefreshing] = useState(false);
 
-  const themeColors = isDark ? darkTheme : lightTheme;
-  const colors = useMemo<ListColors>(
-    () => ({
-      background: themeColors.background,
-      cardBackground: themeColors.card,
-      text: themeColors.foreground,
-      textMuted: themeColors.mutedForeground,
-      border: themeColors.border,
-      primary: isDark ? primary[500] : primary[600],
-      positiveBg: isDark ? '#16a34a30' : '#dcfce7',
-      positiveText: isDark ? '#86efac' : '#15803d',
-      activeBg: isDark ? `${primary[500]}30` : `${primary[600]}20`,
-      activeText: isDark ? primary[300] : primary[700],
-      neutralBg: isDark ? neutral[700] : neutral[200],
-      neutralText: isDark ? neutral[100] : neutral[700],
-      mutedBg: isDark ? neutral[800] : neutral[100],
-      mutedText: isDark ? neutral[400] : neutral[500],
-    }),
-    [themeColors, isDark]
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [statusFilter, setStatusFilter] = useState<TournamentStatusFilter>('all');
+  const [formatFilter, setFormatFilter] = useState<TournamentFormatFilter>('all');
+  const [myRatingOnly, setMyRatingOnly] = useState(false);
+  const [openSpotsOnly, setOpenSpotsOnly] = useState(false);
+
+  // Active rating read path: player_sport.active_rating_score_id → scale value
+  const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(
+    selectedSport?.name,
+    selectedSport?.id,
+    userId
   );
+  const playerRatingValue = useMemo(() => {
+    if (!playerRatingScoreId) return null;
+    return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
+  }, [ratingScores, playerRatingScoreId]);
+  const ratingFilterValue = myRatingOnly ? playerRatingValue : null;
 
-  const sections = useMemo<Section[]>(() => {
-    const registered: Tournament[] = [];
-    const mine: Tournament[] = [];
+  const hasActiveFilters =
+    statusFilter !== 'all' ||
+    formatFilter !== 'all' ||
+    (myRatingOnly && playerRatingValue != null) ||
+    openSpotsOnly;
+  const isFilteredView = hasActiveFilters || debouncedSearchQuery.length > 0;
+
+  const sections = useMemo<TournamentSection[]>(() => {
+    const query = debouncedSearchQuery.trim().toLowerCase();
+    const visible = tournaments.filter(tn => {
+      if (userId && tn.organizer_id === userId) return false;
+      if (registeredTournamentIds.has(tn.id)) return false;
+      if (statusFilter !== 'all' && tn.status !== statusFilter) return false;
+      if (formatFilter !== 'all' && tn.entry_format !== formatFilter) return false;
+      if (
+        ratingFilterValue != null &&
+        ((tn.min_rating != null && ratingFilterValue < Number(tn.min_rating)) ||
+          (tn.max_rating != null && ratingFilterValue > Number(tn.max_rating)))
+      )
+        return false;
+      if (
+        openSpotsOnly &&
+        (tn.status !== 'registration_open' || tn.registration_count >= tn.max_participants)
+      )
+        return false;
+      if (
+        query &&
+        !tn.name.toLowerCase().includes(query) &&
+        !(tn.venue_name ?? '').toLowerCase().includes(query)
+      )
+        return false;
+      return true;
+    });
+
+    // Actionability grouping: joinable first, soonest-closing deadline on top.
     const open: Tournament[] = [];
-    const upcoming: Tournament[] = [];
-    const past: Tournament[] = [];
-    const cancelled: Tournament[] = [];
-    const drafts: Tournament[] = [];
-
-    for (const tn of tournaments) {
-      const isMine = tn.organizer_id === userId;
-      const isRegistered = !isMine && registeredIds.has(tn.id);
-
-      if (isRegistered) {
-        registered.push(tn);
-      } else if (isMine && tn.status === 'draft') {
-        drafts.push(tn);
-      } else if (isMine) {
-        mine.push(tn);
-      } else if (tn.status === 'registration_open') {
-        open.push(tn);
-      } else if (tn.status === 'completed') {
-        past.push(tn);
-      } else if (tn.status === 'cancelled') {
-        cancelled.push(tn);
-      } else {
-        upcoming.push(tn);
-      }
+    const inProgress: Tournament[] = [];
+    const startingSoon: Tournament[] = [];
+    for (const tn of visible) {
+      if (tn.status === 'registration_open') open.push(tn);
+      else if (tn.status === 'in_progress') inProgress.push(tn);
+      else if (tn.status === 'registration_closed') startingSoon.push(tn);
     }
+    open.sort(
+      (a, b) =>
+        new Date(a.registration_closes_at ?? a.start_date).getTime() -
+        new Date(b.registration_closes_at ?? b.start_date).getTime()
+    );
 
-    const out: Section[] = [];
-    if (registered.length)
-      out.push({
-        titleKey: 'tournamentList.sectionRegistered' as TranslationKey,
-        items: registered,
-      });
-    if (mine.length)
-      out.push({ titleKey: 'tournamentList.sectionMine' as TranslationKey, items: mine });
-    if (open.length)
-      out.push({ titleKey: 'tournamentList.sectionOpen' as TranslationKey, items: open });
-    if (upcoming.length)
-      out.push({ titleKey: 'tournamentList.sectionUpcoming' as TranslationKey, items: upcoming });
-    if (drafts.length)
-      out.push({ titleKey: 'tournamentList.sectionDraft' as TranslationKey, items: drafts });
-    if (past.length)
-      out.push({ titleKey: 'tournamentList.sectionPast' as TranslationKey, items: past });
-    if (cancelled.length)
-      out.push({
-        titleKey: 'tournamentList.sectionCancelled' as TranslationKey,
-        items: cancelled,
-      });
+    const out: TournamentSection[] = [];
+    if (open.length) out.push({ titleKey: 'tournamentList.sectionOpen', items: open });
+    if (inProgress.length)
+      out.push({ titleKey: 'tournamentList.sectionInProgress', items: inProgress });
+    if (startingSoon.length)
+      out.push({ titleKey: 'tournamentList.sectionStartingSoon', items: startingSoon });
     return out;
-  }, [tournaments, userId, registeredIds]);
+  }, [
+    tournaments,
+    userId,
+    registeredTournamentIds,
+    debouncedSearchQuery,
+    statusFilter,
+    formatFilter,
+    ratingFilterValue,
+    openSpotsOnly,
+  ]);
 
   const handlePress = useCallback(
-    (tournamentId: string, name: string) => {
-      navigation.navigate('TournamentDetail', { tournamentId, tournamentName: name });
+    (tournament: Tournament) => {
+      navigation.navigate('TournamentDetail', {
+        tournamentId: tournament.id,
+        tournamentName: tournament.name,
+      });
     },
     [navigation]
   );
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
-
-  if (isLoading) {
-    return (
-      <SafeAreaView
-        edges={['bottom']}
-        style={[styles.root, { backgroundColor: colors.background }]}
+  const header = (
+    <View style={styles.headerContainer}>
+      <TouchableOpacity
+        onPress={() => {
+          void lightHaptic();
+          navigation.navigate('MyTournaments');
+        }}
+        activeOpacity={0.85}
+        style={[
+          styles.myTournamentsButton,
+          {
+            backgroundColor: isDark ? primary[950] : primary[50],
+            borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+          },
+        ]}
       >
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text size="sm" color={colors.textMuted} style={styles.centeredText}>
-            {t('tournamentList.loading' as TranslationKey)}
-          </Text>
+        <View
+          style={[
+            styles.myTournamentsIcon,
+            { backgroundColor: isDark ? `${primary[400]}20` : `${primary[500]}15` },
+          ]}
+        >
+          <Ionicons name="ribbon-outline" size={24} color={isDark ? primary[400] : primary[500]} />
         </View>
-      </SafeAreaView>
-    );
-  }
+        <Text
+          size="base"
+          weight="semibold"
+          color={isDark ? primary[300] : primary[600]}
+          style={styles.myTournamentsLabel}
+        >
+          {t('tournamentList.myTournaments')}
+        </Text>
+      </TouchableOpacity>
 
-  if (isError) {
-    return (
-      <SafeAreaView
-        edges={['bottom']}
-        style={[styles.root, { backgroundColor: colors.background }]}
-      >
-        <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
-          <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-            {t('tournamentList.loadError' as TranslationKey)}
-          </Text>
-          <TouchableOpacity
-            onPress={() => refetch()}
-            style={[styles.retryButton, { backgroundColor: colors.primary }]}
-          >
-            <Text size="base" weight="semibold" color="#ffffff">
-              {t('tournamentList.retry' as TranslationKey)}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+      <View style={styles.searchRow}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('tournamentList.searchPlaceholder')}
+          onClear={() => setSearchQuery('')}
+        />
+      </View>
 
-  if (sections.length === 0) {
-    return (
-      <SafeAreaView
-        edges={['bottom']}
-        style={[styles.root, { backgroundColor: colors.background }]}
-      >
-        <View style={styles.centered}>
-          <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
-          <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-            {t('tournamentList.empty' as TranslationKey)}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.centeredSubtext}>
-            {t('tournamentList.emptyDescription' as TranslationKey)}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Flatten sections for FlatList rendering with sticky headers via type discrim
-  type Item =
-    | { kind: 'header'; title: string; key: string }
-    | { kind: 'row'; tournament: Tournament; key: string };
-  const data: Item[] = [];
-  for (const s of sections) {
-    data.push({ kind: 'header', title: t(s.titleKey), key: `h-${s.titleKey}` });
-    for (const tn of s.items) data.push({ kind: 'row', tournament: tn, key: `r-${tn.id}` });
-  }
+      <TournamentFiltersBar
+        status={statusFilter}
+        format={formatFilter}
+        myRatingOnly={myRatingOnly}
+        showMyRatingFilter={playerRatingValue != null}
+        openSpotsOnly={openSpotsOnly}
+        onStatusChange={setStatusFilter}
+        onFormatChange={setFormatFilter}
+        onMyRatingChange={setMyRatingOnly}
+        onOpenSpotsChange={setOpenSpotsOnly}
+        onReset={() => {
+          setStatusFilter('all');
+          setFormatFilter('all');
+          setMyRatingOnly(false);
+          setOpenSpotsOnly(false);
+        }}
+        hasActiveFilters={hasActiveFilters}
+      />
+    </View>
+  );
 
   return (
-    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-      <FlatList
-        data={data}
-        keyExtractor={item => item.key}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing || isRefetching}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        renderItem={({ item }) => {
-          if (item.kind === 'header') {
-            return (
-              <Text
-                size="xs"
-                weight="semibold"
-                color={colors.textMuted}
-                style={styles.sectionHeader}
-              >
-                {item.title.toUpperCase()}
-              </Text>
-            );
-          }
-          return (
-            <TournamentRow
-              tournament={item.tournament}
-              colors={colors}
-              locale={locale}
-              t={t}
-              onPress={() => handlePress(item.tournament.id, item.tournament.name)}
-            />
-          );
-        }}
-      />
-    </SafeAreaView>
+    <TournamentListScaffold
+      sections={sections}
+      isLoading={isLoading}
+      isError={isError}
+      refetch={refetch}
+      emptyIcon={isFilteredView ? 'filter-outline' : 'trophy-outline'}
+      emptyTitleKey={isFilteredView ? 'tournamentList.emptySearch.title' : 'tournamentList.empty'}
+      emptyDescriptionKey={
+        isFilteredView
+          ? 'tournamentList.emptySearch.description'
+          : 'tournamentList.emptyDescription'
+      }
+      header={header}
+      cardWatermark={
+        <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={96} color={colors.textMuted} />
+      }
+      onPressTournament={handlePress}
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  centered: {
-    flex: 1,
+  headerContainer: {
+    paddingTop: spacingPixels[5],
+  },
+  myTournamentsButton: {
+    flexDirection: 'row',
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacingPixels[6],
-  },
-  centeredText: { marginTop: spacingPixels[3], textAlign: 'center' },
-  centeredSubtext: { marginTop: spacingPixels[2], textAlign: 'center' },
-  retryButton: {
-    marginTop: spacingPixels[4],
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-  },
-  listContent: {
-    padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
-    gap: spacingPixels[2],
-  },
-  sectionHeader: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-    letterSpacing: 0.5,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
     gap: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
   },
-  rowMain: {
-    flex: 1,
-    gap: spacingPixels[1],
+  myTournamentsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  rowMeta: {
+  myTournamentsLabel: {
+    textAlign: 'center',
+  },
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
-  },
-  metaSeparator: {
-    width: 1,
-    height: 12,
-    backgroundColor: 'rgba(128,128,128,0.3)',
-    marginHorizontal: spacingPixels[1.5],
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[2],
     gap: spacingPixels[2],
-  },
-  statusPill: {
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[0.5],
-    borderRadius: radiusPixels.full,
   },
 });
 

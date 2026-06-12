@@ -89,6 +89,7 @@ import Communities from '#/screens/Communities';
 import CommunityDetail from '#/screens/CommunityDetail';
 import TournamentDetail from '#/screens/TournamentDetail';
 import Tournaments from '#/screens/Tournaments';
+import MyTournaments from '#/screens/MyTournaments';
 import NetworkMatches from '#/screens/NetworkMatches';
 import AdminPanelScreen from '#/screens/AdminPanelScreen';
 import AdminDashboardScreen from '#/screens/AdminDashboardScreen';
@@ -1530,6 +1531,16 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('tournamentList.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="MyTournaments"
+        component={MyTournaments}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('tournamentList.myTournaments'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

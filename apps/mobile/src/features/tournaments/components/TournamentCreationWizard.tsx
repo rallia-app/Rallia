@@ -2,8 +2,9 @@
  * TournamentCreationWizard
  *
  * V1 of the leagues & tournaments vertical slice plan: smallest meaningful
- * tournament-creation flow. Three steps (Basics → Schedule → Visibility),
- * single screen, no draft persistence, no analytics, no post-success invite.
+ * tournament-creation flow. Two steps (Details → Visibility), single screen,
+ * no draft persistence, no post-success invite. No facility/venue attribution
+ * in the MVP — the schema and tournament_update RPC support it for later.
  *
  * Mirrors MatchCreationWizard styling conventions:
  *   - Fixed-width header sides (40) so the sport badge stays centered
@@ -18,7 +19,7 @@
  */
 
 import * as React from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -41,12 +42,14 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useTheme, useCreateTournament } from '@rallia/shared-hooks';
+import { useTheme, useCreateTournament, useUpdateTournament } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
+import type { TournamentUpdatePatch } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
+import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
 const TOTAL_STEPS = 2;
@@ -55,6 +58,48 @@ type BracketSize = (typeof BRACKET_SIZES)[number];
 
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>; // V1: private/public only
 type RegistrationMode = Enums<'tournament_registration_mode'>;
+type MatchFormat = Enums<'match_format'>;
+
+const TENNIS_FORMATS: readonly MatchFormat[] = ['one_set', 'two_of_three', 'three_of_five'];
+const PICKLEBALL_FORMATS: readonly MatchFormat[] = [
+  'pickleball_to_11',
+  'pickleball_to_15',
+  'pickleball_to_21',
+];
+const MATCH_FORMAT_KEYS: Record<MatchFormat, { label: string; hint: string }> = {
+  one_set: {
+    label: 'tournamentCreation.fields.matchFormatOneSet',
+    hint: 'tournamentCreation.fields.matchFormatOneSetHint',
+  },
+  two_of_three: {
+    label: 'tournamentCreation.fields.matchFormatTwoOfThree',
+    hint: 'tournamentCreation.fields.matchFormatTwoOfThreeHint',
+  },
+  three_of_five: {
+    label: 'tournamentCreation.fields.matchFormatThreeOfFive',
+    hint: 'tournamentCreation.fields.matchFormatThreeOfFiveHint',
+  },
+  pickleball_to_11: {
+    label: 'tournamentCreation.fields.matchFormatTo11',
+    hint: 'tournamentCreation.fields.matchFormatTo11Hint',
+  },
+  pickleball_to_15: {
+    label: 'tournamentCreation.fields.matchFormatTo15',
+    hint: 'tournamentCreation.fields.matchFormatTo15Hint',
+  },
+  pickleball_to_21: {
+    label: 'tournamentCreation.fields.matchFormatTo21',
+    hint: 'tournamentCreation.fields.matchFormatTo21Hint',
+  },
+};
+
+const formatOptionsForSport = (sportName: string | undefined): readonly MatchFormat[] =>
+  sportName === 'pickleball' ? PICKLEBALL_FORMATS : TENNIS_FORMATS;
+
+const STEP_ANALYTICS_NAMES = ['details', 'visibility'] as const;
+
+const defaultFormatForSport = (sportName: string | undefined): MatchFormat =>
+  sportName === 'pickleball' ? 'pickleball_to_11' : 'two_of_three';
 
 interface ThemeColors {
   background: string;
@@ -74,10 +119,30 @@ interface ThemeColors {
   success: string;
 }
 
+/**
+ * Payload to launch the wizard in edit mode (initialData pattern). Carries the
+ * tournament fields to prefill plus its sport (edit can't change sport).
+ */
+export interface TournamentEditData {
+  id: string;
+  version: number;
+  status: Enums<'tournament_status'>;
+  name: string;
+  description: string | null;
+  visibility: Enums<'tournament_visibility'>;
+  startDate: string; // ISO
+  endDate: string; // ISO
+  maxParticipants: number;
+  matchFormat: MatchFormat;
+  sport: { id: string; name: string; display_name: string };
+}
+
 export interface TournamentCreationWizardProps {
   onClose: () => void;
   onBackToLanding: () => void;
   onSuccess: (tournamentId: string) => void;
+  /** When present, the wizard runs in edit mode against this tournament. */
+  editTournament?: TournamentEditData;
 }
 
 // =============================================================================
@@ -86,28 +151,45 @@ export interface TournamentCreationWizardProps {
 
 const WizardHeader: React.FC<{
   currentStep: number;
+  isEditMode: boolean;
   onBack: () => void;
   onBackToLanding: () => void;
   onClose: () => void;
   sportName: string;
   sportKey: string;
   colors: ThemeColors;
-}> = ({ currentStep, onBack, onBackToLanding, onClose, sportName, sportKey, colors }) => (
+  t: (k: TranslationKey) => string;
+}> = ({
+  currentStep,
+  isEditMode,
+  onBack,
+  onBackToLanding,
+  onClose,
+  sportName,
+  sportKey,
+  colors,
+  t,
+}) => (
   <View style={[styles.header, { borderBottomColor: colors.border }]}>
+    {/* Step 1 in edit mode has no landing to go back to — the close (X) handles
+        dismiss — so the back chevron is hidden there. The empty spacer keeps the
+        sport badge centered. */}
     <View style={styles.headerLeft}>
-      <TouchableOpacity
-        onPress={() => {
-          Keyboard.dismiss();
-          lightHaptic();
-          if (currentStep === 1) onBackToLanding();
-          else onBack();
-        }}
-        style={styles.headerButton}
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-      >
-        <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-      </TouchableOpacity>
+      {!(isEditMode && currentStep === 1) && (
+        <TouchableOpacity
+          onPress={() => {
+            Keyboard.dismiss();
+            lightHaptic();
+            if (currentStep === 1) onBackToLanding();
+            else onBack();
+          }}
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back' as TranslationKey)}
+        >
+          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
+        </TouchableOpacity>
+      )}
     </View>
 
     <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
@@ -126,7 +208,7 @@ const WizardHeader: React.FC<{
         }}
         style={styles.headerButton}
         accessibilityRole="button"
-        accessibilityLabel="Close"
+        accessibilityLabel={t('common.close' as TranslationKey)}
       >
         <Ionicons name="close-outline" size={24} color={colors.textMuted} />
       </TouchableOpacity>
@@ -300,8 +382,15 @@ const DateField: React.FC<{
 const DetailsStep: React.FC<{
   name: string;
   setName: (v: string) => void;
+  description: string;
+  setDescription: (v: string) => void;
   bracketSize: BracketSize;
   setBracketSize: (v: BracketSize) => void;
+  matchFormat: MatchFormat;
+  setMatchFormat: (v: MatchFormat) => void;
+  formatOptions: readonly MatchFormat[];
+  /** Bracket size & format are only editable while the tournament is a draft. */
+  canEditStructure: boolean;
   startDate: Date | null;
   endDate: Date | null;
   setStartDate: (d: Date) => void;
@@ -311,11 +400,19 @@ const DetailsStep: React.FC<{
   t: (k: TranslationKey) => string;
   locale: string;
   isDark: boolean;
+  /** Edit mode allows a start date in the past (the tournament may have begun). */
+  isEditMode: boolean;
 }> = ({
   name,
   setName,
+  description,
+  setDescription,
   bracketSize,
   setBracketSize,
+  matchFormat,
+  setMatchFormat,
+  formatOptions,
+  canEditStructure,
   startDate,
   endDate,
   setStartDate,
@@ -325,6 +422,7 @@ const DetailsStep: React.FC<{
   t,
   locale,
   isDark,
+  isEditMode,
 }) => {
   const [pickerOpen, setPickerOpen] = useState<'start' | 'end' | null>(null);
   const minimumDate = useMemo(() => {
@@ -377,7 +475,7 @@ const DetailsStep: React.FC<{
           placeholderTextColor={colors.textMuted}
           value={name}
           onChangeText={setName}
-          maxLength={120}
+          maxLength={100}
           autoCapitalize="sentences"
           autoCorrect={false}
           returnKeyType="done"
@@ -391,44 +489,125 @@ const DetailsStep: React.FC<{
 
       <View style={styles.fieldGroup}>
         <FieldLabel colors={colors}>
-          {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
+          {t('tournamentCreation.fields.description' as TranslationKey)}
         </FieldLabel>
-        <View style={styles.optionsRow}>
-          {BRACKET_SIZES.map(n => {
-            const selected = n === bracketSize;
-            return (
-              <TouchableOpacity
-                key={n}
-                onPress={() => {
-                  lightHaptic();
-                  setBracketSize(n);
-                }}
-                activeOpacity={0.7}
-                style={[
-                  styles.bracketChip,
-                  {
-                    backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-                    borderColor: selected ? colors.buttonActive : colors.border,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-              >
-                <Text
-                  size="base"
-                  weight={selected ? 'semibold' : 'regular'}
-                  color={selected ? colors.buttonActive : colors.text}
-                >
-                  {n}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-          {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
-        </Text>
+        <TextInput
+          style={[
+            styles.textInput,
+            styles.textArea,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: colors.inputBorder,
+              color: colors.text,
+            },
+          ]}
+          placeholder={t('tournamentCreation.fields.descriptionPlaceholder' as TranslationKey)}
+          placeholderTextColor={colors.textMuted}
+          value={description}
+          onChangeText={setDescription}
+          maxLength={500}
+          multiline
+          autoCapitalize="sentences"
+        />
       </View>
+
+      {canEditStructure && (
+        <>
+          <View style={styles.fieldGroup}>
+            <FieldLabel colors={colors}>
+              {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
+            </FieldLabel>
+            <View style={styles.optionsRow}>
+              {BRACKET_SIZES.map(n => {
+                const selected = n === bracketSize;
+                return (
+                  <TouchableOpacity
+                    key={n}
+                    onPress={() => {
+                      lightHaptic();
+                      setBracketSize(n);
+                    }}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.bracketChip,
+                      {
+                        backgroundColor: selected
+                          ? `${colors.buttonActive}15`
+                          : colors.buttonInactive,
+                        borderColor: selected ? colors.buttonActive : colors.border,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text
+                      size="base"
+                      weight={selected ? 'semibold' : 'regular'}
+                      color={selected ? colors.buttonActive : colors.text}
+                    >
+                      {n}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+              {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
+            </Text>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <FieldLabel colors={colors}>
+              {t('tournamentCreation.fields.matchFormat' as TranslationKey)}
+            </FieldLabel>
+            <View style={styles.optionsRow}>
+              {formatOptions.map(format => {
+                const selected = format === matchFormat;
+                return (
+                  <TouchableOpacity
+                    key={format}
+                    onPress={() => {
+                      lightHaptic();
+                      setMatchFormat(format);
+                    }}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.bracketChip,
+                      {
+                        backgroundColor: selected
+                          ? `${colors.buttonActive}15`
+                          : colors.buttonInactive,
+                        borderColor: selected ? colors.buttonActive : colors.border,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text
+                      size="base"
+                      weight={selected ? 'semibold' : 'regular'}
+                      color={selected ? colors.buttonActive : colors.text}
+                    >
+                      {t(MATCH_FORMAT_KEYS[format].label as TranslationKey)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+              {t(MATCH_FORMAT_KEYS[matchFormat].hint as TranslationKey)}
+            </Text>
+          </View>
+        </>
+      )}
+
+      {!canEditStructure && (
+        <View style={styles.fieldGroup}>
+          <Text size="xs" color={colors.textMuted}>
+            {t('tournamentDetail.editModal.draftOnlyHint' as TranslationKey)}
+          </Text>
+        </View>
+      )}
 
       <DateField
         label={t('tournamentCreation.fields.startDate' as TranslationKey)}
@@ -454,24 +633,35 @@ const DetailsStep: React.FC<{
         <Modal visible={pickerOpen !== null} transparent animationType="slide">
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}>
-              <DateTimePicker
-                value={
-                  (pickerOpen === 'start' ? startDate : endDate) ??
-                  (pickerOpen === 'end' && startDate ? startDate : minimumDate)
-                }
-                mode="date"
-                display="spinner"
-                minimumDate={pickerOpen === 'end' && startDate ? startDate : minimumDate}
-                onChange={onChange}
-                themeVariant={isDark ? 'dark' : 'light'}
-              />
+              {/* Mount the native picker only when a field is tapped. RN renders
+                  Modal children even while hidden, so an always-mounted
+                  DateTimePicker would stall every wizard open. */}
+              {pickerOpen !== null && (
+                <DateTimePicker
+                  value={
+                    (pickerOpen === 'start' ? startDate : endDate) ??
+                    (pickerOpen === 'end' && startDate ? startDate : minimumDate)
+                  }
+                  mode="date"
+                  display="spinner"
+                  minimumDate={
+                    pickerOpen === 'end' && startDate
+                      ? startDate
+                      : isEditMode
+                        ? undefined
+                        : minimumDate
+                  }
+                  onChange={onChange}
+                  themeVariant={isDark ? 'dark' : 'light'}
+                />
+              )}
               <TouchableOpacity
                 onPress={() => setPickerOpen(null)}
                 style={[styles.modalDoneButton, { backgroundColor: colors.buttonActive }]}
                 accessibilityRole="button"
               >
                 <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-                  Done
+                  {t('common.done' as TranslationKey)}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -494,7 +684,7 @@ const DetailsStep: React.FC<{
 };
 
 const VisibilityStep: React.FC<{
-  visibility: Visibility;
+  visibility: Enums<'tournament_visibility'>;
   setVisibility: (v: Visibility) => void;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
@@ -507,10 +697,10 @@ const VisibilityStep: React.FC<{
   >
     <View style={styles.stepHeader}>
       <Text size="lg" weight="bold" color={colors.text}>
-        {t('tournamentCreation.step2Title' as TranslationKey)}
+        {t('tournamentCreation.visibilityStepTitle' as TranslationKey)}
       </Text>
       <Text size="sm" color={colors.textMuted}>
-        {t('tournamentCreation.step2Description' as TranslationKey)}
+        {t('tournamentCreation.visibilityStepDescription' as TranslationKey)}
       </Text>
     </View>
 
@@ -560,12 +750,14 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   onClose,
   onBackToLanding,
   onSuccess,
+  editTournament,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const toast = useToast();
   const isDark = theme === 'dark';
+  const isEditMode = !!editTournament;
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ThemeColors>(
@@ -589,12 +781,34 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     [themeColors, isDark]
   );
 
+  // In edit mode the sport is fixed by the tournament; otherwise it follows the
+  // selected sport context. Mirrors MatchCreationWizard's editMatch handling.
+  const sportName = editTournament?.sport.name ?? selectedSport?.name;
+  const formatOptions = formatOptionsForSport(sportName);
+  // Bracket size & match format lock once a tournament leaves draft.
+  const canEditStructure = !isEditMode || editTournament?.status === 'draft';
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [name, setName] = useState('');
-  const [bracketSize, setBracketSize] = useState<BracketSize>(8);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [visibility, setVisibility] = useState<Visibility>('private');
+  const [name, setName] = useState(editTournament?.name ?? '');
+  const [description, setDescription] = useState(editTournament?.description ?? '');
+  const [bracketSize, setBracketSize] = useState<BracketSize>(
+    (editTournament?.maxParticipants as BracketSize) ?? 8
+  );
+  const [matchFormat, setMatchFormat] = useState<MatchFormat>(
+    () => editTournament?.matchFormat ?? defaultFormatForSport(sportName)
+  );
+  const [startDate, setStartDate] = useState<Date | null>(
+    editTournament ? new Date(editTournament.startDate) : null
+  );
+  const [endDate, setEndDate] = useState<Date | null>(
+    editTournament ? new Date(editTournament.endDate) : null
+  );
+  // Holds the full enum (incl. 'community') so an untouched non-private/public
+  // tournament isn't silently flipped on save; the create path only ever sets
+  // private/public via the option cards.
+  const [visibility, setVisibility] = useState<Enums<'tournament_visibility'>>(
+    editTournament?.visibility ?? 'private'
+  );
   // Fixed to 'open' — the registration-mode picker is hidden in VisibilityStep
   // until the approval/invite_only organizer flows exist. Kept as state so the
   // create payload and resetForm wiring stay intact for an easy restore.
@@ -602,6 +816,18 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
+
+  const startTimeRef = useRef(Date.now());
+  const startedTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!isEditMode && !startedTrackedRef.current && selectedSport?.id) {
+      startedTrackedRef.current = true;
+      Analytics.tournamentCreationStarted({
+        sportId: selectedSport.id,
+        sportName: selectedSport.name ?? '',
+      });
+    }
+  }, [selectedSport, isEditMode]);
 
   const { createTournamentAsync, isCreating } = useCreateTournament({
     onError: err => {
@@ -611,6 +837,21 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         : msg.includes('RATE_LIMITED')
           ? 'tournamentCreation.errors.rateLimited'
           : 'tournamentCreation.errors.generic';
+      warningHaptic();
+      toast.error(t(key as TranslationKey));
+    },
+  });
+
+  const { mutateAsync: updateTournamentAsync, isPending: isUpdating } = useUpdateTournament({
+    onError: e => {
+      const msg = e.message || '';
+      const key = msg.includes('OPTIMISTIC_LOCK_CONFLICT')
+        ? 'tournamentDetail.errors.lockConflict'
+        : msg.includes('FIELD_NOT_EDITABLE')
+          ? 'tournamentDetail.editModal.errors.notEditable'
+          : msg.includes('INVALID_DATES')
+            ? 'tournamentCreation.validation.endBeforeStart'
+            : 'tournamentDetail.editModal.errors.generic';
       warningHaptic();
       toast.error(t(key as TranslationKey));
     },
@@ -643,16 +884,20 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         } else {
           if (endDate < startDate)
             next.endDate = t('tournamentCreation.validation.endBeforeStart' as TranslationKey);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          if (startDate < today)
-            next.startDate = t('tournamentCreation.validation.startInPast' as TranslationKey);
+          // Past-start guard applies to new tournaments only — an existing
+          // tournament may already have started (registration_closed / live).
+          if (!isEditMode) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (startDate < today)
+              next.startDate = t('tournamentCreation.validation.startInPast' as TranslationKey);
+          }
         }
       }
       setErrors(next);
       return Object.values(next).every(v => !v);
     },
-    [name, startDate, endDate, t]
+    [name, startDate, endDate, isEditMode, t]
   );
 
   const goNext = useCallback(() => {
@@ -660,53 +905,134 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       warningHaptic();
       return;
     }
+    Analytics.tournamentCreationStepCompleted({
+      stepIndex: currentStep,
+      stepName: STEP_ANALYTICS_NAMES[currentStep - 1],
+      sportName: sportName ?? '',
+    });
     lightHaptic();
     setCurrentStep(s => Math.min(TOTAL_STEPS, s + 1));
-  }, [currentStep, validateStep]);
+  }, [currentStep, validateStep, sportName]);
 
   const goBack = useCallback(() => {
     setCurrentStep(s => Math.max(1, s - 1));
   }, []);
 
+  const trackAbandoned = useCallback(() => {
+    if (showSuccess) return;
+    Analytics.tournamentCreationAbandoned({
+      lastStep: currentStep,
+      durationSeconds: Math.round((Date.now() - startTimeRef.current) / 1000),
+      sportName: sportName ?? '',
+    });
+  }, [showSuccess, currentStep, sportName]);
+
+  const handleClose = useCallback(() => {
+    trackAbandoned();
+    onClose();
+  }, [trackAbandoned, onClose]);
+
+  const handleBackToLanding = useCallback(() => {
+    trackAbandoned();
+    onBackToLanding();
+  }, [trackAbandoned, onBackToLanding]);
+
   const handleSubmit = useCallback(async () => {
-    if (!selectedSport?.id) return;
     if (!validateStep(1)) {
       setCurrentStep(1);
       return;
     }
     if (!startDate || !endDate) return;
 
+    // ---- Edit mode: diff against the original and PATCH only what changed ----
+    if (isEditMode && editTournament) {
+      const patch: TournamentUpdatePatch = {};
+      const trimmedName = name.trim();
+      if (trimmedName !== editTournament.name) patch.name = trimmedName;
+      const desc = description.trim();
+      if (desc !== (editTournament.description ?? ''))
+        patch.description = desc.length ? desc : null;
+      if (visibility !== editTournament.visibility) patch.visibility = visibility;
+      if (startDate.toISOString() !== new Date(editTournament.startDate).toISOString())
+        patch.startDate = startDate.toISOString();
+      if (endDate.toISOString() !== new Date(editTournament.endDate).toISOString())
+        patch.endDate = endDate.toISOString();
+      if (canEditStructure) {
+        if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
+        if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
+      }
+
+      if (Object.keys(patch).length === 0) {
+        onClose();
+        return;
+      }
+      try {
+        await updateTournamentAsync({
+          tournamentId: editTournament.id,
+          versionWas: editTournament.version,
+          patch,
+        });
+        successHaptic();
+        onSuccess(editTournament.id);
+      } catch {
+        // Error toast handled by hook's onError.
+      }
+      return;
+    }
+
+    // ---- Create mode ----
+    if (!selectedSport?.id) return;
     try {
       const tournament = await createTournamentAsync({
         name: name.trim(),
+        description: description.trim() || undefined,
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        visibility,
+        visibility: visibility as Visibility,
         registrationMode,
+        matchFormat,
       });
       successHaptic();
+      Analytics.tournamentCreated({
+        tournamentId: tournament.id,
+        sportId: selectedSport.id,
+        sportName: selectedSport.name ?? '',
+        maxParticipants: bracketSize,
+        matchFormat,
+        visibility,
+      });
       setCreatedId(tournament.id);
       setShowSuccess(true);
     } catch {
       // Error toast handled by hook's onError.
     }
   }, [
+    isEditMode,
+    editTournament,
+    canEditStructure,
     selectedSport,
     name,
+    description,
     bracketSize,
+    matchFormat,
     startDate,
     endDate,
     visibility,
     registrationMode,
     createTournamentAsync,
+    updateTournamentAsync,
+    onClose,
+    onSuccess,
     validateStep,
   ]);
 
   const handleCreateAnother = useCallback(() => {
     setName('');
+    setDescription('');
     setBracketSize(8);
+    setMatchFormat(defaultFormatForSport(sportName));
     setStartDate(null);
     setEndDate(null);
     setVisibility('private');
@@ -715,7 +1041,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setShowSuccess(false);
     setCreatedId(null);
     setCurrentStep(1);
-  }, []);
+  }, [sportName]);
 
   // Success view
   if (showSuccess) {
@@ -726,7 +1052,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             onPress={onClose}
             style={styles.successCloseButton}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close' as TranslationKey)}
           >
             <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
@@ -775,12 +1101,19 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
       <WizardHeader
         currentStep={currentStep}
+        isEditMode={isEditMode}
         onBack={goBack}
-        onBackToLanding={onBackToLanding}
-        onClose={onClose}
-        sportName={selectedSport?.display_name ?? selectedSport?.name ?? ''}
-        sportKey={selectedSport?.name ?? 'tennis'}
+        onBackToLanding={handleBackToLanding}
+        onClose={handleClose}
+        sportName={
+          editTournament?.sport.display_name ??
+          selectedSport?.display_name ??
+          selectedSport?.name ??
+          ''
+        }
+        sportKey={editTournament?.sport.name ?? selectedSport?.name ?? 'tennis'}
         colors={colors}
+        t={t}
       />
       <ProgressBar currentStep={currentStep} colors={colors} t={t} />
 
@@ -789,8 +1122,14 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           <DetailsStep
             name={name}
             setName={setName}
+            description={description}
+            setDescription={setDescription}
             bracketSize={bracketSize}
             setBracketSize={setBracketSize}
+            matchFormat={matchFormat}
+            setMatchFormat={setMatchFormat}
+            formatOptions={formatOptions}
+            canEditStructure={canEditStructure}
             startDate={startDate}
             endDate={endDate}
             setStartDate={handleSetStartDate}
@@ -800,6 +1139,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             t={t}
             locale={locale}
             isDark={isDark}
+            isEditMode={isEditMode}
           />
         )}
         {currentStep === 2 && (
@@ -815,23 +1155,27 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity
           onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
-          disabled={isCreating}
+          disabled={isCreating || isUpdating}
           style={[
             styles.nextButton,
             { backgroundColor: colors.buttonActive },
-            isCreating && styles.buttonDisabled,
+            (isCreating || isUpdating) && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
         >
-          <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+          <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
             {currentStep === TOTAL_STEPS
-              ? isCreating
-                ? t('tournamentCreation.creating' as TranslationKey)
-                : t('tournamentCreation.createTournament' as TranslationKey)
+              ? isEditMode
+                ? isUpdating
+                  ? t('tournamentDetail.editModal.saving' as TranslationKey)
+                  : t('tournamentDetail.editModal.save' as TranslationKey)
+                : isCreating
+                  ? t('tournamentCreation.creating' as TranslationKey)
+                  : t('tournamentCreation.createTournament' as TranslationKey)
               : t('tournamentCreation.next' as TranslationKey)}
           </Text>
           {currentStep !== TOTAL_STEPS && (
-            <Ionicons name="arrow-forward" size={20} color={colors.buttonTextActive} />
+            <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
           )}
         </TouchableOpacity>
       </View>
@@ -923,6 +1267,10 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     fontSize: 16,
+  },
+  textArea: {
+    minHeight: 96,
+    textAlignVertical: 'top',
   },
   dateButton: {
     flexDirection: 'row',

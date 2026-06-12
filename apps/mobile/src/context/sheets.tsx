@@ -35,6 +35,11 @@ import { ScoreConfirmationActionSheet } from '#/features/matches/components/Scor
 import { RegisterMatchScoreActionSheet } from '#/features/matches/components/RegisterMatchScoreSheet';
 import { CourtSelectionActionSheet } from '#/features/matches/components/CourtSelectionSheet';
 import { ReportIssueActionSheet } from '#/features/matches/components/feedback-steps/ReportIssueSheet';
+// Tournament components
+import { TournamentRecordScoreActionSheet } from '#/features/tournaments/components/TournamentRecordScoreSheet';
+import { TournamentLinkMatchActionSheet } from '#/features/tournaments/components/TournamentLinkMatchSheet';
+import { TournamentEditActionSheet } from '#/features/tournaments/components/TournamentEditSheet';
+import type { TournamentEditData } from '#/features/tournaments';
 // Facilities components
 import { ExternalBookingActionSheet } from '#/features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '#/features/facilities/components/CourtBookingSheet';
@@ -322,6 +327,35 @@ declare module 'react-native-actions-sheet' {
         onDismiss?: () => void;
         isRebuttal?: boolean;
         matchResultId?: string;
+      };
+    }>;
+    'tournament-record-score': SheetDefinition<{
+      payload: {
+        tournamentMatchId: string;
+        tournamentId: string;
+        player1RegId: string;
+        player2RegId: string;
+        player1Name: string;
+        player2Name: string;
+        isPickleball: boolean;
+        onSuccess?: () => void;
+        onDismiss?: () => void;
+      };
+    }>;
+    'tournament-link-match': SheetDefinition<{
+      payload: {
+        tournamentMatchId: string;
+        tournamentId: string;
+        sportId: string;
+        player1UserId: string;
+        player2UserId: string;
+        onSuccess?: () => void;
+        onDismiss?: () => void;
+      };
+    }>;
+    'tournament-edit': SheetDefinition<{
+      payload: {
+        tournament: TournamentEditData;
       };
     }>;
     'court-selection': SheetDefinition<{
@@ -806,6 +840,9 @@ export const Sheets = () => {
         'share-to-facebook': ShareToFacebookActionSheet,
         'score-confirmation': ScoreConfirmationActionSheet,
         'register-match-score': RegisterMatchScoreActionSheet,
+        'tournament-record-score': TournamentRecordScoreActionSheet,
+        'tournament-link-match': TournamentLinkMatchActionSheet,
+        'tournament-edit': TournamentEditActionSheet,
         'court-selection': CourtSelectionActionSheet,
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,

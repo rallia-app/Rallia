@@ -7,7 +7,7 @@
 
 import * as React from 'react';
 import { useCallback } from 'react';
-import { View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Text, Button } from '@rallia/shared-components';
 import {
   lightTheme,
@@ -161,7 +161,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     >
       <TouchableWithoutFeedback onPress={handleCancel}>
         <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={[styles.modal, { backgroundColor: colors.background }]}>
               {/* Title */}
               <Text size="lg" weight="semibold" style={[styles.title, { color: colors.text }]}>

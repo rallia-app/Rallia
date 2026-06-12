@@ -1265,7 +1265,12 @@ export default function CommunityDetailScreen() {
                   { backgroundColor: colors.cardBackground },
                 ],
               ]}
-              onPress={() => setActiveTab(tabKey)}
+              onPress={() => {
+                if (tabKey !== activeTab) {
+                  void lightHaptic();
+                  setActiveTab(tabKey);
+                }
+              }}
             >
               {tabKey === 'games' ? (
                 <SportIcon

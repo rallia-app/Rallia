@@ -28,8 +28,9 @@ import {
   listActiveRegistrations,
   listLinkableMatchesForSlot,
   listMyActiveRegistrations,
+  listMyTournaments,
+  listPublicTournaments,
   listTournamentMatches,
-  listVisibleTournaments,
   openTournamentRegistration,
   overrideTournamentMatchScore,
   registerForTournament,
@@ -72,40 +73,104 @@ function chain(result: { data: unknown; error: unknown }) {
 }
 
 // ---------------------------------------------------------------------------
-// listVisibleTournaments
+// listPublicTournaments
 // ---------------------------------------------------------------------------
 
-describe('listVisibleTournaments', () => {
-  it('returns rows ordered most-recent first', async () => {
-    const rows = [{ id: 't1' }, { id: 't2' }];
-    const { p } = chain({ data: rows, error: null });
+describe('listPublicTournaments', () => {
+  it('returns rows filtered to public visibility and discovery statuses', async () => {
+    const rows = [
+      { id: 't1', tournament_registrations: [{ count: 3 }] },
+      { id: 't2', tournament_registrations: [] },
+    ];
+    const { p, calls } = chain({ data: rows, error: null });
     mockFrom.mockReturnValue(p);
 
-    const out = await listVisibleTournaments();
-    expect(out).toEqual(rows);
+    const out = await listPublicTournaments();
+    expect(out).toEqual([
+      { id: 't1', registration_count: 3 },
+      { id: 't2', registration_count: 0 },
+    ]);
     expect(mockFrom).toHaveBeenCalledWith('tournaments');
+    expect(calls.eq).toHaveBeenCalledWith('visibility', 'public');
+    expect(calls.eq).toHaveBeenCalledWith('tournament_registrations.status', 'registered');
+    expect(calls.in).toHaveBeenCalledWith('status', [
+      'registration_open',
+      'registration_closed',
+      'in_progress',
+    ]);
   });
 
   it('returns [] when supabase returns null data', async () => {
     const { p } = chain({ data: null, error: null });
     mockFrom.mockReturnValue(p);
-    expect(await listVisibleTournaments()).toEqual([]);
+    expect(await listPublicTournaments()).toEqual([]);
   });
 
   it('throws when supabase returns an error', async () => {
     const { p } = chain({ data: null, error: { message: 'boom' } });
     mockFrom.mockReturnValue(p);
-    await expect(listVisibleTournaments()).rejects.toThrow('boom');
+    await expect(listPublicTournaments()).rejects.toThrow('boom');
   });
 
-  it('applies optional sport filter and excludeArchived filter', async () => {
+  it('applies optional sport filter', async () => {
     const { p, calls } = chain({ data: [], error: null });
     mockFrom.mockReturnValue(p);
 
-    await listVisibleTournaments({ sportId: 's1', excludeArchived: true });
+    await listPublicTournaments({ sportId: 's1' });
 
     expect(calls.eq).toHaveBeenCalledWith('sport_id', 's1');
-    expect(calls.neq).toHaveBeenCalledWith('status', 'archived');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listMyTournaments
+// ---------------------------------------------------------------------------
+
+describe('listMyTournaments', () => {
+  it('combines organized and registered tournaments via or()', async () => {
+    const regChain = chain({
+      data: [{ tournament_id: 'r1' }, { tournament_id: 'r2' }],
+      error: null,
+    });
+    const tnChain = chain({
+      data: [{ id: 't1', tournament_registrations: [{ count: 2 }] }],
+      error: null,
+    });
+    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(tnChain.p);
+
+    const out = await listMyTournaments('u1');
+    expect(out).toEqual([{ id: 't1', registration_count: 2 }]);
+    expect(mockFrom).toHaveBeenNthCalledWith(1, 'tournament_registrations');
+    expect(mockFrom).toHaveBeenNthCalledWith(2, 'tournaments');
+    expect(tnChain.calls.or).toHaveBeenCalledWith('organizer_id.eq.u1,id.in.(r1,r2)');
+    expect(tnChain.calls.neq).toHaveBeenCalledWith('status', 'archived');
+  });
+
+  it('falls back to an organizer-only filter when there are no registrations', async () => {
+    const regChain = chain({ data: [], error: null });
+    const tnChain = chain({ data: [], error: null });
+    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(tnChain.p);
+
+    await listMyTournaments('u1');
+
+    expect(tnChain.calls.eq).toHaveBeenCalledWith('organizer_id', 'u1');
+    expect(tnChain.calls.or).toBeUndefined();
+  });
+
+  it('applies optional sport filter', async () => {
+    const regChain = chain({ data: [], error: null });
+    const tnChain = chain({ data: [], error: null });
+    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(tnChain.p);
+
+    await listMyTournaments('u1', { sportId: 's1' });
+
+    expect(tnChain.calls.eq).toHaveBeenCalledWith('sport_id', 's1');
+  });
+
+  it('throws when the registrations query errors', async () => {
+    const regChain = chain({ data: null, error: { message: 'boom' } });
+    mockFrom.mockReturnValueOnce(regChain.p);
+    await expect(listMyTournaments('u1')).rejects.toThrow('boom');
   });
 });
 
@@ -410,41 +475,34 @@ describe('listTournamentMatches', () => {
 // ---------------------------------------------------------------------------
 
 describe('listLinkableMatchesForSlot', () => {
+  type MatchResultEmbed = {
+    id: string;
+    is_verified: boolean;
+    verified_at: string | null;
+    winning_team: number | null;
+    team1_score: number | null;
+    team2_score: number | null;
+    match_set: Array<{ set_number: number; team1_score: number; team2_score: number }>;
+  };
   type MatchRow = {
     id: string;
     match_date: string;
     start_time: string;
     end_time: string;
-    match_result:
-      | {
-          id: string;
-          is_verified: boolean;
-          verified_at: string | null;
-          winning_team: number | null;
-          team1_score: number | null;
-          team2_score: number | null;
-        }
-      | Array<{
-          id: string;
-          is_verified: boolean;
-          verified_at: string | null;
-          winning_team: number | null;
-          team1_score: number | null;
-          team2_score: number | null;
-        }>
-      | null;
-    match_participant: Array<{ player_id: string; status: string }>;
+    match_result: MatchResultEmbed | MatchResultEmbed[] | null;
+    match_participant: Array<{ player_id: string; status: string; team_number: number | null }>;
   };
 
   function row(opts: {
     id: string;
     embedAsArray?: boolean;
     verified?: boolean;
-    participants?: Array<{ player_id: string; status?: string }>;
+    participants?: Array<{ player_id: string; status?: string; team_number?: number | null }>;
     nullResult?: boolean;
     winning_team?: number | null;
+    sets?: Array<{ set_number: number; team1_score: number; team2_score: number }>;
   }): MatchRow {
-    const mr = opts.nullResult
+    const mr: MatchResultEmbed | null = opts.nullResult
       ? null
       : {
           id: `mr-${opts.id}`,
@@ -453,6 +511,7 @@ describe('listLinkableMatchesForSlot', () => {
           winning_team: 'winning_team' in opts ? (opts.winning_team ?? null) : 1,
           team1_score: 6,
           team2_score: 3,
+          match_set: opts.sets ?? [{ set_number: 1, team1_score: 6, team2_score: 3 }],
         };
     return {
       id: opts.id,
@@ -460,9 +519,10 @@ describe('listLinkableMatchesForSlot', () => {
       start_time: '12:00',
       end_time: '13:00',
       match_result: opts.embedAsArray && mr ? [mr] : mr,
-      match_participant: (opts.participants ?? []).map(p => ({
+      match_participant: (opts.participants ?? []).map((p, i) => ({
         player_id: p.player_id,
         status: p.status ?? 'joined',
+        team_number: p.team_number ?? i + 1,
       })),
     };
   }
@@ -510,7 +570,44 @@ describe('listLinkableMatchesForSlot', () => {
       winning_team: 1,
       team1_score: 6,
       team2_score: 3,
+      team1_user_id: 'u1',
+      team2_user_id: 'u2',
     });
+  });
+
+  it('returns per-set scores ordered by set number', async () => {
+    arrange([
+      row({
+        id: 'm-sets',
+        participants: [{ player_id: 'u1' }, { player_id: 'u2' }],
+        sets: [
+          { set_number: 2, team1_score: 4, team2_score: 6 },
+          { set_number: 1, team1_score: 6, team2_score: 3 },
+          { set_number: 3, team1_score: 6, team2_score: 2 },
+        ],
+      }),
+    ]);
+    const out = await listLinkableMatchesForSlot(params);
+    expect(out[0].sets).toEqual([
+      { team1: 6, team2: 3 },
+      { team1: 4, team2: 6 },
+      { team1: 6, team2: 2 },
+    ]);
+  });
+
+  it('maps each score to its player by team_number, regardless of row order', async () => {
+    arrange([
+      row({
+        id: 'm-teams',
+        // u2 is on team 1, u1 is on team 2 — independent of array order
+        participants: [
+          { player_id: 'u1', team_number: 2 },
+          { player_id: 'u2', team_number: 1 },
+        ],
+      }),
+    ]);
+    const out = await listLinkableMatchesForSlot(params);
+    expect(out[0]).toMatchObject({ team1_user_id: 'u2', team2_user_id: 'u1' });
   });
 
   it('handles match_result returned as a single-element array (PostgREST shape variation)', async () => {
