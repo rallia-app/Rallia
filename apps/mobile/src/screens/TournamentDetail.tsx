@@ -52,6 +52,7 @@ import {
   useCloseTournamentRegistration,
   useRegisterForTournament,
   useWithdrawFromTournament,
+  useRemoveTournamentRegistration,
   useTournamentMatches,
   useGenerateTournamentBracket,
   useCancelTournament,
@@ -455,13 +456,17 @@ function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | u
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
-/** Registered players rendered with the shared community PlayerCard. */
+/** Registered players rendered with the shared community PlayerCard.
+ *  onRemovePress is set only when the caller may remove registrants
+ *  (organizer, pre-bracket); the organizer's own row never shows it. */
 const ParticipantsSection: React.FC<{
   players: PlayerSearchResult[];
   onPlayerPress: (player: PlayerSearchResult) => void;
+  onRemovePress?: (player: PlayerSearchResult) => void;
+  currentUserId?: string;
   colors: ScreenColors;
-  t: (k: TranslationKey) => string;
-}> = ({ players, onPlayerPress, colors, t }) => {
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ players, onPlayerPress, onRemovePress, currentUserId, colors, t }) => {
   if (players.length === 0) {
     return (
       <View style={styles.participantEmpty}>
@@ -483,6 +488,17 @@ const ParticipantsSection: React.FC<{
             player.last_seen_at
               ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
               : false
+          }
+          trailingAction={
+            onRemovePress && player.id !== currentUserId
+              ? {
+                  icon: 'person-remove-outline',
+                  accessibilityLabel: t('tournamentDetail.dashboard.participants.removeLabel', {
+                    name: getHumanName(player, ''),
+                  }),
+                  onPress: onRemovePress,
+                }
+              : undefined
           }
         />
       ))}
@@ -533,9 +549,15 @@ export const TournamentDetail: React.FC = () => {
                   ? 'tournamentDetail.errors.startPassed'
                   : lower.includes('withdraw_not_allowed')
                     ? 'tournamentDetail.errors.withdrawClosed'
-                    : lower.includes('tournament_reg_closed') || lower.includes('reg_closed')
-                      ? 'tournamentDetail.errors.regClosed'
-                      : fallbackKey;
+                    : lower.includes('registration_removed')
+                      ? 'tournamentDetail.errors.registrationRemoved'
+                      : lower.includes('remove_not_allowed')
+                        ? 'tournamentDetail.errors.removeNotAllowed'
+                        : lower.includes('registration_not_found')
+                          ? 'tournamentDetail.errors.lockConflict'
+                          : lower.includes('tournament_reg_closed') || lower.includes('reg_closed')
+                            ? 'tournamentDetail.errors.regClosed'
+                            : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -562,7 +584,20 @@ export const TournamentDetail: React.FC = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<PlayerSearchResult | null>(null);
   const insets = useSafeAreaInsets();
+
+  const removeRegistrant = useRemoveTournamentRegistration({
+    onSuccess: () => {
+      successHaptic();
+      setRemoveTarget(null);
+      toast.success(t('tournamentDetail.removeModal.success'));
+    },
+    onError: e => {
+      setRemoveTarget(null);
+      showError(e.message, 'tournamentDetail.errors.removeFailed');
+    },
+  });
 
   const cancel = useCancelTournament({
     onSuccess: () => {
@@ -709,6 +744,39 @@ export const TournamentDetail: React.FC = () => {
   // Seed-ordered participants enriched with rating/reputation/online, fetched
   // server-side so the Players tab renders full community PlayerCards.
   const { data: participantPlayers = [] } = useTournamentParticipants(params.tournamentId);
+
+  // Registrant removal is a pre-bracket organizer tool; participant rows map
+  // back to their registration (id + version) through user_id.
+  const canRemoveRegistrants =
+    isOrganizer &&
+    (tournament?.status === 'registration_open' || tournament?.status === 'registration_closed');
+
+  const registrationByUserId = useMemo(() => {
+    const map = new Map<string, (typeof registrations)[number]>();
+    for (const r of registrations) map.set(r.user_id, r);
+    return map;
+  }, [registrations]);
+
+  const handleRemovePress = useCallback((player: PlayerSearchResult) => {
+    lightHaptic();
+    setRemoveTarget(player);
+  }, []);
+
+  const confirmRemove = useCallback(() => {
+    if (!tournament || !removeTarget) return;
+    const reg = registrationByUserId.get(removeTarget.id);
+    if (!reg) {
+      setRemoveTarget(null);
+      warningHaptic();
+      toast.error(t('tournamentDetail.errors.lockConflict'));
+      return;
+    }
+    removeRegistrant.mutate({
+      registrationId: reg.id,
+      versionWas: reg.version,
+      tournamentId: tournament.id,
+    });
+  }, [tournament, removeTarget, registrationByUserId, removeRegistrant, toast, t]);
 
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
@@ -1471,6 +1539,8 @@ export const TournamentDetail: React.FC = () => {
             <ParticipantsSection
               players={participantPlayers}
               onPlayerPress={handlePlayerPress}
+              onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
+              currentUserId={userId}
               colors={colors}
               t={t}
             />
@@ -1664,6 +1734,20 @@ export const TournamentDetail: React.FC = () => {
           if (!tournament) return;
           archive.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
         }}
+      />
+
+      <ConfirmationModal
+        visible={!!removeTarget && !!tournament}
+        title={t('tournamentDetail.removeModal.title')}
+        message={t('tournamentDetail.removeModal.message', {
+          name: removeTarget ? getHumanName(removeTarget, '') : '',
+        })}
+        confirmLabel={t('tournamentDetail.removeModal.confirm')}
+        cancelLabel={t('tournamentDetail.removeModal.keepIt')}
+        destructive
+        isLoading={removeRegistrant.isPending}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={confirmRemove}
       />
     </SafeAreaView>
   );

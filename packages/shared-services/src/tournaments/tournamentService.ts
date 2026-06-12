@@ -698,3 +698,19 @@ export async function withdrawFromTournament(
   if (error) throw new Error(error.message);
   return data as TournamentRegistration;
 }
+
+/**
+ * Organizer removes a registrant pre-bracket. Status flips to 'disqualified',
+ * which is terminal — the removed player cannot re-register.
+ */
+export async function removeTournamentRegistration(
+  registrationId: string,
+  versionWas: number
+): Promise<TournamentRegistration> {
+  const { data, error } = await supabase.rpc('tournament_remove_registration', {
+    p_registration_id: registrationId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentRegistration;
+}

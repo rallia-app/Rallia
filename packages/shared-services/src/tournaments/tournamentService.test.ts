@@ -34,6 +34,7 @@ import {
   openTournamentRegistration,
   overrideTournamentMatchScore,
   registerForTournament,
+  removeTournamentRegistration,
   withdrawFromTournament,
 } from './tournamentService';
 import { supabase } from '../supabase';
@@ -390,6 +391,12 @@ describe('RPC wrappers', () => {
       name: 'withdrawFromTournament',
       fn: () => withdrawFromTournament('r1', 2),
       rpc: 'tournament_withdraw',
+      args: { p_registration_id: 'r1', p_version_was: 2 },
+    },
+    {
+      name: 'removeTournamentRegistration',
+      fn: () => removeTournamentRegistration('r1', 2),
+      rpc: 'tournament_remove_registration',
       args: { p_registration_id: 'r1', p_version_was: 2 },
     },
     {

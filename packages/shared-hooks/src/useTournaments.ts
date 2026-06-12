@@ -19,6 +19,7 @@ import {
   closeTournamentRegistration,
   registerForTournament,
   withdrawFromTournament,
+  removeTournamentRegistration,
   listTournamentMatches,
   generateTournamentBracket,
   listLinkableMatchesForSlot,
@@ -162,6 +163,7 @@ function useTournamentDetailInvalidator() {
   return (tournamentId: string) => {
     qc.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.registrations(tournamentId) });
+    qc.invalidateQueries({ queryKey: tournamentKeys.participants(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.matches(tournamentId) });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myRegistration', tournamentId] });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myActiveRegistrations'] });
@@ -432,6 +434,34 @@ export function useWithdrawFromTournament(options: MutationOptions<TournamentReg
   >({
     mutationFn: ({ registrationId, versionWas }) =>
       withdrawFromTournament(registrationId, versionWas),
+    onSuccess: (r, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(r);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Organizer removes a registrant pre-bracket. Permanent: the removed player
+ * cannot re-register for this tournament.
+ */
+export function useRemoveTournamentRegistration(
+  options: MutationOptions<TournamentRegistration> = {}
+) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { registrationId: string; versionWas: number; tournamentId: string }
+  >({
+    mutationFn: ({ registrationId, versionWas }) =>
+      removeTournamentRegistration(registrationId, versionWas),
     onSuccess: (r, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(r);

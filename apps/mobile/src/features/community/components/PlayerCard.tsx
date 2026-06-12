@@ -44,6 +44,13 @@ interface PlayerCardProps {
   reputationDisplay?: ReputationDisplay;
   /** Online status computed by parent from last_seen_at */
   isOnline?: boolean;
+  /** Optional trailing icon button in the name row (e.g. remove from list). */
+  trailingAction?: {
+    icon: keyof typeof Ionicons.glyphMap;
+    color?: string;
+    accessibilityLabel: string;
+    onPress: (player: PlayerSearchResult) => void;
+  };
 }
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
@@ -65,6 +72,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   showFavorite = false,
   reputationDisplay,
   isOnline = false,
+  trailingAction,
 }) => {
   const { t } = useTranslation();
   // Use the app's theme context (not device colorScheme) — the rest of the
@@ -230,6 +238,21 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     name={isFavorite ? 'heart' : 'heart-outline'}
                     size={20}
                     color={isFavorite ? '#EF4444' : mutedColor}
+                  />
+                </TouchableOpacity>
+              )}
+              {trailingAction && (
+                <TouchableOpacity
+                  onPress={() => trailingAction.onPress(player)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.favoriteButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={trailingAction.accessibilityLabel}
+                >
+                  <Ionicons
+                    name={trailingAction.icon}
+                    size={20}
+                    color={trailingAction.color ?? mutedColor}
                   />
                 </TouchableOpacity>
               )}

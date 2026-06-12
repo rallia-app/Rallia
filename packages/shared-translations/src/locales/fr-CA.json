@@ -4182,7 +4182,8 @@
       "participants": {
         "title": "Joueurs",
         "empty": "Aucun joueur inscrit pour le moment",
-        "pending": "En attente"
+        "pending": "En attente",
+        "removeLabel": "Retirer {name}"
       }
     },
     "labels": {
@@ -4272,6 +4273,13 @@
       "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
       "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
     },
+    "removeModal": {
+      "title": "Retirer ce joueur ?",
+      "message": "Retirer {name} du tournoi ? Cette personne ne pourra plus s'inscrire à ce tournoi.",
+      "confirm": "Retirer",
+      "keepIt": "Annuler",
+      "success": "Joueur retiré"
+    },
     "cancelledNotice": {
       "title": "Tournoi annulé",
       "reason": "Raison : {reason}"
@@ -4330,7 +4338,10 @@
       "regClosed": "Les inscriptions ne sont plus ouvertes.",
       "startPassed": "La date de début est passée. Modifiez les dates avant d'ouvrir les inscriptions.",
       "notInvited": "Ce tournoi est sur invitation et vous n'avez pas été invité.",
-      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
+      "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
+      "registrationRemoved": "L'organisateur t'a retiré de ce tournoi. Tu peux plus t'y inscrire."
     }
   },
   "tournamentCreation": {

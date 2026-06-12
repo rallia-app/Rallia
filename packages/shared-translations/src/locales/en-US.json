@@ -4182,7 +4182,8 @@
       "participants": {
         "title": "Players",
         "empty": "No players registered yet",
-        "pending": "Pending"
+        "pending": "Pending",
+        "removeLabel": "Remove {name}"
       }
     },
     "labels": {
@@ -4272,6 +4273,13 @@
       "errorNotArchivable": "This tournament can't be archived yet.",
       "errorLockConflict": "Someone else made changes — please refresh and try again."
     },
+    "removeModal": {
+      "title": "Remove this player?",
+      "message": "Remove {name} from the tournament? They won't be able to register for this tournament again.",
+      "confirm": "Remove",
+      "keepIt": "Cancel",
+      "success": "Player removed"
+    },
     "cancelledNotice": {
       "title": "Tournament cancelled",
       "reason": "Reason: {reason}"
@@ -4330,7 +4338,10 @@
       "regClosed": "Registration is no longer open.",
       "startPassed": "The start date has passed. Update the dates before opening registration.",
       "notInvited": "This tournament is invite-only and you haven't been invited.",
-      "lockConflict": "Someone else made changes — please refresh and try again."
+      "lockConflict": "Someone else made changes — please refresh and try again.",
+      "removeFailed": "Couldn't remove the player. Please try again.",
+      "removeNotAllowed": "Players can't be removed once the bracket exists.",
+      "registrationRemoved": "The organizer removed you from this tournament. You can't register again."
     }
   },
   "tournamentCreation": {
