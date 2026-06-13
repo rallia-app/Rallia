@@ -90,17 +90,17 @@ const MESSAGES = {
       "What's been working well for you, and what trips you up sometimes?",
     ],
   },
-  // Arm B: direct interview ask + Calendly link (utm-tagged for booking attribution).
+  // Arm B: direct interview ask + Calendly link.
   test_link: {
     fr: [
       'Salut {{name}}!',
       "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
-      `Aurais-tu 15 min pour qu'on jase de ton expérience sur appel? Tu peux réserver le moment qui te convient ici: ${CALENDLY}?utm_source=interview_test`,
+      `Aurais-tu 15 min pour qu'on jase de ton expérience sur appel? Tu peux réserver le moment qui te convient ici: ${CALENDLY}`,
     ],
     en: [
       'Hey {{name}}!',
       "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
-      `Would you have 15 min for a quick call about your experience? You can grab a time that works for you here: ${CALENDLY}?utm_source=interview_test`,
+      `Would you have 15 min for a quick call about your experience? You can grab a time that works for you here: ${CALENDLY}`,
     ],
   },
   // Arm C: direct interview ask, no link.
