@@ -399,6 +399,7 @@ export function TournamentRecordScoreActionSheet({
                     placeholderTextColor={colors.textMuted}
                     value={set.player1Score !== null ? String(set.player1Score) : ''}
                     onChangeText={v => handleScoreChange(idx, 'player1', v)}
+                    testID={`score-input-p1-${idx}`}
                   />
                 </View>
                 <Text
@@ -428,6 +429,7 @@ export function TournamentRecordScoreActionSheet({
                     placeholderTextColor={colors.textMuted}
                     value={set.player2Score !== null ? String(set.player2Score) : ''}
                     onChangeText={v => handleScoreChange(idx, 'player2', v)}
+                    testID={`score-input-p2-${idx}`}
                   />
                 </View>
               </View>
@@ -484,6 +486,7 @@ export function TournamentRecordScoreActionSheet({
             onPress={handleSubmit}
             disabled={!canSubmit}
             activeOpacity={0.8}
+            testID="record-score-save"
           >
             {override.isPending ? (
               <ActivityIndicator color={colors.buttonTextActive} />

@@ -59,6 +59,10 @@ export function getConversationDisplayName(
     return conversation.title || t('chat.filters.match');
   }
 
+  if (conversation.conversation_type === 'tournament') {
+    return conversation.tournament_info?.name || conversation.title || t('chat.filters.tournament');
+  }
+
   return conversation.title || t('chat.conversation.groupChat');
 }
 

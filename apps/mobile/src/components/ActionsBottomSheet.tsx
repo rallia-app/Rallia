@@ -90,9 +90,17 @@ interface ActionItemProps {
   description: string;
   onPress: () => void;
   colors: ThemeColors;
+  testID?: string;
 }
 
-const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPress, colors }) => {
+const ActionItem: React.FC<ActionItemProps> = ({
+  icon,
+  title,
+  description,
+  onPress,
+  colors,
+  testID,
+}) => {
   const { selectedSport } = useSport();
   return (
     <TouchableOpacity
@@ -102,6 +110,7 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
         onPress();
       }}
       activeOpacity={0.7}
+      testID={testID}
     >
       <View style={[styles.actionIconContainer, { backgroundColor: colors.buttonInactive }]}>
         {icon === 'sport' ? (
@@ -169,6 +178,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
             description={t('actions.createTournamentDescription')}
             onPress={onCreateTournament}
             colors={colors}
+            testID="action-create-tournament"
           />
         )}
 
@@ -392,7 +402,7 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Handle tournament wizard success - close sheet and navigate to detail screen
   const handleTournamentSuccess = useCallback(
-    (tournamentId: string) => {
+    (tournamentId: string, openInviteSheet = false) => {
       successHaptic();
       closeSheet();
       setShowTournamentWizard(false);
@@ -403,11 +413,19 @@ export const ActionsBottomSheet: React.FC = () => {
       // the navigation transition isn't competing with the sheet collapse.
       setTimeout(() => {
         if (navigationRef.isReady()) {
-          navigationRef.navigate('TournamentDetail', { tournamentId });
+          navigationRef.navigate('TournamentDetail', { tournamentId, openInviteSheet });
         }
       }, 300);
     },
     [closeSheet, slideProgress]
+  );
+
+  // "Share invite link" on the success screen: same close-and-navigate, but
+  // the detail screen opens the invite sheet on arrival. The actions sheet is
+  // fully closed before any sheet shows, so no sheet-to-sheet transition.
+  const handleTournamentShareInvite = useCallback(
+    (tournamentId: string) => handleTournamentSuccess(tournamentId, true),
+    [handleTournamentSuccess]
   );
 
   // Handle invite wizard close - slide back to actions list
@@ -642,6 +660,7 @@ export const ActionsBottomSheet: React.FC = () => {
               onClose={closeSheet}
               onBackToLanding={handleTournamentWizardClose}
               onSuccess={handleTournamentSuccess}
+              onShareInvite={handleTournamentShareInvite}
             />
           </Animated.View>
         )}

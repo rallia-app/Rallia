@@ -2031,6 +2031,7 @@
       "community": "Communautés",
       "club": "Clubs",
       "match": "Matchs",
+      "tournament": "Tournois",
       "blocked": "Bloqués",
       "favorites": "Favoris",
       "archived": "Archivés",
@@ -4108,6 +4109,9 @@
     "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
     "loadError": "Impossible de charger le tournoi",
     "retry": "Réessayer",
+    "chat": {
+      "open": "Clavardage du tournoi"
+    },
     "status": {
       "draft": "Brouillon",
       "registration_open": "Inscriptions ouvertes",
@@ -4159,12 +4163,15 @@
         "title": "Inscriptions ouvertes",
         "full": "Tournoi complet",
         "fullDescription": "Toutes les places sont prises.",
-        "spotsLeft": "{n} places restantes"
+        "spotsLeft": "{n} places restantes",
+        "spotsLeftTeams": "{n} places d'équipe restantes"
       },
       "withdrawCta": {
         "title": "T'es inscrit",
+        "titleTeam": "Ton équipe est inscrite",
         "titlePending": "Inscription en attente",
         "description": "Ta place est réservée. Un changement de plan? Tu peux te retirer tant que les inscriptions sont ouvertes.",
+        "descriptionTeam": "La place de ton équipe est réservée. Un changement de plan? Te retirer enlève les deux joueurs tant que les inscriptions sont ouvertes.",
         "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes."
       },
       "addMyselfCta": {
@@ -4228,11 +4235,32 @@
       "closing": "Fermeture...",
       "registrationPendingLabel": "Inscription en attente d'approbation",
       "registeredLabel": "Vous êtes inscrit",
+      "registeredWithPartnerLabel": "T'es inscrit avec {name}",
       "generateBracket": "Générer le tableau",
       "generating": "Génération du tableau...",
       "cancelTournament": "Annuler le tournoi",
       "archiveTournament": "Archiver le tournoi",
-      "editDetails": "Modifier les détails"
+      "editDetails": "Modifier les détails",
+      "invitePlayers": "Inviter des joueurs"
+    },
+    "invite": {
+      "title": "Inviter des joueurs",
+      "description": "Toute personne avec ce lien peut s'inscrire au tournoi, même s'il est privé.",
+      "generating": "Préparation de votre lien d'invitation...",
+      "scanToRegister": "Balayez pour vous inscrire au tournoi",
+      "share": "Partager le lien d'invitation",
+      "shareTitle": "Rejoignez {name} sur Rallia",
+      "shareMessage": "Vous êtes invité à mon tournoi {name} sur Rallia. Inscrivez-vous ici : {link}",
+      "resetLink": "Réinitialiser le lien",
+      "resetWarning": "Le lien actuel cessera de fonctionner. Les joueurs déjà inscrits gardent leur place.",
+      "resetDone": "Nouveau lien d'invitation prêt",
+      "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
+      "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation."
+    },
+    "inviteLanding": {
+      "invalidTitle": "Lien d'invitation non valide",
+      "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demandez un nouveau lien à l'organisateur.",
+      "joinedToast": "Vous êtes inscrit! On se voit au tournoi."
     },
     "editModal": {
       "title": "Modifier le tournoi",
@@ -4305,8 +4333,18 @@
       "title": "Lier une partie jouée",
       "empty": "Aucune partie trouvée",
       "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
+      "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, confirme le score, puis reviens ici pour la lier.",
       "attachFailed": "Impossible de lier la partie",
       "linkCta": "Lier cette partie"
+    },
+    "partner": {
+      "title": "Choisis ton partenaire",
+      "searchPlaceholder": "Chercher des joueurs",
+      "recentHeader": "Partenaires récents",
+      "empty": "Pas encore de partenaire récent. Cherche pour trouver ton partenaire.",
+      "noResults": "Aucun joueur trouvé",
+      "confirmCta": "S'inscrire avec {name}",
+      "confirmCtaEmpty": "Choisis un partenaire"
     },
     "override": {
       "title": "Inscrire le résultat",
@@ -4341,7 +4379,12 @@
       "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
       "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
       "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
-      "registrationRemoved": "L'organisateur t'a retiré de ce tournoi. Tu peux plus t'y inscrire."
+      "registrationRemoved": "L'organisateur t'a retiré de ce tournoi. Tu peux plus t'y inscrire.",
+      "partnerRequired": "Choisis un partenaire pour t'inscrire à ce tournoi en double.",
+      "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
+      "partnerSportMismatch": "Ton partenaire n'a pas ce sport actif sur son profil.",
+      "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
+      "inviteInvalid": "Ce lien d'invitation n'est plus valide."
     }
   },
   "tournamentCreation": {
@@ -4363,6 +4406,7 @@
     "success": "Tournoi créé!",
     "successDescription": "Votre brouillon de tournoi est prêt. Ouvrez les inscriptions quand vous voulez inviter des joueurs.",
     "viewTournament": "Voir le tournoi",
+    "shareInvite": "Partager le lien d'invitation",
     "createAnother": "En créer un autre",
     "fields": {
       "name": "Nom",
@@ -4371,6 +4415,10 @@
       "descriptionPlaceholder": "Dis aux joueurs à quoi s'attendre (optionnel)",
       "maxParticipants": "Taille du tableau",
       "maxParticipantsHint": "Nombre de joueurs que le tableau accueille",
+      "maxTeams": "Taille du tableau (équipes)",
+      "maxTeamsHint": "Nombre d'équipes dans le tableau. Chaque équipe compte 2 joueurs.",
+      "entryFormat": "Type d'inscription",
+      "entryFormatDoublesHint": "Les joueurs s'inscrivent en équipes de 2. Un joueur inscrit la paire et choisit son partenaire.",
       "matchFormat": "Format des parties",
       "matchFormatOneSet": "1 manche",
       "matchFormatOneSetHint": "Une seule manche décide du gagnant",

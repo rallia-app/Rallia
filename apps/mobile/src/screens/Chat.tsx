@@ -60,6 +60,7 @@ const SERVER_FILTERS = new Set<ChatInboxFilter>([
   'player_group',
   'community',
   'match',
+  'tournament',
 ]);
 
 const STATUS_FILTERS = new Set<ChatInboxFilter>(['pinned', 'favorites', 'muted', 'blocked']);

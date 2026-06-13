@@ -79,6 +79,22 @@ const REFERENCE_RESPONSE_NOTIFICATION_TYPES: string[] = [
   'reference_request_declined',
 ];
 
+/**
+ * Tournament-related notification types that should navigate to tournament detail
+ */
+const TOURNAMENT_NOTIFICATION_TYPES: string[] = [
+  'tournament_partner_registered',
+  'tournament_partner_withdrew',
+  'tournament_registration_received',
+  'tournament_registration_approved',
+  'tournament_registration_removed',
+  'tournament_bracket_published',
+  'tournament_match_completed',
+  'tournament_updated',
+  'tournament_cancelled',
+  'tournament_completed',
+];
+
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 
@@ -474,6 +490,19 @@ const Notifications: React.FC = () => {
           });
           communityNavigation.navigate('CommunityDetail', {
             communityId: notification.target_id,
+          });
+          return;
+        }
+
+        // Handle tournament notifications - navigate to TournamentDetail
+        if (TOURNAMENT_NOTIFICATION_TYPES.includes(notification.type)) {
+          Logger.logUserAction('notification_tournament_tapped', {
+            notificationId: notification.id,
+            tournamentId: notification.target_id,
+            type: notification.type,
+          });
+          appNavigation.navigate('TournamentDetail', {
+            tournamentId: notification.target_id,
           });
           return;
         }

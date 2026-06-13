@@ -2031,6 +2031,7 @@
       "community": "Communities",
       "club": "Clubs",
       "match": "Matches",
+      "tournament": "Tournaments",
       "blocked": "Blocked",
       "favorites": "Favorites",
       "archived": "Archived",
@@ -4108,6 +4109,9 @@
     "notFoundDescription": "This tournament may have been deleted or you don't have permission to view it.",
     "loadError": "Couldn't load the tournament",
     "retry": "Try again",
+    "chat": {
+      "open": "Tournament chat"
+    },
     "status": {
       "draft": "Draft",
       "registration_open": "Registration open",
@@ -4159,12 +4163,15 @@
         "title": "Registration open",
         "full": "Tournament full",
         "fullDescription": "All spots are taken.",
-        "spotsLeft": "{n} spots left"
+        "spotsLeft": "{n} spots left",
+        "spotsLeftTeams": "{n} team spots left"
       },
       "withdrawCta": {
         "title": "You're registered",
+        "titleTeam": "Your team is registered",
         "titlePending": "Registration pending",
         "description": "Your spot is locked in. Plans changed? You can withdraw while registration is open.",
+        "descriptionTeam": "Your team's spot is locked in. Plans changed? Withdrawing pulls both of you while registration is open.",
         "descriptionPending": "The organizer still needs to approve your spot. You can withdraw while registration is open."
       },
       "addMyselfCta": {
@@ -4228,11 +4235,32 @@
       "closing": "Closing...",
       "registrationPendingLabel": "Registration pending approval",
       "registeredLabel": "You're registered",
+      "registeredWithPartnerLabel": "You're registered with {name}",
       "generateBracket": "Generate bracket",
       "generating": "Generating bracket...",
       "cancelTournament": "Cancel tournament",
       "archiveTournament": "Archive tournament",
-      "editDetails": "Edit details"
+      "editDetails": "Edit details",
+      "invitePlayers": "Invite players"
+    },
+    "invite": {
+      "title": "Invite players",
+      "description": "Anyone with this link can register for this tournament, even if it is private.",
+      "generating": "Preparing your invite link...",
+      "scanToRegister": "Scan to register for the tournament",
+      "share": "Share invite link",
+      "shareTitle": "Join {name} on Rallia",
+      "shareMessage": "You're invited to my tournament {name} on Rallia. Register here: {link}",
+      "resetLink": "Reset link",
+      "resetWarning": "The current link will stop working. Players already registered keep their spot.",
+      "resetDone": "New invite link ready",
+      "resetFailed": "Couldn't reset the link. Please try again.",
+      "linkInfo": "Anyone who uses this link is registered right away, even if registration normally requires approval."
+    },
+    "inviteLanding": {
+      "invalidTitle": "Invite link not valid",
+      "invalidDescription": "This link was reset or has expired. Ask the organizer for a new one.",
+      "joinedToast": "You're in! See you at the tournament."
     },
     "editModal": {
       "title": "Edit tournament",
@@ -4305,8 +4333,18 @@
       "title": "Link a played match",
       "empty": "No matches found",
       "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
+      "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match",
       "linkCta": "Link this game"
+    },
+    "partner": {
+      "title": "Pick your partner",
+      "searchPlaceholder": "Search players",
+      "recentHeader": "Recent partners",
+      "empty": "No recent partners yet. Search to find your partner.",
+      "noResults": "No players found",
+      "confirmCta": "Register with {name}",
+      "confirmCtaEmpty": "Pick a partner"
     },
     "override": {
       "title": "Record the result",
@@ -4341,7 +4379,12 @@
       "lockConflict": "Someone else made changes — please refresh and try again.",
       "removeFailed": "Couldn't remove the player. Please try again.",
       "removeNotAllowed": "Players can't be removed once the bracket exists.",
-      "registrationRemoved": "The organizer removed you from this tournament. You can't register again."
+      "registrationRemoved": "The organizer removed you from this tournament. You can't register again.",
+      "partnerRequired": "Pick a partner to register for this doubles tournament.",
+      "partnerAlreadyRegistered": "That player is already registered in this tournament.",
+      "partnerSportMismatch": "Your partner doesn't have this sport active on their profile.",
+      "partnerInvalid": "That partner can't be registered. Pick someone else.",
+      "inviteInvalid": "This invite link is no longer valid."
     }
   },
   "tournamentCreation": {
@@ -4363,6 +4406,7 @@
     "success": "Tournament created!",
     "successDescription": "Your draft tournament is ready. Open registration when you're ready to invite players.",
     "viewTournament": "View tournament",
+    "shareInvite": "Share invite link",
     "createAnother": "Create another",
     "fields": {
       "name": "Name",
@@ -4371,6 +4415,10 @@
       "descriptionPlaceholder": "Tell players what to expect (optional)",
       "maxParticipants": "Bracket size",
       "maxParticipantsHint": "Number of players the bracket holds",
+      "maxTeams": "Bracket size (teams)",
+      "maxTeamsHint": "Number of teams the bracket holds. Each team is 2 players.",
+      "entryFormat": "Entry format",
+      "entryFormatDoublesHint": "Players register in teams of 2. One player registers the pair and picks their partner.",
       "matchFormat": "Scoring format",
       "matchFormatOneSet": "1 set",
       "matchFormatOneSetHint": "A single set decides the winner",

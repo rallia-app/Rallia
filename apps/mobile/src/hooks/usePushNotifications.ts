@@ -16,6 +16,7 @@ import { registerPushToken, supabase, unregisterPushToken, Logger } from '@ralli
 import {
   navigateFromOutside,
   navigateToChatConversationFromOutside,
+  navigateToTournamentDetailFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
   navigateToUserProfileFromOutside,
@@ -92,6 +93,22 @@ const PAYOUTS_NOTIFICATION_TYPES = [
   'payouts_expired_refunded',
   'reimbursement_received',
   'reimbursement_all_received',
+] as const;
+
+/**
+ * Tournament notifications — all deep-link to the tournament detail screen.
+ */
+const TOURNAMENT_NOTIFICATION_TYPES = [
+  'tournament_partner_registered',
+  'tournament_partner_withdrew',
+  'tournament_registration_received',
+  'tournament_registration_approved',
+  'tournament_registration_removed',
+  'tournament_bracket_published',
+  'tournament_match_completed',
+  'tournament_updated',
+  'tournament_cancelled',
+  'tournament_completed',
 ] as const;
 
 /**
@@ -496,6 +513,24 @@ export function usePushNotifications(
           conversationId,
           type: notificationType,
         });
+      }
+    }
+
+    // Handle tournament notifications — deep-link to the tournament detail screen.
+    if (notificationType) {
+      const isTournamentNotification = TOURNAMENT_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof TOURNAMENT_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isTournamentNotification) {
+        const tournamentId = (data.tournamentId ?? data.targetId) as string | undefined;
+        if (tournamentId) {
+          navigateToTournamentDetailFromOutside(tournamentId);
+          Logger.logUserAction('push_notification_deep_link', {
+            tournamentId,
+            type: notificationType,
+          });
+        }
       }
     }
   }, []);

@@ -1,0 +1,31 @@
+# Lifecycle B: runs immediately after segment A + server-side seeding of a
+# second registrant. Continues on the already-open TournamentDetail screen.
+appId: com.mathisl971.rallia-app
+tags: [tournaments]
+---
+# Close registration
+- scrollUntilVisible:
+    element:
+      id: "cta-close-registration"
+    direction: UP
+    timeout: 10000
+- tapOn:
+    id: "cta-close-registration"
+- extendedWaitUntil:
+    visible:
+      id: "cta-generate-bracket"
+    timeout: 20000
+
+# Generate the bracket
+- tapOn:
+    id: "cta-generate-bracket"
+- extendedWaitUntil:
+    visible: ".*Tournament in progress.*"
+    timeout: 30000
+
+# Bracket tab shows the generated final
+- tapOn: "Bracket"
+- extendedWaitUntil:
+    visible: ".*Final.*"
+    timeout: 10000
+- takeScreenshot: /tmp/maestro-lifecycle-b

@@ -803,6 +803,8 @@ function CenterTabButton({
               openSheet();
             }}
             activeOpacity={0.85}
+            testID="tab-create-fab"
+            accessibilityLabel="Create"
             style={{
               flex: 1,
               borderRadius: CENTER_TAB_SIZE / 2,

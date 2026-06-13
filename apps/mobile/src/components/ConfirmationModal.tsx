@@ -61,6 +61,10 @@ export interface ConfirmationModalProps {
    */
   confirmLabel?: string;
 
+  /** testIDs for automation. */
+  confirmTestID?: string;
+  cancelTestID?: string;
+
   /**
    * Label for cancel button
    * @default "Cancel"
@@ -107,6 +111,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   visible,
   onClose,
   onConfirm,
+  confirmTestID,
+  cancelTestID,
   title,
   message,
   additionalInfo,
@@ -215,6 +221,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   onPress={handleCancel}
                   isDark={isDark}
                   style={styles.buttonFlex}
+                  testID={cancelTestID}
                 >
                   {cancelLabel}
                 </Button>
@@ -227,6 +234,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   onPress={handleConfirm}
                   isDark={isDark}
                   style={styles.buttonFlex}
+                  testID={confirmTestID}
                 >
                   {confirmLabel}
                 </Button>

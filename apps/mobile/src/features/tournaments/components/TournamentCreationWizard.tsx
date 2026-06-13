@@ -59,6 +59,14 @@ type BracketSize = (typeof BRACKET_SIZES)[number];
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>; // V1: private/public only
 type RegistrationMode = Enums<'tournament_registration_mode'>;
 type MatchFormat = Enums<'match_format'>;
+type EntryFormat = Enums<'entry_format'>;
+
+const ENTRY_FORMATS: readonly EntryFormat[] = ['singles', 'doubles', 'mixed_doubles'];
+const ENTRY_FORMAT_KEYS: Record<EntryFormat, string> = {
+  singles: 'tournamentDetail.values.singles',
+  doubles: 'tournamentDetail.values.doubles',
+  mixed_doubles: 'tournamentDetail.values.mixedDoubles',
+};
 
 const TENNIS_FORMATS: readonly MatchFormat[] = ['one_set', 'two_of_three', 'three_of_five'];
 const PICKLEBALL_FORMATS: readonly MatchFormat[] = [
@@ -141,6 +149,8 @@ export interface TournamentCreationWizardProps {
   onClose: () => void;
   onBackToLanding: () => void;
   onSuccess: (tournamentId: string) => void;
+  /** Success-screen "Share invite link" — navigates to detail with the invite sheet open. */
+  onShareInvite?: (tournamentId: string) => void;
   /** When present, the wizard runs in edit mode against this tournament. */
   editTournament?: TournamentEditData;
 }
@@ -346,7 +356,8 @@ const DateField: React.FC<{
   error?: string;
   colors: ThemeColors;
   locale: string;
-}> = ({ label, date, onPress, placeholder, error, colors, locale }) => {
+  testID?: string;
+}> = ({ label, date, onPress, placeholder, error, colors, locale, testID }) => {
   const formatted = date
     ? date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })
     : placeholder;
@@ -364,6 +375,7 @@ const DateField: React.FC<{
           },
         ]}
         accessibilityRole="button"
+        testID={testID}
       >
         <Text size="base" color={date ? colors.text : colors.textMuted}>
           {formatted}
@@ -389,6 +401,10 @@ const DetailsStep: React.FC<{
   matchFormat: MatchFormat;
   setMatchFormat: (v: MatchFormat) => void;
   formatOptions: readonly MatchFormat[];
+  entryFormat: EntryFormat;
+  setEntryFormat: (v: EntryFormat) => void;
+  /** Entry format is fixed at creation; hidden when editing. */
+  canPickEntryFormat: boolean;
   /** Bracket size & format are only editable while the tournament is a draft. */
   canEditStructure: boolean;
   startDate: Date | null;
@@ -412,6 +428,9 @@ const DetailsStep: React.FC<{
   matchFormat,
   setMatchFormat,
   formatOptions,
+  entryFormat,
+  setEntryFormat,
+  canPickEntryFormat,
   canEditStructure,
   startDate,
   endDate,
@@ -425,20 +444,48 @@ const DetailsStep: React.FC<{
   isEditMode,
 }) => {
   const [pickerOpen, setPickerOpen] = useState<'start' | 'end' | null>(null);
+  // Tracks the value the spinner currently shows, so "Done" commits it even
+  // when the user never scrolls (iOS onChange only fires on an actual change).
+  const [pickerValue, setPickerValue] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const minimumDate = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
 
+  const openPicker = useCallback(
+    (which: 'start' | 'end') => {
+      const seed =
+        which === 'start' ? (startDate ?? minimumDate) : (endDate ?? startDate ?? minimumDate);
+      setPickerValue(seed);
+      setPickerOpen(which);
+    },
+    [startDate, endDate, minimumDate]
+  );
+
+  const commitDate = useCallback(
+    (which: 'start' | 'end', value: Date) => {
+      if (which === 'start') setStartDate(value);
+      else setEndDate(value);
+    },
+    [setStartDate, setEndDate]
+  );
+
   const onChange = useCallback(
     (_event: unknown, selected?: Date) => {
-      if (Platform.OS === 'android') setPickerOpen(null);
-      if (!selected) return;
-      if (pickerOpen === 'start') setStartDate(selected);
-      if (pickerOpen === 'end') setEndDate(selected);
+      // Android's default picker has no "Done" — commit and close on change.
+      if (Platform.OS === 'android') {
+        setPickerOpen(null);
+        if (selected && pickerOpen) commitDate(pickerOpen, selected);
+        return;
+      }
+      if (selected) setPickerValue(selected);
     },
-    [pickerOpen, setStartDate, setEndDate]
+    [pickerOpen, commitDate]
   );
 
   return (
@@ -479,6 +526,7 @@ const DetailsStep: React.FC<{
           autoCapitalize="sentences"
           autoCorrect={false}
           returnKeyType="done"
+          testID="tournament-name-input"
         />
         {errors.name && (
           <Text size="xs" color={colors.error} style={styles.errorText}>
@@ -513,9 +561,61 @@ const DetailsStep: React.FC<{
 
       {canEditStructure && (
         <>
+          {canPickEntryFormat && (
+            <View style={styles.fieldGroup}>
+              <FieldLabel colors={colors}>
+                {t('tournamentCreation.fields.entryFormat' as TranslationKey)}
+              </FieldLabel>
+              <View style={styles.optionsRow}>
+                {ENTRY_FORMATS.map(format => {
+                  const selected = format === entryFormat;
+                  return (
+                    <TouchableOpacity
+                      key={format}
+                      testID={`entry-format-${format}`}
+                      onPress={() => {
+                        lightHaptic();
+                        setEntryFormat(format);
+                      }}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.bracketChip,
+                        {
+                          backgroundColor: selected
+                            ? `${colors.buttonActive}15`
+                            : colors.buttonInactive,
+                          borderColor: selected ? colors.buttonActive : colors.border,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                    >
+                      <Text
+                        size="base"
+                        weight={selected ? 'semibold' : 'regular'}
+                        color={selected ? colors.buttonActive : colors.text}
+                      >
+                        {t(ENTRY_FORMAT_KEYS[format] as TranslationKey)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {entryFormat !== 'singles' && (
+                <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                  {t('tournamentCreation.fields.entryFormatDoublesHint' as TranslationKey)}
+                </Text>
+              )}
+            </View>
+          )}
+
           <View style={styles.fieldGroup}>
             <FieldLabel colors={colors}>
-              {t('tournamentCreation.fields.maxParticipants' as TranslationKey)}
+              {t(
+                (entryFormat === 'singles'
+                  ? 'tournamentCreation.fields.maxParticipants'
+                  : 'tournamentCreation.fields.maxTeams') as TranslationKey
+              )}
             </FieldLabel>
             <View style={styles.optionsRow}>
               {BRACKET_SIZES.map(n => {
@@ -552,7 +652,11 @@ const DetailsStep: React.FC<{
               })}
             </View>
             <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-              {t('tournamentCreation.fields.maxParticipantsHint' as TranslationKey)}
+              {t(
+                (entryFormat === 'singles'
+                  ? 'tournamentCreation.fields.maxParticipantsHint'
+                  : 'tournamentCreation.fields.maxTeamsHint') as TranslationKey
+              )}
             </Text>
           </View>
 
@@ -612,21 +716,23 @@ const DetailsStep: React.FC<{
       <DateField
         label={t('tournamentCreation.fields.startDate' as TranslationKey)}
         date={startDate}
-        onPress={() => setPickerOpen('start')}
+        onPress={() => openPicker('start')}
         placeholder={t('tournamentCreation.fields.startDatePlaceholder' as TranslationKey)}
         error={errors.startDate}
         colors={colors}
         locale={locale}
+        testID="tournament-start-date"
       />
 
       <DateField
         label={t('tournamentCreation.fields.endDate' as TranslationKey)}
         date={endDate}
-        onPress={() => setPickerOpen('end')}
+        onPress={() => openPicker('end')}
         placeholder={t('tournamentCreation.fields.endDatePlaceholder' as TranslationKey)}
         error={errors.endDate}
         colors={colors}
         locale={locale}
+        testID="tournament-end-date"
       />
 
       {Platform.OS === 'ios' ? (
@@ -638,10 +744,7 @@ const DetailsStep: React.FC<{
                   DateTimePicker would stall every wizard open. */}
               {pickerOpen !== null && (
                 <DateTimePicker
-                  value={
-                    (pickerOpen === 'start' ? startDate : endDate) ??
-                    (pickerOpen === 'end' && startDate ? startDate : minimumDate)
-                  }
+                  value={pickerValue}
                   mode="date"
                   display="spinner"
                   minimumDate={
@@ -656,9 +759,13 @@ const DetailsStep: React.FC<{
                 />
               )}
               <TouchableOpacity
-                onPress={() => setPickerOpen(null)}
+                onPress={() => {
+                  if (pickerOpen) commitDate(pickerOpen, pickerValue);
+                  setPickerOpen(null);
+                }}
                 style={[styles.modalDoneButton, { backgroundColor: colors.buttonActive }]}
                 accessibilityRole="button"
+                testID="tournament-date-done"
               >
                 <Text size="base" weight="semibold" color={colors.buttonTextActive}>
                   {t('common.done' as TranslationKey)}
@@ -669,10 +776,7 @@ const DetailsStep: React.FC<{
         </Modal>
       ) : pickerOpen !== null ? (
         <DateTimePicker
-          value={
-            (pickerOpen === 'start' ? startDate : endDate) ??
-            (pickerOpen === 'end' && startDate ? startDate : minimumDate)
-          }
+          value={pickerValue}
           mode="date"
           display="default"
           minimumDate={pickerOpen === 'end' && startDate ? startDate : minimumDate}
@@ -750,6 +854,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   onClose,
   onBackToLanding,
   onSuccess,
+  onShareInvite,
   editTournament,
 }) => {
   const { theme } = useTheme();
@@ -797,6 +902,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [matchFormat, setMatchFormat] = useState<MatchFormat>(
     () => editTournament?.matchFormat ?? defaultFormatForSport(sportName)
   );
+  // Entry format is fixed at creation (the server's tournament_update doesn't
+  // accept it), so edit mode never surfaces the picker.
+  const [entryFormat, setEntryFormat] = useState<EntryFormat>('singles');
   const [startDate, setStartDate] = useState<Date | null>(
     editTournament ? new Date(editTournament.startDate) : null
   );
@@ -993,6 +1101,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         visibility: visibility as Visibility,
         registrationMode,
         matchFormat,
+        entryFormat,
       });
       successHaptic();
       Analytics.tournamentCreated({
@@ -1033,6 +1142,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setDescription('');
     setBracketSize(8);
     setMatchFormat(defaultFormatForSport(sportName));
+    setEntryFormat('singles');
     setStartDate(null);
     setEndDate(null);
     setVisibility('private');
@@ -1068,18 +1178,46 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           </Text>
 
           <View style={styles.successButtons}>
-            <TouchableOpacity
-              onPress={() => {
-                if (createdId) onSuccess(createdId);
-              }}
-              style={[styles.successButton, { backgroundColor: colors.buttonActive }]}
-              accessibilityRole="button"
-            >
-              <Ionicons name="eye-outline" size={20} color={colors.buttonTextActive} />
-              <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-                {t('tournamentCreation.viewTournament' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
+            {!isEditMode && onShareInvite && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (createdId) onShareInvite(createdId);
+                }}
+                style={[styles.successButton, { backgroundColor: colors.buttonActive }]}
+                accessibilityRole="button"
+                testID="tournament-success-share"
+              >
+                <Ionicons name="share-social-outline" size={20} color={colors.buttonTextActive} />
+                <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+                  {t('tournamentCreation.shareInvite' as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {(() => {
+              // Share (when present) takes the primary slot; View drops to secondary.
+              const viewIsPrimary = isEditMode || !onShareInvite;
+              const fg = viewIsPrimary ? colors.buttonTextActive : colors.buttonActive;
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (createdId) onSuccess(createdId);
+                  }}
+                  style={[
+                    styles.successButton,
+                    {
+                      backgroundColor: viewIsPrimary ? colors.buttonActive : colors.buttonInactive,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  testID="tournament-success-view"
+                >
+                  <Ionicons name="eye-outline" size={20} color={fg} />
+                  <Text size="base" weight="semibold" color={fg}>
+                    {t('tournamentCreation.viewTournament' as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
             <TouchableOpacity
               onPress={handleCreateAnother}
               style={[styles.successButton, { backgroundColor: colors.buttonInactive }]}
@@ -1129,6 +1267,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             matchFormat={matchFormat}
             setMatchFormat={setMatchFormat}
             formatOptions={formatOptions}
+            entryFormat={entryFormat}
+            setEntryFormat={setEntryFormat}
+            canPickEntryFormat={!isEditMode}
             canEditStructure={canEditStructure}
             startDate={startDate}
             endDate={endDate}
@@ -1162,6 +1303,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             (isCreating || isUpdating) && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
+          testID="tournament-wizard-submit"
         >
           <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
             {currentStep === TOTAL_STEPS

@@ -1,0 +1,105 @@
+# E2E (organizer): create -> edit (rename) -> verify -> cancel -> verify.
+appId: com.mathisl971.rallia-app
+tags: [tournaments]
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "tab-create-fab"
+    timeout: 120000
+- tapOn:
+    id: "tab-create-fab"
+- extendedWaitUntil:
+    visible:
+      id: "action-create-tournament"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "action-create-tournament"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-name-input"
+    timeout: 15000
+- tapOn:
+    id: "tournament-name-input"
+- inputText: "Maestro Edit Cup"
+- tapOn: "done"
+- scrollUntilVisible:
+    element:
+      id: "tournament-start-date"
+    direction: DOWN
+    timeout: 12000
+- tapOn:
+    id: "tournament-start-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-end-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-wizard-submit"
+- extendedWaitUntil:
+    visible: ".*Visibility.*"
+    timeout: 10000
+- tapOn:
+    id: "tournament-wizard-submit"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-success-view"
+    timeout: 30000
+- tapOn:
+    id: "tournament-success-view"
+
+# --- EDIT: overflow -> Edit details -> rename -> Next -> Save changes ---
+# The overflow menu renders as a flattened Modal node (items not individually
+# addressable), so menu items are tapped by coordinate (fixed top-right card).
+- extendedWaitUntil:
+    visible:
+      id: "tournament-overflow-menu"
+    timeout: 20000
+- tapOn:
+    id: "tournament-overflow-menu"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    point: "71%,16%"     # Edit details (1st menu item)
+- extendedWaitUntil:
+    visible:
+      id: "tournament-name-input"
+    timeout: 15000
+- tapOn:
+    id: "tournament-name-input"
+- eraseText
+- inputText: "Maestro Renamed Cup"
+- tapOn: "done"
+- tapOn:
+    id: "tournament-wizard-submit"   # Next -> Visibility step
+- extendedWaitUntil:
+    visible: ".*Visibility.*"
+    timeout: 10000
+- tapOn:
+    id: "tournament-wizard-submit"   # Save changes
+- extendedWaitUntil:
+    visible: "Maestro Renamed Cup"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-edited
+
+# --- CANCEL: overflow -> Cancel tournament -> confirm ---
+- tapOn:
+    id: "tournament-overflow-menu"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    point: "71%,28%"     # Cancel tournament (3rd menu item, draft state)
+- extendedWaitUntil:
+    visible:
+      id: "confirm-cancel-tournament"
+    timeout: 10000
+- tapOn:
+    id: "confirm-cancel-tournament"
+- extendedWaitUntil:
+    visible: ".*cancelled.*"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-cancelled

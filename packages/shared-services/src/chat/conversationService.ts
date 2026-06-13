@@ -51,6 +51,10 @@ interface ConversationRPCRow {
   match_date: string | null;
   match_start_time: string | null;
   match_sport_name: string | null;
+  tournament_id: string | null;
+  tournament_name: string | null;
+  tournament_status: string | null;
+  tournament_sport_name: string | null;
 }
 
 // ============================================================================
@@ -113,6 +117,16 @@ export async function getPlayerConversations(
         };
       }
 
+      // Build tournament_info for tournament-linked chats
+      let tournamentInfo: ConversationPreview['tournament_info'] = null;
+      if (row.tournament_id && row.tournament_name) {
+        tournamentInfo = {
+          name: row.tournament_name,
+          sport_name: row.tournament_sport_name || '',
+          status: row.tournament_status || '',
+        };
+      }
+
       return {
         id: row.id,
         conversation_type: row.conversation_type as ConversationType,
@@ -131,6 +145,8 @@ export async function getPlayerConversations(
         match_info: matchInfo,
         network_id: row.network_id,
         network_type: row.network_type,
+        tournament_id: row.tournament_id,
+        tournament_info: tournamentInfo,
       };
     });
 
@@ -408,6 +424,36 @@ export async function getMatchChat(matchId: string): Promise<Conversation | null
 }
 
 // ============================================================================
+// TOURNAMENT CHAT OPERATIONS
+// ============================================================================
+// Tournament chats mirror match chats: created and synced entirely by Postgres
+// triggers on `tournaments`, `tournament_registrations` and
+// `tournament_co_organizers` (see migration 20260613100100). Call sites read
+// the conversation by tournament_id when they need it.
+
+/**
+ * Check if a tournament chat exists (and is visible to the caller) for a
+ * given tournament. RLS restricts visibility to conversation participants.
+ */
+export async function getTournamentChat(tournamentId: string): Promise<Conversation | null> {
+  const { data, error } = await supabase
+    .from('conversation')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Not found
+    }
+    console.error('Error fetching tournament chat:', error);
+    return null;
+  }
+
+  return data;
+}
+
+// ============================================================================
 // UPDATE OPERATIONS
 // ============================================================================
 
@@ -555,6 +601,10 @@ interface FilteredConversationRPCRow {
   match_date: string | null;
   match_start_time: string | null;
   match_sport_name: string | null;
+  tournament_id: string | null;
+  tournament_name: string | null;
+  tournament_status: string | null;
+  tournament_sport_name: string | null;
 }
 
 /**
@@ -646,6 +696,15 @@ export async function getPlayerConversationsFiltered(
           };
         }
 
+        let tournamentInfo: ConversationPreview['tournament_info'] = null;
+        if (row.tournament_id && row.tournament_name) {
+          tournamentInfo = {
+            name: row.tournament_name,
+            sport_name: row.tournament_sport_name || '',
+            status: row.tournament_status || '',
+          };
+        }
+
         return {
           id: row.id,
           conversation_type: row.conversation_type as ConversationType,
@@ -664,6 +723,8 @@ export async function getPlayerConversationsFiltered(
           match_info: matchInfo,
           network_id: row.network_id,
           network_type: row.network_type,
+          tournament_id: row.tournament_id,
+          tournament_info: tournamentInfo,
         };
       }
     );

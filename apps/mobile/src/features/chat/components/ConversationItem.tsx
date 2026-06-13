@@ -80,6 +80,8 @@ function getIconForType(type: string): keyof typeof Ionicons.glyphMap {
       return 'business';
     case 'match':
       return 'trophy';
+    case 'tournament':
+      return 'podium';
     case 'announcement':
       return 'megaphone';
     default:
@@ -120,6 +122,19 @@ function getConversationInfo(
         null,
       iconName: 'trophy',
       sportIconName: conversation.match_info?.sport_name ?? null,
+      isOnline: false,
+      lastSeen: null,
+    };
+  }
+
+  if (conversation.conversation_type === 'tournament') {
+    return {
+      name,
+      avatar:
+        getCoverImageUrl(conversation.cover_image_url, { width: 400, height: 400, quality: 75 }) ||
+        null,
+      iconName: 'podium',
+      sportIconName: conversation.tournament_info?.sport_name ?? null,
       isOnline: false,
       lastSeen: null,
     };

@@ -101,6 +101,7 @@ import {
   markSheetShown,
 } from '#/utils/referralInviteFrequency';
 import { runWhenIdle } from '#/utils/runWhenIdle';
+import { IS_E2E } from '#/utils/e2e';
 
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -341,6 +342,11 @@ const Home = () => {
                 openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
               }
             });
+          } else if (nav.screen === 'TournamentDetail' && nav.params?.tournamentId) {
+            appNavigation.navigate('TournamentDetail', {
+              tournamentId: nav.params.tournamentId,
+              inviteToken: nav.params.inviteToken,
+            });
           }
         } catch {
           // Ignore parse errors
@@ -396,6 +402,11 @@ const Home = () => {
                 }
               })
               .catch(() => {});
+          } else if (pending.type === 'tournament') {
+            appNavigation.navigate('TournamentDetail', {
+              tournamentId: pending.targetId,
+              inviteToken: pending.shareToken,
+            });
           }
         } catch {
           // Ignore parse errors
@@ -571,6 +582,13 @@ const Home = () => {
             } else {
               toast.error(r.error || t('community.joinFailedViaLink'));
             }
+          } else if (payload.invitationType === 'tournament' && payload.targetId) {
+            // Preview-then-confirm: the detail screen resolves the token and
+            // owns the register CTA — no auto-registration here.
+            appNavigation.navigate('TournamentDetail', {
+              tournamentId: payload.targetId,
+              inviteToken: payload.shareToken,
+            });
           }
           // referral-only: nothing to do, already persisted to AsyncStorage by the store
           break;
@@ -608,6 +626,7 @@ const Home = () => {
   // Deferred past first paint — this is a periodic prompt, never time-sensitive.
   const { stats: referralStats, statsLoading: referralStatsLoading } = useReferral(player?.id);
   useEffect(() => {
+    if (IS_E2E) return;
     if (!isOnboarded || !player?.id || referralStatsLoading) return;
 
     const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
@@ -1501,6 +1520,7 @@ const Home = () => {
             style={styles.signInButton}
             leftIcon={<Ionicons name="log-in-outline" size={20} color="#FFFFFF" />}
             isDark={isDark}
+            testID="home-signin"
           >
             {t('auth.signIn')}
           </Button>

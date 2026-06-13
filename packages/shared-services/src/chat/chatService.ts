@@ -54,6 +54,7 @@ export {
   createConversation,
   getOrCreateDirectConversation,
   getMatchChat,
+  getTournamentChat,
   syncMatchConversationTitle,
   updateConversation,
   getConversationByNetworkId,

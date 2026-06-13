@@ -17,6 +17,7 @@ export type InvitationType =
   | 'match'
   | 'group'
   | 'community'
+  | 'tournament'
   | 'flyer'
   | 'poster'
   | 'social';
@@ -136,7 +137,16 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
 
       const type: InvitationType =
         typeParam &&
-        ['match', 'group', 'community', 'referral', 'flyer', 'poster', 'social'].includes(typeParam)
+        [
+          'match',
+          'group',
+          'community',
+          'tournament',
+          'referral',
+          'flyer',
+          'poster',
+          'social',
+        ].includes(typeParam)
           ? (typeParam as InvitationType)
           : 'referral';
 

@@ -1,0 +1,87 @@
+# Lifecycle A: create -> view -> open registration -> organizer self-register.
+# (A second registrant is seeded server-side between segments A and B.)
+appId: com.mathisl971.rallia-app
+tags: [tournaments]
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "tab-create-fab"
+    timeout: 120000
+- tapOn:
+    id: "tab-create-fab"
+- extendedWaitUntil:
+    visible:
+      id: "action-create-tournament"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "action-create-tournament"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-name-input"
+    timeout: 15000
+- tapOn:
+    id: "tournament-name-input"
+- inputText: "Maestro Lifecycle Cup"
+- tapOn: "done"
+- scrollUntilVisible:
+    element:
+      id: "tournament-start-date"
+    direction: DOWN
+    timeout: 12000
+- tapOn:
+    id: "tournament-start-date"
+# Spin the day wheel forward — opening registration requires start_date > now,
+# so "today" (committed as midnight) would be rejected (TOURNAMENT_START_PASSED).
+- swipe:
+    start: "50%, 78%"
+    end: "50%, 68%"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-end-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-wizard-submit"
+- extendedWaitUntil:
+    visible: ".*Visibility.*"
+    timeout: 10000
+- tapOn:
+    id: "tournament-wizard-submit"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-success-view"
+    timeout: 30000
+
+# View tournament -> detail
+- tapOn:
+    id: "tournament-success-view"
+- extendedWaitUntil:
+    visible:
+      id: "cta-open-registration"
+    timeout: 20000
+
+# Open registration
+- tapOn:
+    id: "cta-open-registration"
+- extendedWaitUntil:
+    visible:
+      id: "cta-close-registration"
+    timeout: 20000
+
+# Organizer adds himself as a player
+- scrollUntilVisible:
+    element:
+      id: "cta-add-myself"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "cta-add-myself"
+- extendedWaitUntil:
+    visible:
+      id: "cta-withdraw"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-lifecycle-a

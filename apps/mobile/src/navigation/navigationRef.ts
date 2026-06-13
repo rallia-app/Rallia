@@ -104,3 +104,13 @@ export function navigateToChatConversationFromOutside(conversationId: string, ti
     navigationRef.navigate('ChatConversation', { conversationId, title });
   }
 }
+
+/**
+ * Navigate to TournamentDetail from outside the NavigationContainer.
+ * Used for tournament push notification tap handling.
+ */
+export function navigateToTournamentDetailFromOutside(tournamentId: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('TournamentDetail', { tournamentId });
+  }
+}

@@ -1,0 +1,22 @@
+# E2E: invite-link redemption. A PRIVATE tournament organized by another user
+# is reachable only via the invite token: deep link -> preview -> register.
+# Fixture (tournament + link) is seeded server-side; ids passed via env:
+#   maestro test -e TOURNAMENT_ID=... -e INVITE_TOKEN=... invite-redemption.yaml
+appId: com.mathisl971.rallia-app
+tags: [tournaments]
+---
+- openLink: "rallia://invite/E2ETEST?type=tournament&id=${TOURNAMENT_ID}&share=${INVITE_TOKEN}"
+- extendedWaitUntil:
+    visible: "Maestro Invite Open"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "cta-register"
+    timeout: 15000
+- tapOn:
+    id: "cta-register"
+- extendedWaitUntil:
+    visible:
+      id: "cta-withdraw"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-invite-redeemed

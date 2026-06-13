@@ -126,6 +126,7 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
           becomes visible (needed to keep the keyboard open across the slide). */}
       <TextInput
         ref={hiddenInputRef}
+        testID="otp-code-input"
         style={styles.hiddenInput}
         value={code}
         onChangeText={handleCodeChange}
@@ -138,7 +139,11 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
       />
 
       {/* Visual Code Display Boxes */}
-      <Pressable style={styles.codeInputContainer} onPress={focusHiddenInput}>
+      <Pressable
+        style={styles.codeInputContainer}
+        onPress={focusHiddenInput}
+        testID="otp-code-boxes"
+      >
         {Array.from({ length: 6 }).map((_, index) => {
           const digit = code[index] || '';
           const isFilled = digit !== '';

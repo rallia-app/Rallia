@@ -6,9 +6,11 @@
  */
 
 import type { Tables, Enums } from '@rallia/shared-types';
+import type { UtmParams } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
 import type { PlayerSearchResult } from '../players/playerService';
+import { generateInvitationLink } from '../invitation/invitationLinkService';
 
 export type Tournament = Tables<'tournaments'>;
 export type TournamentRegistration = Tables<'tournament_registrations'>;
@@ -72,8 +74,8 @@ export async function listPublicTournaments(
 
 /**
  * List the caller's tournaments — ones they organize (any status, incl.
- * drafts) plus ones they hold an active registration in. Archived rows are
- * excluded; most-recent first.
+ * drafts) plus ones they hold an active registration in (as captain or
+ * doubles partner). Archived rows are excluded; most-recent first.
  */
 export async function listMyTournaments(
   userId: string,
@@ -82,7 +84,7 @@ export async function listMyTournaments(
   const { data: regs, error: regsError } = await supabase
     .from('tournament_registrations')
     .select('tournament_id')
-    .eq('user_id', userId)
+    .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
     .in('status', ['registered', 'pending']);
   if (regsError) throw new Error(regsError.message);
 
@@ -264,7 +266,7 @@ export async function listTournamentParticipants(
 ): Promise<PlayerSearchResult[]> {
   const { data: regs, error: regErr } = await supabase
     .from('tournament_registrations')
-    .select('user_id, seed_rank, registered_at, id')
+    .select('user_id, partner_user_id, seed_rank, registered_at, id')
     .eq('tournament_id', tournamentId)
     .in('status', ['registered', 'pending']);
   if (regErr) throw new Error(regErr.message);
@@ -280,7 +282,10 @@ export async function listTournamentParticipants(
     if (ta !== tb) return ta - tb;
     return a.id.localeCompare(b.id);
   });
-  const playerIds = ordered.map(r => r.user_id);
+  // One row per pair member, captain first, entry order preserved.
+  const playerIds = ordered.flatMap(r =>
+    r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id]
+  );
 
   // Sport drives the rating lookup (ratings are per-sport).
   const { data: tourney, error: tErr } = await supabase
@@ -338,27 +343,98 @@ export async function listTournamentParticipants(
     });
   }
 
-  return ordered.map(r => {
-    const prof = profileById.get(r.user_id);
-    const rep = repById.get(r.user_id);
+  return playerIds.map(playerId => {
+    const prof = profileById.get(playerId);
+    const rep = repById.get(playerId);
     return {
-      id: r.user_id,
+      id: playerId,
       first_name: prof?.first_name ?? '',
       last_name: prof?.last_name ?? '',
       display_name: null,
       profile_picture_url: prof?.profile_picture_url ?? null,
       city: null,
       gender: null,
-      rating: ratingByPlayer.get(r.user_id) ?? null,
+      rating: ratingByPlayer.get(playerId) ?? null,
       latitude: null,
       longitude: null,
       distance_meters: null,
       reputation_tier: rep?.reputation_tier ?? null,
       reputation_score: rep?.reputation_score ?? null,
       reputation_is_public: rep?.is_public ?? false,
-      last_seen_at: lastSeenById.get(r.user_id) ?? null,
+      last_seen_at: lastSeenById.get(playerId) ?? null,
     };
   });
+}
+
+/**
+ * The caller's most recent doubles teammates in a sport — players who shared
+ * their side (same team_number) in a joined doubles game. Most recent first,
+ * deduped, capped at 5. Feeds the "recent partners" section of the tournament
+ * partner picker.
+ */
+export async function listRecentDoublesPartners(
+  userId: string,
+  sportId: string
+): Promise<PlayerProfile[]> {
+  const { data: mine, error: mineErr } = await supabase
+    .from('match_participant')
+    .select('match_id, team_number, match!inner ( id, sport_id, format, match_date )')
+    .eq('player_id', userId)
+    .eq('status', 'joined')
+    .eq('match.format', 'doubles')
+    .eq('match.sport_id', sportId)
+    .limit(50);
+  if (mineErr) throw new Error(mineErr.message);
+
+  type MineRow = {
+    match_id: string;
+    team_number: number | null;
+    match: { match_date: string } | { match_date: string }[] | null;
+  };
+  const myRows = ((mine ?? []) as unknown as MineRow[])
+    .map(r => ({
+      match_id: r.match_id,
+      team_number: r.team_number,
+      match_date: (Array.isArray(r.match) ? r.match[0] : r.match)?.match_date ?? '',
+    }))
+    .filter(r => r.team_number !== null)
+    .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+  if (myRows.length === 0) return [];
+
+  const myTeamByMatch = new Map(myRows.map(r => [r.match_id, r.team_number]));
+  const { data: mates, error: matesErr } = await supabase
+    .from('match_participant')
+    .select('match_id, player_id, team_number')
+    .in(
+      'match_id',
+      myRows.map(r => r.match_id)
+    )
+    .eq('status', 'joined')
+    .neq('player_id', userId);
+  if (matesErr) throw new Error(matesErr.message);
+
+  const teammatesByMatch = new Map<string, string[]>();
+  for (const row of mates ?? []) {
+    if (row.team_number !== myTeamByMatch.get(row.match_id)) continue;
+    const list = teammatesByMatch.get(row.match_id) ?? [];
+    list.push(row.player_id);
+    teammatesByMatch.set(row.match_id, list);
+  }
+
+  const partnerIds: string[] = [];
+  for (const r of myRows) {
+    for (const mate of teammatesByMatch.get(r.match_id) ?? []) {
+      if (!partnerIds.includes(mate)) partnerIds.push(mate);
+    }
+    if (partnerIds.length >= 5) break;
+  }
+  if (partnerIds.length === 0) return [];
+
+  const profiles = await getProfilesByIds(partnerIds.slice(0, 5));
+  return partnerIds
+    .slice(0, 5)
+    .map(id => profiles[id])
+    .filter((p): p is PlayerProfile => !!p);
 }
 
 /**
@@ -387,15 +463,18 @@ export async function listMyActiveRegistrations(userId: string): Promise<Tournam
   const { data, error } = await supabase
     .from('tournament_registrations')
     .select('*')
-    .eq('user_id', userId)
+    .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
     .in('status', ['registered', 'pending']);
   if (error) throw new Error(error.message);
   return (data ?? []) as TournamentRegistration[];
 }
 
 /**
- * Fetch the caller's registration row for a tournament, if any.
- * Returns null when the caller has never registered.
+ * Fetch the caller's registration row for a tournament, if any — as captain
+ * or doubles partner. A user can match several rows (e.g. their own withdrawn
+ * captain row plus an active row where they're the partner); the active one
+ * wins, then the most recent. Returns null when the caller has never
+ * registered.
  */
 export async function getMyRegistration(
   tournamentId: string,
@@ -405,10 +484,15 @@ export async function getMyRegistration(
     .from('tournament_registrations')
     .select('*')
     .eq('tournament_id', tournamentId)
-    .eq('user_id', userId)
-    .maybeSingle();
+    .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`);
   if (error) throw new Error(error.message);
-  return (data ?? null) as TournamentRegistration | null;
+  const rows = (data ?? []) as TournamentRegistration[];
+  if (rows.length === 0) return null;
+  const isActive = (r: TournamentRegistration) =>
+    r.status === 'registered' || r.status === 'pending' || r.status === 'waitlisted';
+  const byRecency = (a: TournamentRegistration, b: TournamentRegistration) =>
+    new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime();
+  return rows.filter(isActive).sort(byRecency)[0] ?? rows.sort(byRecency)[0];
 }
 
 /**
@@ -445,10 +529,15 @@ export async function closeTournamentRegistration(
  * Self-register for a tournament. Initial status depends on the
  * tournament's registration_mode: open → 'registered', approval → 'pending',
  * invite_only → flips an existing pending invite to 'registered'.
+ * Doubles tournaments require a partner; the caller registers the pair.
  */
-export async function registerForTournament(tournamentId: string): Promise<TournamentRegistration> {
+export async function registerForTournament(
+  tournamentId: string,
+  partnerId?: string
+): Promise<TournamentRegistration> {
   const { data, error } = await supabase.rpc('tournament_register', {
     p_tournament_id: tournamentId,
+    p_partner_id: partnerId,
   });
   if (error) throw new Error(error.message);
   return data as TournamentRegistration;
@@ -494,36 +583,37 @@ export interface LinkableMatch {
   team1_score: number | null;
   team2_score: number | null;
   verified_at: string | null;
-  /** User id on each team, so callers can show the right player by score. */
-  team1_user_id: string | null;
-  team2_user_id: string | null;
+  /** User ids on each score side (1 for singles, 2 for doubles). */
+  team1_user_ids: string[];
+  team2_user_ids: string[];
   /** Per-set scores (team1 vs team2), ordered by set number. */
   sets: Array<{ team1: number; team2: number }>;
 }
 
 /**
  * List the caller's verified matches that could be linked to the given
- * tournament_match slot — both bracket players are joined participants,
- * the match is in the tournament's sport, has a verified result, and is
- * not already linked to another tournament_match.
+ * tournament_match slot — every member of both bracket entries is a joined
+ * participant (2 players for singles, 4 for doubles), the game is in the
+ * tournament's sport with the matching format, has a verified result, and
+ * is not already linked to another tournament_match.
  *
  * Filters happen client-side via the server-fetched two-sided join; the
  * eligible set is small (caller's recent matches).
  */
 export async function listLinkableMatchesForSlot(params: {
   tournamentMatchId: string;
-  player1UserId: string;
-  player2UserId: string;
+  team1UserIds: string[];
+  team2UserIds: string[];
   sportId: string;
+  entryFormat: Enums<'entry_format'>;
 }): Promise<LinkableMatch[]> {
-  // Two-sided IN: matches that include BOTH players as joined participants.
-  // We start by fetching the caller's matches with verified results in this
-  // sport, then filter to those whose participants are exactly the two
-  // bracket players (no third party).
+  // Fetch the caller's matches with verified results in this sport, then
+  // filter to those whose joined participants are exactly the bracket
+  // entries' members (no third party).
   const { data, error } = await supabase
     .from('match')
     .select(
-      `id, match_date, start_time, end_time,
+      `id, match_date, start_time, end_time, format,
        match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
          match_set ( set_number, team1_score, team2_score ) ),
        match_participant!inner ( player_id, status, team_number )`
@@ -550,31 +640,40 @@ export async function listLinkableMatchesForSlot(params: {
     match_date: string;
     start_time: string;
     end_time: string;
+    format: string | null;
     match_result: MatchResultEmbed | MatchResultEmbed[] | null;
     match_participant: Array<{ player_id: string; status: string; team_number: number | null }>;
   };
 
   const rows = (data ?? []) as unknown as Row[];
 
-  const expected = new Set([params.player1UserId, params.player2UserId]);
+  const isDoubles = params.entryFormat !== 'singles';
+  const expected = new Set([...params.team1UserIds, ...params.team2UserIds]);
+  const expectedSize = isDoubles ? 4 : 2;
   const eligible: LinkableMatch[] = [];
 
   for (const row of rows) {
     const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
     if (!mr || !mr.is_verified) continue;
+    if ((row.format ?? 'singles') !== (isDoubles ? 'doubles' : 'singles')) continue;
 
     const joined = row.match_participant.filter(p => p.status === 'joined');
     const joinedUsers = joined.map(p => p.player_id);
-    if (joinedUsers.length !== 2) continue;
+    if (expected.size !== expectedSize || joinedUsers.length !== expectedSize) continue;
     if (!joinedUsers.every(u => expected.has(u))) continue;
     if (!Array.from(expected).every(u => joinedUsers.includes(u))) continue;
 
-    // Map each score column to its player via team_number. Fall back to join
-    // order if team_number is missing so the card still labels both sides.
-    const t1 = joined.find(p => p.team_number === 1)?.player_id ?? null;
-    const t2 = joined.find(p => p.team_number === 2)?.player_id ?? null;
-    const team1_user_id = t1 ?? joinedUsers.find(u => u !== t2) ?? null;
-    const team2_user_id = t2 ?? joinedUsers.find(u => u !== team1_user_id) ?? null;
+    // Map each score column to its players via team_number. Singles keeps the
+    // join-order fallback for legacy rows without team_number; doubles teams
+    // are always assigned at score submission.
+    let team1_user_ids = joined.filter(p => p.team_number === 1).map(p => p.player_id);
+    let team2_user_ids = joined.filter(p => p.team_number === 2).map(p => p.player_id);
+    if (!isDoubles && (team1_user_ids.length === 0 || team2_user_ids.length === 0)) {
+      const t1 = team1_user_ids[0] ?? joinedUsers.find(u => u !== team2_user_ids[0]) ?? null;
+      const t2 = team2_user_ids[0] ?? joinedUsers.find(u => u !== t1) ?? null;
+      team1_user_ids = t1 ? [t1] : [];
+      team2_user_ids = t2 ? [t2] : [];
+    }
 
     const sets = (mr.match_set ?? [])
       .slice()
@@ -591,8 +690,8 @@ export async function listLinkableMatchesForSlot(params: {
       team1_score: mr.team1_score,
       team2_score: mr.team2_score,
       verified_at: mr.verified_at,
-      team1_user_id,
-      team2_user_id,
+      team1_user_ids,
+      team2_user_ids,
       sets,
     });
   }
@@ -713,4 +812,89 @@ export async function removeTournamentRegistration(
   });
   if (error) throw new Error(error.message);
   return data as TournamentRegistration;
+}
+
+export type TournamentInviteLink = Tables<'tournament_invite_links'>;
+
+export interface TournamentInvitePreview {
+  tournament: Tournament;
+  activeCount: number;
+}
+
+/**
+ * Organizer's active default invite link, minted on first call.
+ */
+export async function getOrCreateTournamentInvite(
+  tournamentId: string
+): Promise<TournamentInviteLink> {
+  const { data, error } = await supabase.rpc('tournament_invite_get_or_create', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentInviteLink;
+}
+
+/**
+ * Revokes the active invite link and mints a fresh one. Old links stop
+ * resolving immediately.
+ */
+export async function resetTournamentInvite(tournamentId: string): Promise<TournamentInviteLink> {
+  const { data, error } = await supabase.rpc('tournament_invite_reset', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentInviteLink;
+}
+
+/**
+ * Token preview: resolves a valid invite token to its tournament — bypassing
+ * RLS so invitees can see private tournaments before registering — plus the
+ * active registration count (RLS hides other players' registrations on
+ * private tournaments, so the client can't compute it). Throws
+ * INVITE_INVALID for unknown / revoked / expired tokens.
+ */
+export async function getTournamentByInviteToken(token: string): Promise<TournamentInvitePreview> {
+  const { data, error } = await supabase.rpc('tournament_get_by_invite_token', {
+    p_token: token,
+  });
+  if (error) throw new Error(error.message);
+  const payload = data as unknown as { tournament: Tournament; active_count: number };
+  return { tournament: payload.tournament, activeCount: payload.active_count };
+}
+
+/**
+ * Registers the caller via an invite token. Bypasses registration_mode
+ * (status 'registered' even on approval/invite_only tournaments) and is
+ * idempotent for already-active registrations (captain or partner).
+ * Doubles tournaments require a partner.
+ */
+export async function joinTournamentViaInvite(
+  token: string,
+  partnerId?: string
+): Promise<TournamentRegistration> {
+  const { data, error } = await supabase.rpc('tournament_join_via_invite', {
+    p_token: token,
+    p_partner_id: partnerId,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentRegistration;
+}
+
+/**
+ * Shareable tournament invite URL on the unified /invite format — the
+ * sender's referral code rides along for signup attribution.
+ */
+export function getTournamentInviteLink(
+  token: string,
+  tournamentId: string,
+  referralCode: string,
+  utm?: UtmParams
+): string {
+  return generateInvitationLink({
+    type: 'tournament',
+    referralCode,
+    targetId: tournamentId,
+    shareToken: token,
+    utm,
+  });
 }

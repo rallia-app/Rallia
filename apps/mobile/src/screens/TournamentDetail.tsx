@@ -53,6 +53,8 @@ import {
   useRegisterForTournament,
   useWithdrawFromTournament,
   useRemoveTournamentRegistration,
+  useTournamentInvitePreview,
+  useJoinTournamentViaInvite,
   useTournamentMatches,
   useGenerateTournamentBracket,
   useCancelTournament,
@@ -63,7 +65,7 @@ import {
   useAuth,
 } from '@rallia/shared-hooks';
 import type { Enums, Tables } from '@rallia/shared-types';
-import { getTierConfig } from '@rallia/shared-services';
+import { getTierConfig, getTournamentChat } from '@rallia/shared-services';
 import type {
   PlayerSearchResult,
   ReputationDisplay,
@@ -71,6 +73,7 @@ import type {
 } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../hooks';
+import * as Analytics from '../services/analytics';
 import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import PlayerCard from '../features/community/components/PlayerCard';
@@ -379,6 +382,7 @@ const DashboardCtaCard: React.FC<{
   /** Coral "leave" tone (plain card + coral button) — used for withdraw. */
   destructive?: boolean;
   colors: ScreenColors;
+  testID?: string;
 }> = ({
   icon,
   title,
@@ -389,6 +393,7 @@ const DashboardCtaCard: React.FC<{
   disabled,
   destructive,
   colors,
+  testID,
 }) => (
   <View
     style={[
@@ -428,6 +433,7 @@ const DashboardCtaCard: React.FC<{
           disabled && styles.buttonDisabled,
         ]}
         accessibilityRole="button"
+        testID={testID}
       >
         {buttonIcon && <Ionicons name={buttonIcon} size={20} color="#ffffff" />}
         <Text size="base" weight="semibold" color="#ffffff">
@@ -518,11 +524,27 @@ export const TournamentDetail: React.FC = () => {
   const isDark = theme === 'dark';
   const userId = session?.user?.id;
 
-  const { data: tournament, isLoading, isError, refetch } = useTournament(params.tournamentId);
+  const {
+    data: directTournament,
+    isLoading,
+    isError,
+    refetch,
+  } = useTournament(params.tournamentId);
   const { data: registrations = [] } = useTournamentRegistrations(params.tournamentId);
   const { data: myRegistration } = useMyTournamentRegistration(params.tournamentId, userId);
   const { sports } = useSports();
   const { openSheetForTournamentEdit } = useActionsSheet();
+
+  // Invite-token fallback: when the direct fetch comes back empty (private
+  // tournament, caller not yet registered → RLS hides the row), a valid
+  // token still renders the page via the preview RPC.
+  const invitePreviewEnabled = !!params.inviteToken && !isLoading && !directTournament;
+  const {
+    data: invitePreview,
+    isLoading: invitePreviewLoading,
+    isError: inviteInvalid,
+  } = useTournamentInvitePreview(params.inviteToken, invitePreviewEnabled);
+  const tournament = directTournament ?? invitePreview?.tournament ?? null;
 
   const isOrganizer = !!tournament && !!userId && tournament.organizer_id === userId;
   const myActiveRegistration =
@@ -530,34 +552,76 @@ export const TournamentDetail: React.FC = () => {
     (myRegistration.status === 'registered' || myRegistration.status === 'pending')
       ? myRegistration
       : null;
-  const activeCount = registrations.length;
+
+  // Tournament chat (trigger-managed conversation). RLS only returns it to
+  // participants, so an existing id doubles as the access check.
+  const [chatConversationId, setChatConversationId] = useState<string | null>(null);
+  const isChatMember = isOrganizer || myRegistration?.status === 'registered';
+  useEffect(() => {
+    let isMounted = true;
+    if (!userId || !isChatMember) {
+      setChatConversationId(null);
+      return;
+    }
+    getTournamentChat(params.tournamentId).then(conversation => {
+      if (isMounted) setChatConversationId(conversation?.id ?? null);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [params.tournamentId, userId, isChatMember]);
+
+  const handleOpenChat = useCallback(() => {
+    if (!chatConversationId || !tournament) return;
+    lightHaptic();
+    navigation.navigate('ChatConversation', {
+      conversationId: chatConversationId,
+      title: tournament.name,
+    });
+  }, [chatConversationId, tournament, navigation]);
+  // RLS hides other players' registrations on private tournaments, so the
+  // token preview supplies the count until the caller registers.
+  const activeCount = directTournament ? registrations.length : (invitePreview?.activeCount ?? 0);
 
   const showError = useCallback(
     (errMsg: string, fallbackKey: TranslationKey) => {
       const lower = errMsg.toLowerCase();
-      const key: TranslationKey = lower.includes('sport_mismatch')
-        ? 'tournamentDetail.errors.sportMismatch'
-        : lower.includes('tournament_full')
-          ? 'tournamentDetail.errors.tournamentFull'
-          : lower.includes('already_registered')
-            ? 'tournamentDetail.errors.alreadyRegistered'
-            : lower.includes('not_invited')
-              ? 'tournamentDetail.errors.notInvited'
-              : lower.includes('optimistic_lock')
-                ? 'tournamentDetail.errors.lockConflict'
-                : lower.includes('start_passed')
-                  ? 'tournamentDetail.errors.startPassed'
-                  : lower.includes('withdraw_not_allowed')
-                    ? 'tournamentDetail.errors.withdrawClosed'
-                    : lower.includes('registration_removed')
-                      ? 'tournamentDetail.errors.registrationRemoved'
-                      : lower.includes('remove_not_allowed')
-                        ? 'tournamentDetail.errors.removeNotAllowed'
-                        : lower.includes('registration_not_found')
+      // Partner codes come first: partner_already_registered and
+      // partner_sport_mismatch contain the bare codes as substrings.
+      const key: TranslationKey = lower.includes('partner_already_registered')
+        ? 'tournamentDetail.errors.partnerAlreadyRegistered'
+        : lower.includes('partner_sport_mismatch')
+          ? 'tournamentDetail.errors.partnerSportMismatch'
+          : lower.includes('partner_required')
+            ? 'tournamentDetail.errors.partnerRequired'
+            : lower.includes('partner_invalid') || lower.includes('partner_not_allowed')
+              ? 'tournamentDetail.errors.partnerInvalid'
+              : lower.includes('invite_invalid')
+                ? 'tournamentDetail.errors.inviteInvalid'
+                : lower.includes('sport_mismatch')
+                  ? 'tournamentDetail.errors.sportMismatch'
+                  : lower.includes('tournament_full')
+                    ? 'tournamentDetail.errors.tournamentFull'
+                    : lower.includes('already_registered')
+                      ? 'tournamentDetail.errors.alreadyRegistered'
+                      : lower.includes('not_invited')
+                        ? 'tournamentDetail.errors.notInvited'
+                        : lower.includes('optimistic_lock')
                           ? 'tournamentDetail.errors.lockConflict'
-                          : lower.includes('tournament_reg_closed') || lower.includes('reg_closed')
-                            ? 'tournamentDetail.errors.regClosed'
-                            : fallbackKey;
+                          : lower.includes('start_passed')
+                            ? 'tournamentDetail.errors.startPassed'
+                            : lower.includes('withdraw_not_allowed')
+                              ? 'tournamentDetail.errors.withdrawClosed'
+                              : lower.includes('registration_removed')
+                                ? 'tournamentDetail.errors.registrationRemoved'
+                                : lower.includes('remove_not_allowed')
+                                  ? 'tournamentDetail.errors.removeNotAllowed'
+                                  : lower.includes('registration_not_found')
+                                    ? 'tournamentDetail.errors.lockConflict'
+                                    : lower.includes('tournament_reg_closed') ||
+                                        lower.includes('reg_closed')
+                                      ? 'tournamentDetail.errors.regClosed'
+                                      : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -576,6 +640,25 @@ export const TournamentDetail: React.FC = () => {
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.registerFailed'),
   });
+  const joinViaInvite = useJoinTournamentViaInvite({
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('tournamentDetail.inviteLanding.joinedToast'));
+      Analytics.tournamentInviteRedeemed({
+        tournamentId: params.tournamentId,
+        result: 'registered',
+      });
+    },
+    onError: e => {
+      Analytics.tournamentInviteRedeemed({
+        tournamentId: params.tournamentId,
+        result: 'error',
+        errorCode: e.message,
+      });
+      showError(e.message, 'tournamentDetail.errors.registerFailed');
+    },
+  });
+  const registerPending = register.isPending || joinViaInvite.isPending;
   const withdraw = useWithdrawFromTournament({
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed'),
@@ -662,11 +745,40 @@ export const TournamentDetail: React.FC = () => {
     close.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
   }, [tournament, close]);
 
+  const isDoubles = !!tournament && tournament.entry_format !== 'singles';
+
   const onRegister = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
+    // Invite recipients redeem the token (bypasses registration_mode and
+    // works on private tournaments); organizers and direct registrants take
+    // the normal path. Doubles routes through the partner picker first.
+    const inviteToken = !isOrganizer ? params.inviteToken : undefined;
+    if (isDoubles) {
+      void SheetManager.show('tournament-partner-picker', {
+        payload: {
+          sportId: tournament.sport_id,
+          onPick: partner => {
+            if (inviteToken) {
+              joinViaInvite.mutate({
+                token: inviteToken,
+                tournamentId: tournament.id,
+                partnerId: partner.id,
+              });
+            } else {
+              register.mutate({ tournamentId: tournament.id, partnerId: partner.id });
+            }
+          },
+        },
+      });
+      return;
+    }
+    if (inviteToken) {
+      joinViaInvite.mutate({ token: inviteToken, tournamentId: tournament.id });
+      return;
+    }
     register.mutate({ tournamentId: tournament.id });
-  }, [tournament, register]);
+  }, [tournament, isDoubles, register, joinViaInvite, params.inviteToken, isOrganizer]);
 
   const onWithdraw = useCallback(() => {
     if (!tournament || !myActiveRegistration) return;
@@ -714,18 +826,25 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations]);
 
-  // Map registration_id → user_id, used to decide whether the caller can
-  // tap into a bracket match.
-  const userByRegId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const r of registrations) map.set(r.id, r.user_id);
+  // Map registration_id → member user ids (captain first, partner second for
+  // doubles), used to decide whether the caller can tap into a bracket match.
+  const membersByRegId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const r of registrations) {
+      map.set(r.id, r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id]);
+    }
     return map;
   }, [registrations]);
 
   // Batch-fetch player profiles so the bracket and players list can render
   // real names; includes the organizer for the hero byline.
   const userIds = useMemo(
-    () => [...registrations.map(r => r.user_id), ...(tournament ? [tournament.organizer_id] : [])],
+    () => [
+      ...registrations.flatMap(r =>
+        r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id]
+      ),
+      ...(tournament ? [tournament.organizer_id] : []),
+    ],
     [registrations, tournament]
   );
   const { data: profiles } = useProfilesByIds(userIds);
@@ -736,7 +855,12 @@ export const TournamentDetail: React.FC = () => {
       // Always use first (+ last). display_name is intentionally ignored
       // per the app-wide convention in @rallia/shared-utils/getHumanName.
       const name = p ? getHumanName(p, '') : '';
-      if (name) map.set(r.id, name);
+      // Doubles entries render as a pair label ("Alex & Sam") everywhere the
+      // registration is shown: bracket slots, champion, opponent, score sheet.
+      const partner = r.partner_user_id ? profiles?.[r.partner_user_id] : undefined;
+      const partnerName = partner ? getHumanName(partner, '') : '';
+      const label = partnerName && name ? `${name} & ${partnerName}` : name;
+      if (label) map.set(r.id, label);
     }
     return map;
   }, [registrations, profiles]);
@@ -753,7 +877,11 @@ export const TournamentDetail: React.FC = () => {
 
   const registrationByUserId = useMemo(() => {
     const map = new Map<string, (typeof registrations)[number]>();
-    for (const r of registrations) map.set(r.user_id, r);
+    for (const r of registrations) {
+      map.set(r.user_id, r);
+      // Removing either member of a doubles pair removes the whole entry.
+      if (r.partner_user_id) map.set(r.partner_user_id, r);
+    }
     return map;
   }, [registrations]);
 
@@ -799,6 +927,17 @@ export const TournamentDetail: React.FC = () => {
     const p = profiles?.[tournament.organizer_id];
     return p ? getHumanName(p, '') : '';
   }, [profiles, tournament]);
+
+  // Doubles: the other member of the caller's pair, for the hero label.
+  const myPartnerName = useMemo(() => {
+    if (!myActiveRegistration?.partner_user_id || !userId) return '';
+    const otherId =
+      myActiveRegistration.user_id === userId
+        ? myActiveRegistration.partner_user_id
+        : myActiveRegistration.user_id;
+    const p = profiles?.[otherId];
+    return p ? getHumanName(p, '') : '';
+  }, [myActiveRegistration, userId, profiles]);
 
   const myRegId = myActiveRegistration?.id ?? null;
 
@@ -870,21 +1009,22 @@ export const TournamentDetail: React.FC = () => {
 
   const handleBracketMatchTap = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
-      const p1User = userByRegId.get(p1RegId);
-      const p2User = userByRegId.get(p2RegId);
-      if (!p1User || !p2User || !tournament) return;
+      const team1 = membersByRegId.get(p1RegId);
+      const team2 = membersByRegId.get(p2RegId);
+      if (!team1?.length || !team2?.length || !tournament) return;
       lightHaptic();
       SheetManager.show('tournament-link-match', {
         payload: {
           tournamentMatchId,
           tournamentId: tournament.id,
           sportId: tournament.sport_id,
-          player1UserId: p1User,
-          player2UserId: p2User,
+          entryFormat: tournament.entry_format,
+          team1UserIds: team1,
+          team2UserIds: team2,
         },
       });
     },
-    [userByRegId, tournament]
+    [membersByRegId, tournament]
   );
 
   // Organizer-only: record an authoritative result for a stalled/disputed
@@ -948,15 +1088,33 @@ export const TournamentDetail: React.FC = () => {
     const s = tournament?.status;
     // Details are only editable before registration closes (draft / open).
     const canEdit = s === 'draft' || s === 'registration_open';
+    // Links can be shared ahead of opening — they redeem once registration opens.
+    const canInvite = s === 'draft' || s === 'registration_open';
     const canCancel =
       s === 'draft' ||
       s === 'registration_open' ||
       s === 'registration_closed' ||
       s === 'in_progress';
     const canArchive = s === 'completed' || s === 'cancelled';
-    const enabled = isOrganizer && (canEdit || canCancel || canArchive);
-    return { canEdit, canCancel, canArchive, enabled };
+    const enabled = isOrganizer && (canEdit || canInvite || canCancel || canArchive);
+    return { canEdit, canInvite, canCancel, canArchive, enabled };
   }, [isOrganizer, tournament?.status]);
+
+  // Creation-success handoff: land here with openInviteSheet=true and the
+  // invite sheet opens once, after the screen settles. The param is cleared
+  // inside the timeout — clearing it synchronously re-runs this effect and
+  // the cleanup would cancel the timer before it fires.
+  useEffect(() => {
+    if (!params.openInviteSheet || !isOrganizer || !tournament) return;
+    const { id: tournamentId, name: tournamentName } = tournament;
+    const timer = setTimeout(() => {
+      navigation.setParams({ openInviteSheet: undefined });
+      void SheetManager.show('tournament-invite', {
+        payload: { tournamentId, tournamentName },
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [params.openInviteSheet, isOrganizer, tournament, navigation]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -971,6 +1129,7 @@ export const TournamentDetail: React.FC = () => {
               accessibilityRole="button"
               accessibilityLabel={t('tournamentDetail.sections.manage')}
               style={styles.headerMenuButton}
+              testID="tournament-overflow-menu"
             >
               <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
             </TouchableOpacity>
@@ -987,7 +1146,7 @@ export const TournamentDetail: React.FC = () => {
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 
-  if (isLoading) {
+  if (isLoading || (invitePreviewEnabled && invitePreviewLoading)) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
         <View style={styles.centered}>
@@ -1027,10 +1186,14 @@ export const TournamentDetail: React.FC = () => {
         <View style={styles.centered}>
           <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
           <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-            {t('tournamentDetail.notFound')}
+            {inviteInvalid
+              ? t('tournamentDetail.inviteLanding.invalidTitle')
+              : t('tournamentDetail.notFound')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.centeredSubtext}>
-            {t('tournamentDetail.notFoundDescription')}
+            {inviteInvalid
+              ? t('tournamentDetail.inviteLanding.invalidDescription')
+              : t('tournamentDetail.notFoundDescription')}
           </Text>
         </View>
       </SafeAreaView>
@@ -1184,14 +1347,32 @@ export const TournamentDetail: React.FC = () => {
                 <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
                   <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                    {t(
-                      myActiveRegistration.status === 'pending'
-                        ? 'tournamentDetail.actions.registrationPendingLabel'
-                        : 'tournamentDetail.actions.registeredLabel'
-                    )}
+                    {myActiveRegistration.status === 'pending'
+                      ? t('tournamentDetail.actions.registrationPendingLabel')
+                      : myPartnerName
+                        ? t('tournamentDetail.actions.registeredWithPartnerLabel').replace(
+                            '{name}',
+                            myPartnerName
+                          )
+                        : t('tournamentDetail.actions.registeredLabel')}
                   </Text>
                 </View>
               )}
+
+            {chatConversationId && (
+              <TouchableOpacity
+                onPress={handleOpenChat}
+                activeOpacity={0.8}
+                style={[styles.heroChatButton, { borderColor: colors.border }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('tournamentDetail.chat.open')}
+              >
+                <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
+                <Text size="sm" weight="semibold" color={colors.primary}>
+                  {t('tournamentDetail.chat.open')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -1214,6 +1395,7 @@ export const TournamentDetail: React.FC = () => {
                   ]}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
+                  testID={`tournament-tab-${tab.key}`}
                 >
                   <Text
                     size="sm"
@@ -1288,6 +1470,7 @@ export const TournamentDetail: React.FC = () => {
                 onPress={onOpen}
                 disabled={open.isPending}
                 colors={colors}
+                testID="cta-open-registration"
               />
             )}
             {isOrganizer && tournament.status === 'registration_open' && (
@@ -1306,6 +1489,7 @@ export const TournamentDetail: React.FC = () => {
                 onPress={onClose}
                 disabled={close.isPending}
                 colors={colors}
+                testID="cta-close-registration"
               />
             )}
             {isOrganizer && tournament.status === 'registration_closed' && (
@@ -1325,6 +1509,7 @@ export const TournamentDetail: React.FC = () => {
                 onPress={onGenerateBracket}
                 disabled={generateBracket.isPending}
                 colors={colors}
+                testID="cta-generate-bracket"
               />
             )}
             {isOrganizer && isLive && (
@@ -1350,10 +1535,11 @@ export const TournamentDetail: React.FC = () => {
                 description={
                   spotsLeft > 0
                     ? [
-                        t('tournamentDetail.dashboard.registerCta.spotsLeft').replace(
-                          '{n}',
-                          String(spotsLeft)
-                        ),
+                        t(
+                          isDoubles
+                            ? 'tournamentDetail.dashboard.registerCta.spotsLeftTeams'
+                            : 'tournamentDetail.dashboard.registerCta.spotsLeft'
+                        ).replace('{n}', String(spotsLeft)),
                         registerCloseHint,
                       ]
                         .filter(Boolean)
@@ -1362,15 +1548,16 @@ export const TournamentDetail: React.FC = () => {
                 }
                 buttonLabel={
                   spotsLeft > 0
-                    ? register.isPending
+                    ? registerPending
                       ? t('tournamentDetail.actions.registering')
                       : t('tournamentDetail.actions.register')
                     : undefined
                 }
                 buttonIcon="person-add-outline"
                 onPress={spotsLeft > 0 ? onRegister : undefined}
-                disabled={register.isPending}
+                disabled={registerPending}
                 colors={colors}
+                testID="cta-register"
               />
             )}
 
@@ -1389,6 +1576,7 @@ export const TournamentDetail: React.FC = () => {
                 onPress={onRegister}
                 disabled={register.isPending}
                 colors={colors}
+                testID="cta-add-myself"
               />
             )}
 
@@ -1399,12 +1587,16 @@ export const TournamentDetail: React.FC = () => {
                 title={
                   myActiveRegistration.status === 'pending'
                     ? t('tournamentDetail.dashboard.withdrawCta.titlePending')
-                    : t('tournamentDetail.dashboard.withdrawCta.title')
+                    : isDoubles
+                      ? t('tournamentDetail.dashboard.withdrawCta.titleTeam')
+                      : t('tournamentDetail.dashboard.withdrawCta.title')
                 }
                 description={
                   myActiveRegistration.status === 'pending'
                     ? t('tournamentDetail.dashboard.withdrawCta.descriptionPending')
-                    : t('tournamentDetail.dashboard.withdrawCta.description')
+                    : isDoubles
+                      ? t('tournamentDetail.dashboard.withdrawCta.descriptionTeam')
+                      : t('tournamentDetail.dashboard.withdrawCta.description')
                 }
                 buttonLabel={
                   withdraw.isPending
@@ -1414,6 +1606,7 @@ export const TournamentDetail: React.FC = () => {
                 buttonIcon="exit-outline"
                 onPress={onWithdraw}
                 disabled={withdraw.isPending}
+                testID="cta-withdraw"
                 destructive
                 colors={colors}
               />
@@ -1521,7 +1714,7 @@ export const TournamentDetail: React.FC = () => {
               matches={matches}
               seedByRegId={seedByRegId}
               nameByRegId={nameByRegId}
-              userByRegId={userByRegId}
+              membersByRegId={membersByRegId}
               currentUserId={userId}
               isOrganizer={isOrganizer}
               onMatchPress={handleBracketMatchTap}
@@ -1626,6 +1819,7 @@ export const TournamentDetail: React.FC = () => {
               <MenuItem
                 icon="create-outline"
                 label={t('tournamentDetail.actions.editDetails')}
+                testID="menu-edit-details"
                 onPress={() => {
                   setShowActionsMenu(false);
                   lightHaptic();
@@ -1650,12 +1844,29 @@ export const TournamentDetail: React.FC = () => {
                 colors={colors}
               />
             )}
+            {adminActions.canInvite && (
+              <MenuItem
+                icon="share-social-outline"
+                label={t('tournamentDetail.actions.invitePlayers')}
+                testID="menu-invite-players"
+                showDivider={adminActions.canEdit}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  lightHaptic();
+                  void SheetManager.show('tournament-invite', {
+                    payload: { tournamentId: tournament.id, tournamentName: tournament.name },
+                  });
+                }}
+                colors={colors}
+              />
+            )}
             {adminActions.canCancel && (
               <MenuItem
                 icon="close-circle-outline"
                 label={t('tournamentDetail.actions.cancelTournament')}
+                testID="menu-cancel-tournament"
                 destructive
-                showDivider={adminActions.canEdit}
+                showDivider={adminActions.canEdit || adminActions.canInvite}
                 onPress={() => {
                   setShowActionsMenu(false);
                   lightHaptic();
@@ -1668,6 +1879,7 @@ export const TournamentDetail: React.FC = () => {
               <MenuItem
                 icon="archive-outline"
                 label={t('tournamentDetail.actions.archiveTournament')}
+                testID="menu-archive-tournament"
                 showDivider={adminActions.canEdit || adminActions.canCancel}
                 onPress={() => {
                   setShowActionsMenu(false);
@@ -1687,6 +1899,7 @@ export const TournamentDetail: React.FC = () => {
         message={t('tournamentDetail.cancelModal.description')}
         confirmLabel={t('tournamentDetail.cancelModal.confirm')}
         cancelLabel={t('tournamentDetail.cancelModal.keepIt')}
+        confirmTestID="confirm-cancel-tournament"
         destructive
         isLoading={cancel.isPending}
         onClose={() => {
@@ -1728,6 +1941,7 @@ export const TournamentDetail: React.FC = () => {
         message={t('tournamentDetail.archiveModal.description')}
         confirmLabel={t('tournamentDetail.archiveModal.confirm')}
         cancelLabel={t('tournamentDetail.archiveModal.keepIt')}
+        confirmTestID="confirm-archive-tournament"
         isLoading={archive.isPending}
         onClose={() => setShowArchiveModal(false)}
         onConfirm={() => {
@@ -1810,7 +2024,7 @@ const BracketSection: React.FC<{
   matches: MatchRow[];
   seedByRegId: Map<string, number>;
   nameByRegId: Map<string, string>;
-  userByRegId: Map<string, string>;
+  membersByRegId: Map<string, string[]>;
   currentUserId: string | undefined;
   isOrganizer: boolean;
   onMatchPress: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
@@ -1822,7 +2036,7 @@ const BracketSection: React.FC<{
   matches,
   seedByRegId,
   nameByRegId,
-  userByRegId,
+  membersByRegId,
   currentUserId,
   isOrganizer,
   onMatchPress,
@@ -1898,14 +2112,14 @@ const BracketSection: React.FC<{
           : 0;
     const isFinalRound = m.round_number === totalRounds;
 
-    const p1User = m.player1_registration_id
-      ? userByRegId.get(m.player1_registration_id)
-      : undefined;
-    const p2User = m.player2_registration_id
-      ? userByRegId.get(m.player2_registration_id)
-      : undefined;
+    const p1Members = m.player1_registration_id
+      ? (membersByRegId.get(m.player1_registration_id) ?? [])
+      : [];
+    const p2Members = m.player2_registration_id
+      ? (membersByRegId.get(m.player2_registration_id) ?? [])
+      : [];
     const callerIsParticipant =
-      !!currentUserId && (currentUserId === p1User || currentUserId === p2User);
+      !!currentUserId && (p1Members.includes(currentUserId) || p2Members.includes(currentUserId));
     const isPlayable =
       m.status === 'pending' &&
       !m.player1_is_bye &&
@@ -2025,6 +2239,7 @@ const BracketSection: React.FC<{
           ]}
           accessibilityRole="button"
           accessibilityLabel={a11yLabel}
+          testID="bracket-playable-match"
         >
           {matchInner}
           <View
@@ -2262,12 +2477,14 @@ const MenuItem: React.FC<{
   destructive?: boolean;
   showDivider?: boolean;
   colors: ScreenColors;
-}> = ({ label, icon, onPress, destructive, showDivider, colors }) => {
+  testID?: string;
+}> = ({ label, icon, onPress, destructive, showDivider, colors, testID }) => {
   const fg = destructive ? colors.danger : colors.text;
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.6}
+      testID={testID}
       style={[
         styles.menuItem,
         showDivider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
@@ -2568,6 +2785,17 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3.5],
+  },
+  heroChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    marginTop: spacingPixels[3],
   },
   heroRegistered: {
     flexDirection: 'row',

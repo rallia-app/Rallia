@@ -26,6 +26,7 @@ import { useAuth, useProfile } from '@rallia/shared-hooks';
 
 import { useActionsSheet, useOverlay } from '#/context';
 import { navigationRef } from '#/navigation';
+import { IS_E2E } from '#/utils/e2e';
 
 import { useCheckInContext } from './api';
 import { WEEKLY_CHECKIN_COOLDOWN_KEY } from './useWeeklyCheckInWizard';
@@ -64,6 +65,7 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
   const autoOpenedRef = useRef(false);
 
   useEffect(() => {
+    if (IS_E2E) return;
     if (autoOpenedRef.current) return;
     if (!isSplashComplete) return;
     if (!isAuthed) return;

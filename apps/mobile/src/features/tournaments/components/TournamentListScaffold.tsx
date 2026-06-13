@@ -218,6 +218,7 @@ export const TournamentCard: React.FC<{
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
+      testID={`tournament-card-${tournament.id}`}
       style={[
         styles.card,
         { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },

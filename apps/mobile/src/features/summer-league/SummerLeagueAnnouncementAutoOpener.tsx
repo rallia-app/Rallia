@@ -20,6 +20,7 @@ import { useAuth, useProfile } from '@rallia/shared-hooks';
 import { useOverlay } from '#/context';
 import { summerLeagueAnnouncementViewed } from '#/services/analytics';
 import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
+import { IS_E2E } from '#/utils/e2e';
 
 const SUMMER_LEAGUE_SHOWN_KEY = '@rallia/summer-league-announcement-shown';
 // Let the home screen settle before presenting (matches PendingFeedbackHandler).
@@ -48,6 +49,7 @@ export const SummerLeagueAnnouncementAutoOpener: React.FC<
   const openedRef = useRef(false);
 
   useEffect(() => {
+    if (IS_E2E) return;
     if (openedRef.current) return;
     if (!isSplashComplete || !isSportSelectionComplete) return;
     if (!isAuthed || !isOnboardingComplete) return;

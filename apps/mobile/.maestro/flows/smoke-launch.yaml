@@ -1,0 +1,4 @@
+# Sanity flow: the dev client launches and renders.
+appId: com.mathisl971.rallia-app
+---
+- launchApp

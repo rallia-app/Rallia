@@ -38,7 +38,9 @@ import { ReportIssueActionSheet } from '#/features/matches/components/feedback-s
 // Tournament components
 import { TournamentRecordScoreActionSheet } from '#/features/tournaments/components/TournamentRecordScoreSheet';
 import { TournamentLinkMatchActionSheet } from '#/features/tournaments/components/TournamentLinkMatchSheet';
+import { TournamentPartnerPickerActionSheet } from '#/features/tournaments/components/TournamentPartnerPickerSheet';
 import { TournamentEditActionSheet } from '#/features/tournaments/components/TournamentEditSheet';
+import { TournamentInviteSheet } from '#/features/tournaments/components/TournamentInviteSheet';
 import type { TournamentEditData } from '#/features/tournaments';
 // Facilities components
 import { ExternalBookingActionSheet } from '#/features/facilities/components/ExternalBookingSheet';
@@ -347,15 +349,29 @@ declare module 'react-native-actions-sheet' {
         tournamentMatchId: string;
         tournamentId: string;
         sportId: string;
-        player1UserId: string;
-        player2UserId: string;
+        entryFormat: import('@rallia/shared-types').Enums<'entry_format'>;
+        team1UserIds: string[];
+        team2UserIds: string[];
         onSuccess?: () => void;
+        onDismiss?: () => void;
+      };
+    }>;
+    'tournament-partner-picker': SheetDefinition<{
+      payload: {
+        sportId: string;
+        onPick: (player: { id: string; name: string }) => void;
         onDismiss?: () => void;
       };
     }>;
     'tournament-edit': SheetDefinition<{
       payload: {
         tournament: TournamentEditData;
+      };
+    }>;
+    'tournament-invite': SheetDefinition<{
+      payload: {
+        tournamentId: string;
+        tournamentName: string;
       };
     }>;
     'court-selection': SheetDefinition<{
@@ -842,7 +858,9 @@ export const Sheets = () => {
         'register-match-score': RegisterMatchScoreActionSheet,
         'tournament-record-score': TournamentRecordScoreActionSheet,
         'tournament-link-match': TournamentLinkMatchActionSheet,
+        'tournament-partner-picker': TournamentPartnerPickerActionSheet,
         'tournament-edit': TournamentEditActionSheet,
+        'tournament-invite': TournamentInviteSheet,
         'court-selection': CourtSelectionActionSheet,
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,

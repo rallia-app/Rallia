@@ -168,6 +168,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       {/* Email Input */}
       <TextInput
         ref={inputRef}
+        testID="auth-email-input"
         style={[
           styles.emailInput,
           {

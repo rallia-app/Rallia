@@ -7,6 +7,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Enums } from '@rallia/shared-types';
 import {
   createTournament,
   getTournament,
@@ -30,8 +31,15 @@ import {
   updateTournament,
   getProfilesByIds,
   listTournamentParticipants,
+  getOrCreateTournamentInvite,
+  resetTournamentInvite,
+  getTournamentByInviteToken,
+  joinTournamentViaInvite,
+  listRecentDoublesPartners,
   type CreateTournamentInput,
   type TournamentUpdatePatch,
+  type TournamentInviteLink,
+  type TournamentInvitePreview,
   type Tournament,
   type TournamentListItem,
   type TournamentRegistration,
@@ -58,6 +66,9 @@ export const tournamentKeys = {
   myActiveRegistrations: (userId: string) =>
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
+  inviteLink: (tournamentId: string) =>
+    [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
+  invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
 };
 
 /**
@@ -93,6 +104,22 @@ export function useMyActiveRegistrations(userId: string | undefined) {
     queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
     queryFn: () => listMyActiveRegistrations(userId!),
     enabled: !!userId,
+  });
+}
+
+/**
+ * The caller's most recent doubles teammates in a sport — feeds the
+ * "recent partners" section of the tournament partner picker.
+ */
+export function useRecentDoublesPartners(
+  userId: string | undefined,
+  sportId: string | undefined,
+  enabled = true
+) {
+  return useQuery<PlayerProfile[]>({
+    queryKey: [...tournamentKeys.all, 'recentDoublesPartners', userId ?? '', sportId ?? ''],
+    queryFn: () => listRecentDoublesPartners(userId!, sportId!),
+    enabled: enabled && !!userId && !!sportId,
   });
 }
 
@@ -184,36 +211,40 @@ export function useTournamentMatches(tournamentId: string | undefined) {
 /**
  * Linkable matches the caller can attach to a tournament_match slot.
  * Filters server-side by tournament's sport and verified result; eligibility
- * (both bracket players are joined participants) is computed client-side.
+ * (every bracket-entry member is a joined participant — 2 for singles,
+ * 4 for doubles) is computed client-side.
  */
 export function useLinkableMatchesForSlot(params: {
   tournamentMatchId: string | undefined;
-  player1UserId: string | undefined;
-  player2UserId: string | undefined;
+  team1UserIds: string[] | undefined;
+  team2UserIds: string[] | undefined;
   sportId: string | undefined;
+  entryFormat: Enums<'entry_format'> | undefined;
   enabled?: boolean;
 }) {
   const enabled =
     (params.enabled ?? true) &&
     !!params.tournamentMatchId &&
-    !!params.player1UserId &&
-    !!params.player2UserId &&
-    !!params.sportId;
+    !!params.team1UserIds?.length &&
+    !!params.team2UserIds?.length &&
+    !!params.sportId &&
+    !!params.entryFormat;
 
   return useQuery<LinkableMatch[]>({
     queryKey: [
       ...tournamentKeys.all,
       'linkable',
       params.tournamentMatchId ?? '',
-      params.player1UserId ?? '',
-      params.player2UserId ?? '',
+      (params.team1UserIds ?? []).join('+'),
+      (params.team2UserIds ?? []).join('+'),
     ],
     queryFn: () =>
       listLinkableMatchesForSlot({
         tournamentMatchId: params.tournamentMatchId!,
-        player1UserId: params.player1UserId!,
-        player2UserId: params.player2UserId!,
+        team1UserIds: params.team1UserIds!,
+        team2UserIds: params.team2UserIds!,
         sportId: params.sportId!,
+        entryFormat: params.entryFormat!,
       }),
     enabled,
   });
@@ -410,8 +441,12 @@ export function useCloseTournamentRegistration(options: MutationOptions<Tourname
 
 export function useRegisterForTournament(options: MutationOptions<TournamentRegistration> = {}) {
   const invalidate = useTournamentDetailInvalidator();
-  const mutation = useMutation<TournamentRegistration, Error, { tournamentId: string }>({
-    mutationFn: ({ tournamentId }) => registerForTournament(tournamentId),
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { tournamentId: string; partnerId?: string }
+  >({
+    mutationFn: ({ tournamentId, partnerId }) => registerForTournament(tournamentId, partnerId),
     onSuccess: r => {
       invalidate(r.tournament_id);
       options.onSuccess?.(r);
@@ -513,3 +548,76 @@ export function useCreateTournament(options: UseCreateTournamentOptions = {}) {
 }
 
 export default useCreateTournament;
+
+/**
+ * Organizer's active invite link, minted on first fetch. Only enable when
+ * the share UI is actually open — fetching mints a link server-side.
+ */
+export function useTournamentInviteLink(tournamentId: string | undefined, enabled = true) {
+  return useQuery<TournamentInviteLink>({
+    queryKey: tournamentKeys.inviteLink(tournamentId ?? ''),
+    queryFn: () => getOrCreateTournamentInvite(tournamentId!),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/**
+ * Revoke the active invite link and mint a fresh one.
+ */
+export function useResetTournamentInvite(options: MutationOptions<TournamentInviteLink> = {}) {
+  const qc = useQueryClient();
+  const mutation = useMutation<TournamentInviteLink, Error, { tournamentId: string }>({
+    mutationFn: ({ tournamentId }) => resetTournamentInvite(tournamentId),
+    onSuccess: link => {
+      qc.setQueryData(tournamentKeys.inviteLink(link.tournament_id), link);
+      options.onSuccess?.(link);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Invite-token preview: tournament + active count for a valid token, even
+ * when the tournament is private (RLS would hide it pre-registration).
+ * INVITE_INVALID is terminal — don't retry.
+ */
+export function useTournamentInvitePreview(token: string | undefined, enabled = true) {
+  return useQuery<TournamentInvitePreview>({
+    queryKey: tournamentKeys.invitePreview(token ?? ''),
+    queryFn: () => getTournamentByInviteToken(token!),
+    enabled: !!token && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Register via an invite token (bypasses registration_mode; idempotent).
+ */
+export function useJoinTournamentViaInvite(options: MutationOptions<TournamentRegistration> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { token: string; tournamentId: string; partnerId?: string }
+  >({
+    mutationFn: ({ token, partnerId }) => joinTournamentViaInvite(token, partnerId),
+    onSuccess: (reg, vars) => {
+      invalidate(vars.tournamentId);
+      qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      qc.invalidateQueries({ queryKey: tournamentKeys.invitePreview(vars.token) });
+      options.onSuccess?.(reg);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}

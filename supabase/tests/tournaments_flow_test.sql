@@ -168,33 +168,30 @@ BEGIN
 END $$;
 
 -- --------------------------------------------------------------------------
--- 3. Doubles tournaments are rejected at creation
+-- 3. Doubles tournaments can be created (full doubles lifecycle is covered
+--    by tournaments_doubles_flow_test.sql)
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
     v_sport uuid;
     v_org   uuid;
-    v_ok    boolean := false;
+    v_t     tournaments;
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT player_id INTO v_org FROM player_sport
       WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 1;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
-    BEGIN
-        PERFORM tournament_create(
-            p_name => 'Doubles Cup', p_sport_id => v_sport,
-            p_max_participants => 8::smallint,
-            p_start_date => now() + interval '7 days',
-            p_end_date   => now() + interval '8 days',
-            p_entry_format => 'doubles'
-        );
-    EXCEPTION WHEN OTHERS THEN
-        v_ok := (SQLERRM = 'DOUBLES_NOT_SUPPORTED');
-    END;
-    ASSERT v_ok, 'expected DOUBLES_NOT_SUPPORTED';
+    SELECT * INTO v_t FROM tournament_create(
+        p_name => 'Doubles Cup', p_sport_id => v_sport,
+        p_max_participants => 8::smallint,
+        p_start_date => now() + interval '7 days',
+        p_end_date   => now() + interval '8 days',
+        p_entry_format => 'doubles'
+    );
+    ASSERT v_t.entry_format = 'doubles', 'expected doubles entry_format';
 
-    RAISE NOTICE 'PASS 3: doubles tournament rejected at creation';
+    RAISE NOTICE 'PASS 3: doubles tournament accepted at creation';
 END $$;
 
 -- --------------------------------------------------------------------------

@@ -4,3 +4,4 @@ export type {
   TournamentEditData,
 } from './components/TournamentCreationWizard';
 export { TournamentEditActionSheet } from './components/TournamentEditSheet';
+export { TournamentInviteSheet } from './components/TournamentInviteSheet';

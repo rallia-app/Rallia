@@ -1,0 +1,50 @@
+# Lifecycle C: record the final's score (organizer), tournament completes,
+# then archive it. Continues on the in_progress TournamentDetail screen.
+appId: com.mathisl971.rallia-app
+tags: [tournaments]
+---
+- tapOn:
+    id: "tournament-tab-bracket"
+- extendedWaitUntil:
+    visible:
+      id: "bracket-playable-match"
+    timeout: 15000
+- tapOn:
+    id: "bracket-playable-match"
+- extendedWaitUntil:
+    visible:
+      id: "score-input-p1-0"
+    timeout: 15000
+
+# Best-of-3: two 6-4 sets for player 1
+- tapOn:
+    id: "score-input-p1-0"
+- inputText: "6"
+- tapOn:
+    id: "score-input-p2-0"
+- inputText: "4"
+# One completed set is enough — the sheet derives the winner automatically.
+- tapOn:
+    id: "record-score-save"
+
+# Completion: bracket shows the decided final, champion banner on Overview
+- extendedWaitUntil:
+    visible: ".*Completed.*"
+    timeout: 30000
+- tapOn:
+    id: "tournament-tab-overview"
+- extendedWaitUntil:
+    visible: ".*Champion.*"
+    timeout: 10000
+- takeScreenshot: /tmp/maestro-lifecycle-completed
+
+# Archive via overflow menu
+- tapOn:
+    id: "tournament-overflow-menu"
+- tapOn:
+    id: "menu-archive-tournament"
+- tapOn: "Archive"
+- extendedWaitUntil:
+    visible: ".*Archived.*"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-lifecycle-archived

@@ -44,8 +44,9 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
   const tournamentMatchId = payload?.tournamentMatchId ?? '';
   const tournamentId = payload?.tournamentId ?? '';
   const sportId = payload?.sportId ?? '';
-  const player1UserId = payload?.player1UserId ?? '';
-  const player2UserId = payload?.player2UserId ?? '';
+  const entryFormat = payload?.entryFormat ?? 'singles';
+  const team1UserIds = useMemo(() => payload?.team1UserIds ?? [], [payload?.team1UserIds]);
+  const team2UserIds = useMemo(() => payload?.team2UserIds ?? [], [payload?.team2UserIds]);
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -58,16 +59,17 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
 
   const { data: matches = [], isLoading } = useLinkableMatchesForSlot({
     tournamentMatchId,
-    player1UserId,
-    player2UserId,
+    team1UserIds,
+    team2UserIds,
     sportId,
+    entryFormat,
   });
 
-  // The two bracket players are fixed for the whole sheet — fetch once and look
-  // up each match's team→player by id.
+  // The bracket players are fixed for the whole sheet — fetch once and look
+  // up each match's team→players by id.
   const playerIds = useMemo(
-    () => [player1UserId, player2UserId].filter(Boolean),
-    [player1UserId, player2UserId]
+    () => [...team1UserIds, ...team2UserIds].filter(Boolean),
+    [team1UserIds, team2UserIds]
   );
   const { data: profiles } = useProfilesByIds(playerIds);
 
@@ -135,7 +137,11 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
             {t('tournamentDetail.linkPicker.empty')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.emptyHint}>
-            {t('tournamentDetail.linkPicker.emptyHint')}
+            {t(
+              entryFormat === 'singles'
+                ? 'tournamentDetail.linkPicker.emptyHint'
+                : 'tournamentDetail.linkPicker.emptyHintDoubles'
+            )}
           </Text>
         </View>
       ) : (
@@ -187,24 +193,39 @@ const PlayerAvatar: React.FC<{
   );
 };
 
-/** One player side: avatar + first name, hugging the central score. */
+/** One side: avatar(s) + first name(s) — a pair for doubles — hugging the central score. */
 const PlayerSide: React.FC<{
-  profile?: PlayerProfile;
+  sideProfiles: Array<PlayerProfile | undefined>;
   won: boolean;
   align: 'left' | 'right';
   colors: ThemeColors;
   trophyColor: string;
-}> = ({ profile, won, align, colors, trophyColor }) => {
-  const name = profile?.first_name?.trim() || '—';
-  const avatar = (
-    <PlayerAvatar profile={profile} won={won} colors={colors} trophyColor={trophyColor} />
+}> = ({ sideProfiles, won, align, colors, trophyColor }) => {
+  const name =
+    sideProfiles
+      .map(p => p?.first_name?.trim())
+      .filter(Boolean)
+      .join(' & ') || '—';
+  const avatars = (
+    <View style={styles.avatarStack}>
+      {sideProfiles.map((profile, i) => (
+        <View key={profile?.id ?? i} style={i > 0 ? styles.avatarOverlap : undefined}>
+          <PlayerAvatar
+            profile={profile}
+            won={won && i === 0}
+            colors={colors}
+            trophyColor={trophyColor}
+          />
+        </View>
+      ))}
+    </View>
   );
   const label = (
     <Text
       size="sm"
       weight="semibold"
       color={won ? colors.primary : colors.text}
-      numberOfLines={1}
+      numberOfLines={2}
       style={styles.playerName}
     >
       {name}
@@ -214,13 +235,13 @@ const PlayerSide: React.FC<{
     <View style={[styles.playerSide, align === 'right' && styles.playerSideRight]}>
       {align === 'left' ? (
         <>
-          {avatar}
+          {avatars}
           {label}
         </>
       ) : (
         <>
           {label}
-          {avatar}
+          {avatars}
         </>
       )}
     </View>
@@ -334,8 +355,8 @@ const LinkableMatchCard: React.FC<{
   const cardBg = isDark ? primary[950] : primary[50];
   const borderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
 
-  const p1 = match.team1_user_id ? profiles?.[match.team1_user_id] : undefined;
-  const p2 = match.team2_user_id ? profiles?.[match.team2_user_id] : undefined;
+  const side1 = match.team1_user_ids.map(id => profiles?.[id]);
+  const side2 = match.team2_user_ids.map(id => profiles?.[id]);
 
   return (
     <TouchableOpacity
@@ -378,10 +399,10 @@ const LinkableMatchCard: React.FC<{
         ) : null}
       </View>
 
-      {/* Player — score — player */}
+      {/* Side — score — side */}
       <View style={styles.scoreRow}>
         <PlayerSide
-          profile={p1}
+          sideProfiles={side1}
           won={match.winning_team === 1}
           align="left"
           colors={colors}
@@ -389,7 +410,7 @@ const LinkableMatchCard: React.FC<{
         />
         <ScoreBlock match={match} colors={colors} />
         <PlayerSide
-          profile={p2}
+          sideProfiles={side2}
           won={match.winning_team === 2}
           align="right"
           colors={colors}
@@ -477,6 +498,14 @@ const styles = StyleSheet.create({
   avatarWrap: {
     position: 'relative',
     flexShrink: 0,
+  },
+  avatarStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  avatarOverlap: {
+    marginLeft: -AVATAR_SIZE / 3,
   },
   avatar: {
     width: AVATAR_SIZE,

@@ -892,3 +892,18 @@ export function tournamentCreated(props: {
 }): void {
   capture('lt.tournament.created', props);
 }
+
+export function tournamentShared(props: {
+  tournamentId: string;
+  medium: 'link' | 'native' | 'qr';
+}): void {
+  capture('lt.tournament.shared', props);
+}
+
+export function tournamentInviteRedeemed(props: {
+  tournamentId: string;
+  result: 'registered' | 'error';
+  errorCode?: string;
+}): void {
+  capture('lt.tournament.invite_redeemed', props);
+}

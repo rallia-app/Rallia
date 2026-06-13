@@ -984,6 +984,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     params: { matchId: pending.targetId },
                   })
                 );
+              } else if (pending.type === 'tournament' && pending.targetId) {
+                // Preview-then-confirm: land on the detail screen with the
+                // token; the register CTA there redeems it. No auto-register.
+                await AsyncStorage.setItem(
+                  '@rallia/pending-navigation',
+                  JSON.stringify({
+                    screen: 'TournamentDetail',
+                    params: { tournamentId: pending.targetId, inviteToken: pending.shareToken },
+                  })
+                );
               }
             }
           } catch (referralError) {

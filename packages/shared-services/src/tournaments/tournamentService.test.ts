@@ -29,6 +29,7 @@ import {
   listLinkableMatchesForSlot,
   listMyActiveRegistrations,
   listMyTournaments,
+  listRecentDoublesPartners,
   listPublicTournaments,
   listTournamentMatches,
   openTournamentRegistration,
@@ -349,10 +350,112 @@ describe('registration listing helpers', () => {
   });
 
   it('getMyRegistration returns the row when one exists', async () => {
-    const row = { id: 'r1', user_id: 'u1' };
-    const { p } = chain({ data: row, error: null });
+    const row = { id: 'r1', user_id: 'u1', status: 'registered', registered_at: '2026-06-01' };
+    const { p } = chain({ data: [row], error: null });
     mockFrom.mockReturnValue(p);
     expect(await getMyRegistration('t1', 'u1')).toEqual(row);
+  });
+
+  it('getMyRegistration prefers the active row over an older withdrawn one', async () => {
+    const withdrawn = {
+      id: 'r-old',
+      user_id: 'u1',
+      status: 'withdrawn',
+      registered_at: '2026-06-02',
+    };
+    const activeAsPartner = {
+      id: 'r-active',
+      user_id: 'u9',
+      partner_user_id: 'u1',
+      status: 'registered',
+      registered_at: '2026-06-01',
+    };
+    const { p } = chain({ data: [withdrawn, activeAsPartner], error: null });
+    mockFrom.mockReturnValue(p);
+    expect(await getMyRegistration('t1', 'u1')).toEqual(activeAsPartner);
+  });
+
+  it('getMyRegistration falls back to the most recent row when none is active', async () => {
+    const older = { id: 'r1', user_id: 'u1', status: 'withdrawn', registered_at: '2026-06-01' };
+    const newer = { id: 'r2', user_id: 'u1', status: 'disqualified', registered_at: '2026-06-05' };
+    const { p } = chain({ data: [older, newer], error: null });
+    mockFrom.mockReturnValue(p);
+    expect(await getMyRegistration('t1', 'u1')).toEqual(newer);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listRecentDoublesPartners — teammate matching, dedupe, recency order
+// ---------------------------------------------------------------------------
+
+describe('listRecentDoublesPartners', () => {
+  /** Three sequential from() calls: my participations, teammates, profiles. */
+  function arrangePartners(
+    mine: Array<{ match_id: string; team_number: number | null; match: { match_date: string } }>,
+    mates: Array<{ match_id: string; player_id: string; team_number: number | null }>,
+    profiles: Array<{ id: string; first_name: string }>
+  ) {
+    mockFrom
+      .mockImplementationOnce((table: string) => {
+        expect(table).toBe('match_participant');
+        return chain({ data: mine, error: null }).p;
+      })
+      .mockImplementationOnce((table: string) => {
+        expect(table).toBe('match_participant');
+        return chain({ data: mates, error: null }).p;
+      })
+      .mockImplementationOnce((table: string) => {
+        expect(table).toBe('profile');
+        return chain({ data: profiles, error: null }).p;
+      });
+  }
+
+  it('returns same-team teammates, most recent first, deduped', async () => {
+    arrangePartners(
+      [
+        { match_id: 'm-old', team_number: 1, match: { match_date: '2026-06-01' } },
+        { match_id: 'm-new', team_number: 2, match: { match_date: '2026-06-10' } },
+      ],
+      [
+        // m-old: p1 shared my side (team 1); o1 was the opposition
+        { match_id: 'm-old', player_id: 'p1', team_number: 1 },
+        { match_id: 'm-old', player_id: 'o1', team_number: 2 },
+        // m-new: p2 shared my side (team 2); o2 was the opposition
+        { match_id: 'm-new', player_id: 'p2', team_number: 2 },
+        { match_id: 'm-new', player_id: 'o2', team_number: 1 },
+      ],
+      [
+        { id: 'p1', first_name: 'Old Partner' },
+        { id: 'p2', first_name: 'New Partner' },
+      ]
+    );
+    const out = await listRecentDoublesPartners('me', 's1');
+    expect(out.map(p => p.id)).toEqual(['p2', 'p1']);
+  });
+
+  it('dedupes a repeat partner and skips matches without my team_number', async () => {
+    arrangePartners(
+      [
+        { match_id: 'm1', team_number: 1, match: { match_date: '2026-06-10' } },
+        { match_id: 'm2', team_number: 1, match: { match_date: '2026-06-05' } },
+        { match_id: 'm3', team_number: null, match: { match_date: '2026-06-09' } },
+      ],
+      [
+        { match_id: 'm1', player_id: 'p1', team_number: 1 },
+        { match_id: 'm2', player_id: 'p1', team_number: 1 },
+        { match_id: 'm3', player_id: 'px', team_number: 1 },
+      ],
+      [{ id: 'p1', first_name: 'Repeat' }]
+    );
+    const out = await listRecentDoublesPartners('me', 's1');
+    expect(out.map(p => p.id)).toEqual(['p1']);
+  });
+
+  it('returns [] when the caller has no doubles history', async () => {
+    mockFrom.mockImplementationOnce(() => chain({ data: [], error: null }).p);
+    const out = await listRecentDoublesPartners('me', 's1');
+    expect(out).toEqual([]);
+    expect(mockFrom).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -385,7 +488,13 @@ describe('RPC wrappers', () => {
       name: 'registerForTournament',
       fn: () => registerForTournament('t1'),
       rpc: 'tournament_register',
-      args: { p_tournament_id: 't1' },
+      args: { p_tournament_id: 't1', p_partner_id: undefined },
+    },
+    {
+      name: 'registerForTournament (doubles partner)',
+      fn: () => registerForTournament('t1', 'p9'),
+      rpc: 'tournament_register',
+      args: { p_tournament_id: 't1', p_partner_id: 'p9' },
     },
     {
       name: 'withdrawFromTournament',
@@ -496,6 +605,7 @@ describe('listLinkableMatchesForSlot', () => {
     match_date: string;
     start_time: string;
     end_time: string;
+    format?: string | null;
     match_result: MatchResultEmbed | MatchResultEmbed[] | null;
     match_participant: Array<{ player_id: string; status: string; team_number: number | null }>;
   };
@@ -504,6 +614,7 @@ describe('listLinkableMatchesForSlot', () => {
     id: string;
     embedAsArray?: boolean;
     verified?: boolean;
+    format?: string | null;
     participants?: Array<{ player_id: string; status?: string; team_number?: number | null }>;
     nullResult?: boolean;
     winning_team?: number | null;
@@ -525,6 +636,7 @@ describe('listLinkableMatchesForSlot', () => {
       match_date: '2026-05-01',
       start_time: '12:00',
       end_time: '13:00',
+      format: opts.format ?? 'singles',
       match_result: opts.embedAsArray && mr ? [mr] : mr,
       match_participant: (opts.participants ?? []).map((p, i) => ({
         player_id: p.player_id,
@@ -556,9 +668,18 @@ describe('listLinkableMatchesForSlot', () => {
 
   const params = {
     tournamentMatchId: 'tm-1',
-    player1UserId: 'u1',
-    player2UserId: 'u2',
+    team1UserIds: ['u1'],
+    team2UserIds: ['u2'],
     sportId: 's1',
+    entryFormat: 'singles' as const,
+  };
+
+  const doublesParams = {
+    tournamentMatchId: 'tm-1',
+    team1UserIds: ['u1', 'u2'],
+    team2UserIds: ['u3', 'u4'],
+    sportId: 's1',
+    entryFormat: 'doubles' as const,
   };
 
   it('returns the eligible match when both players joined and result verified (object embed)', async () => {
@@ -577,8 +698,8 @@ describe('listLinkableMatchesForSlot', () => {
       winning_team: 1,
       team1_score: 6,
       team2_score: 3,
-      team1_user_id: 'u1',
-      team2_user_id: 'u2',
+      team1_user_ids: ['u1'],
+      team2_user_ids: ['u2'],
     });
   });
 
@@ -614,7 +735,74 @@ describe('listLinkableMatchesForSlot', () => {
       }),
     ]);
     const out = await listLinkableMatchesForSlot(params);
-    expect(out[0]).toMatchObject({ team1_user_id: 'u2', team2_user_id: 'u1' });
+    expect(out[0]).toMatchObject({ team1_user_ids: ['u2'], team2_user_ids: ['u1'] });
+  });
+
+  it('doubles: returns the eligible 4-player doubles game with per-team ids', async () => {
+    arrange([
+      row({
+        id: 'm-d',
+        format: 'doubles',
+        participants: [
+          { player_id: 'u1', team_number: 1 },
+          { player_id: 'u2', team_number: 1 },
+          { player_id: 'u3', team_number: 2 },
+          { player_id: 'u4', team_number: 2 },
+        ],
+      }),
+    ]);
+    const out = await listLinkableMatchesForSlot(doublesParams);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      id: 'm-d',
+      team1_user_ids: ['u1', 'u2'],
+      team2_user_ids: ['u3', 'u4'],
+    });
+  });
+
+  it('doubles: drops singles-format games and wrong/partial player sets', async () => {
+    arrange([
+      // right players, wrong format
+      row({
+        id: 'm-fmt',
+        format: 'singles',
+        participants: [
+          { player_id: 'u1', team_number: 1 },
+          { player_id: 'u2', team_number: 1 },
+          { player_id: 'u3', team_number: 2 },
+          { player_id: 'u4', team_number: 2 },
+        ],
+      }),
+      // 3 of 4 players + an outsider
+      row({
+        id: 'm-out',
+        format: 'doubles',
+        participants: [
+          { player_id: 'u1', team_number: 1 },
+          { player_id: 'u2', team_number: 1 },
+          { player_id: 'u3', team_number: 2 },
+          { player_id: 'u9', team_number: 2 },
+        ],
+      }),
+    ]);
+    const out = await listLinkableMatchesForSlot(doublesParams);
+    expect(out).toEqual([]);
+  });
+
+  it('singles: drops doubles-format games even with the right two players', async () => {
+    const matchChain = chain({
+      data: [
+        row({
+          id: 'm-d2',
+          format: 'doubles',
+          participants: [{ player_id: 'u1' }, { player_id: 'u2' }],
+        }),
+      ],
+      error: null,
+    });
+    mockFrom.mockReturnValueOnce(matchChain.p);
+    const out = await listLinkableMatchesForSlot(params);
+    expect(out).toEqual([]);
   });
 
   it('handles match_result returned as a single-element array (PostgREST shape variation)', async () => {
