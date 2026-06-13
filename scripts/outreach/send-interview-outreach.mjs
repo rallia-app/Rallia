@@ -66,8 +66,8 @@ const MESSAGES = {
   active: {
     fr: [
       'Salut {{name}}!',
-      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
-      "Qu'est-ce qui marche bien pour toi, pis qu'est-ce qui t'accroche des fois?",
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Tu utilises l'app depuis un moment et on aimerait vraiment avoir ton avis.",
+      "Qu'est-ce qui marche bien pour toi, et qu'est-ce qui t'accroche parfois?",
     ],
     en: [
       'Hey {{name}}!',
@@ -81,8 +81,8 @@ const MESSAGES = {
   test_casual: {
     fr: [
       'Salut {{name}}!',
-      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
-      "Qu'est-ce qui marche bien pour toi, pis qu'est-ce qui t'accroche des fois?",
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Tu utilises l'app depuis un moment et on aimerait vraiment avoir ton avis.",
+      "Qu'est-ce qui marche bien pour toi, et qu'est-ce qui t'accroche parfois?",
     ],
     en: [
       'Hey {{name}}!',
@@ -94,8 +94,8 @@ const MESSAGES = {
   test_link: {
     fr: [
       'Salut {{name}}!',
-      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
-      `Aurais-tu 15 min pour qu'on jase de ton expérience sur appel? Tu peux réserver le moment qui te convient ici: ${CALENDLY}`,
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Tu utilises l'app depuis un moment et on aimerait vraiment avoir ton avis.",
+      `Aurais-tu 15 min pour discuter de ton expérience? Tu peux réserver le moment qui te convient ici: ${CALENDLY}`,
     ],
     en: [
       'Hey {{name}}!',
@@ -107,8 +107,8 @@ const MESSAGES = {
   test_nolink: {
     fr: [
       'Salut {{name}}!',
-      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
-      "Aurais-tu 15 min cette semaine pour qu'on jase de ton expérience sur appel?",
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Tu utilises l'app depuis un moment et on aimerait vraiment avoir ton avis.",
+      "Aurais-tu 15 min cette semaine pour discuter de ton expérience?",
     ],
     en: [
       'Hey {{name}}!',
