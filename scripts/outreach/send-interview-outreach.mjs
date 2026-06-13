@@ -41,7 +41,11 @@ const SENDER_EMAIL = 'lefrancmathis@gmail.com'; // message author
 const FOUNDER_LABEL = 'Jean & Mathis'; // used in the conversation title
 const CAMPAIGN = 'user_interview_outreach';
 const PROD_REF = 'ncewkeoohdkpbcovbppd';
-const VALID_SEGMENTS = new Set(['new', 'active', 'one_session', 'drifted']);
+const VALID_SEGMENTS = new Set([
+  'new', 'active', 'one_session', 'drifted',
+  // A/B/C interview-ask experiment (active users)
+  'test_casual', 'test_link', 'test_nolink',
+]);
 const CALENDLY = 'https://calendly.com/apprallia/15min';
 
 // Each template is an array of lines joined into ONE message with line breaks.
@@ -69,6 +73,47 @@ const MESSAGES = {
       'Hey {{name}}!',
       "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
       "What's been working well for you, and what trips you up sometimes?",
+    ],
+  },
+
+  // --- A/B/C interview-ask experiment. Identical intro across arms; only the 3rd line (the ask) differs. ---
+  // Arm A: casual hook, no interview ask (same as `active`).
+  test_casual: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
+      "Qu'est-ce qui marche bien pour toi, pis qu'est-ce qui t'accroche des fois?",
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
+      "What's been working well for you, and what trips you up sometimes?",
+    ],
+  },
+  // Arm B: direct interview ask + Calendly link (utm-tagged for booking attribution).
+  test_link: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
+      `Aurais-tu 15 min pour qu'on jase de ton expérience sur appel? Tu peux réserver le moment qui te convient ici: ${CALENDLY}?utm_source=interview_test`,
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
+      `Would you have 15 min for a quick call about your experience? You can grab a time that works for you here: ${CALENDLY}?utm_source=interview_test`,
+    ],
+  },
+  // Arm C: direct interview ask, no link.
+  test_nolink: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Ça fait un bout que t'utilises l'app pis on aimerait vraiment avoir ton avis.",
+      "Aurais-tu 15 min cette semaine pour qu'on jase de ton expérience sur appel?",
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
+      'Would you have 15 min this week for a quick call about your experience?',
     ],
   },
   one_session: {
