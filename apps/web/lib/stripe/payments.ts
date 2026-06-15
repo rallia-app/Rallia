@@ -149,6 +149,37 @@ export interface CreateDonationPaymentIntentParams {
   donorMessage?: string;
 }
 
+export interface CreateMatchUnlockPaymentIntentParams {
+  amountCents: number;
+  currency?: string;
+  receiptEmail?: string;
+  metadata: Record<string, string>;
+}
+
+export async function createMatchUnlockPaymentIntent(
+  params: CreateMatchUnlockPaymentIntentParams
+): Promise<PaymentIntentResult> {
+  const stripe = getStripeClient();
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: params.amountCents,
+    currency: params.currency ?? 'cad',
+    automatic_payment_methods: { enabled: true },
+    receipt_email: params.receiptEmail || undefined,
+    description: 'Rallia instant match intro (early access preview)',
+    metadata: {
+      type: 'match_smoke_test',
+      ...params.metadata,
+    },
+  });
+
+  return {
+    paymentIntentId: paymentIntent.id,
+    clientSecret: paymentIntent.client_secret!,
+    status: paymentIntent.status,
+  };
+}
+
 export async function createDonationPaymentIntent(
   params: CreateDonationPaymentIntentParams
 ): Promise<PaymentIntentResult> {

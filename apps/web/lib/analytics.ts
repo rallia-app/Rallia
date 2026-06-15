@@ -14,6 +14,8 @@
 
 import posthog from 'posthog-js';
 
+import type { RatingOption } from '@/lib/match-smoke-test/constants';
+
 type Properties = Record<string, unknown>;
 
 function capture(event: string, properties?: Properties): void {
@@ -73,6 +75,127 @@ export function donateFailed(props: {
   stage: 'intent_create' | 'payment_confirm';
 }): void {
   capture('donate_failed', props);
+}
+
+// ---- /find-a-match smoke test funnel ----
+
+export type MatchSmokeTestRating = RatingOption;
+export type MatchSmokeTestTimeSlot = string;
+export type MatchSmokeTestLocationType = 'address';
+export type MatchSmokeTestFormat = 'singles' | 'doubles';
+export type MatchSmokeTestNature = 'casual' | 'competitive';
+export type MatchSmokeTestPlanTier = 'single' | 'pack_3' | 'sub_monthly';
+
+type MatchSmokeTestPaymentProps = {
+  rating: MatchSmokeTestRating;
+  plan_tier: MatchSmokeTestPlanTier;
+  amount_cents: number;
+  currency: string;
+  credits: number | null;
+};
+
+export function matchSmokeTestViewed(): void {
+  capture('match_smoke_test_viewed');
+}
+
+export function matchSmokeTestFormSubmitted(props: {
+  rating: MatchSmokeTestRating;
+  match_format: MatchSmokeTestFormat;
+  match_nature: MatchSmokeTestNature;
+  time_slot: MatchSmokeTestTimeSlot;
+  location_type: MatchSmokeTestLocationType;
+  has_postal_code: boolean;
+  geolocation_granted: boolean;
+}): void {
+  capture('match_smoke_test_form_submitted', props);
+}
+
+export function matchSmokeTestSearchStarted(props: {
+  rating: MatchSmokeTestRating;
+  time_slot: MatchSmokeTestTimeSlot;
+}): void {
+  capture('match_smoke_test_search_started', props);
+}
+
+export function matchSmokeTestMatchFound(props: {
+  rating: MatchSmokeTestRating;
+  time_slot: MatchSmokeTestTimeSlot;
+  player_template_id: string;
+  distance_km: number;
+}): void {
+  capture('match_smoke_test_match_found', props);
+}
+
+export function matchSmokeTestPromiseViewed(props: { rating: MatchSmokeTestRating }): void {
+  capture('match_smoke_test_promise_viewed', props);
+}
+
+export function matchSmokeTestPromiseContinued(props: { rating: MatchSmokeTestRating }): void {
+  capture('match_smoke_test_promise_continued', props);
+}
+
+export function matchSmokeTestUnlockClicked(props: { rating: MatchSmokeTestRating }): void {
+  capture('match_smoke_test_unlock_clicked', props);
+}
+
+export function matchSmokeTestPlanPickerViewed(props: { rating: MatchSmokeTestRating }): void {
+  capture('match_smoke_test_plan_picker_viewed', props);
+}
+
+export function matchSmokeTestPlanSelected(props: MatchSmokeTestPaymentProps): void {
+  capture('match_smoke_test_plan_selected', props);
+}
+
+export function matchSmokeTestSubscriptionInterest(props: { rating: MatchSmokeTestRating }): void {
+  capture('match_smoke_test_subscription_interest', props);
+}
+
+export function matchSmokeTestCheckoutStarted(props: MatchSmokeTestPaymentProps): void {
+  capture('match_smoke_test_checkout_started', props);
+}
+
+export function matchSmokeTestCheckoutViewed(props: MatchSmokeTestPaymentProps): void {
+  capture('match_smoke_test_checkout_viewed', props);
+}
+
+export function matchSmokeTestCompleted(props: MatchSmokeTestPaymentProps): void {
+  capture('match_smoke_test_completed', props);
+}
+
+export function matchSmokeTestFailed(
+  props: MatchSmokeTestPaymentProps & {
+    stage: 'intent_create' | 'payment_confirm';
+  }
+): void {
+  capture('match_smoke_test_failed', props);
+}
+
+export function matchSmokeTestPhoneStepViewed(props: {
+  rating: MatchSmokeTestRating;
+  payment_intent_id: string;
+}): void {
+  capture('match_smoke_test_phone_step_viewed', props);
+}
+
+export function matchSmokeTestPhoneCodeSent(props: {
+  rating: MatchSmokeTestRating;
+  payment_intent_id: string;
+}): void {
+  capture('match_smoke_test_phone_code_sent', props);
+}
+
+export function matchSmokeTestPhoneVerified(props: {
+  rating: MatchSmokeTestRating;
+  payment_intent_id: string;
+}): void {
+  capture('match_smoke_test_phone_verified', props);
+}
+
+export function matchSmokeTestDone(props: {
+  rating: MatchSmokeTestRating;
+  payment_intent_id: string;
+}): void {
+  capture('match_smoke_test_done', props);
 }
 
 // ---- Deep-link landings ----

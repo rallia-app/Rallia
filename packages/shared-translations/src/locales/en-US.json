@@ -10212,6 +10212,224 @@
       "donateAgain": "Donate again"
     }
   },
+  "findAMatch": {
+    "hero": {
+      "badge": "Early preview",
+      "headline": "Find a player at your level, near you, when you want.",
+      "subheadline": "Tell us your level, where, and when — our AI coordinates compatible players and locks in your match."
+    },
+    "wizard": {
+      "stepOf": "Question {current} of {total}",
+      "back": "Back",
+      "continue": "Continue",
+      "submit": "Find my match",
+      "intro": {
+        "headline": "Need someone to play with?",
+        "subheadline": "Answer {count} quick questions — then our AI agent runs the back-and-forth with players in our network to find your best match.",
+        "cta": "Get started"
+      },
+      "rating": {
+        "question": "What's your level?",
+        "hint": "Pick the rating closest to yours — we'll match you with someone similar."
+      },
+      "format": {
+        "question": "Singles or doubles?",
+        "hint": "We'll find players looking for the same format."
+      },
+      "nature": {
+        "question": "Casual or competitive?",
+        "hint": "So our AI reaches players with the same vibe."
+      },
+      "day": {
+        "question": "Which day works for you?",
+        "hint": "Pick today or tomorrow. Counts show bookable court slots at your facility.",
+        "loading": "Loading availability…",
+        "openSlots": "{count} court slots open",
+        "noOpenSlots": "No court slots listed"
+      },
+      "time": {
+        "question": "What time works for you?",
+        "hint": "For {day} — pick one time. Colors show court availability at your facility, not players yet.",
+        "startLabel": "Start",
+        "endLabel": "End",
+        "rangeHintStart": "Tap a start time below",
+        "rangeHintEnd": "Now tap your end time",
+        "rangeSelected": "{range}",
+        "periods": {
+          "morning": "Morning",
+          "afternoon": "Afternoon",
+          "evening": "Evening"
+        },
+        "openCourts": "{count} courts",
+        "noOpenCourts": "No courts",
+        "availabilityLegend": {
+          "high": "Lots of court slots",
+          "medium": "Some court slots",
+          "low": "Few court slots",
+          "none": "No slots listed"
+        }
+      },
+      "location": {
+        "question": "Where do you want to play?",
+        "hint": "Enter your home or playing address, then pick a nearby facility.",
+        "resolving": "Looking up your address…",
+        "searching": "Finding nearby facilities…",
+        "openSlots": "{count} court slots open",
+        "noOpenSlots": "No online slots listed",
+        "noResults": "No facilities found within 25 km.",
+        "errors": {
+          "notFound": "We couldn't find that address.",
+          "searchFailed": "Couldn't load facilities. Try again."
+        }
+      }
+    },
+    "form": {
+      "ratingLabel": "Your level",
+      "timeLabel": "When do you want to play?",
+      "locationLabel": "Where?",
+      "postalPlaceholder": "H2X 1Y4",
+      "addressPlaceholder": "1234 Rue Saint-Denis, Montréal",
+      "submit": "Find a player",
+      "submitting": "Starting search…",
+      "timeFlexible": "Flexible — any time in the next 48 hours",
+      "timeFlexibleHint": "Our AI will reach players who can fit you in soon",
+      "timeWindow": "{day} · {window}",
+      "timeDays": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "day_after": "Day after"
+      },
+      "formats": {
+        "singles": "Singles",
+        "doubles": "Doubles"
+      },
+      "formatHints": {
+        "singles": "1 vs 1",
+        "doubles": "2 vs 2 — we'll find you a partner or a pair"
+      },
+      "natures": {
+        "casual": "Casual rallies",
+        "competitive": "Competitive match"
+      },
+      "natureHints": {
+        "casual": "Relaxed hitting and rallying",
+        "competitive": "Real match with scoring"
+      },
+      "locations": {
+        "near_me": "Near me",
+        "postal_code": "Postal code"
+      },
+      "errors": {
+        "rating": "Pick your level to continue.",
+        "time": "Pick when you'd like to play.",
+        "postalCode": "Enter a valid Canadian postal code.",
+        "address": "Select an address from the suggestions.",
+        "facility": "Select a facility."
+      }
+    },
+    "search": {
+      "title": "Starting your AI search…",
+      "message1": "Scanning compatible players near you…",
+      "message2": "Checking who's free for your time slot…",
+      "message3": "Following up with the best candidates…",
+      "footer": "This usually takes a few minutes."
+    },
+    "promise": {
+      "title": "Here's what happens next",
+      "subtitle": "You're not browsing a list — an AI agent handles the coordination for you.",
+      "summaryTitle": "Your request",
+      "summaryLevel": "Level {rating}",
+      "summaryFormat": "Format: {format}",
+      "summaryNature": "Style: {nature}",
+      "summaryTime": "When: {time}",
+      "summaryNearMe": "Where: near you",
+      "summaryPostal": "Where: {postal}",
+      "summaryAddress": "Where: {address}",
+      "summaryFacility": "Where: {facility} · {address}",
+      "point1": "Our AI contacts compatible players, follows up, and negotiates time and fit until we land on the best match for your slot.",
+      "point2": "If we can't get everyone confirmed within 30 minutes, you're automatically refunded 100% — no questions asked.",
+      "point3": "Once confirmed, we'll text you the match details. Reply to accept.",
+      "continueCta": "Choose a plan"
+    },
+    "match": {
+      "badge": "Match available",
+      "title": "A compatible player is available",
+      "subtitle": "Choose a plan to unlock the intro and lock in your game.",
+      "rating": "Level {rating}",
+      "games": "{count} games",
+      "distance": "{km} km away",
+      "continueCta": "Choose a plan",
+      "continueNote": "AI coordinates players for you — refund if no match in 30 min."
+    },
+    "plans": {
+      "title": "How do you want to search?",
+      "subtitle": "Each credit is one active search. An AI agent coordinates compatible players for you.",
+      "bestValue": "Best value",
+      "comingSoon": "Coming soon",
+      "perSearch": "{amount} / search",
+      "single": {
+        "title": "1 search",
+        "price": "$1.99",
+        "description": "Just this game — pay as you go."
+      },
+      "pack_3": {
+        "title": "3 searches",
+        "price": "$2.99",
+        "description": "Play regularly? Cover a few games at a better rate."
+      },
+      "sub_monthly": {
+        "title": "Unlimited",
+        "price": "$4.99/mo",
+        "description": "For players who need a partner every week."
+      },
+      "subscriptionNote": "Unlimited plans aren't available in this preview yet — we'll notify you when they launch.",
+      "continueCta": "Continue to payment"
+    },
+    "payment": {
+      "title": "Complete your purchase",
+      "subtitleSingle": "Pay {amount} for 1 search credit.",
+      "subtitlePack": "Pay {amount} for 3 search credits.",
+      "submit": "Pay {amount}",
+      "processing": "Processing…",
+      "back": "Back to plans",
+      "secureNote": "Secured by Stripe. Your card details are never stored by Rallia.",
+      "failed": "Payment failed. Please check your details and try again.",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "phone": {
+      "badge": "Payment received",
+      "title": "Where should we text you?",
+      "subtitle": "We'll text you when your AI-coordinated match is confirmed — reply to accept.",
+      "placeholder": "(514) 555-0123",
+      "codePlaceholder": "6-digit code",
+      "sendCode": "Send verification code",
+      "sending": "Sending…",
+      "verifyCode": "Verify & finish",
+      "verifying": "Verifying…",
+      "changeNumber": "Use a different number",
+      "devCodeHint": "Dev mode — your code is {code}",
+      "errors": {
+        "invalidPhone": "Enter a valid 10-digit phone number.",
+        "invalidCode": "Enter the 6-digit code we sent you.",
+        "sendFailed": "Couldn't send the code. Try again.",
+        "verifyFailed": "Verification failed. Check the code and try again."
+      }
+    },
+    "done": {
+      "badge": "You're all set",
+      "headline": "Your AI agent is on it.",
+      "message": "We're contacting compatible players, handling replies, and zeroing in on the best fit. Watch for a text within the next 30 minutes.",
+      "smsNote": "When a match is locked in, we'll text you the details — reply to accept.",
+      "previewNote": "Early preview — AI coordination is rolling out market by market while we validate demand."
+    },
+    "success": {
+      "badge": "You're in",
+      "headline": "Thanks — you're on the early access list.",
+      "message": "Your payment confirms real demand for instant matchmaking. We'll reach out as soon as intros go live in your area.",
+      "previewNote": "This was an early preview — no player contact is made yet. A receipt was sent if you entered an email at checkout.",
+      "tryAgain": "Try another search"
+    }
+  },
   "subscription": {
     "pro_badge": "Plus",
     "upgrade_cta": "Upgrade to Rallia Plus",
@@ -10349,6 +10567,12 @@
       "description": "Help keep Rallia free for tennis and pickleball players. Your contribution funds matchmaking, court partnerships, and the community.",
       "ogTitle": "Support Rallia",
       "ogDescription": "Help keep Rallia free for tennis and pickleball players everywhere."
+    },
+    "findAMatch": {
+      "title": "Find a Player Now — Rallia Preview",
+      "description": "AI-coordinated tennis and pickleball matchmaking — we handle the player outreach for you.",
+      "ogTitle": "Find a Player Now — Rallia Preview",
+      "ogDescription": "AI-coordinated tennis and pickleball matchmaking — we handle the player outreach for you."
     },
     "privacy": {
       "title": "Privacy Policy",
