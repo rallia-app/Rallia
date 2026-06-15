@@ -511,6 +511,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const {
     predictions,
     isLoading: isLoadingPredictions,
+    error: placesError,
     clearPredictions,
     getPlaceDetails,
   } = usePlacesAutocomplete({
@@ -1197,6 +1198,10 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
         {facilitySearchError && !isSearchingFacilities && (
           <p className="text-sm text-muted-foreground">{facilitySearchError}</p>
+        )}
+
+        {placesError && !isResolvingAddress && (
+          <p className="text-sm text-destructive">{placesError}</p>
         )}
 
         {nearbyFacilities.length > 0 && (
