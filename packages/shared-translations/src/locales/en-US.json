@@ -4178,6 +4178,11 @@
         "title": "Playing too?",
         "description": "Add yourself to this tournament as a participant."
       },
+      "pendingRequestsCta": {
+        "title": "Pending requests",
+        "description": "{count} players waiting for your approval.",
+        "review": "Review requests"
+      },
       "myMatch": {
         "title": "Your next game",
         "vs": "vs {name}",
