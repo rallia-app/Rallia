@@ -4191,6 +4191,14 @@
         "empty": "No players registered yet",
         "pending": "Pending",
         "removeLabel": "Remove {name}"
+      },
+      "pendingRequests": {
+        "title": "Pending requests ({count})",
+        "approve": "Approve",
+        "decline": "Decline",
+        "approveLabel": "Approve {name}",
+        "declineLabel": "Decline {name}",
+        "approvedToast": "Player approved"
       }
     },
     "labels": {
@@ -4308,6 +4316,13 @@
       "keepIt": "Cancel",
       "success": "Player removed"
     },
+    "declineModal": {
+      "title": "Decline this request?",
+      "message": "Decline {name}'s request? They won't be able to request to join this tournament again.",
+      "confirm": "Decline",
+      "keepIt": "Cancel",
+      "success": "Request declined"
+    },
     "cancelledNotice": {
       "title": "Tournament cancelled",
       "reason": "Reason: {reason}"
@@ -4379,6 +4394,9 @@
       "lockConflict": "Someone else made changes — please refresh and try again.",
       "removeFailed": "Couldn't remove the player. Please try again.",
       "removeNotAllowed": "Players can't be removed once the bracket exists.",
+      "approveFailed": "Couldn't approve the request. Please try again.",
+      "approveNotAllowed": "Requests can't be approved once the bracket exists.",
+      "declineFailed": "Couldn't decline the request. Please try again.",
       "registrationRemoved": "The organizer removed you from this tournament. You can't register again.",
       "partnerRequired": "Pick a partner to register for this doubles tournament.",
       "partnerAlreadyRegistered": "That player is already registered in this tournament.",
