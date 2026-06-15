@@ -90,6 +90,11 @@ const getApiKey = (): string | null => {
   return null;
 };
 
+/** Web: proxy through Next.js API when only server-side GOOGLE_PLACES_API_KEY is set. */
+function shouldUseServerPlacesProxy(): boolean {
+  return typeof window !== 'undefined' && !getApiKey();
+}
+
 // =============================================================================
 // SESSION TOKEN MANAGEMENT
 // =============================================================================
@@ -147,6 +152,23 @@ export function usePlacesAutocomplete(
     if (shouldUseApiMocks()) {
       sessionTokenRef.current = generateSessionToken();
       return mockPlaceDetails(placeId);
+    }
+
+    if (shouldUseServerPlacesProxy()) {
+      try {
+        const response = await fetch('/api/places/details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ placeId }),
+        });
+        if (!response.ok) return null;
+        const data = (await response.json()) as { details?: PlaceDetails };
+        sessionTokenRef.current = generateSessionToken();
+        return data.details ?? null;
+      } catch (err) {
+        console.error('Place details proxy error:', err);
+        return null;
+      }
     }
 
     const apiKey = getApiKey();
@@ -265,6 +287,49 @@ export function usePlacesAutocomplete(
         try {
           const results = await mockPlacePredictions(query);
           setPredictions(results);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (shouldUseServerPlacesProxy()) {
+        if (query.length < minQueryLength) {
+          setPredictions([]);
+          setIsLoading(false);
+          return;
+        }
+
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+          const response = await fetch('/api/places/autocomplete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input: query }),
+            signal: abortControllerRef.current.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch place suggestions');
+          }
+
+          const data = (await response.json()) as { predictions?: PlacePrediction[] };
+          setPredictions(data.predictions ?? []);
+          setError(null);
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') {
+            return;
+          }
+          console.error('Places autocomplete proxy error:', err);
+          setError('Failed to search places');
+          setPredictions([]);
         } finally {
           setIsLoading(false);
         }
