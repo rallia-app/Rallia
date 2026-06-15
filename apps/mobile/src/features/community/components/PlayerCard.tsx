@@ -45,13 +45,18 @@ interface PlayerCardProps {
   /** Online status computed by parent from last_seen_at */
   isOnline?: boolean;
   /** Optional trailing icon button in the name row (e.g. remove from list). */
-  trailingAction?: {
-    icon: keyof typeof Ionicons.glyphMap;
-    color?: string;
-    accessibilityLabel: string;
-    onPress: (player: PlayerSearchResult) => void;
-  };
+  trailingAction?: PlayerCardTrailingAction;
+  /** Optional multiple trailing icon buttons (e.g. approve + decline). Takes
+   *  precedence over trailingAction when provided. */
+  trailingActions?: PlayerCardTrailingAction[];
 }
+
+export type PlayerCardTrailingAction = {
+  icon: keyof typeof Ionicons.glyphMap;
+  color?: string;
+  accessibilityLabel: string;
+  onPress: (player: PlayerSearchResult) => void;
+};
 
 function formatDistance(meters: number | null, nearbyLabel: string): string {
   if (meters === null || meters === undefined) return '';
@@ -73,6 +78,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   reputationDisplay,
   isOnline = false,
   trailingAction,
+  trailingActions,
 }) => {
   const { t } = useTranslation();
   // Use the app's theme context (not device colorScheme) — the rest of the
@@ -144,6 +150,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const onlineColor = isDark ? status.success.light : status.success.DEFAULT;
 
   const hasBadges = !!(player.rating || reputationDisplay?.isVisible);
+
+  // Normalize single/multiple trailing actions; plural wins when both are set.
+  const resolvedTrailingActions = trailingActions ?? (trailingAction ? [trailingAction] : []);
 
   // When the player isn't online, derive a calendar-day "last active" label.
   // Hidden when missing or stale beyond 14 days so the row doesn't carry
@@ -241,21 +250,18 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                   />
                 </TouchableOpacity>
               )}
-              {trailingAction && (
+              {resolvedTrailingActions.map(action => (
                 <TouchableOpacity
-                  onPress={() => trailingAction.onPress(player)}
+                  key={action.icon}
+                  onPress={() => action.onPress(player)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={styles.favoriteButton}
                   accessibilityRole="button"
-                  accessibilityLabel={trailingAction.accessibilityLabel}
+                  accessibilityLabel={action.accessibilityLabel}
                 >
-                  <Ionicons
-                    name={trailingAction.icon}
-                    size={20}
-                    color={trailingAction.color ?? mutedColor}
-                  />
+                  <Ionicons name={action.icon} size={20} color={action.color ?? mutedColor} />
                 </TouchableOpacity>
-              )}
+              ))}
             </View>
 
             {/* Row 2: distance · activity (inline, dot-separated) */}
