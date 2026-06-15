@@ -1,0 +1,51 @@
+# E2E (participant): discover a public open tournament -> register -> withdraw.
+# Fixture "Maestro Public Open" is seeded server-side in demo's active sport.
+appId: com.mathisl971.rallia-app
+tags: [tournaments]
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "tab-create-fab"
+    timeout: 120000
+
+# Open the tournaments discovery list from the Home quick-nav row
+# (horizontal carousel — swipe it left to reveal "Join a tournament").
+- swipe:
+    start: "85%, 30%"
+    end: "15%, 30%"
+- swipe:
+    start: "85%, 30%"
+    end: "15%, 30%"
+- extendedWaitUntil:
+    visible: ".*Join a tournament.*"
+    timeout: 8000
+- tapOn: ".*Join a tournament.*"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-card-c2e04d75-8718-4709-8358-6eba02f39d47"
+    timeout: 20000
+- tapOn:
+    id: "tournament-card-c2e04d75-8718-4709-8358-6eba02f39d47"
+
+# Register as a participant
+- extendedWaitUntil:
+    visible:
+      id: "cta-register"
+    timeout: 20000
+- tapOn:
+    id: "cta-register"
+- extendedWaitUntil:
+    visible:
+      id: "cta-withdraw"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-participant-registered
+
+# Withdraw
+- tapOn:
+    id: "cta-withdraw"
+- extendedWaitUntil:
+    visible:
+      id: "cta-register"
+    timeout: 20000
+- takeScreenshot: /tmp/maestro-participant-withdrawn

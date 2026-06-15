@@ -15,11 +15,12 @@ import React, { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SheetManager, getSheetStack } from 'react-native-actions-sheet';
 import { Logger } from '@rallia/shared-services';
-import { useAuth, useProfile, useAdminStatus } from '@rallia/shared-hooks';
+import { useAuth, useProfile } from '@rallia/shared-hooks';
 
 import { useOverlay } from '#/context';
 import { summerLeagueAnnouncementViewed } from '#/services/analytics';
 import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
+import { IS_E2E } from '#/utils/e2e';
 
 const SUMMER_LEAGUE_SHOWN_KEY = '@rallia/summer-league-announcement-shown';
 // Let the home screen settle before presenting (matches PendingFeedbackHandler).
@@ -43,18 +44,15 @@ export const SummerLeagueAnnouncementAutoOpener: React.FC<
   const { profile } = useProfile();
   const isOnboardingComplete = !!profile?.onboarding_completed;
   const { isSportSelectionComplete } = useOverlay();
-  // Temporary: restrict the announcement to admins while we pilot it.
-  const { isAdmin, loading: adminLoading } = useAdminStatus();
 
   // Evaluate at most once per app session.
   const openedRef = useRef(false);
 
   useEffect(() => {
+    if (IS_E2E) return;
     if (openedRef.current) return;
     if (!isSplashComplete || !isSportSelectionComplete) return;
     if (!isAuthed || !isOnboardingComplete) return;
-    // Admin-only for now — wait for the check to resolve, then require admin.
-    if (adminLoading || !isAdmin) return;
 
     openedRef.current = true;
 
@@ -94,14 +92,7 @@ export const SummerLeagueAnnouncementAutoOpener: React.FC<
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [
-    isSplashComplete,
-    isSportSelectionComplete,
-    isAuthed,
-    isOnboardingComplete,
-    adminLoading,
-    isAdmin,
-  ]);
+  }, [isSplashComplete, isSportSelectionComplete, isAuthed, isOnboardingComplete]);
 
   return null;
 };

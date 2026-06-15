@@ -174,10 +174,10 @@ import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyCheckInAutoOpener';
 import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
 import { SummerLeagueAnnouncementAutoOpener } from './src/features/summer-league/SummerLeagueAnnouncementAutoOpener';
-import { SUMMER_LEAGUE_ANNOUNCEMENT_ENABLED } from './src/features/summer-league/featureFlag';
 import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation';
+import { IS_E2E } from './src/utils/e2e';
 import AppNavigator from './src/navigation/AppNavigator';
 import type { MatchDetailData } from './src/context/MatchDetailSheetContext';
 import {
@@ -430,7 +430,14 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
         };
         checkOnboarding();
       } else if (inviteCode) {
-        deepLinkOpened({ link_type: 'invite', source, referral_code: inviteCode, ...utmParams });
+        const invitationType = /[?&]type=([a-z]+)/.exec(url)?.[1];
+        deepLinkOpened({
+          link_type: 'invite',
+          source,
+          referral_code: inviteCode,
+          invitation_type: invitationType,
+          ...utmParams,
+        });
       } else if (utmParams) {
         deepLinkOpened({ link_type: 'utm', source, ...utmParams });
       }
@@ -700,7 +707,7 @@ function PendingFeedbackHandler() {
   // Check for pending feedback when splash and sport selection are complete
   usePendingFeedbackCheck({
     userId: user?.id,
-    enabled: isSplashComplete && isSportSelectionComplete && !!user?.id,
+    enabled: isSplashComplete && isSportSelectionComplete && !!user?.id && !IS_E2E,
     onMatchFound: data => {
       Logger.logNavigation('pending_feedback_found', {
         matchId: data.matchId,
@@ -880,6 +887,14 @@ function AppContent() {
         ref={navigationRef}
         linking={linking}
         theme={navigationTheme}
+        onReady={() => {
+          // onStateChange never fires for the initial state, so the first
+          // screen of every session would otherwise go untracked in PostHog.
+          const initialRoute = navigationRef.current?.getCurrentRoute();
+          if (initialRoute?.name) {
+            posthogClient?.screen(initialRoute.name);
+          }
+        }}
         onStateChange={() => {
           // Notify React Query of navigation state changes so stale queries
           // refetch when the user navigates back to a screen.
@@ -908,9 +923,7 @@ function AppContent() {
       <AccountSuspendedHandler />
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
       {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
-      {SUMMER_LEAGUE_ANNOUNCEMENT_ENABLED && (
-        <SummerLeagueAnnouncementAutoOpener isSplashComplete={isSplashComplete} />
-      )}
+      <SummerLeagueAnnouncementAutoOpener isSplashComplete={isSplashComplete} />
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}

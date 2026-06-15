@@ -382,7 +382,7 @@ export default function CommunitiesScreen() {
 
   const handleScannerMatchScanned = useCallback(
     (match: MatchDetailData) => {
-      openMatchDetail(match);
+      openMatchDetail(match, { source: 'community' });
     },
     [openMatchDetail]
   );

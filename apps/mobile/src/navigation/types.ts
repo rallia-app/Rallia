@@ -53,6 +53,16 @@ export type RootStackParamList = {
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string; fromChat?: boolean }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
+  Tournaments: undefined; // Public tournament discovery — full-screen, reached from Home quick-nav (back returns to Home)
+  MyTournaments: undefined; // Caller's tournaments (organized + registered), reached from Tournaments
+  TournamentDetail: {
+    tournamentId: string;
+    tournamentName?: string;
+    /** Invite-link token: grants preview of private tournaments + register-via-invite. */
+    inviteToken?: string;
+    /** Organizer handoff from the creation success screen: open the invite sheet on arrival. */
+    openInviteSheet?: boolean;
+  }; // Tournament detail view
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
@@ -148,10 +158,9 @@ export type CommunityStackParamList = {
   SharedListDetail: { listId: string; listName: string };
   Groups: undefined;
   Communities: undefined;
-  Tournaments: undefined;
   Leagues: undefined;
   CommunityDetail: { communityId: string; fromChat?: boolean };
-  TournamentDetail: { tournamentId: string };
+  TournamentDetail: { tournamentId: string; inviteToken?: string; openInviteSheet?: boolean };
   LeagueDetail: { leagueId: string };
 };
 

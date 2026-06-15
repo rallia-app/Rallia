@@ -45,6 +45,7 @@ const FILTER_OPTIONS: FilterOption[] = [
   { value: 'unread', labelKey: 'chat.filters.unread', icon: 'mail-unread-outline' },
   { value: 'direct', labelKey: 'chat.filters.direct', icon: 'chatbubble-outline' },
   { value: 'match', labelKey: 'chat.filters.match', useSportIcon: true },
+  { value: 'tournament', labelKey: 'chat.filters.tournament', icon: 'podium-outline' },
   { value: 'group_chat', labelKey: 'chat.filters.groupChat', icon: 'people-outline' },
   { value: 'player_group', labelKey: 'chat.filters.playerGroup', icon: 'people-circle-outline' },
   { value: 'community', labelKey: 'chat.filters.community', icon: 'earth-outline' },

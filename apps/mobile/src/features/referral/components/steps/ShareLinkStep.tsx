@@ -228,8 +228,8 @@ const ContestBanner: React.FC<ContestBannerProps> = ({
 // ============================================================================
 
 const TABS: Array<{ id: TabId; icon: string; labelKey: TranslationKey }> = [
-  { id: 'code', icon: 'code-slash-outline', labelKey: 'referral.code' },
   { id: 'qr', icon: 'qr-code-outline', labelKey: 'referral.qrCode' },
+  { id: 'code', icon: 'code-slash-outline', labelKey: 'referral.code' },
   { id: 'contacts', icon: 'people-outline', labelKey: 'referral.stepNames.inviteContacts' },
 ];
 

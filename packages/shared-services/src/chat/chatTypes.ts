@@ -16,6 +16,7 @@
  * - 'community': Community network chat
  * - 'club': Club network chat
  * - 'match': Chat created for a specific match
+ * - 'tournament': Chat created for a specific tournament
  * - 'announcement': Broadcast channel (future)
  */
 export type ConversationType =
@@ -25,6 +26,7 @@ export type ConversationType =
   | 'community'
   | 'club'
   | 'match'
+  | 'tournament'
   | 'announcement';
 
 // Migration 20260312100001 renamed all 'group' rows to their exact types.
@@ -91,6 +93,7 @@ export interface Conversation {
   title: string | null;
   picture_url: string | null;
   match_id: string | null;
+  tournament_id?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -316,6 +319,13 @@ export interface ConversationPreview {
   // Network-linked chat info (for groups/communities)
   network_id?: string | null;
   network_type?: string | null; // 'friends', 'player_group', 'club', 'community', 'public', 'private'
+  // Tournament-linked chat info
+  tournament_id?: string | null;
+  tournament_info?: {
+    name: string;
+    sport_name: string;
+    status: string;
+  } | null;
 }
 
 // ============================================================================

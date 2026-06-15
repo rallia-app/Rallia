@@ -19,6 +19,7 @@ import {
   InvitePayload,
   InviteState,
 } from '#/components/SuggestionCard';
+import type { SuggestionSource } from '#/services/analytics';
 
 export interface FeedItemCardProps {
   item: UnifiedFeedItem;
@@ -31,6 +32,10 @@ export interface FeedItemCardProps {
   getInviteState: (opponentId: string, facilityId: string, startTime: Date | string) => InviteState;
   onMatchPress: (match: UnifiedFeedMatch) => void;
   onSendInvite: (payload: InvitePayload) => void;
+  /** Surface hosting this feed — drives analytics source attribution. */
+  suggestionSource: SuggestionSource;
+  /** Pass false when the surface fires viewability-gated impressions itself. */
+  trackSuggestionImpressionOnMount?: boolean;
   /** Optional sport context for suggestion analytics breakdowns. */
   sportId?: string;
   sportName?: string;
@@ -49,6 +54,8 @@ function FeedItemCardImpl({
   getInviteState,
   onMatchPress,
   onSendInvite,
+  suggestionSource,
+  trackSuggestionImpressionOnMount,
   sportId,
   sportName,
   defaultMatchType,
@@ -98,7 +105,8 @@ function FeedItemCardImpl({
         locale={locale}
         onSendInvite={onSendInvite}
         inviteState={inviteState}
-        source="feed"
+        source={suggestionSource}
+        trackImpressionOnMount={trackSuggestionImpressionOnMount}
         sportId={sportId}
         sportName={sportName}
         defaultMatchType={defaultMatchType}

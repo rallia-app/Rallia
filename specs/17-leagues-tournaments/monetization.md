@@ -1,114 +1,48 @@
 # Monetization
 
-> Integration boundary with [18-monetization](../18-monetization/) for entry fees, dues, refunds, and sponsorship.
+> **Status: deferred. v1 of L&T ships with no monetization surface — no entry fees, no league dues, no refunds, no Stripe wiring, no reserved schema columns.**
 
-This file does **not** specify monetization mechanics — those live in `specs/18-monetization/`. It specifies the _integration surface_ leagues and tournaments expose so that monetization can plug in without re-opening the L&T spec.
+## Why deferred
 
-## Scope of v1
+- The Rallia spec series does not yet contain `specs/18-monetization/`. Until that exists, there is no contract for L&T to integrate against.
+- The friends-and-family launch [project_friends_family_launch.md](../../.claude/projects/-Users-mathis-dev-startups-rallia-rallia/memory/project_friends_family_launch.md) targets free play; paid tournaments are not part of the early validation goal.
+- Quebec consumer-protection rules around tournament refunds need legal review before any paid flow ships — out of scope for v1.
 
-L&T v1 ships **without** any payment, fee, or refund flow. The reasons:
+## What this means for v1
 
-- The MVP focus is the competitive product (per [README.md](./README.md#phasing) phasing).
-- Stripe wiring already exists in `apps/web/lib/stripe/` for donations and player subscriptions; it is not yet exposed for L&T.
-- Quebec consumer-protection rules around tournament refunds need legal review before going live.
+| Surface                    | v1 behavior                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Tournament create form     | No entry-fee field. No refund-policy field. No Stripe Connect prompt.                                                   |
+| `tournaments` table        | No `entry_fee_*`, `refund_policy`, or sponsor columns.                                                                  |
+| League create form         | No dues field, no `dues_*` columns on `leagues`.                                                                        |
+| `tournament_registrations` | No `payment_intent_id`, `payment_status`, `paid_amount_cents`, `refunded_*` columns.                                    |
+| `tournament_register` RPC  | Never returns a `payment_required` flag. Registration is free and instant (subject to mode: open/approval/invite_only). |
+| `tournament_cancel` RPC    | No refund hook called. Cancellation just transitions matches and emits notifications.                                   |
+| `tournament_withdraw` RPC  | No partial refund. Withdrawal is free.                                                                                  |
+| Notifications              | No fee-amount or refund-amount strings. The corresponding i18n keys are not created.                                    |
+| Organizer dashboards       | No payment summary section.                                                                                             |
 
-But the schema reserves columns so that the monetization payload can be added later **without a migration churn that triggers RLS reset** or breaks live data.
+## When monetization lands (post-v1)
 
-## Reserved columns
+When `specs/18-monetization/` is written, L&T will need:
 
-### `tournaments`
+1. A new migration adding the entry-fee / dues / payment columns. Because v1 omits these entirely, this migration is purely additive (no `RENAME COLUMN`, no data backfill).
+2. New RPC parameters / branches in `tournament_register`, `tournament_cancel`, `tournament_withdraw`, `league_join`, plus new `mn_*` integration hooks defined by 18-monetization.
+3. UI updates in [mobile-ux.md](./mobile-ux.md) and [web-organizer-ux.md](./web-organizer-ux.md) to surface pricing on create and at registration.
+4. New analytics events in [analytics.md](./analytics.md) (`lt.tournament.payment_succeeded`, etc.).
+5. Notification i18n keys for fee/refund strings.
 
-```sql
-ALTER TABLE tournaments
-  ADD COLUMN entry_fee_amount_cents integer CHECK (entry_fee_amount_cents IS NULL OR entry_fee_amount_cents >= 0),
-  ADD COLUMN entry_fee_currency text CHECK (entry_fee_currency IS NULL OR entry_fee_currency ~ '^[A-Z]{3}$'),
-  ADD COLUMN refund_policy text;                  -- markdown text shown at registration time
-```
+The two invariants that **must** be honored once monetization ships (so that they're worth designing into the v1 schema even though no columns exist yet):
 
-### `tournament_registrations`
+- Never hard-delete a `tournament_registrations` row that has been paid. Use `withdrawn` status. (v1 already follows this since withdrawal is the canonical exit.)
+- Always include the `version` lock when changing payment-relevant fields. (v1 already locks every UPDATE.)
 
-```sql
-ALTER TABLE tournament_registrations
-  ADD COLUMN payment_intent_id text,              -- Stripe PaymentIntent
-  ADD COLUMN payment_status text,                 -- 'pending' / 'succeeded' / 'refunded' / null
-  ADD COLUMN paid_amount_cents integer,
-  ADD COLUMN refunded_amount_cents integer,
-  ADD COLUMN refunded_at timestamptz;
-```
+These two are both inherent to the v1 design, so post-v1 monetization adds payment fields without requiring v1 behavior to change.
 
-### `leagues`
+## Sponsorship
 
-```sql
-ALTER TABLE leagues
-  ADD COLUMN dues_amount_cents integer CHECK (dues_amount_cents IS NULL OR dues_amount_cents >= 0),
-  ADD COLUMN dues_currency text CHECK (dues_currency IS NULL OR dues_currency ~ '^[A-Z]{3}$'),
-  ADD COLUMN dues_period text CHECK (dues_period IN ('once', 'per_season', 'per_year') OR dues_period IS NULL);
-```
+Out of scope for v1. Will be re-evaluated when monetization ships.
 
-### `league_members`
+## What was here before
 
-```sql
-ALTER TABLE league_members
-  ADD COLUMN dues_paid_through date,              -- subscription-style; null = never paid
-  ADD COLUMN last_payment_intent_id text;
-```
-
-These columns are NULL across the board in v1; no UI surfaces them. They exist purely so the v2 monetization migration is additive (add columns ✓ already done; add policies/RPCs/UI is the new work).
-
-## Integration boundary
-
-When monetization ships, it provides:
-
-| Hook (called from L&T)                                            | Implementation in monetization                       |
-| ----------------------------------------------------------------- | ---------------------------------------------------- |
-| `mn_create_tournament_intent(tournament_id, user_id, partner_id)` | Returns Stripe PaymentIntent client_secret           |
-| `mn_confirm_tournament_payment(intent_id)`                        | Marks `payment_status = 'succeeded'` on registration |
-| `mn_refund_tournament(registration_id, reason)`                   | Issues refund, sets `refunded_*` columns             |
-| `mn_create_dues_intent(league_id, user_id)`                       | League-dues subscription                             |
-
-L&T's RPCs that need money awareness:
-
-- `tournament_register` checks `tournaments.entry_fee_amount_cents`. If non-null, returns a `payment_required: true` flag with the Stripe client secret; client opens checkout. Registration only flips to `registered` after payment confirmation.
-- `tournament_cancel` calls `mn_refund_tournament` for each registered participant per the tournament's `refund_policy`.
-- `tournament_withdraw` may issue a partial refund per the policy text (parsed by monetization service, not by L&T).
-
-## Refund policy (UI text)
-
-Free-text markdown shown at registration. Monetization's service parses simple structured forms (e.g., "100% before X, 50% before Y, 0% after"), but L&T does not interpret it.
-
-## Entry fees in notifications
-
-When `entry_fee_amount_cents IS NOT NULL`:
-
-- `tournament_registered` notification body includes the amount paid.
-- `tournament_cancelled` includes refund amount and ETA.
-
-i18n strings live under `notifications.tournament.feeAmount` etc.
-
-## Sponsorship (v2+)
-
-Tournaments and leagues may have sponsors:
-
-| Reserved column            | Purpose                               |
-| -------------------------- | ------------------------------------- |
-| `sponsor_logo_urls text[]` | Up to 5 logo URLs in Supabase Storage |
-| `sponsor_links jsonb`      | Map of sponsor name → URL             |
-
-Display is a small horizontal logo strip on the detail page. Out of scope for v1; reserved here.
-
-## Tax and reporting
-
-Out of scope for v1. Stripe handles tax via Stripe Tax; payouts go to the organizer's connected Stripe account (per Stripe Connect integration in `apps/web/lib/stripe/`).
-
-Organizer dashboards in [web-organizer-ux.md](./web-organizer-ux.md) will show payment summaries when monetization ships.
-
-## What L&T must guarantee
-
-For monetization to plug in cleanly, L&T must:
-
-1. **Never delete a registration row** that has a non-null `payment_intent_id`. Use `withdrawn` status instead.
-2. **Always include the `version` lock** when changing payment-relevant fields, so monetization can detect concurrent edits.
-3. **Always emit an audit row** when a registration's payment-relevant fields change.
-4. **Never expose `payment_intent_id` over RLS** to non-organizers — the column is part of `treg_no_direct_write` policy and select policies redact it for non-organizer reads.
-
-These constraints are encoded in `tournament_registrations`'s schema and RLS policies so they're enforced regardless of monetization's implementation.
+This file previously specified reserved columns (`entry_fee_amount_cents`, `payment_intent_id`, `dues_amount_cents`, etc.) and four named integration hooks (`mn_create_tournament_intent`, `mn_confirm_tournament_payment`, `mn_refund_tournament`, `mn_create_dues_intent`). Those references have been removed; reintroduce them via `specs/18-monetization/` when that spec is written, and bring them back here as a forward-compatibility section at the same time.

@@ -57,7 +57,8 @@ import {
   useSportSetup,
   type TranslationKey,
 } from '#/hooks';
-import { useSport } from '#/context';
+import { useActionsSheet, useSport } from '#/context';
+import * as Analytics from '#/services/analytics';
 import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
 import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '#/utils/dateFormatting';
@@ -103,7 +104,14 @@ const UserProfile = () => {
     reputationTotalEvents,
   } = usePlayer();
   const { userSports, refetch: refetchSportContext } = useSport();
+  const { openSheetForInvitePlayers } = useActionsSheet();
   const loadingCore = profileLoading || playerLoading;
+
+  const handleInviteQrPress = useCallback(() => {
+    void lightHaptic();
+    Analytics.referralInviteOpened({ source: 'profile_header' });
+    openSheetForInvitePlayers();
+  }, [openSheetForInvitePlayers]);
 
   // Profile completeness
   const profileCompleteness = useProfileCompleteness();
@@ -927,6 +935,27 @@ const UserProfile = () => {
                       />
                     </View>
                   </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.inviteQrButton,
+                      {
+                        backgroundColor: isDark ? primary[900] : primary[100],
+                        borderColor: isDark ? `${primary[400]}40` : `${primary[500]}30`,
+                        shadowColor: isDark ? primary[400] : primary[500],
+                      },
+                    ]}
+                    onPress={handleInviteQrPress}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('actions.invitePlayers')}
+                  >
+                    <Ionicons
+                      name="qr-code-outline"
+                      size={18}
+                      color={isDark ? primary[100] : primary[600]}
+                    />
+                  </TouchableOpacity>
                 </View>
               </>
             )}
@@ -1811,6 +1840,19 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: spacingPixels[1],
+  },
+  inviteQrButton: {
+    alignSelf: 'flex-start',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
   },
   profilePicWrapper: {
     position: 'relative',

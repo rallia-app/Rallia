@@ -247,6 +247,11 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
     hasNextPage: query.hasNextPage ?? false,
 
     /**
+     * Number of pages loaded for the current filters (resets on refetch)
+     */
+    pageCount: query.data?.pages.length ?? 0,
+
+    /**
      * Fetch the next page of matches
      */
     fetchNextPage: query.fetchNextPage,

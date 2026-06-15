@@ -1,0 +1,3 @@
+# Real recipient lists contain user PII. Never commit them.
+*.csv
+!recipients.sample.csv

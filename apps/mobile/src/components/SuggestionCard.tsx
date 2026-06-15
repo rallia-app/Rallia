@@ -82,6 +82,8 @@ export interface SuggestionCardProps {
    * applied when the invite is accepted. Omitted or 'both' hides the chip.
    */
   defaultMatchType?: 'competitive' | 'casual' | 'both';
+  /** Disable when the parent surface owns viewability-gated impressions. */
+  trackImpressionOnMount?: boolean;
 }
 
 function buildReputationDisplay(s: SlotSuggestion): ReputationDisplay | undefined {
@@ -122,31 +124,16 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   sportId,
   sportName,
   defaultMatchType,
+  trackImpressionOnMount = true,
 }) => {
-  // Fire an impression event once per mount. List virtualization may remount
-  // the card as the user scrolls; each remount counts as a fresh impression,
-  // which is the right semantic for this metric.
+  // Mount-based impression for surfaces where mounting ≈ visible (suggestion
+  // sheet, onboarding). Feed surfaces pass trackImpressionOnMount={false} and
+  // own viewability-gated impressions themselves.
   useEffect(() => {
-    if (!source) return;
-    const slotStart =
-      suggestion.slot.datetime instanceof Date
-        ? suggestion.slot.datetime.toISOString()
-        : new Date(suggestion.slot.datetime).toISOString();
-    Analytics.matchSuggestionShown({
-      source,
-      opponent_id: suggestion.opponentId,
-      facility_id: suggestion.facility.facilityId,
-      slot_start: slotStart,
-      sport_id: sportId,
-      sport_name: sportName,
-      score: suggestion.score,
-      player_compatibility: suggestion.playerCompatibility,
-      facility_affinity: suggestion.facility.facilityAffinity,
-      score_history: suggestion.scoreHistory,
-      rank: suggestion.rank,
-      match_type: suggestion.matchType,
-      match_duration: suggestion.matchDuration,
-    });
+    if (!source || !trackImpressionOnMount) return;
+    Analytics.matchSuggestionShown(
+      Analytics.buildSuggestionEventProps(suggestion, source, sportId, sportName)
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const slotStart = useMemo(
@@ -169,43 +156,12 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     if (!suggestion.opponentId) return;
     lightHaptic();
     if (source) {
-      const slotStart =
-        suggestion.slot.datetime instanceof Date
-          ? suggestion.slot.datetime.toISOString()
-          : new Date(suggestion.slot.datetime).toISOString();
-      Analytics.matchSuggestionAvatarTapped({
-        source,
-        opponent_id: suggestion.opponentId,
-        facility_id: suggestion.facility.facilityId,
-        slot_start: slotStart,
-        sport_id: sportId,
-        sport_name: sportName,
-        score: suggestion.score,
-        player_compatibility: suggestion.playerCompatibility,
-        facility_affinity: suggestion.facility.facilityAffinity,
-        score_history: suggestion.scoreHistory,
-        rank: suggestion.rank,
-        match_type: suggestion.matchType,
-        match_duration: suggestion.matchDuration,
-      });
+      Analytics.matchSuggestionAvatarTapped(
+        Analytics.buildSuggestionEventProps(suggestion, source, sportId, sportName)
+      );
     }
     navigateToPlayerProfile(suggestion.opponentId, sportId);
-  }, [
-    navigateToPlayerProfile,
-    suggestion.opponentId,
-    suggestion.slot.datetime,
-    suggestion.facility.facilityId,
-    suggestion.facility.facilityAffinity,
-    suggestion.score,
-    suggestion.playerCompatibility,
-    suggestion.scoreHistory,
-    suggestion.rank,
-    suggestion.matchType,
-    suggestion.matchDuration,
-    sportId,
-    sportName,
-    source,
-  ]);
+  }, [navigateToPlayerProfile, suggestion, sportId, sportName, source]);
 
   const cardScaleAnimation = useMemo(() => new Animated.Value(1), []);
   const handlePressIn = () => {

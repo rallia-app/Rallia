@@ -125,20 +125,13 @@ export function useSuggestionInviteHandler(
       setInviteStates(prev => ({ ...prev, [key]: 'sent' }));
       if (source) {
         Analytics.matchSuggestionInviteSent({
-          source,
-          opponent_id: suggestion.opponentId,
-          facility_id: suggestion.facility.facilityId,
-          slot_start: slotStart.toISOString(),
+          ...Analytics.buildSuggestionEventProps(
+            suggestion,
+            source,
+            sportId,
+            selectedSport?.id === sportId ? selectedSport?.name : undefined
+          ),
           match_id: result.matchId,
-          sport_id: sportId,
-          sport_name: selectedSport?.id === sportId ? selectedSport?.name : undefined,
-          score: suggestion.score,
-          player_compatibility: suggestion.playerCompatibility,
-          facility_affinity: suggestion.facility.facilityAffinity,
-          score_history: suggestion.scoreHistory,
-          rank: suggestion.rank,
-          match_type: suggestion.matchType,
-          match_duration: suggestion.matchDuration,
         });
       }
       queryClient.invalidateQueries({ queryKey: ['matches', 'list', 'player'] });

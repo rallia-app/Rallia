@@ -1122,7 +1122,7 @@
           "recordVideo": "Enregistrer une vidéo",
           "selectFromGallery": "Sélectionner depuis la galerie",
           "maxDuration": "Durée maximale: 1 minute",
-          "maxSize": "Taille maximale: 250 Mo"
+          "maxSize": "Taille maximale: 50 Mo"
         },
         "image": {
           "title": "Capture d'écran / Image",
@@ -2031,6 +2031,7 @@
       "community": "Communautés",
       "club": "Clubs",
       "match": "Matchs",
+      "tournament": "Tournois",
       "blocked": "Bloqués",
       "favorites": "Favoris",
       "archived": "Archivés",
@@ -3698,12 +3699,14 @@
     "continueSetup": "Continuer la configuration",
     "createMatch": "Créer une partie",
     "createMatchDescription": "Créez une partie et partagez-la avec des joueurs et contacts",
-    "invitePlayers": "Inviter des joueurs",
-    "invitePlayersDescription": "Invitez des amis et des contacts à rejoindre Rallia et jouer avec vous",
+    "invitePlayers": "Faire découvrir Rallia",
+    "invitePlayersDescription": "Partagez votre code ou votre QR pour que vos amis vous rejoignent sur Rallia",
     "createShareList": "Créer une liste de partage",
     "createShareListDescription": "Créez une liste de personnes hors application à inviter à vos parties",
     "createNetwork": "Créer un réseau",
     "createNetworkDescription": "Créez un groupe ou une communauté pour organiser des parties régulières",
+    "createTournament": "Créer un tournoi",
+    "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
     "createEvent": "Créer un événement",
     "createEventDescription": "Organisez un tournoi ou une ligue et gérez les tableaux et horaires",
     "selectNetworkType": "Créer un réseau",
@@ -4052,6 +4055,415 @@
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
     }
   },
+  "tournamentList": {
+    "title": "Tournois",
+    "loadError": "Impossible de charger les tournois",
+    "retry": "Réessayer",
+    "empty": "Aucun tournoi public pour le moment",
+    "emptyDescription": "Revenez bientôt, ou créez le vôtre depuis le menu d'actions.",
+    "myTournaments": "Mes tournois",
+    "roleOrganizer": "Organisateur",
+    "registerBy": "Inscriptions jusqu'au {date}",
+    "searchPlaceholder": "Rechercher des tournois...",
+    "discoverFilters": {
+      "status": "Statut",
+      "allStatuses": "Tous les statuts",
+      "format": "Format",
+      "allFormats": "Tous les formats",
+      "myRating": "Ma cote",
+      "openSpots": "Places libres"
+    },
+    "emptySearch": {
+      "title": "Aucun tournoi trouvé",
+      "description": "Essayez d'ajuster votre recherche ou vos filtres."
+    },
+    "sectionOpen": "Inscriptions ouvertes",
+    "sectionInProgress": "En cours",
+    "sectionStartingSoon": "Commence bientôt",
+    "filters": {
+      "all": "Tous",
+      "registered": "Inscrits",
+      "organizing": "Organisés",
+      "drafts": "Brouillons",
+      "completed": "Terminés",
+      "cancelled": "Annulés"
+    },
+    "emptyUpcoming": {
+      "title": "Aucun tournoi à venir",
+      "description": "Les tournois que vous rejoignez ou organisez apparaîtront ici."
+    },
+    "emptyPast": {
+      "title": "Aucun tournoi passé",
+      "description": "Vos tournois terminés et annulés apparaîtront ici."
+    },
+    "emptyFiltered": {
+      "title": "Aucun tournoi trouvé",
+      "description": "Aucun tournoi ne correspond au filtre « {filter} »"
+    },
+    "dateRange": "{start} – {end}"
+  },
+  "tournamentDetail": {
+    "title": "Tournoi",
+    "loading": "Chargement du tournoi...",
+    "notFound": "Tournoi introuvable",
+    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
+    "loadError": "Impossible de charger le tournoi",
+    "retry": "Réessayer",
+    "chat": {
+      "open": "Clavardage du tournoi"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "registration_open": "Inscriptions ouvertes",
+      "registration_closed": "Inscriptions fermées",
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "archived": "Archivé"
+    },
+    "sections": {
+      "manage": "Gestion"
+    },
+    "tabs": {
+      "overview": "Aperçu",
+      "bracket": "Tableau",
+      "players": "Joueurs",
+      "details": "Détails"
+    },
+    "dashboard": {
+      "details": "Détails",
+      "organizedBy": "Organisé par {name}",
+      "champion": "Champion",
+      "steps": {
+        "draft": "Brouillon",
+        "registration": "Inscriptions",
+        "play": "Jeu",
+        "done": "Terminé"
+      },
+      "stats": {
+        "registered": "Inscrits",
+        "games": "Parties",
+        "start": "Début",
+        "startsInDays": "Dans {n} jours",
+        "startsToday": "Aujourd'hui",
+        "live": "En cours",
+        "ended": "Terminé"
+      },
+      "nextStep": {
+        "draftTitle": "Prêt à lancer?",
+        "draftDescription": "Ouvrez les inscriptions pour que les joueurs puissent trouver et rejoindre votre tournoi.",
+        "openTitle": "Les inscriptions sont ouvertes",
+        "openDescription": "{count} places sur {max} sont prises.",
+        "closedTitle": "Créez le tableau",
+        "closedDescription": "{count} joueurs sont inscrits. Générez le tableau pour commencer.",
+        "liveTitle": "Tournoi en cours",
+        "liveDescription": "{done} parties jouées sur {total}. Touchez une partie en attente dans le tableau pour enregistrer son résultat."
+      },
+      "registerCta": {
+        "title": "Inscriptions ouvertes",
+        "full": "Tournoi complet",
+        "fullDescription": "Toutes les places sont prises.",
+        "spotsLeft": "{n} places restantes",
+        "spotsLeftTeams": "{n} places d'équipe restantes"
+      },
+      "withdrawCta": {
+        "title": "T'es inscrit",
+        "titleTeam": "Ton équipe est inscrite",
+        "titlePending": "Inscription en attente",
+        "description": "Ta place est réservée. Un changement de plan? Tu peux te retirer tant que les inscriptions sont ouvertes.",
+        "descriptionTeam": "La place de ton équipe est réservée. Un changement de plan? Te retirer enlève les deux joueurs tant que les inscriptions sont ouvertes.",
+        "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes."
+      },
+      "addMyselfCta": {
+        "title": "Tu joues aussi?",
+        "description": "Ajoute-toi à ce tournoi comme participant."
+      },
+      "myMatch": {
+        "title": "Votre prochaine partie",
+        "vs": "contre {name}",
+        "hint": "Touchez pour lier votre partie jouée",
+        "waiting": "En attente de votre prochain adversaire",
+        "eliminated": "Vous avez été éliminé. Belle performance!",
+        "champion": "Vous avez gagné le tournoi!"
+      },
+      "participants": {
+        "title": "Joueurs",
+        "empty": "Aucun joueur inscrit pour le moment",
+        "pending": "En attente",
+        "removeLabel": "Retirer {name}"
+      }
+    },
+    "labels": {
+      "bracketSize": "Taille du tableau",
+      "bracketType": "Type de tableau",
+      "matchFormat": "Format des parties",
+      "entryFormat": "Type d'inscription",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "visibility": "Visibilité",
+      "registrationMode": "Mode d'inscription",
+      "registrationCloses": "Fermeture des inscriptions"
+    },
+    "values": {
+      "singleElimination": "Élimination simple",
+      "doubleElimination": "Élimination double",
+      "singles": "Simples",
+      "doubles": "Doubles",
+      "mixedDoubles": "Double mixte",
+      "oneSet": "Une manche",
+      "twoOfThree": "2 de 3 manches",
+      "threeOfFive": "3 de 5 manches",
+      "pickleballTo11": "Parties à 11 points",
+      "pickleballTo15": "Parties à 15 points",
+      "pickleballTo21": "Parties à 21 points",
+      "private": "Privé",
+      "public": "Public",
+      "community": "Communauté",
+      "open": "Ouvert",
+      "approval": "Approbation requise",
+      "inviteOnly": "Sur invitation"
+    },
+    "actions": {
+      "openRegistration": "Ouvrir les inscriptions",
+      "closeRegistration": "Fermer les inscriptions",
+      "register": "S'inscrire",
+      "addMyself": "M'ajouter",
+      "withdraw": "Se retirer",
+      "registering": "Inscription...",
+      "withdrawing": "Retrait...",
+      "opening": "Ouverture...",
+      "closing": "Fermeture...",
+      "registrationPendingLabel": "Inscription en attente d'approbation",
+      "registeredLabel": "Vous êtes inscrit",
+      "registeredWithPartnerLabel": "T'es inscrit avec {name}",
+      "generateBracket": "Générer le tableau",
+      "generating": "Génération du tableau...",
+      "cancelTournament": "Annuler le tournoi",
+      "archiveTournament": "Archiver le tournoi",
+      "editDetails": "Modifier les détails",
+      "invitePlayers": "Inviter des joueurs"
+    },
+    "invite": {
+      "title": "Inviter des joueurs",
+      "description": "Toute personne avec ce lien peut s'inscrire au tournoi, même s'il est privé.",
+      "generating": "Préparation de votre lien d'invitation...",
+      "scanToRegister": "Balayez pour vous inscrire au tournoi",
+      "share": "Partager le lien d'invitation",
+      "shareTitle": "Rejoignez {name} sur Rallia",
+      "shareMessage": "Vous êtes invité à mon tournoi {name} sur Rallia. Inscrivez-vous ici : {link}",
+      "resetLink": "Réinitialiser le lien",
+      "resetWarning": "Le lien actuel cessera de fonctionner. Les joueurs déjà inscrits gardent leur place.",
+      "resetDone": "Nouveau lien d'invitation prêt",
+      "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
+      "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation."
+    },
+    "inviteLanding": {
+      "invalidTitle": "Lien d'invitation non valide",
+      "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demandez un nouveau lien à l'organisateur.",
+      "joinedToast": "Vous êtes inscrit! On se voit au tournoi."
+    },
+    "editModal": {
+      "title": "Modifier le tournoi",
+      "subtitle": "Les changements sont visibles aux joueurs immédiatement.",
+      "nameLabel": "Nom",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Dites aux joueurs à quoi s'attendre",
+      "startDateLabel": "Date de début",
+      "endDateLabel": "Date de fin",
+      "visibilityLabel": "Visibilité",
+      "bracketSizeLabel": "Taille du tableau",
+      "scoringFormatLabel": "Format des parties",
+      "draftOnlyHint": "La taille du tableau et le format des parties sont verrouillés dès l'ouverture des inscriptions.",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "saved": "Tournoi mis à jour",
+      "errors": {
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
+        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+      }
+    },
+    "cancelModal": {
+      "title": "Annuler ce tournoi ?",
+      "description": "Toutes les parties en attente ou en cours seront annulées. Les joueurs conservent leur historique d'inscription. Cette action est irréversible.",
+      "reasonPlaceholder": "Optionnel : courte raison communiquée aux participants",
+      "confirm": "Annuler",
+      "keepIt": "Garder",
+      "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
+      "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    },
+    "archiveModal": {
+      "title": "Archiver ce tournoi ?",
+      "description": "Les tournois archivés sont retirés des flux actifs mais restent accessibles par lien direct.",
+      "confirm": "Archiver",
+      "keepIt": "Annuler",
+      "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
+      "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+    },
+    "removeModal": {
+      "title": "Retirer ce joueur ?",
+      "message": "Retirer {name} du tournoi ? Cette personne ne pourra plus s'inscrire à ce tournoi.",
+      "confirm": "Retirer",
+      "keepIt": "Annuler",
+      "success": "Joueur retiré"
+    },
+    "cancelledNotice": {
+      "title": "Tournoi annulé",
+      "reason": "Raison : {reason}"
+    },
+    "bracket": {
+      "sectionTitle": "Tableau",
+      "round": "Tour {n}",
+      "final": "Finale",
+      "semifinal": "Demi-finale",
+      "quarterfinal": "Quart de finale",
+      "bye": "EXEMPT",
+      "tbd": "À déterminer",
+      "phantom": "—",
+      "linkMatch": "Lier une partie jouée à ce slot",
+      "overrideMatch": "Inscrire le résultat (organisateur)",
+      "recordResult": "Inscrire le résultat",
+      "addResult": "Ajouter ton résultat",
+      "live": "En direct",
+      "disputed": "Contesté",
+      "gamesProgress": "{done}/{total} parties"
+    },
+    "linkPicker": {
+      "title": "Lier une partie jouée",
+      "empty": "Aucune partie trouvée",
+      "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
+      "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, confirme le score, puis reviens ici pour la lier.",
+      "attachFailed": "Impossible de lier la partie",
+      "linkCta": "Lier cette partie"
+    },
+    "partner": {
+      "title": "Choisis ton partenaire",
+      "searchPlaceholder": "Chercher des joueurs",
+      "recentHeader": "Partenaires récents",
+      "empty": "Pas encore de partenaire récent. Cherche pour trouver ton partenaire.",
+      "noResults": "Aucun joueur trouvé",
+      "confirmCta": "S'inscrire avec {name}",
+      "confirmCtaEmpty": "Choisis un partenaire"
+    },
+    "override": {
+      "title": "Inscrire le résultat",
+      "subtitle": "Entrez le score final. Le gagnant est déterminé automatiquement.",
+      "confirm": "Enregistrer le résultat",
+      "errors": {
+        "notOverridable": "Cette partie ne peut plus être modifiée.",
+        "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
+        "notInProgress": "Le tournoi n'est pas en cours.",
+        "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
+        "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
+      }
+    },
+    "generateBracketErrors": {
+      "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
+      "alreadyGenerated": "Le tableau existe déjà.",
+      "wrongStatus": "Fermez les inscriptions avant de générer le tableau.",
+      "generic": "Impossible de générer le tableau. Veuillez réessayer."
+    },
+    "errors": {
+      "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",
+      "closeFailed": "Impossible de fermer les inscriptions. Veuillez réessayer.",
+      "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
+      "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
+      "withdrawClosed": "Les inscriptions sont fermées, tu peux plus te retirer.",
+      "tournamentFull": "Ce tournoi est complet.",
+      "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",
+      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil.",
+      "regClosed": "Les inscriptions ne sont plus ouvertes.",
+      "startPassed": "La date de début est passée. Modifiez les dates avant d'ouvrir les inscriptions.",
+      "notInvited": "Ce tournoi est sur invitation et vous n'avez pas été invité.",
+      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
+      "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
+      "registrationRemoved": "L'organisateur t'a retiré de ce tournoi. Tu peux plus t'y inscrire.",
+      "partnerRequired": "Choisis un partenaire pour t'inscrire à ce tournoi en double.",
+      "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
+      "partnerSportMismatch": "Ton partenaire n'a pas ce sport actif sur son profil.",
+      "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
+      "inviteInvalid": "Ce lien d'invitation n'est plus valide."
+    }
+  },
+  "tournamentCreation": {
+    "title": "Créer un tournoi",
+    "forSport": "Création d'un tournoi pour {sport}",
+    "step": "Étape {current} sur {total}",
+    "stepNames": {
+      "details": "Détails",
+      "visibility": "Visibilité"
+    },
+    "step1Title": "Détails",
+    "step1Description": "Nommez votre tournoi, choisissez la taille du tableau et le format des parties, et fixez les dates",
+    "visibilityStepTitle": "Visibilité",
+    "visibilityStepDescription": "Qui peut le voir et s'inscrire?",
+    "next": "Suivant",
+    "back": "Retour",
+    "createTournament": "Créer le tournoi",
+    "creating": "Création...",
+    "success": "Tournoi créé!",
+    "successDescription": "Votre brouillon de tournoi est prêt. Ouvrez les inscriptions quand vous voulez inviter des joueurs.",
+    "viewTournament": "Voir le tournoi",
+    "shareInvite": "Partager le lien d'invitation",
+    "createAnother": "En créer un autre",
+    "fields": {
+      "name": "Nom",
+      "namePlaceholder": "ex. : Simples du printemps 2026",
+      "description": "Description",
+      "descriptionPlaceholder": "Dis aux joueurs à quoi s'attendre (optionnel)",
+      "maxParticipants": "Taille du tableau",
+      "maxParticipantsHint": "Nombre de joueurs que le tableau accueille",
+      "maxTeams": "Taille du tableau (équipes)",
+      "maxTeamsHint": "Nombre d'équipes dans le tableau. Chaque équipe compte 2 joueurs.",
+      "entryFormat": "Type d'inscription",
+      "entryFormatDoublesHint": "Les joueurs s'inscrivent en équipes de 2. Un joueur inscrit la paire et choisit son partenaire.",
+      "matchFormat": "Format des parties",
+      "matchFormatOneSet": "1 manche",
+      "matchFormatOneSetHint": "Une seule manche décide du gagnant",
+      "matchFormatTwoOfThree": "2 de 3",
+      "matchFormatTwoOfThreeHint": "Premier à gagner 2 manches",
+      "matchFormatThreeOfFive": "3 de 5",
+      "matchFormatThreeOfFiveHint": "Premier à gagner 3 manches",
+      "matchFormatTo11": "À 11",
+      "matchFormatTo11Hint": "Premier à 11 points, 2 points d'écart",
+      "matchFormatTo15": "À 15",
+      "matchFormatTo15Hint": "Premier à 15 points, 2 points d'écart",
+      "matchFormatTo21": "À 21",
+      "matchFormatTo21Hint": "Premier à 21 points, 2 points d'écart",
+      "startDate": "Date de début",
+      "startDatePlaceholder": "Choisir une date",
+      "endDate": "Date de fin",
+      "endDatePlaceholder": "Choisir une date",
+      "visibility": "Visibilité",
+      "visibilityPrivate": "Privé",
+      "visibilityPrivateDescription": "Seules les personnes que vous invitez le voient",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Toute personne dans votre sport peut le trouver et s'inscrire",
+      "visibilityCommunity": "Communauté",
+      "visibilityCommunityDescription": "Visible aux membres d'une communauté que vous choisissez",
+      "registrationMode": "Mode d'inscription",
+      "registrationModeOpen": "Ouvert",
+      "registrationModeOpenDescription": "Toute personne qui voit le tournoi peut s'inscrire",
+      "registrationModeApproval": "Approbation",
+      "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
+      "registrationModeInviteOnly": "Sur invitation",
+      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire"
+    },
+    "validation": {
+      "nameRequired": "Le nom du tournoi est requis",
+      "nameTooLong": "Le nom doit contenir au plus 100 caractères",
+      "datesRequired": "Les dates de début et de fin sont requises",
+      "endBeforeStart": "La date de fin doit être après ou égale à la date de début",
+      "startInPast": "La date de début doit être dans le futur"
+    },
+    "errors": {
+      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
+      "rateLimited": "Vous avez créé trop de tournois récemment. Réessayez plus tard.",
+      "generic": "Impossible de créer le tournoi. Veuillez réessayer."
+    }
+  },
   "home": {
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "Vos parties",
@@ -4069,7 +4481,8 @@
       "joinCommunity": "Rejoindre une communauté",
       "bookCourt": "Réserver un terrain",
       "findGame": "Trouver une partie",
-      "browseSuggestions": "Découvrir mes suggestions"
+      "browseSuggestions": "Découvrir mes suggestions",
+      "tournaments": "Rejoindre un tournoi"
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
@@ -4104,7 +4517,7 @@
     "availabilityRefreshBanner": {
       "title": "C'est l'heure de ton check-in 🐿️",
       "description": "Fixe ton objectif et confirme tes dispos pour les prochains jours.",
-      "descriptionStreak": "Tu es sur une séquence de {count} semaines 🔥 Confirme tes prochains jours.",
+      "descriptionStreak": "Tu es sur une streak de {count} semaines 🔥 Confirme tes prochains jours.",
       "cta": "Commencer"
     },
     "header": {
@@ -7777,6 +8190,12 @@
         "responseRateHint": "{responded} sur {settled} invitations admissibles",
         "settleNote": "{inFlight} invitation(s) envoyée(s) dans les dernières 48 h sont encore en attente et exclues des taux ci-dessous.",
         "allInFlight": "Toutes les invitations de cette fenêtre sont trop récentes pour mesurer les réponses.",
+        "weeklyHint": "Cohortes d'invitations des 6 dernières semaines, ancrées sur l'heure d'envoi (lun–dim). Les taux n'utilisent que les invitations admissibles; les semaines récentes peuvent encore attendre des réponses.",
+        "weekStats": "Matchs {matches} · Invitations {invites} · {settled} admissibles",
+        "weekInFlight": "{inFlight} en attente",
+        "weekResponded": "{pct} % de réponses",
+        "weekAllInFlight": "Toutes les invitations de cette semaine sont encore en attente.",
+        "weekNoInvites": "Aucune invitation envoyée cette semaine.",
         "stageEligible": "Invitations admissibles",
         "stageEligibleDesc": "Envoyées assez tôt pour avoir eu une vraie chance d'obtenir une réponse.",
         "stageResponded": "Ont répondu",
@@ -7812,6 +8231,11 @@
         "commitmentNorthStar": "Étoile polaire — matchs créés qui obtiennent l'engagement d'un 2e joueur",
         "funnelTitle": "Entonnoir du cycle de vie",
         "funnelHint": "Parties planifiées dans cette fenêtre, par issue à la clôture.",
+        "weeklyFunnelHint": "Entonnoir de chacune des 6 dernières semaines (lun–dim), selon la date de jeu. La semaine en cours n'est pas terminée.",
+        "viewCumulative": "Cumulatif",
+        "viewWeekly": "Hebdo",
+        "weekCurrent": "en cours",
+        "weekCommitment": "{pct} % remplis",
         "funnelOf": "{pct} % des créés",
         "funnelConfidence": "Joués et qualité sont confirmés par les avis — un plancher, pas un plafond (couverture {pct} %).",
         "segmentAll": "Tous",
@@ -9810,6 +10234,7 @@
     "terms_of_service": "Conditions d'utilisation"
   },
   "weeklyCheckIn": {
+    "loadError": "Impossible de charger ton check-in",
     "exit": {
       "title": "On se reprend plus tard?",
       "description": "Ace reviendra te voir dans quelques jours — tes réglages ne seront pas sauvegardés cette fois-ci.",
@@ -9817,39 +10242,34 @@
       "cancel": "Continuer"
     },
     "step1": {
-      "bubbleHit": "Horaire enregistré 🔒 Objectif explosé la semaine passée — la séquence grimpe.",
-      "bubbleMet": "Horaire enregistré 🔒 {goal} sessions jouées la semaine passée. La séquence tient bon.",
-      "bubbleMiss": "Horaire enregistré 🔒 Objectif manqué la semaine passée — on se reprend et on vise juste cette semaine. 💪",
-      "bubbleFirstTime": "Horaire enregistré 🔒 Joue tes parties et fais ton check-in cette semaine pour lancer ta séquence. 🔥",
-      "streakTitle": "Séquence de {count} semaines",
-      "streakTitleZero": "Commence une séquence cette semaine",
-      "streakSubtitle": "semaines",
-      "streakSubtitleOne": "semaine de suite",
-      "streakLabel": "SÉQUENCE D'OBJECTIFS",
-      "streakLabelOne": "SÉQUENCE D'OBJECTIFS",
+      "bubbleHit": "Salut 👋 Objectif explosé la semaine passée — ta streak grimpe. 🔥",
+      "bubbleMet": "Salut 👋 {goal} sessions jouées la semaine passée. Ta streak tient bon. 💪",
+      "bubbleMiss": "Salut 👋 Objectif manqué la semaine passée — on se reprend! 💪",
+      "bubbleFrozen": "Salut 👋 Un joker a sauvé ta streak ❄️ On se reprend cette semaine!",
+      "bubbleBack": "Salut 👋 Content de te revoir! On te ramène sur le terrain. 💪",
+      "bubbleFirstTime": "Salut 👋 Joue tes parties et fais ton check-in pour lancer ta streak. 🔥",
+      "streakTitle": "Streak de {count} semaines",
+      "streakTitleZero": "Commence une streak cette semaine",
+      "streakLabel": "STREAK D'OBJECTIFS",
+      "streakLabelOne": "STREAK D'OBJECTIFS",
       "timelineLabel": "Tes derniers check-ins",
       "thisWeek": "Cette sem.",
       "freezeCount": "{count} jokers en réserve",
       "freezeOne": "1 joker en réserve",
       "freezeZero": "0 joker en réserve",
-      "freezeHint": "Gagne 1 joker pour 4 objectifs atteints de suite",
-      "freezeFirstTimeInvite": "Atteins ton objectif hebdo pour lancer ta séquence 🔥",
-      "goalsCardTitle": "SUIVI DES OBJECTIFS",
-      "goalsCardLastWeek": "Semaine passée",
+      "freezeFirstTimeInvite": "Atteins ton objectif hebdo pour lancer ta streak 🔥",
+      "goalsCardLastWeekResult": "Semaine passée : {played} jouées · objectif {goal}",
       "goalsCardTrendLabel": "Les 4 dernières semaines",
-      "goalsCardLastWeekSummary": "{played} sur {goal} sessions",
-      "goalsCardLastWeekHit": "Objectif atteint ✓",
-      "goalsCardLastWeekMiss": "Objectif manqué",
       "goalsCardNoHistory": "Ton historique d'objectifs apparaîtra ici après quelques semaines de jeu. 📈",
-      "checkInNote": "📍 À noter : une partie ne compte pour ta séquence que si tu fais ton check-in au terrain.",
-      "freezeTooltip": "Les jokers de séquence te protègent si tu rates ton objectif hebdo.",
+      "checkInNote": "📍 Ta partie compte juste avec un check-in au terrain.",
+      "freezeTooltip": "Les jokers de streak te protègent si tu rates ton objectif hebdo.",
       "goalsHitLabel": "Objectifs atteints",
       "recapGoal": "Objectif",
       "recapPlayed": "Joué",
       "cta": "Fixons mon objectif 🎯"
     },
     "step2": {
-      "bubble": "Salut 👋 Quand es-tu libre dans les prochains jours? Tape ou glisse pour peindre tes plages. ✨",
+      "bubble": "Quand es-tu libre dans les prochains jours? Tape ou glisse pour peindre tes plages. ✨",
       "cta": "Parfait"
     },
     "step3": {
@@ -9861,19 +10281,30 @@
         "4": "4×",
         "5plus": "5+×"
       },
-      "frequencyContextSame": "Comme la semaine passée — la régularité paie! 🌱",
+      "frequencyContextSame": "Comme la dernière fois — la régularité paie! 🌱",
       "frequencyContextUp": "On monte de {last} → {current}. J'adore l'ambition! 🔥",
       "frequencyContextDown": "On revient à {current}. Mieux vaut tenir la cadence. 💆",
-      "frequencyContextFirstTime": "Choisis ce qui te convient — tu peux ajuster à chaque semaine. ✨",
-      "opsLabel": "Pour te simplifier la vie",
-      "autoCreateTitle": "Créer des matchs ouverts automatiquement",
-      "autoCreateDesc": "Publie des matchs request-to-join à tes heures libres.",
+      "frequencyContextFirstTime": "Choisis ce qui te convient — tu peux ajuster à chaque semaine. ✨"
+    },
+    "autoMatch": {
+      "bubble": "Veux-tu que je fasse le travail? Voici mon plan. 👇",
+      "howLabel": "Voici ce que je ferai",
+      "howCreateTitle": "Créer des parties pour toi",
+      "howCreateDesc": "À tes heures libres, dans Mes parties.",
+      "howInviteTitle": "Inviter les bons joueurs",
+      "howInviteDesc": "Les plus compatibles, selon mon algorithme.",
+      "howNotifyTitle": "Te tenir au courant",
+      "howNotifyDesc": "Je t'avise dès que quelqu'un se joint.",
+      "togglesLabel": "À toi de décider",
+      "autoCreateTitle": "Créer des parties ouvertes automatiquement",
+      "autoCreateDesc": "Publie des parties request-to-join à tes heures libres.",
       "autoInviteTitle": "Inviter des joueurs compatibles automatiquement",
       "autoInviteDesc": "Trouve des joueurs de ton niveau et envoie-leur une invitation.",
+      "reassurance": "Tu peux changer d'avis chaque semaine — rien ne se passe si c'est désactivé.",
       "cta": "Lancer ma semaine"
     },
     "step4": {
-      "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🎾",
+      "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🙌",
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",

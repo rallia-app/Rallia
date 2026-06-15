@@ -37,12 +37,13 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useTheme } from '@rallia/shared-hooks';
+import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '#/hooks';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
 import { MatchCreationWizard } from '#/features/matches';
+import { TournamentCreationWizard } from '#/features/tournaments';
 import { InvitePlayersWizard } from '#/features/referral';
 import { CreateNetworkWizard } from '#/features/groups';
 import { AuthWizard } from '#/features/auth';
@@ -89,9 +90,17 @@ interface ActionItemProps {
   description: string;
   onPress: () => void;
   colors: ThemeColors;
+  testID?: string;
 }
 
-const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPress, colors }) => {
+const ActionItem: React.FC<ActionItemProps> = ({
+  icon,
+  title,
+  description,
+  onPress,
+  colors,
+  testID,
+}) => {
   const { selectedSport } = useSport();
   return (
     <TouchableOpacity
@@ -101,6 +110,7 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
         onPress();
       }}
       activeOpacity={0.7}
+      testID={testID}
     >
       <View style={[styles.actionIconContainer, { backgroundColor: colors.buttonInactive }]}>
         {icon === 'sport' ? (
@@ -132,8 +142,10 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
 interface ActionsContentProps {
   onClose: () => void;
   onCreateMatch: () => void;
+  onCreateTournament: () => void;
   onInvitePlayers: () => void;
   onCreateNetwork: () => void;
+  showCreateTournament: boolean;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
@@ -141,8 +153,10 @@ interface ActionsContentProps {
 const ActionsContent: React.FC<ActionsContentProps> = ({
   onClose,
   onCreateMatch,
+  onCreateTournament,
   onInvitePlayers,
   onCreateNetwork,
+  showCreateTournament,
   colors,
   t,
 }) => {
@@ -156,6 +170,17 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
           onPress={onCreateMatch}
           colors={colors}
         />
+
+        {showCreateTournament && (
+          <ActionItem
+            icon="trophy-outline"
+            title={t('actions.createTournament')}
+            description={t('actions.createTournamentDescription')}
+            onPress={onCreateTournament}
+            colors={colors}
+            testID="action-create-tournament"
+          />
+        )}
 
         <ActionItem
           icon="person-add-outline"
@@ -203,10 +228,12 @@ export const ActionsBottomSheet: React.FC = () => {
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const { isAdmin } = useAdminStatus();
   const isDark = theme === 'dark';
 
   // Wizard state for all sliding panels (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
+  const [showTournamentWizard, setShowTournamentWizard] = useState(false);
   const [showInviteWizard, setShowInviteWizard] = useState(false);
   const [showNetworkWizard, setShowNetworkWizard] = useState(false);
 
@@ -348,6 +375,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle invite players - show invite wizard with slide animation
   const handleInvitePlayers = useCallback(() => {
     lightHaptic();
+    Analytics.referralInviteOpened({ source: 'actions_sheet' });
     setInviteInitialTab(undefined);
     setShowInviteWizard(true);
     slideIn();
@@ -359,6 +387,46 @@ export const ActionsBottomSheet: React.FC = () => {
     setShowNetworkWizard(true);
     slideIn();
   }, [slideIn]);
+
+  // Handle create tournament - show tournament wizard with slide animation
+  const handleCreateTournament = useCallback(() => {
+    lightHaptic();
+    setShowTournamentWizard(true);
+    slideIn();
+  }, [slideIn]);
+
+  // Handle tournament wizard close - slide back to actions list
+  const handleTournamentWizardClose = useCallback(() => {
+    slideOut(() => setShowTournamentWizard(false));
+  }, [slideOut]);
+
+  // Handle tournament wizard success - close sheet and navigate to detail screen
+  const handleTournamentSuccess = useCallback(
+    (tournamentId: string, openInviteSheet = false) => {
+      successHaptic();
+      closeSheet();
+      setShowTournamentWizard(false);
+      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+      slideProgress.value = 0;
+
+      // Wait for the sheet's close animation before pushing the screen so
+      // the navigation transition isn't competing with the sheet collapse.
+      setTimeout(() => {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('TournamentDetail', { tournamentId, openInviteSheet });
+        }
+      }, 300);
+    },
+    [closeSheet, slideProgress]
+  );
+
+  // "Share invite link" on the success screen: same close-and-navigate, but
+  // the detail screen opens the invite sheet on arrival. The actions sheet is
+  // fully closed before any sheet shows, so no sheet-to-sheet transition.
+  const handleTournamentShareInvite = useCallback(
+    (tournamentId: string) => handleTournamentSuccess(tournamentId, true),
+    [handleTournamentSuccess]
+  );
 
   // Handle invite wizard close - slide back to actions list
   const handleInviteWizardClose = useCallback(() => {
@@ -404,7 +472,7 @@ export const ActionsBottomSheet: React.FC = () => {
           navigateFromOutside('PlayerMatches');
           // Small delay to ensure navigation completes before opening sheet
           setTimeout(() => {
-            openMatchDetail(matchDetails);
+            openMatchDetail(matchDetails, { source: 'match_creation' });
           }, 300);
         }
       } catch (error) {
@@ -441,6 +509,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
+    setShowTournamentWizard(false);
     setShowInviteWizard(false);
     setInviteInitialTab(undefined);
     setShowNetworkWizard(false);
@@ -562,8 +631,10 @@ export const ActionsBottomSheet: React.FC = () => {
           <ActionsContent
             onClose={closeSheet}
             onCreateMatch={handleCreateMatch}
+            onCreateTournament={handleCreateTournament}
             onInvitePlayers={handleInvitePlayers}
             onCreateNetwork={handleCreateNetwork}
+            showCreateTournament={isAdmin}
             colors={colors}
             t={t}
           />
@@ -578,6 +649,18 @@ export const ActionsBottomSheet: React.FC = () => {
               onSuccess={handleWizardSuccess}
               initialBookingForWizard={initialBookingForWizard}
               onConsumeInitialBooking={clearInitialBookingFlag}
+            />
+          </Animated.View>
+        )}
+
+        {/* Tournament creation wizard */}
+        {showTournamentWizard && (
+          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
+            <TournamentCreationWizard
+              onClose={closeSheet}
+              onBackToLanding={handleTournamentWizardClose}
+              onSuccess={handleTournamentSuccess}
+              onShareInvite={handleTournamentShareInvite}
             />
           </Animated.View>
         )}
@@ -611,6 +694,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Auth is deliberately NOT in this list — it sizes to content.
   const isFullHeight =
     showWizard ||
+    showTournamentWizard ||
     showInviteWizard ||
     showNetworkWizard ||
     isEditMode ||

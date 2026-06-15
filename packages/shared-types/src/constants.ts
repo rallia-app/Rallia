@@ -336,6 +336,17 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_time_suggested: 'time-outline',
   match_time_suggestion_accepted: 'checkmark-circle-outline',
   match_time_suggestion_declined: 'close-circle-outline',
+  tournament_partner_registered: 'people-outline',
+  tournament_partner_withdrew: 'exit-outline',
+  // Tournament lifecycle
+  tournament_registration_received: 'person-add-outline',
+  tournament_registration_approved: 'checkmark-circle-outline',
+  tournament_registration_removed: 'remove-circle-outline',
+  tournament_bracket_published: 'git-network-outline',
+  tournament_match_completed: 'podium-outline',
+  tournament_updated: 'create-outline',
+  tournament_cancelled: 'close-circle-outline',
+  tournament_completed: 'trophy-outline',
 };
 
 /**
@@ -422,6 +433,17 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_time_suggested: '#FF9800', // Orange — action required from the host
   match_time_suggestion_accepted: '#4CAF50', // Green
   match_time_suggestion_declined: '#F44336', // Red
+  tournament_partner_registered: '#4DB8A8', // Teal
+  tournament_partner_withdrew: '#FF9800', // Orange
+  // Tournament lifecycle
+  tournament_registration_received: '#FF9800', // Orange — action required from organizer
+  tournament_registration_approved: '#4CAF50', // Green
+  tournament_registration_removed: '#F44336', // Red
+  tournament_bracket_published: '#4DB8A8', // Teal
+  tournament_match_completed: '#4DB8A8', // Teal
+  tournament_updated: '#FF9800', // Orange — details changed
+  tournament_cancelled: '#F44336', // Red
+  tournament_completed: '#4CAF50', // Green — celebration
 };
 
 /**
@@ -504,6 +526,17 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_time_suggested: 'Time Change Suggested',
   match_time_suggestion_accepted: 'Time Change Accepted',
   match_time_suggestion_declined: 'Time Change Declined',
+  tournament_partner_registered: 'Tournament Partner',
+  tournament_partner_withdrew: 'Team Withdrawn',
+  // Tournament lifecycle
+  tournament_registration_received: 'Registration Request',
+  tournament_registration_approved: 'Registration Approved',
+  tournament_registration_removed: 'Removed from Tournament',
+  tournament_bracket_published: 'Bracket Published',
+  tournament_match_completed: 'Tournament Result',
+  tournament_updated: 'Tournament Updated',
+  tournament_cancelled: 'Tournament Cancelled',
+  tournament_completed: 'Tournament Complete',
 };
 
 /**
@@ -594,6 +627,17 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_time_suggested: 'match',
   match_time_suggestion_accepted: 'match',
   match_time_suggestion_declined: 'match',
+  tournament_partner_registered: 'match',
+  tournament_partner_withdrew: 'match',
+  // Tournament lifecycle
+  tournament_registration_received: 'match',
+  tournament_registration_approved: 'match',
+  tournament_registration_removed: 'match',
+  tournament_bracket_published: 'match',
+  tournament_match_completed: 'match',
+  tournament_updated: 'match',
+  tournament_cancelled: 'match',
+  tournament_completed: 'match',
 };
 
 /**
@@ -727,6 +771,17 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_time_suggested: { email: true, push: true, sms: false },
   match_time_suggestion_accepted: { email: true, push: true, sms: false },
   match_time_suggestion_declined: { email: false, push: true, sms: false },
+  tournament_partner_registered: { email: false, push: true, sms: false },
+  tournament_partner_withdrew: { email: false, push: true, sms: false },
+  // Tournament lifecycle — mirror the edge function DEFAULT_PREFERENCES
+  tournament_registration_received: { email: false, push: true, sms: false },
+  tournament_registration_approved: { email: false, push: true, sms: false },
+  tournament_registration_removed: { email: false, push: true, sms: false },
+  tournament_bracket_published: { email: false, push: true, sms: false },
+  tournament_match_completed: { email: false, push: true, sms: false },
+  tournament_updated: { email: false, push: true, sms: false },
+  tournament_cancelled: { email: true, push: true, sms: false },
+  tournament_completed: { email: false, push: true, sms: false },
 };
 
 // ============================================

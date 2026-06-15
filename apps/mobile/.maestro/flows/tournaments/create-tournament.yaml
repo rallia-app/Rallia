@@ -1,0 +1,67 @@
+# E2E: create a tournament end-to-end as the signed-in demo (admin) account.
+#
+# Requires:
+#   - the build running with EXPO_PUBLIC_E2E=1 (gates the auto-opener sheets:
+#     referral, weekly check-in, summer-league, pending match feedback)
+#   - demo@rallia.ca already signed in (session persists across launches)
+#   - demo granted admin on the target env (unlocks the create action)
+appId: com.mathisl971.rallia-app
+tags:
+  - tournaments
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "tab-create-fab"
+    timeout: 120000
+
+# Open the create sheet -> tournament wizard
+- tapOn:
+    id: "tab-create-fab"
+- extendedWaitUntil:
+    visible:
+      id: "action-create-tournament"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "action-create-tournament"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-name-input"
+    timeout: 15000
+
+# Step 1: details
+- tapOn:
+    id: "tournament-name-input"
+- inputText: "Maestro Test Cup"
+- tapOn: "done"
+- scrollUntilVisible:
+    element:
+      id: "tournament-start-date"
+    direction: DOWN
+    timeout: 12000
+- tapOn:
+    id: "tournament-start-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-end-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-wizard-submit"
+
+# Step 2: visibility -> create
+- extendedWaitUntil:
+    visible: ".*Visibility.*"
+    timeout: 10000
+- tapOn:
+    id: "tournament-wizard-submit"
+
+# Success
+- extendedWaitUntil:
+    visible:
+      id: "tournament-success-view"
+    timeout: 30000
+- takeScreenshot: /tmp/maestro-create-success

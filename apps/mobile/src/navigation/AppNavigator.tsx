@@ -87,6 +87,9 @@ import GroupChatInfo from '#/screens/GroupChatInfo';
 import PlayedMatchDetail from '#/screens/PlayedMatchDetail';
 import Communities from '#/screens/Communities';
 import CommunityDetail from '#/screens/CommunityDetail';
+import TournamentDetail from '#/screens/TournamentDetail';
+import Tournaments from '#/screens/Tournaments';
+import MyTournaments from '#/screens/MyTournaments';
 import NetworkMatches from '#/screens/NetworkMatches';
 import AdminPanelScreen from '#/screens/AdminPanelScreen';
 import AdminDashboardScreen from '#/screens/AdminDashboardScreen';
@@ -800,6 +803,8 @@ function CenterTabButton({
               openSheet();
             }}
             activeOpacity={0.85}
+            testID="tab-create-fab"
+            accessibilityLabel="Create"
             style={{
               flex: 1,
               borderRadius: CENTER_TAB_SIZE / 2,
@@ -1518,6 +1523,36 @@ export default function AppNavigator() {
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.communityName || t('community.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Tournaments"
+        component={Tournaments}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('tournamentList.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="MyTournaments"
+        component={MyTournaments}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('tournamentList.myTournaments'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="TournamentDetail"
+        component={TournamentDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.tournamentName || t('tournamentDetail.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

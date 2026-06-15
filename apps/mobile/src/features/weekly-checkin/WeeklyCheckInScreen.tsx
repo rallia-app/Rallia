@@ -5,7 +5,7 @@
  *   * Background: cream → pale-teal vertical gradient (no decorative blobs)
  *   * Pager: 4 steps side-by-side in a row that's SCREEN_WIDTH × 4 wide,
  *     translateX driven by a single Animated.timing (280ms cubic-out, native driver)
- *   * Header: back chevron (steps 2-4) + progress dots
+ *   * Header: back chevron (steps 2-3) + progress dots
  *   * Footer: each step manages its own CTA
  *
  * The weekly check-in is mandatory: there is no exit affordance and swipe-to-
@@ -32,10 +32,12 @@ import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { accent, primary, spacingPixels } from '@rallia/design-system';
 
 import * as Analytics from '#/services/analytics';
+import { useTranslation } from '#/hooks';
 
 import { WizardHeader } from './components/WizardHeader';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
+import { AutoMatchStep } from './steps/AutoMatchStep';
 import { AllSetStep } from './steps/AllSetStep';
 import { useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
 
@@ -43,6 +45,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function WeeklyCheckInScreen() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { colors, isDark } = useThemeStyles();
   const insets = useSafeAreaInsets();
 
@@ -96,7 +99,7 @@ export function WeeklyCheckInScreen() {
     }).start();
   }, [wizard.currentStep, slideAnim]);
 
-  // CTA → submit transition from the recap+goal step to the All-Set step.
+  // CTA → submit transition from the auto-match step to the All-Set step.
   // Fire mediumHaptic immediately on press so the tap feels responsive — the
   // submit() call ultimately fires successHaptic on success or errorHaptic on
   // failure, but those land ~1-2s later after the RPC roundtrip.
@@ -108,7 +111,7 @@ export function WeeklyCheckInScreen() {
       // runs from the useEffect above via the currentStep dependency change.
     } catch {
       // Errors are logged + errorHaptic'd inside submit(); ignore here so the
-      // wizard stays on the recap+goal step for the user to retry.
+      // wizard stays on the auto-match step for the user to retry.
     }
   }, [wizard]);
 
@@ -133,10 +136,12 @@ export function WeeklyCheckInScreen() {
           to clear the status bar / notch. */}
       <View style={{ height: Platform.OS === 'ios' ? spacingPixels[5] : insets.top }} />
 
+      {/* When the recap step is skipped, the header renumbers to 3 dots so
+          availability reads as step 1 of 3. */}
       <WizardHeader
-        currentStep={wizard.currentStep}
-        totalSteps={wizard.totalSteps}
-        showBack={wizard.currentStep > 1 && wizard.currentStep < 3}
+        currentStep={wizard.skipRecapStep ? wizard.currentStep - 1 : wizard.currentStep}
+        totalSteps={wizard.skipRecapStep ? wizard.totalSteps - 1 : wizard.totalSteps}
+        showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 4}
         onBack={wizard.goBack}
       />
 
@@ -144,7 +149,7 @@ export function WeeklyCheckInScreen() {
         style={[
           styles.pager,
           {
-            width: SCREEN_WIDTH * 3,
+            width: SCREEN_WIDTH * 4,
             // Bottom safe-area inset keeps the CTA above the Android nav bar
             // / iOS home indicator. Each step's footer adds its own additional
             // breathing room on top of this.
@@ -153,6 +158,40 @@ export function WeeklyCheckInScreen() {
           },
         ]}
       >
+        <StepSlot>
+          {wizard.context ? (
+            <RecapGoalStep
+              context={wizard.context}
+              frequencyGoal={wizard.frequencyGoal}
+              setFrequencyGoal={wizard.setFrequencyGoal}
+              previousGoal={
+                wizard.context.lastFrequencyGoal ?? wizard.context.lastWeekFrequencyGoal ?? null
+              }
+              onContinue={wizard.goNext}
+            />
+          ) : (
+            <View style={styles.loading}>
+              {wizard.contextError ? (
+                <>
+                  <Text style={[styles.errorTitle, { color: colors.text }]}>
+                    {t('weeklyCheckIn.loadError')}
+                  </Text>
+                  <Text style={[styles.errorMsg, { color: colors.textMuted }]}>
+                    {wizard.contextError.message}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={[styles.loadingHint, { color: colors.textMuted }]}>
+                    {t('common.loading')}
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
+        </StepSlot>
+
         <StepSlot>
           <AvailabilityStep
             availability={wizard.availability}
@@ -163,43 +202,14 @@ export function WeeklyCheckInScreen() {
         </StepSlot>
 
         <StepSlot>
-          {wizard.context ? (
-            <RecapGoalStep
-              context={wizard.context}
-              frequencyGoal={wizard.frequencyGoal}
-              setFrequencyGoal={wizard.setFrequencyGoal}
-              previousGoal={
-                wizard.context.lastFrequencyGoal ?? wizard.context.lastWeekFrequencyGoal ?? null
-              }
-              autoCreate={wizard.autoCreate}
-              setAutoCreate={wizard.setAutoCreate}
-              autoInvite={wizard.autoInvite}
-              setAutoInvite={wizard.setAutoInvite}
-              isSubmitting={wizard.isSubmitting}
-              onSubmit={handleSubmit}
-              showFrequencyStep={wizard.showFrequencyStep}
-            />
-          ) : (
-            <View style={styles.loading}>
-              {wizard.contextError ? (
-                <>
-                  <Text style={[styles.errorTitle, { color: colors.text }]}>
-                    Failed to load check-in
-                  </Text>
-                  <Text style={[styles.errorMsg, { color: colors.textMuted }]}>
-                    {wizard.contextError.message}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <ActivityIndicator color={colors.primary} />
-                  <Text style={[styles.loadingHint, { color: colors.textMuted }]}>
-                    Loading{wizard.isContextLoading ? '…' : ' (idle?)'}
-                  </Text>
-                </>
-              )}
-            </View>
-          )}
+          <AutoMatchStep
+            autoCreate={wizard.autoCreate}
+            setAutoCreate={wizard.setAutoCreate}
+            autoInvite={wizard.autoInvite}
+            setAutoInvite={wizard.setAutoInvite}
+            isSubmitting={wizard.isSubmitting}
+            onSubmit={handleSubmit}
+          />
         </StepSlot>
 
         <StepSlot>

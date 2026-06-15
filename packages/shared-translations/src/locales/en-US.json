@@ -1122,7 +1122,7 @@
           "recordVideo": "Record Video",
           "selectFromGallery": "Select from Gallery",
           "maxDuration": "Maximum duration: 1 minute",
-          "maxSize": "Maximum size: 250 MB"
+          "maxSize": "Maximum size: 50 MB"
         },
         "image": {
           "title": "Screenshot / Image",
@@ -2031,6 +2031,7 @@
       "community": "Communities",
       "club": "Clubs",
       "match": "Matches",
+      "tournament": "Tournaments",
       "blocked": "Blocked",
       "favorites": "Favorites",
       "archived": "Archived",
@@ -3698,12 +3699,14 @@
     "continueSetup": "Continue Setup",
     "createMatch": "Create Game",
     "createMatchDescription": "Create a game and share it with players and contacts",
-    "invitePlayers": "Invite Players",
-    "invitePlayersDescription": "Invite friends and contacts to join Rallia and play with you",
+    "invitePlayers": "Invite a Friend to Rallia",
+    "invitePlayersDescription": "Share your code or QR so friends can join you on Rallia",
     "createShareList": "Create Share List",
     "createShareListDescription": "Create a list of people outside the app to invite to your games",
     "createNetwork": "Create Network",
     "createNetworkDescription": "Start a group or community to organize regular games with others",
+    "createTournament": "Create Tournament",
+    "createTournamentDescription": "Organize a tournament with a bracket and registrations",
     "createEvent": "Create Event",
     "createEventDescription": "Organize a tournament or league and manage brackets and schedules",
     "selectNetworkType": "Create Network",
@@ -4052,6 +4055,415 @@
       "selectContactsFromLists": "Select contacts from your lists"
     }
   },
+  "tournamentList": {
+    "title": "Tournaments",
+    "loadError": "Couldn't load tournaments",
+    "retry": "Try again",
+    "empty": "No public tournaments right now",
+    "emptyDescription": "Check back soon, or create your own from the action menu.",
+    "myTournaments": "My tournaments",
+    "roleOrganizer": "Organizer",
+    "registerBy": "Register by {date}",
+    "searchPlaceholder": "Search tournaments...",
+    "discoverFilters": {
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "format": "Format",
+      "allFormats": "All formats",
+      "myRating": "My rating",
+      "openSpots": "Open spots"
+    },
+    "emptySearch": {
+      "title": "No tournaments found",
+      "description": "Try adjusting your search or filters."
+    },
+    "sectionOpen": "Open for registration",
+    "sectionInProgress": "In progress",
+    "sectionStartingSoon": "Starting soon",
+    "filters": {
+      "all": "All",
+      "registered": "Registered",
+      "organizing": "Organizing",
+      "drafts": "Drafts",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "emptyUpcoming": {
+      "title": "No upcoming tournaments",
+      "description": "Tournaments you join or organize will show up here."
+    },
+    "emptyPast": {
+      "title": "No past tournaments",
+      "description": "Your completed and cancelled tournaments will show up here."
+    },
+    "emptyFiltered": {
+      "title": "No tournaments found",
+      "description": "No tournaments match the \"{filter}\" filter"
+    },
+    "dateRange": "{start} – {end}"
+  },
+  "tournamentDetail": {
+    "title": "Tournament",
+    "loading": "Loading tournament...",
+    "notFound": "Tournament not found",
+    "notFoundDescription": "This tournament may have been deleted or you don't have permission to view it.",
+    "loadError": "Couldn't load the tournament",
+    "retry": "Try again",
+    "chat": {
+      "open": "Tournament chat"
+    },
+    "status": {
+      "draft": "Draft",
+      "registration_open": "Registration open",
+      "registration_closed": "Registration closed",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "archived": "Archived"
+    },
+    "sections": {
+      "manage": "Manage"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "bracket": "Bracket",
+      "players": "Players",
+      "details": "Details"
+    },
+    "dashboard": {
+      "details": "Details",
+      "organizedBy": "Organized by {name}",
+      "champion": "Champion",
+      "steps": {
+        "draft": "Draft",
+        "registration": "Registration",
+        "play": "Play",
+        "done": "Done"
+      },
+      "stats": {
+        "registered": "Registered",
+        "games": "Games",
+        "start": "Start",
+        "startsInDays": "In {n} days",
+        "startsToday": "Today",
+        "live": "Live",
+        "ended": "Ended"
+      },
+      "nextStep": {
+        "draftTitle": "Ready to launch?",
+        "draftDescription": "Open registration so players can find and join your tournament.",
+        "openTitle": "Registration is live",
+        "openDescription": "{count} of {max} spots filled.",
+        "closedTitle": "Build the bracket",
+        "closedDescription": "{count} players are in. Generate the bracket to start play.",
+        "liveTitle": "Tournament in progress",
+        "liveDescription": "{done} of {total} games completed. Tap a pending game in the bracket to record its result."
+      },
+      "registerCta": {
+        "title": "Registration open",
+        "full": "Tournament full",
+        "fullDescription": "All spots are taken.",
+        "spotsLeft": "{n} spots left",
+        "spotsLeftTeams": "{n} team spots left"
+      },
+      "withdrawCta": {
+        "title": "You're registered",
+        "titleTeam": "Your team is registered",
+        "titlePending": "Registration pending",
+        "description": "Your spot is locked in. Plans changed? You can withdraw while registration is open.",
+        "descriptionTeam": "Your team's spot is locked in. Plans changed? Withdrawing pulls both of you while registration is open.",
+        "descriptionPending": "The organizer still needs to approve your spot. You can withdraw while registration is open."
+      },
+      "addMyselfCta": {
+        "title": "Playing too?",
+        "description": "Add yourself to this tournament as a participant."
+      },
+      "myMatch": {
+        "title": "Your next game",
+        "vs": "vs {name}",
+        "hint": "Tap to link your played game",
+        "waiting": "Waiting for your next opponent",
+        "eliminated": "You've been eliminated. Good run!",
+        "champion": "You won the tournament!"
+      },
+      "participants": {
+        "title": "Players",
+        "empty": "No players registered yet",
+        "pending": "Pending",
+        "removeLabel": "Remove {name}"
+      }
+    },
+    "labels": {
+      "bracketSize": "Bracket size",
+      "bracketType": "Bracket type",
+      "matchFormat": "Scoring format",
+      "entryFormat": "Entry format",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "visibility": "Visibility",
+      "registrationMode": "Registration mode",
+      "registrationCloses": "Registration closes"
+    },
+    "values": {
+      "singleElimination": "Single elimination",
+      "doubleElimination": "Double elimination",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "mixedDoubles": "Mixed doubles",
+      "oneSet": "Single set",
+      "twoOfThree": "Best of 3 sets",
+      "threeOfFive": "Best of 5 sets",
+      "pickleballTo11": "Games to 11",
+      "pickleballTo15": "Games to 15",
+      "pickleballTo21": "Games to 21",
+      "private": "Private",
+      "public": "Public",
+      "community": "Community",
+      "open": "Open",
+      "approval": "Approval required",
+      "inviteOnly": "Invite only"
+    },
+    "actions": {
+      "openRegistration": "Open registration",
+      "closeRegistration": "Close registration",
+      "register": "Register",
+      "addMyself": "Add myself",
+      "withdraw": "Withdraw",
+      "registering": "Registering...",
+      "withdrawing": "Withdrawing...",
+      "opening": "Opening...",
+      "closing": "Closing...",
+      "registrationPendingLabel": "Registration pending approval",
+      "registeredLabel": "You're registered",
+      "registeredWithPartnerLabel": "You're registered with {name}",
+      "generateBracket": "Generate bracket",
+      "generating": "Generating bracket...",
+      "cancelTournament": "Cancel tournament",
+      "archiveTournament": "Archive tournament",
+      "editDetails": "Edit details",
+      "invitePlayers": "Invite players"
+    },
+    "invite": {
+      "title": "Invite players",
+      "description": "Anyone with this link can register for this tournament, even if it is private.",
+      "generating": "Preparing your invite link...",
+      "scanToRegister": "Scan to register for the tournament",
+      "share": "Share invite link",
+      "shareTitle": "Join {name} on Rallia",
+      "shareMessage": "You're invited to my tournament {name} on Rallia. Register here: {link}",
+      "resetLink": "Reset link",
+      "resetWarning": "The current link will stop working. Players already registered keep their spot.",
+      "resetDone": "New invite link ready",
+      "resetFailed": "Couldn't reset the link. Please try again.",
+      "linkInfo": "Anyone who uses this link is registered right away, even if registration normally requires approval."
+    },
+    "inviteLanding": {
+      "invalidTitle": "Invite link not valid",
+      "invalidDescription": "This link was reset or has expired. Ask the organizer for a new one.",
+      "joinedToast": "You're in! See you at the tournament."
+    },
+    "editModal": {
+      "title": "Edit tournament",
+      "subtitle": "Changes are visible to players right away.",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Tell players what to expect",
+      "startDateLabel": "Start date",
+      "endDateLabel": "End date",
+      "visibilityLabel": "Visibility",
+      "bracketSizeLabel": "Bracket size",
+      "scoringFormatLabel": "Scoring format",
+      "draftOnlyHint": "Bracket size and scoring format lock once registration opens.",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "saved": "Tournament updated",
+      "errors": {
+        "notEditable": "One of these fields can't be changed anymore. Refresh and try again.",
+        "generic": "Couldn't save the changes. Please try again."
+      }
+    },
+    "cancelModal": {
+      "title": "Cancel this tournament?",
+      "description": "All pending and in-progress matches will be cancelled. Players will keep their registration history. This can't be undone.",
+      "reasonPlaceholder": "Optional: short reason shown to participants",
+      "confirm": "Cancel",
+      "keepIt": "Keep it",
+      "errorGeneric": "Couldn't cancel the tournament. Please try again.",
+      "errorNotCancellable": "This tournament can't be cancelled in its current state.",
+      "errorLockConflict": "Someone else made changes — please refresh and try again."
+    },
+    "archiveModal": {
+      "title": "Archive this tournament?",
+      "description": "Archived tournaments hide from active feeds but stay accessible by direct link.",
+      "confirm": "Archive",
+      "keepIt": "Cancel",
+      "errorGeneric": "Couldn't archive the tournament. Please try again.",
+      "errorNotArchivable": "This tournament can't be archived yet.",
+      "errorLockConflict": "Someone else made changes — please refresh and try again."
+    },
+    "removeModal": {
+      "title": "Remove this player?",
+      "message": "Remove {name} from the tournament? They won't be able to register for this tournament again.",
+      "confirm": "Remove",
+      "keepIt": "Cancel",
+      "success": "Player removed"
+    },
+    "cancelledNotice": {
+      "title": "Tournament cancelled",
+      "reason": "Reason: {reason}"
+    },
+    "bracket": {
+      "sectionTitle": "Bracket",
+      "round": "Round {n}",
+      "final": "Final",
+      "semifinal": "Semifinal",
+      "quarterfinal": "Quarterfinal",
+      "bye": "BYE",
+      "tbd": "TBD",
+      "phantom": "—",
+      "linkMatch": "Link a played match to this slot",
+      "overrideMatch": "Record the result as organizer",
+      "recordResult": "Record result",
+      "addResult": "Add your result",
+      "live": "Live",
+      "disputed": "Disputed",
+      "gamesProgress": "{done}/{total} games"
+    },
+    "linkPicker": {
+      "title": "Link a played match",
+      "empty": "No matches found",
+      "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
+      "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
+      "attachFailed": "Couldn't link the match",
+      "linkCta": "Link this game"
+    },
+    "partner": {
+      "title": "Pick your partner",
+      "searchPlaceholder": "Search players",
+      "recentHeader": "Recent partners",
+      "empty": "No recent partners yet. Search to find your partner.",
+      "noResults": "No players found",
+      "confirmCta": "Register with {name}",
+      "confirmCtaEmpty": "Pick a partner"
+    },
+    "override": {
+      "title": "Record the result",
+      "subtitle": "Enter the final score. The winner is set automatically.",
+      "confirm": "Save result",
+      "errors": {
+        "notOverridable": "This match can't be edited anymore.",
+        "winnerNotInMatch": "Pick one of the two players in this match.",
+        "notInProgress": "The tournament isn't in progress.",
+        "slotsIncomplete": "Both players aren't set yet for this match.",
+        "generic": "Couldn't save the result. Please try again."
+      }
+    },
+    "generateBracketErrors": {
+      "insufficientParticipants": "At least 2 players must be registered.",
+      "alreadyGenerated": "The bracket already exists.",
+      "wrongStatus": "Close registration first to generate the bracket.",
+      "generic": "Couldn't generate the bracket. Please try again."
+    },
+    "errors": {
+      "openFailed": "Couldn't open registration. Please try again.",
+      "closeFailed": "Couldn't close registration. Please try again.",
+      "registerFailed": "Couldn't complete registration. Please try again.",
+      "withdrawFailed": "Couldn't withdraw. Please try again.",
+      "withdrawClosed": "Registration has closed — you can't withdraw anymore.",
+      "tournamentFull": "This tournament is full.",
+      "alreadyRegistered": "You're already registered for this tournament.",
+      "sportMismatch": "You don't have this sport active on your profile.",
+      "regClosed": "Registration is no longer open.",
+      "startPassed": "The start date has passed. Update the dates before opening registration.",
+      "notInvited": "This tournament is invite-only and you haven't been invited.",
+      "lockConflict": "Someone else made changes — please refresh and try again.",
+      "removeFailed": "Couldn't remove the player. Please try again.",
+      "removeNotAllowed": "Players can't be removed once the bracket exists.",
+      "registrationRemoved": "The organizer removed you from this tournament. You can't register again.",
+      "partnerRequired": "Pick a partner to register for this doubles tournament.",
+      "partnerAlreadyRegistered": "That player is already registered in this tournament.",
+      "partnerSportMismatch": "Your partner doesn't have this sport active on their profile.",
+      "partnerInvalid": "That partner can't be registered. Pick someone else.",
+      "inviteInvalid": "This invite link is no longer valid."
+    }
+  },
+  "tournamentCreation": {
+    "title": "Create a tournament",
+    "forSport": "Creating tournament for {sport}",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "details": "Details",
+      "visibility": "Visibility"
+    },
+    "step1Title": "Details",
+    "step1Description": "Name your tournament, pick a bracket size and scoring format, and set the dates",
+    "visibilityStepTitle": "Visibility",
+    "visibilityStepDescription": "Who can see and register?",
+    "next": "Next",
+    "back": "Back",
+    "createTournament": "Create tournament",
+    "creating": "Creating...",
+    "success": "Tournament created!",
+    "successDescription": "Your draft tournament is ready. Open registration when you're ready to invite players.",
+    "viewTournament": "View tournament",
+    "shareInvite": "Share invite link",
+    "createAnother": "Create another",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g., Spring Singles 2026",
+      "description": "Description",
+      "descriptionPlaceholder": "Tell players what to expect (optional)",
+      "maxParticipants": "Bracket size",
+      "maxParticipantsHint": "Number of players the bracket holds",
+      "maxTeams": "Bracket size (teams)",
+      "maxTeamsHint": "Number of teams the bracket holds. Each team is 2 players.",
+      "entryFormat": "Entry format",
+      "entryFormatDoublesHint": "Players register in teams of 2. One player registers the pair and picks their partner.",
+      "matchFormat": "Scoring format",
+      "matchFormatOneSet": "1 set",
+      "matchFormatOneSetHint": "A single set decides the winner",
+      "matchFormatTwoOfThree": "Best of 3",
+      "matchFormatTwoOfThreeHint": "First to win 2 sets",
+      "matchFormatThreeOfFive": "Best of 5",
+      "matchFormatThreeOfFiveHint": "First to win 3 sets",
+      "matchFormatTo11": "To 11",
+      "matchFormatTo11Hint": "First to 11 points, win by 2",
+      "matchFormatTo15": "To 15",
+      "matchFormatTo15Hint": "First to 15 points, win by 2",
+      "matchFormatTo21": "To 21",
+      "matchFormatTo21Hint": "First to 21 points, win by 2",
+      "startDate": "Start date",
+      "startDatePlaceholder": "Select date",
+      "endDate": "End date",
+      "endDatePlaceholder": "Select date",
+      "visibility": "Visibility",
+      "visibilityPrivate": "Private",
+      "visibilityPrivateDescription": "Only people you invite can see this",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Anyone in your sport can find and register",
+      "visibilityCommunity": "Community",
+      "visibilityCommunityDescription": "Visible to members of a community you choose",
+      "registrationMode": "Registration mode",
+      "registrationModeOpen": "Open",
+      "registrationModeOpenDescription": "Anyone visible can self-register",
+      "registrationModeApproval": "Approval",
+      "registrationModeApprovalDescription": "You approve each registration",
+      "registrationModeInviteOnly": "Invite only",
+      "registrationModeInviteOnlyDescription": "Only people you invite can register"
+    },
+    "validation": {
+      "nameRequired": "Tournament name is required",
+      "nameTooLong": "Name must be 100 characters or fewer",
+      "datesRequired": "Both start and end dates are required",
+      "endBeforeStart": "End date must be on or after the start date",
+      "startInPast": "Start date must be in the future"
+    },
+    "errors": {
+      "sportMismatch": "You don't have this sport active on your profile",
+      "rateLimited": "You've created too many tournaments recently. Try again later.",
+      "generic": "Couldn't create the tournament. Please try again."
+    }
+  },
   "home": {
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "Your Games",
@@ -4069,7 +4481,8 @@
       "joinCommunity": "Join a community",
       "bookCourt": "Reserve a court",
       "findGame": "Find a game nearby",
-      "browseSuggestions": "Discover suggestions"
+      "browseSuggestions": "Discover suggestions",
+      "tournaments": "Join a tournament"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",
@@ -7777,6 +8190,12 @@
         "responseRateHint": "{responded} of {settled} eligible invites",
         "settleNote": "{inFlight} invitation(s) sent in the last 48h are still in-flight and excluded from the rates below.",
         "allInFlight": "All invitations in this window are too recent to measure responses yet.",
+        "weeklyHint": "Invitation cohorts for the last 6 weeks, anchored on send time (Mon–Sun). Rates use settled invites only; recent weeks may still be settling.",
+        "weekStats": "Matches {matches} · Invites {invites} · {settled} settled",
+        "weekInFlight": "{inFlight} in flight",
+        "weekResponded": "{pct}% responded",
+        "weekAllInFlight": "All invitations this week are still in flight.",
+        "weekNoInvites": "No invitations sent this week.",
         "stageEligible": "Eligible invitations",
         "stageEligibleDesc": "Sent long enough ago to have had a fair chance to respond.",
         "stageResponded": "Responded",
@@ -7812,6 +8231,11 @@
         "commitmentNorthStar": "North star — created matches that get a second player to commit",
         "funnelTitle": "Lifecycle funnel",
         "funnelHint": "Games scheduled in this window, by closure outcome.",
+        "weeklyFunnelHint": "Funnel for each of the last 6 weeks (Mon–Sun), bucketed by play date. The current week is still in progress.",
+        "viewCumulative": "Cumulative",
+        "viewWeekly": "Weekly",
+        "weekCurrent": "current",
+        "weekCommitment": "{pct}% filled",
         "funnelOf": "{pct}% of created",
         "funnelConfidence": "Played & quality are feedback-confirmed — a floor, not a ceiling (coverage {pct}%).",
         "segmentAll": "All",
@@ -9810,6 +10234,7 @@
     "terms_of_service": "Terms of Service"
   },
   "weeklyCheckIn": {
+    "loadError": "Couldn't load your check-in",
     "exit": {
       "title": "Catch you later?",
       "description": "Ace will check back in a few days — your settings won't be saved this time.",
@@ -9817,14 +10242,14 @@
       "cancel": "Keep going"
     },
     "step1": {
-      "bubbleHit": "Schedule locked 🔒 And last week? You smashed your goal — streak's still climbing.",
-      "bubbleMet": "Schedule locked 🔒 Last week you hit all {goal} sessions too. Streak alive and well.",
-      "bubbleMiss": "Schedule locked 🔒 You missed last week's goal — let's bounce back and nail it this week. 💪",
-      "bubbleFirstTime": "Schedule locked 🔒 Play your games and check in to them this week to start your streak. 🔥",
+      "bubbleHit": "Hey 👋 Last week you smashed your goal — streak's still climbing. 🔥",
+      "bubbleMet": "Hey 👋 You hit all {goal} sessions last week. Streak alive and well. 💪",
+      "bubbleMiss": "Hey 👋 You missed last week's goal — let's bounce back! 💪",
+      "bubbleFrozen": "Hey 👋 A freeze saved your streak ❄️ Let's bounce back this week!",
+      "bubbleBack": "Hey 👋 Good to see you! Let's get you back on court. 💪",
+      "bubbleFirstTime": "Hey 👋 Play your games and check in to start your streak. 🔥",
       "streakTitle": "{count}-week streak",
       "streakTitleZero": "Start a streak this week",
-      "streakSubtitle": "weeks",
-      "streakSubtitleOne": "week streak",
       "streakLabel": "WEEKLY GOAL STREAK",
       "streakLabelOne": "WEEKLY GOAL STREAK",
       "timelineLabel": "Your check-in history",
@@ -9832,16 +10257,11 @@
       "freezeCount": "{count} freezes saved",
       "freezeOne": "1 freeze saved",
       "freezeZero": "0 freezes saved",
-      "freezeHint": "Earn 1 for every 4 goals hit in a row",
       "freezeFirstTimeInvite": "Hit your weekly goal to start your streak 🔥",
-      "goalsCardTitle": "GOAL TRACKING",
-      "goalsCardLastWeek": "Last week",
+      "goalsCardLastWeekResult": "Last week: {played} played · goal {goal}",
       "goalsCardTrendLabel": "Last 4 weeks",
-      "goalsCardLastWeekSummary": "{played} of {goal} sessions",
-      "goalsCardLastWeekHit": "Goal hit ✓",
-      "goalsCardLastWeekMiss": "Goal missed",
       "goalsCardNoHistory": "Your goal-hit history will show up here once you've played a few weeks. 📈",
-      "checkInNote": "📍 Heads up: a game only counts toward your streak if you check in at the court.",
+      "checkInNote": "📍 Games only count with an on-court check-in.",
       "freezeTooltip": "Streak freezes protect you if you miss your weekly goal.",
       "goalsHitLabel": "Goals hit",
       "recapGoal": "Goal",
@@ -9849,7 +10269,7 @@
       "cta": "Set my goal 🎯"
     },
     "step2": {
-      "bubble": "Hey 👋 When are you free over the next few days? Tap or drag to paint your slots. ✨",
+      "bubble": "When are you free over the next few days? Tap or drag to paint your slots. ✨",
       "cta": "Looks good"
     },
     "step3": {
@@ -9861,19 +10281,30 @@
         "4": "4×",
         "5plus": "5+×"
       },
-      "frequencyContextSame": "Same as last week — consistency wins! 🌱",
+      "frequencyContextSame": "Same as last time — consistency wins! 🌱",
       "frequencyContextUp": "Stepping it up from {last} → {current}. I love the ambition! 🔥",
       "frequencyContextDown": "Dialing back to {current}. Sustainable beats burnout. 💆",
-      "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨",
-      "opsLabel": "Make this easier",
-      "autoCreateTitle": "Auto-create open matches",
-      "autoCreateDesc": "Post request-to-join matches at your free times.",
+      "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨"
+    },
+    "autoMatch": {
+      "bubble": "Want me to do the legwork? Here's my game plan. 👇",
+      "howLabel": "Here's what I'll do",
+      "howCreateTitle": "Create games for you",
+      "howCreateDesc": "Open games at your free times, in My Games.",
+      "howInviteTitle": "Invite the right players",
+      "howInviteDesc": "My algorithm picks your most compatible players.",
+      "howNotifyTitle": "Keep you posted",
+      "howNotifyDesc": "I ping you the moment someone joins.",
+      "togglesLabel": "Your call",
+      "autoCreateTitle": "Auto-create open games",
+      "autoCreateDesc": "Post request-to-join games at your free times.",
       "autoInviteTitle": "Auto-invite compatible players",
       "autoInviteDesc": "Find players at your level nearby and ping them.",
+      "reassurance": "You can change these every week — nothing happens unless they're on.",
       "cta": "Set my week"
     },
     "step4": {
-      "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🎾",
+      "bubble": "Boom 💥 You're all set. I'll handle the rest from here — see you on court! 🙌",
       "summaryGoal": "Goal: {freq}",
       "summarySlots": "{count} hours confirmed",
       "summarySlotsOne": "1 hour confirmed",

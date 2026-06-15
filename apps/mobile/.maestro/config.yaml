@@ -1,0 +1,4 @@
+# Maestro workspace config — see https://docs.maestro.dev/reference/workspace-configuration
+# Run from apps/mobile: maestro test .maestro/
+flows:
+  - "flows/**"

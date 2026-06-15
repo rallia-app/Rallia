@@ -25,6 +25,7 @@ import { useProfile } from '@rallia/shared-hooks';
 
 import { useAuth } from './AuthContext';
 import type { MatchDetailData } from './MatchDetailSheetContext';
+import type { TournamentEditData } from '../features/tournaments';
 
 // =============================================================================
 // TYPES
@@ -38,6 +39,9 @@ interface ActionsSheetContextType {
 
   /** Open the Actions bottom sheet in edit mode with pre-filled match data */
   openSheetForEdit: (match: MatchDetailData) => void;
+
+  /** Open the Actions bottom sheet in edit mode with pre-filled tournament data */
+  openSheetForTournamentEdit: (tournament: TournamentEditData) => void;
 
   /** Open the Actions bottom sheet directly to match creation (skips actions menu) */
   openSheetForMatchCreation: () => void;
@@ -197,6 +201,17 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   }, [computeInitialMode]);
 
   /**
+   * Open the dedicated tournament-edit sheet. Unlike match edit (which shares
+   * the 'main-actions' sheet), tournament edit has its own lightweight sheet so
+   * the present is a single clean animation rather than routing through the
+   * heavy actions sheet. The tournament is passed via payload (synchronous with
+   * show), so the first presented frame already renders the wizard.
+   */
+  const openSheetForTournamentEdit = useCallback((tournament: TournamentEditData) => {
+    SheetManager.show('tournament-edit', { payload: { tournament } });
+  }, []);
+
+  /**
    * Open the sheet in edit mode with pre-filled match data
    */
   const openSheetForEdit = useCallback((match: MatchDetailData) => {
@@ -331,6 +346,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const contextValue: ActionsSheetContextType = {
     openSheet,
     openSheetForEdit,
+    openSheetForTournamentEdit,
     openSheetForMatchCreation,
     openSheetForMatchCreationFromBooking,
     closeSheet,

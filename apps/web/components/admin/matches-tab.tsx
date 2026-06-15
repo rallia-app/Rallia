@@ -4,6 +4,13 @@ import { useMatchQualityAnalytics, type MatchQualityPoint } from '@rallia/shared
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
+import {
+  daysCoveringLastNWeeks,
+  formatWeekLabel,
+  lastNWeekStarts,
+  weekStartOf,
+} from './week-utils';
+
 import { AutoInviteFunnel } from '@/components/admin/auto-invite-funnel';
 import { KpiCard } from '@/components/admin/kpi-card';
 import {
@@ -43,6 +50,10 @@ const SEGMENT_LABEL: Record<Segment, string> = {
   nonAuto: 'matchesTab.sourceOrganic',
 };
 
+type FunnelView = 'cumulative' | 'weekly';
+
+const WEEKS_SHOWN = 6;
+
 export function MatchesTab() {
   const t = useTranslations('admin.analytics');
   const [days, setDays] = useState<DaysWindow>(30);
@@ -54,6 +65,16 @@ export function MatchesTab() {
     [data]
   );
   const [segment, setSegment] = useState<Segment>('all');
+  const [funnelView, setFunnelView] = useState<FunnelView>('cumulative');
+  // Weekly cohorts always cover the last 6 ISO weeks (through Sunday so the
+  // current week's scheduled matches show), fetched separately from the
+  // window-bound data so the cumulative views stay on the selected window.
+  const { data: weeklyData, loading: weeklyLoading } = useMatchQualityAnalytics(
+    daysCoveringLastNWeeks(WEEKS_SHOWN),
+    true,
+    funnelView === 'weekly'
+  );
+  const weeklyFunnels = useMemo(() => aggregateWeekly(weeklyData, segment), [weeklyData, segment]);
   const funnelTotals =
     segment === 'auto' ? autoTotals : segment === 'nonAuto' ? nonAutoTotals : totals;
   const funnelCoverage =
@@ -146,26 +167,48 @@ export function MatchesTab() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle className="text-base">{t('matchesTab.funnelTitle')}</CardTitle>
-              <p className="text-xs text-muted-foreground m-0 mt-1">{t('matchesTab.funnelHint')}</p>
+              <p className="text-xs text-muted-foreground m-0 mt-1">
+                {t(
+                  funnelView === 'weekly' ? 'matchesTab.weeklyFunnelHint' : 'matchesTab.funnelHint'
+                )}
+              </p>
             </div>
-            <Tabs value={segment} onValueChange={v => setSegment(v as Segment)}>
-              <TabsList className="h-8">
-                {SEGMENTS.map(s => (
-                  <TabsTrigger key={s} value={s} className="text-xs">
-                    {t(SEGMENT_LABEL[s])}
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs value={segment} onValueChange={v => setSegment(v as Segment)}>
+                <TabsList className="h-8">
+                  {SEGMENTS.map(s => (
+                    <TabsTrigger key={s} value={s} className="text-xs">
+                      {t(SEGMENT_LABEL[s])}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+              <Tabs value={funnelView} onValueChange={v => setFunnelView(v as FunnelView)}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="cumulative" className="text-xs">
+                    {t('matchesTab.viewCumulative')}
                   </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+                  <TabsTrigger value="weekly" className="text-xs">
+                    {t('matchesTab.viewWeekly')}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {(funnelView === 'weekly' ? weeklyLoading : loading) ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-8 w-full" />
               ))}
             </div>
+          ) : funnelView === 'weekly' ? (
+            weeklyFunnels.some(w => w.totals.created > 0) ? (
+              <WeeklyFunnels weeks={weeklyFunnels} t={t} />
+            ) : (
+              <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
+            )
           ) : funnelTotals.created === 0 ? (
             <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
           ) : (
@@ -499,6 +542,98 @@ function FunnelBars({
                 className={s.feedbackDep ? 'h-full bg-primary/55' : 'h-full bg-primary'}
                 style={{ width: `${Math.max(pct, s.count > 0 ? 1.5 : 0)}%` }}
               />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Weekly cohort view — one mini funnel per calendar week (Mon–Sun)
+// ---------------------------------------------------------------------------
+
+interface WeekFunnel {
+  weekStart: string;
+  totals: Totals;
+}
+
+function aggregateWeekly(data: MatchQualityPoint[], segment: Segment): WeekFunnel[] {
+  // Exactly the last WEEKS_SHOWN tiles, zero-filled; rows outside are dropped.
+  const map = new Map<string, Totals>(
+    lastNWeekStarts(WEEKS_SHOWN).map(week => [week, emptyTotals()])
+  );
+  for (const row of data) {
+    if (segment === 'auto' && !row.isAutoGenerated) continue;
+    if (segment === 'nonAuto' && row.isAutoGenerated) continue;
+    const totals = map.get(weekStartOf(row.date));
+    if (!totals) continue;
+    addToTotals(totals, row);
+  }
+  return Array.from(map.entries()).map(([weekStart, totals]) => ({ weekStart, totals }));
+}
+
+function WeeklyFunnels({
+  weeks,
+  t,
+}: {
+  weeks: WeekFunnel[];
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const currentWeek = weekStartOf(new Date().toISOString().split('T')[0]);
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      {weeks.map(({ weekStart, totals }) => {
+        const stages = [
+          {
+            key: 'created',
+            label: t('matchesTab.stageCreated'),
+            count: totals.created,
+            dim: false,
+          },
+          { key: 'filled', label: t('matchesTab.stageFilled'), count: totals.filled, dim: false },
+          { key: 'played', label: t('matchesTab.stagePlayed'), count: totals.played, dim: true },
+          { key: 'quality', label: t('matchesTab.stageQuality'), count: totals.quality, dim: true },
+        ];
+        const commitment = totals.created > 0 ? (totals.filled / totals.created) * 100 : null;
+        return (
+          <div key={weekStart} className="rounded-md border p-3 flex flex-col gap-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs font-medium">
+                {formatWeekLabel(weekStart)}
+                {weekStart === currentWeek && (
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                    ({t('matchesTab.weekCurrent')})
+                  </span>
+                )}
+              </span>
+              {commitment != null && (
+                <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                  {t('matchesTab.weekCommitment', { pct: commitment.toFixed(0) })}
+                </span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {stages.map(s => {
+                const pct = totals.created > 0 ? (s.count / totals.created) * 100 : 0;
+                return (
+                  <div key={s.key}>
+                    <div className="flex items-baseline justify-between gap-2 text-[11px] mb-0.5">
+                      <span>{s.label}</span>
+                      <span className="text-muted-foreground tabular-nums whitespace-nowrap">
+                        {s.count.toLocaleString()} · {pct.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="h-2 rounded bg-muted overflow-hidden">
+                      <div
+                        className={s.dim ? 'h-full bg-primary/55' : 'h-full bg-primary'}
+                        style={{ width: `${Math.max(pct, s.count > 0 ? 1.5 : 0)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );

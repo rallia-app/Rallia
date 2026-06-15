@@ -26,6 +26,7 @@ import { useAuth, useProfile } from '@rallia/shared-hooks';
 
 import { useActionsSheet, useOverlay } from '#/context';
 import { navigationRef } from '#/navigation';
+import { IS_E2E } from '#/utils/e2e';
 
 import { useCheckInContext } from './api';
 import { WEEKLY_CHECKIN_COOLDOWN_KEY } from './useWeeklyCheckInWizard';
@@ -63,24 +64,14 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
 
   const autoOpenedRef = useRef(false);
 
-  // ----------------------------------------------------------------------
-  // ⚠️ TEMPORARY: force-show mode for local testing.
-  // Set FORCE_SHOW = false (or delete this block) to restore the real gates.
-  // ----------------------------------------------------------------------
-  const FORCE_SHOW = false;
-  // ⚠️ TEMPORARY: bypass the AsyncStorage cooldown check for local testing.
-  // The cooldown is set whenever the user dismisses via "Exit for now", which
-  // blocks the auto-opener for 24h. Flip this back to false (or delete) when
-  // done iterating.
-  const BYPASS_COOLDOWN = false;
-
   useEffect(() => {
+    if (IS_E2E) return;
     if (autoOpenedRef.current) return;
     if (!isSplashComplete) return;
     if (!isAuthed) return;
-    // Hard gates (apply even in FORCE_SHOW): never auto-open the check-in
-    // wizard while the user is still onboarding — it would navigate on top of
-    // (and dismiss) the onboarding wizard. We block until BOTH:
+    // Never auto-open the check-in wizard while the user is still onboarding —
+    // it would navigate on top of (and dismiss) the onboarding wizard. We block
+    // until BOTH:
     //   1. onboarding is marked complete, and
     //   2. the onboarding wizard sheet is no longer presenting — its post-
     //      completion steps (success + suggestions) still render after the
@@ -88,26 +79,22 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     if (!isOnboardingComplete) return;
     if (isOnboardingSheetOpen) return;
 
-    if (!FORCE_SHOW) {
-      if (!isSportSelectionComplete) return;
-      if (!context) return;
-      if (!context.isPendingCheckIn) return;
-    }
+    if (!isSportSelectionComplete) return;
+    if (!context) return;
+    if (!context.isPendingCheckIn) return;
 
     let cancelled = false;
     (async () => {
-      if (!FORCE_SHOW && !BYPASS_COOLDOWN) {
-        try {
-          const cooldownRaw = await AsyncStorage.getItem(WEEKLY_CHECKIN_COOLDOWN_KEY);
-          if (cooldownRaw) {
-            const dismissedAt = parseInt(cooldownRaw, 10);
-            if (Number.isFinite(dismissedAt) && Date.now() - dismissedAt < COOLDOWN_MS) {
-              return;
-            }
+      try {
+        const cooldownRaw = await AsyncStorage.getItem(WEEKLY_CHECKIN_COOLDOWN_KEY);
+        if (cooldownRaw) {
+          const dismissedAt = parseInt(cooldownRaw, 10);
+          if (Number.isFinite(dismissedAt) && Date.now() - dismissedAt < COOLDOWN_MS) {
+            return;
           }
-        } catch (err) {
-          Logger.error('Weekly check-in auto-opener cooldown read failed', err as Error);
         }
+      } catch (err) {
+        Logger.error('Weekly check-in auto-opener cooldown read failed', err as Error);
       }
 
       if (cancelled) return;
@@ -140,8 +127,6 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     isOnboardingSheetOpen,
     isSportSelectionComplete,
     context,
-    FORCE_SHOW,
-    BYPASS_COOLDOWN,
   ]);
 
   return null;

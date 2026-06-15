@@ -38,6 +38,7 @@ export {
   createConversation,
   getOrCreateDirectConversation,
   getMatchChat,
+  getTournamentChat,
   syncMatchConversationTitle,
   setActiveConversation,
   clearActiveConversation,

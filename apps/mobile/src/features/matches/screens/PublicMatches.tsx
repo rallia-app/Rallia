@@ -7,7 +7,7 @@ import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react'
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Text } from '@rallia/shared-components';
 import {
   useTheme,
@@ -34,11 +34,17 @@ import {
   useTranslation,
   useEffectiveLocation,
   useSuggestionInviteHandler,
+  useImpressionTracker,
 } from '#/hooks';
+import * as Analytics from '#/services/analytics';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
 import { FeedItemCard } from '#/features/matches/components/FeedItemCard';
+
+// A card counts as shown once it's ≥50% visible for 500ms. Module constant so
+// the FlatList viewability config never changes identity (a runtime crash).
+const FEED_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTime: 500 };
 
 // =============================================================================
 // HELPER COMPONENTS
@@ -105,6 +111,7 @@ export default function PublicMatches() {
     filters,
     debouncedSearchQuery,
     hasActiveFilters,
+    activeFilterCount,
     setSearchQuery,
     setFormat,
     setMatchType,
@@ -152,12 +159,14 @@ export default function PublicMatches() {
   const isManualRefresh = useRef(false);
   const {
     matches,
+    totalCount,
     isLoading,
     isFetching,
     isRefetching,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
+    pageCount,
     refetch,
   } = usePublicMatches({
     latitude: location?.latitude,
@@ -308,12 +317,14 @@ export default function PublicMatches() {
   // then a single light "Suggestions for you" divider, then up-to-N suggestions
   // padding to a minimum of 30 total — but only once matches finish paginating.
   type PublicFeedRow =
-    | { kind: 'item'; key: string; data: UnifiedFeedItem }
+    | { kind: 'item'; key: string; rank: number; data: UnifiedFeedItem }
     | { kind: 'section-header'; key: string; title: string }
     | { kind: 'frontier'; key: string };
   const feed = useMemo<PublicFeedRow[]>(() => {
     const matchItems: PublicFeedRow[] = [];
     let currentSection = '';
+    // 1-indexed position among cards only — headers/frontier excluded.
+    let rank = 0;
 
     sortedMatches.forEach(m => {
       const section = getUpcomingDateSection(m.match_date);
@@ -322,9 +333,11 @@ export default function PublicMatches() {
         currentSection = label;
         matchItems.push({ kind: 'section-header', key: `section:${section}`, title: label });
       }
+      rank += 1;
       matchItems.push({
         kind: 'item',
         key: `match:${m.id}`,
+        rank,
         data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
       });
     });
@@ -334,9 +347,10 @@ export default function PublicMatches() {
     const padCount = Math.max(0, 30 - sortedMatches.length);
     if (padCount === 0 || hasNextPage) return matchItems;
 
-    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map(s => ({
+    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map((s, i) => ({
       kind: 'item' as const,
       key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
+      rank: rank + i + 1,
       data: {
         kind: 'suggestion',
         key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
@@ -357,7 +371,7 @@ export default function PublicMatches() {
     handleSendInvite,
     getInviteState,
     callerMatchType,
-  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'feed' });
+  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'public_matches_feed' });
 
   // Pagination is driven by FlatList `onEndReached` so the first page renders
   // immediately and additional pages only fetch as the user scrolls. Padding
@@ -365,11 +379,181 @@ export default function PublicMatches() {
   // them (see the `padCount`/`hasNextPage` branch in the `feed` memo above).
 
   // Handle infinite scroll
+  const pagesFetchedRef = useRef(0);
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
+      pagesFetchedRef.current += 1;
+      Analytics.feedPageFetched({ screen: 'public_matches', page_number: pageCount + 1 });
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, pageCount]);
+
+  // search_performed: once per settled query value, with the server-side total.
+  // When debouncedSearchQuery changes, the query key changes in the same
+  // render, so isFetching is already true by the time this effect runs.
+  const lastSearchFired = useRef('');
+  useEffect(() => {
+    if (debouncedSearchQuery.length === 0) {
+      lastSearchFired.current = '';
+      return;
+    }
+    if (isLoading || isFetching) return;
+    if (lastSearchFired.current === debouncedSearchQuery) return;
+    lastSearchFired.current = debouncedSearchQuery;
+    Analytics.searchPerformed({
+      query: debouncedSearchQuery,
+      result_count: totalCount ?? 0,
+      context: 'public_matches',
+    });
+  }, [debouncedSearchQuery, isLoading, isFetching, totalCount]);
+
+  // public_matches_feed_loaded: once per load signature (sport / location /
+  // filters / search / manual refresh), after matches AND suggestion padding
+  // settle. refreshNonce must be state — a ref wouldn't re-run the effect
+  // when a refresh returns identical data.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const loadSignature = useMemo(() => {
+    const { searchQuery, ...nonSearchFilters } = filters;
+    void searchQuery;
+    return [
+      selectedSport?.id ?? '',
+      locationMode,
+      debouncedSearchQuery,
+      JSON.stringify(nonSearchFilters),
+      String(refreshNonce),
+    ].join('|');
+  }, [filters, selectedSport?.id, locationMode, debouncedSearchQuery, refreshNonce]);
+
+  const lastLoadedSignature = useRef<string | null>(null);
+  useEffect(() => {
+    if (!showMatches || isLoading || isFetching || loadingSuggestions) return;
+    if (lastLoadedSignature.current === loadSignature) return;
+    // Matches settle one render before useTopSuggestions flips to enabled —
+    // the grace timer absorbs that gap (cleanup cancels if suggestions start
+    // loading inside the window, and we re-arm when they finish).
+    const timer = setTimeout(() => {
+      lastLoadedSignature.current = loadSignature;
+      const suggestionCount = feed.filter(
+        r => r.kind === 'item' && r.data.kind === 'suggestion'
+      ).length;
+      Analytics.publicMatchesFeedLoaded({
+        real_match_count: sortedMatches.length,
+        suggestion_count: suggestionCount,
+        total_match_count: totalCount,
+        has_next_page: hasNextPage,
+        active_filter_count: activeFilterCount,
+        has_search_query: debouncedSearchQuery.length > 0,
+        padded_with_suggestions: suggestionCount > 0,
+      });
+      if (sortedMatches.length + suggestionCount === 0) {
+        Analytics.feedEmptyStateShown({
+          screen: 'public_matches',
+          has_active_filters: hasActiveFilters,
+          has_search: debouncedSearchQuery.length > 0,
+        });
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [
+    loadSignature,
+    showMatches,
+    isLoading,
+    isFetching,
+    loadingSuggestions,
+    feed,
+    sortedMatches.length,
+    totalCount,
+    hasNextPage,
+    activeFilterCount,
+    hasActiveFilters,
+    debouncedSearchQuery,
+  ]);
+
+  // Wrap a filter setter so every chip interaction emits filter_applied.
+  const withFilterTracking = useCallback(
+    <V,>(filterType: string, setter: (v: V) => void, serialize?: (v: V) => string) =>
+      (value: V) => {
+        Analytics.filterApplied({
+          filter_type: filterType,
+          value: serialize ? serialize(value) : String(value),
+          screen: 'public_matches',
+        });
+        setter(value);
+      },
+    []
+  );
+
+  // Viewability-gated impressions: a card counts as shown once it's ≥50%
+  // visible for 500ms, at most once per focus session. Stable row keys make
+  // the dedup survive background-refetch remounts.
+  const { track } = useImpressionTracker();
+  const maxIndexViewedRef = useRef(0);
+  const impressionCtx = useRef<{ sportId?: string; sportName?: string }>({});
+  useEffect(() => {
+    impressionCtx.current = { sportId: selectedSport?.id, sportName: selectedSport?.name };
+  }, [selectedSport?.id, selectedSport?.name]);
+
+  // Must keep a stable identity for the lifetime of the FlatList — changing
+  // it mid-flight is a runtime crash. Every captured value is itself stable.
+  const onViewableItemsChanged = useCallback(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<{ item: PublicFeedRow; index: number | null; isViewable: boolean }>;
+    }) => {
+      const { sportId, sportName } = impressionCtx.current;
+      for (const token of viewableItems) {
+        if (!token.isViewable || token.item.kind !== 'item') continue;
+        if (token.index != null && token.index > maxIndexViewedRef.current) {
+          maxIndexViewedRef.current = token.index;
+        }
+        const row = token.item;
+        if (row.data.kind === 'suggestion') {
+          const s = row.data.data;
+          track(row.key, () =>
+            Analytics.matchSuggestionShown(
+              Analytics.buildSuggestionEventProps(s, 'public_matches_feed', sportId, sportName)
+            )
+          );
+        } else {
+          const m = row.data.data;
+          track(row.key, () =>
+            Analytics.matchCardShown({
+              match_id: m.id,
+              sport_id: m.sport?.id ?? sportId ?? 'unknown',
+              sport_name: m.sport?.name ?? sportName ?? 'unknown',
+              is_auto_generated: m.is_auto_generated ?? false,
+              surface: 'public_matches_feed',
+              rank: row.rank,
+            })
+          );
+        }
+      }
+    },
+    [track]
+  );
+
+  // Scroll-depth summary per focus session (pushing a profile blurs the
+  // screen, so one visit can emit several rows).
+  const feedLenRef = useRef(0);
+  useEffect(() => {
+    feedLenRef.current = feed.length;
+  }, [feed.length]);
+  useFocusEffect(
+    useCallback(() => {
+      const focusedAt = Date.now();
+      return () => {
+        Analytics.publicMatchesBrowsed({
+          max_index_viewed: maxIndexViewedRef.current,
+          items_total: feedLenRef.current,
+          pages_fetched: pagesFetchedRef.current,
+          duration_seconds: Math.round((Date.now() - focusedAt) / 1000),
+        });
+        maxIndexViewedRef.current = 0;
+        pagesFetchedRef.current = 0;
+      };
+    }, [])
+  );
 
   // Render feed row — either a match/suggestion card or the single hairline
   // divider between the match block and the suggestion tail.
@@ -407,9 +591,11 @@ export default function PublicMatches() {
           getInviteState={getInviteState}
           onMatchPress={match => {
             Logger.logUserAction('public_match_pressed', { matchId: match.id });
-            openMatchDetail(match);
+            openMatchDetail(match, { source: 'public_matches_feed' });
           }}
           onSendInvite={handleSendInvite}
+          suggestionSource="public_matches_feed"
+          trackSuggestionImpressionOnMount={false}
           sportId={selectedSport?.id}
           sportName={selectedSport?.name}
           defaultMatchType={callerMatchType}
@@ -529,25 +715,38 @@ export default function PublicMatches() {
           specificTime={filters.specificTime}
           reputation={filters.reputation}
           rating={filters.rating}
-          onFormatChange={setFormat}
-          onMatchTypeChange={setMatchType}
-          onDateRangeChange={setDateRange}
-          onTimeOfDayChange={setTimeOfDay}
-          onGenderChange={setGender}
-          onCostChange={setCost}
-          onJoinModeChange={setJoinMode}
-          onDistanceChange={setDistance}
-          onDurationChange={setDuration}
-          onMatchTierChange={setMatchTier}
-          onSpecificDateChange={setSpecificDate}
-          onSpotsAvailableChange={setSpotsAvailable}
-          onFavoritesOnlyChange={setFavoritesOnly}
-          onSpecificTimeChange={setSpecificTime}
-          onReputationChange={setReputation}
-          onRatingChange={setRating}
+          onFormatChange={withFilterTracking('format', setFormat)}
+          onMatchTypeChange={withFilterTracking('match_type', setMatchType)}
+          onDateRangeChange={withFilterTracking('date_range', setDateRange)}
+          onTimeOfDayChange={withFilterTracking('time_of_day', setTimeOfDay)}
+          onGenderChange={withFilterTracking('gender', setGender)}
+          onCostChange={withFilterTracking('cost', setCost)}
+          onJoinModeChange={withFilterTracking('join_mode', setJoinMode)}
+          onDistanceChange={withFilterTracking('distance', setDistance)}
+          onDurationChange={withFilterTracking('duration', setDuration)}
+          onMatchTierChange={withFilterTracking('match_tier', setMatchTier)}
+          onSpecificDateChange={withFilterTracking('specific_date', setSpecificDate, v =>
+            v == null ? 'none' : String(v)
+          )}
+          onSpotsAvailableChange={withFilterTracking('spots_available', setSpotsAvailable)}
+          onFavoritesOnlyChange={withFilterTracking('favorites_only', setFavoritesOnly)}
+          onSpecificTimeChange={withFilterTracking('specific_time', setSpecificTime, v =>
+            v == null ? 'none' : String(v)
+          )}
+          onReputationChange={withFilterTracking('reputation', setReputation)}
+          onRatingChange={withFilterTracking('rating', setRating, v =>
+            v.length ? v.join(',') : 'none'
+          )}
           ratingOptions={ratingScores}
           isAuthenticated={!!session?.user}
-          onReset={resetFilters}
+          onReset={() => {
+            Analytics.filterApplied({
+              filter_type: 'reset',
+              value: 'all',
+              screen: 'public_matches',
+            });
+            resetFilters();
+          }}
           hasActiveFilters={hasActiveFilters}
           showLocationSelector={hasBothLocationOptions}
           locationMode={locationMode}
@@ -574,6 +773,8 @@ export default function PublicMatches() {
           ListFooterComponent={renderFooter}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
+          viewabilityConfig={FEED_VIEWABILITY_CONFIG}
+          onViewableItemsChanged={onViewableItemsChanged}
           contentContainerStyle={[styles.listContent, feed.length === 0 && styles.emptyListContent]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -581,6 +782,8 @@ export default function PublicMatches() {
               refreshing={isRefetching && isManualRefresh.current}
               onRefresh={() => {
                 isManualRefresh.current = true;
+                Analytics.feedRefreshed({ screen: 'public_matches' });
+                setRefreshNonce(n => n + 1);
                 Promise.all([refetch(), refetchSuggestions()]).finally(() => {
                   isManualRefresh.current = false;
                 });

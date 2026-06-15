@@ -7,6 +7,7 @@ import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-syst
 
 import { useThemedStyles, useTranslation, type ThemedStylesContext } from '#/hooks';
 import { useActionsSheet } from '#/context';
+import * as Analytics from '#/services/analytics';
 
 export function ReferralInviteActionSheet(_props: SheetProps<'referral-invite'>) {
   const { styles, colors } = useThemedStyles(makeStyles);
@@ -14,6 +15,7 @@ export function ReferralInviteActionSheet(_props: SheetProps<'referral-invite'>)
   const { openSheetForInvitePlayers } = useActionsSheet();
 
   const handleInvite = useCallback(async () => {
+    Analytics.referralInviteOpened({ source: 'auto_popup' });
     await SheetManager.hide('referral-invite');
     setTimeout(() => {
       openSheetForInvitePlayers();

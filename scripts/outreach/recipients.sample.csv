@@ -1,0 +1,8 @@
+# Recipients for the interview outreach script.
+# Columns: email,segment[,locale]
+#   segment: new | active | one_session | drifted
+#   locale (optional): overrides the profile's preferred_locale. fr* -> French, else English.
+# Lines starting with # are ignored. Replace these with real STAGING test accounts.
+someone@staging.test,one_session,fr-CA
+another@staging.test,drifted,en-US
+third@staging.test,new

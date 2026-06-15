@@ -1226,6 +1226,7 @@ export interface JoinMatchResult {
  * Join a match as a participant.
  * - For direct join mode: Creates participant with 'joined' status
  * - For request join mode: Creates participant with 'requested' status (pending host approval)
+ * - Accepting a pending invitation: lands as 'joined' regardless of join mode
  *
  * @throws Error if match is full, already joined, or match not found
  */
@@ -1348,6 +1349,10 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   if (availableSpots <= 0) {
     // Match is full - add to waitlist
     participantStatus = 'waitlisted';
+  } else if (existingParticipant?.status === 'pending') {
+    // Accepting a host-initiated invitation joins directly — the invite is the
+    // approval, so no second hop through 'requested' even in request mode
+    participantStatus = 'joined';
   } else if (match.join_mode === 'request') {
     // Match has spots but requires host approval
     participantStatus = 'requested';

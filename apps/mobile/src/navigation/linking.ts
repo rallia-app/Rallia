@@ -99,7 +99,7 @@ function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
     return { type: 'matchupSuggestions' };
   }
 
-  // /invite/:referralCode?type=...&id=...
+  // /invite/:referralCode?type=...&id=...&share=...
   const inviteLink = path.match(/^\/invite\/([A-Za-z0-9]+)/);
   if (inviteLink) {
     const referralCode = inviteLink[1];
@@ -108,7 +108,8 @@ function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
     const params = new URLSearchParams(queryMatch?.[1] ?? '');
     const type = params.get('type') ?? undefined;
     const id = params.get('id') ?? undefined;
-    const validTypes = ['match', 'group', 'community', 'referral'] as const;
+    const share = params.get('share') ?? undefined;
+    const validTypes = ['match', 'group', 'community', 'tournament', 'referral'] as const;
     const invitationType =
       type && validTypes.includes(type as (typeof validTypes)[number])
         ? (type as (typeof validTypes)[number])
@@ -118,6 +119,7 @@ function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
       referralCode,
       invitationType,
       targetId: id,
+      shareToken: share,
     };
   }
 

@@ -1,5 +1,6 @@
 import type { JsonType } from '@posthog/core';
 import { Platform } from 'react-native';
+import type { SlotSuggestion } from '@rallia/shared-services';
 
 import { posthogClient } from '#/providers/PostHogProvider';
 import { logMetaEvent } from '#/lib/meta';
@@ -98,6 +99,7 @@ export function matchFilled(props: {
   sport_name: string;
   format: string;
   is_auto_generated: boolean;
+  discovery_source?: string;
 }): void {
   capture('match_filled', props);
 }
@@ -107,6 +109,7 @@ export function matchJoinRequested(props: {
   sport_id: string;
   sport_name: string;
   is_auto_generated: boolean;
+  discovery_source?: string;
 }): void {
   capture('match_join_requested', props);
 }
@@ -250,7 +253,35 @@ export function matchCreationSuccessViewed(props: {
 
 // ---- In-App Match Suggestions ----
 
-export type SuggestionSource = 'feed' | 'sheet' | 'onboarding';
+export type SuggestionSource = 'home_carousel' | 'public_matches_feed' | 'sheet' | 'onboarding';
+
+/** The two browsable feed surfaces (subset of SuggestionSource). */
+export type FeedSurface = 'home_carousel' | 'public_matches_feed';
+
+/** Canonical property payload shared by the three match_suggestion_* events. */
+export function buildSuggestionEventProps(
+  suggestion: SlotSuggestion,
+  source: SuggestionSource,
+  sportId?: string,
+  sportName?: string
+) {
+  const dt = suggestion.slot.datetime;
+  return {
+    source,
+    opponent_id: suggestion.opponentId,
+    facility_id: suggestion.facility.facilityId,
+    slot_start: (dt instanceof Date ? dt : new Date(dt)).toISOString(),
+    sport_id: sportId,
+    sport_name: sportName,
+    score: suggestion.score,
+    player_compatibility: suggestion.playerCompatibility,
+    facility_affinity: suggestion.facility.facilityAffinity,
+    score_history: suggestion.scoreHistory,
+    rank: suggestion.rank,
+    match_type: suggestion.matchType,
+    match_duration: suggestion.matchDuration,
+  };
+}
 
 export function matchSuggestionShown(props: {
   source: SuggestionSource;
@@ -318,6 +349,81 @@ export function matchSuggestionAvatarTapped(props: {
   match_duration?: string;
 }): void {
   capture('match_suggestion_avatar_tapped', props);
+}
+
+// ---- Feed Surfaces (Just For You carousel / Public Matches) ----
+
+/** Viewability-gated impression of a real match card (counterpart of
+ *  match_suggestion_shown for concrete matches in the two feed surfaces). */
+export function matchCardShown(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  is_auto_generated: boolean;
+  surface: FeedSurface;
+  /** 1-indexed position among feed items at impression time. */
+  rank?: number;
+}): void {
+  capture('match_card_shown', props);
+}
+
+/** Feed composition the user actually faced, fired once per load signature
+ *  (sport/location/filters/search/refresh) after matches AND suggestion
+ *  padding settle. */
+export function publicMatchesFeedLoaded(props: {
+  real_match_count: number;
+  suggestion_count: number;
+  /** Server-side total for the current filters (all pages). */
+  total_match_count?: number;
+  has_next_page: boolean;
+  active_filter_count: number;
+  has_search_query: boolean;
+  padded_with_suggestions: boolean;
+}): void {
+  capture('public_matches_feed_loaded', props);
+}
+
+export function feedEmptyStateShown(props: {
+  screen: 'public_matches';
+  has_active_filters: boolean;
+  has_search: boolean;
+}): void {
+  capture('feed_empty_state_shown', props);
+}
+
+export function feedRefreshed(props: { screen: 'home' | 'public_matches' }): void {
+  capture('feed_refreshed', props);
+}
+
+export function feedPageFetched(props: { screen: 'public_matches'; page_number: number }): void {
+  capture('feed_page_fetched', props);
+}
+
+/** Scroll-depth summary, fired on each blur of PublicMatches — one screen
+ *  visit can emit several rows if the user pushes profiles and comes back
+ *  (focus-session semantics). */
+export function publicMatchesBrowsed(props: {
+  max_index_viewed: number;
+  items_total: number;
+  pages_fetched: number;
+  duration_seconds: number;
+}): void {
+  capture('public_matches_browsed', props);
+}
+
+/** "Home focused with the Just-for-you section settled" — not strict
+ *  scrolled-into-view; per-card visibility lives in the impression events. */
+export function jfySectionViewed(props: {
+  item_count: number;
+  match_count: number;
+  suggestion_count: number;
+  is_empty: boolean;
+}): void {
+  capture('jfy_section_viewed', props);
+}
+
+export function publicMatchesOpened(props: { cta: 'view_all' | 'find_game' | 'deep_link' }): void {
+  capture('public_matches_opened', props);
 }
 
 export function matchCheckInCompleted(props: {
@@ -422,7 +528,11 @@ export function searchPerformed(props: {
   logMetaEvent('fb_mobile_search', { fb_content_type: props.context });
 }
 
-export function filterApplied(props: { filter_type: string; value: string }): void {
+export function filterApplied(props: {
+  filter_type: string;
+  value: string;
+  screen?: string;
+}): void {
   capture('filter_applied', props);
 }
 
@@ -435,6 +545,12 @@ export function referralInviteShared(props: { channel: string }): void {
 
 export function invitationLinkGenerated(props: { invitation_type: string; channel: string }): void {
   capture('invitation_link_generated', props);
+}
+
+export function referralInviteOpened(props: {
+  source: 'profile_header' | 'actions_sheet' | 'auto_popup';
+}): void {
+  capture('referral_invite_opened', props);
 }
 
 export function onboardingShareSkipped(): void {
@@ -695,13 +811,13 @@ export function billingIssueEncountered(): void {
 export function weeklyCheckinOpened(props: {
   source: string; // 'auto_opener' | 'banner' | 'manual' | 'unknown'
   current_streak: number;
-  recap_variant: string; // 'hit' | 'met' | 'miss' | 'first'
+  recap_variant: string; // 'hit' | 'met' | 'miss' | 'frozen' | 'back' | 'first'
 }): void {
   capture('weekly_checkin_opened', props);
 }
 
 export function weeklyCheckinStepCompleted(props: {
-  step_name: string; // 'welcome_recap' | 'availability' | 'frequency_auto'
+  step_name: string; // 'availability' | 'recap_goal' | 'auto_match'
   step_index: number;
   availability_cells?: number;
   frequency_goal?: number;
@@ -740,4 +856,54 @@ export function weeklyCheckinAbandoned(props: {
   duration_seconds: number;
 }): void {
   capture('weekly_checkin_abandoned', props);
+}
+
+// ---- Leagues & Tournaments ----
+// Event names follow the lt.<entity>.<verb> taxonomy from
+// specs/17-leagues-tournaments/analytics.md (camelCase props per spec).
+
+export function tournamentCreationStarted(props: { sportId: string; sportName: string }): void {
+  capture('lt.tournament.creation_started', props);
+}
+
+export function tournamentCreationStepCompleted(props: {
+  stepIndex: number;
+  stepName: 'details' | 'visibility';
+  sportName: string;
+}): void {
+  capture('lt.tournament.creation_step_completed', props);
+}
+
+export function tournamentCreationAbandoned(props: {
+  lastStep: number;
+  durationSeconds: number;
+  sportName: string;
+}): void {
+  capture('lt.tournament.creation_abandoned', props);
+}
+
+export function tournamentCreated(props: {
+  tournamentId: string;
+  sportId: string;
+  sportName: string;
+  maxParticipants: number;
+  matchFormat: string;
+  visibility: string;
+}): void {
+  capture('lt.tournament.created', props);
+}
+
+export function tournamentShared(props: {
+  tournamentId: string;
+  medium: 'link' | 'native' | 'qr';
+}): void {
+  capture('lt.tournament.shared', props);
+}
+
+export function tournamentInviteRedeemed(props: {
+  tournamentId: string;
+  result: 'registered' | 'error';
+  errorCode?: string;
+}): void {
+  capture('lt.tournament.invite_redeemed', props);
 }

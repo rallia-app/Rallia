@@ -98,7 +98,8 @@ export type ConversationFilter =
   | 'player_group'
   | 'community'
   | 'club'
-  | 'match';
+  | 'match'
+  | 'tournament';
 
 /** Client-side inbox status filters (applied after server fetch) */
 export type ConversationStatusFilter = 'pinned' | 'favorites' | 'muted' | 'blocked';

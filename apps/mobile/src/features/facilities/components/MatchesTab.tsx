@@ -184,7 +184,7 @@ export default function MatchesTab({ facilityId }: MatchesTabProps) {
         }
         onPress={() => {
           Logger.logUserAction('facility_match_pressed', { matchId: item.id });
-          openMatchDetail(item);
+          openMatchDetail(item, { source: 'facility' });
         }}
       />
     ),

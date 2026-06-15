@@ -437,6 +437,17 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   match_time_suggested: 'high',
   match_time_suggestion_accepted: 'high',
   match_time_suggestion_declined: 'normal',
+  tournament_partner_registered: 'high',
+  tournament_partner_withdrew: 'high',
+  // Tournament lifecycle (produced DB-side by triggers; listed for completeness)
+  tournament_registration_received: 'normal',
+  tournament_registration_approved: 'high',
+  tournament_registration_removed: 'high',
+  tournament_bracket_published: 'high',
+  tournament_match_completed: 'normal',
+  tournament_updated: 'normal',
+  tournament_cancelled: 'urgent',
+  tournament_completed: 'normal',
 };
 
 /**
@@ -524,6 +535,17 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_time_suggested: 'New time suggested',
   match_time_suggestion_accepted: 'Your time suggestion was accepted',
   match_time_suggestion_declined: 'Your time suggestion was declined',
+  tournament_partner_registered: 'Tournament partner',
+  tournament_partner_withdrew: 'Team withdrawn',
+  // Tournament lifecycle (produced DB-side by triggers; listed for completeness)
+  tournament_registration_received: 'New registration request',
+  tournament_registration_approved: "You're in",
+  tournament_registration_removed: 'Removed from tournament',
+  tournament_bracket_published: 'Bracket published',
+  tournament_match_completed: 'Tournament result',
+  tournament_updated: 'Tournament updated',
+  tournament_cancelled: 'Tournament cancelled',
+  tournament_completed: 'Tournament complete',
 };
 
 /**
@@ -639,6 +661,18 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
     '{hostName} accepted your time change. The {sportName} game on {matchDate} now starts at {suggestedStartTime}.',
   match_time_suggestion_declined:
     'Your suggested time for the {sportName} game on {matchDate} was declined.',
+  tournament_partner_registered:
+    '{captainName} registered you as their partner for {tournamentName}.',
+  tournament_partner_withdrew: '{playerName} withdrew your team from {tournamentName}.',
+  // Tournament lifecycle (produced DB-side by triggers; listed for completeness)
+  tournament_registration_received: '{registrantName} wants to join {tournamentName}.',
+  tournament_registration_approved: 'Your registration for {tournamentName} was approved.',
+  tournament_registration_removed: 'An organizer removed you from {tournamentName}.',
+  tournament_bracket_published: '{tournamentName}: round 1 vs {opponentName}.',
+  tournament_match_completed: '{tournamentName}: round {round} result recorded.',
+  tournament_updated: '{tournamentName}: the dates or venue changed. Check the latest details.',
+  tournament_cancelled: '{tournamentName} has been cancelled.',
+  tournament_completed: '{tournamentName} has wrapped up. Champion: {championName}.',
 };
 
 /**

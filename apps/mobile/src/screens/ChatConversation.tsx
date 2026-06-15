@@ -333,7 +333,8 @@ export default function ChatConversationScreen() {
     if (
       isGroupConversationType(conversation.conversation_type) ||
       conversation.conversation_type === 'announcement' ||
-      conversation.conversation_type === 'match'
+      conversation.conversation_type === 'match' ||
+      conversation.conversation_type === 'tournament'
     ) {
       const count = networkInfo?.member_count || conversation.participants?.length || 0;
       return `${count} participant${count !== 1 ? 's' : ''}`;
@@ -424,6 +425,7 @@ export default function ChatConversationScreen() {
         const match = await getMatchWithDetails(conversation.match_id);
         if (match) {
           openMatchDetailSheet(match as MatchDetailData, {
+            source: 'chat',
             onMatchRemoved: () => {
               // Optimistically remove this conversation from the cached list
               if (playerId) {
@@ -439,6 +441,8 @@ export default function ChatConversationScreen() {
       } catch (error) {
         console.error('Error fetching match details:', error);
       }
+    } else if (conversation?.conversation_type === 'tournament' && conversation.tournament_id) {
+      navigation.navigate('TournamentDetail', { tournamentId: conversation.tournament_id });
     } else if (conversation && isGroupConversationType(conversation.conversation_type)) {
       // Network-backed conversations (player_group, community, club) navigate to their detail screen
       // since membership is managed at the network level, not the chat level

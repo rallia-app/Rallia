@@ -1,5 +1,5 @@
 /**
- * WizardHeader — back chevron (steps 2-4) + progress dots.
+ * WizardHeader — back chevron (intermediate steps) + progress dots.
  *
  * The weekly check-in is mandatory: there is no exit affordance. The empty
  * right-hand slot is kept so the progress dots stay centered against the back

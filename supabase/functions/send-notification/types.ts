@@ -58,7 +58,19 @@ export type NotificationType =
   // Match time-suggestion (counter-proposal) flow
   | 'match_time_suggested'
   | 'match_time_suggestion_accepted'
-  | 'match_time_suggestion_declined';
+  | 'match_time_suggestion_declined'
+  // Doubles tournament partner flow
+  | 'tournament_partner_registered'
+  | 'tournament_partner_withdrew'
+  // Tournament lifecycle
+  | 'tournament_registration_received'
+  | 'tournament_registration_approved'
+  | 'tournament_registration_removed'
+  | 'tournament_bracket_published'
+  | 'tournament_match_completed'
+  | 'tournament_updated'
+  | 'tournament_cancelled'
+  | 'tournament_completed';
 
 // Organization notification types (subset for org-specific handling)
 export type OrgNotificationType =
@@ -232,6 +244,17 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_time_suggested: { email: true, push: true, sms: false },
   match_time_suggestion_accepted: { email: true, push: true, sms: false },
   match_time_suggestion_declined: { email: false, push: true, sms: false },
+  // Doubles tournament partner flow
+  tournament_partner_registered: { email: false, push: true, sms: false },
+  tournament_partner_withdrew: { email: false, push: true, sms: false },
+  tournament_registration_received: { email: false, push: true, sms: false },
+  tournament_registration_approved: { email: false, push: true, sms: false },
+  tournament_registration_removed: { email: false, push: true, sms: false },
+  tournament_bracket_published: { email: false, push: true, sms: false },
+  tournament_match_completed: { email: false, push: true, sms: false },
+  tournament_updated: { email: false, push: true, sms: false },
+  tournament_cancelled: { email: true, push: true, sms: false },
+  tournament_completed: { email: false, push: true, sms: false },
 };
 
 /**

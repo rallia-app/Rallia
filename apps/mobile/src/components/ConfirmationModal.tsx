@@ -7,7 +7,7 @@
 
 import * as React from 'react';
 import { useCallback } from 'react';
-import { View, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Text, Button } from '@rallia/shared-components';
 import {
   lightTheme,
@@ -61,6 +61,10 @@ export interface ConfirmationModalProps {
    */
   confirmLabel?: string;
 
+  /** testIDs for automation. */
+  confirmTestID?: string;
+  cancelTestID?: string;
+
   /**
    * Label for cancel button
    * @default "Cancel"
@@ -86,6 +90,14 @@ export interface ConfirmationModalProps {
   disabled?: boolean;
 
   /**
+   * Optional extra content rendered between the message/info box and the
+   * action buttons. Use sparingly — for things like a one-line input that
+   * the confirm action needs (e.g. a cancellation reason). Anything richer
+   * deserves its own dedicated sheet.
+   */
+  extraContent?: React.ReactNode;
+
+  /**
    * Optional custom content rendered above the action buttons (e.g. reason chips).
    */
   children?: React.ReactNode;
@@ -99,6 +111,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   visible,
   onClose,
   onConfirm,
+  confirmTestID,
+  cancelTestID,
   title,
   message,
   additionalInfo,
@@ -107,6 +121,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   destructive = false,
   isLoading = false,
   disabled,
+  extraContent,
   children,
 }) => {
   const { theme } = useTheme();
@@ -152,7 +167,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     >
       <TouchableWithoutFeedback onPress={handleCancel}>
         <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={[styles.modal, { backgroundColor: colors.background }]}>
               {/* Title */}
               <Text size="lg" weight="semibold" style={[styles.title, { color: colors.text }]}>
@@ -191,6 +206,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </View>
               )}
 
+              {/* Optional extra content (e.g. a reason input) */}
+              {extraContent}
+
               {/* Optional custom content (e.g. reason chips) */}
               {children}
 
@@ -203,6 +221,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   onPress={handleCancel}
                   isDark={isDark}
                   style={styles.buttonFlex}
+                  testID={cancelTestID}
                 >
                   {cancelLabel}
                 </Button>
@@ -215,6 +234,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   onPress={handleConfirm}
                   isDark={isDark}
                   style={styles.buttonFlex}
+                  testID={confirmTestID}
                 >
                   {confirmLabel}
                 </Button>

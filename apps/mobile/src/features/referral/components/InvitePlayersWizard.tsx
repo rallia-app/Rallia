@@ -132,7 +132,7 @@ export const InvitePlayersWizard: React.FC<InvitePlayersWizardProps> = ({
       })
     : undefined;
 
-  const [activeTab, setActiveTab] = useState<'code' | 'qr' | 'contacts'>(initialTab ?? 'code');
+  const [activeTab, setActiveTab] = useState<'code' | 'qr' | 'contacts'>(initialTab ?? 'qr');
 
   // Theme colors
   const themeColors = isDark ? darkTheme : lightTheme;
