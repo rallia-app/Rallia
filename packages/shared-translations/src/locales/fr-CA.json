@@ -4127,7 +4127,7 @@
     "tabs": {
       "overview": "Aperçu",
       "bracket": "Tableau",
-      "players": "Joueurs",
+      "players": "Participants",
       "details": "Détails"
     },
     "dashboard": {
@@ -4187,7 +4187,7 @@
         "champion": "Vous avez gagné le tournoi!"
       },
       "participants": {
-        "title": "Joueurs",
+        "title": "Participants",
         "empty": "Aucun joueur inscrit pour le moment",
         "pending": "En attente",
         "removeLabel": "Retirer {name}"

@@ -4127,7 +4127,7 @@
     "tabs": {
       "overview": "Overview",
       "bracket": "Bracket",
-      "players": "Players",
+      "players": "Participants",
       "details": "Details"
     },
     "dashboard": {
@@ -4187,7 +4187,7 @@
         "champion": "You won the tournament!"
       },
       "participants": {
-        "title": "Players",
+        "title": "Participants",
         "empty": "No players registered yet",
         "pending": "Pending",
         "removeLabel": "Remove {name}"
