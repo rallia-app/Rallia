@@ -528,10 +528,9 @@ const PendingRequestsSection: React.FC<{
   onPlayerPress: (player: PlayerSearchResult) => void;
   onApprove: (registrationId: string, version: number) => void;
   onDecline: (player: PlayerSearchResult) => void;
-  busy: boolean;
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
-}> = ({ rows, onPlayerPress, onApprove, onDecline, busy, colors, t }) => {
+}> = ({ rows, onPlayerPress, onApprove, onDecline, colors, t }) => {
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
@@ -541,54 +540,35 @@ const PendingRequestsSection: React.FC<{
         })}
       </Text>
       {rows.map(({ player, registrationId, version }) => (
-        <View key={registrationId}>
-          <PlayerCard
-            player={player}
-            onPress={onPlayerPress}
-            reputationDisplay={reputationDisplayFor(player)}
-            isOnline={
-              player.last_seen_at
-                ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
-                : false
-            }
-          />
-          <View style={styles.pendingActions}>
-            <TouchableOpacity
-              onPress={() => onDecline(player)}
-              disabled={busy}
-              accessibilityRole="button"
-              accessibilityLabel={t('tournamentDetail.dashboard.pendingRequests.declineLabel', {
+        <PlayerCard
+          key={registrationId}
+          player={player}
+          onPress={onPlayerPress}
+          reputationDisplay={reputationDisplayFor(player)}
+          isOnline={
+            player.last_seen_at
+              ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
+              : false
+          }
+          trailingActions={[
+            {
+              icon: 'checkmark-circle',
+              color: colors.statusPositiveText,
+              accessibilityLabel: t('tournamentDetail.dashboard.pendingRequests.approveLabel', {
                 name: getHumanName(player, ''),
-              })}
-              style={[styles.pendingBtn, styles.pendingDeclineBtn, { borderColor: colors.border }]}
-              testID={`pending-decline-${registrationId}`}
-            >
-              <Ionicons name="close" size={18} color={colors.danger} />
-              <Text size="sm" weight="semibold" color={colors.danger}>
-                {t('tournamentDetail.dashboard.pendingRequests.decline')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onApprove(registrationId, version)}
-              disabled={busy}
-              accessibilityRole="button"
-              accessibilityLabel={t('tournamentDetail.dashboard.pendingRequests.approveLabel', {
+              }),
+              onPress: () => onApprove(registrationId, version),
+            },
+            {
+              icon: 'close-circle',
+              color: colors.danger,
+              accessibilityLabel: t('tournamentDetail.dashboard.pendingRequests.declineLabel', {
                 name: getHumanName(player, ''),
-              })}
-              style={[
-                styles.pendingBtn,
-                { backgroundColor: colors.primary },
-                busy && { opacity: 0.6 },
-              ]}
-              testID={`pending-approve-${registrationId}`}
-            >
-              <Ionicons name="checkmark" size={18} color="#ffffff" />
-              <Text size="sm" weight="semibold" color="#ffffff">
-                {t('tournamentDetail.dashboard.pendingRequests.approve')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              }),
+              onPress: () => onDecline(player),
+            },
+          ]}
+        />
       ))}
     </View>
   );
@@ -1043,7 +1023,7 @@ export const TournamentDetail: React.FC = () => {
 
   const handleApprovePress = useCallback(
     (registrationId: string, version: number) => {
-      if (!tournament) return;
+      if (!tournament || approveRegistrant.isPending) return;
       lightHaptic();
       approveRegistrant.mutate({
         registrationId,
@@ -1882,7 +1862,6 @@ export const TournamentDetail: React.FC = () => {
               onPlayerPress={handlePlayerPress}
               onApprove={handleApprovePress}
               onDecline={handleRemovePress}
-              busy={approveRegistrant.isPending || removeRegistrant.isPending}
               colors={colors}
               t={t}
             />
@@ -2914,26 +2893,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[2],
     letterSpacing: 0.5,
-  },
-  pendingActions: {
-    flexDirection: 'row',
-    gap: spacingPixels[2],
-    marginHorizontal: spacingPixels[4],
-    marginTop: -spacingPixels[2],
-    marginBottom: spacingPixels[3],
-  },
-  pendingBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[1.5],
-    paddingVertical: spacingPixels[2.5],
-    borderRadius: radiusPixels.lg,
-  },
-  pendingDeclineBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
   },
   myMatchCard: {
     flexDirection: 'row',
