@@ -150,6 +150,10 @@ interface ScreenColors {
   cancelledText: string;
   highlightBg: string;
   highlightBorder: string;
+  secondaryHighlightBg: string;
+  secondaryHighlightBorder: string;
+  secondaryAccent: string;
+  secondaryAccentBg: string;
   championBg: string;
   championText: string;
   danger: string;
@@ -382,6 +386,8 @@ const DashboardCtaCard: React.FC<{
   disabled?: boolean;
   /** Coral "leave" tone (plain card + coral button) — used for withdraw. */
   destructive?: boolean;
+  /** Primary (default) or secondary palette for card tint and CTA button. */
+  accent?: 'primary' | 'secondary';
   colors: ScreenColors;
   testID?: string;
 }> = ({
@@ -393,57 +399,75 @@ const DashboardCtaCard: React.FC<{
   onPress,
   disabled,
   destructive,
+  accent = 'primary',
   colors,
   testID,
-}) => (
-  <View
-    style={[
-      styles.section,
-      styles.ctaCard,
-      destructive
-        ? { backgroundColor: colors.cardBackground, borderColor: colors.border }
-        : { backgroundColor: colors.highlightBg, borderColor: colors.highlightBorder },
-    ]}
-  >
-    <View style={styles.ctaCardHeader}>
-      <View
-        style={[
-          styles.ctaCardIcon,
-          { backgroundColor: destructive ? colors.dangerBg : colors.statusActiveBg },
-        ]}
-      >
-        <Ionicons name={icon} size={22} color={destructive ? colors.danger : colors.primary} />
+}) => {
+  const cardBg = destructive
+    ? colors.cardBackground
+    : accent === 'secondary'
+      ? colors.secondaryHighlightBg
+      : colors.highlightBg;
+  const cardBorder = destructive
+    ? colors.border
+    : accent === 'secondary'
+      ? colors.secondaryHighlightBorder
+      : colors.highlightBorder;
+  const iconBg = destructive
+    ? colors.dangerBg
+    : accent === 'secondary'
+      ? colors.secondaryAccentBg
+      : colors.statusActiveBg;
+  const iconColor = destructive
+    ? colors.danger
+    : accent === 'secondary'
+      ? colors.secondaryAccent
+      : colors.primary;
+  const buttonBg = destructive
+    ? colors.danger
+    : accent === 'secondary'
+      ? colors.secondaryAccent
+      : colors.primary;
+
+  return (
+    <View
+      style={[styles.section, styles.ctaCard, { backgroundColor: cardBg, borderColor: cardBorder }]}
+    >
+      <View style={styles.ctaCardHeader}>
+        <View style={[styles.ctaCardIcon, { backgroundColor: iconBg }]}>
+          <Ionicons name={icon} size={22} color={iconColor} />
+        </View>
+        <View style={styles.ctaCardTextBlock}>
+          <Text size="base" weight="bold" color={colors.text}>
+            {title}
+          </Text>
+          <Text size="sm" color={colors.textMuted} style={styles.ctaCardDescription}>
+            {description}
+          </Text>
+        </View>
       </View>
-      <View style={styles.ctaCardTextBlock}>
-        <Text size="base" weight="bold" color={colors.text}>
-          {title}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.ctaCardDescription}>
-          {description}
-        </Text>
-      </View>
+      {buttonLabel && onPress && (
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={disabled}
+          activeOpacity={0.7}
+          style={[
+            styles.primaryButton,
+            { backgroundColor: buttonBg },
+            disabled && styles.buttonDisabled,
+          ]}
+          accessibilityRole="button"
+          testID={testID}
+        >
+          {buttonIcon && <Ionicons name={buttonIcon} size={20} color="#ffffff" />}
+          <Text size="base" weight="semibold" color="#ffffff">
+            {buttonLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
-    {buttonLabel && onPress && (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled}
-        activeOpacity={0.7}
-        style={[
-          styles.primaryButton,
-          { backgroundColor: destructive ? colors.danger : colors.primary },
-          disabled && styles.buttonDisabled,
-        ]}
-        accessibilityRole="button"
-        testID={testID}
-      >
-        {buttonIcon && <Ionicons name={buttonIcon} size={20} color="#ffffff" />}
-        <Text size="base" weight="semibold" color="#ffffff">
-          {buttonLabel}
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
-);
+  );
+};
 
 // Mirror PlayerDirectory: derive reputation display straight from the row,
 // no extra API call. Hidden unless the player's reputation is public.
@@ -1201,6 +1225,10 @@ export const TournamentDetail: React.FC = () => {
       cancelledText: isDark ? '#fbbf24' : '#92400e',
       highlightBg: isDark ? primary[950] : primary[50],
       highlightBorder: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+      secondaryHighlightBg: isDark ? secondary[950] : secondary[50],
+      secondaryHighlightBorder: isDark ? `${secondary[400]}40` : `${secondary[500]}20`,
+      secondaryAccent: isDark ? secondary[400] : secondary[500],
+      secondaryAccentBg: isDark ? `${secondary[500]}30` : `${secondary[500]}20`,
       championBg: isDark ? `${accent[400]}25` : `${accent[500]}15`,
       championText: isDark ? accent[400] : accent[600],
       danger: isDark ? secondary[400] : secondary[500],
@@ -1379,6 +1407,7 @@ export const TournamentDetail: React.FC = () => {
   ];
   const currentTabIdx = Math.min(activeTabIdx, tabs.length - 1);
   const currentTabKey = tabs[currentTabIdx].key;
+  const playersTabIdx = tabs.findIndex(tab => tab.key === 'players');
 
   const goToTab = (idx: number) => {
     void lightHaptic();
@@ -1580,6 +1609,23 @@ export const TournamentDetail: React.FC = () => {
 
             {/* Champion banner */}
             {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
+
+            {isOrganizer && pendingRequestRows.length > 0 && (
+              <DashboardCtaCard
+                icon="hourglass-outline"
+                title={t('tournamentDetail.dashboard.pendingRequestsCta.title')}
+                description={t('tournamentDetail.dashboard.pendingRequestsCta.description').replace(
+                  '{count}',
+                  String(pendingRequestRows.length)
+                )}
+                buttonLabel={t('tournamentDetail.dashboard.pendingRequestsCta.review')}
+                buttonIcon="people-outline"
+                onPress={() => playersTabIdx >= 0 && goToTab(playersTabIdx)}
+                accent="secondary"
+                colors={colors}
+                testID="cta-pending-requests"
+              />
+            )}
 
             {/* Organizer: what's next */}
             {isOrganizer && tournament.status === 'draft' && (

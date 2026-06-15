@@ -4178,6 +4178,11 @@
         "title": "Tu joues aussi?",
         "description": "Ajoute-toi à ce tournoi comme participant."
       },
+      "pendingRequestsCta": {
+        "title": "Demandes en attente",
+        "description": "{count} joueur(s) attendent votre approbation.",
+        "review": "Voir les demandes"
+      },
       "myMatch": {
         "title": "Votre prochaine partie",
         "vs": "contre {name}",
