@@ -44,6 +44,8 @@ interface PlayerCardProps {
   reputationDisplay?: ReputationDisplay;
   /** Online status computed by parent from last_seen_at */
   isOnline?: boolean;
+  /** When false, hides online / last-seen activity in the location row. */
+  showActivity?: boolean;
   /** Optional trailing icon button in the name row (e.g. remove from list). */
   trailingAction?: PlayerCardTrailingAction;
   /** Optional multiple trailing icon buttons (e.g. approve + decline). Takes
@@ -77,6 +79,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   showFavorite = false,
   reputationDisplay,
   isOnline = false,
+  showActivity = true,
   trailingAction,
   trailingActions,
 }) => {
@@ -158,7 +161,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   // Hidden when missing or stale beyond 14 days so the row doesn't carry
   // meaningless noise.
   const lastSeenLabel = useMemo(() => {
-    if (isOnline || !player.last_seen_at) return null;
+    if (!showActivity || isOnline || !player.last_seen_at) return null;
     const seen = new Date(player.last_seen_at);
     const now = new Date();
     if (seen.getTime() > now.getTime()) return null;
@@ -171,7 +174,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     if (diffDays === 1) return t('playerDirectory.lastSeenYesterday');
     if (diffDays <= 14) return t('playerDirectory.lastSeenDaysAgo', { count: diffDays });
     return null;
-  }, [isOnline, player.last_seen_at, t]);
+  }, [showActivity, isOnline, player.last_seen_at, t]);
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -265,7 +268,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             </View>
 
             {/* Row 2: distance · activity (inline, dot-separated) */}
-            {(!!distanceText || isOnline || !!lastSeenLabel) && (
+            {(!!distanceText || (showActivity && (isOnline || !!lastSeenLabel))) && (
               <View style={styles.locationRow}>
                 {!!distanceText && (
                   <>
@@ -280,12 +283,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                     </Text>
                   </>
                 )}
-                {!!distanceText && (isOnline || !!lastSeenLabel) && (
+                {!!distanceText && showActivity && (isOnline || !!lastSeenLabel) && (
                   <Text size="sm" color={mutedColor}>
                     ·
                   </Text>
                 )}
-                {isOnline ? (
+                {showActivity && isOnline ? (
                   <View style={styles.onlineInline}>
                     <Animated.View
                       style={[
@@ -297,7 +300,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                       {t('playerDirectory.online')}
                     </Text>
                   </View>
-                ) : lastSeenLabel ? (
+                ) : showActivity && lastSeenLabel ? (
                   <Text size="sm" color={mutedColor} numberOfLines={1} style={styles.activityText}>
                     {lastSeenLabel}
                   </Text>

@@ -461,8 +461,6 @@ function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | u
   };
 }
 
-const ONLINE_WINDOW_MS = 5 * 60 * 1000;
-
 /** Registered players rendered with the shared community PlayerCard.
  *  onRemovePress is set only when the caller may remove registrants
  *  (organizer, pre-bracket); the organizer's own row never shows it. */
@@ -474,41 +472,39 @@ const ParticipantsSection: React.FC<{
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
 }> = ({ players, onPlayerPress, onRemovePress, currentUserId, colors, t }) => {
-  if (players.length === 0) {
-    return (
-      <View style={styles.participantEmpty}>
-        <Text size="sm" color={colors.textMuted}>
-          {t('tournamentDetail.dashboard.participants.empty')}
-        </Text>
-      </View>
-    );
-  }
   return (
     <View>
-      {players.map(player => (
-        <PlayerCard
-          key={player.id}
-          player={player}
-          onPress={onPlayerPress}
-          reputationDisplay={reputationDisplayFor(player)}
-          isOnline={
-            player.last_seen_at
-              ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
-              : false
-          }
-          trailingAction={
-            onRemovePress && player.id !== currentUserId
-              ? {
-                  icon: 'person-remove-outline',
-                  accessibilityLabel: t('tournamentDetail.dashboard.participants.removeLabel', {
-                    name: getHumanName(player, ''),
-                  }),
-                  onPress: onRemovePress,
-                }
-              : undefined
-          }
-        />
-      ))}
+      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
+        {t('tournamentDetail.dashboard.participants.title')}
+      </Text>
+      {players.length === 0 ? (
+        <View style={styles.participantEmpty}>
+          <Text size="sm" color={colors.textMuted}>
+            {t('tournamentDetail.dashboard.participants.empty')}
+          </Text>
+        </View>
+      ) : (
+        players.map(player => (
+          <PlayerCard
+            key={player.id}
+            player={player}
+            onPress={onPlayerPress}
+            reputationDisplay={reputationDisplayFor(player)}
+            showActivity={false}
+            trailingAction={
+              onRemovePress && player.id !== currentUserId
+                ? {
+                    icon: 'person-remove-outline',
+                    accessibilityLabel: t('tournamentDetail.dashboard.participants.removeLabel', {
+                      name: getHumanName(player, ''),
+                    }),
+                    onPress: onRemovePress,
+                  }
+                : undefined
+            }
+          />
+        ))
+      )}
     </View>
   );
 };
@@ -545,11 +541,7 @@ const PendingRequestsSection: React.FC<{
           player={player}
           onPress={onPlayerPress}
           reputationDisplay={reputationDisplayFor(player)}
-          isOnline={
-            player.last_seen_at
-              ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
-              : false
-          }
+          showActivity={false}
           trailingActions={[
             {
               icon: 'checkmark-circle',
@@ -978,6 +970,12 @@ export const TournamentDetail: React.FC = () => {
     for (const p of participantPlayers) map.set(p.id, p);
     return map;
   }, [participantPlayers]);
+
+  // Registered list excludes pending approvals — those render in PendingRequestsSection.
+  const registeredParticipantPlayers = useMemo(
+    () => participantPlayers.filter(p => registrationByUserId.get(p.id)?.status !== 'pending'),
+    [participantPlayers, registrationByUserId]
+  );
 
   // Organizer approval queue: one entry per pending registration, enriched with
   // the captain's participant card. Same pre-bracket + organizer gate as remove.
@@ -1866,7 +1864,7 @@ export const TournamentDetail: React.FC = () => {
               t={t}
             />
             <ParticipantsSection
-              players={participantPlayers}
+              players={registeredParticipantPlayers}
               onPlayerPress={handlePlayerPress}
               onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
               currentUserId={userId}
