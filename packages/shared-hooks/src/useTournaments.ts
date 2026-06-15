@@ -21,6 +21,7 @@ import {
   registerForTournament,
   withdrawFromTournament,
   removeTournamentRegistration,
+  approveTournamentRegistration,
   listTournamentMatches,
   generateTournamentBracket,
   listLinkableMatchesForSlot,
@@ -497,6 +498,35 @@ export function useRemoveTournamentRegistration(
   >({
     mutationFn: ({ registrationId, versionWas }) =>
       removeTournamentRegistration(registrationId, versionWas),
+    onSuccess: (r, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(r);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Organizer approves a pending registration (approval-mode tournaments).
+ * The approved player flips to 'registered'; detail/registration/participant
+ * queries are invalidated so the pending queue and roster refresh.
+ */
+export function useApproveTournamentRegistration(
+  options: MutationOptions<TournamentRegistration> = {}
+) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { registrationId: string; versionWas: number; tournamentId: string }
+  >({
+    mutationFn: ({ registrationId, versionWas }) =>
+      approveTournamentRegistration(registrationId, versionWas),
     onSuccess: (r, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(r);

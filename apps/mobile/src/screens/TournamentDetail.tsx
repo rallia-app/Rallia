@@ -53,6 +53,7 @@ import {
   useRegisterForTournament,
   useWithdrawFromTournament,
   useRemoveTournamentRegistration,
+  useApproveTournamentRegistration,
   useTournamentInvitePreview,
   useJoinTournamentViaInvite,
   useTournamentMatches,
@@ -512,6 +513,87 @@ const ParticipantsSection: React.FC<{
   );
 };
 
+type PendingRequestRow = {
+  player: PlayerSearchResult;
+  registrationId: string;
+  version: number;
+};
+
+/** Organizer-only approval queue (approval-mode tournaments, pre-bracket).
+ *  One PlayerCard per pending registration with Approve / Decline actions.
+ *  Display data is reused from the enriched participants list; the registration
+ *  row supplies id + version for the optimistic-locked RPCs. */
+const PendingRequestsSection: React.FC<{
+  rows: PendingRequestRow[];
+  onPlayerPress: (player: PlayerSearchResult) => void;
+  onApprove: (registrationId: string, version: number) => void;
+  onDecline: (player: PlayerSearchResult) => void;
+  busy: boolean;
+  colors: ScreenColors;
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ rows, onPlayerPress, onApprove, onDecline, busy, colors, t }) => {
+  if (rows.length === 0) return null;
+  return (
+    <View style={styles.pendingSection}>
+      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
+        {t('tournamentDetail.dashboard.pendingRequests.title', {
+          count: String(rows.length),
+        })}
+      </Text>
+      {rows.map(({ player, registrationId, version }) => (
+        <View key={registrationId}>
+          <PlayerCard
+            player={player}
+            onPress={onPlayerPress}
+            reputationDisplay={reputationDisplayFor(player)}
+            isOnline={
+              player.last_seen_at
+                ? new Date(player.last_seen_at).getTime() > Date.now() - ONLINE_WINDOW_MS
+                : false
+            }
+          />
+          <View style={styles.pendingActions}>
+            <TouchableOpacity
+              onPress={() => onDecline(player)}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel={t('tournamentDetail.dashboard.pendingRequests.declineLabel', {
+                name: getHumanName(player, ''),
+              })}
+              style={[styles.pendingBtn, styles.pendingDeclineBtn, { borderColor: colors.border }]}
+              testID={`pending-decline-${registrationId}`}
+            >
+              <Ionicons name="close" size={18} color={colors.danger} />
+              <Text size="sm" weight="semibold" color={colors.danger}>
+                {t('tournamentDetail.dashboard.pendingRequests.decline')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onApprove(registrationId, version)}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel={t('tournamentDetail.dashboard.pendingRequests.approveLabel', {
+                name: getHumanName(player, ''),
+              })}
+              style={[
+                styles.pendingBtn,
+                { backgroundColor: colors.primary },
+                busy && { opacity: 0.6 },
+              ]}
+              testID={`pending-approve-${registrationId}`}
+            >
+              <Ionicons name="checkmark" size={18} color="#ffffff" />
+              <Text size="sm" weight="semibold" color="#ffffff">
+                {t('tournamentDetail.dashboard.pendingRequests.approve')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
 // =============================================================================
 
 export const TournamentDetail: React.FC = () => {
@@ -614,14 +696,16 @@ export const TournamentDetail: React.FC = () => {
                               ? 'tournamentDetail.errors.withdrawClosed'
                               : lower.includes('registration_removed')
                                 ? 'tournamentDetail.errors.registrationRemoved'
-                                : lower.includes('remove_not_allowed')
-                                  ? 'tournamentDetail.errors.removeNotAllowed'
-                                  : lower.includes('registration_not_found')
-                                    ? 'tournamentDetail.errors.lockConflict'
-                                    : lower.includes('tournament_reg_closed') ||
-                                        lower.includes('reg_closed')
-                                      ? 'tournamentDetail.errors.regClosed'
-                                      : fallbackKey;
+                                : lower.includes('approve_not_allowed')
+                                  ? 'tournamentDetail.errors.approveNotAllowed'
+                                  : lower.includes('remove_not_allowed')
+                                    ? 'tournamentDetail.errors.removeNotAllowed'
+                                    : lower.includes('registration_not_found')
+                                      ? 'tournamentDetail.errors.lockConflict'
+                                      : lower.includes('tournament_reg_closed') ||
+                                          lower.includes('reg_closed')
+                                        ? 'tournamentDetail.errors.regClosed'
+                                        : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -670,16 +754,39 @@ export const TournamentDetail: React.FC = () => {
   const [removeTarget, setRemoveTarget] = useState<PlayerSearchResult | null>(null);
   const insets = useSafeAreaInsets();
 
+  // Decline reuses the remove RPC (sets 'disqualified'); the ref lets the
+  // shared mutation callbacks pick decline- vs remove-flavored copy.
+  const declineModeRef = useRef(false);
+
   const removeRegistrant = useRemoveTournamentRegistration({
     onSuccess: () => {
       successHaptic();
       setRemoveTarget(null);
-      toast.success(t('tournamentDetail.removeModal.success'));
+      toast.success(
+        t(
+          declineModeRef.current
+            ? 'tournamentDetail.declineModal.success'
+            : 'tournamentDetail.removeModal.success'
+        )
+      );
     },
     onError: e => {
       setRemoveTarget(null);
-      showError(e.message, 'tournamentDetail.errors.removeFailed');
+      showError(
+        e.message,
+        declineModeRef.current
+          ? 'tournamentDetail.errors.declineFailed'
+          : 'tournamentDetail.errors.removeFailed'
+      );
     },
+  });
+
+  const approveRegistrant = useApproveTournamentRegistration({
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('tournamentDetail.dashboard.pendingRequests.approvedToast'));
+    },
+    onError: e => showError(e.message, 'tournamentDetail.errors.approveFailed'),
   });
 
   const cancel = useCancelTournament({
@@ -885,10 +992,37 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations]);
 
+  // Enriched participant cards keyed by player id, for the pending queue.
+  const participantById = useMemo(() => {
+    const map = new Map<string, PlayerSearchResult>();
+    for (const p of participantPlayers) map.set(p.id, p);
+    return map;
+  }, [participantPlayers]);
+
+  // Organizer approval queue: one entry per pending registration, enriched with
+  // the captain's participant card. Same pre-bracket + organizer gate as remove.
+  const pendingRequestRows = useMemo<PendingRequestRow[]>(() => {
+    if (!canRemoveRegistrants) return [];
+    const rows: PendingRequestRow[] = [];
+    for (const r of registrations) {
+      if (r.status !== 'pending') continue;
+      const player = participantById.get(r.user_id);
+      if (player) rows.push({ player, registrationId: r.id, version: r.version });
+    }
+    return rows;
+  }, [registrations, participantById, canRemoveRegistrants]);
+
   const handleRemovePress = useCallback((player: PlayerSearchResult) => {
     lightHaptic();
     setRemoveTarget(player);
   }, []);
+
+  // Decline a pending request reuses the remove confirmation modal, but with
+  // decline-flavored copy and the disqualify-is-terminal warning.
+  const removeTargetIsPending = useMemo(
+    () => (removeTarget ? registrationByUserId.get(removeTarget.id)?.status === 'pending' : false),
+    [removeTarget, registrationByUserId]
+  );
 
   const confirmRemove = useCallback(() => {
     if (!tournament || !removeTarget) return;
@@ -899,12 +1033,26 @@ export const TournamentDetail: React.FC = () => {
       toast.error(t('tournamentDetail.errors.lockConflict'));
       return;
     }
+    declineModeRef.current = reg.status === 'pending';
     removeRegistrant.mutate({
       registrationId: reg.id,
       versionWas: reg.version,
       tournamentId: tournament.id,
     });
   }, [tournament, removeTarget, registrationByUserId, removeRegistrant, toast, t]);
+
+  const handleApprovePress = useCallback(
+    (registrationId: string, version: number) => {
+      if (!tournament) return;
+      lightHaptic();
+      approveRegistrant.mutate({
+        registrationId,
+        versionWas: version,
+        tournamentId: tournament.id,
+      });
+    },
+    [tournament, approveRegistrant]
+  );
 
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
@@ -1729,6 +1877,15 @@ export const TournamentDetail: React.FC = () => {
         {/* ============================ PLAYERS ============================= */}
         {currentTabKey === 'players' && showPlayersTab && (
           <View style={styles.playersTabContent}>
+            <PendingRequestsSection
+              rows={pendingRequestRows}
+              onPlayerPress={handlePlayerPress}
+              onApprove={handleApprovePress}
+              onDecline={handleRemovePress}
+              busy={approveRegistrant.isPending || removeRegistrant.isPending}
+              colors={colors}
+              t={t}
+            />
             <ParticipantsSection
               players={participantPlayers}
               onPlayerPress={handlePlayerPress}
@@ -1952,12 +2109,27 @@ export const TournamentDetail: React.FC = () => {
 
       <ConfirmationModal
         visible={!!removeTarget && !!tournament}
-        title={t('tournamentDetail.removeModal.title')}
-        message={t('tournamentDetail.removeModal.message', {
-          name: removeTarget ? getHumanName(removeTarget, '') : '',
-        })}
-        confirmLabel={t('tournamentDetail.removeModal.confirm')}
-        cancelLabel={t('tournamentDetail.removeModal.keepIt')}
+        title={t(
+          removeTargetIsPending
+            ? 'tournamentDetail.declineModal.title'
+            : 'tournamentDetail.removeModal.title'
+        )}
+        message={t(
+          removeTargetIsPending
+            ? 'tournamentDetail.declineModal.message'
+            : 'tournamentDetail.removeModal.message',
+          { name: removeTarget ? getHumanName(removeTarget, '') : '' }
+        )}
+        confirmLabel={t(
+          removeTargetIsPending
+            ? 'tournamentDetail.declineModal.confirm'
+            : 'tournamentDetail.removeModal.confirm'
+        )}
+        cancelLabel={t(
+          removeTargetIsPending
+            ? 'tournamentDetail.declineModal.keepIt'
+            : 'tournamentDetail.removeModal.keepIt'
+        )}
         destructive
         isLoading={removeRegistrant.isPending}
         onClose={() => setRemoveTarget(null)}
@@ -2734,6 +2906,34 @@ const styles = StyleSheet.create({
   participantEmpty: {
     padding: spacingPixels[4],
     alignItems: 'center',
+  },
+  pendingSection: {
+    marginBottom: spacingPixels[4],
+  },
+  pendingSectionTitle: {
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[2],
+    letterSpacing: 0.5,
+  },
+  pendingActions: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    marginHorizontal: spacingPixels[4],
+    marginTop: -spacingPixels[2],
+    marginBottom: spacingPixels[3],
+  },
+  pendingBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1.5],
+    paddingVertical: spacingPixels[2.5],
+    borderRadius: radiusPixels.lg,
+  },
+  pendingDeclineBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
   },
   myMatchCard: {
     flexDirection: 'row',

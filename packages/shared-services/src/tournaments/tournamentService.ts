@@ -814,6 +814,24 @@ export async function removeTournamentRegistration(
   return data as TournamentRegistration;
 }
 
+/**
+ * Organizer approves a pending registration (approval-mode tournaments).
+ * Status flips 'pending' -> 'registered'; the approved notification fires
+ * automatically via the registrations trigger. No capacity re-check — a pending
+ * row already counts toward the bracket.
+ */
+export async function approveTournamentRegistration(
+  registrationId: string,
+  versionWas: number
+): Promise<TournamentRegistration> {
+  const { data, error } = await supabase.rpc('tournament_approve_registration', {
+    p_registration_id: registrationId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentRegistration;
+}
+
 export type TournamentInviteLink = Tables<'tournament_invite_links'>;
 
 export interface TournamentInvitePreview {

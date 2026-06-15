@@ -4191,6 +4191,14 @@
         "empty": "Aucun joueur inscrit pour le moment",
         "pending": "En attente",
         "removeLabel": "Retirer {name}"
+      },
+      "pendingRequests": {
+        "title": "Demandes en attente ({count})",
+        "approve": "Accepter",
+        "decline": "Refuser",
+        "approveLabel": "Accepter {name}",
+        "declineLabel": "Refuser {name}",
+        "approvedToast": "Joueur accepté"
       }
     },
     "labels": {
@@ -4308,6 +4316,13 @@
       "keepIt": "Annuler",
       "success": "Joueur retiré"
     },
+    "declineModal": {
+      "title": "Refuser cette demande ?",
+      "message": "Refuser la demande de {name} ? Cette personne ne pourra plus demander à rejoindre ce tournoi.",
+      "confirm": "Refuser",
+      "keepIt": "Annuler",
+      "success": "Demande refusée"
+    },
     "cancelledNotice": {
       "title": "Tournoi annulé",
       "reason": "Raison : {reason}"
@@ -4379,6 +4394,9 @@
       "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
       "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
       "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
+      "approveFailed": "Impossible d'accepter la demande. Réessaie.",
+      "approveNotAllowed": "On ne peut plus accepter de demandes une fois le tableau créé.",
+      "declineFailed": "Impossible de refuser la demande. Réessaie.",
       "registrationRemoved": "L'organisateur t'a retiré de ce tournoi. Tu peux plus t'y inscrire.",
       "partnerRequired": "Choisis un partenaire pour t'inscrire à ce tournoi en double.",
       "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
