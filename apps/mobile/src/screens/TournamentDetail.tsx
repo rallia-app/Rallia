@@ -850,13 +850,23 @@ export const TournamentDetail: React.FC = () => {
 
   const isDoubles = !!tournament && tournament.entry_format !== 'singles';
 
+  // Invite-only invitees land a 'pending' row the organizer never approves —
+  // they accept it themselves (tournament_register flips pending → registered).
+  // Distinct from approval-mode pending, which is passive (await organizer).
+  const isInvitePending =
+    !!myActiveRegistration &&
+    myActiveRegistration.status === 'pending' &&
+    tournament?.registration_mode === 'invite_only';
+
   const onRegister = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
-    // Invite recipients redeem the token (bypasses registration_mode and
-    // works on private tournaments); organizers and direct registrants take
-    // the normal path. Doubles routes through the partner picker first.
-    const inviteToken = !isOrganizer ? params.inviteToken : undefined;
+    // Accepting an existing pending invite flips it via tournament_register
+    // (join-via-invite is idempotent on a pending row and wouldn't confirm it);
+    // a fresh invitee with only a share link redeems the token. Organizers and
+    // direct registrants take the normal path. Doubles routes through the
+    // partner picker first in every case.
+    const inviteToken = !isOrganizer && !isInvitePending ? params.inviteToken : undefined;
     if (isDoubles) {
       void SheetManager.show('tournament-partner-picker', {
         payload: {
@@ -881,7 +891,15 @@ export const TournamentDetail: React.FC = () => {
       return;
     }
     register.mutate({ tournamentId: tournament.id });
-  }, [tournament, isDoubles, register, joinViaInvite, params.inviteToken, isOrganizer]);
+  }, [
+    tournament,
+    isDoubles,
+    isInvitePending,
+    register,
+    joinViaInvite,
+    params.inviteToken,
+    isOrganizer,
+  ]);
 
   const onWithdraw = useCallback(() => {
     if (!tournament || !myActiveRegistration) return;
@@ -1503,7 +1521,9 @@ export const TournamentDetail: React.FC = () => {
                   <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
                   <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
                     {myActiveRegistration.status === 'pending'
-                      ? t('tournamentDetail.actions.registrationPendingLabel')
+                      ? isInvitePending
+                        ? t('tournamentDetail.actions.invitePendingLabel')
+                        : t('tournamentDetail.actions.registrationPendingLabel')
                       : myPartnerName
                         ? t('tournamentDetail.actions.registeredWithPartnerLabel').replace(
                             '{name}',
@@ -1753,19 +1773,47 @@ export const TournamentDetail: React.FC = () => {
             )}
 
             {/* Registered (any persona): withdraw card — only while registration is open */}
+            {/* Invite-only invitee: accept the pending invitation (organizer
+                never approves it — the invitee confirms it themselves). */}
+            {isInvitePending && (
+              <DashboardCtaCard
+                icon="mail-open-outline"
+                title={t('tournamentDetail.dashboard.inviteCta.title')}
+                description={t(
+                  isDoubles
+                    ? 'tournamentDetail.dashboard.inviteCta.descriptionDoubles'
+                    : 'tournamentDetail.dashboard.inviteCta.description'
+                )}
+                buttonLabel={
+                  registerPending
+                    ? t('tournamentDetail.actions.accepting')
+                    : t('tournamentDetail.actions.acceptInvite')
+                }
+                buttonIcon="checkmark-circle-outline"
+                onPress={onRegister}
+                disabled={registerPending}
+                testID="cta-accept-invite"
+                colors={colors}
+              />
+            )}
+
             {myActiveRegistration && tournament.status === 'registration_open' && (
               <DashboardCtaCard
                 icon="checkmark-circle-outline"
                 title={
                   myActiveRegistration.status === 'pending'
-                    ? t('tournamentDetail.dashboard.withdrawCta.titlePending')
+                    ? isInvitePending
+                      ? t('tournamentDetail.dashboard.withdrawCta.titleInvited')
+                      : t('tournamentDetail.dashboard.withdrawCta.titlePending')
                     : isDoubles
                       ? t('tournamentDetail.dashboard.withdrawCta.titleTeam')
                       : t('tournamentDetail.dashboard.withdrawCta.title')
                 }
                 description={
                   myActiveRegistration.status === 'pending'
-                    ? t('tournamentDetail.dashboard.withdrawCta.descriptionPending')
+                    ? isInvitePending
+                      ? t('tournamentDetail.dashboard.withdrawCta.descriptionInvited')
+                      : t('tournamentDetail.dashboard.withdrawCta.descriptionPending')
                     : isDoubles
                       ? t('tournamentDetail.dashboard.withdrawCta.descriptionTeam')
                       : t('tournamentDetail.dashboard.withdrawCta.description')

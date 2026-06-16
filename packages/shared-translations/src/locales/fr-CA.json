@@ -4170,9 +4170,16 @@
         "title": "T'es inscrit",
         "titleTeam": "Ton équipe est inscrite",
         "titlePending": "Inscription en attente",
+        "titleInvited": "Invitation reçue",
         "description": "Ta place est réservée. Un changement de plan? Tu peux te retirer tant que les inscriptions sont ouvertes.",
         "descriptionTeam": "La place de ton équipe est réservée. Un changement de plan? Te retirer enlève les deux joueurs tant que les inscriptions sont ouvertes.",
-        "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes."
+        "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes.",
+        "descriptionInvited": "Accepte ci-dessus pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
+      },
+      "inviteCta": {
+        "title": "Tu es invité",
+        "description": "Accepte pour confirmer ta place dans le tournoi.",
+        "descriptionDoubles": "Choisis ton partenaire, puis accepte pour confirmer votre place."
       },
       "addMyselfCta": {
         "title": "Tu joues aussi?",
@@ -4242,11 +4249,14 @@
       "register": "S'inscrire",
       "addMyself": "M'ajouter",
       "withdraw": "Se retirer",
+      "acceptInvite": "Accepter l'invitation",
+      "accepting": "Acceptation...",
       "registering": "Inscription...",
       "withdrawing": "Retrait...",
       "opening": "Ouverture...",
       "closing": "Fermeture...",
       "registrationPendingLabel": "Inscription en attente d'approbation",
+      "invitePendingLabel": "Invitation en attente",
       "registeredLabel": "Vous êtes inscrit",
       "registeredWithPartnerLabel": "T'es inscrit avec {name}",
       "generateBracket": "Générer le tableau",
