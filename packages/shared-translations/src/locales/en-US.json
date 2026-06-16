@@ -4170,9 +4170,16 @@
         "title": "You're registered",
         "titleTeam": "Your team is registered",
         "titlePending": "Registration pending",
+        "titleInvited": "Invitation received",
         "description": "Your spot is locked in. Plans changed? You can withdraw while registration is open.",
         "descriptionTeam": "Your team's spot is locked in. Plans changed? Withdrawing pulls both of you while registration is open.",
-        "descriptionPending": "The organizer still needs to approve your spot. You can withdraw while registration is open."
+        "descriptionPending": "The organizer still needs to approve your spot. You can withdraw while registration is open.",
+        "descriptionInvited": "Accept above to confirm your spot. You can also withdraw if you can't play."
+      },
+      "inviteCta": {
+        "title": "You're invited",
+        "description": "Accept to lock in your spot in the tournament.",
+        "descriptionDoubles": "Pick your partner, then accept to lock in your team's spot."
       },
       "addMyselfCta": {
         "title": "Playing too?",
@@ -4242,11 +4249,14 @@
       "register": "Register",
       "addMyself": "Add myself",
       "withdraw": "Withdraw",
+      "acceptInvite": "Accept invitation",
+      "accepting": "Accepting...",
       "registering": "Registering...",
       "withdrawing": "Withdrawing...",
       "opening": "Opening...",
       "closing": "Closing...",
       "registrationPendingLabel": "Registration pending approval",
+      "invitePendingLabel": "Invitation pending",
       "registeredLabel": "You're registered",
       "registeredWithPartnerLabel": "You're registered with {name}",
       "generateBracket": "Generate bracket",
