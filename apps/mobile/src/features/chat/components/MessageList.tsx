@@ -345,6 +345,17 @@ function MessageListComponent(
         keyExtractor={keyExtractor}
         inverted
         contentContainerStyle={styles.listContent}
+        // Dismiss the keyboard when the user drags the list. The message input
+        // is multiline (return inserts a newline, never closes the keyboard),
+        // so dragging is the primary dismiss gesture. "on-drag" works even in
+        // sparse conversations where there's little content to tap on.
+        keyboardDismissMode="on-drag"
+        // Pass taps to children (reactions, long-press, etc.) but dismiss the
+        // keyboard when a tap lands on non-interactive space.
+        keyboardShouldPersistTaps="handled"
+        // Keep the list draggable even when there's little/no content, so the
+        // "on-drag" dismiss gesture still fires in sparse conversations.
+        alwaysBounceVertical
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.2}
         ListFooterComponent={renderFooter}
