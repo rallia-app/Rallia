@@ -9879,6 +9879,12 @@
       "title": "Rejoindre cette partie",
       "description": "Scannez le code QR avec votre téléphone pour télécharger Rallia et rejoindre cette partie.",
       "qrHint": "Ouvrez Rallia sur votre téléphone pour rejoindre cette partie."
+    },
+    "cardStatus": {
+      "joined": "Vous êtes inscrit",
+      "requested": "En attente d'approbation",
+      "waitlisted": "Sur la liste d'attente",
+      "invited": "Vous êtes invité"
     }
   },
   "matchPage": {
@@ -10678,6 +10684,149 @@
       "description": "Cette version de Rallia n'est plus prise en charge. Mets à jour vers la dernière version pour continuer à jouer.",
       "versionInfo": "Tu as la version {current} · la version {required} ou plus récente est requise",
       "cta": "Mettre à jour"
+    }
+  },
+  "webJoin": {
+    "pageTitle": "Rejoindre une partie de {sport} sur Rallia",
+    "notFound": "Partie introuvable",
+    "progress": "Création du profil",
+    "continue": "Continuer",
+    "back": "Retour",
+    "finish": "Rejoindre la partie",
+    "finishRequest": "Demander à rejoindre",
+    "finishWaitlist": "Rejoindre la liste d'attente",
+    "stepCounter": "Étape {current} sur {total}",
+    "steps": {
+      "account": "Compte",
+      "profile": "Profil",
+      "level": "Niveau",
+      "location": "Secteur",
+      "preferences": "Préférences"
+    },
+    "auth": {
+      "title": "Connectez-vous pour rejoindre",
+      "description": "Créez votre compte ou connectez-vous pour rejoindre cette partie.",
+      "requestTitle": "Connectez-vous pour demander",
+      "requestDescription": "Créez votre compte ou connectez-vous pour demander une place. L'hôte examinera votre demande.",
+      "google": "Continuer avec Google",
+      "orEmail": "ou",
+      "email": "Courriel",
+      "emailPlaceholder": "vous@exemple.com",
+      "otp": "Code de vérification",
+      "otpHint": "Entrez le code à 6 chiffres envoyé à {email}",
+      "continue": "Envoyer le code",
+      "verify": "Vérifier",
+      "resend": "Renvoyer le code",
+      "changeEmail": "Utiliser un autre courriel"
+    },
+    "review": {
+      "title": "Prêt à rejoindre?",
+      "description": "Vous êtes connecté et votre profil est prêt. Confirmez pour rejoindre cette partie.",
+      "cta": "Rejoindre cette partie",
+      "requestTitle": "Prêt à demander?",
+      "requestDescription": "L'hôte approuve les joueurs avant qu'ils rejoignent. Envoyez une demande et nous vous aviserons de sa réponse.",
+      "requestCta": "Demander à rejoindre",
+      "waitlistCta": "Rejoindre la liste d'attente"
+    },
+    "profile": {
+      "vs": "VS",
+      "matchup": "La formation",
+      "you": "Vous",
+      "addToCalendar": "Ajouter au calendrier",
+      "openDirections": "Itinéraire",
+      "startsToday": "Commence aujourd'hui",
+      "startsTomorrow": "Commence demain",
+      "startsInDays": "Dans {count, plural, one {1 jour} other {# jours}}",
+      "startedAlready": "En cours"
+    },
+    "personal": {
+      "title": "À propos de vous",
+      "description": "Quelques infos pour que les autres joueurs sachent avec qui ils jouent.",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "birthDate": "Date de naissance",
+      "gender": "Genre",
+      "genderOptions": {
+        "male": "Homme",
+        "female": "Femme",
+        "other": "Autre"
+      }
+    },
+    "rating": {
+      "title": "Votre niveau en {sport}",
+      "description": "Choisissez le niveau qui vous décrit le mieux. Vous pourrez le modifier plus tard dans l'app."
+    },
+    "location": {
+      "title": "Où jouez-vous?",
+      "description": "Votre code postal nous aide à trouver des parties près de chez vous.",
+      "postalCode": "Code postal",
+      "geocoding": "Recherche de votre secteur...",
+      "detected": "Secteur confirmé"
+    },
+    "preferences": {
+      "title": "Préférences de jeu",
+      "description": "Presque fini — encore quelques détails.",
+      "playingHand": "Main dominante",
+      "matchType": "Type de partie",
+      "handOptions": {
+        "right": "Droite",
+        "left": "Gauche",
+        "both": "Les deux"
+      },
+      "matchTypeOptions": {
+        "casual": "Loisir",
+        "competitive": "Compétitif",
+        "both": "Les deux"
+      }
+    },
+    "success": {
+      "joinedTitle": "C'est confirmé!",
+      "joinedDescription": "Votre profil est prêt. Téléchargez l'app et connectez-vous avec le même compte pour discuter avec les autres joueurs, voir les détails de la partie et recevoir les notifications.",
+      "requestTitle": "Demande envoyée!",
+      "requestDescription": "Votre demande a été envoyée au créateur de la partie. Téléchargez l'app pour discuter avec les autres joueurs, suivre sa réponse et recevoir les notifications.",
+      "waitlistTitle": "Vous êtes sur la liste d'attente",
+      "waitlistDescription": "La partie est complète, mais vous êtes sur la liste d'attente. Téléchargez l'app pour discuter avec les autres joueurs, être avisé si une place se libère et suivre les mises à jour.",
+      "qrHint": "Scannez avec votre téléphone pour télécharger Rallia",
+      "chatCta": "Discuter avec les joueurs",
+      "chatLocked": "Le clavardage avec les autres joueurs s'ouvre une fois que vous êtes dans la partie.",
+      "leaveCta": "Quitter cette partie"
+    },
+    "left": {
+      "title": "Vous avez quitté la partie",
+      "description": "Vous ne faites plus partie de cette partie. Pour en rejoindre une autre, téléchargez l'application Rallia."
+    },
+    "errors": {
+      "authFailed": "La connexion a échoué. Veuillez réessayer.",
+      "requiredFields": "Veuillez remplir tous les champs obligatoires.",
+      "minimumAge": "Vous devez avoir au moins 18 ans pour utiliser cette application.",
+      "selectRating": "Veuillez sélectionner votre niveau.",
+      "invalidPostalCode": "Entrez un code postal valide.",
+      "ratingsLoadFailed": "Impossible de charger les niveaux. Actualisez la page.",
+      "submitFailed": "Une erreur est survenue. Veuillez réessayer.",
+      "genderMismatch": "Cette partie est réservée à des joueurs d'un autre genre, vous ne pouvez donc pas la rejoindre.",
+      "matchUnavailable": "Cette partie n'est plus disponible. Elle a peut-être été annulée ou a déjà commencé.",
+      "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
+      "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
+      "webJoinLimit": "Vous avez déjà rejoint une partie sur le web. Téléchargez l'application Rallia pour rejoindre d'autres parties et discuter avec les joueurs.",
+      "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici."
+    },
+    "chat": {
+      "title": "Clavardage de la partie",
+      "subtitle": "{count, plural, one {# joueur} other {# joueurs}}",
+      "back": "Retour à la partie",
+      "loadEarlier": "Voir les messages précédents",
+      "empty": "Aucun message pour l'instant. Lancez la conversation!",
+      "notReady": "Le clavardage s'ouvre dès qu'un autre joueur rejoint la partie. Revenez bientôt!",
+      "signInPrompt": "Connectez-vous et rejoignez la partie pour discuter avec les autres joueurs.",
+      "signInCta": "Aller à la partie",
+      "composerPlaceholder": "Écrivez un message…",
+      "send": "Envoyer",
+      "you": "Vous",
+      "rules": {
+        "title": "On garde ça amical",
+        "body": "Restez respectueux, gardez les messages en lien avec la partie et évitez de partager vos coordonnées personnelles tant que vous n'êtes pas à l'aise. Les messages peuvent être modérés.",
+        "accept": "Compris, on clavarde"
+      }
     }
   }
 }

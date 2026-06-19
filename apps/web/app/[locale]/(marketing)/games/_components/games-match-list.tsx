@@ -2,15 +2,15 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { CalendarX, Loader2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import JoinMatchDialog from './join-match-dialog';
 import MatchCardSkeleton from './match-card-skeleton';
 import PublicMatchCard, { type PublicMatch } from './public-match-card';
 import { getRelativeDateLabel } from './utils';
+import { createClient } from '@/lib/supabase/client';
 
 const PAGE_SIZE = 12;
 
@@ -27,6 +27,8 @@ interface GamesMatchListProps {
 export default function GamesMatchList({ initialMatches }: GamesMatchListProps) {
   const t = useTranslations('gamesPage');
   const locale = useLocale();
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
 
   const [matches, setMatches] = useState<PublicMatch[]>(initialMatches);
   const [hasMore, setHasMore] = useState(initialMatches.length >= PAGE_SIZE);
@@ -34,16 +36,35 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [locationLoaded, setLocationLoaded] = useState(false);
+  const [viewerPlayerId, setViewerPlayerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) setViewerPlayerId(data.session?.user?.id ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setViewerPlayerId(session?.user?.id ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   // Sport filter
   const [sports, setSports] = useState<Sport[]>([]);
   const [activeSportId, setActiveSportId] = useState<string | null>(null);
 
-  // Join dialog
-  const [joinMatchId, setJoinMatchId] = useState<string | null>(null);
-  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const handleJoin = (matchId: string) => {
+    router.push(`/join/match/${matchId}`);
+  };
 
-  // Fetch sports on mount
   useEffect(() => {
     (async () => {
       try {
@@ -178,22 +199,6 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
     }
   };
 
-  const handleJoin = (matchId: string) => {
-    const ua = navigator.userAgent.toLowerCase();
-    if (/iphone|ipad|ipod/.test(ua)) {
-      window.location.href = 'https://apps.apple.com/app/rallia/id6760482014';
-      return;
-    }
-    if (/android/.test(ua)) {
-      window.location.href =
-        'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
-      return;
-    }
-    // Desktop: show QR code dialog
-    setJoinMatchId(matchId);
-    setJoinDialogOpen(true);
-  };
-
   // Group matches by date
   const dateGroups = useMemo(() => {
     const groups: Array<{ label: string; date: string; matches: PublicMatch[] }> = [];
@@ -273,7 +278,11 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
             <div className="-mx-8 flex gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pl-8">
               {group.matches.map(match => (
                 <div key={match.id} className="w-[320px] shrink-0">
-                  <PublicMatchCard match={match} onJoin={handleJoin} />
+                  <PublicMatchCard
+                    match={match}
+                    viewerPlayerId={viewerPlayerId}
+                    onJoin={handleJoin}
+                  />
                 </div>
               ))}
               <div className="shrink-0 w-8 min-w-[2rem]" aria-hidden>
@@ -297,12 +306,6 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
           </Button>
         </div>
       )}
-
-      <JoinMatchDialog
-        matchId={joinMatchId}
-        open={joinDialogOpen}
-        onOpenChange={setJoinDialogOpen}
-      />
     </>
   );
 }

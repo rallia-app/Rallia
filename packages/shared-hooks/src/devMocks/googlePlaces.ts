@@ -178,19 +178,35 @@ function deterministicJitter(seed: string): number {
   return ((h % 1000) / 1000 - 0.5) * 0.1;
 }
 
+function findMockPlaceByPostal(normalizedPostal: string): MockPlace | undefined {
+  const normalized = normalizedPostal.toUpperCase();
+  const exact = MOCK_PLACES.find(place => place.postalCode.toUpperCase() === normalized);
+  if (exact) return exact;
+
+  const fsa = normalized.slice(0, 3);
+  return MOCK_PLACES.find(place => place.postalCode.toUpperCase().startsWith(fsa));
+}
+
 export async function mockGeocodePostalCode(
   normalizedPostal: string,
   country: 'CA' | 'US'
 ): Promise<PostalCodeLocation> {
   await wait();
-  const baseLat = country === 'CA' ? 45.5017 : 40.7128;
-  const baseLng = country === 'CA' ? -73.5673 : -74.006;
-  const lat = baseLat + deterministicJitter(normalizedPostal + 'lat');
-  const lng = baseLng + deterministicJitter(normalizedPostal + 'lng');
+  const matchedPlace = country === 'CA' ? findMockPlaceByPostal(normalizedPostal) : undefined;
+  const baseLat = matchedPlace?.latitude ?? (country === 'CA' ? 45.5017 : 40.7128);
+  const baseLng = matchedPlace?.longitude ?? (country === 'CA' ? -73.5673 : -74.006);
+  const lat = matchedPlace?.latitude ?? baseLat + deterministicJitter(normalizedPostal + 'lat');
+  const lng = matchedPlace?.longitude ?? baseLng + deterministicJitter(normalizedPostal + 'lng');
+  const formattedAddress = matchedPlace
+    ? `${normalizedPostal}, ${matchedPlace.city}, ${matchedPlace.province}, ${matchedPlace.country}`
+    : `${normalizedPostal}, ${country === 'CA' ? 'Canada' : 'USA'}`;
+
   return {
     postalCode: normalizedPostal,
     country,
-    formattedAddress: `${normalizedPostal}, ${country === 'CA' ? 'Canada' : 'USA'}`,
+    formattedAddress,
+    ...(matchedPlace?.city && { city: matchedPlace.city }),
+    ...(matchedPlace?.province && { province: matchedPlace.province }),
     latitude: lat,
     longitude: lng,
   };

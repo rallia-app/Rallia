@@ -16,6 +16,7 @@ import { Link, usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import LocaleToggle from './locale-toggle';
+import { MarketingHeaderSession } from './marketing-header-session';
 import ModeToggle from './mode-toggle';
 import { SocialIcons } from './social-icons';
 import ThemeLogo from './theme-logo';
@@ -229,11 +230,12 @@ export default function MobileNavSheet({ trigger = 'onLight' }: MobileNavSheetPr
               </p>
               <div
                 className={cn(
-                  'flex items-center gap-1',
+                  'flex items-center gap-2',
                   '[&_button]:!text-foreground/80 [&_button]:hover:!text-foreground [&_button]:hover:!bg-foreground/10',
                   'dark:[&_button]:!text-white dark:[&_button]:hover:!bg-white/10'
                 )}
               >
+                <MarketingHeaderSession className="text-foreground/70 hover:text-foreground dark:text-white/80 dark:hover:text-white" />
                 <LocaleToggle />
                 <ModeToggle />
               </div>
