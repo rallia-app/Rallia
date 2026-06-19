@@ -10554,11 +10554,23 @@
       "reassurance": "Tu peux changer d'avis chaque semaine — rien ne se passe si c'est désactivé.",
       "cta": "Lancer ma semaine"
     },
+    "opportunities": {
+      "bubble": "Des parties à tes heures sont déjà ouvertes proche de toi. Embarque! 🙌",
+      "empty": "Aucune partie ouverte ne fitte tes heures pour l'instant. Je t'en organise d'autres tout de suite après.",
+      "joined": "Inscrit",
+      "requested": "Demande envoyée",
+      "waitlisted": "Liste d'attente",
+      "cta": "Continuer"
+    },
     "step4": {
       "bubble": "Boom 💥 C'est tout réglé. Je m'occupe du reste — on se voit sur le terrain! 🙌",
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",
+      "summaryJoined": "{count} parties rejointes",
+      "summaryJoinedOne": "1 partie rejointe",
+      "summaryRequested": "Demandes envoyées pour {count} parties",
+      "summaryRequestedOne": "Demande envoyée pour 1 partie",
       "summaryAutoCreate": "Matchmaking automatique activé",
       "summaryAutoInvite": "Invitations automatiques activées",
       "cta": "Retour à l'accueil"

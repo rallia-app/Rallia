@@ -200,12 +200,13 @@ interface ThemeColors {
  * - "Month Day" for dates further out (e.g., "Jan 15")
  *
  * Time format is locale-aware:
- * - English: 12-hour format (e.g., "2:00 PM")
- * - French: 24-hour format (e.g., "14:00")
+ * - English: 12-hour format (e.g., "2:00 PM · 1h30")
+ * - French: 24-hour format (e.g., "14:00 · 1h30")
  */
 function getRelativeTimeDisplay(
   dateString: string,
   startTime: string,
+  endTime: string,
   timezone: string,
   locale: string,
   t: (key: TranslationKey, options?: TranslationOptions) => string
@@ -231,9 +232,24 @@ function getRelativeTimeDisplay(
   // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
 
-  const separator = t('common.time.timeSeparator');
+  // Calculate duration from start and end times
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  let durationMin = endH * 60 + endM - (startH * 60 + startM);
+  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
+  const durationHours = Math.floor(durationMin / 60);
+  const durationRemMin = durationMin % 60;
+  const durationStr =
+    durationHours > 0
+      ? durationRemMin > 0
+        ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
+        : `${durationHours}h`
+      : `${durationRemMin}min`;
 
-  return { label: `${dateLabel}${separator}${startResult.formattedTime}`, isUrgent };
+  const separator = t('common.time.timeSeparator');
+  const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
+
+  return { label: `${dateLabel}${separator}${timeRange}`, isUrgent };
 }
 
 /**
@@ -1065,6 +1081,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,
+    match.end_time,
     match.timezone,
     locale,
     t

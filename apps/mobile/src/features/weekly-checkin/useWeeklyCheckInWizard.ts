@@ -16,19 +16,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { errorHaptic, mediumHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
-import type { DayEnum } from '@rallia/shared-types';
+import type { DayEnum, MatchWithDetails } from '@rallia/shared-types';
 
 import * as Analytics from '#/services/analytics';
 
 import {
   useAvailabilityKeys,
   useCheckInContext,
+  useCheckInMatchOpportunities,
   useRecordCheckIn,
   type CheckInContext,
   type CheckInResult,
   type HourGrid,
 } from './api';
-import { countCellsForDays } from './window';
+import { countCellsForDays, slotsForDays } from './window';
 
 // Analytics step labels, keyed by step index. The streak recap leads as the
 // motivational hook, then the schedule, then the auto-match planning step —
@@ -37,8 +38,9 @@ import { countCellsForDays } from './window';
 const STEP_NAMES: Record<WizardStep, string> = {
   1: 'recap_goal',
   2: 'availability',
-  3: 'auto_match',
-  4: 'all_set',
+  3: 'match_opportunities',
+  4: 'auto_match',
+  5: 'all_set',
 };
 
 // Shared with apps/mobile/src/screens/Home.tsx (AVAILABILITY_BANNER_COOLDOWN_KEY).
@@ -51,8 +53,8 @@ export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-
 // match-creation logic to have something to work with.
 export const MIN_AVAILABILITY_CELLS = 3;
 
-export type WizardStep = 1 | 2 | 3 | 4;
-const TOTAL_STEPS: WizardStep = 4;
+export type WizardStep = 1 | 2 | 3 | 4 | 5;
+const TOTAL_STEPS: WizardStep = 5;
 
 export interface UseWeeklyCheckInWizard {
   // Step navigation
@@ -99,6 +101,15 @@ export interface UseWeeklyCheckInWizard {
    * the header's step numbering (3 dots instead of 4).
    */
   skipRecapStep: boolean;
+
+  /** "Games for you": public matches fitting the just-declared availability. */
+  opportunities: MatchWithDetails[];
+  opportunitiesLoading: boolean;
+  /**
+   * Settled with zero fitting matches → the opportunities step is skipped
+   * (no dead screen). Drives both navigation and the header's step numbering.
+   */
+  skipOpportunitiesStep: boolean;
 
   /** Epoch ms when the wizard opened (analytics duration). */
   startedAt: number;
@@ -183,6 +194,28 @@ export function useWeeklyCheckInWizard(
   // of replaying a recap with nothing to decide.
   const skipRecapStep = !!context?.frequencyAlreadySetThisWeek;
 
+  // "Games for you" — prefetched from the availability step so results are ready
+  // by the time the user continues. Slots are the just-declared (in-memory) cells
+  // within the window; the query is gated on having any and on the step being
+  // reachable (availability or the opportunities step itself).
+  const opportunitySlots = useMemo(
+    () => slotsForDays(availability, windowDays),
+    [availability, windowDays]
+  );
+  const {
+    data: opportunities = [],
+    isLoading: opportunitiesIsLoading,
+    isFetched: opportunitiesFetched,
+  } = useCheckInMatchOpportunities({
+    slots: opportunitySlots,
+    timezone: context?.timezone,
+    enabled: currentStep >= 2 && currentStep <= 3,
+  });
+  const opportunitiesLoading = opportunitiesIsLoading && opportunitySlots.length > 0;
+  // Settled with nothing that fits → skip the step. Only true once the query has
+  // actually run for the current slots (isFetched guards the not-yet-run state).
+  const skipOpportunitiesStep = opportunitiesFetched && opportunities.length === 0;
+
   // Jump past the recap step once the context lands (only if the user is still
   // sitting on step 1, which they are — step 1 shows a loader until context).
   const skipDecidedRef = useRef(false);
@@ -193,6 +226,14 @@ export function useWeeklyCheckInWizard(
       setCurrentStep(prev => (prev === 1 ? 2 : prev));
     }
   }, [context]);
+
+  // Auto-advance past "Games for you" when nothing fits — covers the case where
+  // the query settles empty only after the user already landed on the step.
+  useEffect(() => {
+    if (currentStep === 3 && skipOpportunitiesStep) {
+      setCurrentStep(4);
+    }
+  }, [currentStep, skipOpportunitiesStep]);
 
   // Submission
   const { mutateAsync: recordCheckIn, isPending: isSubmitting } = useRecordCheckIn();
@@ -217,29 +258,47 @@ export function useWeeklyCheckInWizard(
     setCurrentStep(step);
   }, []);
   const goNext = useCallback(() => {
-    // Funnel step_completed for the step being left. Steps 1 (recap_goal) and
-    // 2 (availability) advance via goNext; step 3 (auto_match) completes via submit().
+    // Funnel step_completed for the step being left. Steps 1 (recap_goal),
+    // 2 (availability) and 3 (match_opportunities) advance via goNext; step 4
+    // (auto_match) completes via submit().
     if (currentStep === 1) {
       Analytics.weeklyCheckinStepCompleted({
         step_name: STEP_NAMES[1],
         step_index: 1,
         frequency_goal: frequencyGoal,
       });
+      setCurrentStep(2);
     } else if (currentStep === 2) {
       Analytics.weeklyCheckinStepCompleted({
         step_name: STEP_NAMES[2],
         step_index: 2,
         availability_cells: availability.size,
       });
+      // Skip "Games for you" when nothing fits.
+      setCurrentStep(skipOpportunitiesStep ? 4 : 3);
+    } else if (currentStep === 3) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[3],
+        step_index: 3,
+        opportunities_count: opportunities.length,
+      });
+      setCurrentStep(4);
+    } else {
+      setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
     }
-    setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
     mediumHaptic();
-  }, [currentStep, availability, frequencyGoal]);
+  }, [currentStep, availability, frequencyGoal, skipOpportunitiesStep, opportunities.length]);
   const goBack = useCallback(() => {
     // When the recap step is skipped, availability (step 2) is the floor.
     const minStep = skipRecapStep ? 2 : 1;
-    setCurrentStep(prev => (prev > minStep ? ((prev - 1) as WizardStep) : prev));
-  }, [skipRecapStep]);
+    setCurrentStep(prev => {
+      if (prev <= minStep) return prev;
+      // Mirror the forward skip: jump straight from auto_match back to
+      // availability when "Games for you" was skipped.
+      if (prev === 4 && skipOpportunitiesStep) return 2;
+      return (prev - 1) as WizardStep;
+    });
+  }, [skipRecapStep, skipOpportunitiesStep]);
 
   // Validation — step 1 (recap + goal) gates on a valid frequency (defaults are
   // valid). Step 2 (availability) gates on ≥ MIN_AVAILABILITY_CELLS.
@@ -252,8 +311,10 @@ export function useWeeklyCheckInWizard(
       case 2:
         return windowCellCount >= MIN_AVAILABILITY_CELLS;
       case 3:
-        return true;
+        return true; // match_opportunities — joining is optional, always continue
       case 4:
+        return true; // auto_match — both opt-in states are submittable
+      case 5:
         return false; // no advance from the success step
       default:
         return false;
@@ -271,10 +332,10 @@ export function useWeeklyCheckInWizard(
         availability,
         windowDays,
       });
-      // The auto-match step (step 3) completes on a successful submit.
+      // The auto-match step (step 4) completes on a successful submit.
       Analytics.weeklyCheckinStepCompleted({
-        step_name: STEP_NAMES[3],
-        step_index: 3,
+        step_name: STEP_NAMES[4],
+        step_index: 4,
         auto_create: autoCreate,
         auto_invite: autoInvite,
       });
@@ -289,7 +350,7 @@ export function useWeeklyCheckInWizard(
       });
       setResult(res);
       successHaptic();
-      setCurrentStep(4);
+      setCurrentStep(5);
       onComplete?.(res);
     } catch (err) {
       errorHaptic();
@@ -330,6 +391,10 @@ export function useWeeklyCheckInWizard(
     windowDays,
     windowCellCount,
     skipRecapStep,
+
+    opportunities,
+    opportunitiesLoading,
+    skipOpportunitiesStep,
 
     // Epoch ms when the wizard opened — for analytics duration on completion.
     startedAt: startedAtRef.current,

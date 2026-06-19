@@ -48,6 +48,8 @@ import type {
   MatchJoinModeEnum,
   GenderEnum,
   BadgeStatusEnum,
+  DayEnum,
+  Json,
   MatchParticipantStatusEnum,
   UpcomingMatchFilter,
   PastMatchFilter,
@@ -3431,9 +3433,41 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     };
   }
 
-  // Step 2: Fetch full match details for the found IDs
+  // Step 2-4: hydrate the found IDs into full MatchWithDetails (shared helper,
+  // also used by the weekly check-in "Games for you" step).
   const matchIds = results.map(r => r.match_id);
-  const distanceMap = new Map(results.map(r => [r.match_id, r.distance_meters]));
+  const distanceMap = new Map<string, number | null>(
+    results.map(r => [r.match_id, r.distance_meters])
+  );
+  const orderedMatches = await hydrateMatchDetailsByIds(matchIds, distanceMap, sportId);
+
+  if (orderedMatches.length === 0) {
+    return { matches: [], hasMore: false, nextOffset: null };
+  }
+
+  return {
+    matches: orderedMatches,
+    hasMore,
+    nextOffset: hasMore ? offset + limit : null,
+    totalCount: countResult.data ?? undefined,
+  };
+}
+
+/**
+ * Hydrate match IDs (in the given order) into full MatchWithDetails, attaching
+ * creator/participant profiles, per-sport ratings (when `sportId` is provided),
+ * open-court availability, and distance. Input order is preserved.
+ *
+ * Shared by getPublicMatches and getCheckInMatchOpportunities. When `sportId` is
+ * omitted (e.g. results spanning multiple sports) the per-sport ratings
+ * enrichment is skipped.
+ */
+async function hydrateMatchDetailsByIds(
+  matchIds: string[],
+  distanceMap: Map<string, number | null>,
+  sportId?: string | null
+): Promise<MatchWithDetailsAndDistance[]> {
+  if (matchIds.length === 0) return [];
 
   const { data: matchesData, error: matchError } = await supabase
     .from('match')
@@ -3525,11 +3559,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   }
 
   if (!matchesData || matchesData.length === 0) {
-    return {
-      matches: [],
-      hasMore: false,
-      nextOffset: null,
-    };
+    return [];
   }
 
   // Step 3: Fetch profiles for all players
@@ -3679,7 +3709,7 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     matchMap.set(match.id, matchWithDistance);
   });
 
-  // Maintain order from RPC results (sorted by date/time)
+  // Maintain caller's order (the originating query already sorted the IDs).
   const orderedMatches = matchIds
     .map(id => matchMap.get(id))
     .filter(Boolean) as MatchWithDetailsAndDistance[];
@@ -3688,12 +3718,48 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
   // "N courts available" chip for unreserved future matches.
   applyCourtSlots(orderedMatches, await courtSlotsPromise);
 
-  return {
-    matches: orderedMatches,
-    hasMore,
-    nextOffset: hasMore ? offset + limit : null,
-    totalCount: countResult.data ?? undefined,
-  };
+  return orderedMatches;
+}
+
+/**
+ * Weekly check-in "Games for you": existing PUBLIC matches with open spots that
+ * fit the availability the player just declared in the wizard. Delegates all
+ * filtering (favorite/distance, exact rating, declared day+hour slot, gender,
+ * open spot, today…today+3 window, multi-sport) to get_checkin_match_opportunities,
+ * then hydrates the matching IDs into MatchWithDetails for MatchCard.
+ *
+ * `slots` are the in-memory (not-yet-persisted) availability cells: one entry per
+ * selected (weekday, hour). Returns soonest-first in the RPC's order.
+ */
+export async function getCheckInMatchOpportunities(params: {
+  slots: { day: DayEnum; hour: number }[];
+  timezone?: string | null;
+  limit?: number;
+}): Promise<MatchWithDetailsAndDistance[]> {
+  const { slots, timezone, limit = 20 } = params;
+  if (!slots || slots.length === 0) return [];
+
+  const { data, error } = await supabase.rpc('get_checkin_match_opportunities', {
+    p_slots: slots as unknown as Json,
+    p_timezone: timezone ?? null,
+    p_limit: limit,
+  });
+
+  if (error) {
+    throw new Error(`Failed to fetch check-in match opportunities: ${error.message}`);
+  }
+
+  const results = (data ?? []) as PublicMatchResult[];
+  if (results.length === 0) return [];
+
+  const matchIds = results.map(r => r.match_id);
+  const distanceMap = new Map<string, number | null>(
+    results.map(r => [r.match_id, r.distance_meters])
+  );
+  // sportId omitted on purpose: opportunities can span multiple sports, so the
+  // single-sport ratings enrichment is skipped (the rating badge still renders
+  // from the match's own min_rating_score).
+  return hydrateMatchDetailsByIds(matchIds, distanceMap);
 }
 
 // =============================================================================

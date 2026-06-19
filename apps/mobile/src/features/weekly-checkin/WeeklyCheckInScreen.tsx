@@ -27,7 +27,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
-import { useThemeStyles } from '@rallia/shared-hooks';
+import { useThemeStyles, useAuth } from '@rallia/shared-hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { accent, primary, spacingPixels } from '@rallia/design-system';
 
@@ -37,9 +37,11 @@ import { useTranslation } from '#/hooks';
 import { WizardHeader } from './components/WizardHeader';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
+import { MatchOpportunitiesStep } from './steps/MatchOpportunitiesStep';
 import { AutoMatchStep } from './steps/AutoMatchStep';
 import { AllSetStep } from './steps/AllSetStep';
 import { useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
+import { useJoinOpportunity } from './useJoinOpportunity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -54,6 +56,21 @@ export function WeeklyCheckInScreen() {
   }, [navigation]);
 
   const wizard = useWeeklyCheckInWizard();
+
+  const { session } = useAuth();
+  const playerId = session?.user?.id ?? null;
+
+  // One-click join state for the "Games for you" step — lifted to the screen so
+  // the All-Set recap can report what was joined / asked to join there.
+  const { join, outcomes, pendingId } = useJoinOpportunity(playerId);
+  const joinedCount = useMemo(
+    () => Object.values(outcomes).filter(o => o === 'joined').length,
+    [outcomes]
+  );
+  const requestedCount = useMemo(
+    () => Object.values(outcomes).filter(o => o === 'requested').length,
+    [outcomes]
+  );
 
   // Analytics: which entry point opened the wizard (set by the navigator param).
   const route = useRoute();
@@ -72,6 +89,21 @@ export function WeeklyCheckInScreen() {
     });
   }, [wizard.context, source]);
 
+  // Fire `weekly_checkin_opportunities_viewed` once, the first time the step is
+  // reached with at least one real match (the top of the join funnel).
+  const oppViewedFiredRef = useRef(false);
+  useEffect(() => {
+    if (oppViewedFiredRef.current) return;
+    if (wizard.currentStep !== 3 || wizard.opportunitiesLoading) return;
+    if (wizard.opportunities.length === 0) return;
+    oppViewedFiredRef.current = true;
+    const sportsCount = new Set(wizard.opportunities.map(m => m.sport?.id).filter(Boolean)).size;
+    Analytics.weeklyCheckinOpportunitiesViewed({
+      opportunities_count: wizard.opportunities.length,
+      sports_count: sportsCount,
+    });
+  }, [wizard.currentStep, wizard.opportunitiesLoading, wizard.opportunities]);
+
   // Warm light surface in day mode (accent-50 → primary-50, both from the
   // design-system palette); soft dark theme background in night mode.
   // We keep a 2-stop gradient on both so the canvas doesn't feel chromeless.
@@ -87,17 +119,37 @@ export function WeeklyCheckInScreen() {
     SheetManager.hideAll();
   }, []);
 
-  // Slide pager — single translateX animation across all 4 steps.
+  // Slide pager — single translateX animation across all 5 steps. A skip (recap
+  // or "Games for you") moves more than one step at once; animating that would
+  // visibly fly over the hidden middle step, so snap instantly for multi-step
+  // jumps and only animate genuine single-step navigation.
   const slideAnim = useMemo(() => new Animated.Value(0), []);
+  const prevStepRef = useRef(wizard.currentStep);
 
   useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: -(wizard.currentStep - 1) * SCREEN_WIDTH,
-      duration: 280,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    const delta = Math.abs(wizard.currentStep - prevStepRef.current);
+    prevStepRef.current = wizard.currentStep;
+    const target = -(wizard.currentStep - 1) * SCREEN_WIDTH;
+    if (delta > 1) {
+      slideAnim.setValue(target);
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: target,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
   }, [wizard.currentStep, slideAnim]);
+
+  // Progress dots: drop any skipped step from both the total and the current
+  // index so the header reads e.g. "2 of 4" when "Games for you" is skipped.
+  const skippedBefore =
+    (wizard.skipRecapStep && wizard.currentStep > 1 ? 1 : 0) +
+    (wizard.skipOpportunitiesStep && wizard.currentStep > 3 ? 1 : 0);
+  const displayedStep = wizard.currentStep - skippedBefore;
+  const displayedTotalSteps =
+    wizard.totalSteps - (wizard.skipRecapStep ? 1 : 0) - (wizard.skipOpportunitiesStep ? 1 : 0);
 
   // CTA → submit transition from the auto-match step to the All-Set step.
   // Fire mediumHaptic immediately on press so the tap feels responsive — the
@@ -136,12 +188,13 @@ export function WeeklyCheckInScreen() {
           to clear the status bar / notch. */}
       <View style={{ height: Platform.OS === 'ios' ? spacingPixels[5] : insets.top }} />
 
-      {/* When the recap step is skipped, the header renumbers to 3 dots so
-          availability reads as step 1 of 3. */}
+      {/* Dots exclude any skipped step. Recap (step 1) is skipped when the goal
+          is already set this week; "Games for you" (step 3) is skipped when no
+          match fits — so either can drop out of the count and renumbering. */}
       <WizardHeader
-        currentStep={wizard.skipRecapStep ? wizard.currentStep - 1 : wizard.currentStep}
-        totalSteps={wizard.skipRecapStep ? wizard.totalSteps - 1 : wizard.totalSteps}
-        showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 4}
+        currentStep={displayedStep}
+        totalSteps={displayedTotalSteps}
+        showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 5}
         onBack={wizard.goBack}
       />
 
@@ -149,7 +202,7 @@ export function WeeklyCheckInScreen() {
         style={[
           styles.pager,
           {
-            width: SCREEN_WIDTH * 4,
+            width: SCREEN_WIDTH * 5,
             // Bottom safe-area inset keeps the CTA above the Android nav bar
             // / iOS home indicator. Each step's footer adds its own additional
             // breathing room on top of this.
@@ -202,6 +255,18 @@ export function WeeklyCheckInScreen() {
         </StepSlot>
 
         <StepSlot>
+          <MatchOpportunitiesStep
+            opportunities={wizard.opportunities}
+            isLoading={wizard.opportunitiesLoading}
+            playerId={playerId}
+            join={join}
+            outcomes={outcomes}
+            pendingId={pendingId}
+            onContinue={wizard.goNext}
+          />
+        </StepSlot>
+
+        <StepSlot>
           <AutoMatchStep
             autoCreate={wizard.autoCreate}
             setAutoCreate={wizard.setAutoCreate}
@@ -219,6 +284,8 @@ export function WeeklyCheckInScreen() {
               hoursConfirmed={wizard.windowCellCount}
               autoCreate={wizard.autoCreate}
               autoInvite={wizard.autoInvite}
+              joinedCount={joinedCount}
+              requestedCount={requestedCount}
               onDone={handleDone}
             />
           )}
