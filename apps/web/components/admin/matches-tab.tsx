@@ -4,50 +4,34 @@ import { useMatchQualityAnalytics, type MatchQualityPoint } from '@rallia/shared
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
-import {
-  daysCoveringLastNWeeks,
-  formatWeekLabel,
-  lastNWeekStarts,
-  weekStartOf,
-} from './week-utils';
+import { daysCoveringLastNWeeks, lastNWeekStarts, shortWeekLabel, weekStartOf } from './week-utils';
+import { RateTrendChart, StackedFunnelChart, type TrendPoint } from './weekly-trend-charts';
 
 import { AutoInviteFunnel } from '@/components/admin/auto-invite-funnel';
-import { KpiCard } from '@/components/admin/kpi-card';
-import {
-  MultiSeriesAreaChart,
-  type ChartPoint,
-  type ChartSeries,
-} from '@/components/admin/multi-series-area-chart';
+import { InsightCardHeader, SegmentedToggle } from '@/components/admin/insight-card';
+import { WindowSelect } from '@/components/admin/window-select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DAY_OPTIONS = [7, 30, 90] as const;
 type DaysWindow = (typeof DAY_OPTIONS)[number];
 
-const SEGMENTS = ['all', 'auto', 'nonAuto'] as const;
+const VIEWS = ['lifecycle', 'autoInvites', 'feedback'] as const;
+type View = (typeof VIEWS)[number];
+const VIEW_LABEL: Record<View, string> = {
+  lifecycle: 'matchesTab.tabLifecycle',
+  autoInvites: 'matchesTab.tabAutoInvites',
+  feedback: 'matchesTab.tabFeedback',
+};
+
+const SEGMENTS = ['all', 'auto', 'organic'] as const;
 type Segment = (typeof SEGMENTS)[number];
 const SEGMENT_LABEL: Record<Segment, string> = {
   all: 'matchesTab.segmentAll',
   auto: 'matchesTab.sourceAuto',
-  nonAuto: 'matchesTab.sourceOrganic',
+  organic: 'matchesTab.sourceOrganic',
 };
 
 type FunnelView = 'cumulative' | 'weekly';
@@ -56,348 +40,228 @@ const WEEKS_SHOWN = 6;
 
 export function MatchesTab() {
   const t = useTranslations('admin.analytics');
-  const [days, setDays] = useState<DaysWindow>(30);
+  const [view, setView] = useState<View>('lifecycle');
 
-  const { data, loading } = useMatchQualityAnalytics(days);
+  // Each insight owns its own time window (rendered in its card header); there
+  // is no shared/global window selector.
+  return (
+    <Tabs value={view} onValueChange={v => setView(v as View)}>
+      <TabsList className="h-auto flex-wrap">
+        {VIEWS.map(v => (
+          <TabsTrigger key={v} value={v} className="text-xs">
+            {t(VIEW_LABEL[v])}
+          </TabsTrigger>
+        ))}
+      </TabsList>
 
-  const { totals, autoTotals, nonAutoTotals, bySport, bySource } = useMemo(
-    () => aggregate(data),
-    [data]
+      <TabsContent value="lifecycle">
+        <LifecycleFunnelCard />
+      </TabsContent>
+      <TabsContent value="autoInvites">
+        <AutoInviteFunnel />
+      </TabsContent>
+      <TabsContent value="feedback">
+        <FeedbackCard />
+      </TabsContent>
+    </Tabs>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Lifecycle funnel — cumulative (windowed) + weekly cohort trend
+// ---------------------------------------------------------------------------
+
+function LifecycleFunnelCard() {
+  const t = useTranslations('admin.analytics');
+  const [days, setDays] = useState<DaysWindow>(30);
   const [segment, setSegment] = useState<Segment>('all');
-  const [funnelView, setFunnelView] = useState<FunnelView>('cumulative');
-  // Weekly cohorts always cover the last 6 ISO weeks (through Sunday so the
-  // current week's scheduled matches show), fetched separately from the
-  // window-bound data so the cumulative views stay on the selected window.
+  const [funnelView, setFunnelView] = useState<FunnelView>('weekly');
+
+  // Cumulative is window-bound; weekly always covers the last 6 ISO weeks
+  // (through Sunday so the current week shows). Only the active view fetches.
+  const { data, loading } = useMatchQualityAnalytics(days, false, funnelView === 'cumulative');
+  const { totals, autoTotals, nonAutoTotals } = useMemo(() => aggregate(data), [data]);
   const { data: weeklyData, loading: weeklyLoading } = useMatchQualityAnalytics(
     daysCoveringLastNWeeks(WEEKS_SHOWN),
     true,
     funnelView === 'weekly'
   );
   const weeklyFunnels = useMemo(() => aggregateWeekly(weeklyData, segment), [weeklyData, segment]);
+
   const funnelTotals =
-    segment === 'auto' ? autoTotals : segment === 'nonAuto' ? nonAutoTotals : totals;
+    segment === 'auto' ? autoTotals : segment === 'organic' ? nonAutoTotals : totals;
   const funnelCoverage =
     funnelTotals.feedbackExpected > 0
       ? (funnelTotals.feedbackPresent / funnelTotals.feedbackExpected) * 100
       : null;
-  const chart = useCreatedVsQualityChart(data, t);
-
-  const qualityRate = totals.played > 0 ? (totals.quality / totals.played) * 100 : null;
-  const avgRating = totals.ratingCount > 0 ? totals.ratingSum / totals.ratingCount : null;
-  const coverage =
-    totals.feedbackExpected > 0 ? (totals.feedbackPresent / totals.feedbackExpected) * 100 : null;
-
-  // North star: created matches that get a second player to commit (= filled).
-  const commitmentRate = totals.created > 0 ? (totals.filled / totals.created) * 100 : null;
-  const autoCommitment =
-    autoTotals.created > 0 ? (autoTotals.filled / autoTotals.created) * 100 : null;
-  const humanCommitment =
-    nonAutoTotals.created > 0 ? (nonAutoTotals.filled / nonAutoTotals.created) * 100 : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Time window selector */}
-      <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-        <Label className="text-xs text-muted-foreground">{t('utm.timeWindow')}</Label>
-        <Select value={String(days)} onValueChange={v => setDays(Number(v) as DaysWindow)}>
-          <SelectTrigger className="h-8 w-[110px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DAY_OPTIONS.map(option => (
-              <SelectItem key={option} value={String(option)}>
-                {t(`timeRange.${option}d`)}
-              </SelectItem>
+    <Card>
+      <InsightCardHeader
+        title={t('matchesTab.funnelTitle')}
+        hint={t(funnelView === 'weekly' ? 'matchesTab.weeklyFunnelHint' : 'matchesTab.funnelHint')}
+        controls={
+          <>
+            <SegmentedToggle
+              value={segment}
+              onChange={v => setSegment(v as Segment)}
+              options={SEGMENTS.map(s => ({ value: s, label: t(SEGMENT_LABEL[s]) }))}
+            />
+            <SegmentedToggle
+              value={funnelView}
+              onChange={v => setFunnelView(v as FunnelView)}
+              options={[
+                { value: 'weekly', label: t('matchesTab.viewWeekly') },
+                { value: 'cumulative', label: t('matchesTab.viewCumulative') },
+              ]}
+            />
+            {funnelView === 'cumulative' && (
+              <WindowSelect
+                value={days}
+                onChange={d => setDays(d as DaysWindow)}
+                options={DAY_OPTIONS}
+              />
+            )}
+          </>
+        }
+      />
+      <CardContent>
+        {(funnelView === 'weekly' ? weeklyLoading : loading) ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
             ))}
-          </SelectContent>
-        </Select>
-      </div>
+          </div>
+        ) : funnelView === 'weekly' ? (
+          weeklyFunnels.some(w => w.totals.created > 0) ? (
+            <WeeklyFunnels weeks={weeklyFunnels} t={t} />
+          ) : (
+            <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
+          )
+        ) : funnelTotals.created === 0 ? (
+          <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
+        ) : (
+          <Funnel totals={funnelTotals} coverage={funnelCoverage} t={t} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
-      {/* KPI strip — 2nd-player commitment north star + quality */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard
-          label={t('matchesTab.commitmentRate')}
-          value={commitmentRate != null ? `${commitmentRate.toFixed(0)}%` : '—'}
-          hint={t('matchesTab.commitmentRateHint', {
-            filled: totals.filled,
-            created: totals.created,
-            human: humanCommitment != null ? `${humanCommitment.toFixed(0)}%` : '—',
-            auto: autoCommitment != null ? `${autoCommitment.toFixed(0)}%` : '—',
-          })}
-          loading={loading}
-        />
-        <KpiCard
-          label={t('matchesTab.qualityGames')}
-          value={loading ? null : totals.quality}
-          hint={t('matchesTab.qualityGamesHint')}
-          loading={loading}
-        />
-        <KpiCard
-          label={t('matchesTab.qualityRate')}
-          value={qualityRate != null ? `${qualityRate.toFixed(0)}%` : '—'}
-          hint={t('matchesTab.qualityRateHint', { quality: totals.quality, played: totals.played })}
-          loading={loading}
-        />
-        <KpiCard
-          label={t('matchesTab.played')}
-          value={loading ? null : totals.played}
-          hint={t('matchesTab.playedHint')}
-          loading={loading}
-        />
-        <KpiCard
-          label={t('matchesTab.avgRating')}
-          value={avgRating != null ? avgRating.toFixed(1) : '—'}
-          loading={loading}
-        />
-        <KpiCard
-          label={t('matchesTab.feedbackCoverage')}
-          value={coverage != null ? `${coverage.toFixed(0)}%` : '—'}
-          hint={t('matchesTab.feedbackCoverageHint', {
-            present: totals.feedbackPresent,
-            expected: totals.feedbackExpected,
-          })}
-          loading={loading}
-        />
-      </div>
+// ---------------------------------------------------------------------------
+// Feedback — per-step participant completion (cumulative + weekly)
+// ---------------------------------------------------------------------------
 
-      {/* Lifecycle funnel — segmented by match source */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-base">{t('matchesTab.funnelTitle')}</CardTitle>
-              <p className="text-xs text-muted-foreground m-0 mt-1">
-                {t(
-                  funnelView === 'weekly' ? 'matchesTab.weeklyFunnelHint' : 'matchesTab.funnelHint'
-                )}
+function FeedbackCard() {
+  const t = useTranslations('admin.analytics');
+  const [days, setDays] = useState<DaysWindow>(30);
+  const [view, setView] = useState<FunnelView>('weekly');
+
+  // Only the active view fetches; weekly always covers the last 6 ISO weeks.
+  const { data, loading } = useMatchQualityAnalytics(days, false, view === 'cumulative');
+  const { totals } = useMemo(() => aggregate(data), [data]);
+  const { data: weeklyData, loading: weeklyLoading } = useMatchQualityAnalytics(
+    daysCoveringLastNWeeks(WEEKS_SHOWN),
+    true,
+    view === 'weekly'
+  );
+  const weeks = useMemo(() => aggregateWeekly(weeklyData, 'all'), [weeklyData]);
+
+  // Each post-match step as a share of expected participants (closed matches).
+  // Not strictly nested — check-in happens before the others — so these are
+  // completion rates, not a funnel.
+  const steps = [
+    { label: t('matchesTab.stepCheckedIn'), count: totals.feedbackCheckedIn },
+    { label: t('matchesTab.stepReported'), count: totals.feedbackPresent },
+    { label: t('matchesTab.stepRated'), count: totals.feedbackRated },
+    { label: t('matchesTab.stepDone'), count: totals.feedbackDone },
+  ] as const;
+
+  const weeklyPoints: TrendPoint[] = weeks.map(({ weekStart, totals: wt }) => {
+    const e = wt.feedbackExpected;
+    return {
+      week: shortWeekLabel(weekStart),
+      expected: e,
+      reported: e > 0 ? Math.round((wt.feedbackPresent / e) * 100) : 0,
+      done: e > 0 ? Math.round((wt.feedbackDone / e) * 100) : 0,
+    };
+  });
+
+  return (
+    <Card>
+      <InsightCardHeader
+        title={t('matchesTab.feedbackTitle')}
+        hint={t(view === 'weekly' ? 'matchesTab.feedbackWeeklyHint' : 'matchesTab.feedbackHint', {
+          expected: totals.feedbackExpected,
+        })}
+        controls={
+          <>
+            <SegmentedToggle
+              value={view}
+              onChange={v => setView(v as FunnelView)}
+              options={[
+                { value: 'weekly', label: t('matchesTab.viewWeekly') },
+                { value: 'cumulative', label: t('matchesTab.viewCumulative') },
+              ]}
+            />
+            {view === 'cumulative' && (
+              <WindowSelect
+                value={days}
+                onChange={d => setDays(d as DaysWindow)}
+                options={DAY_OPTIONS}
+              />
+            )}
+          </>
+        }
+      />
+      <CardContent>
+        {(view === 'weekly' ? weeklyLoading : loading) ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-7 w-full" />
+            ))}
+          </div>
+        ) : view === 'weekly' ? (
+          weeks.some(w => w.totals.feedbackExpected > 0) ? (
+            <div className="flex flex-col gap-3">
+              <RateTrendChart
+                data={weeklyPoints}
+                volumeKey="expected"
+                volumeLabel={t('matchesTab.feedbackExpectedLabel')}
+                series={[
+                  { key: 'reported', label: t('matchesTab.stepReported'), color: 'var(--chart-1)' },
+                  {
+                    key: 'done',
+                    label: t('matchesTab.stepDone'),
+                    color: 'var(--chart-2)',
+                    dash: '5 3',
+                  },
+                ]}
+              />
+              <p className="text-[11px] text-muted-foreground m-0">
+                {t('matchesTab.weeklyInProgress')}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Tabs value={segment} onValueChange={v => setSegment(v as Segment)}>
-                <TabsList className="h-8">
-                  {SEGMENTS.map(s => (
-                    <TabsTrigger key={s} value={s} className="text-xs">
-                      {t(SEGMENT_LABEL[s])}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-              <Tabs value={funnelView} onValueChange={v => setFunnelView(v as FunnelView)}>
-                <TabsList className="h-8">
-                  <TabsTrigger value="cumulative" className="text-xs">
-                    {t('matchesTab.viewCumulative')}
-                  </TabsTrigger>
-                  <TabsTrigger value="weekly" className="text-xs">
-                    {t('matchesTab.viewWeekly')}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
+          )
+        ) : totals.feedbackExpected === 0 ? (
+          <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
+        ) : (
+          <div className="space-y-3">
+            {steps.map(s => (
+              <BarRow
+                key={s.label}
+                label={s.label}
+                count={s.count}
+                total={totals.feedbackExpected}
+                tone="primary"
+              />
+            ))}
           </div>
-        </CardHeader>
-        <CardContent>
-          {(funnelView === 'weekly' ? weeklyLoading : loading) ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-8 w-full" />
-              ))}
-            </div>
-          ) : funnelView === 'weekly' ? (
-            weeklyFunnels.some(w => w.totals.created > 0) ? (
-              <WeeklyFunnels weeks={weeklyFunnels} t={t} />
-            ) : (
-              <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
-            )
-          ) : funnelTotals.created === 0 ? (
-            <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
-          ) : (
-            <Funnel totals={funnelTotals} coverage={funnelCoverage} t={t} />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Auto-generation invitation funnel (own time window + settle cohort) */}
-      <AutoInviteFunnel />
-
-      {/* Played vs quality over time */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t('matchesTab.chartTitle')}</CardTitle>
-          <p className="text-xs text-muted-foreground m-0 mt-1">{t('matchesTab.chartHint')}</p>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Skeleton className="h-[300px] w-full" />
-          ) : chart.hasData ? (
-            <MultiSeriesAreaChart
-              data={chart.chartData}
-              series={chart.chartSeries}
-              height={300}
-              formatDay={formatDayLabel}
-            />
-          ) : (
-            <div className="h-[300px] flex items-center justify-center">
-              <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quality drop-off diagnostic */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t('matchesTab.dropoffTitle')}</CardTitle>
-          <p className="text-xs text-muted-foreground m-0 mt-1">
-            {t('matchesTab.dropoffHint', { played: totals.played })}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-7 w-full" />
-              ))}
-            </div>
-          ) : totals.played === 0 ? (
-            <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
-          ) : (
-            <div className="space-y-3">
-              {(
-                [
-                  { label: t('matchesTab.dropNoShow'), count: totals.playedNoShow },
-                  { label: t('matchesTab.dropLate'), count: totals.playedLate },
-                  { label: t('matchesTab.dropLowRating'), count: totals.playedLowRating },
-                  { label: t('matchesTab.dropReported'), count: totals.playedReported },
-                ] as const
-              ).map(row => (
-                <BarRow
-                  key={row.label}
-                  label={row.label}
-                  count={row.count}
-                  total={totals.played}
-                  tone="rose"
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Per-sport breakdown */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t('matchesTab.sportBreakdown')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 w-full" />
-              ))}
-            </div>
-          ) : bySport.length === 0 ? (
-            <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('matchesTab.colSport')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colPlayed')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colQuality')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colRate')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colAvgRating')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bySport.map(row => {
-                    const rate =
-                      row.played > 0 ? ((row.quality / row.played) * 100).toFixed(0) : '—';
-                    const rating =
-                      row.ratingCount > 0 ? (row.ratingSum / row.ratingCount).toFixed(1) : '—';
-                    return (
-                      <TableRow key={row.sportId}>
-                        <TableCell className="font-medium">{row.sportName}</TableCell>
-                        <TableCell className="text-right">{row.played}</TableCell>
-                        <TableCell className="text-right">{row.quality}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline" className="text-xs">
-                            {rate !== '—' ? `${rate}%` : rate}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{rating}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Auto-matched vs organic */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t('matchesTab.sourceTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
-            </div>
-          ) : totals.played === 0 ? (
-            <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('matchesTab.sourceTitle')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colPlayed')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colQuality')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colRate')}</TableHead>
-                    <TableHead className="text-right">{t('matchesTab.colAvgRating')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(
-                    [
-                      { label: t('matchesTab.sourceAuto'), agg: bySource.auto },
-                      { label: t('matchesTab.sourceOrganic'), agg: bySource.organic },
-                    ] as const
-                  ).map(row => {
-                    const rate =
-                      row.agg.played > 0
-                        ? ((row.agg.quality / row.agg.played) * 100).toFixed(0)
-                        : '—';
-                    const rating =
-                      row.agg.ratingCount > 0
-                        ? (row.agg.ratingSum / row.agg.ratingCount).toFixed(1)
-                        : '—';
-                    return (
-                      <TableRow key={row.label}>
-                        <TableCell className="font-medium">{row.label}</TableCell>
-                        <TableCell className="text-right">{row.agg.played}</TableCell>
-                        <TableCell className="text-right">{row.agg.quality}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline" className="text-xs">
-                            {rate !== '—' ? `${rate}%` : rate}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{rating}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -566,7 +430,7 @@ function aggregateWeekly(data: MatchQualityPoint[], segment: Segment): WeekFunne
   );
   for (const row of data) {
     if (segment === 'auto' && !row.isAutoGenerated) continue;
-    if (segment === 'nonAuto' && row.isAutoGenerated) continue;
+    if (segment === 'organic' && row.isAutoGenerated) continue;
     const totals = map.get(weekStartOf(row.date));
     if (!totals) continue;
     addToTotals(totals, row);
@@ -581,63 +445,53 @@ function WeeklyFunnels({
   weeks: WeekFunnel[];
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
-  const currentWeek = weekStartOf(new Date().toISOString().split('T')[0]);
+  // Headline = the reliable commitment signal (filled/created). Played/quality
+  // depend on post-match feedback, so they stay out of the weekly trend and live
+  // only in the cumulative funnel where coverage is shown.
+  const points: TrendPoint[] = weeks.map(({ weekStart, totals }) => {
+    const c = totals.created;
+    return {
+      week: shortWeekLabel(weekStart),
+      created: c,
+      commitment: c > 0 ? Math.round((totals.filled / c) * 100) : 0,
+      filled: totals.filled,
+      createdNotFilled: totals.created - totals.filled,
+    };
+  });
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-      {weeks.map(({ weekStart, totals }) => {
-        const stages = [
-          {
-            key: 'created',
-            label: t('matchesTab.stageCreated'),
-            count: totals.created,
-            dim: false,
-          },
-          { key: 'filled', label: t('matchesTab.stageFilled'), count: totals.filled, dim: false },
-          { key: 'played', label: t('matchesTab.stagePlayed'), count: totals.played, dim: true },
-          { key: 'quality', label: t('matchesTab.stageQuality'), count: totals.quality, dim: true },
-        ];
-        const commitment = totals.created > 0 ? (totals.filled / totals.created) * 100 : null;
-        return (
-          <div key={weekStart} className="rounded-md border p-3 flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs font-medium">
-                {formatWeekLabel(weekStart)}
-                {weekStart === currentWeek && (
-                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
-                    ({t('matchesTab.weekCurrent')})
-                  </span>
-                )}
-              </span>
-              {commitment != null && (
-                <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-                  {t('matchesTab.weekCommitment', { pct: commitment.toFixed(0) })}
-                </span>
-              )}
-            </div>
-            <div className="space-y-2">
-              {stages.map(s => {
-                const pct = totals.created > 0 ? (s.count / totals.created) * 100 : 0;
-                return (
-                  <div key={s.key}>
-                    <div className="flex items-baseline justify-between gap-2 text-[11px] mb-0.5">
-                      <span>{s.label}</span>
-                      <span className="text-muted-foreground tabular-nums whitespace-nowrap">
-                        {s.count.toLocaleString()} · {pct.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="h-2 rounded bg-muted overflow-hidden">
-                      <div
-                        className={s.dim ? 'h-full bg-primary/55' : 'h-full bg-primary'}
-                        style={{ width: `${Math.max(pct, s.count > 0 ? 1.5 : 0)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-5">
+      <div>
+        <p className="text-[11px] font-medium text-muted-foreground m-0 mb-2">
+          {t('matchesTab.weeklyRatesTitle')}
+        </p>
+        <RateTrendChart
+          data={points}
+          volumeKey="created"
+          volumeLabel={t('matchesTab.stageCreated')}
+          series={[
+            { key: 'commitment', label: t('matchesTab.trendCommitment'), color: 'var(--chart-1)' },
+          ]}
+        />
+      </div>
+      <div>
+        <p className="text-[11px] font-medium text-muted-foreground m-0 mb-2">
+          {t('matchesTab.weeklyVolumeTitle')}
+        </p>
+        <StackedFunnelChart
+          data={points}
+          segments={[
+            { key: 'filled', label: t('matchesTab.stageFilled'), color: 'var(--chart-1)' },
+            {
+              key: 'createdNotFilled',
+              label: t('matchesTab.segCreatedNotFilled'),
+              color: 'var(--muted-foreground)',
+              opacity: 0.3,
+            },
+          ]}
+        />
+      </div>
+      <p className="text-[11px] text-muted-foreground m-0">{t('matchesTab.weeklyInProgress')}</p>
     </div>
   );
 }
@@ -689,26 +543,14 @@ interface Totals {
   playedLate: number;
   playedLowRating: number;
   playedReported: number;
+  playedIncomplete: number;
   ratingSum: number;
   ratingCount: number;
   feedbackExpected: number;
   feedbackPresent: number;
-}
-
-interface SportAggregate {
-  sportId: string;
-  sportName: string;
-  played: number;
-  quality: number;
-  ratingSum: number;
-  ratingCount: number;
-}
-
-interface SourceAggregate {
-  played: number;
-  quality: number;
-  ratingSum: number;
-  ratingCount: number;
+  feedbackCheckedIn: number;
+  feedbackRated: number;
+  feedbackDone: number;
 }
 
 function emptyTotals(): Totals {
@@ -727,10 +569,14 @@ function emptyTotals(): Totals {
     playedLate: 0,
     playedLowRating: 0,
     playedReported: 0,
+    playedIncomplete: 0,
     ratingSum: 0,
     ratingCount: 0,
     feedbackExpected: 0,
     feedbackPresent: 0,
+    feedbackCheckedIn: 0,
+    feedbackRated: 0,
+    feedbackDone: 0,
   };
 }
 
@@ -749,104 +595,30 @@ function addToTotals(t: Totals, row: MatchQualityPoint): void {
   t.playedLate += row.playedLate;
   t.playedLowRating += row.playedLowRating;
   t.playedReported += row.playedReported;
+  t.playedIncomplete += row.playedIncomplete;
   t.ratingSum += row.ratingSum;
   t.ratingCount += row.ratingCount;
   t.feedbackExpected += row.feedbackExpected;
   t.feedbackPresent += row.feedbackPresent;
+  t.feedbackCheckedIn += row.feedbackCheckedIn;
+  t.feedbackRated += row.feedbackRated;
+  t.feedbackDone += row.feedbackDone;
 }
 
 function aggregate(data: MatchQualityPoint[]): {
   totals: Totals;
   autoTotals: Totals;
   nonAutoTotals: Totals;
-  bySport: SportAggregate[];
-  bySource: { auto: SourceAggregate; organic: SourceAggregate };
 } {
   const totals = emptyTotals();
   const autoTotals = emptyTotals();
   const nonAutoTotals = emptyTotals();
-  const sportMap = new Map<string, SportAggregate>();
-  const auto: SourceAggregate = { played: 0, quality: 0, ratingSum: 0, ratingCount: 0 };
-  const organic: SourceAggregate = { played: 0, quality: 0, ratingSum: 0, ratingCount: 0 };
 
   for (const row of data) {
     addToTotals(totals, row);
     if (row.isAutoGenerated) addToTotals(autoTotals, row);
     else addToTotals(nonAutoTotals, row);
-
-    const sport = sportMap.get(row.sportId);
-    if (sport) {
-      sport.played += row.matchesPlayed;
-      sport.quality += row.matchesQuality;
-      sport.ratingSum += row.ratingSum;
-      sport.ratingCount += row.ratingCount;
-    } else {
-      sportMap.set(row.sportId, {
-        sportId: row.sportId,
-        sportName: row.sportName,
-        played: row.matchesPlayed,
-        quality: row.matchesQuality,
-        ratingSum: row.ratingSum,
-        ratingCount: row.ratingCount,
-      });
-    }
-
-    const bucket = row.isAutoGenerated ? auto : organic;
-    bucket.played += row.matchesPlayed;
-    bucket.quality += row.matchesQuality;
-    bucket.ratingSum += row.ratingSum;
-    bucket.ratingCount += row.ratingCount;
   }
 
-  return {
-    totals,
-    autoTotals,
-    nonAutoTotals,
-    bySport: Array.from(sportMap.values())
-      .filter(s => s.played > 0 || s.quality > 0)
-      .sort((a, b) => b.played - a.played),
-    bySource: { auto, organic },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Chart: played vs quality per day (aggregated across sports)
-// ---------------------------------------------------------------------------
-
-function useCreatedVsQualityChart(
-  data: MatchQualityPoint[],
-  t: (key: string) => string
-): { chartData: ChartPoint[]; chartSeries: ChartSeries[]; hasData: boolean } {
-  return useMemo(() => {
-    const chartSeries: ChartSeries[] = [
-      { name: 'played', label: t('matchesTab.seriesPlayed'), colorIndex: 3 },
-      { name: 'quality', label: t('matchesTab.seriesQuality'), colorIndex: 1 },
-    ];
-
-    if (data.length === 0) return { chartData: [], chartSeries, hasData: false };
-
-    const byDay = new Map<string, { played: number; quality: number }>();
-    for (const row of data) {
-      const point = byDay.get(row.date) ?? { played: 0, quality: 0 };
-      point.played += row.matchesPlayed;
-      point.quality += row.matchesQuality;
-      byDay.set(row.date, point);
-    }
-
-    const chartData: ChartPoint[] = Array.from(byDay.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([day, v]) => ({ day, played: v.played, quality: v.quality }));
-
-    const hasData = chartData.some(p => (p.played as number) > 0 || (p.quality as number) > 0);
-    return { chartData, chartSeries, hasData };
-  }, [data, t]);
-}
-
-function formatDayLabel(day: string): string {
-  try {
-    const d = new Date(day);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  } catch {
-    return day;
-  }
+  return { totals, autoTotals, nonAutoTotals };
 }

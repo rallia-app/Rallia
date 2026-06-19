@@ -9345,8 +9345,11 @@ export type Database = {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
           date: string
+          feedback_checked_in: number
+          feedback_done: number
           feedback_expected: number
           feedback_present: number
+          feedback_rated: number
           is_auto_generated: boolean
           matches_all_checked_in: number
           matches_all_feedback: number
@@ -9358,6 +9361,7 @@ export type Database = {
           matches_pending: number
           matches_played: number
           matches_quality: number
+          played_incomplete: number
           played_late: number
           played_low_rating: number
           played_no_show: number

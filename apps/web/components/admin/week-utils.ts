@@ -27,3 +27,11 @@ export function formatWeekLabel(weekStart: string): string {
   const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   return `${fmt(start)} – ${fmt(end)}`;
 }
+
+/** Compact axis label for an ISO week start (the Monday, e.g. "May 5"). */
+export function shortWeekLabel(weekStart: string): string {
+  return new Date(`${weekStart}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
