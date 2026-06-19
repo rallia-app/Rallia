@@ -5,19 +5,30 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getStorageImageUrl } from '@rallia/shared-utils';
 import {
+  BarChart3,
   Calendar,
   Check,
+  CheckCircle2,
   CircleDollarSign,
   Clock,
+  List,
   MapPin,
   Share2,
-  Swords,
+  Smile,
+  Timer,
+  Trophy,
   User,
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { getRelativeDateLabel, formatDuration } from './utils';
+import { MatchChipRow, type MatchChipDef } from './match-chip';
+import {
+  getViewerMatchStatus,
+  getViewerParticipant,
+  type ViewerMatchStatus,
+} from './match-viewer-status';
 import { publicMatchShareClicked } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------
@@ -43,6 +54,7 @@ export interface PublicMatch {
   start_time: string;
   end_time: string;
   format: string;
+  join_mode: 'direct' | 'request' | null;
   player_expectation: string | null;
   court_status: string | null;
   is_court_free: boolean | null;
@@ -65,6 +77,7 @@ export interface PublicMatch {
 
 interface PublicMatchCardProps {
   match: PublicMatch;
+  viewerPlayerId?: string | null;
   onJoin: (matchId: string) => void;
 }
 
@@ -72,7 +85,13 @@ interface PublicMatchCardProps {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function PlayerSlots({ match }: { match: PublicMatch }) {
+function PlayerSlots({
+  match,
+  viewerPlayerId,
+}: {
+  match: PublicMatch;
+  viewerPlayerId?: string | null;
+}) {
   const total = match.format === 'doubles' ? 4 : 2;
   const joined = match.participants?.filter(p => p.status === 'joined') ?? [];
   const sorted = [...joined].sort((a, b) => (b.is_host ? 1 : 0) - (a.is_host ? 1 : 0));
@@ -90,6 +109,7 @@ function PlayerSlots({ match }: { match: PublicMatch }) {
           { width: 96, height: 96, quality: 70 }
         );
         const displayName = slot.participant?.player?.profile?.display_name;
+        const isViewer = !!viewerPlayerId && slot.participant?.player_id === viewerPlayerId;
 
         return (
           <div key={i} className="relative" style={{ zIndex: i }}>
@@ -98,7 +118,9 @@ function PlayerSlots({ match }: { match: PublicMatch }) {
                 'size-9 rounded-full flex items-center justify-center overflow-hidden',
                 'bg-card',
                 slot.filled
-                  ? 'ring-2 ring-primary/20'
+                  ? isViewer
+                    ? 'ring-2 ring-primary'
+                    : 'ring-2 ring-primary/20'
                   : 'border-2 border-dashed border-muted-foreground/25'
               )}
             >
@@ -163,13 +185,116 @@ function ShareButton({ matchId }: { matchId: string }) {
   );
 }
 
+function ViewerStatusBanner({ status }: { status: ViewerMatchStatus }) {
+  const t = useTranslations('gamesPage');
+
+  const config = {
+    joined: {
+      label: t('cardStatus.joined'),
+      className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+      icon: Check,
+    },
+    requested: {
+      label: t('cardStatus.requested'),
+      className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+      icon: Timer,
+    },
+    waitlisted: {
+      label: t('cardStatus.waitlisted'),
+      className: 'bg-sky-500/10 text-sky-700 dark:text-sky-400',
+      icon: List,
+    },
+    invited: {
+      label: t('cardStatus.invited'),
+      className: 'bg-primary/10 text-primary',
+      icon: User,
+    },
+  }[status];
+
+  const Icon = config.icon;
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium',
+        config.className
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" />
+      {config.label}
+    </div>
+  );
+}
+
+function resolveCta(
+  viewerStatus: ViewerMatchStatus | null,
+  isFull: boolean,
+  isRequestMode: boolean,
+  tMatch: ReturnType<typeof useTranslations<'match'>>
+): {
+  label: string;
+  variant: 'default' | 'outline' | 'secondary';
+  disabled: boolean;
+  className?: string;
+} {
+  if (viewerStatus === 'joined') {
+    return {
+      label: tMatch('cta.view'),
+      variant: 'outline',
+      disabled: false,
+      className: 'border-primary/30 text-primary hover:bg-primary/5',
+    };
+  }
+  if (viewerStatus === 'requested') {
+    return {
+      label: tMatch('cta.view'),
+      variant: 'outline',
+      disabled: false,
+      className: 'border-primary/30 text-primary hover:bg-primary/5',
+    };
+  }
+  if (viewerStatus === 'waitlisted') {
+    if (isFull) {
+      return {
+        label: tMatch('cta.view'),
+        variant: 'outline',
+        disabled: false,
+        className: 'border-primary/30 text-primary hover:bg-primary/5',
+      };
+    }
+    return {
+      label: isRequestMode ? tMatch('cta.askToJoin') : tMatch('cta.join'),
+      variant: 'default',
+      disabled: false,
+    };
+  }
+  if (viewerStatus === 'invited') {
+    return {
+      label: isRequestMode ? tMatch('cta.askToJoin') : tMatch('cta.acceptInvitation'),
+      variant: 'default',
+      disabled: false,
+    };
+  }
+  if (isFull) {
+    return { label: tMatch('cta.joinWaitlist'), variant: 'outline', disabled: false };
+  }
+  if (isRequestMode) {
+    return { label: tMatch('cta.askToJoin'), variant: 'default', disabled: false };
+  }
+  return { label: tMatch('cta.join'), variant: 'default', disabled: false };
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps) {
+export default function PublicMatchCard({ match, viewerPlayerId, onJoin }: PublicMatchCardProps) {
   const t = useTranslations('gamesPage');
+  const tMatch = useTranslations('match');
   const locale = useLocale();
+
+  const viewerParticipant = getViewerParticipant(match.participants, viewerPlayerId);
+  const viewerStatus = getViewerMatchStatus(viewerParticipant);
 
   const dateLabel = getRelativeDateLabel(match.match_date, locale, t('today'), t('tomorrow'));
   const dateTime = new Date(`${match.match_date}T${match.start_time}`);
@@ -185,6 +310,7 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
   const joinedCount = match.participants?.filter(p => p.status === 'joined').length ?? 0;
   const spotsLeft = Math.max(0, total - joinedCount);
   const isFull = spotsLeft === 0;
+  const isRequestMode = match.join_mode === 'request';
 
   const costLabel = match.is_court_free
     ? t('free')
@@ -192,40 +318,60 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
       ? t('costPerPlayer', { amount: (match.estimated_cost / total).toFixed(2) })
       : null;
 
-  const badges: Array<{
-    key: string;
-    label: string;
-    variant: 'default' | 'secondary' | 'outline';
-  }> = [];
+  const chips: MatchChipDef[] = [];
 
-  if (match.format) {
-    badges.push({
-      key: 'format',
-      label: match.format === 'doubles' ? t('doubles') : t('singles'),
-      variant: 'outline',
-    });
-  }
-  if (match.player_expectation && match.player_expectation !== 'both') {
-    badges.push({
-      key: 'expectation',
-      label: match.player_expectation === 'competitive' ? t('competitive') : t('casual'),
-      variant: 'outline',
+  if (match.min_rating_score) {
+    chips.push({
+      key: 'rating',
+      label: match.min_rating_score.label,
+      tone: 'secondary',
+      icon: <BarChart3 />,
     });
   }
   if (match.court_status === 'reserved') {
-    badges.push({ key: 'court', label: t('courtBooked'), variant: 'secondary' });
+    chips.push({
+      key: 'court',
+      label: t('courtBooked'),
+      tone: 'secondary',
+      icon: <CheckCircle2 />,
+    });
   }
-  if (match.min_rating_score) {
-    badges.push({ key: 'rating', label: match.min_rating_score.label, variant: 'secondary' });
+  if (match.player_expectation && match.player_expectation !== 'both') {
+    const isCompetitive = match.player_expectation === 'competitive';
+    chips.push({
+      key: 'expectation',
+      label: isCompetitive ? t('competitive') : t('casual'),
+      tone: 'primary',
+      icon: isCompetitive ? <Trophy /> : <Smile />,
+    });
   }
   if (costLabel) {
-    badges.push({ key: 'cost', label: costLabel, variant: 'outline' });
+    chips.push({
+      key: 'cost',
+      label: costLabel,
+      tone: 'primary',
+      icon: match.is_court_free ? <CheckCircle2 /> : <CircleDollarSign />,
+    });
+  }
+  if (match.format) {
+    chips.push({
+      key: 'format',
+      label: match.format === 'doubles' ? t('doubles') : t('singles'),
+      tone: 'primary',
+    });
   }
 
+  const cta = resolveCta(viewerStatus, isFull, isRequestMode, tMatch);
+
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 h-full">
+    <div
+      className={cn(
+        'group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 h-full',
+        viewerStatus === 'joined' && 'border-primary/40 ring-1 ring-primary/20'
+      )}
+    >
       {/* Accent strip */}
-      <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
+      <div className="h-1 w-full bg-linear-to-r from-primary to-primary/60" />
 
       <div className="flex flex-col gap-4 p-5 flex-1">
         {/* Header: Sport + Share + Spots */}
@@ -251,6 +397,8 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
             {isFull ? t('matchFull') : t('spotsLeft', { count: spotsLeft })}
           </span>
         </div>
+
+        {viewerStatus && <ViewerStatusBanner status={viewerStatus} />}
 
         {/* Date & Time row */}
         <div className="flex items-center gap-4">
@@ -287,7 +435,7 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
 
         {/* Players */}
         <div className="flex items-center justify-between">
-          <PlayerSlots match={match} />
+          <PlayerSlots match={match} viewerPlayerId={viewerPlayerId} />
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Users className="size-3.5" />
             <span>
@@ -296,33 +444,20 @@ export default function PublicMatchCard({ match, onJoin }: PublicMatchCardProps)
           </div>
         </div>
 
-        {/* Badges */}
-        {badges.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {badges.map(badge => (
-              <Badge
-                key={badge.key}
-                variant={badge.variant}
-                className="text-xs px-2.5 py-1 font-medium"
-              >
-                {badge.key === 'expectation' && <Swords className="size-3.5 mr-1" />}
-                {badge.key === 'cost' && <CircleDollarSign className="size-3.5 mr-1" />}
-                {badge.label}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* Chips */}
+        <MatchChipRow chips={chips} />
 
         <div className="flex-1" />
 
         {/* CTA */}
         <Button
-          className="w-full font-semibold"
+          className={cn('w-full font-semibold', cta.className)}
           size="lg"
           onClick={() => onJoin(match.id)}
-          variant={isFull ? 'outline' : 'default'}
+          variant={cta.variant}
+          disabled={cta.disabled}
         >
-          {isFull ? t('waitlistButton') : t('joinButton')}
+          {cta.label}
         </Button>
       </div>
     </div>

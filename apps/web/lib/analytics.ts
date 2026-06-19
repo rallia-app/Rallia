@@ -234,3 +234,17 @@ export function publicMatchShareClicked(props: {
 export function joinMatchDialogViewed(props: { match_id: string }): void {
   capture('join_match_dialog_viewed', props);
 }
+
+// ---- Web join onboarding funnel ----
+
+export function webJoinStarted(props: { match_id: string; sport_slug?: string }): void {
+  capture('web_join_started', props);
+}
+
+export function webJoinCompleted(props: {
+  match_id: string;
+  join_status: string;
+  existing_user?: boolean;
+}): void {
+  capture('web_join_completed', props);
+}

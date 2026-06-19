@@ -20,6 +20,10 @@ export interface PostalCodeLocation {
   country: 'CA' | 'US';
   /** Human-readable formatted address from Google */
   formattedAddress: string;
+  /** City or locality, when available from geocoding */
+  city?: string;
+  /** Province/state short code (e.g. QC, ON), when available */
+  province?: string;
   /** Latitude of postal code centroid */
   latitude: number;
   /** Longitude of postal code centroid */
@@ -50,6 +54,35 @@ interface UsePostalCodeGeocodeReturn {
 // =============================================================================
 
 const GOOGLE_GEOCODING_API_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
+
+interface GeocodeAddressComponent {
+  long_name?: string;
+  short_name?: string;
+  types?: string[];
+}
+
+function parseGeocodeAddressComponents(components: GeocodeAddressComponent[] | undefined): {
+  city?: string;
+  province?: string;
+} {
+  if (!components?.length) return {};
+
+  const getComponent = (types: string[], useShort = false): string => {
+    const component = components.find(c => types.some(type => c.types?.includes(type)));
+    return (useShort ? component?.short_name : component?.long_name) || '';
+  };
+
+  const city =
+    getComponent(['locality']) ||
+    getComponent(['administrative_area_level_3']) ||
+    getComponent(['sublocality_level_1']);
+  const province = getComponent(['administrative_area_level_1'], true);
+
+  return {
+    ...(city && { city }),
+    ...(province && { province }),
+  };
+}
 
 // Get API key from environment
 const getApiKey = (): string | null => {
@@ -170,6 +203,7 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
 
         const firstResult = data.results[0];
         const location = firstResult.geometry?.location;
+        const { city, province } = parseGeocodeAddressComponents(firstResult.address_components);
 
         if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
           setError('notFound');
@@ -181,6 +215,8 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
           postalCode: validation.normalized,
           country: validation.country,
           formattedAddress: firstResult.formatted_address || validation.normalized,
+          ...(city && { city }),
+          ...(province && { province }),
           latitude: location.lat,
           longitude: location.lng,
         };
