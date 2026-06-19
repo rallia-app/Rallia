@@ -45,6 +45,8 @@ const VALID_SEGMENTS = new Set([
   'new', 'active', 'one_session', 'drifted',
   // A/B/C interview-ask experiment (active users)
   'test_casual', 'test_link', 'test_nolink',
+  // Winner rollout: warm direct ask, no link
+  'active_warm',
 ]);
 const CALENDLY = 'https://calendly.com/apprallia/15min';
 
@@ -114,6 +116,19 @@ const MESSAGES = {
       'Hey {{name}}!',
       "We're Mathis and Jean, the two behind Rallia. You've been using the app for a while now and we'd really love your take.",
       'Would you have 15 min this week for a quick call about your experience?',
+    ],
+  },
+  // Rollout: warmer version of the direct ask — question first, interview ask as soft invite.
+  active_warm: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Tu utilises l'app depuis un moment et on voulait vraiment savoir comment ça se passe pour toi.",
+      "Est-ce que t'as réussi à jouer des parties? Si t'as 15 min pour en jaser sur appel cette semaine, on serait vraiment preneurs.",
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. You've been using the app for a bit and we really wanted to know how it's been going for you.",
+      "Have you managed to get some games in? If you have 15 min to chat on a call this week, we'd really love that.",
     ],
   },
   one_session: {
