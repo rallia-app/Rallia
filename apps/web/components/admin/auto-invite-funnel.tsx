@@ -4,31 +4,34 @@ import { useAutoInviteFunnel, type AutoInviteFunnelPoint } from '@rallia/shared-
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
-import {
-  daysCoveringLastNWeeks,
-  formatWeekLabel,
-  lastNWeekStarts,
-  weekStartOf,
-} from './week-utils';
+import { daysCoveringLastNWeeks, lastNWeekStarts, shortWeekLabel } from './week-utils';
+import { RateTrendChart, StackedFunnelChart, type TrendPoint } from './weekly-trend-charts';
 
+import { InsightCardHeader, SegmentedToggle } from '@/components/admin/insight-card';
 import { KpiCard } from '@/components/admin/kpi-card';
+import { WindowSelect } from '@/components/admin/window-select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DAY_OPTIONS = [7, 14, 30] as const;
 type DaysWindow = (typeof DAY_OPTIONS)[number];
 
 type FunnelView = 'cumulative' | 'weekly';
+
+// Match source the funnel is scoped to. Maps to the RPC's p_is_auto:
+// all -> null, auto -> true, organic -> false.
+type Source = 'all' | 'auto' | 'organic';
+const SOURCE_TITLE: Record<Source, string> = {
+  all: 'autoInvite.titleAll',
+  auto: 'autoInvite.title',
+  organic: 'autoInvite.titleOrganic',
+};
+const SOURCE_HINT: Record<Source, string> = {
+  all: 'autoInvite.hintAll',
+  auto: 'autoInvite.hint',
+  organic: 'autoInvite.hintOrganic',
+};
 
 const WEEKS_SHOWN = 6;
 
@@ -117,13 +120,13 @@ export function AutoInviteFunnel() {
   const t = useTranslations('admin.analytics');
   const tReasons = useTranslations('matchActions.declineReasons');
   const [days, setDays] = useState<DaysWindow>(14);
-  const [source, setSource] = useState<'auto' | 'human'>('auto');
-  const [view, setView] = useState<FunnelView>('cumulative');
+  const [source, setSource] = useState<Source>('all');
+  const [view, setView] = useState<FunnelView>('weekly');
   // Weekly view always covers the last 6 ISO weeks, independent of the window.
   const { data, loading } = useAutoInviteFunnel(
     view === 'weekly' ? daysCoveringLastNWeeks(WEEKS_SHOWN) : days,
     48,
-    source === 'auto',
+    source === 'all' ? null : source === 'auto',
     view === 'weekly' ? 'week' : 'total'
   );
   const totals = useMemo(() => aggregate(data), [data]);
@@ -161,61 +164,38 @@ export function AutoInviteFunnel() {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-base">
-              {t(source === 'auto' ? 'autoInvite.title' : 'autoInvite.titleHuman')}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground m-0 mt-1">
-              {view === 'weekly'
-                ? t('autoInvite.weeklyHint')
-                : t(source === 'auto' ? 'autoInvite.hint' : 'autoInvite.hintHuman')}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={source} onValueChange={v => setSource(v as 'auto' | 'human')}>
-              <TabsList className="h-8">
-                <TabsTrigger value="auto" className="text-xs">
-                  {t('autoInvite.srcAuto')}
-                </TabsTrigger>
-                <TabsTrigger value="human" className="text-xs">
-                  {t('autoInvite.srcHuman')}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Tabs value={view} onValueChange={v => setView(v as FunnelView)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="cumulative" className="text-xs">
-                  {t('matchesTab.viewCumulative')}
-                </TabsTrigger>
-                <TabsTrigger value="weekly" className="text-xs">
-                  {t('matchesTab.viewWeekly')}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+      <InsightCardHeader
+        title={t(SOURCE_TITLE[source])}
+        hint={view === 'weekly' ? t('autoInvite.weeklyHint') : t(SOURCE_HINT[source])}
+        controls={
+          <>
+            <SegmentedToggle
+              value={source}
+              onChange={v => setSource(v as Source)}
+              options={[
+                { value: 'all', label: t('matchesTab.segmentAll') },
+                { value: 'auto', label: t('matchesTab.sourceAuto') },
+                { value: 'organic', label: t('matchesTab.sourceOrganic') },
+              ]}
+            />
+            <SegmentedToggle
+              value={view}
+              onChange={v => setView(v as FunnelView)}
+              options={[
+                { value: 'weekly', label: t('matchesTab.viewWeekly') },
+                { value: 'cumulative', label: t('matchesTab.viewCumulative') },
+              ]}
+            />
             {view === 'cumulative' && (
-              <>
-                <Label className="text-xs text-muted-foreground shrink-0">
-                  {t('utm.timeWindow')}
-                </Label>
-                <Select value={String(days)} onValueChange={v => setDays(Number(v) as DaysWindow)}>
-                  <SelectTrigger className="h-8 w-[150px] shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAY_OPTIONS.map(option => (
-                      <SelectItem key={option} value={String(option)}>
-                        {t(`timeRange.${option}d`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
+              <WindowSelect
+                value={days}
+                onChange={d => setDays(d as DaysWindow)}
+                options={DAY_OPTIONS}
+              />
             )}
-          </div>
-        </div>
-      </CardHeader>
+          </>
+        }
+      />
       <CardContent>
         {loading ? (
           <div className="space-y-3">
@@ -398,85 +378,59 @@ function WeeklyInviteFunnels({
   weeks: { weekStart: string; totals: AutoInviteTotals }[];
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
-  const currentWeek = weekStartOf(new Date().toISOString().split('T')[0]);
   if (weeks.length === 0) {
     return <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>;
   }
+  const points: TrendPoint[] = weeks.map(({ weekStart, totals }) => {
+    const s = totals.invitesSettled;
+    return {
+      week: shortWeekLabel(weekStart),
+      settled: s,
+      response: s > 0 ? Math.round((totals.responded / s) * 100) : 0,
+      accept: s > 0 ? Math.round((totals.accepted / s) * 100) : 0,
+      accepted: totals.accepted,
+      declined: totals.declined,
+      timeSuggested: totals.timeSuggested,
+      noResponse: totals.noResponse,
+    };
+  });
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-      {weeks.map(({ weekStart, totals }) => {
-        const rate =
-          totals.invitesSettled > 0 ? (totals.responded / totals.invitesSettled) * 100 : null;
-        return (
-          <div key={weekStart} className="rounded-md border p-3 flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs font-medium">
-                {formatWeekLabel(weekStart)}
-                {weekStart === currentWeek && (
-                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
-                    ({t('matchesTab.weekCurrent')})
-                  </span>
-                )}
-              </span>
-              {rate != null && (
-                <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-                  {t('autoInvite.weekResponded', { pct: rate.toFixed(0) })}
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-muted-foreground m-0">
-              {t('autoInvite.weekStats', {
-                matches: totals.matchesCreated,
-                invites: totals.invitesSent,
-                settled: totals.invitesSettled,
-              })}
-              {totals.invitesInFlight > 0 && (
-                <> · {t('autoInvite.weekInFlight', { inFlight: totals.invitesInFlight })}</>
-              )}
-            </p>
-            {totals.invitesSent === 0 ? (
-              <p className="text-[11px] text-muted-foreground m-0">
-                {t('autoInvite.weekNoInvites')}
-              </p>
-            ) : totals.invitesSettled === 0 ? (
-              <p className="text-[11px] text-muted-foreground m-0">
-                {t('autoInvite.weekAllInFlight')}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <Bar
-                  label={t('autoInvite.stageResponded')}
-                  count={totals.responded}
-                  base={totals.invitesSettled}
-                  tone="primary"
-                  small
-                />
-                <Bar
-                  label={t('autoInvite.catOui')}
-                  count={totals.accepted}
-                  base={totals.invitesSettled}
-                  tone="emerald"
-                  small
-                />
-                <Bar
-                  label={t('autoInvite.catNon')}
-                  count={totals.declined}
-                  base={totals.invitesSettled}
-                  tone="rose"
-                  small
-                />
-                <Bar
-                  label={t('autoInvite.catNouvelHoraire')}
-                  count={totals.timeSuggested}
-                  base={totals.invitesSettled}
-                  tone="amber"
-                  small
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-5">
+      <div>
+        <p className="text-[11px] font-medium text-muted-foreground m-0 mb-2">
+          {t('matchesTab.weeklyRatesTitle')}
+        </p>
+        <RateTrendChart
+          data={points}
+          volumeKey="settled"
+          volumeLabel={t('autoInvite.stageEligible')}
+          series={[
+            { key: 'response', label: t('autoInvite.stageResponded'), color: '#2563eb' },
+            { key: 'accept', label: t('autoInvite.catOui'), color: '#10b981', dash: '5 3' },
+          ]}
+        />
+      </div>
+      <div>
+        <p className="text-[11px] font-medium text-muted-foreground m-0 mb-2">
+          {t('matchesTab.weeklyVolumeTitle')}
+        </p>
+        <StackedFunnelChart
+          data={points}
+          segments={[
+            { key: 'accepted', label: t('autoInvite.catOui'), color: '#10b981' },
+            { key: 'declined', label: t('autoInvite.catNon'), color: '#f43f5e' },
+            { key: 'timeSuggested', label: t('autoInvite.catNouvelHoraire'), color: '#f59e0b' },
+            {
+              key: 'noResponse',
+              label: t('autoInvite.noResponse'),
+              color: 'var(--muted-foreground)',
+              opacity: 0.3,
+            },
+          ]}
+        />
+      </div>
+      <p className="text-[11px] text-muted-foreground m-0">{t('matchesTab.weeklyInProgress')}</p>
     </div>
   );
 }

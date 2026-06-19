@@ -3378,12 +3378,18 @@ export interface MatchQualityPoint {
   playedLate: number;
   playedLowRating: number;
   playedReported: number;
+  // Attendance unconfirmed (showed_up NULL) or no rating submitted — the
+  // "missing data" misses the four bars above don't capture.
+  playedIncomplete: number;
   // Avg rating across played matches = ratingSum / ratingCount
   ratingSum: number;
   ratingCount: number;
-  // Feedback coverage / confidence among matches that reached closure
+  // Feedback coverage / per-step completion among matches that reached closure
   feedbackExpected: number;
   feedbackPresent: number;
+  feedbackCheckedIn: number;
+  feedbackRated: number;
+  feedbackDone: number;
 }
 
 export async function getMatchQualityAnalytics(
@@ -3425,10 +3431,14 @@ export async function getMatchQualityAnalytics(
       playedLate: Number(row.played_late) || 0,
       playedLowRating: Number(row.played_low_rating) || 0,
       playedReported: Number(row.played_reported) || 0,
+      playedIncomplete: Number(row.played_incomplete) || 0,
       ratingSum: Number(row.rating_sum) || 0,
       ratingCount: Number(row.rating_count) || 0,
       feedbackExpected: Number(row.feedback_expected) || 0,
       feedbackPresent: Number(row.feedback_present) || 0,
+      feedbackCheckedIn: Number(row.feedback_checked_in) || 0,
+      feedbackRated: Number(row.feedback_rated) || 0,
+      feedbackDone: Number(row.feedback_done) || 0,
     }));
   } catch (error) {
     console.error('Error in getMatchQualityAnalytics (thrown):', error);
