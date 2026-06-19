@@ -817,14 +817,27 @@ export function weeklyCheckinOpened(props: {
 }
 
 export function weeklyCheckinStepCompleted(props: {
-  step_name: string; // 'availability' | 'recap_goal' | 'auto_match'
+  step_name: string; // 'recap_goal' | 'availability' | 'match_opportunities' | 'auto_match'
   step_index: number;
   availability_cells?: number;
   frequency_goal?: number;
   auto_create?: boolean;
   auto_invite?: boolean;
+  opportunities_count?: number;
 }): void {
   capture('weekly_checkin_step_completed', props);
+}
+
+/**
+ * Fired once when the "Games for you" step is presented with ≥ 1 real match —
+ * the top of the join funnel for check-in-surfaced public games.
+ */
+export function weeklyCheckinOpportunitiesViewed(props: {
+  opportunities_count: number;
+  /** Distinct sports represented in the surfaced matches. */
+  sports_count: number;
+}): void {
+  capture('weekly_checkin_opportunities_viewed', props);
 }
 
 export function weeklyCheckinSubmitted(props: {

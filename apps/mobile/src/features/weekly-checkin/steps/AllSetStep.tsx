@@ -19,6 +19,9 @@ interface AllSetStepProps {
   hoursConfirmed: number;
   autoCreate: boolean;
   autoInvite: boolean;
+  /** Games joined / asked to join on the "Games for you" step. */
+  joinedCount: number;
+  requestedCount: number;
   onDone: () => void;
 }
 
@@ -27,6 +30,8 @@ export function AllSetStep({
   hoursConfirmed,
   autoCreate,
   autoInvite,
+  joinedCount,
+  requestedCount,
   onDone,
 }: AllSetStepProps) {
   const { t } = useTranslation();
@@ -46,6 +51,8 @@ export function AllSetStep({
             hoursConfirmed={hoursConfirmed}
             autoCreate={autoCreate}
             autoInvite={autoInvite}
+            joinedCount={joinedCount}
+            requestedCount={requestedCount}
           />
         </View>
       </ScrollView>

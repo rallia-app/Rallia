@@ -12,7 +12,12 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { matchKeys } from '@rallia/shared-hooks';
-import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
+import {
+  OnboardingService,
+  getCheckInMatchOpportunities,
+  supabase,
+  Logger,
+} from '@rallia/shared-services';
 import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
 
 import { cellKey, type HourGrid } from '#/features/onboarding/components/HourlyAvailabilityGrid';
@@ -25,7 +30,15 @@ export const checkInKeys = {
   all: ['weekly-checkin'] as const,
   context: () => [...checkInKeys.all, 'context'] as const,
   availability: () => [...checkInKeys.all, 'availability'] as const,
+  opportunities: (slots: CheckInMatchSlot[], timezone: string | null) =>
+    [...checkInKeys.all, 'opportunities', { slots, timezone }] as const,
 };
+
+/** A declared availability cell: one selected (weekday, hour). */
+export interface CheckInMatchSlot {
+  day: DayEnum;
+  hour: number;
+}
 
 /**
  * Device IANA timezone (e.g. 'America/Toronto'), or null if it can't resolve.
@@ -229,6 +242,34 @@ export function useAvailabilityKeys(options?: { enabled?: boolean }) {
     queryFn: fetchAvailabilityKeys,
     staleTime: 60_000,
     enabled: options?.enabled ?? true,
+  });
+}
+
+// =============================================================================
+// "GAMES FOR YOU" OPPORTUNITIES — get_checkin_match_opportunities()
+// =============================================================================
+
+/**
+ * Public matches with open spots that fit the availability the player just
+ * declared (in-memory `slots`, not yet persisted). The RPC enforces all four
+ * criteria server-side (favorite/distance, exact rating, declared day+hour,
+ * gender) across the player's active sports, windowed to today…today+3.
+ *
+ * Gated on having ≥ 1 declared slot; callers should pass `enabled` keyed to the
+ * step being reachable so it can prefetch while the player is still on
+ * availability.
+ */
+export function useCheckInMatchOpportunities(params: {
+  slots: CheckInMatchSlot[];
+  timezone?: string | null;
+  enabled?: boolean;
+}) {
+  const { slots, timezone = null, enabled = true } = params;
+  return useQuery({
+    queryKey: checkInKeys.opportunities(slots, timezone),
+    queryFn: () => getCheckInMatchOpportunities({ slots, timezone, limit: 20 }),
+    staleTime: 60_000,
+    enabled: enabled && slots.length > 0,
   });
 }
 

@@ -65,6 +65,29 @@ export function countCellsForDays(grid: ReadonlySet<string>, days: DayEnum[]): n
 }
 
 /**
+ * Serialize the selected cells within `days` into sorted {day, hour} slots —
+ * the shape the match-opportunities RPC expects. Sorted so the query key stays
+ * stable regardless of Set iteration order.
+ */
+export function slotsForDays(
+  grid: ReadonlySet<string>,
+  days: DayEnum[]
+): { day: DayEnum; hour: number }[] {
+  if (days.length === 0) return [];
+  const scope = new Set<string>(days);
+  const out: { day: DayEnum; hour: number }[] = [];
+  grid.forEach(key => {
+    const sep = key.lastIndexOf('-');
+    const day = key.slice(0, sep);
+    if (scope.has(day)) {
+      out.push({ day: day as DayEnum, hour: Number(key.slice(sep + 1)) });
+    }
+  });
+  out.sort((a, b) => (a.day === b.day ? a.hour - b.hour : a.day < b.day ? -1 : 1));
+  return out;
+}
+
+/**
  * Map the server window to grid props. Labels are relative to position:
  * index 0 → "Today", 1 → "Tomorrow", 2+ → the localized weekday name (no date
  * number). The 4 window dates are consecutive, so their weekdays are always

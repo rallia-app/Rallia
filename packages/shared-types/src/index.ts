@@ -27,4 +27,4 @@ export * from './constants';
 export * from './validation';
 
 // Re-export Database type and Supabase helper types for client typing
-export type { Database, Tables, TablesInsert, TablesUpdate, Enums } from './supabase';
+export type { Database, Tables, TablesInsert, TablesUpdate, Enums, Json } from './supabase';

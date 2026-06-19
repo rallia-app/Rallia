@@ -25,6 +25,10 @@ interface SummaryCardProps {
   hoursConfirmed: number;
   autoCreate: boolean;
   autoInvite: boolean;
+  /** Games joined directly on the "Games for you" step. */
+  joinedCount: number;
+  /** Games the player asked to join (request-mode) on that step. */
+  requestedCount: number;
 }
 
 export function SummaryCard({
@@ -32,6 +36,8 @@ export function SummaryCard({
   hoursConfirmed,
   autoCreate,
   autoInvite,
+  joinedCount,
+  requestedCount,
 }: SummaryCardProps) {
   const { t } = useTranslation();
   const { colors, isDark } = useThemeStyles();
@@ -48,46 +54,61 @@ export function SummaryCard({
       ? t('weeklyCheckIn.step4.summarySlotsOne')
       : t('weeklyCheckIn.step4.summarySlots', { count: hoursConfirmed });
 
+  // Build the recap rows in order, then flag the last so only it drops its
+  // divider. The "games joined / asked to join" rows recap what happened on the
+  // "Games for you" step and only show when the player acted there.
+  const rows: Array<{ key: string; icon: keyof typeof Ionicons.glyphMap; text: string }> = [
+    { key: 'goal', icon: 'trophy', text: freqText },
+    { key: 'slots', icon: 'calendar', text: slotsText },
+  ];
+  if (joinedCount > 0) {
+    rows.push({
+      key: 'joined',
+      icon: 'checkmark-circle',
+      text:
+        joinedCount === 1
+          ? t('weeklyCheckIn.step4.summaryJoinedOne')
+          : t('weeklyCheckIn.step4.summaryJoined', { count: joinedCount }),
+    });
+  }
+  if (requestedCount > 0) {
+    rows.push({
+      key: 'requested',
+      icon: 'hand-left',
+      text:
+        requestedCount === 1
+          ? t('weeklyCheckIn.step4.summaryRequestedOne')
+          : t('weeklyCheckIn.step4.summaryRequested', { count: requestedCount }),
+    });
+  }
+  if (WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && autoCreate) {
+    rows.push({
+      key: 'autoCreate',
+      icon: 'add-circle',
+      text: t('weeklyCheckIn.step4.summaryAutoCreate'),
+    });
+  }
+  if (WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite) {
+    rows.push({
+      key: 'autoInvite',
+      icon: 'people',
+      text: t('weeklyCheckIn.step4.summaryAutoInvite'),
+    });
+  }
+
   return (
     <View style={[styles.card, { backgroundColor: colors.card }]}>
-      <SummaryRow
-        icon="trophy"
-        text={freqText}
-        colors={colors}
-        iconBubbleBg={iconBubbleBg}
-        iconColor={iconColor}
-      />
-      <SummaryRow
-        icon="calendar"
-        text={slotsText}
-        colors={colors}
-        iconBubbleBg={iconBubbleBg}
-        iconColor={iconColor}
-        isLast={
-          !(WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && autoCreate) &&
-          !(WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite)
-        }
-      />
-      {WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && autoCreate && (
+      {rows.map((row, i) => (
         <SummaryRow
-          icon="add-circle"
-          text={t('weeklyCheckIn.step4.summaryAutoCreate')}
+          key={row.key}
+          icon={row.icon}
+          text={row.text}
           colors={colors}
           iconBubbleBg={iconBubbleBg}
           iconColor={iconColor}
-          isLast={!(WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite)}
+          isLast={i === rows.length - 1}
         />
-      )}
-      {WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite && (
-        <SummaryRow
-          icon="people"
-          text={t('weeklyCheckIn.step4.summaryAutoInvite')}
-          colors={colors}
-          iconBubbleBg={iconBubbleBg}
-          iconColor={iconColor}
-          isLast
-        />
-      )}
+      ))}
     </View>
   );
 }

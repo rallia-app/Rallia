@@ -9162,6 +9162,13 @@ export type Database = {
           timezone: string
         }[]
       }
+      get_checkin_match_opportunities: {
+        Args: { p_limit?: number; p_slots: Json; p_timezone?: string }
+        Returns: {
+          distance_meters: number
+          match_id: string
+        }[]
+      }
       get_compatible_players: {
         Args: {
           p_max_results?: number
