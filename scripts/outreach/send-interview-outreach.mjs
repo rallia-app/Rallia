@@ -252,16 +252,22 @@ async function resolveProfileByEmail(supabase, email) {
 
 // Find an existing GROUP conversation whose participant set is exactly
 // {recipient, ...founders}. Returns conversation id or null.
+// Note: we fetch ALL conversations the recipient is in and filter conversation_type
+// in JS — the PostgREST nested-table filter (.eq('conversation.x', v)) silently
+// drops the condition on some client versions, so we can't rely on it server-side.
 async function findExistingGroup(supabase, recipientId, founderIds) {
   const want = new Set([recipientId, ...founderIds]);
   const { data: rows, error } = await supabase
     .from('conversation_participant')
     .select('conversation_id, conversation:conversation!inner(conversation_type)')
     .eq('player_id', recipientId)
-    .eq('conversation.conversation_type', 'group')
     .limit(200);
   if (error) throw error;
-  const candidateIds = [...new Set((rows || []).map(r => r.conversation_id))];
+  const candidateIds = [...new Set(
+    (rows || [])
+      .filter(r => r.conversation?.conversation_type === 'group')
+      .map(r => r.conversation_id)
+  )];
   for (const cid of candidateIds) {
     const { data: parts, error: pErr } = await supabase
       .from('conversation_participant')
@@ -283,6 +289,27 @@ async function hasCampaignMessage(supabase, conversationId) {
     .limit(1);
   if (error) throw error;
   return (data || []).length > 0;
+}
+
+// Fallback idempotency check: does this player have a campaign message in ANY
+// conversation they're part of? Catches cases where findExistingGroup returns null
+// (e.g. the conversation was somehow not found) but a message was already sent.
+async function hasAnyCampaignMessageForPlayer(supabase, playerId) {
+  const { data: convRows, error: cErr } = await supabase
+    .from('conversation_participant')
+    .select('conversation_id')
+    .eq('player_id', playerId);
+  if (cErr) throw cErr;
+  if (!convRows || convRows.length === 0) return false;
+  const ids = convRows.map(r => r.conversation_id);
+  const { data: msgs, error: mErr } = await supabase
+    .from('message')
+    .select('id')
+    .in('conversation_id', ids)
+    .filter('metadata->>campaign', 'eq', CAMPAIGN)
+    .limit(1);
+  if (mErr) throw mErr;
+  return (msgs || []).length > 0;
 }
 
 async function createGroupConversation(supabase, senderId, participantIds, title) {
@@ -422,6 +449,14 @@ async function main() {
       const content = buildContent(r.segment, lang, firstName);
       const title = opts.title || buildTitle(firstName);
       const participantIds = [profile.id, ...founderIds];
+
+      // Idempotency: check for any prior campaign message for this player first
+      // (catches cases where findExistingGroup misses the conversation).
+      if (await hasAnyCampaignMessageForPlayer(supabase, profile.id)) {
+        console.log(`SKIP  ${r.email}  -> campaign message already exists`);
+        summary.alreadySent++;
+        continue;
+      }
 
       let convId = await findExistingGroup(supabase, profile.id, founderIds);
       let convAction = convId ? 'reuse' : 'create';
