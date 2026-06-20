@@ -10270,6 +10270,10 @@
         "question": "What's your level?",
         "hint": "Pick the rating closest to yours — we'll match you with someone similar."
       },
+      "matchType": {
+        "question": "What kind of game?",
+        "hint": "Pick your format and style."
+      },
       "format": {
         "question": "Singles or doubles?",
         "hint": "We'll find players looking for the same format."
@@ -10281,6 +10285,7 @@
       "day": {
         "question": "Which day works for you?",
         "hint": "Pick today or tomorrow. Counts show bookable court slots at your facility.",
+        "hintNoFacility": "Pick today or tomorrow.",
         "loading": "Loading availability…",
         "openSlots": "{count} court slots open",
         "noOpenSlots": "No court slots listed"
@@ -10288,6 +10293,7 @@
       "time": {
         "question": "What time works for you?",
         "hint": "For {day} — pick one time. Colors show court availability at your facility, not players yet.",
+        "hintNoFacility": "For {day}, pick one time.",
         "startLabel": "Start",
         "endLabel": "End",
         "rangeHintStart": "Tap a start time below",
@@ -10315,6 +10321,8 @@
         "openSlots": "{count} court slots open",
         "noOpenSlots": "No online slots listed",
         "noResults": "No facilities found within 25 km.",
+        "outOfArea": "We don't have partner facilities near you yet. You can still tell us when you'd like to play, and we'll reach out the moment we launch in your area.",
+        "outOfAreaCta": "Continue",
         "errors": {
           "notFound": "We couldn't find that address.",
           "searchFailed": "Couldn't load facilities. Try again."
