@@ -1,5 +1,5 @@
 import type { PlacePrediction } from '@rallia/shared-types';
-import type { PlaceDetails } from '@rallia/shared-hooks';
+import type { PlaceDetails, PlacesScope } from '@rallia/shared-hooks';
 
 const AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
@@ -17,11 +17,19 @@ function getApiKey(): string | null {
   return process.env.GOOGLE_PLACES_API_KEY ?? null;
 }
 
-export async function autocompletePlaces(input: string): Promise<PlacePrediction[]> {
+export async function autocompletePlaces(
+  input: string,
+  scope: PlacesScope = 'gma'
+): Promise<PlacePrediction[]> {
   const apiKey = getApiKey();
   if (!apiKey) {
     throw new Error('Google Places API not configured');
   }
+
+  const restrictions =
+    scope === 'worldwide'
+      ? {}
+      : { includedRegionCodes: ['ca'], locationRestriction: GMA_LOCATION_RESTRICTION };
 
   const response = await fetch(AUTOCOMPLETE_URL, {
     method: 'POST',
@@ -31,8 +39,7 @@ export async function autocompletePlaces(input: string): Promise<PlacePrediction
     },
     body: JSON.stringify({
       input,
-      includedRegionCodes: ['ca'],
-      locationRestriction: GMA_LOCATION_RESTRICTION,
+      ...restrictions,
     }),
   });
 

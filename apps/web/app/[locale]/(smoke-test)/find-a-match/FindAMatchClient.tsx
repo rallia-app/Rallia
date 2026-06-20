@@ -528,6 +528,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     searchQuery: addressQuery,
     enabled: step === 'location' && homeCoordinates === null,
     minQueryLength: 3,
+    scope: 'worldwide',
   });
 
   const selectedPlan = getMatchPlan(selectedPlanTier);
