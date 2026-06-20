@@ -42,11 +42,12 @@ export function getDayDateKey(
   now: Date = new Date()
 ): string {
   const todayKey = getDateKeyInTimezone(now, timezone);
-  if (day === 'today') return todayKey;
+  const offset = day === 'today' ? 0 : day === 'tomorrow' ? 1 : 2;
+  if (offset === 0) return todayKey;
 
   const [year, month, dayNum] = todayKey.split('-').map(Number);
-  const tomorrow = new Date(Date.UTC(year, month - 1, dayNum + 1));
-  return `${tomorrow.getUTCFullYear()}-${String(tomorrow.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrow.getUTCDate()).padStart(2, '0')}`;
+  const target = new Date(Date.UTC(year, month - 1, dayNum + offset));
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}-${String(target.getUTCDate()).padStart(2, '0')}`;
 }
 
 function getSlotDateKey(slotStart: string, timezone: string): string {

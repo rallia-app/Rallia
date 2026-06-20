@@ -1,6 +1,6 @@
 export const FLEXIBLE_TIME_SLOT = 'flexible_48h';
 
-export const TIME_DAY_OPTIONS = ['today', 'tomorrow'] as const;
+export const TIME_DAY_OPTIONS = ['today', 'tomorrow', 'dayAfter'] as const;
 export type TimeDayOption = (typeof TIME_DAY_OPTIONS)[number];
 
 /** First selectable hour (inclusive), local time. */
@@ -8,7 +8,8 @@ export const PLAY_HOUR_START = 6;
 /** Last selectable hour (inclusive), local time — 11 PM slot. */
 export const PLAY_HOUR_END = 23;
 
-const HOURS_48_MS = 48 * 60 * 60 * 1000;
+/** Rolling booking window: today, tomorrow, and the day after. */
+const BOOKING_WINDOW_MS = 72 * 60 * 60 * 1000;
 
 function startOfLocalDay(date: Date): Date {
   const d = new Date(date);
@@ -19,7 +20,18 @@ function startOfLocalDay(date: Date): Date {
 export function getDateForDay(day: TimeDayOption, now: Date = new Date()): Date {
   const d = startOfLocalDay(now);
   if (day === 'tomorrow') d.setDate(d.getDate() + 1);
+  else if (day === 'dayAfter') d.setDate(d.getDate() + 2);
   return d;
+}
+
+/** Localized weekday name (e.g. "Monday") for a day option. */
+export function getDayWeekdayName(
+  day: TimeDayOption,
+  locale: string,
+  now: Date = new Date()
+): string {
+  const name = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(getDateForDay(day, now));
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 export function getPlayHours(): number[] {
@@ -66,7 +78,7 @@ export function isHourSelectable(
   now: Date = new Date()
 ): boolean {
   if (hour < PLAY_HOUR_START || hour > PLAY_HOUR_END) return false;
-  const max = new Date(now.getTime() + HOURS_48_MS);
+  const max = new Date(now.getTime() + BOOKING_WINDOW_MS);
   const { start } = getHourBounds(day, hour, now);
   return start < max && start > now;
 }

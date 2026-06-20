@@ -78,6 +78,7 @@ import {
   TIME_HOUR_GROUPS,
   encodeTimeSlot,
   formatHourLabel,
+  getDayWeekdayName,
   isDaySelectable,
   isFlexibleTimeSlot,
   isHourSelectable,
@@ -174,7 +175,8 @@ function formatTimeSlotLabel(
 
   let dayLabel: string;
   if (parsed.day === 'today') dayLabel = translate('form.timeDays.today');
-  else dayLabel = translate('form.timeDays.tomorrow');
+  else if (parsed.day === 'tomorrow') dayLabel = translate('form.timeDays.tomorrow');
+  else dayLabel = getDayWeekdayName(parsed.day, locale);
 
   const timeLabel = formatHourLabel(parsed.hour, locale);
 
@@ -689,6 +691,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         setNearbyFacilities(facilities);
         if (facilities.length === 0) {
           setIsOutOfArea(true);
+          setStep('day');
         }
       } catch {
         if (requestId !== facilitySearchRequest.current) return;
@@ -980,7 +983,8 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
   const getDayLabel = (day: TimeDayOption): string => {
     if (day === 'today') return t('form.timeDays.today');
-    return t('form.timeDays.tomorrow');
+    if (day === 'tomorrow') return t('form.timeDays.tomorrow');
+    return getDayWeekdayName(day, locale);
   };
 
   const selectDay = (day: TimeDayOption) => {
@@ -1009,12 +1013,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     setError(null);
     void loadFacilityAvailability(facility.id);
     scheduleAdvance('day');
-  };
-
-  const continueWithoutFacility = () => {
-    clearAdvanceTimer();
-    setError(null);
-    setStep('day');
   };
 
   const renderConditionSummary = () => {
@@ -1259,19 +1257,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
                 </button>
               );
             })}
-          </div>
-        )}
-
-        {isOutOfArea && (
-          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-muted/30 p-4">
-            <p className="text-sm text-muted-foreground">{tw('location.outOfArea')}</p>
-            <Button
-              onClick={continueWithoutFacility}
-              className="h-12 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
-            >
-              {tw('location.outOfAreaCta')}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
           </div>
         )}
 

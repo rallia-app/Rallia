@@ -10356,8 +10356,6 @@
         "openSlots": "{count} court slots open",
         "noOpenSlots": "No online slots listed",
         "noResults": "No facilities found within 25 km.",
-        "outOfArea": "We don't have partner facilities near you yet. You can still tell us when you'd like to play, and we'll reach out the moment we launch in your area.",
-        "outOfAreaCta": "Continue",
         "errors": {
           "notFound": "We couldn't find that address.",
           "searchFailed": "Couldn't load facilities. Try again."
