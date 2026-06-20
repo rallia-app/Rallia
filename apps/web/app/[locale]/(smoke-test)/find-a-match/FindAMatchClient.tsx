@@ -97,8 +97,7 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const WIZARD_STEPS = [
   'intro',
   'rating',
-  'format',
-  'nature',
+  'matchType',
   'location',
   'day',
   'time',
@@ -113,10 +112,10 @@ const DEFAULT_PLAN_TIER: MatchPlanTier = 'pack_3';
 const AUTO_ADVANCE_MS = 380;
 
 type Step = (typeof WIZARD_STEPS)[number];
-type QuestionStep = 'rating' | 'format' | 'nature' | 'day' | 'time' | 'location';
+type QuestionStep = 'rating' | 'matchType' | 'day' | 'time' | 'location';
 type PhonePhase = 'enter' | 'verify';
 
-const QUESTION_STEPS: QuestionStep[] = ['rating', 'format', 'nature', 'location', 'day', 'time'];
+const QUESTION_STEPS: QuestionStep[] = ['rating', 'matchType', 'location', 'day', 'time'];
 
 function paymentAnalyticsProps(rating: RatingOption, plan: MatchPlanConfig) {
   return {
@@ -263,6 +262,7 @@ interface TimePickerProps {
   availabilitySlots: FacilityAvailabilitySlotRow[];
   selectedHour: number | null;
   onSelectHour: (hour: number) => void;
+  showAvailability: boolean;
 }
 
 function TimePicker({
@@ -272,29 +272,32 @@ function TimePicker({
   availabilitySlots,
   selectedHour,
   onSelectHour,
+  showAvailability,
 }: TimePickerProps) {
   const tw = useTranslations('findAMatch.wizard.time');
   const allHours = TIME_HOUR_GROUPS.flatMap(group => group.hours);
-  const maxOpenCount = getMaxAvailabilityCountForHours(
-    availabilitySlots,
-    timeDay,
-    allHours,
-    timezone
-  );
+  const maxOpenCount = showAvailability
+    ? getMaxAvailabilityCountForHours(availabilitySlots, timeDay, allHours, timezone)
+    : 0;
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
-        {(['high', 'medium', 'low', 'none'] as const).map(tier => (
-          <span key={tier} className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+      {showAvailability && (
+        <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
+          {(['high', 'medium', 'low', 'none'] as const).map(tier => (
             <span
-              className={`h-3 w-5 shrink-0 rounded-sm ${AVAILABILITY_LEGEND_SWATCH[tier]}`}
-              aria-hidden
-            />
-            {tw(`availabilityLegend.${tier}`)}
-          </span>
-        ))}
-      </div>
+              key={tier}
+              className="inline-flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              <span
+                className={`h-3 w-5 shrink-0 rounded-sm ${AVAILABILITY_LEGEND_SWATCH[tier]}`}
+                aria-hidden
+              />
+              {tw(`availabilityLegend.${tier}`)}
+            </span>
+          ))}
+        </div>
+      )}
 
       {TIME_HOUR_GROUPS.map(group => (
         <div key={group.id}>
@@ -305,13 +308,12 @@ function TimePicker({
             {group.hours.map(hour => {
               const selectable = isHourSelectable(timeDay, hour);
               const state = getHourCellState(hour, selectedHour, selectable);
-              const openCount = countAvailabilitySlotsForHour(
-                availabilitySlots,
-                timeDay,
-                hour,
-                timezone
-              );
-              const tier = getHourAvailabilityTier(openCount, maxOpenCount);
+              const openCount = showAvailability
+                ? countAvailabilitySlotsForHour(availabilitySlots, timeDay, hour, timezone)
+                : 0;
+              const tier: HourAvailabilityTier = showAvailability
+                ? getHourAvailabilityTier(openCount, maxOpenCount)
+                : 'low';
               const countLabel =
                 openCount > 0 ? tw('openCourts', { count: openCount }) : tw('noOpenCourts');
 
@@ -322,11 +324,17 @@ function TimePicker({
                   disabled={state === 'disabled'}
                   onClick={() => onSelectHour(hour)}
                   className={hourChipClass(state, tier)}
-                  aria-label={`${formatHourLabel(hour, locale, true)}, ${countLabel}`}
+                  aria-label={
+                    showAvailability
+                      ? `${formatHourLabel(hour, locale, true)}, ${countLabel}`
+                      : formatHourLabel(hour, locale, true)
+                  }
                 >
                   <span className="flex flex-col items-center gap-0.5">
                     <span>{formatHourLabel(hour, locale, true)}</span>
-                    <span className={hourCountClass(state, tier)}>{countLabel}</span>
+                    {showAvailability && (
+                      <span className={hourCountClass(state, tier)}>{countLabel}</span>
+                    )}
                   </span>
                 </button>
               );
@@ -494,6 +502,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [isSearchingFacilities, setIsSearchingFacilities] = useState(false);
   const [facilitySearchError, setFacilitySearchError] = useState<string | null>(null);
+  const [isOutOfArea, setIsOutOfArea] = useState(false);
   const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier>(DEFAULT_PLAN_TIER);
   const [activePlan, setActivePlan] = useState<MatchPlanConfig>(getMatchPlan(DEFAULT_PLAN_TIER));
   const [subscriptionNoteVisible, setSubscriptionNoteVisible] = useState(false);
@@ -507,6 +516,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const facilitySearchRequest = useRef(0);
+  const availabilityLoadedFor = useRef<string | null>(null);
 
   const {
     predictions,
@@ -549,8 +559,8 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   }, [step, timeDay]);
 
   useEffect(() => {
-    if (step === 'day' && !selectedFacilityId) setStep('location');
-  }, [step, selectedFacilityId]);
+    if (step === 'day' && !selectedFacilityId && !isOutOfArea) setStep('location');
+  }, [step, selectedFacilityId, isOutOfArea]);
 
   useEffect(() => () => clearAdvanceTimer(), [clearAdvanceTimer]);
 
@@ -573,8 +583,10 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     setSelectedFacilityName(null);
     setSelectedFacilityTimezone('America/Toronto');
     setFacilityAvailabilitySlots([]);
+    availabilityLoadedFor.current = null;
     setIsLoadingAvailability(false);
     setFacilitySearchError(null);
+    setIsOutOfArea(false);
     setIsSearchingFacilities(false);
     setSelectedPlanTier(DEFAULT_PLAN_TIER);
     setActivePlan(getMatchPlan(DEFAULT_PLAN_TIER));
@@ -640,6 +652,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   }, [step, effectivePaymentIntentId, effectiveRating]);
 
   const loadFacilityAvailability = useCallback(async (facilityId: string) => {
+    availabilityLoadedFor.current = facilityId;
     setIsLoadingAvailability(true);
     try {
       const slots = await fetchFacilityAvailabilitySlots(facilityId);
@@ -653,22 +666,17 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
   useEffect(() => {
     if (step !== 'day' && step !== 'time') return;
-    if (!selectedFacilityId || facilityAvailabilitySlots.length > 0 || isLoadingAvailability)
-      return;
+    if (!selectedFacilityId || isLoadingAvailability) return;
+    if (availabilityLoadedFor.current === selectedFacilityId) return;
     void loadFacilityAvailability(selectedFacilityId);
-  }, [
-    step,
-    selectedFacilityId,
-    facilityAvailabilitySlots.length,
-    isLoadingAvailability,
-    loadFacilityAvailability,
-  ]);
+  }, [step, selectedFacilityId, isLoadingAvailability, loadFacilityAvailability]);
 
   const loadNearbyFacilities = useCallback(
     async (coordinates: { latitude: number; longitude: number }) => {
       const requestId = ++facilitySearchRequest.current;
       setIsSearchingFacilities(true);
       setFacilitySearchError(null);
+      setIsOutOfArea(false);
       setNearbyFacilities([]);
       setSelectedFacilityId(null);
       setSelectedFacilityName(null);
@@ -679,18 +687,18 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
         setNearbyFacilities(facilities);
         if (facilities.length === 0) {
-          setFacilitySearchError(t('location.noResults'));
+          setIsOutOfArea(true);
         }
       } catch {
         if (requestId !== facilitySearchRequest.current) return;
-        setFacilitySearchError(t('location.errors.searchFailed'));
+        setFacilitySearchError(tw('location.errors.searchFailed'));
       } finally {
         if (requestId === facilitySearchRequest.current) {
           setIsSearchingFacilities(false);
         }
       }
     },
-    [t]
+    [tw]
   );
 
   const handleAddressQueryChange = (value: string) => {
@@ -702,6 +710,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     setSelectedFacilityId(null);
     setSelectedFacilityName(null);
     setFacilitySearchError(null);
+    setIsOutOfArea(false);
     setError(null);
     clearPredictions();
   };
@@ -715,7 +724,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
     const details = await getPlaceDetails(prediction.placeId);
     if (!details) {
-      setFacilitySearchError(t('location.errors.notFound'));
+      setFacilitySearchError(tw('location.errors.notFound'));
       return;
     }
 
@@ -735,7 +744,8 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const advanceToPromise = useCallback(
     (slotOverride?: string) => {
       const effectiveSlot = slotOverride ?? timeSlot;
-      if (!rating || !matchFormat || !matchNature || !effectiveSlot || !selectedFacilityId) return;
+      if (!rating || !matchFormat || !matchNature || !effectiveSlot) return;
+      if (!selectedFacilityId && !isOutOfArea) return;
       if (!homeAddress) {
         setError(t('form.errors.address'));
         return;
@@ -755,7 +765,17 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
       setStep('promise');
       setError(null);
     },
-    [rating, matchFormat, matchNature, timeSlot, selectedFacilityId, homeAddress, homePostalCode, t]
+    [
+      rating,
+      matchFormat,
+      matchNature,
+      timeSlot,
+      selectedFacilityId,
+      isOutOfArea,
+      homeAddress,
+      homePostalCode,
+      t,
+    ]
   );
 
   const handleContinueToPlans = () => {
@@ -942,19 +962,19 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const selectRating = (option: RatingOption) => {
     setRating(option);
     setError(null);
-    scheduleAdvance('format');
+    scheduleAdvance('matchType');
   };
 
   const selectFormat = (option: MatchFormatOption) => {
     setMatchFormat(option);
     setError(null);
-    scheduleAdvance('nature');
+    if (matchNature) scheduleAdvance('location');
   };
 
   const selectNature = (option: MatchNatureOption) => {
     setMatchNature(option);
     setError(null);
-    scheduleAdvance('location');
+    if (matchFormat) scheduleAdvance('location');
   };
 
   const getDayLabel = (day: TimeDayOption): string => {
@@ -988,6 +1008,12 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     setError(null);
     void loadFacilityAvailability(facility.id);
     scheduleAdvance('day');
+  };
+
+  const continueWithoutFacility = () => {
+    clearAdvanceTimer();
+    setError(null);
+    setStep('day');
   };
 
   const renderConditionSummary = () => {
@@ -1065,7 +1091,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     );
   }
 
-  if (step === 'format') {
+  if (step === 'matchType') {
     return (
       <WizardShell
         step={step}
@@ -1074,13 +1100,19 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           clearAdvanceTimer();
           setStep('rating');
         }}
-        questionStep="format"
+        questionStep="matchType"
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('format.question')}</h2>
-          <p className="text-muted-foreground">{tw('format.hint')}</p>
+          <h2 className="text-2xl font-bold text-balance sm:text-3xl">
+            {tw('matchType.question')}
+          </h2>
+          <p className="text-muted-foreground">{tw('matchType.hint')}</p>
         </div>
+
         <div className="flex flex-col gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {tw('format.question')}
+          </p>
           {MATCH_FORMAT_OPTIONS.map(option => (
             <button
               key={option}
@@ -1100,26 +1132,11 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
             </button>
           ))}
         </div>
-      </WizardShell>
-    );
-  }
 
-  if (step === 'nature') {
-    return (
-      <WizardShell
-        step={step}
-        showBack
-        onBack={() => {
-          clearAdvanceTimer();
-          setStep('format');
-        }}
-        questionStep="nature"
-      >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('nature.question')}</h2>
-          <p className="text-muted-foreground">{tw('nature.hint')}</p>
-        </div>
-        <div className="flex flex-col gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {tw('nature.question')}
+          </p>
           {MATCH_NATURE_OPTIONS.map(option => (
             <button
               key={option}
@@ -1152,7 +1169,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         showBack
         onBack={() => {
           clearAdvanceTimer();
-          setStep('nature');
+          setStep('matchType');
         }}
         questionStep="location"
       >
@@ -1244,6 +1261,19 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           </div>
         )}
 
+        {isOutOfArea && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">{tw('location.outOfArea')}</p>
+            <Button
+              onClick={continueWithoutFacility}
+              className="h-12 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+            >
+              {tw('location.outOfAreaCta')}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        )}
+
         {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
       </WizardShell>
     );
@@ -1262,7 +1292,9 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
       >
         <div className="flex flex-col gap-3">
           <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('day.question')}</h2>
-          <p className="text-muted-foreground">{tw('day.hint')}</p>
+          <p className="text-muted-foreground">
+            {tw(selectedFacilityId ? 'day.hint' : 'day.hintNoFacility')}
+          </p>
         </div>
         <div className="flex flex-col gap-3">
           {TIME_DAY_OPTIONS.map(day => {
@@ -1288,19 +1320,21 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
                 <span className="flex items-center justify-between gap-3">
                   <span className="flex flex-col gap-1 text-left">
                     <span className="text-lg font-semibold">{getDayLabel(day)}</span>
-                    <span
-                      className={
-                        openCount > 0
-                          ? 'text-sm font-medium text-[var(--primary-600)]'
-                          : 'text-sm text-muted-foreground'
-                      }
-                    >
-                      {isLoadingAvailability
-                        ? tw('day.loading')
-                        : openCount > 0
-                          ? tw('day.openSlots', { count: openCount })
-                          : tw('day.noOpenSlots')}
-                    </span>
+                    {selectedFacilityId && (
+                      <span
+                        className={
+                          openCount > 0
+                            ? 'text-sm font-medium text-[var(--primary-600)]'
+                            : 'text-sm text-muted-foreground'
+                        }
+                      >
+                        {isLoadingAvailability
+                          ? tw('day.loading')
+                          : openCount > 0
+                            ? tw('day.openSlots', { count: openCount })
+                            : tw('day.noOpenSlots')}
+                      </span>
+                    )}
                   </span>
                   {selectable && (
                     <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -1328,7 +1362,11 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
       >
         <div className="flex flex-col gap-3">
           <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('time.question')}</h2>
-          <p className="text-muted-foreground">{tw('time.hint', { day: getDayLabel(timeDay) })}</p>
+          <p className="text-muted-foreground">
+            {tw(selectedFacilityId ? 'time.hint' : 'time.hintNoFacility', {
+              day: getDayLabel(timeDay),
+            })}
+          </p>
         </div>
 
         <TimePicker
@@ -1338,6 +1376,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           availabilitySlots={facilityAvailabilitySlots}
           selectedHour={selectedHour}
           onSelectHour={handleSelectHour}
+          showAvailability={Boolean(selectedFacilityId)}
         />
 
         {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (normalizedAddress.length < 5) {
       return NextResponse.json({ error: 'Invalid address.' }, { status: 400 });
     }
-    if (!facilityId || typeof facilityId !== 'string') {
+    if (facilityId != null && typeof facilityId !== 'string') {
       return NextResponse.json({ error: 'Invalid facility.' }, { status: 400 });
     }
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         location_type: String(locationType),
         home_address: normalizedAddress,
         postal_code: normalizedPostal,
-        facility_id: String(facilityId),
+        facility_id: facilityId ? String(facilityId) : '',
         facility_name: facilityName ? String(facilityName) : '',
         plan_tier: plan.tier,
         credits: plan.credits !== null ? String(plan.credits) : '',

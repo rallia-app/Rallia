@@ -67,8 +67,8 @@ export function isHourSelectable(
 ): boolean {
   if (hour < PLAY_HOUR_START || hour > PLAY_HOUR_END) return false;
   const max = new Date(now.getTime() + HOURS_48_MS);
-  const { start, end } = getHourBounds(day, hour, now);
-  return start < max && end > now;
+  const { start } = getHourBounds(day, hour, now);
+  return start < max && start > now;
 }
 
 export function getSelectableHours(day: TimeDayOption, now: Date = new Date()): number[] {

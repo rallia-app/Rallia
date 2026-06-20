@@ -10270,6 +10270,10 @@
         "question": "Quel est votre niveau?",
         "hint": "Choisissez la cote la plus proche de la vôtre — nous vous jumelerons avec quelqu'un de similaire."
       },
+      "matchType": {
+        "question": "Quel genre de partie?",
+        "hint": "Choisissez votre format pis votre style."
+      },
       "format": {
         "question": "Simple ou double?",
         "hint": "On trouve des joueurs qui cherchent le même format."
@@ -10281,6 +10285,7 @@
       "day": {
         "question": "Quel jour vous convient?",
         "hint": "Choisissez aujourd'hui ou demain. Les totaux indiquent les plages horaires réservables à l'installation.",
+        "hintNoFacility": "Choisissez aujourd'hui ou demain.",
         "loading": "Chargement des disponibilités…",
         "openSlots": "{count} plages horaires ouvertes",
         "noOpenSlots": "Aucune plage horaire"
@@ -10288,6 +10293,7 @@
       "time": {
         "question": "Quelle heure vous convient?",
         "hint": "Pour {day} — choisissez une heure. Les couleurs indiquent les terrains disponibles à l'installation, pas encore les joueurs.",
+        "hintNoFacility": "Pour {day}, choisissez une heure.",
         "startLabel": "Début",
         "endLabel": "Fin",
         "rangeHintStart": "Appuyez sur une heure de début ci-dessous",
@@ -10315,6 +10321,8 @@
         "openSlots": "{count} plages horaires ouvertes",
         "noOpenSlots": "Aucune plage en ligne",
         "noResults": "Aucune installation trouvée dans un rayon de 25 km.",
+        "outOfArea": "On n'a pas encore d'installations partenaires près de chez vous. Vous pouvez quand même nous dire quand vous aimeriez jouer, pis on vous écrit dès qu'on arrive dans votre coin.",
+        "outOfAreaCta": "Continuer",
         "errors": {
           "notFound": "Adresse introuvable.",
           "searchFailed": "Impossible de charger les installations. Réessayez."
