@@ -70,7 +70,7 @@ export function AutoMatchStep({
             description={t('weeklyCheckIn.autoMatch.howInviteDesc')}
           />
           <HowRow
-            icon="notifications-outline"
+            icon="shield-checkmark-outline"
             iconColor={iconColor}
             title={t('weeklyCheckIn.autoMatch.howNotifyTitle')}
             description={t('weeklyCheckIn.autoMatch.howNotifyDesc')}
