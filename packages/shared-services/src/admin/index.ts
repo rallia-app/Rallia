@@ -84,6 +84,7 @@ export type {
   MatchFillPoint,
   MatchQualityPoint,
   AutoInviteFunnelPoint,
+  CompatSupplyPoint,
 } from './analyticsService';
 
 // Analytics Service - Functions
@@ -140,6 +141,7 @@ export {
   getMatchFillAnalytics,
   getMatchQualityAnalytics,
   getAutoInviteFunnel,
+  getCompatSupplySnapshot,
 } from './analyticsService';
 
 // Audit Service - Types

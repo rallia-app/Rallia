@@ -3535,6 +3535,64 @@ export async function getAutoInviteFunnel(
   }
 }
 
+/**
+ * Compatibility "supply vs realized" snapshot — one row per weekly-goal bucket
+ * ('1'..'5', 'none') plus an 'all' row. Hypothetical supply (compatible pool +
+ * availability density at the player's best N windows) vs actual realization
+ * (distinct compatible partners actually played in a past, filled, both-joined match).
+ */
+export interface CompatSupplyPoint {
+  goalBucket: string;
+  players: number;
+  densityMean: number | null;
+  densityMedian: number | null;
+  densityP25: number | null;
+  densityP75: number | null;
+  pctZeroDensity: number | null;
+  compatibleMean: number | null;
+  compatibleMedian: number | null;
+  playedMean: number | null;
+  pctPlayedAny: number | null;
+  playedCompatibleMean: number | null;
+  pctPlayedCompatible: number | null;
+  realizationPct: number | null;
+}
+
+export async function getCompatSupplySnapshot(): Promise<CompatSupplyPoint[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_compat_supply_snapshot');
+    if (error) {
+      console.error('Error in getCompatSupplySnapshot:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      return [];
+    }
+    const num = (v: unknown) => (v != null ? Number(v) : null);
+    return (data || []).map((row: Record<string, unknown>) => ({
+      goalBucket: row.goal_bucket as string,
+      players: Number(row.players) || 0,
+      densityMean: num(row.density_mean),
+      densityMedian: num(row.density_median),
+      densityP25: num(row.density_p25),
+      densityP75: num(row.density_p75),
+      pctZeroDensity: num(row.pct_zero_density),
+      compatibleMean: num(row.compatible_mean),
+      compatibleMedian: num(row.compatible_median),
+      playedMean: num(row.played_mean),
+      pctPlayedAny: num(row.pct_played_any),
+      playedCompatibleMean: num(row.played_compatible_mean),
+      pctPlayedCompatible: num(row.pct_played_compatible),
+      realizationPct: num(row.realization_pct),
+    }));
+  } catch (error) {
+    console.error('Error in getCompatSupplySnapshot (thrown):', error);
+    return [];
+  }
+}
+
 export default {
   getRealtimeUserStats,
   getMatchStatistics,

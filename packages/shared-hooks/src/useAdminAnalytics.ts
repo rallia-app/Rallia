@@ -34,6 +34,8 @@ import {
   getMatchFillAnalytics,
   getMatchQualityAnalytics,
   getAutoInviteFunnel,
+  getCompatSupplySnapshot,
+  getAnalyticsSnapshots,
   type KPISummary,
   type RealtimeUserStats,
   type MatchStatistics,
@@ -52,6 +54,8 @@ import {
   type MatchFillPoint,
   type MatchQualityPoint,
   type AutoInviteFunnelPoint,
+  type CompatSupplyPoint,
+  type AnalyticsSnapshot,
 } from '@rallia/shared-services';
 
 // =============================================================================
@@ -1301,6 +1305,92 @@ export function useAutoInviteFunnel(
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days, settleHours, isAuto, bucket]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+// =============================================================================
+// COMPATIBILITY SUPPLY VS REALIZED
+// =============================================================================
+
+export function useCompatSupplySnapshot(): {
+  data: CompatSupplyPoint[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<CompatSupplyPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getCompatSupplySnapshot();
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching compat supply snapshot:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useCompatSupplyTrend(days: number = 90): {
+  data: AnalyticsSnapshot[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+} {
+  const [data, setData] = useState<AnalyticsSnapshot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      const result = await getAnalyticsSnapshots({
+        startDate,
+        endDate,
+        metricType: 'compat_supply',
+      });
+      if (isMounted.current) setData(result);
+    } catch (err) {
+      console.error('Error fetching compat supply trend:', err);
+      if (isMounted.current) setError(err as Error);
+    } finally {
+      if (isMounted.current) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchData();
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
 
   return { data, loading, error, refetch: fetchData };
 }
