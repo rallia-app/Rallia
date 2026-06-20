@@ -285,7 +285,7 @@ async function hasCampaignMessage(supabase, conversationId) {
     .from('message')
     .select('id')
     .eq('conversation_id', conversationId)
-    .filter('metadata->>campaign', 'eq', CAMPAIGN)
+    .contains('metadata', { campaign: CAMPAIGN })
     .limit(1);
   if (error) throw error;
   return (data || []).length > 0;
@@ -306,7 +306,7 @@ async function hasAnyCampaignMessageForPlayer(supabase, playerId) {
     .from('message')
     .select('id')
     .in('conversation_id', ids)
-    .filter('metadata->>campaign', 'eq', CAMPAIGN)
+    .contains('metadata', { campaign: CAMPAIGN })
     .limit(1);
   if (mErr) throw mErr;
   return (msgs || []).length > 0;
