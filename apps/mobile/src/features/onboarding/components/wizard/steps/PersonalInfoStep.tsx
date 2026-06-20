@@ -30,6 +30,7 @@ import {
   sanitizeReferralCode,
   isReferralCodeComplete,
   REFERRAL_CODE_LENGTH,
+  getMinimumDateOfBirth,
 } from '@rallia/shared-utils';
 import { GENDER_VALUES } from '@rallia/shared-types';
 import type { TranslationKey, Locale } from '@rallia/shared-translations';
@@ -69,15 +70,6 @@ interface FieldErrors {
   dateOfBirth?: string;
   gender?: string;
 }
-
-const MINIMUM_AGE_YEARS = 18;
-
-// Calculate minimum date of birth (18 years ago)
-const getMinimumDateOfBirth = (): Date => {
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - MINIMUM_AGE_YEARS);
-  return date;
-};
 
 export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   formData,
