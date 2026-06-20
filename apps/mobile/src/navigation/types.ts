@@ -55,6 +55,8 @@ export type RootStackParamList = {
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
   Tournaments: undefined; // Public tournament discovery — full-screen, reached from Home quick-nav (back returns to Home)
   MyTournaments: undefined; // Caller's tournaments (organized + registered), reached from Tournaments
+  Leagues: undefined; // Public league discovery — full-screen, reached from Home quick-nav (admin-gated; tournaments are not)
+  MyLeagues: undefined; // Caller's leagues (organized + member), reached from Leagues or Community
   TournamentDetail: {
     tournamentId: string;
     tournamentName?: string;
@@ -63,6 +65,8 @@ export type RootStackParamList = {
     /** Organizer handoff from the creation success screen: open the invite sheet on arrival. */
     openInviteSheet?: boolean;
   }; // Tournament detail view
+  LeagueDetail: { leagueId: string; leagueName?: string }; // League detail view
+  SessionDetail: { sessionId: string; leagueId: string; sessionName?: string }; // League session detail + confirm CTA
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation

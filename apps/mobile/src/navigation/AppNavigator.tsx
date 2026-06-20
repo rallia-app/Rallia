@@ -90,6 +90,10 @@ import CommunityDetail from '#/screens/CommunityDetail';
 import TournamentDetail from '#/screens/TournamentDetail';
 import Tournaments from '#/screens/Tournaments';
 import MyTournaments from '#/screens/MyTournaments';
+import Leagues from '#/screens/Leagues';
+import MyLeagues from '#/screens/MyLeagues';
+import LeagueDetail from '#/screens/LeagueDetail';
+import SessionDetail from '#/screens/SessionDetail';
 import NetworkMatches from '#/screens/NetworkMatches';
 import AdminPanelScreen from '#/screens/AdminPanelScreen';
 import AdminDashboardScreen from '#/screens/AdminDashboardScreen';
@@ -1543,6 +1547,46 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('tournamentList.myTournaments'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="Leagues"
+        component={Leagues}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('leagueList.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="MyLeagues"
+        component={MyLeagues}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('leagueList.myLeagues'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="LeagueDetail"
+        component={LeagueDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.leagueName || t('leagueDetail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="SessionDetail"
+        component={SessionDetail}
+        options={({ route, navigation }) => ({
+          ...sharedOptions,
+          headerTitle: route.params?.sessionName || t('sessionDetail.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

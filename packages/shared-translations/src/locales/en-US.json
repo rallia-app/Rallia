@@ -3708,6 +3708,8 @@
     "createNetworkDescription": "Start a group or community to organize regular games with others",
     "createTournament": "Create Tournament",
     "createTournamentDescription": "Organize a tournament with a bracket and registrations",
+    "createLeague": "Create League",
+    "createLeagueDescription": "Run a seasonal ladder with sessions and rankings",
     "createEvent": "Create Event",
     "createEventDescription": "Organize a tournament or league and manage brackets and schedules",
     "selectNetworkType": "Create Network",
@@ -4054,6 +4056,303 @@
       "invitationsSentCount": "Sent {count} invitation(s)",
       "shareWithContacts": "Share with {count} contact(s)",
       "selectContactsFromLists": "Select contacts from your lists"
+    }
+  },
+  "leagueList": {
+    "title": "Leagues",
+    "myLeagues": "My leagues",
+    "loadError": "Couldn't load leagues",
+    "retry": "Try again",
+    "empty": "No public leagues right now",
+    "emptyDescription": "Check back soon, or create your own from the action menu.",
+    "searchPlaceholder": "Search leagues...",
+    "discoverFilters": {
+      "joinMode": "Join mode",
+      "allJoinModes": "All join modes",
+      "myRating": "My rating",
+      "reset": "Reset"
+    },
+    "emptySearch": {
+      "title": "No leagues found",
+      "description": "Try adjusting your search or filters."
+    },
+    "sectionOpenJoin": "Open to join",
+    "sectionApproval": "Approval required",
+    "sectionInviteOnly": "Invite only",
+    "roleOrganizer": "Organizer",
+    "memberCount": "{count} members",
+    "emptyMy": {
+      "title": "No leagues yet",
+      "description": "Leagues you join or organize will show up here. Create one from the action menu."
+    }
+  },
+  "leagueDetail": {
+    "title": "League",
+    "loading": "Loading league...",
+    "loadError": "Couldn't load league",
+    "retry": "Try again",
+    "notFound": "League not found",
+    "notFoundDescription": "This league may have been removed or you don't have access.",
+    "joinSuccess": "You joined the league",
+    "joinPending": "Your request is pending organizer approval",
+    "membershipPending": "Your membership is pending approval",
+    "memberActive": "You're an active member",
+    "memberApproved": "Member approved",
+    "seasonCreated": "Season created",
+    "seasonOpened": "Season is now open",
+    "seasonClosed": "Season closed — final standings are in",
+    "standings": {
+      "title": "{name} standings",
+      "player": "Player",
+      "wl": "W-L",
+      "pts": "Pts"
+    },
+    "unknownMember": "Player",
+    "noMembers": "No active members yet",
+    "noSeasons": "No seasons yet",
+    "tabs": {
+      "overview": "Overview",
+      "members": "Members",
+      "seasons": "Seasons",
+      "sessions": "Sessions",
+      "details": "Details"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "closed": "Closed"
+    },
+    "hero": {
+      "membersCount": "{count} members"
+    },
+    "labels": {
+      "visibility": "Visibility",
+      "joinMode": "Join mode",
+      "description": "Description",
+      "venue": "Venue",
+      "ratingRange": "Rating range"
+    },
+    "dashboard": {
+      "organizedBy": "Organized by {name}",
+      "steps": {
+        "setup": "Setup",
+        "season": "Season",
+        "play": "Play",
+        "done": "Done"
+      },
+      "stats": {
+        "members": "Members",
+        "seasons": "Seasons",
+        "currentSeason": "Season",
+        "noSeason": "None"
+      },
+      "pendingRequestsCta": {
+        "title": "Pending join requests",
+        "description": "{count} players are waiting for your approval",
+        "review": "Review requests"
+      },
+      "pendingRequests": {
+        "title": "Pending approval ({count})",
+        "approveLabel": "Approve {name}"
+      },
+      "members": {
+        "title": "Active members"
+      },
+      "joinCta": {
+        "title": "Join this league",
+        "description": "Request membership and start competing in seasons"
+      },
+      "createSeasonCta": {
+        "title": "Create your first season",
+        "description": "Seasons organize play periods and standings for your league",
+        "button": "Create season"
+      },
+      "openSeasonCta": {
+        "title": "Open {name}",
+        "description": "Opening a season lets members register and sessions begin"
+      }
+    },
+    "sections": {
+      "pending": "Pending approval",
+      "members": "Members",
+      "seasons": "Seasons"
+    },
+    "seasonStatus": {
+      "draft": "Draft",
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "sessionStatus": {
+      "draft": "Draft",
+      "published": "Published",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "createTitle": "Schedule a session",
+      "needOpenSeason": "Open a season first to schedule sessions.",
+      "empty": "No sessions scheduled yet",
+      "namePlaceholder": "e.g., Tuesday night",
+      "date": "Date",
+      "time": "Time",
+      "capacityPlaceholder": "Capacity (optional)",
+      "submit": "Create session",
+      "creating": "Creating...",
+      "publish": "Publish",
+      "created": "Session created",
+      "published": "Session published",
+      "validation": {
+        "nameRequired": "Session name is required",
+        "future": "Pick a date and time in the future"
+      }
+    },
+    "values": {
+      "private": "Private",
+      "public": "Public",
+      "community": "Community",
+      "open": "Open join",
+      "approval": "Approval required",
+      "inviteOnly": "Invite only"
+    },
+    "actions": {
+      "join": "Join league",
+      "joining": "Joining...",
+      "approve": "Approve",
+      "openSeason": "Open season",
+      "openingSeason": "Opening...",
+      "closeSeason": "Close season",
+      "closingSeason": "Closing..."
+    },
+    "createSeason": {
+      "title": "Create a season",
+      "namePlaceholder": "e.g., Summer 2026",
+      "startDate": "Start",
+      "endDate": "End",
+      "submit": "Create season",
+      "creating": "Creating..."
+    },
+    "validation": {
+      "seasonNameRequired": "Season name is required",
+      "endBeforeStart": "End date must be on or after the start date"
+    },
+    "errors": {
+      "generic": "Something went wrong. Try again."
+    }
+  },
+  "sessionDetail": {
+    "title": "Session",
+    "loadError": "Couldn't load session",
+    "retry": "Try again",
+    "unknownMember": "Player",
+    "confirmedCount": "{count} confirmed",
+    "confirmedOfCapacity": "{count}/{capacity} confirmed",
+    "confirmBy": "Confirm by {date}",
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "cta": {
+      "title": "Are you in?",
+      "confirmedTitle": "You're confirmed",
+      "waitlistedTitle": "You're on the waitlist",
+      "declinedTitle": "You declined — changed your mind?",
+      "confirm": "I'm in",
+      "decline": "Can't make it"
+    },
+    "roster": {
+      "confirmed": "Confirmed",
+      "waitlisted": "Waitlist",
+      "pending": "No response",
+      "declined": "Declined"
+    },
+    "actions": {
+      "publish": "Publish session",
+      "publishing": "Publishing...",
+      "cancel": "Cancel session",
+      "cancelling": "Cancelling..."
+    },
+    "toasts": {
+      "confirmed": "You're in 🙌",
+      "waitlisted": "You're on the waitlist",
+      "declined": "Marked as can't make it",
+      "published": "Session published",
+      "cancelled": "Session cancelled"
+    },
+    "sheet": {
+      "title": "Match sheet",
+      "empty": "No match sheet generated yet",
+      "generate": "Generate sheet",
+      "regenerate": "Regenerate sheet",
+      "generating": "Generating...",
+      "ready": "Match sheet ready 🙌",
+      "round": "Round {n}",
+      "vs": "vs",
+      "bye": "Bye: {names}",
+      "lock": "Lock game",
+      "unlock": "Unlock game"
+    },
+    "score": {
+      "title": "Enter score",
+      "winnerPrompt": "Who won?",
+      "scorePlaceholder": "Score (e.g. 6-4 6-2)",
+      "enter": "Enter score",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "saved": "Score saved 🙌",
+      "played": "Played"
+    },
+    "errors": {
+      "generic": "Something went wrong. Try again."
+    }
+  },
+  "leagueCreation": {
+    "title": "Create a league",
+    "step": "Step {current} of {total}",
+    "stepNames": {
+      "details": "Details",
+      "visibility": "Visibility"
+    },
+    "step1Title": "Details",
+    "step1Description": "Name your league and add an optional description",
+    "visibilityStepTitle": "Visibility",
+    "visibilityStepDescription": "Who can find and join your league?",
+    "next": "Next",
+    "createLeague": "Create league",
+    "creating": "Creating...",
+    "success": "League created!",
+    "successDescription": "Invite players and create your first season when you're ready.",
+    "viewLeague": "View league",
+    "createAnother": "Create another",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g., Montreal Summer Ladder",
+      "description": "Description",
+      "descriptionPlaceholder": "Tell players what to expect (optional)",
+      "visibility": "Visibility",
+      "visibilityPrivate": "Private",
+      "visibilityPrivateDescription": "Only people you invite can find this league",
+      "visibilityPublic": "Public",
+      "visibilityPublicDescription": "Anyone in your sport can find and request to join",
+      "joinMode": "Join mode",
+      "joinModeOpen": "Open",
+      "joinModeOpenDescription": "Players join immediately",
+      "joinModeApproval": "Approval",
+      "joinModeApprovalDescription": "You approve each join request"
+    },
+    "validation": {
+      "nameRequired": "League name is required",
+      "nameTooLong": "Name must be 100 characters or fewer"
+    },
+    "errors": {
+      "sportMismatch": "Switch to a sport on your profile before creating a league",
+      "rateLimited": "You can create up to 5 leagues per day",
+      "generic": "Couldn't create the league. Try again."
     }
   },
   "tournamentList": {
@@ -4520,7 +4819,8 @@
       "bookCourt": "Reserve a court",
       "findGame": "Find a game nearby",
       "browseSuggestions": "Discover suggestions",
-      "tournaments": "Join a tournament"
+      "tournaments": "Join a tournament",
+      "leagues": "Join a league"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",
@@ -9877,6 +10177,149 @@
       "qrHint": "Open Rallia on your phone to join this community."
     }
   },
+  "webJoin": {
+    "pageTitle": "Join a {sport} game on Rallia",
+    "notFound": "Game not found",
+    "progress": "Profile setup",
+    "continue": "Continue",
+    "back": "Back",
+    "finish": "Join game",
+    "finishRequest": "Request to join",
+    "finishWaitlist": "Join waitlist",
+    "stepCounter": "Step {current} of {total}",
+    "steps": {
+      "account": "Account",
+      "profile": "Profile",
+      "level": "Level",
+      "location": "Location",
+      "preferences": "Preferences"
+    },
+    "auth": {
+      "title": "Sign in to join",
+      "description": "Create your account or sign in to join this game.",
+      "requestTitle": "Sign in to request",
+      "requestDescription": "Create your account or sign in to request a spot in this game. The host will review your request.",
+      "google": "Continue with Google",
+      "orEmail": "or",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "otp": "Verification code",
+      "otpHint": "Enter the 6-digit code sent to {email}",
+      "continue": "Send code",
+      "verify": "Verify",
+      "resend": "Resend code",
+      "changeEmail": "Use a different email"
+    },
+    "review": {
+      "title": "Ready to join?",
+      "description": "You're signed in and your profile is ready. Confirm to join this specific game.",
+      "cta": "Join this game",
+      "requestTitle": "Ready to request?",
+      "requestDescription": "The host approves players before they join. Send a request and we'll notify you when they respond.",
+      "requestCta": "Request to join",
+      "waitlistCta": "Join waitlist"
+    },
+    "profile": {
+      "vs": "VS",
+      "matchup": "The lineup",
+      "you": "You",
+      "addToCalendar": "Add to calendar",
+      "openDirections": "Directions",
+      "startsToday": "Starts today",
+      "startsTomorrow": "Starts tomorrow",
+      "startsInDays": "In {count, plural, one {1 day} other {# days}}",
+      "startedAlready": "In progress"
+    },
+    "personal": {
+      "title": "About you",
+      "description": "Tell us a bit about yourself so other players know who they're playing with.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "birthDate": "Date of birth",
+      "gender": "Gender",
+      "genderOptions": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other"
+      }
+    },
+    "rating": {
+      "title": "Your {sport} level",
+      "description": "Pick the level that best describes you. You can update this later in the app."
+    },
+    "location": {
+      "title": "Where do you play?",
+      "description": "Your postal code helps us find games near you.",
+      "postalCode": "Postal code",
+      "geocoding": "Looking up your area...",
+      "detected": "Area confirmed"
+    },
+    "preferences": {
+      "title": "Playing preferences",
+      "description": "Almost done — just a couple more details.",
+      "playingHand": "Playing hand",
+      "matchType": "Match type",
+      "handOptions": {
+        "right": "Right",
+        "left": "Left",
+        "both": "Both"
+      },
+      "matchTypeOptions": {
+        "casual": "Casual",
+        "competitive": "Competitive",
+        "both": "Both"
+      }
+    },
+    "success": {
+      "joinedTitle": "You're in!",
+      "joinedDescription": "Your profile is ready. Download the app and sign in with the same account to chat with other players, see match details, and get notifications.",
+      "requestTitle": "Request sent!",
+      "requestDescription": "Your request was sent to the host. Download the app and sign in to chat with other players, track their response, and get notifications.",
+      "waitlistTitle": "You're on the waitlist",
+      "waitlistDescription": "This game is full, but we've added you to the waitlist. Download the app to chat with other players, get notified if a spot opens, and follow match updates.",
+      "qrHint": "Scan with your phone to download Rallia",
+      "chatCta": "Chat with players",
+      "chatLocked": "Chat with the other players unlocks once you're in the game.",
+      "leaveCta": "Leave this game"
+    },
+    "left": {
+      "title": "You've left the game",
+      "description": "You're no longer in this game. To join another game, download the Rallia app."
+    },
+    "errors": {
+      "authFailed": "Sign in failed. Please try again.",
+      "requiredFields": "Please fill in all required fields.",
+      "minimumAge": "You must be at least 18 years old to use this app.",
+      "selectRating": "Please select your skill level.",
+      "invalidPostalCode": "Enter a valid postal code.",
+      "ratingsLoadFailed": "Could not load skill levels. Please refresh and try again.",
+      "submitFailed": "Something went wrong. Please try again.",
+      "genderMismatch": "This game is reserved for players of a different gender, so you can't join it.",
+      "matchUnavailable": "This game is no longer available. It may have been cancelled or already started.",
+      "alreadyHost": "You're the host of this game, so you're already in it.",
+      "eligibilityUnverified": "We couldn't verify your eligibility for this game. Please try again.",
+      "webJoinLimit": "You've already joined a game on the web. Download the Rallia app to join more games and chat with players.",
+      "matchStarted": "This game has already started, so you can't leave it from here."
+    },
+    "chat": {
+      "title": "Game chat",
+      "subtitle": "{count, plural, one {# player} other {# players}}",
+      "back": "Back to game",
+      "loadEarlier": "Load earlier messages",
+      "empty": "No messages yet. Say hello to kick things off!",
+      "notReady": "Chat opens once another player joins this game. Check back soon!",
+      "signInPrompt": "Sign in and join this game to chat with the other players.",
+      "signInCta": "Go to the game",
+      "composerPlaceholder": "Write a message…",
+      "send": "Send",
+      "you": "You",
+      "rules": {
+        "title": "Keep it friendly",
+        "body": "Be respectful, keep messages relevant to the game, and hold off on sharing personal contact details until you're comfortable. Messages may be moderated.",
+        "accept": "Got it, let's chat"
+      }
+    }
+  },
   "gamesPage": {
     "title": "Upcoming Games",
     "subtitle": "Find public matches near you and join the action.",
@@ -9902,6 +10345,12 @@
     "allGames": "All games",
     "myGames": "My games",
     "copied": "Link copied!",
+    "cardStatus": {
+      "joined": "You're in",
+      "requested": "Pending approval",
+      "waitlisted": "On waitlist",
+      "invited": "You're invited"
+    },
     "emptyTitle": "No games nearby",
     "emptyDescription": "There are no upcoming matches in your area right now. Check back soon or join our waitlist to be the first to know.",
     "emptyCta": "Join the Waitlist",
@@ -9924,12 +10373,6 @@
       "title": "Join this game",
       "description": "Scan the QR code with your phone to download Rallia and join this match.",
       "qrHint": "Open Rallia on your phone to join this game."
-    },
-    "cardStatus": {
-      "joined": "You're in",
-      "requested": "Pending approval",
-      "waitlisted": "On waitlist",
-      "invited": "You're invited"
     }
   },
   "matchPage": {
@@ -10755,149 +11198,6 @@
       "description": "This version of Rallia is no longer supported. Update to the latest version to keep playing.",
       "versionInfo": "You have {current} · {required} or newer is required",
       "cta": "Update Now"
-    }
-  },
-  "webJoin": {
-    "pageTitle": "Join a {sport} game on Rallia",
-    "notFound": "Game not found",
-    "progress": "Profile setup",
-    "continue": "Continue",
-    "back": "Back",
-    "finish": "Join game",
-    "finishRequest": "Request to join",
-    "finishWaitlist": "Join waitlist",
-    "stepCounter": "Step {current} of {total}",
-    "steps": {
-      "account": "Account",
-      "profile": "Profile",
-      "level": "Level",
-      "location": "Location",
-      "preferences": "Preferences"
-    },
-    "auth": {
-      "title": "Sign in to join",
-      "description": "Create your account or sign in to join this game.",
-      "requestTitle": "Sign in to request",
-      "requestDescription": "Create your account or sign in to request a spot in this game. The host will review your request.",
-      "google": "Continue with Google",
-      "orEmail": "or",
-      "email": "Email",
-      "emailPlaceholder": "you@example.com",
-      "otp": "Verification code",
-      "otpHint": "Enter the 6-digit code sent to {email}",
-      "continue": "Send code",
-      "verify": "Verify",
-      "resend": "Resend code",
-      "changeEmail": "Use a different email"
-    },
-    "review": {
-      "title": "Ready to join?",
-      "description": "You're signed in and your profile is ready. Confirm to join this specific game.",
-      "cta": "Join this game",
-      "requestTitle": "Ready to request?",
-      "requestDescription": "The host approves players before they join. Send a request and we'll notify you when they respond.",
-      "requestCta": "Request to join",
-      "waitlistCta": "Join waitlist"
-    },
-    "profile": {
-      "vs": "VS",
-      "matchup": "The lineup",
-      "you": "You",
-      "addToCalendar": "Add to calendar",
-      "openDirections": "Directions",
-      "startsToday": "Starts today",
-      "startsTomorrow": "Starts tomorrow",
-      "startsInDays": "In {count, plural, one {1 day} other {# days}}",
-      "startedAlready": "In progress"
-    },
-    "personal": {
-      "title": "About you",
-      "description": "Tell us a bit about yourself so other players know who they're playing with.",
-      "firstName": "First name",
-      "lastName": "Last name",
-      "birthDate": "Date of birth",
-      "gender": "Gender",
-      "genderOptions": {
-        "male": "Male",
-        "female": "Female",
-        "other": "Other"
-      }
-    },
-    "rating": {
-      "title": "Your {sport} level",
-      "description": "Pick the level that best describes you. You can update this later in the app."
-    },
-    "location": {
-      "title": "Where do you play?",
-      "description": "Your postal code helps us find games near you.",
-      "postalCode": "Postal code",
-      "geocoding": "Looking up your area...",
-      "detected": "Area confirmed"
-    },
-    "preferences": {
-      "title": "Playing preferences",
-      "description": "Almost done — just a couple more details.",
-      "playingHand": "Playing hand",
-      "matchType": "Match type",
-      "handOptions": {
-        "right": "Right",
-        "left": "Left",
-        "both": "Both"
-      },
-      "matchTypeOptions": {
-        "casual": "Casual",
-        "competitive": "Competitive",
-        "both": "Both"
-      }
-    },
-    "success": {
-      "joinedTitle": "You're in!",
-      "joinedDescription": "Your profile is ready. Download the app and sign in with the same account to chat with other players, see match details, and get notifications.",
-      "requestTitle": "Request sent!",
-      "requestDescription": "Your request was sent to the host. Download the app and sign in to chat with other players, track their response, and get notifications.",
-      "waitlistTitle": "You're on the waitlist",
-      "waitlistDescription": "This game is full, but we've added you to the waitlist. Download the app to chat with other players, get notified if a spot opens, and follow match updates.",
-      "qrHint": "Scan with your phone to download Rallia",
-      "chatCta": "Chat with players",
-      "chatLocked": "Chat with the other players unlocks once you're in the game.",
-      "leaveCta": "Leave this game"
-    },
-    "left": {
-      "title": "You've left the game",
-      "description": "You're no longer in this game. To join another game, download the Rallia app."
-    },
-    "errors": {
-      "authFailed": "Sign in failed. Please try again.",
-      "requiredFields": "Please fill in all required fields.",
-      "minimumAge": "You must be at least 18 years old to use this app.",
-      "selectRating": "Please select your skill level.",
-      "invalidPostalCode": "Enter a valid postal code.",
-      "ratingsLoadFailed": "Could not load skill levels. Please refresh and try again.",
-      "submitFailed": "Something went wrong. Please try again.",
-      "genderMismatch": "This game is reserved for players of a different gender, so you can't join it.",
-      "matchUnavailable": "This game is no longer available. It may have been cancelled or already started.",
-      "alreadyHost": "You're the host of this game, so you're already in it.",
-      "eligibilityUnverified": "We couldn't verify your eligibility for this game. Please try again.",
-      "webJoinLimit": "You've already joined a game on the web. Download the Rallia app to join more games and chat with players.",
-      "matchStarted": "This game has already started, so you can't leave it from here."
-    },
-    "chat": {
-      "title": "Game chat",
-      "subtitle": "{count, plural, one {# player} other {# players}}",
-      "back": "Back to game",
-      "loadEarlier": "Load earlier messages",
-      "empty": "No messages yet. Say hello to kick things off!",
-      "notReady": "Chat opens once another player joins this game. Check back soon!",
-      "signInPrompt": "Sign in and join this game to chat with the other players.",
-      "signInCta": "Go to the game",
-      "composerPlaceholder": "Write a message…",
-      "send": "Send",
-      "you": "You",
-      "rules": {
-        "title": "Keep it friendly",
-        "body": "Be respectful, keep messages relevant to the game, and hold off on sharing personal contact details until you're comfortable. Messages may be moderated.",
-        "accept": "Got it, let's chat"
-      }
     }
   }
 }

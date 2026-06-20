@@ -150,8 +150,8 @@ stateDiagram-v2
 
 1. Verify caller is league organizer.
 2. Verify season status is `draft`.
-3. Verify `start_date <= today <= end_date` is achievable (warning if `end_date < today`, blocking if `start_date < today` by more than 7 days).
-4. Clone `leagues.default_rules` → `seasons.rules`, applying any `rules_override` already saved on the season.
+3. Verify `start_date <= today <= end_date` is achievable (warning if `end_date < today`; warn if `start_date` is more than 7 days in the past — organizer may still open with confirmation).
+4. Merge `leagues.default_rules` with any `rules_override` passed to `season_create` (stored in draft as partial `seasons.rules` or merged only at open — see [data-model.md](./data-model.md#seasons)).
 5. Set `rules_locked_at = now()`.
 6. Status → `open`.
 7. Notify all `active` members.
@@ -177,7 +177,7 @@ A closed season's `final_standings` is immutable. To "fix" a closed season, an a
 
 ### Season rules override (v2)
 
-A season can have `rules_override` applied at OPEN that diverges from the league defaults. Examples:
+A season can diverge from league defaults via `rules_override` on **`season_create`** (jsonb merge at OPEN). Examples:
 
 ```json
 {
@@ -298,7 +298,7 @@ Required preconditions:
 
 - Status = `published`.
 - `confirmed_count >= 2` (singles) or `>= 4` (doubles).
-- All confirmed members satisfy the session's `min_rating`/`max_rating` filters if any.
+- All confirmed members satisfy the **league's** `min_rating` / `max_rating` / `min_reputation` gates if set (same columns as tournaments — see [data-model.md](./data-model.md#leagues)).
 
 The full algorithm is specified in [match-sheet.md](./match-sheet.md).
 
@@ -327,7 +327,7 @@ Ranking is re-computed once at session completion, then once more if any score i
 
 - Allowed in `draft`, `published`, `in_progress`.
 - Sets `cancelled_at = now()`, `cancelled_reason`.
-- Discards the match sheet (`session_matches` rows deleted? — **no**, retained for audit but status flipped to `cancelled`).
+- Retains `session_matches` rows for audit; each match → `cancelled` (not deleted).
 - Notifies confirmed members.
 - A cancelled session does not contribute to rankings; `sessions_eligible` is decremented for all members.
 

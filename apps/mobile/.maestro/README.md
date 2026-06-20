@@ -85,3 +85,14 @@ Key ids: `tab-create-fab`, `action-create-tournament`, `tournament-name-input`,
 `bracket-playable-match`, `score-input-p1-N`/`-p2-N`, `record-score-save`,
 `tournament-overflow-menu`, `menu-*`, `invite-*`, `partner-*`,
 `tournament-card-<id>`.
+
+## Leagues (V6)
+
+| File                                     | Persona   | Covers                                        |
+| ---------------------------------------- | --------- | --------------------------------------------- |
+| `leagues/lifecycle-a-create-season.yaml` | organizer | create → detail → create season → open season |
+
+Key ids: `action-create-league`, `league-name-input`, `league-wizard-submit`,
+`league-success-view`, `season-name-input`, `cta-create-season`, `cta-open-season`.
+
+DB RPC smoke (local): `npm run db:test:leagues` from repo root.
