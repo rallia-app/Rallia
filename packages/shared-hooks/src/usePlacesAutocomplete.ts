@@ -15,6 +15,13 @@ import { mockPlaceDetails, mockPlacePredictions } from './devMocks/googlePlaces'
 // TYPES
 // =============================================================================
 
+/**
+ * Geographic scope for predictions.
+ * 'gma' (default) hard-restricts to the Greater Montreal Area + Canada;
+ * 'worldwide' removes all geographic restrictions.
+ */
+export type PlacesScope = 'gma' | 'worldwide';
+
 interface UsePlacesAutocompleteOptions {
   /** Search query string */
   searchQuery: string;
@@ -24,6 +31,8 @@ interface UsePlacesAutocompleteOptions {
   enabled?: boolean;
   /** Minimum query length to trigger search (default: 2) */
   minQueryLength?: number;
+  /** Geographic scope for predictions (default: 'gma') */
+  scope?: PlacesScope;
 }
 
 /** Place details with coordinates and optional timezone (from Google Time Zone API) */
@@ -67,6 +76,21 @@ interface UsePlacesAutocompleteReturn {
 const GOOGLE_PLACES_API_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const GOOGLE_PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
 const GOOGLE_TIMEZONE_API_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
+
+// Greater Montreal Area (CMM) bounding box — covers H1-H9, J3-J7 FSAs:
+// Montreal, Laval, South Shore, North Shore. Hard restriction for the 'gma' scope.
+const GMA_LOCATION_RESTRICTION = {
+  rectangle: {
+    low: { latitude: 45.25, longitude: -74.2 },
+    high: { latitude: 45.75, longitude: -73.1 },
+  },
+};
+
+/** Region/location restriction fields for an autocomplete request, by scope. */
+function buildPlacesScopeRestrictions(scope: PlacesScope): Record<string, unknown> {
+  if (scope === 'worldwide') return {};
+  return { includedRegionCodes: ['ca'], locationRestriction: GMA_LOCATION_RESTRICTION };
+}
 
 // Get API key from environment
 // In Expo, environment variables prefixed with EXPO_PUBLIC_ are embedded at build time
@@ -118,7 +142,13 @@ function generateSessionToken(): string {
 export function usePlacesAutocomplete(
   options: UsePlacesAutocompleteOptions
 ): UsePlacesAutocompleteReturn {
-  const { searchQuery, debounceMs = 300, enabled = true, minQueryLength = 2 } = options;
+  const {
+    searchQuery,
+    debounceMs = 300,
+    enabled = true,
+    minQueryLength = 2,
+    scope = 'gma',
+  } = options;
 
   // State
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -312,7 +342,7 @@ export function usePlacesAutocomplete(
           const response = await fetch('/api/places/autocomplete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ input: query }),
+            body: JSON.stringify({ input: query, scope }),
             signal: abortControllerRef.current.signal,
           });
 
@@ -364,21 +394,11 @@ export function usePlacesAutocomplete(
       setError(null);
 
       try {
-        // Build request body with GMA restriction
+        // Build request body, applying geographic restrictions per scope
         const requestBody: Record<string, unknown> = {
           input: query,
           sessionToken: sessionTokenRef.current,
-          includedRegionCodes: ['ca'],
-          // Hard restriction to Greater Montreal Area (CMM) bounding box
-          // Covers H1-H9, J3-J7 FSAs: Montreal, Laval, South Shore, North Shore
-          // SW: south of Saint-Jean-sur-Richelieu, west of Mirabel
-          // NE: north of Mirabel, east of Mont-Saint-Hilaire
-          locationRestriction: {
-            rectangle: {
-              low: { latitude: 45.25, longitude: -74.2 },
-              high: { latitude: 45.75, longitude: -73.1 },
-            },
-          },
+          ...buildPlacesScopeRestrictions(scope),
         };
 
         const response = await fetch(GOOGLE_PLACES_API_URL, {
@@ -438,7 +458,7 @@ export function usePlacesAutocomplete(
         setIsLoading(false);
       }
     },
-    [minQueryLength]
+    [minQueryLength, scope]
   );
 
   // Effect to trigger search when debounced query changes
