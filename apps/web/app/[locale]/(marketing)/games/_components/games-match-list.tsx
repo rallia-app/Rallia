@@ -12,7 +12,7 @@ import PublicMatchCard, { type PublicMatch } from './public-match-card';
 import { getRelativeDateLabel } from './utils';
 import { createClient } from '@/lib/supabase/client';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 36;
 
 interface Sport {
   id: string;
