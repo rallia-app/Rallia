@@ -18,7 +18,8 @@ export async function generateMetadata({
   return buildPageMetadata({ locale, path: '/games', namespace: 'seo.games' });
 }
 
-const PAGE_SIZE = 12;
+// Larger initial page so several days of matches load up front (each date renders its own carousel row)
+const PAGE_SIZE = 36;
 
 async function getInitialMatches(): Promise<PublicMatch[]> {
   const supabase = createServiceRoleClient();
