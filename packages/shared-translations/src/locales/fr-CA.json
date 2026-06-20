@@ -10356,8 +10356,6 @@
         "openSlots": "{count} plages horaires ouvertes",
         "noOpenSlots": "Aucune plage en ligne",
         "noResults": "Aucune installation trouvée dans un rayon de 25 km.",
-        "outOfArea": "On n'a pas encore d'installations partenaires près de chez vous. Vous pouvez quand même nous dire quand vous aimeriez jouer, pis on vous écrit dès qu'on arrive dans votre coin.",
-        "outOfAreaCta": "Continuer",
         "errors": {
           "notFound": "Adresse introuvable.",
           "searchFailed": "Impossible de charger les installations. Réessayez."
