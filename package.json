@@ -75,6 +75,8 @@
     "// ----- Utilities -----": "",
     "check-deps": "node scripts/dev/check-deps.js",
     "// check-deps": "Check for dependency conflicts across workspaces",
+    "docs:tournament-test-guide": "node scripts/tournaments/generate-test-guide-pdf.mjs",
+    "// docs:tournament-test-guide": "Regenerate Guide_de_test_des_tournois.pdf from scripts/tournaments/test-guide.html",
     "check-env": "node scripts/dev/check-env.js",
     "// check-env": "Validate environment variables are set",
     "doctor": "node scripts/dev/doctor.js",

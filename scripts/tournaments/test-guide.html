@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Guide de test des tournois</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 16mm 20mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.45;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 20pt;
+        margin: 0 0 6px;
+        letter-spacing: -0.02em;
+      }
+
+      .meta {
+        color: #4b5563;
+        font-size: 9.5pt;
+        margin-bottom: 14px;
+      }
+
+      h2 {
+        font-size: 12.5pt;
+        margin: 18px 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 2px solid #0d9488;
+        color: #0f766e;
+        page-break-after: avoid;
+      }
+
+      h3 {
+        font-size: 10.8pt;
+        margin: 14px 0 6px;
+        color: #134e4a;
+        page-break-after: avoid;
+      }
+
+      p {
+        margin: 0 0 8px;
+      }
+
+      ul,
+      ol {
+        margin: 0 0 10px 18px;
+        padding: 0;
+      }
+
+      li {
+        margin-bottom: 4px;
+        page-break-inside: avoid;
+      }
+
+      .fixture {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 9.5pt;
+        background: #f3f4f6;
+        padding: 1px 5px;
+        border-radius: 4px;
+        white-space: nowrap;
+        page-break-inside: avoid;
+      }
+
+      .fixtures-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5pt;
+        margin: 8px 0 12px;
+      }
+
+      .fixtures-table th,
+      .fixtures-table td {
+        border: 1px solid #d1d5db;
+        padding: 6px 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+
+      .fixtures-table th {
+        background: #ecfdf5;
+      }
+
+      .section-intro {
+        color: #374151;
+        margin-bottom: 10px;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Guide de test des tournois</h1>
+    <p class="meta">
+      Compte de test : <strong>jdl.sonkin@gmail.com</strong> · Environnement : <strong>staging</strong> ·
+      16 juin 2026
+    </p>
+
+    <p class="section-intro">
+      Connecte-toi avec <strong>jdl.sonkin@gmail.com</strong> pour tous les scénarios ci-dessous. Les
+      tournois <span class="fixture">[JDL Plays]</span> sont organisés par Mathis (compte
+      lefrancmathis@gmail.com) : tu n'as pas à te connecter à ce compte. Mathis s'occupe de son côté
+      des approbations, refus et envoi des liens d'invitation quand c'est indiqué. Les tournois
+      <span class="fixture">[JDL Host]</span> sont les tiens (tu joues le rôle organisateur).
+    </p>
+
+    <h2>1. Nouveauté : approbation et refus des demandes (priorité)</h2>
+
+    <h3>Côté organisateur (Mathis) — <span class="fixture">[JDL Host] Approval Requests</span></h3>
+    <p><em>Tu n'as rien à faire ici — Mathis teste de son côté. Ce qui compte pour toi :</em></p>
+    <ol>
+      <li>
+        Mathis accepte une demande : la ligne quitte les demandes en attente et passe dans la liste
+        des inscrits.
+      </li>
+      <li>
+        Mathis en refuse une autre : le joueur est disqualifié et ne peut plus refaire de demande.
+      </li>
+    </ol>
+
+    <h3>Côté participant — <span class="fixture">[JDL Plays] Pending Approval</span></h3>
+    <ol>
+      <li>
+        Ouvre le tournoi <span class="fixture">[JDL Plays] Pending Approval</span>. Vérifie que ton
+        inscription affiche bien l'état <strong>« Inscription en attente d'approbation »</strong> (et
+        non inscrit).
+      </li>
+      <li>Mathis accepte ta demande de son côté.</li>
+      <li>Tu reçois la notification « Tu es accepté » et passes inscrit dans le tournoi.</li>
+    </ol>
+
+    <h2>2. Cycle de vie comme organisateur (jdl organise)</h2>
+    <ul>
+      <li>
+        <span class="fixture">[JDL Host] Draft</span> : ouvrir les inscriptions; modifier les champs
+        (nom, format, taille du tableau, tout est modifiable en brouillon); annuler.
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Registration Open</span> (4 inscrits) : fermer les
+        inscriptions; retirer un inscrit; générer et partager un lien d'invitation.
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Invite Only</span> (1 inscrit, 2 invités) : créer et
+        réinitialiser le lien d'invitation; voir les invités par rapport aux inscrits.
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Ready To Bracket</span> (inscriptions fermées, 6 inscrits) :
+        générer le tableau. Le tournoi passe à « en cours » et les byes se résolvent automatiquement.
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Live Bracket</span> (en cours, 8 joueurs) : entrer ou corriger
+        un résultat comme organisateur; voir le gagnant avancer dans le tableau.
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Doubles Live</span> (en cours, double, 4 équipes) : même
+        chose, avec les noms d'équipe (« Alex et Sam »).
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Completed</span> : voir le champion et les résultats;
+        archiver.
+      </li>
+      <li><span class="fixture">[JDL Host] Cancelled</span> : archiver.</li>
+      <li>
+        <span class="fixture">[JDL Host] Archived</span> : consultation seulement (aucune action
+        possible).
+      </li>
+      <li>
+        <span class="fixture">[JDL Host] Pickleball Reg Open</span> : mêmes flots sur un tournoi de
+        pickleball (format « parties à 11 »).
+      </li>
+    </ul>
+
+    <h2>3. Cycle de vie comme participant (jdl joue)</h2>
+
+    <h3>3.1 — <span class="fixture">[JDL Plays] Withdrawable</span></h3>
+    <p>Se désinscrire, puis se réinscrire.</p>
+
+    <h3>3.2 — <span class="fixture">[JDL Plays] Doubles As Captain</span></h3>
+    <p>Voir son partenaire sur l'inscription; se désinscrire (retire toute l'équipe).</p>
+
+    <h3>3.3 — <span class="fixture">[JDL Plays] Doubles As Partner</span></h3>
+    <p>Confirmer qu'il apparaît comme partenaire inscrit de quelqu'un d'autre.</p>
+
+    <h3>3.4 — <span class="fixture">[JDL Plays] Pending Approval</span></h3>
+    <p>Voir section 1 (même tournoi, côté participant).</p>
+
+    <h3>3.5 — <span class="fixture">[JDL Plays] Live Match</span> (en cours, vrai adversaire)</h3>
+    <ol>
+      <li>Ouvre le tournoi, onglet <strong>Tableau</strong>.</li>
+      <li>Touche ta partie en attente dans le tableau.</li>
+      <li>Touche <strong>« Lier une partie jouée »</strong>.</li>
+      <li>
+        Une partie déjà jouée et confirmée contre ton adversaire apparaît dans la liste. Touche
+        <strong>« Lier cette partie »</strong>.
+      </li>
+      <li>Le résultat s'attache au tableau et tu avances au tour suivant.</li>
+    </ol>
+    <p>
+      Côté joueur, on ne saisit pas un score directement dans le tableau : on lie une partie déjà
+      jouée. La saisie directe d'un score reste réservée à l'organisateur.
+    </p>
+
+    <h3>3.6 — <span class="fixture">[JDL Plays] Invite To Accept</span> (sur invitation, déjà invité)</h3>
+    <p>
+      jdl a déjà une inscription <strong>en attente</strong> sur un tournoi sur invitation. Il doit
+      confirmer lui-même (l'organisateur n'approuve pas).
+    </p>
+    <ol>
+      <li>Ouvre <span class="fixture">[JDL Plays] Invite To Accept</span>.</li>
+      <li>
+        Vérifie le badge en haut : <strong>« Invitation en attente »</strong> (pas « en attente
+        d'approbation »).
+      </li>
+      <li>
+        Une carte <strong>« Tu es invité »</strong> s'affiche avec le texte « Accepte pour confirmer
+        ta place dans le tournoi. »
+      </li>
+      <li>Touche <strong>« Accepter l'invitation »</strong>.</li>
+      <li>
+        Le badge passe à <strong>« Vous êtes inscrit »</strong> et la carte d'acceptation
+        disparaît (retour haptique, pas de toast sur ce chemin).
+      </li>
+      <li>
+        Une carte « Invitation reçue » avec un bouton <strong>Se retirer</strong> reste disponible
+        tant que les inscriptions sont ouvertes (pour décliner).
+      </li>
+    </ol>
+    <p><strong>Variante double :</strong> si le tournoi est en double, l'app ouvre d'abord le sélecteur de partenaire (<em>« Choisis ton partenaire, puis accepte pour confirmer votre place. »</em>), puis confirme l'inscription des deux joueurs.</p>
+
+    <h3>3.7 — <span class="fixture">[JDL Plays] Join Via Link</span> (sur invitation, pas encore inscrit)</h3>
+    <p>Mathis t'envoie le lien d'invitation; tu rejoins avec ton compte jdl.</p>
+    <ol>
+      <li>Ouvre le lien reçu de Mathis (Messages, courriel ou Safari).</li>
+      <li>L'app s'ouvre sur la page du tournoi (aperçu via le jeton du lien).</li>
+      <li>Touche <strong>« S'inscrire »</strong> sur la carte d'inscription.</li>
+      <li>
+        <strong>Si le tournoi est en double :</strong> choisis ton partenaire dans la liste, puis
+        confirme.
+      </li>
+      <li>
+        Toast « Vous êtes inscrit! On se voit au tournoi. » — tu apparais dans la liste des
+        participants.
+      </li>
+    </ol>
+
+    <h3>3.8 — <span class="fixture">[JDL Plays] Completed As Player</span></h3>
+    <p>Voir les résultats finaux et son classement.</p>
+
+    <h2>4. Référence des tournois de test</h2>
+    <table class="fixtures-table">
+      <thead>
+        <tr>
+          <th>Tournoi</th>
+          <th>Rôle</th>
+          <th>État / objectif</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="fixture">[JDL Host] Approval Requests</span></td>
+          <td>Organisateur</td>
+          <td>Mode approbation, 3 demandes en attente</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Pending Approval</span></td>
+          <td>Participant</td>
+          <td>jdl en attente d'approbation</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Draft</span></td>
+          <td>Organisateur</td>
+          <td>Brouillon, champs modifiables</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Registration Open</span></td>
+          <td>Organisateur</td>
+          <td>4 inscrits, fermer / retirer / lien</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Invite Only</span></td>
+          <td>Organisateur</td>
+          <td>1 inscrit, 2 invités, lien d'invitation</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Invite To Accept</span></td>
+          <td>Participant</td>
+          <td>Invité en attente, accepter in-app</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Join Via Link</span></td>
+          <td>Participant</td>
+          <td>Pas inscrit, rejoindre via lien</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Ready To Bracket</span></td>
+          <td>Organisateur</td>
+          <td>6 inscrits, générer le tableau</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Live Bracket</span></td>
+          <td>Organisateur</td>
+          <td>8 joueurs, saisie de score</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Doubles Live</span></td>
+          <td>Organisateur</td>
+          <td>4 équipes, double</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Live Match</span></td>
+          <td>Participant</td>
+          <td>Lier une partie jouée au tableau</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Doubles As Captain</span></td>
+          <td>Participant</td>
+          <td>Capitaine d'équipe, retrait d'équipe</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Doubles As Partner</span></td>
+          <td>Participant</td>
+          <td>Partenaire inscrit par un autre</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Completed</span></td>
+          <td>Organisateur</td>
+          <td>Champion, archivage</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Completed As Player</span></td>
+          <td>Participant</td>
+          <td>Résultats finaux</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Cancelled</span></td>
+          <td>Organisateur</td>
+          <td>Annulé, archivage</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Archived</span></td>
+          <td>Organisateur</td>
+          <td>Consultation seule</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Host] Pickleball Reg Open</span></td>
+          <td>Organisateur</td>
+          <td>Pickleball, parties à 11</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL Plays] Withdrawable</span></td>
+          <td>Participant</td>
+          <td>Désinscription / réinscription</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Limites connues (ce ne sont pas des bogues)</h2>
+    <ul>
+      <li>
+        Côté joueur, le score ne s'entre pas directement dans le tableau : on joue une partie normale
+        (confirmée) contre son adversaire, puis on la lie au tableau. La saisie/correction directe
+        d'un score est réservée à l'organisateur.
+      </li>
+      <li>
+        La liste d'attente n'est pas implémentée : s'inscrire au-delà de la capacité donne « tournoi
+        complet », sans liste d'attente.
+      </li>
+      <li>
+        Le refus est définitif : un joueur refusé ne peut plus refaire de demande (par design). Dis-le
+        si tu veux l'assouplir.
+      </li>
+      <li>
+        Approbation simultanée depuis deux sessions : la deuxième reçoit un avis « quelqu'un a fait des
+        changements, rafraîchis » (verrouillage optimiste).
+      </li>
+    </ul>
+
+    <p class="meta" style="margin-top: 18px">
+      Source : <code>scripts/tournaments/test-guide.html</code> · Regénérer avec
+      <code>npm run docs:tournament-test-guide</code>
+    </p>
+  </body>
+</html>
