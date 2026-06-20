@@ -10551,20 +10551,20 @@
       "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨"
     },
     "autoMatch": {
-      "bubble": "Want me to do the legwork? Here's my game plan. 👇",
+      "bubble": "Want me to do the legwork? Here's exactly my game plan. 👇",
       "howLabel": "Here's what I'll do",
       "howCreateTitle": "Create games for you",
-      "howCreateDesc": "Open games at your free times, in My Games.",
+      "howCreateDesc": "Singles at your level, at the times you marked free.",
       "howInviteTitle": "Invite the right players",
-      "howInviteDesc": "My algorithm picks your most compatible players.",
-      "howNotifyTitle": "Keep you posted",
-      "howNotifyDesc": "I ping you the moment someone joins.",
+      "howInviteDesc": "Players at your level who share your favorite court.",
+      "howNotifyTitle": "You stay in control",
+      "howNotifyDesc": "Request-to-join: I ping you to approve each player.",
       "togglesLabel": "Your call",
       "autoCreateTitle": "Auto-create open games",
-      "autoCreateDesc": "Post request-to-join games at your free times.",
+      "autoCreateDesc": "Request-to-join games at the times you're free.",
       "autoInviteTitle": "Auto-invite compatible players",
-      "autoInviteDesc": "Find players at your level nearby and ping them.",
-      "reassurance": "You can change these every week — nothing happens unless they're on.",
+      "autoInviteDesc": "Players at your level who share a favorite court.",
+      "reassurance": "I only create up to your weekly goal, at times you marked free, and never on top of a game you already have. Every game is request-to-join, so you decide who plays. You can change this any week, and nothing happens unless it's on.",
       "cta": "Set my week"
     },
     "opportunities": {
