@@ -356,6 +356,38 @@ const Home = () => {
     return () => handle.cancel();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Web join handoff: profile stores the target match after website onboarding.
+  useEffect(() => {
+    if (!profile?.id || !isOnboarded) return;
+    if (profile.referral_invitation_type !== 'match' || !profile.referral_target_id) return;
+
+    const matchId = profile.referral_target_id;
+    const handle = runWhenIdle(() => {
+      void (async () => {
+        try {
+          await supabase
+            .from('profile')
+            .update({ referral_invitation_type: null, referral_target_id: null })
+            .eq('id', profile.id);
+
+          const match = await getMatchWithDetails(matchId);
+          if (match) {
+            openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
+          }
+        } catch {
+          // Best-effort handoff from web onboarding
+        }
+      })();
+    });
+    return () => handle.cancel();
+  }, [
+    profile?.id,
+    profile?.referral_invitation_type,
+    profile?.referral_target_id,
+    isOnboarded,
+    openMatchDetail,
+  ]);
+
   // Fallback: consume PendingReferral from AsyncStorage if DeepLinkContext expired
   // (e.g., session-expired user taps a deep link, signs in, and DeepLinkContext has expired).
   // Deferred past first paint — not critical for initial frame.
