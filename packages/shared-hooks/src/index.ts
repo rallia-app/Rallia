@@ -23,6 +23,7 @@ export * from './useNotificationPreferences';
 export * from './useOrgNotifications';
 export * from './useCreateMatch';
 export * from './useTournaments';
+export * from './useLeagues';
 export * from './useUpdateMatch';
 export * from './useMatches';
 export * from './useMatchActions';

@@ -906,6 +906,95 @@ export function tournamentCreated(props: {
   capture('lt.tournament.created', props);
 }
 
+export function leagueCreated(props: {
+  leagueId: string;
+  sportId: string;
+  joinMode: string;
+  visibility: string;
+}): void {
+  capture('lt.league.created', props);
+}
+
+export function leagueViewed(props: {
+  leagueId: string;
+  userRole: 'organizer' | 'member' | 'pending' | 'visitor';
+}): void {
+  capture('lt.league.viewed', { tab: 'overview', ...props });
+}
+
+export function seasonCreatedAnalytics(props: {
+  leagueId: string;
+  seasonId: string;
+  hasOverride: boolean;
+}): void {
+  capture('lt.season.created', props);
+}
+
+export function seasonOpenedAnalytics(props: { leagueId: string; seasonId: string }): void {
+  capture('lt.season.opened', props);
+}
+
+export function seasonClosedAnalytics(props: {
+  leagueId: string;
+  seasonId: string;
+  topRankUserId?: string;
+}): void {
+  capture('lt.season.closed', props);
+}
+
+export function leagueMemberJoinedAnalytics(props: { leagueId: string; viaInvite: boolean }): void {
+  capture('lt.league.member_joined', props);
+}
+
+export function leagueMemberPendingAnalytics(props: { leagueId: string }): void {
+  capture('lt.league.member_pending', props);
+}
+
+export function sessionSheetGeneratedAnalytics(props: {
+  sessionId: string;
+  regenerated: boolean;
+}): void {
+  capture(props.regenerated ? 'lt.session.sheet_regenerated' : 'lt.session.sheet_generated', props);
+}
+
+export function sessionCreatedAnalytics(props: {
+  leagueId: string;
+  seasonId: string;
+  sessionId: string;
+}): void {
+  capture('lt.session.created', props);
+}
+
+export function sessionPublishedAnalytics(props: {
+  leagueId: string;
+  sessionId: string;
+  memberCount: number;
+}): void {
+  capture('lt.session.published', props);
+}
+
+export function sessionConfirmedAnalytics(props: {
+  sessionId: string;
+  partnerProvided: boolean;
+}): void {
+  capture('lt.session.confirmed', props);
+}
+
+export function sessionDeclinedAnalytics(props: { sessionId: string }): void {
+  capture('lt.session.declined', props);
+}
+
+export function sessionCancelledAnalytics(props: {
+  sessionId: string;
+  confirmedCount: number;
+}): void {
+  capture('lt.session.cancelled', props);
+}
+
+export function sessionScoreSubmittedAnalytics(props: { sessionId: string }): void {
+  capture('lt.session.match_score_submitted', props);
+}
+
 export function tournamentShared(props: {
   tournamentId: string;
   medium: 'link' | 'native' | 'qr';

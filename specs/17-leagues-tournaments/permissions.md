@@ -44,10 +44,10 @@ Legend: ✅ allowed · ❌ denied · ⚠️ allowed with side effect · — n/a
 | Withdraw self                                |     —     |   —    |     ✅      |     —     |   —   |
 | Generate bracket                             |    ✅     |   ✅   |     ❌      |    ❌     |  ❌   |
 | Manually swap players in bracket             |    ✅⁶    |  ✅⁶   |     ❌      |    ❌     |  ❌   |
-| Submit own match score                       |     —     |   —    |     ✅      |     —     |   —   |
+| Submit own match score                       |     —     |   —    |     ✅⁹     |     —     |   —   |
 | Override any match score                     |    ✅     |   ✅   |     ❌      |    ❌     |  ❌   |
-| Validate / reject submitted score            |    ✅     |   ✅   |     ❌      |    ❌     |  ❌   |
-| Dispute opponent's submitted score           |     —     |   —    |     ✅      |     —     |   —   |
+| Validate / reject submitted score            |     —     |   —    |     ❌      |    ❌     |  ❌   |
+| Dispute opponent's submitted score           |     —     |   —    |     ✅⁹     |     —     |   —   |
 | Reset match to PENDING                       |    ✅⁷    |  ✅⁷   |     ❌      |    ❌     |  ❌   |
 | Cancel tournament                            |    ✅     |   ❌   |     ❌      |    ❌     |  ❌   |
 | Archive tournament                           |    ✅     |   ✅   |     ❌      |    ❌     |  ❌   |
@@ -70,6 +70,8 @@ Legend: ✅ allowed · ❌ denied · ⚠️ allowed with side effect · — n/a
 ⁷ Resetting an `in_progress`/`completed` match invalidates downstream advancements and emits a `match_reset` reputation-neutral audit event. The bracket recomputes from the reset point.
 
 ⁸ Hard delete is allowed only while `status = 'draft'` and no participants are registered. Otherwise the tournament must be cancelled then archived.
+
+⁹ Via linked casual `match` (play, link verified match, or rebuttal). Organizer resolves stalemates with `tournament_override_score`. See [score-entry.md](./score-entry.md#architecture-match-bridge-canonical).
 
 ## League action matrix
 
@@ -101,9 +103,9 @@ Legend: ✅ allowed · ❌ denied · ⚠️ allowed with side effect · — n/a
 | Regenerate match sheet (non-locked rows) |    ✅     |   ✅   |   ❌   |   ❌   |    ❌     |  ❌   |
 | Lock / unlock individual match           |    ✅     |   ✅   |   ❌   |   ❌   |    ❌     |  ❌   |
 | Manually swap session-match players      |    ✅     |   ✅   |   ❌   |   ❌   |    ❌     |  ❌   |
-| Submit own match score                   |     —     |   —    |   ✅   |   —    |     —     |   —   |
+| Submit own match score                   |     —     |   —    |  ✅⁸   |   —    |     —     |   —   |
 | Override any match score                 |    ✅     |   ✅   |   ❌   |   ❌   |    ❌     |  ❌   |
-| Validate / reject submitted score        |    ✅     |   ✅   |   ❌   |   ❌   |    ❌     |  ❌   |
+| Validate / reject submitted score        |    ✅⁹    |  ✅⁹   |   ❌   |   ❌   |    ❌     |  ❌   |
 | Force ranking recalculation              |    ✅     |   ✅   |   ❌   |   ❌   |    ❌     |  ❌   |
 | Transfer organizer role                  |    ✅     |   ❌   |   ❌   |   ❌   |    ❌     |  ❌   |
 
@@ -120,6 +122,10 @@ Legend: ✅ allowed · ❌ denied · ⚠️ allowed with side effect · — n/a
 ⁶ Self-join behavior depends on `leagues.join_mode`: `open` → status `active` immediately; `approval` → status `pending`; `invite_only` → blocked unless an invite row pre-exists.
 
 ⁷ Co-Organizer leaving auto-demotes them to `member` first; if no other organizer exists, leave is blocked.
+
+⁸ Via linked casual `match` row (match bridge) — same as tournament participants. See [score-entry.md](./score-entry.md#architecture-match-bridge-canonical).
+
+⁹ Organizer-only `*_override_score` in v1. There is no separate organizer validate/reject queue for player submissions; disputes resolve through casual-match rebuttal then override if needed.
 
 ## RLS policies
 

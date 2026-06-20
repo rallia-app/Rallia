@@ -23,6 +23,7 @@ export * from './groups';
 export * from './communities';
 export * from './chat';
 export * from './tournaments';
+export * from './leagues';
 // Reports - explicit exports to avoid conflicts with admin/moderationService
 export {
   createReport as createUserReport,

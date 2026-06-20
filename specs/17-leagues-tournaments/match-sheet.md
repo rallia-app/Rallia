@@ -24,7 +24,7 @@ A list of `session_matches` rows with `team_a_user_ids`, `team_b_user_ids`, `rou
 ## Pre-processing
 
 1. Drop pre-paired pairs from the active player set if their preferred partner also confirmed.
-2. If `cardinality(confirmed) % 2 == 1` and format is `singles`: highest-ranked player gets a BYE row (`team_a_user_ids = [user]`, `team_b_user_ids = []`, status = `walkover`, `winner_team = 'a'`). Per [ranking.md](./ranking.md#bye-treatment), a BYE awards participation points (default `pointLoss = 1`) but no win.
+2. If `cardinality(confirmed) % 2 == 1` and format is `singles`: highest-ranked player gets a BYE row (`team_a_user_ids = [user]`, `team_b_user_ids = []`, status = `walkover`, `winner_team = 'a'`). Per [ranking.md § Outcome matrix](./ranking.md#outcome-matrix-authoritative), a BYE awards `pointBye` (default 1) but no win.
 3. If `cardinality(confirmed) % 4 != 0` and format is `doubles`: by default, highest-ranked players matching the residue get BYE rows.
 
 ### Pickleball odd-cardinality alternatives
@@ -33,7 +33,7 @@ For pickleball sessions where odd-cardinality is common (3 confirmed, 5 confirme
 
 | Mode            | Behavior                                                                                                                                                                |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bye` (default) | Highest-ranked extra player(s) get a BYE row                                                                                                                            |
+| `bye` (default) | Highest-ranked extra player(s) get a BYE row (points via `pointBye` — see [ranking.md](./ranking.md#outcome-matrix-authoritative))                                      |
 | `three_player`  | Insert a 3-player match (1 vs 2). The lone side and the duo side play to a target score; scoring per [ranking.md](./ranking.md#points-per-match) `is_three_player` rule |
 | `drill`         | Insert a `is_drill = true` match for the residue players; no points awarded; surfaced as "Practice court" in UI                                                         |
 
