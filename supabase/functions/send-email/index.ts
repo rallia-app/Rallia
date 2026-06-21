@@ -55,6 +55,7 @@ Deno.serve(async req => {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL!,
       to: recipient,
+      replyTo: 'contact@rallia.ca',
       subject,
       html,
     });

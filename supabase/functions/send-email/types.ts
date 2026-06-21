@@ -128,7 +128,14 @@ export interface WelcomeEmailPayload {
   email: string;
   firstName: string | null;
   displayName: string | null;
-  openAppUrl: string;
+  // Best-effort personalization; empty/null falls back to generic copy.
+  sports: string[]; // sport display names, canonical case, primary first (e.g. ['Tennis'])
+  courtCount: number | null; // courts within 25km of the player's home
+  // Deep-link CTAs routed through the web /api/go bouncer (app on mobile,
+  // website home on desktop).
+  profileUrl: string;
+  courtsUrl: string;
+  gamesUrl: string;
 }
 
 // Discriminated union for all email requests (raw records from triggers)
