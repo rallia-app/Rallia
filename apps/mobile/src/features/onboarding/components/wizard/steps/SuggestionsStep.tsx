@@ -1,9 +1,15 @@
 /**
  * SuggestionsStep Component
  *
- * Displays personalized match suggestions after onboarding success.
- * Uses the shared SuggestionCard component for card rendering.
- * Includes confirmation modal for "Send Game Invite" and staggered animations.
+ * Final onboarding step: real PUBLIC matches with open spots that fit what the
+ * player just set up (favorite courts, rating, declared availability). Same
+ * MatchCard + one-click join used by the weekly check-in's "Games for you"
+ * step — Join / Ask to join fires the join directly (no MatchDetailSheet) and
+ * the card CTA flips to a disabled Joined / Requested state on success.
+ *
+ * Joining is optional: the footer always lets the player continue (or skip)
+ * into the app. When no open game fits, the empty state nudges them to the home
+ * screen.
  */
 
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
@@ -18,17 +24,17 @@ import Animated, {
   makeMutable,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import type { SlotSuggestion } from '@rallia/shared-services';
+import { MatchCard, Text } from '@rallia/shared-components';
+import { base, primary, spacingPixels, radiusPixels } from '@rallia/design-system';
+import type { MatchWithDetails } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 
-import { SuggestionCard } from '#/components/SuggestionCard';
 import * as Analytics from '#/services/analytics';
-import { suggestionSlotKey, useSuggestionInviteHandler } from '#/hooks/useSuggestionInviteHandler';
+import { useJoinOpportunity, type JoinOutcome } from '#/features/weekly-checkin/useJoinOpportunity';
 
 const BASE_WHITE = '#ffffff';
 const MAX_CARDS = 5;
+const NOOP = () => {};
 
 interface ThemeColors {
   background: string;
@@ -44,8 +50,8 @@ interface ThemeColors {
 }
 
 interface SuggestionsStepProps {
-  /** Flat top-N suggestions, opponent-deduped, score-ordered (best first). */
-  suggestions: SlotSuggestion[];
+  /** Real public matches with open spots that fit the player's setup. */
+  opportunities: MatchWithDetails[];
   isLoading: boolean;
   onComplete: () => void;
   onRefresh?: () => void;
@@ -62,7 +68,7 @@ interface SuggestionsStepProps {
 // =============================================================================
 
 export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
-  suggestions,
+  opportunities,
   isLoading,
   onComplete,
   onRefresh,
@@ -70,25 +76,16 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   t,
   locale,
   isDark,
-  currentSport,
   playerId,
 }) => {
-  const { cardLabels, inviteStates, handleSendInvite } = useSuggestionInviteHandler({
-    sportId: currentSport?.id,
-    playerId: playerId ?? undefined,
-    source: 'onboarding',
-    onSendSuccess: () =>
-      Analytics.onboardingStepCompleted({
-        step_name: 'suggestions_invite_sent',
-        step_index: -1,
-      }),
-  });
+  // One-click join, scoped to onboarding for the discovery_source on analytics.
+  const { join, outcomes, pendingId } = useJoinOpportunity(playerId ?? null, 'onboarding');
 
-  // Top-N from useTopSuggestions is already opponent-deduped + score-sorted.
-  // Slice defensively in case caller passes more than MAX_CARDS.
-  const previewSuggestions = useMemo<SlotSuggestion[]>(
-    () => suggestions.slice(0, MAX_CARDS),
-    [suggestions]
+  // Cap the preview at MAX_CARDS — the caller already fetches up to 20, but the
+  // post-onboarding moment only needs a short, joinable shortlist.
+  const previewOpportunities = useMemo<MatchWithDetails[]>(
+    () => opportunities.slice(0, MAX_CARDS),
+    [opportunities]
   );
 
   // Animation values
@@ -101,8 +98,8 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   useEffect(() => {
     headerOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
 
-    if (!isLoading && previewSuggestions.length > 0) {
-      previewSuggestions.forEach((_, index) => {
+    if (!isLoading && previewOpportunities.length > 0) {
+      previewOpportunities.forEach((_, index) => {
         if (index < MAX_CARDS) {
           cardOpacities[index].value = withDelay(
             300 + index * 150,
@@ -116,13 +113,13 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
       });
 
       skipOpacity.value = withDelay(
-        300 + Math.min(previewSuggestions.length, MAX_CARDS) * 150 + 200,
+        300 + Math.min(previewOpportunities.length, MAX_CARDS) * 150 + 200,
         withTiming(1, { duration: 400 })
       );
     } else if (!isLoading) {
       skipOpacity.value = withDelay(600, withTiming(1, { duration: 400 }));
     }
-  }, [isLoading, previewSuggestions.length]);
+  }, [isLoading, previewOpportunities.length]);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
@@ -132,18 +129,31 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     opacity: skipOpacity.value,
   }));
 
-  const hasSentInvite = useMemo(
-    () => Object.values(inviteStates).some(state => state === 'sent'),
-    [inviteStates]
+  // True once the player has joined / requested / waitlisted at least one game —
+  // flips the footer from a quiet "skip" into a confident "Continue".
+  const hasJoined = useMemo(() => Object.keys(outcomes).length > 0, [outcomes]);
+
+  const renderCta = useCallback(
+    (match: MatchWithDetails) => (
+      <OpportunityCta
+        match={match}
+        outcome={outcomes[match.id]}
+        isPending={pendingId === match.id}
+        isDark={isDark}
+        t={t}
+        onJoin={join}
+      />
+    ),
+    [outcomes, pendingId, isDark, t, join]
   );
 
   const handleSkip = useCallback(() => {
     Analytics.onboardingStepCompleted({
-      step_name: hasSentInvite ? 'suggestions_continued' : 'suggestions_skipped',
+      step_name: hasJoined ? 'suggestions_continued' : 'suggestions_skipped',
       step_index: -1,
     });
     onComplete();
-  }, [onComplete, hasSentInvite]);
+  }, [onComplete, hasJoined]);
 
   return (
     <View style={styles.wrapper}>
@@ -161,7 +171,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
             {t('onboarding.suggestions.title')}
           </Text>
           <Text size="base" color={colors.textMuted} style={styles.subtitle}>
-            {t('onboarding.suggestions.subtitle')}
+            {t('onboarding.suggestions.gamesSubtitle')}
           </Text>
         </Animated.View>
 
@@ -173,7 +183,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
               {t('onboarding.suggestions.loading')}
             </Text>
           </View>
-        ) : previewSuggestions.length === 0 ? (
+        ) : previewOpportunities.length === 0 ? (
           <View style={styles.centeredState}>
             <Ionicons name="search-outline" size={48} color={colors.textMuted} />
             <Text size="base" weight="semibold" color={colors.text} style={styles.stateText}>
@@ -197,29 +207,21 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {previewSuggestions.map((s, index) => {
+            {previewOpportunities.map((match, index) => {
               const cardAnimatedStyle = {
                 opacity: cardOpacities[index],
                 transform: [{ translateY: cardTranslateYs[index] }],
               };
-              const slotKey = suggestionSlotKey(
-                s.opponentId,
-                s.facility.facilityId,
-                s.slot.datetime
-              );
               return (
-                <Animated.View key={slotKey} style={cardAnimatedStyle}>
-                  <SuggestionCard
-                    suggestion={s}
-                    colors={colors}
+                <Animated.View key={match.id} style={cardAnimatedStyle}>
+                  <MatchCard
+                    match={match}
                     isDark={isDark}
-                    onSendInvite={handleSendInvite}
-                    inviteState={inviteStates[slotKey] ?? 'idle'}
-                    labels={cardLabels}
+                    t={t}
                     locale={locale}
-                    source="onboarding"
-                    sportId={currentSport?.id}
-                    sportName={currentSport?.name}
+                    currentPlayerId={playerId ?? undefined}
+                    onPress={NOOP}
+                    renderCta={renderCta}
                   />
                 </Animated.View>
               );
@@ -229,7 +231,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
 
         {/* Skip / Continue button */}
         <Animated.View style={skipAnimatedStyle}>
-          {hasSentInvite ? (
+          {hasJoined ? (
             <TouchableOpacity
               onPress={handleSkip}
               activeOpacity={0.8}
@@ -257,6 +259,71 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     </View>
   );
 };
+
+// =============================================================================
+// JOIN CTA — replaces MatchCard's default footer with a one-click join button
+// =============================================================================
+
+interface OpportunityCtaProps {
+  match: MatchWithDetails;
+  outcome: JoinOutcome | undefined;
+  isPending: boolean;
+  isDark: boolean;
+  t: (key: TranslationKey) => string;
+  onJoin: (match: MatchWithDetails) => void;
+}
+
+function OpportunityCta({ match, outcome, isPending, isDark, t, onJoin }: OpportunityCtaProps) {
+  const positive = isDark ? primary[400] : primary[500];
+
+  if (outcome) {
+    const label =
+      outcome === 'joined'
+        ? t('weeklyCheckIn.opportunities.joined')
+        : outcome === 'requested'
+          ? t('weeklyCheckIn.opportunities.requested')
+          : t('weeklyCheckIn.opportunities.waitlisted');
+    const icon = outcome === 'requested' ? 'time-outline' : 'checkmark-circle';
+    return (
+      <View style={styles.cardFooter}>
+        <View style={[styles.cta, { backgroundColor: `${positive}${isDark ? '30' : '20'}` }]}>
+          <Ionicons name={icon} size={14} color={positive} style={styles.ctaIcon} />
+          <Text size="sm" weight="bold" color={positive}>
+            {label}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const isRequest = match.join_mode === 'request';
+  const label = isRequest ? t('match.cta.askToJoin') : t('match.cta.join');
+  const icon = isRequest ? 'hand-left-outline' : 'add-circle-outline';
+
+  return (
+    <View style={styles.cardFooter}>
+      <TouchableOpacity
+        style={[styles.cta, { backgroundColor: positive }, isPending && styles.ctaPending]}
+        onPress={() => onJoin(match)}
+        disabled={isPending}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        {isPending ? (
+          <ActivityIndicator color={base.white} />
+        ) : (
+          <>
+            <Ionicons name={icon} size={14} color={base.white} style={styles.ctaIcon} />
+            <Text size="sm" weight="bold" color={base.white}>
+              {label}
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // =============================================================================
 // STYLES
@@ -319,6 +386,29 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[2],
+  },
+
+  // Join CTA
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  cta: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
+  },
+  ctaPending: {
+    opacity: 0.7,
+  },
+  ctaIcon: {
+    marginRight: spacingPixels[1],
   },
 
   // Skip

@@ -24,7 +24,7 @@ import { useTranslation } from '#/hooks';
 
 export type JoinOutcome = 'joined' | 'requested' | 'waitlisted';
 
-const DISCOVERY_SOURCE = 'weekly_checkin';
+const DEFAULT_DISCOVERY_SOURCE = 'weekly_checkin';
 
 function spotsLeft(match: MatchWithDetails): number {
   const total = match.format === 'doubles' ? 4 : 2;
@@ -32,7 +32,10 @@ function spotsLeft(match: MatchWithDetails): number {
   return Math.max(0, total - joined);
 }
 
-export function useJoinOpportunity(playerId: string | null) {
+export function useJoinOpportunity(
+  playerId: string | null,
+  discoverySource: string = DEFAULT_DISCOVERY_SOURCE
+) {
   const qc = useQueryClient();
   const toast = useToast();
   const { t } = useTranslation();
@@ -62,7 +65,7 @@ export function useJoinOpportunity(playerId: string | null) {
             sport_id,
             sport_name,
             is_auto_generated,
-            discovery_source: DISCOVERY_SOURCE,
+            discovery_source: discoverySource,
           });
           if (fillsMatch) {
             Analytics.matchFilled({
@@ -71,7 +74,7 @@ export function useJoinOpportunity(playerId: string | null) {
               sport_name,
               format: match.format ?? 'unknown',
               is_auto_generated,
-              discovery_source: DISCOVERY_SOURCE,
+              discovery_source: discoverySource,
             });
           }
           toast.success(t('matchActions.joinSuccess'));
@@ -84,7 +87,7 @@ export function useJoinOpportunity(playerId: string | null) {
             sport_id,
             sport_name,
             is_auto_generated,
-            discovery_source: DISCOVERY_SOURCE,
+            discovery_source: discoverySource,
           });
           toast.success(t('matchActions.requestSent'));
         }
@@ -100,7 +103,7 @@ export function useJoinOpportunity(playerId: string | null) {
         setPendingId(null);
       }
     },
-    [playerId, pendingId, qc, toast, t]
+    [playerId, pendingId, qc, toast, t, discoverySource]
   );
 
   return { join, outcomes, pendingId };
