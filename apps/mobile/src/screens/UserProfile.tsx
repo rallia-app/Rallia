@@ -909,6 +909,7 @@ const UserProfile = () => {
                         totalEvents={reputationTotalEvents}
                         isDark={isDark}
                         isLoading={playerLoading}
+                        onInfoPress={() => SheetManager.show('coveted-player-explainer')}
                       />
                       <RatingBadge
                         ratingValue={primaryRating?.value}

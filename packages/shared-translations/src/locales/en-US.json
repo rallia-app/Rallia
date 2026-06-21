@@ -1748,6 +1748,7 @@
       "title": "Your Top Matches",
       "sheetTitle": "Personalized suggestions",
       "subtitle": "We found players near you that match your level, schedule, and court preferences",
+      "gamesSubtitle": "Open games that fit your level, schedule, and favourite courts. Jump in!",
       "sendInvite": "Send Game Invite",
       "confirmTitle": "Send game invite?",
       "confirmMessage": "Invite {opponent} for {sport} at {facility}, {time}",
@@ -10213,6 +10214,26 @@
       "tips": {
         "title": "Tips",
         "body": "Complete your matches, show up on time, and be a good sport. Leave fair reviews for other players — it also earns you a small reputation bonus."
+      }
+    },
+    "covetedPlayer": {
+      "title": "What's a Coveted Player?",
+      "overview": {
+        "title": "Coveted Player",
+        "body": "Coveted Player is the top distinction on Rallia. It's reserved for players who are both highly skilled and rock-solid reliable — the kind of player everyone wants on the court."
+      },
+      "requirements": {
+        "title": "How to earn it",
+        "certified": "A certified rating",
+        "certifiedDetail": "Your skill level is verified through peer references or proof.",
+        "reputation": "A Platinum reputation",
+        "reputationDetail": "A reputation score of 90 or higher.",
+        "events": "A solid track record",
+        "eventsDetail": "At least 5 reputation events, so the score reflects real history."
+      },
+      "benefits": {
+        "title": "Why it matters",
+        "body": "Coveted Players stand out across Rallia. Their games are highlighted to other players, so they get noticed faster and pull in more invites and join requests."
       }
     }
   },
