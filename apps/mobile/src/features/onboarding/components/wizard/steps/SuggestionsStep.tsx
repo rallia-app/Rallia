@@ -23,6 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
+import { useAuth } from '@rallia/shared-hooks';
 import { base, primary, spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -76,8 +77,16 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   isDark,
   playerId,
 }) => {
+  // Prefer the LIVE auth session id (the same source the weekly check-in uses)
+  // over the `playerId` prop. That prop is the wizard's async `successPlayerId`
+  // React state, which can lag or hold a previous account's id across multiple
+  // onboardings in one app session — making joinMatch insert player_id != the
+  // current auth.uid(), which RLS rejects (error haptic, no row created).
+  const { session } = useAuth();
+  const effectivePlayerId = session?.user?.id ?? playerId ?? null;
+
   // One-click join, scoped to onboarding for the discovery_source on analytics.
-  const { join, outcomes, pendingId } = useJoinOpportunity(playerId ?? null, 'onboarding');
+  const { join, outcomes, pendingId } = useJoinOpportunity(effectivePlayerId, 'onboarding');
 
   // Cap the preview at MAX_CARDS — the caller already fetches up to 20, but the
   // post-onboarding moment only needs a short, joinable shortlist.
@@ -194,7 +203,7 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
                 isDark={isDark}
                 t={t}
                 locale={locale}
-                currentPlayerId={playerId ?? undefined}
+                currentPlayerId={effectivePlayerId ?? undefined}
                 onPress={NOOP}
                 renderCta={renderCta}
               />
