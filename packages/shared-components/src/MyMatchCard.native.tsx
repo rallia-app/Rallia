@@ -26,6 +26,7 @@ import {
   neutral,
   base,
   duration,
+  status,
 } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import {
@@ -79,7 +80,7 @@ const TIER_PALETTES = {
 // CONSTANTS
 // =============================================================================
 
-const CARD_WIDTH = 160;
+const CARD_WIDTH = 200;
 const AVATAR_SIZE = 24;
 const MAX_VISIBLE_AVATARS = 4;
 
@@ -108,10 +109,12 @@ export interface MyMatchCardProps {
    */
   pendingRequestCount?: number;
   /**
-   * Whether the current user has been invited to this match
-   * Shows an "Invited" indicator in the day label row
+   * The current player's own participation status in this match. Drives the
+   * status pill that differentiates confirmed games (joined) from not-yet
+   * confirmed ones (pending / requested / waitlisted). Other values render no
+   * pill. Pass the raw match_participant_status_enum value.
    */
-  isInvited?: boolean;
+  participantStatus?: string | null;
 }
 
 interface ThemeColors {
@@ -186,151 +189,89 @@ interface PendingRequestsBadgeProps {
 }
 
 /**
- * Notification badge for pending join requests
- * Shows in top-right corner with shimmer animation (matching invited badge)
- * Uses secondary (coral) color for visual distinction from invited badge
+ * Inline indicator at the top-right of the card (creator view) showing how
+ * many players have requested to join. Coral, to distinguish it from the
+ * player's own status pill on the left.
  */
 const PendingRequestsBadge: React.FC<PendingRequestsBadgeProps> = ({ count, isDark }) => {
-  // Use useMemo to avoid accessing refs during render
-  const shimmerAnim = useMemo(() => new Animated.Value(0), []);
-
-  // Memoize interpolated values
-  const shimmerOpacity = useMemo(
-    () =>
-      shimmerAnim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [0.8, 1, 0.8],
-      }),
-    [shimmerAnim]
-  );
-
-  const shimmerScale = useMemo(
-    () =>
-      shimmerAnim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [1, 1.1, 1],
-      }),
-    [shimmerAnim]
-  );
-
-  useEffect(() => {
-    const shimmer = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: duration.extraSlow,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: duration.extraSlow,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    shimmer.start();
-    return () => shimmer.stop();
-  }, [shimmerAnim]);
-
-  // Use secondary (coral) color for distinction from gold invited badge
-  const badgeColor = isDark ? secondary[400] : secondary[500];
-  const textColor = base.white;
+  const color = isDark ? secondary[400] : secondary[500];
 
   return (
-    <Animated.View
-      style={[
-        styles.pendingBadge,
-        {
-          backgroundColor: badgeColor,
-          shadowColor: badgeColor,
-          transform: [{ scale: shimmerScale }],
-          opacity: shimmerOpacity,
-        },
-      ]}
-    >
-      <Text size="xs" weight="bold" color={textColor} style={styles.pendingBadgeText}>
+    <View style={[styles.statusPill, { backgroundColor: `${color}1F` }]}>
+      <Ionicons name="person-add-outline" size={11} color={color} />
+      <Text size="xs" weight="semibold" color={color}>
         {count > 9 ? '9+' : count}
       </Text>
-    </Animated.View>
+    </View>
   );
 };
 
 // =============================================================================
-// INVITED INDICATOR (Player view - shows when invited to a match)
+// PARTICIPANT STATUS PILL (Player view - their own status in the match)
 // =============================================================================
 
-interface InvitedIndicatorProps {
+// The current player's own participation states we surface as a status pill.
+// "Invited" carries no icon — the word already implies the envelope, whereas
+// the other icons (checkmark / clock / list) add meaning the label doesn't.
+type ParticipantStatusKind = 'joined' | 'pending' | 'requested' | 'waitlisted';
+
+// Display kinds for the pill. A joined game splits on fullness: a full roster
+// reads "Confirmed", a not-yet-full one reads "Needs players".
+type PillKind = ParticipantStatusKind | 'needs_players';
+
+const STATUS_PILL_CONFIG: Record<
+  PillKind,
+  { labelKey: TranslationKey; icon?: keyof typeof Ionicons.glyphMap }
+> = {
+  joined: { labelKey: 'home.myMatchesStatus.confirmed', icon: 'checkmark-circle-outline' },
+  needs_players: { labelKey: 'home.myMatchesStatus.needsPlayers', icon: 'people-outline' },
+  pending: { labelKey: 'home.myMatchesStatus.invited' },
+  requested: { labelKey: 'home.myMatchesStatus.requested', icon: 'time-outline' },
+  waitlisted: { labelKey: 'home.myMatchesStatus.waitlisted', icon: 'list-outline' },
+};
+
+/** Narrows the raw participant status to the kinds we render a pill for. */
+function toPillKind(s: string | null | undefined): ParticipantStatusKind | null {
+  return s === 'joined' || s === 'pending' || s === 'requested' || s === 'waitlisted' ? s : null;
+}
+
+interface ParticipantStatusPillProps {
+  kind: PillKind;
   isDark: boolean;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
 }
 
 /**
- * "Invited" badge indicator with subtle shimmer animation
- * Compact icon-only design for bottom-right position
- * Uses accent (gold) color to signal something special awaits action
+ * Pill showing the current player's own status in the match — the signal that
+ * differentiates confirmed games (joined) from not-yet-confirmed ones
+ * (pending / requested / waitlisted) in the My Games carousel.
  */
-const InvitedIndicator: React.FC<InvitedIndicatorProps> = ({ isDark }) => {
-  // Use useMemo to avoid accessing refs during render
-  const shimmerAnim = useMemo(() => new Animated.Value(0), []);
+const ParticipantStatusPill: React.FC<ParticipantStatusPillProps> = ({ kind, isDark, t }) => {
+  const { labelKey, icon } = STATUS_PILL_CONFIG[kind];
 
-  // Memoize interpolated values
-  const shimmerOpacity = useMemo(
-    () =>
-      shimmerAnim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [0.8, 1, 0.8],
-      }),
-    [shimmerAnim]
-  );
-
-  const shimmerScale = useMemo(
-    () =>
-      shimmerAnim.interpolate({
-        inputRange: [0, 0.5, 1],
-        outputRange: [1, 1.1, 1],
-      }),
-    [shimmerAnim]
-  );
-
-  useEffect(() => {
-    const shimmer = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: duration.extraSlow,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: duration.extraSlow,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    shimmer.start();
-    return () => shimmer.stop();
-  }, [shimmerAnim]);
-
-  const badgeBg = isDark ? accent[600] : accent[500];
-  const iconColor = base.white;
+  // Colors mirror the viewer-status banners in MatchDetailSheet so the two
+  // surfaces stay consistent: invited = primary teal, requested = warning,
+  // waitlisted = info. Confirmed has no banner there, so it uses the app's
+  // positive green (status.success). A not-full joined game ("needs players")
+  // uses warning amber to flag the game still needs people.
+  let color: string;
+  if (kind === 'joined') {
+    color = status.success.DEFAULT;
+  } else if (kind === 'pending') {
+    color = isDark ? primary[400] : primary[500];
+  } else if (kind === 'requested' || kind === 'needs_players') {
+    color = status.warning.DEFAULT;
+  } else {
+    color = status.info.DEFAULT;
+  }
 
   return (
-    <Animated.View
-      style={[
-        styles.invitedBadge,
-        {
-          backgroundColor: badgeBg,
-          transform: [{ scale: shimmerScale }],
-          opacity: shimmerOpacity,
-          shadowColor: badgeBg,
-        },
-      ]}
-    >
-      <Ionicons name="mail" size={12} color={iconColor} />
-    </Animated.View>
+    <View style={[styles.statusPill, { backgroundColor: `${color}1F` }]}>
+      {icon && <Ionicons name={icon} size={11} color={color} />}
+      <Text size="xs" weight="semibold" color={color}>
+        {t(labelKey)}
+      </Text>
+    </View>
   );
 };
 
@@ -469,12 +410,17 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   t,
   locale,
   pendingRequestCount = 0,
-  isInvited = false,
+  participantStatus = null,
 }) => {
   // Calculate participant info early to check for expired state
   const participants = match.participants?.filter(p => p.status === 'joined') ?? [];
   const total = match.format === 'doubles' ? 4 : 2;
   const isFull = participants.length >= total;
+
+  // A full joined game reads "Confirmed"; a joined game still missing players
+  // reads "Needs players". Other statuses are unaffected by fullness.
+  const rawStatus = toPillKind(participantStatus);
+  const pillKind: PillKind | null = rawStatus === 'joined' && !isFull ? 'needs_players' : rawStatus;
 
   // Derive match status early to check for expired state
   const derivedStatus = deriveMatchStatus({
@@ -643,9 +589,22 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
   // Build accessibility label with status indicators
   let accessibilityLabel = `Match ${dayLabel} at ${timeLabel}`;
   if (isMostWanted) accessibilityLabel += ' - Must-Play';
-  if (isInvited) accessibilityLabel += ' - You are invited';
+  if (pillKind === 'joined') accessibilityLabel += ' - Confirmed';
+  else if (pillKind === 'needs_players') accessibilityLabel += ' - Needs players';
+  else if (pillKind === 'pending') accessibilityLabel += ' - You are invited';
+  else if (pillKind === 'requested') accessibilityLabel += ' - Join request pending';
+  else if (pillKind === 'waitlisted') accessibilityLabel += ' - Waitlisted';
   if (showPendingBadge)
     accessibilityLabel += ` - ${pendingRequestCount} pending join request${pendingRequestCount > 1 ? 's' : ''}`;
+
+  // Day and time render identically — the day's size, the time's (prominent) color.
+  const headerColor = isExpired
+    ? colors.textMuted
+    : isOngoing
+      ? liveColor
+      : isStartingSoon
+        ? soonColor
+        : colors.text;
 
   return (
     <TouchableOpacity
@@ -662,10 +621,18 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      {/* Pending join requests badge (top-right corner) */}
-      {showPendingBadge && <PendingRequestsBadge count={pendingRequestCount} isDark={isDark} />}
-
       <View style={styles.content}>
+        {/* Top row: player's own status (left) + pending join requests (right),
+            both inline inside the card. */}
+        {(pillKind || showPendingBadge) && (
+          <View style={styles.topRow}>
+            {pillKind ? <ParticipantStatusPill kind={pillKind} isDark={isDark} t={t} /> : <View />}
+            {showPendingBadge && (
+              <PendingRequestsBadge count={pendingRequestCount} isDark={isDark} />
+            )}
+          </View>
+        )}
+
         {/* Day label with indicator */}
         <View style={styles.dayLabelRow}>
           {/* Expired indicator icon */}
@@ -715,42 +682,23 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
               <Ionicons name="chevron-forward" size={10} color={soonColor} />
             </Animated.View>
           )}
-          {/* Day label - always show */}
+          {/* Day · time — identical style, day's size + time's color */}
           <Text
-            size="xs"
+            size="sm"
             weight="semibold"
-            color={
-              isExpired
-                ? colors.textMuted
-                : isOngoing
-                  ? liveColor
-                  : isStartingSoon
-                    ? soonColor
-                    : colors.textMuted
-            }
+            numberOfLines={1}
+            color={headerColor}
             style={styles.dayLabel}
           >
             {dayLabel.toUpperCase()}
           </Text>
+          <Text size="sm" weight="semibold" color={headerColor} style={styles.dayTimeDot}>
+            ·
+          </Text>
+          <Text size="sm" weight="semibold" numberOfLines={1} color={headerColor}>
+            {timeLabel}
+          </Text>
         </View>
-
-        {/* Time - prominent */}
-        <Text
-          size="lg"
-          weight="bold"
-          color={
-            isExpired
-              ? colors.textMuted
-              : isOngoing
-                ? liveColor
-                : isStartingSoon
-                  ? soonColor
-                  : colors.text
-          }
-          numberOfLines={1}
-        >
-          {timeLabel}
-        </Text>
 
         {/* Location */}
         <View style={styles.locationRow}>
@@ -760,10 +708,9 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({
           </Text>
         </View>
 
-        {/* Bottom row: Participants + Invited indicator */}
+        {/* Bottom row: Participants */}
         <View style={styles.bottomRow}>
           <ParticipantAvatars match={match} colors={colors} isDark={isDark} t={t} />
-          {isInvited && <InvitedIndicator isDark={isDark} />}
         </View>
       </View>
     </TouchableOpacity>
@@ -783,46 +730,29 @@ const styles = StyleSheet.create({
     // Shadow is applied dynamically based on theme in the component
   },
 
-  // Pending requests badge (top-right corner, extends outside card)
-  pendingBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    zIndex: 10,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  pendingBadgeText: {
-    fontSize: 10,
-    lineHeight: 12,
-  },
-
-  // Bottom row: avatars + invited indicator
+  // Bottom row: avatars
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
 
-  // Invited indicator badge (compact circular badge for bottom-right)
-  invitedBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  // Top row: status pill (left) + pending-requests indicator (right)
+  topRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: 'space-between',
+    marginBottom: spacingPixels[2],
+  },
+
+  // Pill shape shared by the status pill and the pending-requests indicator
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 2,
+    borderRadius: radiusPixels.full,
   },
 
   content: {
@@ -837,7 +767,10 @@ const styles = StyleSheet.create({
 
   dayLabel: {
     letterSpacing: 0.5,
-    marginBottom: spacingPixels[0.5],
+    flexShrink: 1,
+  },
+  dayTimeDot: {
+    marginHorizontal: spacingPixels[1],
   },
 
   // "Live" indicator styles for ongoing matches

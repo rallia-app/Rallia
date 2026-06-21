@@ -22,7 +22,8 @@ import { SportIcon } from '#/components/SportIcon';
 export function ExternalBookingActionSheet({ payload }: SheetProps<'external-booking'>) {
   const facility = payload?.facility as FacilityWithDetails;
   const slot = payload?.slot as FormattedSlot;
-  const matchId = (payload as { matchId?: string } | undefined)?.matchId;
+  const matchId = payload?.matchId;
+  const source = payload?.source ?? 'external_sheet';
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -75,7 +76,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
       selectedCourt: selectedCourt ?? undefined,
       bookingUrl,
       matchId,
-      source: 'external_sheet',
+      source,
       sportId: selectedSport?.id,
       sportName: selectedSport?.name,
     });
@@ -96,6 +97,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
     t,
     openExternalBooking,
     matchId,
+    source,
     selectedSport?.id,
     selectedSport?.name,
   ]);

@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   myMatchCard: {
-    width: 160,
+    width: 200,
     padding: 16,
     borderRadius: 12,
   },

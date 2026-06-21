@@ -4806,10 +4806,20 @@
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
     "soonAndNearby": "Nearby",
+    "soonAndNearbySubtitle": "Open games near you",
     "justForYou": "Just for you",
+    "justForYouSubtitle": "Hand-picked games near you",
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My games",
+    "myMatchesSubtitle": "Your upcoming games",
+    "myMatchesStatus": {
+      "confirmed": "Confirmed",
+      "needsPlayers": "Needs players",
+      "invited": "Invited",
+      "requested": "Requested",
+      "waitlisted": "Waitlisted"
+    },
     "favoriteAvailability": {
       "title": "Open at your favorites",
       "subtitle": "Live openings ready to book"
