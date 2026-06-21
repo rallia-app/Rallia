@@ -8,7 +8,9 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Json } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Labels exclude '.' so the literal dot is the only separator — no overlapping
+// quantifiers, so matching stays linear (ReDoS-safe).
+const EMAIL_RE = /^[^\s@]+@[^\s.@]+(?:\.[^\s.@]+)+$/;
 
 /** Parse + validate a recipient list (array or delimited string) into deduped, lowercased emails. */
 function parseEmails(raw: unknown): string[] {

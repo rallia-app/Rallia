@@ -69,11 +69,17 @@ export interface GetOrCreateCourtResult {
 export function parseCourtNumber(courtName: string): number | null {
   if (!courtName) return null;
 
-  // Look for a number at the end of the string (most common pattern)
-  // Matches: "Tennis Court 1", "Court 3", "Terrain 2", etc.
-  const endMatch = courtName.match(/(\d+)\s*$/);
-  if (endMatch) {
-    return parseInt(endMatch[1], 10);
+  // Number at the end of the string (most common: "Tennis Court 1", "Court 3").
+  // Scanned manually from the end (after trimming) to avoid polynomial backtracking.
+  const trimmed = courtName.trimEnd();
+  let start = trimmed.length;
+  while (start > 0) {
+    const code = trimmed.charCodeAt(start - 1);
+    if (code < 48 || code > 57) break;
+    start--;
+  }
+  if (start < trimmed.length) {
+    return parseInt(trimmed.slice(start), 10);
   }
 
   // Fallback: look for any number in the string

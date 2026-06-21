@@ -102,7 +102,9 @@ const GENDER_CHOICES = ['male', 'female', 'other'] as const;
 
 const toggleInArray = (arr: string[], value: string): string[] =>
   arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Labels exclude '.' so the literal dot is the only separator — keeps matching
+// linear (ReDoS-safe).
+const EMAIL_RE = /^[^\s@]+@[^\s.@]+(?:\.[^\s.@]+)+$/;
 
 /** Split a free-form list on commas/semicolons/whitespace into deduped valid + invalid entries. */
 function parseEmailList(raw: string): { valid: string[]; invalid: string[] } {
