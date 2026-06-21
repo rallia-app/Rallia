@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, neutral } from '@rallia/design-system';
 import { isCoveted } from '@rallia/shared-utils';
 
 import { useTranslation, type TranslationKey } from '#/hooks';
@@ -21,6 +21,8 @@ interface CovetedBadgeProps {
   size?: 'sm' | 'md';
   /** Whether the badge is loading */
   isLoading?: boolean;
+  /** Callback when the badge is pressed — shows an info icon when provided */
+  onInfoPress?: () => void;
 }
 
 function withAlpha(hex: string, alpha: number): string {
@@ -38,6 +40,7 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
   isDark,
   size = 'md',
   isLoading = false,
+  onInfoPress,
 }) => {
   const { t } = useTranslation();
   const height = size === 'sm' ? 20 : 24;
@@ -66,7 +69,7 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
 
   const iconSize = size === 'sm' ? 10 : 12;
 
-  return (
+  const badge = (
     <LinearGradient
       colors={gradientColors}
       start={{ x: 0, y: 0 }}
@@ -84,8 +87,30 @@ const CovetedBadge: React.FC<CovetedBadgeProps> = ({
       <Text size="xs" weight="semibold" color={accentColor} style={styles.label}>
         {t('match.tier.topPlayer')}
       </Text>
+      {onInfoPress && (
+        <Ionicons
+          name="information-circle-outline"
+          size={14}
+          color={isDark ? neutral[400] : neutral[500]}
+        />
+      )}
     </LinearGradient>
   );
+
+  if (onInfoPress) {
+    return (
+      <TouchableOpacity
+        onPress={onInfoPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={t('match.tier.topPlayer')}
+      >
+        {badge}
+      </TouchableOpacity>
+    );
+  }
+
+  return badge;
 };
 
 const styles = StyleSheet.create({

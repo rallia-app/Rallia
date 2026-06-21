@@ -1940,6 +1940,7 @@ const PlayerProfile = () => {
                   totalEvents={reputationTotalEvents}
                   isDark={isDark}
                   isLoading={loading}
+                  onInfoPress={() => SheetManager.show('coveted-player-explainer')}
                 />
                 <RatingBadge
                   ratingValue={primarySport?.ratingValue}

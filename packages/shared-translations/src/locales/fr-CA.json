@@ -1748,6 +1748,7 @@
       "title": "Vos meilleurs matchs",
       "sheetTitle": "Suggestions personnalisées",
       "subtitle": "Des joueurs près de chez vous, sélectionnés selon votre niveau, vos disponibilités et vos terrains préférés",
+      "gamesSubtitle": "Des parties ouvertes à ton niveau, tes heures pis tes terrains préférés. Embarque!",
       "sendInvite": "Envoyer l'invitation",
       "confirmTitle": "Envoyer l'invitation?",
       "confirmMessage": "Inviter {opponent} pour {sport} à {facility}, {time}",
@@ -10213,6 +10214,26 @@
       "tips": {
         "title": "Conseils",
         "body": "Complétez vos matchs, arrivez à l'heure et soyez fair-play. Laissez des évaluations justes aux autres joueurs — cela vous rapporte aussi un petit bonus de réputation."
+      }
+    },
+    "covetedPlayer": {
+      "title": "C'est quoi un joueur convoité?",
+      "overview": {
+        "title": "Joueur convoité",
+        "body": "Joueur convoité, c'est la plus haute distinction sur Rallia. C'est réservé aux joueurs à la fois très habiles et super fiables, le genre de joueur que tout le monde veut avoir sur le terrain."
+      },
+      "requirements": {
+        "title": "Comment l'obtenir",
+        "certified": "Une cote certifiée",
+        "certifiedDetail": "Ton niveau est vérifié par des références de pairs ou des preuves.",
+        "reputation": "Une réputation Platine",
+        "reputationDetail": "Un score de réputation de 90 ou plus.",
+        "events": "Un historique solide",
+        "eventsDetail": "Au moins 5 événements de réputation, pour que le score reflète un vrai historique."
+      },
+      "benefits": {
+        "title": "Pourquoi ça compte",
+        "body": "Les joueurs convoités se démarquent sur Rallia. Leurs parties sont mises en valeur auprès des autres joueurs, ça fait qu'ils se font remarquer plus vite et reçoivent plus d'invitations pis de demandes."
       }
     }
   },

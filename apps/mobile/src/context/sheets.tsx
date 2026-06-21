@@ -98,6 +98,7 @@ import { ActionsBottomSheet as ActionsActionSheet } from '#/components/ActionsBo
 import {
   RatingExplainerActionSheet,
   ReputationExplainerActionSheet,
+  CovetedPlayerExplainerActionSheet,
 } from '#/components/explainers';
 // Reimbursement sheets
 import { ChoosePayoutsActionSheet } from '#/components/ChoosePayoutsSheet';
@@ -773,6 +774,9 @@ declare module 'react-native-actions-sheet' {
     'reputation-explainer': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'coveted-player-explainer': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
     'choose-payouts': SheetDefinition<{
       payload: {
         onChoose?: (choice: 'auto' | 'manual_only') => void;
@@ -908,6 +912,7 @@ export const Sheets = () => {
         // Explainer sheets
         'rating-explainer': RatingExplainerActionSheet,
         'reputation-explainer': ReputationExplainerActionSheet,
+        'coveted-player-explainer': CovetedPlayerExplainerActionSheet,
         // Reimbursement sheets
         'choose-payouts': ChoosePayoutsActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
