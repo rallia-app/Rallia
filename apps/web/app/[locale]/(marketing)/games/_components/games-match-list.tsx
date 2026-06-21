@@ -61,6 +61,9 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
   const [sports, setSports] = useState<Sport[]>([]);
   const [activeSportId, setActiveSportId] = useState<string | null>(null);
 
+  // Scope filter: all games vs. only the signed-in viewer's games
+  const [mineOnly, setMineOnly] = useState(false);
+
   const handleJoin = (matchId: string) => {
     router.push(`/join/match/${matchId}`);
   };
@@ -84,7 +87,8 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
       fetchOffset: number,
       lat?: number | null,
       lng?: number | null,
-      sportId?: string | null
+      sportId?: string | null,
+      mine?: boolean
     ) => {
       const params = new URLSearchParams({
         limit: String(PAGE_SIZE),
@@ -96,6 +100,9 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
       }
       if (sportId) {
         params.set('sportId', sportId);
+      }
+      if (mine) {
+        params.set('mine', '1');
       }
       const res = await fetch(`/api/public-matches?${params}`);
       if (!res.ok) return null;
@@ -142,7 +149,7 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
         if (cancelled || !loc) return;
 
         setCoords(loc);
-        const result = await fetchMatches(0, loc.latitude, loc.longitude, activeSportId);
+        const result = await fetchMatches(0, loc.latitude, loc.longitude, activeSportId, mineOnly);
         if (result && !cancelled) {
           setMatches(result.matches);
           setHasMore(result.hasMore);
@@ -157,7 +164,7 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
     return () => {
       cancelled = true;
     };
-  }, [fetchMatches, activeSportId]);
+  }, [fetchMatches, activeSportId, mineOnly]);
 
   // Sport filter change
   const handleSportChange = async (sportId: string | null) => {
@@ -170,7 +177,33 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
     setHasMore(false);
 
     try {
-      const result = await fetchMatches(0, coords?.latitude, coords?.longitude, sportId);
+      const result = await fetchMatches(0, coords?.latitude, coords?.longitude, sportId, mineOnly);
+      if (result) {
+        setMatches(result.matches);
+        setHasMore(result.hasMore);
+        setOffset(result.matches.length);
+      }
+    } finally {
+      setLocationLoaded(true);
+    }
+  };
+
+  // Scope filter change (all games vs. my games)
+  const handleScopeChange = async (mine: boolean) => {
+    setMineOnly(mine);
+    setLocationLoaded(false);
+    setMatches([]);
+    setOffset(0);
+    setHasMore(false);
+
+    try {
+      const result = await fetchMatches(
+        0,
+        coords?.latitude,
+        coords?.longitude,
+        activeSportId,
+        mine
+      );
       if (result) {
         setMatches(result.matches);
         setHasMore(result.hasMore);
@@ -184,7 +217,13 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
   const handleLoadMore = async () => {
     setIsLoadingMore(true);
     try {
-      const result = await fetchMatches(offset, coords?.latitude, coords?.longitude, activeSportId);
+      const result = await fetchMatches(
+        offset,
+        coords?.latitude,
+        coords?.longitude,
+        activeSportId,
+        mineOnly
+      );
       if (result) {
         setMatches(prev => {
           const existingIds = new Set(prev.map(m => m.id));
@@ -220,37 +259,18 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
   // Loading state
   const isLoading = !locationLoaded && matches.length === 0;
 
-  // Empty state
-  if (matches.length === 0 && locationLoaded) {
-    return (
-      <>
-        {/* Sport filter tabs */}
-        {sports.length > 0 && (
-          <SportFilterTabs
-            sports={sports}
-            activeSportId={activeSportId}
-            onChange={handleSportChange}
-            allLabel={t('allSports')}
-          />
-        )}
-        <div className="flex flex-col items-center text-center gap-6 py-20">
-          <div className="size-16 rounded-full bg-muted flex items-center justify-center">
-            <CalendarX className="size-8 text-muted-foreground" />
-          </div>
-          <div className="space-y-2 max-w-md">
-            <h2 className="text-2xl font-bold">{t('emptyTitle')}</h2>
-            <p className="text-muted-foreground">{t('emptyDescription')}</p>
-          </div>
-          <Button asChild variant="default" size="lg" className="font-semibold">
-            <Link href="/#download">{t('emptyCta')}</Link>
-          </Button>
-        </div>
-      </>
-    );
-  }
+  const filterControls = (
+    <div className="flex flex-col items-center gap-3">
+      {/* Scope toggle: only relevant when signed in */}
+      {viewerPlayerId && (
+        <ScopeToggle
+          mineOnly={mineOnly}
+          onChange={handleScopeChange}
+          allLabel={t('allGames')}
+          mineLabel={t('myGames')}
+        />
+      )}
 
-  return (
-    <>
       {/* Sport filter tabs */}
       {sports.length > 0 && (
         <SportFilterTabs
@@ -260,6 +280,48 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
           allLabel={t('allSports')}
         />
       )}
+    </div>
+  );
+
+  // Empty state
+  if (matches.length === 0 && locationLoaded) {
+    return (
+      <>
+        {filterControls}
+        <div className="flex flex-col items-center text-center gap-6 py-20">
+          <div className="size-16 rounded-full bg-muted flex items-center justify-center">
+            <CalendarX className="size-8 text-muted-foreground" />
+          </div>
+          <div className="space-y-2 max-w-md">
+            <h2 className="text-2xl font-bold">
+              {mineOnly ? t('myGamesEmptyTitle') : t('emptyTitle')}
+            </h2>
+            <p className="text-muted-foreground">
+              {mineOnly ? t('myGamesEmptyDescription') : t('emptyDescription')}
+            </p>
+          </div>
+          {mineOnly ? (
+            <Button
+              variant="default"
+              size="lg"
+              className="font-semibold"
+              onClick={() => handleScopeChange(false)}
+            >
+              {t('myGamesEmptyCta')}
+            </Button>
+          ) : (
+            <Button asChild variant="default" size="lg" className="font-semibold">
+              <Link href="/#download">{t('emptyCta')}</Link>
+            </Button>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {filterControls}
 
       {/* Skeleton loading */}
       {isLoading && (
@@ -307,6 +369,49 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
         </div>
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Scope Toggle (all games vs. my games)
+// ---------------------------------------------------------------------------
+
+function ScopeToggle({
+  mineOnly,
+  onChange,
+  allLabel,
+  mineLabel,
+}: {
+  mineOnly: boolean;
+  onChange: (mine: boolean) => void;
+  allLabel: string;
+  mineLabel: string;
+}) {
+  return (
+    <div className="inline-flex rounded-full bg-muted p-1">
+      <button
+        onClick={() => onChange(false)}
+        className={cn(
+          'px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
+          !mineOnly
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        {allLabel}
+      </button>
+      <button
+        onClick={() => onChange(true)}
+        className={cn(
+          'px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
+          mineOnly
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        {mineLabel}
+      </button>
+    </div>
   );
 }
 
