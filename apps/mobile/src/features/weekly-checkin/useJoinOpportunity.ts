@@ -26,6 +26,17 @@ export type JoinOutcome = 'joined' | 'requested' | 'waitlisted';
 
 const DEFAULT_DISCOVERY_SOURCE = 'weekly_checkin';
 
+export interface UseJoinOpportunityOptions {
+  /** Analytics `discovery_source` bucket. Defaults to 'weekly_checkin'. */
+  source?: string;
+  /**
+   * How to surface a join failure. Defaults to a toast. The onboarding games
+   * step passes an Alert-based reporter because toasts render behind its bottom
+   * sheet and would otherwise be invisible.
+   */
+  notifyError?: (message: string) => void;
+}
+
 function spotsLeft(match: MatchWithDetails): number {
   const total = match.format === 'doubles' ? 4 : 2;
   const joined = match.participants?.filter(p => p.status === 'joined').length ?? 0;
@@ -34,8 +45,9 @@ function spotsLeft(match: MatchWithDetails): number {
 
 export function useJoinOpportunity(
   playerId: string | null,
-  discoverySource: string = DEFAULT_DISCOVERY_SOURCE
+  options: UseJoinOpportunityOptions = {}
 ) {
+  const { source: discoverySource = DEFAULT_DISCOVERY_SOURCE, notifyError } = options;
   const qc = useQueryClient();
   const toast = useToast();
   const { t } = useTranslation();
@@ -105,13 +117,15 @@ export function useJoinOpportunity(
           }));
         } else {
           errorHaptic();
-          toast.error(message === 'GENDER_MISMATCH' ? t('matchActions.genderMismatch') : message);
+          const text = message === 'GENDER_MISMATCH' ? t('matchActions.genderMismatch') : message;
+          if (notifyError) notifyError(text);
+          else toast.error(text);
         }
       } finally {
         setPendingId(null);
       }
     },
-    [playerId, pendingId, qc, toast, t, discoverySource]
+    [playerId, pendingId, qc, toast, t, discoverySource, notifyError]
   );
 
   return { join, outcomes, pendingId };
