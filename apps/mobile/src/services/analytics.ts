@@ -678,6 +678,7 @@ export function bookingRedirected(props: {
     | 'match_courts'
     | 'map'
     | 'external_sheet'
+    | 'home_favorite_availability'
     | 'unknown';
 }): void {
   capture('booking_redirected', props);

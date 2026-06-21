@@ -12,6 +12,10 @@ import {
 } from 'react-native';
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+// RNGH ScrollView for the favorites carousel: it nests an inner horizontal
+// slot strip (FavoriteAvailabilityCard), and RNGH coordinates the same-axis
+// gesture so the inner strip and outer carousel each scroll independently.
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import {
   MatchCard,
@@ -34,6 +38,7 @@ import {
   usePlayerSports,
   useRatingScoresForSport,
   useFavoriteFacilities,
+  useFavoriteFacilityAvailability,
   useOtherSportsUnreadCount,
   useSports,
   useProfileCompleteness,
@@ -86,6 +91,7 @@ import {
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
 import { SportIcon } from '#/components/SportIcon';
+import { FavoriteAvailabilityCard, FavoriteAvailabilityCardSkeleton } from '#/features/facilities';
 import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
 import { useTabPreload } from '#/navigation/useTabPreload';
 import ProfileCompletionBanner, {
@@ -928,6 +934,17 @@ const Home = () => {
   const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
   const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
+  // Realtime availability at the player's provider-enabled favorite facilities.
+  // Powers the personalized "Open at your favorites" carousel below My Matches.
+  const { facilities: favoriteAvailability, isLoading: loadingFavoriteAvailability } =
+    useFavoriteFacilityAvailability({
+      playerId: player?.id,
+      sportId: selectedSport?.id,
+      latitude: location?.latitude,
+      longitude: location?.longitude,
+      enabled: !!isOnboarded && !!location && !!selectedSport?.id && !!player?.id,
+    });
+
   // Default search radius for signed-out users
   const GUEST_SEARCH_RADIUS_KM = 20;
 
@@ -1319,6 +1336,62 @@ const Home = () => {
     player,
   ]);
 
+  // Render the personalized "Open at your favorites" section: a horizontal
+  // carousel of the player's provider-enabled favorite facilities with their
+  // next bookable slots. Returns null when the player has no provider
+  // favorites (no empty shell). Onboarded users only.
+  const renderFavoriteAvailabilitySection = useCallback(() => {
+    if (!isOnboarded) return null;
+    const showLoading = loadingFavoriteAvailability && favoriteAvailability.length === 0;
+    if (!showLoading && favoriteAvailability.length === 0) return null;
+
+    return (
+      <View style={styles.favAvailSection}>
+        <View style={styles.favAvailHeader}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('home.favoriteAvailability.title')}
+          </Text>
+          <Text size="sm" color={colors.textMuted}>
+            {t('home.favoriteAvailability.subtitle')}
+          </Text>
+        </View>
+        <GestureScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.favAvailScrollContent}
+        >
+          {showLoading
+            ? [1, 2].map(i => <FavoriteAvailabilityCardSkeleton key={i} />)
+            : favoriteAvailability.map(facility => (
+                <FavoriteAvailabilityCard
+                  key={facility.id}
+                  facility={facility}
+                  sportName={selectedSport?.name}
+                  sportId={selectedSport?.id}
+                  onPress={fac => {
+                    Logger.logUserAction('favorite_availability_facility_pressed', {
+                      facilityId: fac.id,
+                    });
+                    appNavigation.navigate('FacilityDetail', { facilityId: fac.id });
+                  }}
+                  t={t}
+                />
+              ))}
+        </GestureScrollView>
+      </View>
+    );
+  }, [
+    isOnboarded,
+    loadingFavoriteAvailability,
+    favoriteAvailability,
+    colors.text,
+    colors.textMuted,
+    t,
+    selectedSport?.name,
+    selectedSport?.id,
+    appNavigation,
+  ]);
+
   // Render list header (welcome section for logged-in users)
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
@@ -1597,6 +1670,13 @@ const Home = () => {
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
 
+    // Personalized realtime availability at the player's favorite facilities.
+    // The renderer returns null when there are no provider favorites, so this
+    // push is inert for those users.
+    headerComponents.push(
+      <View key="favorite-availability">{renderFavoriteAvailabilitySection()}</View>
+    );
+
     // Only show "Soon & Nearby" section header if we have location
     if (showNearbySection) {
       headerComponents.push(<View key="section-header">{renderSectionHeader()}</View>);
@@ -1617,6 +1697,7 @@ const Home = () => {
     openSheet,
     selectedSport,
     renderMyMatchesSection,
+    renderFavoriteAvailabilitySection,
     renderSectionHeader,
     otherSportsUnreadCount,
     dismissedBannerSports,
@@ -1992,6 +2073,20 @@ const styles = StyleSheet.create({
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[2],
+  },
+  favAvailSection: {
+    marginTop: spacingPixels[2],
+  },
+  favAvailHeader: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[3],
+    gap: spacingPixels[0.5],
+  },
+  favAvailScrollContent: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[3],
   },
   bannerCarouselContent: {
     paddingHorizontal: spacingPixels[4],

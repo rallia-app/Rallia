@@ -4511,6 +4511,10 @@
     "publicMatches": "Public Games",
     "viewAll": "View All",
     "myMatches": "My games",
+    "favoriteAvailability": {
+      "title": "Open at your favorites",
+      "subtitle": "Live openings ready to book"
+    },
     "quickNav": {
       "joinCommunity": "Join a community",
       "bookCourt": "Reserve a court",
