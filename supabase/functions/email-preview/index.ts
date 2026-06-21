@@ -1116,7 +1116,11 @@ const TEMPLATES: TemplateEntry[] = [
         email: 'newplayer@example.com',
         firstName: 'Alex',
         displayName: 'alex_plays',
-        openAppUrl: PREVIEW_SITE_URL,
+        sports: ['Tennis', 'Pickleball'],
+        courtCount: 142,
+        profileUrl: `${PREVIEW_SITE_URL}/api/go?to=profile&locale=${locale}`,
+        courtsUrl: `${PREVIEW_SITE_URL}/api/go?to=courts&locale=${locale}`,
+        gamesUrl: `${PREVIEW_SITE_URL}/api/go?to=games&locale=${locale}`,
       };
       return renderWelcomeEmail(payload, locale).html;
     },

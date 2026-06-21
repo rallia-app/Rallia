@@ -120,28 +120,37 @@ const translations: Translations = {
     'org.dateAt': 'at',
 
     // Welcome (post-onboarding)
-    'welcome.subject': 'Welcome to Rallia — your next game is waiting',
-    'welcome.preheader': 'Your next game is waiting. Here is what you can do with Rallia.',
+    'welcome.subject': 'Welcome to Rallia, {firstName}: your first game starts now',
+    'welcome.subjectDefault': 'Welcome to Rallia: your first game starts now',
+    'welcome.preheader': 'One step to unlock your invitations to play this week.',
     'welcome.heading': 'Welcome to Rallia, {firstName}',
     'welcome.headingDefault': 'Welcome to Rallia',
-    'welcome.missionTagline': 'Your next game is waiting.',
-    'welcome.intro':
-      "We're glad to have you on board. Rallia is built to turn your intent to play into actual matches — making it as easy as possible to find the right opponents, organize the details, and enjoy every game you show up for.",
-    'welcome.featuresHeading': 'What you can do with Rallia',
-    'welcome.features.courts.title': 'The most complete court directory in Greater Montreal',
-    'welcome.features.courts.body':
-      'Browse tennis and pickleball courts across Greater Montreal, see real-time availability for most public courts, and get redirected to the official booking page in a few clicks.',
-    'welcome.features.matches.title': 'Create or join a match',
-    'welcome.features.matches.body':
-      'Open a public or private game, or jump into matches that fit your level, schedule, and favorite spots — no more group-chat chaos.',
-    'welcome.features.levels.title': 'Skill ratings you can actually trust',
-    'welcome.features.levels.body':
-      "Self-declared ratings are easy — trusting them isn't. Rallia adds a layer of trust on top of NTRP / DUPR with player references and rating proofs, so the levels you see on profiles hold up and you know exactly who you're stepping on court with.",
-    'welcome.features.reputation.title': 'Reliability & reputation',
-    'welcome.features.reputation.body':
-      'Every game counts. Build your reputation with Bronze → Platinum badges and play with people who show up.',
-    'welcome.ctaButton': 'Open Rallia',
-    'welcome.footerTagline': 'See you on the court.',
+    'welcome.intro': "You've just joined Montreal's {sport} community. Welcome.",
+    'welcome.mission':
+      "We have one mission: to turn every urge to play into a real game on the court. And we're starting now.",
+    'welcome.hero.title': '🎯 Your next step: complete your profile',
+    'welcome.hero.body':
+      'Photo, bio, availability, and above all, proof of your level. A complete profile builds trust, makes you visible to the right partners, and brings you up to 2x more invitations to play. The video proof of your level is what really sets you apart from other profiles.',
+    'welcome.hero.cta': 'Complete my profile',
+    'welcome.stepsIntro': 'Once your profile is ready, the rest takes just a few clicks:',
+    'welcome.steps.courts.title': '🏟️ Explore the courts near you',
+    'welcome.steps.courts.body':
+      "{courtCount} courts {area}, several of them showing real-time availability. Then book directly on the facility's website.",
+    'welcome.steps.courts.cta': 'See the courts',
+    'welcome.sportFallback': 'tennis and pickleball',
+    'welcome.courts.countFallback': '1,200+',
+    'welcome.area.nearYou': 'near you',
+    'welcome.area.region': 'across Greater Montreal',
+    'welcome.steps.games.title': '🤝 Join or create your first game',
+    'welcome.steps.games.body':
+      'Open games are waiting near you, or create your own and find a compatible partner.',
+    'welcome.steps.games.cta': 'Find a game',
+    'welcome.community':
+      'Looking for more than games? Join our private groups and public communities in Montreal too.',
+    'welcome.contact':
+      'Questions? Running into something? Write to us at {email}, and Jean and Mathis will get back to you personally. We want your first Rallia experience to be a great one.',
+    'welcome.signoff': 'See you on the courts soon,',
+    'welcome.signoffTeam': 'The Rallia Team',
     'welcome.disclaimer':
       "You're receiving this email because you just finished creating your Rallia account.",
     'welcome.footerNote': 'Rallia — Find players, join games, play more',
@@ -344,28 +353,37 @@ const translations: Translations = {
     'org.dateAt': 'à',
 
     // Welcome (post-onboarding)
-    'welcome.subject': "Bienvenue sur Rallia — ta prochaine partie t'attend",
-    'welcome.preheader': "Ta prochaine partie t'attend. Voici ce que tu peux faire avec Rallia.",
+    'welcome.subject': 'Bienvenue sur Rallia, {firstName} : ta première partie commence maintenant',
+    'welcome.subjectDefault': 'Bienvenue sur Rallia : ta première partie commence maintenant',
+    'welcome.preheader': 'Une étape pour débloquer tes invitations à jouer cette semaine.',
     'welcome.heading': 'Bienvenue sur Rallia, {firstName}',
     'welcome.headingDefault': 'Bienvenue sur Rallia',
-    'welcome.missionTagline': "Ta prochaine partie t'attend.",
-    'welcome.intro':
-      "On est content de t'avoir avec nous. Rallia est conçu pour transformer ton envie de jouer en vraies parties — en rendant le plus simple possible de trouver les bons adversaires, d'organiser les détails, et de profiter pleinement de chaque match.",
-    'welcome.featuresHeading': 'Ce que tu peux faire avec Rallia',
-    'welcome.features.courts.title': 'Le répertoire de terrains le plus complet du Grand Montréal',
-    'welcome.features.courts.body':
-      'Parcours les terrains de tennis et de pickleball du Grand Montréal, vois les disponibilités en temps réel sur la plupart des terrains publics, et fais-toi rediriger vers la page officielle de réservation en quelques clics.',
-    'welcome.features.matches.title': 'Crée ou rejoins une partie',
-    'welcome.features.matches.body':
-      'Ouvre une partie publique ou privée, ou rejoins des matchs adaptés à ton niveau, ton horaire et tes terrains préférés — fini le chaos des groupes de texto.',
-    'welcome.features.levels.title': 'Des niveaux auxquels tu peux te fier',
-    'welcome.features.levels.body':
-      "Les notes auto-déclarées, c'est facile — les croire, c'est autre chose. Rallia ajoute une couche de confiance par-dessus NTRP / DUPR avec des références de joueurs et des preuves de niveau, pour que les classements affichés reflètent la réalité et que tu saches vraiment avec qui tu embarques sur le terrain.",
-    'welcome.features.reputation.title': 'Fiabilité et réputation',
-    'welcome.features.reputation.body':
-      'Chaque partie compte. Bâtis ta réputation avec les badges Bronze → Platine et joue avec du monde qui se présente.',
-    'welcome.ctaButton': 'Ouvrir Rallia',
-    'welcome.footerTagline': 'On se voit sur le terrain.',
+    'welcome.intro': 'Tu viens de rejoindre la communauté {sport} de Montréal.',
+    'welcome.mission':
+      'On a une seule mission : transformer chaque envie de jouer en une vraie partie sur le terrain. Et on commence maintenant.',
+    'welcome.hero.title': '🎯 Ta prochaine étape : complète ton profil',
+    'welcome.hero.body':
+      "Photo, bio, disponibilités et surtout ta preuve de niveau. Un profil complet inspire confiance, te rend visible auprès des bons partenaires et t'apporte jusqu'à 2x plus d'invitations à jouer. La preuve vidéo de ton niveau, c'est ce qui te démarque vraiment des autres profils.",
+    'welcome.hero.cta': 'Compléter mon profil',
+    'welcome.stepsIntro': 'Une fois ton profil prêt, tout se fait en quelques clics :',
+    'welcome.steps.courts.title': '🏟️ Explore les terrains près de chez toi',
+    'welcome.steps.courts.body':
+      "{courtCount} terrains {area}, dont plusieurs affichent leurs disponibilités en temps réel. Réserve ensuite directement sur le site de l'établissement.",
+    'welcome.steps.courts.cta': 'Voir les terrains',
+    'welcome.sportFallback': 'tennis et pickleball',
+    'welcome.courts.countFallback': '1200+',
+    'welcome.area.nearYou': 'près de chez toi',
+    'welcome.area.region': 'dans le grand Montréal',
+    'welcome.steps.games.title': '🤝 Rejoins ou crée ta première partie',
+    'welcome.steps.games.body':
+      "Des parties ouvertes t'attendent près de chez toi, ou crée la tienne et trouve un partenaire compatible.",
+    'welcome.steps.games.cta': 'Trouver une partie',
+    'welcome.community':
+      'Tu cherches plus que des parties ? Rejoins aussi les groupes privés et les communautés publiques à Montréal.',
+    'welcome.contact':
+      "Une question ? Un problème ? Écris-nous à {email}, c'est Jean et Mathis qui te répondront personnellement. On tient à ce que ta première expérience sur Rallia soit parfaite.",
+    'welcome.signoff': 'À très vite sur les terrains,',
+    'welcome.signoffTeam': "L'équipe Rallia",
     'welcome.disclaimer':
       'Tu reçois ce courriel parce que tu viens de terminer la création de ton compte Rallia.',
     'welcome.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
