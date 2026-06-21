@@ -10,6 +10,7 @@ import { buildUtmUrl, formatIntuitiveDateInTimezone, type UtmParams } from '@ral
 
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import type { TranslationKey } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 /**
  * Translation function type for generating localized share messages.
@@ -83,11 +84,7 @@ function formatShareTime(timeStr: string, locale: string): string {
     const date = new Date();
     date.setHours(hours, minutes, 0, 0);
 
-    return date.toLocaleTimeString(locale, {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: locale.startsWith('en'),
-    });
+    return formatTimeOfDay(date, locale);
   } catch {
     return timeStr?.substring(0, 5) || '';
   }

@@ -14,6 +14,7 @@ import type { ConversationPreview } from '@rallia/shared-services';
 import { getConversationDisplayName } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 import { SportIcon } from '#/components/SportIcon';
 
 interface ConversationItemProps {
@@ -24,7 +25,7 @@ interface ConversationItemProps {
 }
 
 // Format time for display
-function formatTime(dateString: string | null): string {
+function formatTime(dateString: string | null, locale: string): string {
   if (!dateString) return '';
 
   const date = new Date(dateString);
@@ -33,13 +34,13 @@ function formatTime(dateString: string | null): string {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return formatTimeOfDay(date, locale, { hour: '2-digit' });
   } else if (diffDays === 1) {
     return 'Yesterday';
   } else if (diffDays < 7) {
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
+    return date.toLocaleDateString(locale, { weekday: 'short' });
   } else {
-    return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+    return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
   }
 }
 
@@ -159,7 +160,7 @@ function ConversationItemComponent({
   isBlocked = false,
 }: ConversationItemProps) {
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   // Cast t to TranslateFn for getConversationInfo which uses dynamic keys
   const { name, avatar, iconName, sportIconName, isOnline, lastSeen } = getConversationInfo(
     conversation,
@@ -243,7 +244,7 @@ function ConversationItemComponent({
               />
             )}
             <Text style={[styles.time, { color: colors.textMuted }]}>
-              {formatTime(conversation.last_message_at)}
+              {formatTime(conversation.last_message_at, locale)}
             </Text>
           </View>
         </View>

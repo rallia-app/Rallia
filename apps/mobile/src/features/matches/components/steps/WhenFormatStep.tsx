@@ -28,6 +28,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 
 import type { TranslationKey } from '#/hooks/useTranslation';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 // =============================================================================
 // TIMEZONE DATA
@@ -257,11 +258,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   });
 
   // Format display time
-  const formattedTime = timeValue.toLocaleTimeString(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  const formattedTime = formatTimeOfDay(timeValue, locale);
 
   // Temporary values for iOS picker (only commit on Done)
   const [tempDate, setTempDate] = useState(dateValue);

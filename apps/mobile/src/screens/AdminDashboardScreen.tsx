@@ -54,6 +54,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 
 import type { RootStackParamList } from '#/navigation/types';
 import { useTranslation } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -63,7 +64,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const AdminDashboardScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { isAdmin } = useAdminStatus();
@@ -126,10 +127,13 @@ const AdminDashboardScreen: React.FC = () => {
   );
 
   // Format last updated time
-  const formatLastUpdated = useCallback((date: Date | null): string => {
-    if (!date) return '';
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }, []);
+  const formatLastUpdated = useCallback(
+    (date: Date | null): string => {
+      if (!date) return '';
+      return formatTimeOfDay(date, locale, { hour: '2-digit' });
+    },
+    [locale]
+  );
 
   // Handle back navigation
   const handleBack = useCallback(() => {

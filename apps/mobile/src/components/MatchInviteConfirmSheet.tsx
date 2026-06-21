@@ -28,6 +28,7 @@ import { Logger, supabase } from '@rallia/shared-services';
 import { topSuggestionKeys, justForYouKeys } from '@rallia/shared-hooks';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 export interface MatchInviteConfirmPayload {
   opponentId: string;
@@ -64,11 +65,7 @@ function formatSummary(matchDate: string, startTime: string, locale: string): st
     month: 'short',
     day: 'numeric',
   });
-  const time = dateObj.toLocaleTimeString(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: !locale.startsWith('fr'),
-  });
+  const time = formatTimeOfDay(dateObj, locale);
   return `${date} · ${time}`;
 }
 

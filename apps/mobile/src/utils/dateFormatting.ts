@@ -48,6 +48,27 @@ export function formatDateMonthYear(dateString: string | null, locale: Locale): 
 }
 
 /**
+ * Format the time-of-day portion of a Date with explicit 12h/24h per locale.
+ * en-* → AM/PM, everything else (fr-*) → 24h. We pin `hour12` because iOS
+ * otherwise honors the device "24-Hour Time" setting and ignores the locale,
+ * so relying on the locale default is not reliable.
+ * @param date - Date whose time portion should be formatted
+ * @param locale - Locale code (e.g., 'en-US', 'fr-CA')
+ * @param options.hour - 'numeric' ("2:00 PM") or '2-digit' ("02:00 PM")
+ */
+export function formatTimeOfDay(
+  date: Date,
+  locale: string,
+  options?: { hour?: 'numeric' | '2-digit' }
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    hour: options?.hour ?? 'numeric',
+    minute: '2-digit',
+    hour12: locale.startsWith('en'),
+  }).format(date);
+}
+
+/**
  * Format a time string to a locale-aware time string
  * @param timeString - Time string (HH:mm format) or null
  * @param locale - Locale code (e.g., 'en-US', 'fr-CA')
@@ -59,10 +80,7 @@ export function formatTime(timeString: string | null, locale: Locale): string {
   const [hours, minutes] = timeString.split(':').map(Number);
   const date = new Date();
   date.setHours(hours, minutes, 0, 0);
-  return new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+  return formatTimeOfDay(date, locale);
 }
 
 /**
@@ -80,6 +98,7 @@ export function formatDateTime(dateString: string | null, locale: Locale): strin
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: locale.startsWith('en'),
   }).format(date);
 }
 

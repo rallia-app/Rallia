@@ -21,7 +21,8 @@ import {
   status,
 } from '@rallia/design-system';
 
-import { useThemeStyles, useNavigateToPlayerProfile } from '#/hooks';
+import { useThemeStyles, useNavigateToPlayerProfile, useTranslation } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 import { SportIcon } from '#/components/SportIcon';
 import type { RootStackParamList } from '#/navigation/types';
 
@@ -97,6 +98,7 @@ export default function PlayedMatchDetailScreen() {
   const route = useRoute<PlayedMatchDetailRouteProp>();
   const { match: groupMatch } = route.params;
   const { colors, isDark } = useThemeStyles();
+  const { locale } = useTranslation();
 
   // Parse group match data - the actual match data is nested inside .match
   const data = groupMatch as GroupMatch;
@@ -106,23 +108,19 @@ export default function PlayedMatchDetailScreen() {
   const formattedDate = useMemo(() => {
     if (!matchData?.match_date) return 'Unknown date';
     const date = new Date(matchData.match_date);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       month: 'long',
       day: 'numeric',
     });
-  }, [matchData]);
+  }, [matchData, locale]);
 
   const formattedTime = useMemo(() => {
     if (!matchData?.start_time) return 'Unknown time';
     const [hours, minutes] = matchData.start_time.split(':');
     const date = new Date();
     date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  }, [matchData]);
+    return formatTimeOfDay(date, locale);
+  }, [matchData, locale]);
 
   // Sport name for icon (SportIcon uses tennis/pickleball SVGs; others fallback to tennis)
   const sportNameForIcon = matchData?.sport?.name ?? 'tennis';

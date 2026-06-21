@@ -31,6 +31,7 @@ import { errorHaptic, lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger, suggestMatchTime, withdrawTimeSuggestion } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 import { BaseActionSheet } from './BaseActionSheet';
 
@@ -53,11 +54,7 @@ function formatHHMM(d: Date): string {
 
 function formatTimeForDisplay(time: string, locale: string): string {
   const d = parseTimeToDate(time);
-  return d.toLocaleTimeString(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: !locale.startsWith('fr'),
-  });
+  return formatTimeOfDay(d, locale);
 }
 
 export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-time'>) {
