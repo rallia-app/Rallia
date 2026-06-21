@@ -47,6 +47,9 @@ interface ParticipantForNotification {
   format: string;
   timezone: string;
   player_expectation: string;
+  // What this player still owes for the game (the RPC guarantees at least one is true)
+  needs_feedback: boolean;
+  needs_score: boolean;
 }
 
 interface OpponentInfo {
@@ -195,37 +198,66 @@ async function buildNotificationInput(
   // Format sport name (lowercase)
   const sportName = participant.sport_name.toLowerCase();
 
-  // Casual games never collect a score — ask for feedback only, no score copy.
-  const isCasual = participant.player_expectation === 'casual';
+  // Only nudge about what's still outstanding. The RPC guarantees at least one
+  // of these is true, and needs_score is always false for casual games.
+  const mode: 'both' | 'score' | 'feedback' =
+    participant.needs_score && participant.needs_feedback
+      ? 'both'
+      : participant.needs_score
+        ? 'score'
+        : 'feedback';
 
-  // Build title and body based on notification type
+  const isFr = locale.startsWith('fr');
+
+  // Build title and body based on notification type and what's outstanding
   let title: string;
   let body: string;
 
   if (notificationType === 'feedback_request') {
-    title = 'How was your game?';
-    body = isCasual
-      ? `Rate your ${sportName} game with ${formattedOpponentNames} while it's fresh!`
-      : `Submit your score and rate your ${sportName} match with ${formattedOpponentNames} while it's fresh!`;
-  } else {
-    title = isCasual ? 'You have a game to rate' : 'You have a match to close out';
-    body = isCasual
-      ? `Your ${sportName} rating with ${formattedOpponentNames} is still pending. Share it before the window closes.`
-      : `Your ${sportName} score and rating with ${formattedOpponentNames} are still pending — complete them before the window closes.`;
-  }
-
-  // French translations if needed
-  if (locale.startsWith('fr')) {
-    if (notificationType === 'feedback_request') {
+    if (isFr) {
       title = 'Comment était votre partie?';
-      body = isCasual
-        ? `Évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`
-        : `Soumettez votre score et évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`;
+      body =
+        mode === 'both'
+          ? `Soumettez votre score et évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`
+          : mode === 'score'
+            ? `Soumettez votre score pour votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`
+            : `Évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`;
     } else {
-      title = isCasual ? 'Une partie à évaluer' : 'Une partie à clôturer';
-      body = isCasual
-        ? `Votre évaluation de ${sportName} avec ${formattedOpponentNames} est encore en attente. Partagez-la avant la fermeture.`
-        : `Votre score et évaluation de ${sportName} avec ${formattedOpponentNames} sont toujours en attente — clôturez-les avant la fermeture.`;
+      title = 'How was your game?';
+      body =
+        mode === 'both'
+          ? `Submit your score and rate your ${sportName} game with ${formattedOpponentNames} while it's fresh!`
+          : mode === 'score'
+            ? `Submit your score for your ${sportName} game with ${formattedOpponentNames} while it's fresh!`
+            : `Rate your ${sportName} game with ${formattedOpponentNames} while it's fresh!`;
+    }
+  } else {
+    if (isFr) {
+      title =
+        mode === 'both'
+          ? 'Une partie à clôturer'
+          : mode === 'score'
+            ? 'Un score à soumettre'
+            : 'Une partie à évaluer';
+      body =
+        mode === 'both'
+          ? `Votre score et évaluation de ${sportName} avec ${formattedOpponentNames} sont toujours en attente. Complétez-les avant la fermeture.`
+          : mode === 'score'
+            ? `Votre score de ${sportName} avec ${formattedOpponentNames} est toujours en attente. Soumettez-le avant la fermeture.`
+            : `Votre évaluation de ${sportName} avec ${formattedOpponentNames} est toujours en attente. Partagez-la avant la fermeture.`;
+    } else {
+      title =
+        mode === 'both'
+          ? 'You have a game to close out'
+          : mode === 'score'
+            ? 'You have a score to submit'
+            : 'You have a game to rate';
+      body =
+        mode === 'both'
+          ? `Your ${sportName} score and rating with ${formattedOpponentNames} are still pending. Wrap them up before the window closes.`
+          : mode === 'score'
+            ? `Your ${sportName} score with ${formattedOpponentNames} is still pending. Submit it before the window closes.`
+            : `Your ${sportName} rating with ${formattedOpponentNames} is still pending. Share it before the window closes.`;
     }
   }
 
