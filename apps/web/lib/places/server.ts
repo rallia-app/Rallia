@@ -80,7 +80,12 @@ export async function fetchPlaceDetails(placeId: string): Promise<PlaceDetails |
     throw new Error('Google Places API not configured');
   }
 
-  const response = await fetch(`${PLACE_DETAILS_URL}/${placeId}`, {
+  // Place IDs are URL-safe tokens; reject anything else to prevent path/host injection.
+  if (!/^[A-Za-z0-9_-]+$/.test(placeId)) {
+    return null;
+  }
+
+  const response = await fetch(`${PLACE_DETAILS_URL}/${encodeURIComponent(placeId)}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

@@ -14,8 +14,6 @@ export interface MatchSmokeRequestContext {
   matchNature: MatchNatureOption;
   timeSlot: string;
   locationType: LocationOption;
-  homeAddress?: string;
-  postalCode?: string;
   facilityId?: string;
   facilityName?: string;
   planTier: MatchPlanTier;
