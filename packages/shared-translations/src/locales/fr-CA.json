@@ -4806,13 +4806,23 @@
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
     "soonAndNearby": "À proximité",
-    "justForYou": "Juste pour vous",
+    "soonAndNearbySubtitle": "Des parties ouvertes près de toi",
+    "justForYou": "Juste pour toi",
+    "justForYouSubtitle": "Des parties sélectionnées près de toi",
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
+    "myMatchesSubtitle": "Tes parties à venir",
+    "myMatchesStatus": {
+      "confirmed": "Confirmé",
+      "needsPlayers": "Cherche des joueurs",
+      "invited": "Invité",
+      "requested": "En attente",
+      "waitlisted": "Liste d'attente"
+    },
     "favoriteAvailability": {
       "title": "Tes terrains favoris",
-      "subtitle": "Des places à réserver en temps réel"
+      "subtitle": "Des disponibilités à réserver en temps réel"
     },
     "quickNav": {
       "joinCommunity": "Rejoindre une communauté",

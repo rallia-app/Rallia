@@ -397,6 +397,16 @@ declare module 'react-native-actions-sheet' {
       payload: {
         facility: unknown;
         slot: unknown;
+        /** Match to relink the booking to (skips the create-game prompt on return). */
+        matchId?: string;
+        /** Originating surface, for booking analytics. Defaults to external_sheet. */
+        source?:
+          | 'facility_directory'
+          | 'facility_card'
+          | 'match_courts'
+          | 'map'
+          | 'external_sheet'
+          | 'home_favorite_availability';
       };
     }>;
     'booking-confirmation': SheetDefinition<{

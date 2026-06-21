@@ -25,7 +25,6 @@ import {
   MIN_FAVORITE_FACILITIES,
   type FacilityFilters,
   FormattedSlot,
-  CourtOption,
 } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
@@ -41,7 +40,6 @@ import {
   type TranslationKey,
   type TranslationOptions,
   useRequireOnboarding,
-  useOpenExternalBooking,
 } from '#/hooks';
 import { useAuth } from '#/hooks';
 import { useSport, useUserHomeLocation, useActionsSheet } from '#/context';
@@ -120,7 +118,6 @@ export default function FacilitiesDirectory() {
   const showFavoriteButton = !!session?.user && !!profile?.onboarding_completed;
   const { openSheet } = useActionsSheet();
   const { guardAction } = useRequireOnboarding();
-  const { openExternalBooking } = useOpenExternalBooking();
 
   // User is fully onboarded only if authenticated AND onboarding is complete
   const isOnboarded = !!session?.user && !!profile?.onboarding_completed;
@@ -271,39 +268,13 @@ export default function FacilitiesDirectory() {
       // Require auth and onboarding before allowing booking actions
       if (!guardAction()) return;
 
-      // If multiple courts available, show court selection sheet
-      if (slot.courtOptions.length > 1) {
-        SheetManager.show('court-selection', {
-          payload: {
-            courts: slot.courtOptions ?? [],
-            timeLabel: slot.time ?? '',
-            onSelect: (court: unknown) => {
-              const c = court as CourtOption;
-              openExternalBooking({
-                facility,
-                slot,
-                selectedCourt: c,
-                source: 'facility_directory',
-                sportId: selectedSport?.id,
-                sportName: selectedSport?.name,
-              });
-            },
-            onCancel: () => {},
-          },
-        });
-        return;
-      }
-
-      // Single court or no options - open booking URL with pending tracking
-      openExternalBooking({
-        facility,
-        slot,
-        source: 'facility_directory',
-        sportId: selectedSport?.id,
-        sportName: selectedSport?.name,
+      // Court selection + redirect runs through the shared external-booking
+      // sheet (same as the facility detail availability tab).
+      SheetManager.show('external-booking', {
+        payload: { facility, slot, source: 'facility_directory' },
       });
     },
-    [guardAction, openExternalBooking, selectedSport?.id, selectedSport?.name]
+    [guardAction]
   );
 
   // Render facility card. onPress now receives the facility so the prop is

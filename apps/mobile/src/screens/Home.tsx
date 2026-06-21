@@ -47,7 +47,7 @@ import {
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { MatchScoringPreferences } from '@rallia/shared-hooks';
-import type { MatchWithDetails } from '@rallia/shared-types';
+import type { MatchWithDetails, FacilitySearchResult } from '@rallia/shared-types';
 import {
   Logger,
   supabase,
@@ -923,14 +923,32 @@ const Home = () => {
 
   // Realtime availability at the player's provider-enabled favorite facilities.
   // Powers the personalized "Open at your favorites" carousel below My Matches.
-  const { facilities: favoriteAvailability, isLoading: loadingFavoriteAvailability } =
-    useFavoriteFacilityAvailability({
-      playerId: player?.id,
-      sportId: selectedSport?.id,
-      latitude: location?.latitude,
-      longitude: location?.longitude,
-      enabled: !!isOnboarded && !!location && !!selectedSport?.id && !!player?.id,
-    });
+  const {
+    facilities: favoriteAvailability,
+    isLoading: loadingFavoriteAvailability,
+    refetch: refetchFavoriteAvailability,
+  } = useFavoriteFacilityAvailability({
+    playerId: player?.id,
+    sportId: selectedSport?.id,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
+    enabled: !!isOnboarded && !!location && !!selectedSport?.id && !!player?.id,
+  });
+
+  // Favorites are edited on other screens (sport profile, onboarding) while Home
+  // stays mounted in the tab navigator, so the availability query never refetches
+  // on its own. Refresh it whenever Home regains focus so newly added/removed
+  // favorites appear. Skip the first focus — the hook already fetches on mount.
+  const favAvailFirstFocusRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (favAvailFirstFocusRef.current) {
+        favAvailFirstFocusRef.current = false;
+        return;
+      }
+      refetchFavoriteAvailability();
+    }, [refetchFavoriteAvailability])
+  );
 
   // Default search radius for signed-out users
   const GUEST_SEARCH_RADIUS_KM = 20;
@@ -1144,26 +1162,34 @@ const Home = () => {
     // Signed-in users get the personalized "Just for you" title; signed-out
     // sees the original "Nearby" since the only signal is geographic.
     const titleKey = session?.user?.id ? 'home.justForYou' : 'home.soonAndNearby';
+    const subtitleKey = session?.user?.id
+      ? 'home.justForYouSubtitle'
+      : 'home.soonAndNearbySubtitle';
 
     return (
       <View style={[styles.sectionHeader]}>
-        <View style={styles.sectionTitleRow}>
-          <Text size="xl" weight="bold" color={colors.text}>
-            {t(titleKey)}
+        <View style={styles.sectionHeaderText}>
+          <View style={styles.sectionTitleRow}>
+            <Text size="xl" weight="bold" color={colors.text}>
+              {t(titleKey)}
+            </Text>
+            {/* Only show LocationSelector when both GPS and home location are available */}
+            {hasBothLocationOptions && (
+              <View style={styles.locationSelectorWrapper}>
+                <LocationSelector
+                  selectedMode={locationMode}
+                  onSelectMode={setLocationMode}
+                  hasHomeLocation={hasHomeLocation}
+                  homeLocationLabel={homeLocationLabel}
+                  isDark={isDark}
+                  t={t}
+                />
+              </View>
+            )}
+          </View>
+          <Text size="sm" color={colors.textMuted}>
+            {t(subtitleKey)}
           </Text>
-          {/* Only show LocationSelector when both GPS and home location are available */}
-          {hasBothLocationOptions && (
-            <View style={styles.locationSelectorWrapper}>
-              <LocationSelector
-                selectedMode={locationMode}
-                onSelectMode={setLocationMode}
-                hasHomeLocation={hasHomeLocation}
-                homeLocationLabel={homeLocationLabel}
-                isDark={isDark}
-                t={t}
-              />
-            </View>
-          )}
         </View>
         <TouchableOpacity
           style={styles.viewAllButton}
@@ -1202,9 +1228,14 @@ const Home = () => {
         <WalkthroughableView style={styles.myMatchesSection}>
           {/* Header with title and "See All" button */}
           <View style={[styles.sectionHeader]}>
-            <Text size="xl" weight="bold" color={colors.text}>
-              {t('home.myMatches')}
-            </Text>
+            <View style={styles.sectionHeaderText}>
+              <Text size="xl" weight="bold" color={colors.text}>
+                {t('home.myMatches')}
+              </Text>
+              <Text size="sm" color={colors.textMuted}>
+                {t('home.myMatchesSubtitle')}
+              </Text>
+            </View>
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => {
@@ -1271,13 +1302,11 @@ const Home = () => {
                     />
                   ))
                 : myMatches.slice(0, 5).map((match: MatchWithDetails) => {
-                    // Check if current player is invited (has pending invitation)
-                    const isInvited = !!(
-                      player?.id &&
-                      match.participants?.some(
-                        p => p.player_id === player.id && p.status === 'pending'
-                      )
-                    );
+                    // The current player's own status — drives the card's
+                    // confirmed/invited/requested/waitlisted pill.
+                    const participantStatus = player?.id
+                      ? (match.participants?.find(p => p.player_id === player.id)?.status ?? null)
+                      : null;
                     // Count pending join requests (only relevant if current user is creator)
                     const pendingRequestCount =
                       match.created_by === player?.id
@@ -1291,7 +1320,7 @@ const Home = () => {
                         isDark={isDark}
                         t={t}
                         locale={locale}
-                        isInvited={isInvited}
+                        participantStatus={participantStatus}
                         pendingRequestCount={pendingRequestCount}
                         onPress={() => {
                           Logger.logUserAction('my_match_pressed', { matchId: match.id });
@@ -1332,39 +1361,49 @@ const Home = () => {
     const showLoading = loadingFavoriteAvailability && favoriteAvailability.length === 0;
     if (!showLoading && favoriteAvailability.length === 0) return null;
 
+    // A lone favorite reads better filling the row than as a peek-able card.
+    const isSingle = !showLoading && favoriteAvailability.length === 1;
+
+    const renderCard = (facility: FacilitySearchResult, fullWidth = false) => (
+      <FavoriteAvailabilityCard
+        key={facility.id}
+        facility={facility}
+        fullWidth={fullWidth}
+        onPress={fac => {
+          Logger.logUserAction('favorite_availability_facility_pressed', {
+            facilityId: fac.id,
+          });
+          appNavigation.navigate('FacilityDetail', { facilityId: fac.id });
+        }}
+        t={t}
+      />
+    );
+
     return (
-      <View style={styles.favAvailSection}>
-        <View style={styles.favAvailHeader}>
-          <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.favoriteAvailability.title')}
-          </Text>
-          <Text size="sm" color={colors.textMuted}>
-            {t('home.favoriteAvailability.subtitle')}
-          </Text>
+      <View>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeaderText}>
+            <Text size="xl" weight="bold" color={colors.text}>
+              {t('home.favoriteAvailability.title')}
+            </Text>
+            <Text size="sm" color={colors.textMuted}>
+              {t('home.favoriteAvailability.subtitle')}
+            </Text>
+          </View>
         </View>
-        <GestureScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.favAvailScrollContent}
-        >
-          {showLoading
-            ? [1, 2].map(i => <FavoriteAvailabilityCardSkeleton key={i} />)
-            : favoriteAvailability.map(facility => (
-                <FavoriteAvailabilityCard
-                  key={facility.id}
-                  facility={facility}
-                  sportName={selectedSport?.name}
-                  sportId={selectedSport?.id}
-                  onPress={fac => {
-                    Logger.logUserAction('favorite_availability_facility_pressed', {
-                      facilityId: fac.id,
-                    });
-                    appNavigation.navigate('FacilityDetail', { facilityId: fac.id });
-                  }}
-                  t={t}
-                />
-              ))}
-        </GestureScrollView>
+        {isSingle ? (
+          <View style={styles.favAvailSingleWrap}>{renderCard(favoriteAvailability[0], true)}</View>
+        ) : (
+          <GestureScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.favAvailScrollContent}
+          >
+            {showLoading
+              ? [1, 2].map(i => <FavoriteAvailabilityCardSkeleton key={i} />)
+              : favoriteAvailability.map(facility => renderCard(facility))}
+          </GestureScrollView>
+        )}
       </View>
     );
   }, [
@@ -1767,7 +1806,10 @@ const Home = () => {
               isManualRefresh.current = true;
               Analytics.feedRefreshed({ screen: 'home' });
               refetchJustForYou();
-              if (session?.user?.id) refetchMyMatches();
+              if (session?.user?.id) {
+                refetchMyMatches();
+                refetchFavoriteAvailability();
+              }
             }}
             tintColor={colors.primary}
             colors={[colors.primary]}
@@ -1993,10 +2035,19 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    // Top-align so "View all" sits next to the title, with the description
+    // wrapping below it in the left column.
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[5],
+  },
+  // Left column of a section header: title (+ optional inline controls) stacked
+  // above a muted one-line description.
+  sectionHeaderText: {
+    flex: 1,
+    gap: spacingPixels[0.5],
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -2009,6 +2060,7 @@ const styles = StyleSheet.create({
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   chevronIcon: {
     marginLeft: spacingPixels[1],
@@ -2048,25 +2100,19 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   myMatchesScrollContent: {
-    paddingTop: 10, // Minimal space for corner badges (badge extends 8px above card)
     paddingLeft: spacingPixels[4],
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[2],
   },
-  favAvailSection: {
-    marginTop: spacingPixels[2],
-  },
-  favAvailHeader: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[3],
-    gap: spacingPixels[0.5],
-  },
   favAvailScrollContent: {
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
     gap: spacingPixels[3],
+  },
+  favAvailSingleWrap: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   bannerCarouselContent: {
     paddingHorizontal: spacingPixels[4],

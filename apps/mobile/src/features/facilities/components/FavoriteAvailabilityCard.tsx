@@ -11,12 +11,13 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 // RNGH ScrollView so the inner slot strip reliably claims horizontal drags that
 // start on it (including on Android), while drags elsewhere on the card fall
 // through to the outer carousel. Plain RN nested same-axis scroll is iOS-only
 // reliable; RNGH coordinates the gesture on both platforms.
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, lightTheme, darkTheme } from '@rallia/design-system';
@@ -25,7 +26,6 @@ import { lightHaptic } from '@rallia/shared-utils';
 import { formatInlineSnapshotSlots, type FormattedSlot } from '@rallia/shared-hooks';
 
 import { useRequireOnboarding, useThemeStyles } from '#/hooks';
-import * as Analytics from '#/services/analytics';
 import type { TranslationKey, TranslationOptions } from '#/hooks';
 
 /** Fixed carousel slot width — leaves a peek of the next card. */
@@ -33,13 +33,12 @@ export const FAVORITE_AVAILABILITY_CARD_WIDTH = 280;
 
 interface FavoriteAvailabilityCardProps {
   facility: FacilitySearchResult;
-  /** Sport name for booking analytics. */
-  sportName?: string;
-  /** Sport id for booking analytics. */
-  sportId?: string;
   onPress: (facility: FacilitySearchResult) => void;
-  /** Optional override; defaults to opening the slot's booking URL. */
+  /** Optional override; defaults to opening the shared external-booking sheet. */
   onSlotPress?: (facility: FacilitySearchResult, slot: FormattedSlot) => void;
+  /** Stretch to fill the container instead of the fixed carousel width.
+   *  Used when it's the only card so it reads as a full section, not a peek. */
+  fullWidth?: boolean;
   t: (key: TranslationKey, options?: TranslationOptions) => string;
 }
 
@@ -51,10 +50,9 @@ function formatDistance(meters: number | null): string {
 
 function FavoriteAvailabilityCard({
   facility,
-  sportName,
-  sportId,
   onPress,
   onSlotPress,
+  fullWidth = false,
   t,
 }: FavoriteAvailabilityCardProps) {
   const { guardAction } = useRequireOnboarding();
@@ -103,22 +101,24 @@ function FavoriteAvailabilityCard({
         onSlotPress(facility, slot);
         return;
       }
-      Linking.openURL(slot.bookingUrl);
-      Analytics.bookingRedirected({
-        facility_id: facility.id,
-        sport_id: sportId ?? 'unknown',
-        sport_name: sportName ?? 'unknown',
-        is_match_linked: false,
-        source: 'home_favorite_availability',
+      // Court selection + redirect runs through the shared external-booking
+      // sheet (same as the facility detail availability tab).
+      SheetManager.show('external-booking', {
+        payload: { facility, slot, source: 'home_favorite_availability' },
       });
     },
-    [facility, onSlotPress, guardAction, sportId, sportName]
+    [facility, onSlotPress, guardAction]
   );
 
   const distanceText = formatDistance(facility.distance_meters);
 
   return (
-    <Animated.View style={[styles.wrapper, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View
+      style={[
+        fullWidth ? styles.wrapperFull : styles.wrapper,
+        { transform: [{ scale: scaleAnim }] },
+      ]}
+    >
       <TouchableOpacity
         style={[styles.card, { backgroundColor: cardBackground, borderColor: dynamicBorderColor }]}
         onPress={handlePress}
@@ -331,6 +331,10 @@ export const FavoriteAvailabilityCardSkeleton: React.FC = () => {
 const styles = StyleSheet.create({
   wrapper: {
     width: FAVORITE_AVAILABILITY_CARD_WIDTH,
+  },
+  // Fills the (padded) container — used when it's the only card.
+  wrapperFull: {
+    width: '100%',
   },
   card: {
     borderRadius: radiusPixels.xl,

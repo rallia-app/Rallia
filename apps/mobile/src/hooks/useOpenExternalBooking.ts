@@ -31,7 +31,13 @@ interface OpenExternalBookingParams {
   /** When set, the confirmation flow will update this match instead of opening the match creation wizard */
   matchId?: string;
   /** Where in the app the redirect was initiated, for analytics breakdowns */
-  source?: 'facility_directory' | 'facility_card' | 'match_courts' | 'map' | 'external_sheet';
+  source?:
+    | 'facility_directory'
+    | 'facility_card'
+    | 'match_courts'
+    | 'map'
+    | 'external_sheet'
+    | 'home_favorite_availability';
   /** Sport context, when known */
   sportId?: string;
   sportName?: string;

@@ -31,19 +31,14 @@ import {
   usePlayer,
   MIN_FAVORITE_FACILITIES,
 } from '@rallia/shared-hooks';
-import type { MapFacility, MapCustomMatch, FormattedSlot, CourtOption } from '@rallia/shared-hooks';
+import type { MapFacility, MapCustomMatch, FormattedSlot } from '@rallia/shared-hooks';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
 
 import type { MapStackParamList } from '#/navigation/types';
-import {
-  useThemeStyles,
-  useTranslation,
-  useEffectiveLocation,
-  useOpenExternalBooking,
-} from '#/hooks';
+import { useThemeStyles, useTranslation, useEffectiveLocation } from '#/hooks';
 import { useSport, useMatchDetailSheet } from '#/context';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { SearchBar } from '#/components/SearchBar';
@@ -485,50 +480,13 @@ const Map = () => {
     [openSheet]
   );
 
-  const { openExternalBooking } = useOpenExternalBooking();
-
-  const handleSlotPress = useCallback(
-    (facility: unknown, slot: FormattedSlot) => {
-      const f = facility as {
-        id: string;
-        name: string;
-        address?: string | null;
-        city?: string | null;
-        timezone?: string | null;
-      };
-
-      if (slot.courtOptions.length > 1) {
-        SheetManager.show('court-selection', {
-          payload: {
-            courts: slot.courtOptions ?? [],
-            timeLabel: slot.time ?? '',
-            onSelect: (court: unknown) => {
-              const c = court as CourtOption;
-              openExternalBooking({
-                facility: f,
-                slot,
-                selectedCourt: c,
-                source: 'map',
-                sportId: selectedSport?.id,
-                sportName: selectedSport?.name,
-              });
-            },
-            onCancel: () => {},
-          },
-        });
-        return;
-      }
-
-      openExternalBooking({
-        facility: f,
-        slot,
-        source: 'map',
-        sportId: selectedSport?.id,
-        sportName: selectedSport?.name,
-      });
-    },
-    [openExternalBooking, selectedSport?.id, selectedSport?.name]
-  );
+  const handleSlotPress = useCallback((facility: unknown, slot: FormattedSlot) => {
+    // Court selection + redirect runs through the shared external-booking sheet
+    // (same as the facility detail availability tab).
+    SheetManager.show('external-booking', {
+      payload: { facility, slot, source: 'map' },
+    });
+  }, []);
 
   const PEEK = 24;
   const CARD_OVERLAP = 20; // Eat into the card's own 16+16px gap between items
