@@ -1122,7 +1122,7 @@
           "recordVideo": "Enregistrer une vidéo",
           "selectFromGallery": "Sélectionner depuis la galerie",
           "maxDuration": "Durée maximale: 1 minute",
-          "maxSize": "Taille maximale: 50 Mo"
+          "maxSize": "Taille maximale: 100 Mo"
         },
         "image": {
           "title": "Capture d'écran / Image",
