@@ -15,6 +15,7 @@ import { renderMatchInterestEmail } from '../send-email/templates/match-interest
 import { renderWelcomeEmail } from '../send-email/templates/welcome.ts';
 import { renderMorningDigestEmail } from '../send-morning-digest/template.ts';
 import { renderBroadcastEmail } from '../send-broadcast/template.ts';
+import { renderFeedbackEmail } from '../send-feedback-notification/template.ts';
 import type { NotificationRecord, OrganizationInfo } from '../send-notification/types.ts';
 import type {
   InvitationEmailPayload,
@@ -46,13 +47,17 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
     <style type="text/css">
       @media (prefers-color-scheme: dark) {
         .email-body { background-color: #1a1a1a !important; }
-        .email-container { background-color: #262626 !important; }
+        .email-container { background-color: #262626 !important; border-color: #404040 !important; }
         .email-header { background-color: #0f766e !important; }
         .email-content { background-color: #262626 !important; }
         .email-footer { background-color: #1f1f1f !important; border-top-color: #404040 !important; }
         .email-text { color: #e5e5e5 !important; }
         .email-muted { color: #a3a3a3 !important; }
+        .email-eyebrow { color: #5eead4 !important; }
         .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+        .email-otp-label { color: #5eead4 !important; }
+        .email-otp-code { color: #5eead4 !important; }
+        .email-expiry-pill { background-color: #3a2c10 !important; border-color: #5a4420 !important; color: #fbbf24 !important; }
         .email-divider { border-top-color: #404040 !important; }
         .email-content h2 { color: #5eead4 !important; }
         .email-content p { color: #e5e5e5 !important; }
@@ -66,9 +71,17 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       [data-ogsc] .email-footer { background-color: #1f1f1f !important; }
       [data-ogsc] .email-text { color: #e5e5e5 !important; }
       [data-ogsc] .email-muted { color: #a3a3a3 !important; }
+      [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
+      [data-ogsc] .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+      [data-ogsc] .email-otp-label { color: #5eead4 !important; }
+      [data-ogsc] .email-otp-code { color: #5eead4 !important; }
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
       [data-ogsc] .email-content p { color: #e5e5e5 !important; }
       [data-ogsc] .email-footer p { color: #a3a3a3 !important; }
+      /* Responsive */
+      @media (max-width: 620px) {
+        .email-container { width: 100% !important; }
+      }
     </style>
   </head>
   <body style="margin: 0; padding: 0">
@@ -92,7 +105,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
             border="0"
             width="600"
             class="email-container"
-            style="background-color: #ffffff; border-radius: 12px; overflow: hidden"
+            style="background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e5e5; overflow: hidden"
           >
             <!-- Header -->
             <tr>
@@ -100,9 +113,9 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-header"
                 style="
-                  padding: 40px 40px 20px 40px;
+                  padding: 36px 40px 28px 40px;
                   background-color: #0d9488;
-                  border-radius: 12px 12px 0 0;
+                  border-radius: 16px 16px 0 0;
                 "
               >
                 <img
@@ -114,34 +127,54 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 />
               </td>
             </tr>
+            <!-- Gold accent rule -->
+            <tr>
+              <td style="height: 3px; line-height: 3px; font-size: 3px; background-color: #f59e0b;">&nbsp;</td>
+            </tr>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 40px 40px 30px 40px">
-                <h2
+              <td class="email-content" style="padding: 38px 40px 32px 40px">
+                <p
+                  class="email-eyebrow"
                   style="
-                    padding: 0 0 16px 0;
-                    font-family: Poppins, Arial, Helvetica, sans-serif;
-                    font-size: 24px;
+                    margin: 0;
+                    padding: 0 0 10px 0;
+                    font-size: 12px;
                     font-weight: bold;
                     color: #0d9488;
-                    letter-spacing: -0.025em;
+                    text-transform: uppercase;
+                    letter-spacing: 0.12em;
+                  "
+                >
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vérifiez votre courriel{{ else }}Verify your email{{ end }}
+                </p>
+                <h2
+                  style="
+                    margin: 0;
+                    padding: 0 0 16px 0;
+                    font-family: Poppins, Arial, Helvetica, sans-serif;
+                    font-size: 25px;
+                    font-weight: bold;
+                    color: #171717;
+                    letter-spacing: -0.02em;
                     line-height: 1.2;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Code de connexion à usage unique{{ else }}One-time login code{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Voici votre code de connexion{{ else }}Here's your login code{{ end }}
                 </h2>
 
                 <p
                   class="email-text"
                   style="
-                    padding: 0 0 32px 0;
+                    margin: 0;
+                    padding: 0 0 28px 0;
                     font-size: 16px;
-                    line-height: 1.6;
-                    color: #171717;
+                    line-height: 1.65;
+                    color: #525252;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Bienvenue sur Rallia ! Utilisez le code ci-dessous pour terminer votre connexion et commencer.{{ else }}Welcome to Rallia! Use the verification code below to complete your sign-in and get started.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Bienvenue sur Rallia ! Entrez le code ci-dessous pour terminer votre connexion. Il est valide pendant les 10 prochaines minutes.{{ else }}Welcome back! Enter the code below to finish signing in. It's valid for the next 10 minutes.{{ end }}
                 </p>
 
                 <!-- OTP Code Box -->
@@ -153,46 +186,66 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                   width="100%"
                 >
                   <tr>
-                    <td align="center" style="padding: 0 0 24px 0">
+                    <td align="center" style="padding: 0 0 22px 0">
                       <table
                         role="presentation"
                         cellspacing="0"
                         cellpadding="0"
                         border="0"
+                        width="100%"
                         class="email-otp-box"
                         style="
                           background-color: #f0fdfa;
-                          border: 1px solid #ccfbf1;
-                          border-radius: 8px;
+                          border: 2px dashed #5eead4;
+                          border-radius: 14px;
                         "
                       >
                         <tr>
-                          <td align="center" style="padding: 32px 40px">
+                          <td align="center" style="padding: 30px 40px">
                             <p
+                              class="email-otp-label"
                               style="
-                                padding: 0 0 8px 0;
-                                font-size: 14px;
+                                margin: 0;
+                                padding: 0 0 10px 0;
+                                font-size: 12px;
                                 font-weight: bold;
                                 color: #0d9488;
                                 text-transform: uppercase;
-                                letter-spacing: 0.05em;
+                                letter-spacing: 0.16em;
                               "
                             >
-                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification{{ else }}Your Verification Code{{ end }}
+                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification{{ else }}Your verification code{{ end }}
                             </p>
                             <p
+                              class="email-otp-code"
                               style="
-                                padding: 0;
+                                margin: 0;
+                                padding: 0 0 16px 0;
                                 font-family: Poppins, Arial, Helvetica, sans-serif;
-                                font-size: 36px;
+                                font-size: 40px;
                                 font-weight: bold;
-                                color: #0d9488;
-                                letter-spacing: 0.2em;
-                                line-height: 1.2;
+                                color: #0f766e;
+                                letter-spacing: 0.18em;
+                                line-height: 1.1;
                               "
                             >
                               {{ .Token }}
                             </p>
+                            <span
+                              class="email-expiry-pill"
+                              style="
+                                display: inline-block;
+                                padding: 5px 13px;
+                                background-color: #fffbeb;
+                                border: 1px solid #fde68a;
+                                border-radius: 999px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: #b45309;
+                              "
+                            >
+                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Expire dans 10 minutes{{ else }}Expires in 10 minutes{{ end }}
+                            </span>
                           </td>
                         </tr>
                       </table>
@@ -203,13 +256,15 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
-                    padding: 0 0 24px 0;
-                    font-size: 14px;
+                    margin: 0;
+                    padding: 0 0 8px 0;
+                    font-size: 13.5px;
                     line-height: 1.6;
-                    color: #525252;
+                    color: #737373;
+                    text-align: center;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel. Ce code expire dans 10 minutes.{{ else }}Enter this code in the sign-in form to verify your email address. This code will expire in 10 minutes.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel.{{ else }}Enter this code in the sign-in form to verify your email address.{{ end }}
                 </p>
 
                 <!-- Divider -->
@@ -228,6 +283,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
@@ -246,15 +302,16 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-footer"
                 style="
-                  padding: 30px 40px 40px 40px;
+                  padding: 30px 40px 36px 40px;
                   background-color: #fafafa;
                   border-top: 1px solid #e5e5e5;
-                  border-radius: 0 0 12px 12px;
+                  border-radius: 0 0 16px 16px;
                 "
               >
                 <p
                   style="
-                    padding: 0 0 8px 0;
+                    margin: 0;
+                    padding: 0 0 6px 0;
                     font-size: 14px;
                     font-weight: bold;
                     color: #0d9488;
@@ -265,6 +322,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
@@ -276,7 +334,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <!-- App Store Badges -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td align="center" style="padding: 16px 0 0 0;">
+                    <td align="center" style="padding: 18px 0 0 0;">
                       <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
@@ -298,13 +356,14 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
-                    padding: 16px 0 0 0;
+                    margin: 0;
+                    padding: 18px 0 0 0;
                     font-size: 12px;
                     line-height: 1.5;
                     color: #737373;
                   "
                 >
-                  &copy; Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
+                  &copy; 2026 Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
                 </p>
               </td>
             </tr>
@@ -323,6 +382,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 12px;
                     line-height: 1.5;
@@ -362,13 +422,17 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
     <style type="text/css">
       @media (prefers-color-scheme: dark) {
         .email-body { background-color: #1a1a1a !important; }
-        .email-container { background-color: #262626 !important; }
+        .email-container { background-color: #262626 !important; border-color: #404040 !important; }
         .email-header { background-color: #0f766e !important; }
         .email-content { background-color: #262626 !important; }
         .email-footer { background-color: #1f1f1f !important; border-top-color: #404040 !important; }
         .email-text { color: #e5e5e5 !important; }
         .email-muted { color: #a3a3a3 !important; }
+        .email-eyebrow { color: #5eead4 !important; }
         .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+        .email-otp-label { color: #5eead4 !important; }
+        .email-otp-code { color: #5eead4 !important; }
+        .email-expiry-pill { background-color: #3a2c10 !important; border-color: #5a4420 !important; color: #fbbf24 !important; }
         .email-divider { border-top-color: #404040 !important; }
         .email-content h2 { color: #5eead4 !important; }
         .email-content p { color: #e5e5e5 !important; }
@@ -382,9 +446,17 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       [data-ogsc] .email-footer { background-color: #1f1f1f !important; }
       [data-ogsc] .email-text { color: #e5e5e5 !important; }
       [data-ogsc] .email-muted { color: #a3a3a3 !important; }
+      [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
+      [data-ogsc] .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+      [data-ogsc] .email-otp-label { color: #5eead4 !important; }
+      [data-ogsc] .email-otp-code { color: #5eead4 !important; }
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
       [data-ogsc] .email-content p { color: #e5e5e5 !important; }
       [data-ogsc] .email-footer p { color: #a3a3a3 !important; }
+      /* Responsive */
+      @media (max-width: 620px) {
+        .email-container { width: 100% !important; }
+      }
     </style>
   </head>
   <body style="margin: 0; padding: 0">
@@ -408,7 +480,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
             border="0"
             width="600"
             class="email-container"
-            style="background-color: #ffffff; border-radius: 12px; overflow: hidden"
+            style="background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e5e5; overflow: hidden"
           >
             <!-- Header -->
             <tr>
@@ -416,9 +488,9 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-header"
                 style="
-                  padding: 40px 40px 20px 40px;
+                  padding: 36px 40px 28px 40px;
                   background-color: #0d9488;
-                  border-radius: 12px 12px 0 0;
+                  border-radius: 16px 16px 0 0;
                 "
               >
                 <img
@@ -430,18 +502,37 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 />
               </td>
             </tr>
+            <!-- Gold accent rule -->
+            <tr>
+              <td style="height: 3px; line-height: 3px; font-size: 3px; background-color: #f59e0b;">&nbsp;</td>
+            </tr>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 40px 40px 30px 40px">
-                <h2
+              <td class="email-content" style="padding: 38px 40px 32px 40px">
+                <p
+                  class="email-eyebrow"
                   style="
-                    padding: 0 0 16px 0;
-                    font-family: Poppins, Arial, Helvetica, sans-serif;
-                    font-size: 24px;
+                    margin: 0;
+                    padding: 0 0 10px 0;
+                    font-size: 12px;
                     font-weight: bold;
                     color: #0d9488;
-                    letter-spacing: -0.025em;
+                    text-transform: uppercase;
+                    letter-spacing: 0.12em;
+                  "
+                >
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vérifiez votre courriel{{ else }}Verify your email{{ end }}
+                </p>
+                <h2
+                  style="
+                    margin: 0;
+                    padding: 0 0 16px 0;
+                    font-family: Poppins, Arial, Helvetica, sans-serif;
+                    font-size: 25px;
+                    font-weight: bold;
+                    color: #171717;
+                    letter-spacing: -0.02em;
                     line-height: 1.2;
                   "
                 >
@@ -451,13 +542,14 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <p
                   class="email-text"
                   style="
-                    padding: 0 0 32px 0;
+                    margin: 0;
+                    padding: 0 0 28px 0;
                     font-size: 16px;
-                    line-height: 1.6;
-                    color: #171717;
+                    line-height: 1.65;
+                    color: #525252;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Utilisez le code ci-dessous pour vous connecter à votre compte.{{ else }}Use the verification code below to sign in to your account.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Utilisez le code ci-dessous pour vous connecter à votre compte. Il est valide pendant les 10 prochaines minutes.{{ else }}Use the code below to sign in to your account. It's valid for the next 10 minutes.{{ end }}
                 </p>
 
                 <!-- OTP Code Box -->
@@ -469,46 +561,66 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                   width="100%"
                 >
                   <tr>
-                    <td align="center" style="padding: 0 0 24px 0">
+                    <td align="center" style="padding: 0 0 22px 0">
                       <table
                         role="presentation"
                         cellspacing="0"
                         cellpadding="0"
                         border="0"
+                        width="100%"
                         class="email-otp-box"
                         style="
                           background-color: #f0fdfa;
-                          border: 1px solid #ccfbf1;
-                          border-radius: 8px;
+                          border: 2px dashed #5eead4;
+                          border-radius: 14px;
                         "
                       >
                         <tr>
-                          <td align="center" style="padding: 32px 40px">
+                          <td align="center" style="padding: 30px 40px">
                             <p
+                              class="email-otp-label"
                               style="
-                                padding: 0 0 8px 0;
-                                font-size: 14px;
+                                margin: 0;
+                                padding: 0 0 10px 0;
+                                font-size: 12px;
                                 font-weight: bold;
                                 color: #0d9488;
                                 text-transform: uppercase;
-                                letter-spacing: 0.05em;
+                                letter-spacing: 0.16em;
                               "
                             >
-                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification{{ else }}Your Verification Code{{ end }}
+                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification{{ else }}Your verification code{{ end }}
                             </p>
                             <p
+                              class="email-otp-code"
                               style="
-                                padding: 0;
+                                margin: 0;
+                                padding: 0 0 16px 0;
                                 font-family: Poppins, Arial, Helvetica, sans-serif;
-                                font-size: 36px;
+                                font-size: 40px;
                                 font-weight: bold;
-                                color: #0d9488;
-                                letter-spacing: 0.2em;
-                                line-height: 1.2;
+                                color: #0f766e;
+                                letter-spacing: 0.18em;
+                                line-height: 1.1;
                               "
                             >
                               {{ .Token }}
                             </p>
+                            <span
+                              class="email-expiry-pill"
+                              style="
+                                display: inline-block;
+                                padding: 5px 13px;
+                                background-color: #fffbeb;
+                                border: 1px solid #fde68a;
+                                border-radius: 999px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: #b45309;
+                              "
+                            >
+                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Expire dans 10 minutes{{ else }}Expires in 10 minutes{{ end }}
+                            </span>
                           </td>
                         </tr>
                       </table>
@@ -519,13 +631,15 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
-                    padding: 0 0 24px 0;
-                    font-size: 14px;
+                    margin: 0;
+                    padding: 0 0 8px 0;
+                    font-size: 13.5px;
                     line-height: 1.6;
-                    color: #525252;
+                    color: #737373;
+                    text-align: center;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel. Ce code expire dans 10 minutes.{{ else }}Enter this code in the sign-in form to verify your email address. This code will expire in 10 minutes.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel.{{ else }}Enter this code in the sign-in form to verify your email address.{{ end }}
                 </p>
 
                 <!-- Divider -->
@@ -544,6 +658,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
@@ -562,15 +677,16 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-footer"
                 style="
-                  padding: 30px 40px 40px 40px;
+                  padding: 30px 40px 36px 40px;
                   background-color: #fafafa;
                   border-top: 1px solid #e5e5e5;
-                  border-radius: 0 0 12px 12px;
+                  border-radius: 0 0 16px 16px;
                 "
               >
                 <p
                   style="
-                    padding: 0 0 8px 0;
+                    margin: 0;
+                    padding: 0 0 6px 0;
                     font-size: 14px;
                     font-weight: bold;
                     color: #0d9488;
@@ -581,6 +697,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 13px;
                     line-height: 1.5;
@@ -592,7 +709,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <!-- App Store Badges -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td align="center" style="padding: 16px 0 0 0;">
+                    <td align="center" style="padding: 18px 0 0 0;">
                       <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
@@ -614,13 +731,14 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
-                    padding: 16px 0 0 0;
+                    margin: 0;
+                    padding: 18px 0 0 0;
                     font-size: 12px;
                     line-height: 1.5;
                     color: #737373;
                   "
                 >
-                  &copy; Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
+                  &copy; 2026 Rallia. {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tous droits réservés.{{ else }}All rights reserved.{{ end }}
                 </p>
               </td>
             </tr>
@@ -639,6 +757,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <p
                   class="email-muted"
                   style="
+                    margin: 0;
                     padding: 0;
                     font-size: 12px;
                     line-height: 1.5;
@@ -760,6 +879,96 @@ const TEMPLATES: TemplateEntry[] = [
     label: 'Auth: Magic Link',
     category: 'Auth',
     render: locale => renderAuthTemplate('magic_link.html', locale),
+  },
+
+  // ---- Feedback (internal admin notification) ----
+  // Always English (the template hardcodes locale 'en-US'); the locale toggle
+  // is a no-op here. Covers every render branch: severity pill + screenshots,
+  // a feature use-case, an empty-subject PMF entry, and an anonymous submitter.
+  {
+    id: 'feedback_bug',
+    label: 'Feedback: Bug',
+    category: 'Feedback',
+    render: () =>
+      renderFeedbackEmail({
+        feedback_id: 'fb_2c4e9a10',
+        category: 'bug',
+        module: 'match_features',
+        subject: 'Cannot join a match from the home feed',
+        message:
+          'Tapping "Join" on a suggested game does nothing — no error, no spinner.\n\nReproduces every time on my phone.',
+        metadata: {
+          severity: 'critical',
+          steps_to_reproduce: '1. Open Home\n2. Tap "Join" on a suggested game\n3. Nothing happens',
+          expected_vs_actual: 'Expected to join the game; instead nothing happens.',
+        },
+        player_name: 'Alex Johnson',
+        player_email: 'alex@example.com',
+        app_version: '1.4.2 (203)',
+        device_info: { platform: 'iOS', osVersion: '18.5', deviceModel: 'iPhone 15' },
+        screenshot_urls: [
+          'https://picsum.photos/seed/rallia-a/320/320',
+          'https://picsum.photos/seed/rallia-b/320/320',
+        ],
+        created_at: '2026-06-21T14:00:00Z',
+      }).html,
+  },
+  {
+    id: 'feedback_feature',
+    label: 'Feedback: Feature',
+    category: 'Feedback',
+    render: () =>
+      renderFeedbackEmail({
+        feedback_id: 'fb_71b3',
+        category: 'feature',
+        module: 'facilities',
+        subject: 'Show indoor courts separately',
+        message: 'It would help to filter indoor vs outdoor courts when it rains.',
+        metadata: {
+          use_case: 'Playing in winter / bad weather when only indoor courts are usable.',
+        },
+        player_name: 'Marie Dupont',
+        player_email: 'marie@example.com',
+        app_version: '1.4.2 (203)',
+        device_info: { platform: 'Android', osVersion: '15', deviceModel: 'Pixel 8' },
+        created_at: '2026-06-21T11:30:00Z',
+      }).html,
+  },
+  {
+    id: 'feedback_improvement',
+    label: 'Feedback: Improvement (PMF)',
+    category: 'Feedback',
+    render: () =>
+      renderFeedbackEmail({
+        feedback_id: 'fb_9f02',
+        category: 'improvement',
+        module: null,
+        subject: '',
+        message: '',
+        metadata: {
+          disappointment_score: 'very_disappointed',
+          main_benefit: 'Finding real games fast without endless group-chat coordination.',
+          ideal_user: 'Competitive 3.5–4.5 players who want weekly matches.',
+          how_to_improve: 'More opponents at my level nearby, and faster responses to invites.',
+        },
+        player_name: 'Luca Rossi',
+        player_email: 'luca@example.com',
+        created_at: '2026-06-21T09:15:00Z',
+      }).html,
+  },
+  {
+    id: 'feedback_other',
+    label: 'Feedback: Other (anon)',
+    category: 'Feedback',
+    render: () =>
+      renderFeedbackEmail({
+        feedback_id: 'fb_0007',
+        category: 'other',
+        module: 'other',
+        subject: 'Love the app',
+        message: 'Just wanted to say keep up the great work! 🙌',
+        created_at: '2026-06-21T20:45:00Z',
+      }).html,
   },
 
   // ---- Invitation ----
