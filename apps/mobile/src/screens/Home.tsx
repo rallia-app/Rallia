@@ -1390,6 +1390,28 @@ const Home = () => {
               {t('home.favoriteAvailability.subtitle')}
             </Text>
           </View>
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => {
+              lightHaptic();
+              Logger.logUserAction('favorite_availability_view_all_pressed');
+              appNavigation.navigate('Main', {
+                screen: 'Courts',
+                params: { screen: 'FacilitiesDirectory' },
+              } as never);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text size="base" weight="medium" color={colors.primary}>
+              {t('home.viewAll')}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.primary}
+              style={styles.chevronIcon}
+            />
+          </TouchableOpacity>
         </View>
         {isSingle ? (
           <View style={styles.favAvailSingleWrap}>{renderCard(favoriteAvailability[0], true)}</View>
@@ -1412,6 +1434,7 @@ const Home = () => {
     favoriteAvailability,
     colors.text,
     colors.textMuted,
+    colors.primary,
     t,
     selectedSport?.name,
     selectedSport?.id,
