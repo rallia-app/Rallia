@@ -57,6 +57,7 @@ import {
   useActiveConversation,
   type TranslationKey,
 } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import type { MessageListRef } from '#/features/chat';
@@ -83,7 +84,7 @@ export default function ChatConversationScreen() {
   const { session } = useAuth();
   const { profile } = useProfile();
   const toast = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const playerId = session?.user?.id;
   // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
   const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user');
@@ -271,7 +272,7 @@ export default function ChatConversationScreen() {
         format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
       const matchDate = (match as { match_date?: string | null }).match_date;
       const dateStr = matchDate
-        ? new Date(matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        ? new Date(matchDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
         : '';
       const startTime = (match as { start_time?: string | null }).start_time;
       const timeStr = startTime
@@ -279,13 +280,13 @@ export default function ChatConversationScreen() {
             const [h, m] = startTime.split(':').map(Number);
             const d = new Date();
             d.setHours(h, m, 0, 0);
-            return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+            return formatTimeOfDay(d, locale);
           })()
         : '';
       const datePart = [dateStr, timeStr].filter(Boolean).join(', ');
       setDerivedMatchTitle(datePart ? `${formatLabel} - ${datePart}` : formatLabel);
     });
-  }, [conversation, routeTitle, t]);
+  }, [conversation, routeTitle, t, locale]);
 
   // Fetch reactions for visible messages
   const fetchReactions = useCallback(async () => {

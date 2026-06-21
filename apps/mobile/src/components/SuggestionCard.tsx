@@ -29,6 +29,7 @@ import {
 import * as Analytics from '#/services/analytics';
 import type { SuggestionSource } from '#/services/analytics';
 import { useNavigateToPlayerProfile } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
@@ -104,7 +105,7 @@ function buildReputationDisplay(s: SlotSuggestion): ReputationDisplay | undefine
 function formatHour(hour: number, locale: string): string {
   const date = new Date();
   date.setHours(hour, 0, 0, 0);
-  return date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  return formatTimeOfDay(date, locale);
 }
 
 function localDateKey(d: Date): string {
@@ -209,10 +210,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     return result.label;
   }, [slotStart, locale, labels]);
 
-  const startTimeText = slotStart.toLocaleTimeString(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  const startTimeText = formatTimeOfDay(slotStart, locale);
   const durationText = (() => {
     let mins = Math.round((slotEnd.getTime() - slotStart.getTime()) / 60000);
     if (mins <= 0) mins += 24 * 60;

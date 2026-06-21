@@ -59,6 +59,7 @@ import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
 import { useTranslation, type TranslationKey } from '../hooks';
+import { formatTimeOfDay } from '../utils/dateFormatting';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -710,10 +711,7 @@ export const LeagueDetail: React.FC = () => {
     [locale]
   );
 
-  const formatTime = useCallback(
-    (d: Date): string => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' }),
-    [locale]
-  );
+  const formatTime = useCallback((d: Date): string => formatTimeOfDay(d, locale), [locale]);
 
   const currentSeasonLabel = openSeason
     ? openSeason.name

@@ -21,6 +21,7 @@ import type {
 
 import { SportIcon } from '#/components/SportIcon';
 import type { TranslationKey } from '#/hooks/useTranslation';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 // =============================================================================
 // TYPES
@@ -227,15 +228,7 @@ const formatMatchTime = (timeStr: string, locale: string): string => {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const date = new Date();
   date.setHours(hours, minutes);
-  // Convert locale code to BCP 47 format for toLocaleTimeString
-  const localeCode = locale === 'fr-CA' ? 'fr-CA' : 'en-US';
-  // French uses 24-hour format, English uses 12-hour with AM/PM
-  const isFrench = locale.startsWith('fr');
-  return date.toLocaleTimeString(localeCode, {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: !isFrench,
-  });
+  return formatTimeOfDay(date, locale);
 };
 
 /**

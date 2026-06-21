@@ -22,6 +22,7 @@ import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-s
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -55,7 +56,7 @@ function MessageBubbleComponent({
   isCurrentHighlight = false,
 }: MessageBubbleProps) {
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   // Animation values for swipe-to-reply - using useMemo for stable instances
   const translateX = useMemo(() => new Animated.Value(0), []);
@@ -66,10 +67,7 @@ function MessageBubbleComponent({
 
   const senderAvatar = getProfilePictureUrl(message.sender?.profile?.profile_picture_url);
 
-  const formattedTime = new Date(message.created_at).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const formattedTime = formatTimeOfDay(new Date(message.created_at), locale, { hour: '2-digit' });
 
   const isEdited = message.is_edited ?? false;
   const isDeleted = message.deleted_at != null;

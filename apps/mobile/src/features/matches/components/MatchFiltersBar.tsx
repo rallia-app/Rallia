@@ -50,6 +50,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { selectionHaptic, lightHaptic } from '#/utils/haptics';
+import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 // =============================================================================
 // TYPES & OPTIONS
@@ -579,7 +580,7 @@ export default function MatchFiltersBar({
 }: MatchFiltersBarProps) {
   const { theme } = useTheme();
   const { colors } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isDark = theme === 'dark';
 
   // Dropdown visibility states
@@ -781,13 +782,13 @@ export default function MatchFiltersBar({
       const [hours, minutes] = specificTime.split(':').map(Number);
       const d = new Date();
       d.setHours(hours, minutes, 0, 0);
-      return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return formatTimeOfDay(d, locale);
     }
     if (timeOfDay === 'all') {
       return t('publicMatches.filters.timeOfDay.label');
     }
     return getTimeOfDayLabel(timeOfDay);
-  }, [specificTime, timeOfDay, t, getTimeOfDayLabel]);
+  }, [specificTime, timeOfDay, t, locale, getTimeOfDayLabel]);
 
   // Date display - combines dateRange and specificDate
   const getDateDisplay = useCallback(() => {
