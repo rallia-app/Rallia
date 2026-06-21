@@ -611,8 +611,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     if (ctx?.matchFormat) setMatchFormat(ctx.matchFormat);
     if (ctx?.matchNature) setMatchNature(ctx.matchNature);
     if (ctx?.timeSlot) setTimeSlot(ctx.timeSlot);
-    if (ctx?.homeAddress) setHomeAddress(ctx.homeAddress);
-    if (ctx?.postalCode) setHomePostalCode(ctx.postalCode);
     if (ctx?.facilityId) setSelectedFacilityId(ctx.facilityId);
     if (ctx?.facilityName) setSelectedFacilityName(ctx.facilityName);
     if (ctx?.planTier) {
@@ -852,8 +850,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         matchNature,
         timeSlot,
         locationType: 'address',
-        homeAddress: homeAddress ?? undefined,
-        postalCode: homePostalCode ?? undefined,
         facilityId: selectedFacilityId ?? undefined,
         facilityName: selectedFacilityName ?? undefined,
         planTier: plan.tier,
