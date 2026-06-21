@@ -94,11 +94,19 @@ export function useJoinOpportunity(
 
         qc.invalidateQueries({ queryKey: matchKeys.lists() });
       } catch (err) {
-        errorHaptic();
-        const message = (err as Error)?.message;
-        toast.error(
-          message === 'GENDER_MISMATCH' ? t('matchActions.genderMismatch') : (message ?? '')
-        );
+        const message = (err as Error)?.message ?? '';
+        // A re-tap on a match the player already joined/requested (e.g. before
+        // the CTA had visibly flipped) is not a real failure — reflect the state
+        // the join would have produced instead of buzzing an error.
+        if (message === 'You are already in this match') {
+          setOutcomes(prev => ({
+            ...prev,
+            [match.id]: match.join_mode === 'request' ? 'requested' : 'joined',
+          }));
+        } else {
+          errorHaptic();
+          toast.error(message === 'GENDER_MISMATCH' ? t('matchActions.genderMismatch') : message);
+        }
       } finally {
         setPendingId(null);
       }
