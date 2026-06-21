@@ -12,7 +12,7 @@ import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import type { PendingScoreConfirmation } from '@rallia/shared-hooks';
 
-import { useThemeStyles } from '#/hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 interface PendingScoreCardProps {
   confirmation: PendingScoreConfirmation;
@@ -21,8 +21,9 @@ interface PendingScoreCardProps {
 
 export function PendingScoreCard({ confirmation, onPress }: PendingScoreCardProps) {
   const { colors, isDark } = useThemeStyles();
+  const { locale } = useTranslation();
 
-  const matchDate = new Date(confirmation.match_date).toLocaleDateString('en-US', {
+  const matchDate = new Date(confirmation.match_date).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
   });

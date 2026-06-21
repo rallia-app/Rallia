@@ -204,7 +204,7 @@ function useUserAnalytics(selectedOption: TimeRangeOption) {
 // =============================================================================
 
 const AdminUserAnalyticsScreen: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const isDark = theme === 'dark';
@@ -482,7 +482,7 @@ const AdminUserAnalyticsScreen: React.FC = () => {
                           <Text
                             style={[styles.retentionCohortText, { color: colors.textSecondary }]}
                           >
-                            {new Date(cohort).toLocaleDateString('en-US', {
+                            {new Date(cohort).toLocaleDateString(locale, {
                               month: 'short',
                               day: 'numeric',
                             })}

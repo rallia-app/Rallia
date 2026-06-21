@@ -25,7 +25,7 @@ interface ConversationItemProps {
 }
 
 // Format time for display
-function formatTime(dateString: string | null, locale: string): string {
+function formatTime(dateString: string | null, locale: string, t: TranslateFn): string {
   if (!dateString) return '';
 
   const date = new Date(dateString);
@@ -36,7 +36,7 @@ function formatTime(dateString: string | null, locale: string): string {
   if (diffDays === 0) {
     return formatTimeOfDay(date, locale, { hour: '2-digit' });
   } else if (diffDays === 1) {
-    return 'Yesterday';
+    return t('chat.yesterday');
   } else if (diffDays < 7) {
     return date.toLocaleDateString(locale, { weekday: 'short' });
   } else {
@@ -44,8 +44,12 @@ function formatTime(dateString: string | null, locale: string): string {
   }
 }
 
-// Format last seen for display
-function formatLastSeen(dateString: string | null | undefined): string {
+// Format last seen for display (returns a full localized "Last seen ..." string)
+function formatLastSeen(
+  dateString: string | null | undefined,
+  locale: string,
+  t: TranslateFn
+): string {
   if (!dateString) return '';
 
   const date = new Date(dateString);
@@ -55,12 +59,14 @@ function formatLastSeen(dateString: string | null | undefined): string {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+  if (diffMinutes < 1) return t('chat.conversation.lastSeenJustNow');
+  if (diffMinutes < 60) return t('chat.conversation.lastSeenMinutesAgo', { count: diffMinutes });
+  if (diffHours < 24) return t('chat.conversation.lastSeenHoursAgo', { count: diffHours });
+  if (diffDays === 1) return t('chat.conversation.lastSeenYesterday');
+  if (diffDays < 7) return t('chat.conversation.lastSeenDaysAgo', { count: diffDays });
+  return t('chat.conversation.lastSeenOn', {
+    date: date.toLocaleDateString(locale, { day: '2-digit', month: 'short' }),
+  });
 }
 
 // Translation function type that accepts any key (for internal use)
@@ -244,7 +250,7 @@ function ConversationItemComponent({
               />
             )}
             <Text style={[styles.time, { color: colors.textMuted }]}>
-              {formatTime(conversation.last_message_at, locale)}
+              {formatTime(conversation.last_message_at, locale, t as TranslateFn)}
             </Text>
           </View>
         </View>
@@ -265,7 +271,7 @@ function ConversationItemComponent({
               (isOnline
                 ? t('chat.conversation.online')
                 : lastSeen
-                  ? t('chat.conversation.lastSeen', { time: formatLastSeen(lastSeen) })
+                  ? formatLastSeen(lastSeen, locale, t as TranslateFn)
                   : t('chat.conversation.noMessages'))}
           </Text>
 

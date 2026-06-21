@@ -22,13 +22,14 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
 
 import { SportIcon } from '#/components/SportIcon';
-import { useThemeStyles } from '#/hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-confirmation'>) {
   const confirmation = payload?.confirmation as PendingScoreConfirmation | null;
   const playerId = payload?.playerId ?? '';
 
   const { colors, isDark } = useThemeStyles();
+  const { locale } = useTranslation();
   const toast = useToast();
 
   const handleClose = useCallback(() => {
@@ -86,7 +87,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
 
   if (!confirmation) return null;
 
-  const matchDate = new Date(confirmation.match_date).toLocaleDateString('en-US', {
+  const matchDate = new Date(confirmation.match_date).toLocaleDateString(locale, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

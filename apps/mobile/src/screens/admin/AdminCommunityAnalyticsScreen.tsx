@@ -158,7 +158,7 @@ function useCommunityAnalytics(selectedOption: TimeRangeOption) {
 // =============================================================================
 
 export default function AdminCommunityAnalyticsScreen() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const isDark = theme === 'dark';
@@ -206,9 +206,9 @@ export default function AdminCommunityAnalyticsScreen() {
 
     return networkGrowth.map(item => ({
       value: item.totalNetworks,
-      label: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      label: new Date(item.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
     }));
-  }, [networkGrowth]);
+  }, [networkGrowth, locale]);
 
   // Size distribution bar chart data
   const sizeChartData = useMemo(() => {

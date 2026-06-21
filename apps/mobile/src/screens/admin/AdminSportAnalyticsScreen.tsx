@@ -148,7 +148,7 @@ function useSportAnalytics(selectedOption: TimeRangeOption) {
 // =============================================================================
 
 export default function AdminSportAnalyticsScreen() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const isDark = theme === 'dark';
@@ -232,12 +232,10 @@ export default function AdminSportAnalyticsScreen() {
       const totalMatches = trend.sports?.reduce((sum, s) => sum + (s.matchCount || 0), 0) || 0;
       return {
         value: totalMatches,
-        label: new Date(trend.date)
-          .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          .split(' ')[0],
+        label: new Date(trend.date).toLocaleDateString(locale, { month: 'short' }),
       };
     });
-  }, [growthTrends]);
+  }, [growthTrends, locale]);
 
   // Growth rates bar chart - use sportPopularity growth data
   const growthRatesChartData = useMemo(() => {

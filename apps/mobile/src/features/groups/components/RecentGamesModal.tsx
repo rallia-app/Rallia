@@ -21,7 +21,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
   const onPlayerPress = payload?.onPlayerPress;
 
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const handleClose = useCallback(() => {
     SheetManager.hide('recent-games');
@@ -37,9 +37,9 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
       if (diffDays === 1) return t('common.yesterday');
       if (diffDays < 7) return t('groups.recentGames.daysAgo', { count: diffDays });
 
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
     },
-    [t]
+    [t, locale]
   );
 
   const renderMatchCard = useCallback(

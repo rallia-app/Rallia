@@ -2193,7 +2193,12 @@
       "groupChat": "Group Chat",
       "blockedUser": "You blocked this user",
       "online": "Online",
-      "lastSeen": "Last seen {time}",
+      "lastSeenJustNow": "Last seen just now",
+      "lastSeenMinutesAgo": "Last seen {count}m ago",
+      "lastSeenHoursAgo": "Last seen {count}h ago",
+      "lastSeenYesterday": "Last seen yesterday",
+      "lastSeenDaysAgo": "Last seen {count}d ago",
+      "lastSeenOn": "Last seen {date}",
       "noMessages": "No messages yet"
     },
     "message": {
@@ -2642,8 +2647,12 @@
       "joinedYesterday": "Joined yesterday",
       "joinedDaysAgo": "Joined {days} days ago",
       "joinedWeeksAgo": "Joined {weeks} weeks ago",
+      "joinedOn": "Joined {date}",
       "onlineNow": "Online now",
-      "activeAgo": "Active {time} ago"
+      "activeMinutesAgo": "Active {count}m ago",
+      "activeHoursAgo": "Active {count}h ago",
+      "activeDaysAgo": "Active {count}d ago",
+      "activeOn": "Active {date}"
     },
     "stats": {
       "title": "Group Stats",
