@@ -4511,6 +4511,10 @@
     "publicMatches": "Parties publiques",
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
+    "favoriteAvailability": {
+      "title": "Tes terrains favoris",
+      "subtitle": "Des places à réserver en temps réel"
+    },
     "quickNav": {
       "joinCommunity": "Rejoindre une communauté",
       "bookCourt": "Réserver un terrain",
