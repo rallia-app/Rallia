@@ -45,9 +45,10 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
   syncHomeLocation as syncHomeLocationToPlayer,
+  getCheckInMatchOpportunities,
 } from '@rallia/shared-services';
-import { useProfile, usePlayer, useTopSuggestions, facilityKeys } from '@rallia/shared-hooks';
-import { useQueryClient } from '@tanstack/react-query';
+import { useProfile, usePlayer, facilityKeys } from '@rallia/shared-hooks';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type {
   OnboardingPlayerPreferences,
@@ -339,19 +340,33 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Player ID for referral sharing on success step
   const [successPlayerId, setSuccessPlayerId] = useState<string | null>(null);
 
-  // Match suggestions for post-success step — pedagogical preview, suggestions
-  // only (no real matches mixed in). Top-5 by score, opponent-deduped.
-  const suggestionSport = selectedSport ?? selectedSportsForSuccess[0];
+  // Real, joinable matches for the post-success step — same RPC the weekly
+  // check-in's "Games for you" step uses: PUBLIC matches with open spots that
+  // fit what the player just set up (favorite courts, rating, declared
+  // availability), windowed to today…today+3. Replaces the old suggestion
+  // preview so the player can join an actual game right out of onboarding.
+  const opportunitySlots = useMemo<{ day: DayEnum; hour: number }[]>(() => {
+    const out: { day: DayEnum; hour: number }[] = [];
+    // Set.forEach (not Array.from) to dodge a Hermes iterator edge case, same
+    // as the availabilities save path below.
+    formData.availabilities.forEach(key => {
+      const sepIdx = key.lastIndexOf('-');
+      out.push({ day: key.slice(0, sepIdx) as DayEnum, hour: Number(key.slice(sepIdx + 1)) });
+    });
+    return out;
+  }, [formData.availabilities]);
+
   const {
-    suggestions: matchSuggestions,
-    isLoading: suggestionsLoading,
-    refetch: refetchSuggestions,
-  } = useTopSuggestions({
-    playerId: successPlayerId,
-    sportId: suggestionSport?.id,
-    sportName: suggestionSport?.name,
-    maxItems: 5,
-    enabled: currentStepId === 'success' || currentStepId === 'suggestions',
+    data: matchOpportunities = [],
+    isLoading: opportunitiesLoading,
+    refetch: refetchOpportunities,
+  } = useQuery({
+    queryKey: ['onboarding', 'match-opportunities', opportunitySlots],
+    queryFn: () => getCheckInMatchOpportunities({ slots: opportunitySlots, limit: 20 }),
+    enabled:
+      (currentStepId === 'success' || currentStepId === 'suggestions') &&
+      opportunitySlots.length > 0,
+    staleTime: 60_000,
   });
 
   // Image picker hook
@@ -421,10 +436,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     goToNextStep();
   }, [goToNextStep]);
 
-  // Refresh suggestions — delegates to the hook's refetch
+  // Refresh the "Games for you" list — delegates to the query's refetch
   const handleRefreshSuggestions = useCallback(async () => {
-    await refetchSuggestions();
-  }, [refetchSuggestions]);
+    await refetchOpportunities();
+  }, [refetchOpportunities]);
 
   // Wrapper to handle async setSelectedSport
   const handleSelectInitialSport = useCallback(
@@ -1196,8 +1211,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 'suggestions':
         return (
           <SuggestionsStep
-            suggestions={matchSuggestions}
-            isLoading={suggestionsLoading}
+            opportunities={matchOpportunities}
+            isLoading={opportunitiesLoading}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
             colors={colors}
@@ -1246,8 +1261,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           />
         ) : (
           <SuggestionsStep
-            suggestions={matchSuggestions}
-            isLoading={suggestionsLoading}
+            opportunities={matchOpportunities}
+            isLoading={opportunitiesLoading}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
             colors={colors}
