@@ -12,7 +12,7 @@
  * screen.
  */
 
-import React, { useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import Animated, {
@@ -20,8 +20,6 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
-  withSpring,
-  makeMutable,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
@@ -88,38 +86,20 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     [opportunities]
   );
 
-  // Animation values
+  // Header + footer fade-in. The cards themselves render unwrapped (see below):
+  // a per-card Animated.View wrapper memoizes the MatchCard subtree under the
+  // React Compiler, which stops the one-click Join CTA from flipping to its
+  // Joined/Requested state when `outcomes` updates. Weekly check-in renders the
+  // cards bare for the same reason.
   const headerOpacity = useSharedValue(0);
   const skipOpacity = useSharedValue(0);
-  const cardOpacities = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(0))).current;
-  const cardTranslateYs = useRef(Array.from({ length: MAX_CARDS }, () => makeMutable(20))).current;
 
-  // Trigger animations
   useEffect(() => {
     headerOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
-
-    if (!isLoading && previewOpportunities.length > 0) {
-      previewOpportunities.forEach((_, index) => {
-        if (index < MAX_CARDS) {
-          cardOpacities[index].value = withDelay(
-            300 + index * 150,
-            withTiming(1, { duration: 350 })
-          );
-          cardTranslateYs[index].value = withDelay(
-            300 + index * 150,
-            withSpring(0, { damping: 40, stiffness: 300 })
-          );
-        }
-      });
-
-      skipOpacity.value = withDelay(
-        300 + Math.min(previewOpportunities.length, MAX_CARDS) * 150 + 200,
-        withTiming(1, { duration: 400 })
-      );
-    } else if (!isLoading) {
-      skipOpacity.value = withDelay(600, withTiming(1, { duration: 400 }));
+    if (!isLoading) {
+      skipOpacity.value = withDelay(400, withTiming(1, { duration: 400 }));
     }
-  }, [isLoading, previewOpportunities.length]);
+  }, [isLoading]);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
@@ -207,25 +187,18 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
           </View>
         ) : (
           <View style={styles.cardsContainer}>
-            {previewOpportunities.map((match, index) => {
-              const cardAnimatedStyle = {
-                opacity: cardOpacities[index],
-                transform: [{ translateY: cardTranslateYs[index] }],
-              };
-              return (
-                <Animated.View key={match.id} style={cardAnimatedStyle}>
-                  <MatchCard
-                    match={match}
-                    isDark={isDark}
-                    t={t}
-                    locale={locale}
-                    currentPlayerId={playerId ?? undefined}
-                    onPress={NOOP}
-                    renderCta={renderCta}
-                  />
-                </Animated.View>
-              );
-            })}
+            {previewOpportunities.map(match => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                isDark={isDark}
+                t={t}
+                locale={locale}
+                currentPlayerId={playerId ?? undefined}
+                onPress={NOOP}
+                renderCta={renderCta}
+              />
+            ))}
           </View>
         )}
 
