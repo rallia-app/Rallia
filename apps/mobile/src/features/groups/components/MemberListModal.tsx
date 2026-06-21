@@ -21,28 +21,40 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { SearchBar } from '#/components/SearchBar';
 
+// Translation function type that accepts any key (for internal use)
+type TranslateFn = (key: string, options?: Record<string, string | number | boolean>) => string;
+
 /**
  * Format a date as relative time or date string for join dates
  */
-function formatJoinDate(dateStr: string): string {
+function formatJoinDate(dateStr: string, locale: string, t: TranslateFn): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffDays === 0) return 'Joined today';
-  if (diffDays === 1) return 'Joined yesterday';
-  if (diffDays < 7) return `Joined ${diffDays} days ago`;
-  if (diffDays < 30) return `Joined ${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays === 0) return t('groups.membersSection.joinedToday');
+  if (diffDays === 1) return t('groups.membersSection.joinedYesterday');
+  if (diffDays < 7) return t('groups.membersSection.joinedDaysAgo', { days: diffDays });
+  if (diffDays < 30)
+    return t('groups.membersSection.joinedWeeksAgo', { weeks: Math.floor(diffDays / 7) });
 
-  return `Joined ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })}`;
+  return t('groups.membersSection.joinedOn', {
+    date: date.toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    }),
+  });
 }
 
 /**
  * Format last active status - returns null if never active
  */
 function formatLastActive(
-  dateStr: string | null | undefined
+  dateStr: string | null | undefined,
+  locale: string,
+  t: TranslateFn
 ): { text: string; isOnline: boolean } | null {
   if (!dateStr) return null;
 
@@ -54,13 +66,24 @@ function formatLastActive(
   const diffDays = Math.floor(diffMs / 86400000);
 
   // Consider online if active within last 5 minutes
-  if (diffMins < 5) return { text: 'Online now', isOnline: true };
-  if (diffMins < 60) return { text: `Active ${diffMins}m ago`, isOnline: false };
-  if (diffHours < 24) return { text: `Active ${diffHours}h ago`, isOnline: false };
-  if (diffDays < 7) return { text: `Active ${diffDays}d ago`, isOnline: false };
+  if (diffMins < 5) return { text: t('groups.membersSection.onlineNow'), isOnline: true };
+  if (diffMins < 60)
+    return {
+      text: t('groups.membersSection.activeMinutesAgo', { count: diffMins }),
+      isOnline: false,
+    };
+  if (diffHours < 24)
+    return {
+      text: t('groups.membersSection.activeHoursAgo', { count: diffHours }),
+      isOnline: false,
+    };
+  if (diffDays < 7)
+    return { text: t('groups.membersSection.activeDaysAgo', { count: diffDays }), isOnline: false };
 
   return {
-    text: `Active ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+    text: t('groups.membersSection.activeOn', {
+      date: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
+    }),
     isOnline: false,
   };
 }
@@ -77,7 +100,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
 
   const { colors, isDark } = useThemeStyles();
   const toast = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const [searchQuery, setSearchQuery] = useState('');
   // Track locally removed members for immediate UI update
@@ -274,8 +297,12 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
       const isCreator = group.created_by === item.player_id;
       const isSelf = item.player_id === currentUserId;
       const canManage = isModerator && !isSelf && !isCreator;
-      const lastActive = formatLastActive(item.player?.profile?.last_active_at);
-      const joinDate = formatJoinDate(item.joined_at);
+      const lastActive = formatLastActive(
+        item.player?.profile?.last_active_at,
+        locale,
+        t as TranslateFn
+      );
+      const joinDate = formatJoinDate(item.joined_at, locale, t as TranslateFn);
 
       return (
         <TouchableOpacity
@@ -349,7 +376,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
         </TouchableOpacity>
       );
     },
-    [colors, isDark, group, currentUserId, isModerator, handleMemberOptions, t]
+    [colors, isDark, group, currentUserId, isModerator, handleMemberOptions, t, locale]
   );
 
   if (!group) return null;

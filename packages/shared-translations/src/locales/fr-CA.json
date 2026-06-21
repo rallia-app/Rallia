@@ -2193,7 +2193,12 @@
       "groupChat": "Discussion de groupe",
       "blockedUser": "Vous avez bloqué cet utilisateur",
       "online": "En ligne",
-      "lastSeen": "Vu {time}",
+      "lastSeenJustNow": "Vu à l'instant",
+      "lastSeenMinutesAgo": "Vu il y a {count} min",
+      "lastSeenHoursAgo": "Vu il y a {count}h",
+      "lastSeenYesterday": "Vu hier",
+      "lastSeenDaysAgo": "Vu il y a {count}j",
+      "lastSeenOn": "Vu le {date}",
       "noMessages": "Aucun message pour l'instant"
     },
     "message": {
@@ -2642,8 +2647,12 @@
       "joinedYesterday": "A rejoint hier",
       "joinedDaysAgo": "A rejoint il y a {days} jours",
       "joinedWeeksAgo": "A rejoint il y a {weeks} semaines",
+      "joinedOn": "A rejoint le {date}",
       "onlineNow": "En ligne",
-      "activeAgo": "Actif il y a {time}"
+      "activeMinutesAgo": "Actif il y a {count} min",
+      "activeHoursAgo": "Actif il y a {count}h",
+      "activeDaysAgo": "Actif il y a {count}j",
+      "activeOn": "Actif le {date}"
     },
     "stats": {
       "title": "Statistiques du groupe",

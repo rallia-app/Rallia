@@ -28,7 +28,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, fontSizePixels } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
 
-import { useThemeStyles } from '#/hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 import { CourtSystemMessageCard } from './CourtSystemMessageCard';
 import { MessageBubble } from './MessageBubble';
@@ -56,8 +56,11 @@ interface MessageListProps {
 // Threshold for showing scroll-to-bottom button (in pixels)
 const SCROLL_THRESHOLD = 200;
 
+// Translation function type that accepts any key (for internal use)
+type TranslateFn = (key: string, options?: Record<string, string | number | boolean>) => string;
+
 // Helper to format date for separators
-function formatDateSeparator(date: Date): string {
+function formatDateSeparator(date: Date, locale: string, t: TranslateFn): string {
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -66,16 +69,16 @@ function formatDateSeparator(date: Date): string {
   const isYesterday = date.toDateString() === yesterday.toDateString();
 
   if (isToday) {
-    return 'Today';
+    return t('chat.today');
   } else if (isYesterday) {
-    return 'Yesterday';
+    return t('chat.yesterday');
   } else {
     // Check if within last week
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 7) {
-      return date.toLocaleDateString('en-US', { weekday: 'long' });
+      return date.toLocaleDateString(locale, { weekday: 'long' });
     }
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   }
 }
 
@@ -121,6 +124,7 @@ function MessageListComponent(
   ref: React.Ref<MessageListRef>
 ) {
   const { colors } = useThemeStyles();
+  const { t, locale } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
@@ -174,14 +178,14 @@ function MessageListComponent(
       if (needsSeparator) {
         result.push({
           type: 'dateSeparator',
-          date: formatDateSeparator(messageDate),
+          date: formatDateSeparator(messageDate, locale, t as TranslateFn),
           id: `date-${messageDate.toDateString()}`,
         });
       }
     }
 
     return result;
-  }, [messages, currentUserId]);
+  }, [messages, currentUserId, locale, t]);
 
   // Handle scroll to track if user scrolled up
   const handleScroll = useCallback(
