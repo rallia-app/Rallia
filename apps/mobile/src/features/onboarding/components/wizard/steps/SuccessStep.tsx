@@ -30,7 +30,7 @@ import LottieView from 'lottie-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { useReferral } from '@rallia/shared-hooks';
+import { useReferral, useAuth } from '@rallia/shared-hooks';
 import { getReferralLink } from '@rallia/shared-services';
 import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 
@@ -91,7 +91,15 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
   const toast = useToast();
   const hasAutoSelected = useRef(false);
 
-  const { code: referralCode, codeLoading: referralLoading } = useReferral(playerId ?? undefined);
+  // Prefer the live session id over the wizard's async `successPlayerId` prop,
+  // which can lag/stale across multiple onboardings in one app session — that
+  // would generate a referral code for the wrong player. Mirrors the games step.
+  const { session } = useAuth();
+  const effectivePlayerId = session?.user?.id ?? playerId ?? null;
+
+  const { code: referralCode, codeLoading: referralLoading } = useReferral(
+    effectivePlayerId ?? undefined
+  );
   const referralLink = referralCode
     ? getReferralLink(referralCode, {
         utm_source: 'app_share',

@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Alert, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import Animated, {
   useSharedValue,
@@ -85,8 +85,16 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   const { session } = useAuth();
   const effectivePlayerId = session?.user?.id ?? playerId ?? null;
 
+  // Join failures surface via a native Alert here, not the global toast: this
+  // step lives in a bottom sheet, which renders above the toast layer and would
+  // hide it. Success needs no toast — the CTA flips to its Joined/Requested pill.
+  const handleJoinError = useCallback((msg: string) => Alert.alert(t('alerts.error'), msg), [t]);
+
   // One-click join, scoped to onboarding for the discovery_source on analytics.
-  const { join, outcomes, pendingId } = useJoinOpportunity(effectivePlayerId, 'onboarding');
+  const { join, outcomes, pendingId } = useJoinOpportunity(effectivePlayerId, {
+    source: 'onboarding',
+    notifyError: handleJoinError,
+  });
 
   // Cap the preview at MAX_CARDS — the caller already fetches up to 20, but the
   // post-onboarding moment only needs a short, joinable shortlist.
