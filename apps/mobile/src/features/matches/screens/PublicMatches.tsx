@@ -8,7 +8,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Text } from '@rallia/shared-components';
+import { MatchCard, Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -18,29 +18,25 @@ import {
   useRatingScoresForSport,
   useSortedNearbyMatches,
   useFavoriteFacilities,
-  useTopSuggestions,
-  doesSuggestionPassFilters,
   type MatchScoringPreferences,
-  type UnifiedFeedItem,
+  type PublicMatch,
 } from '@rallia/shared-hooks';
 import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger, supabase } from '@rallia/shared-services';
-import { spacingPixels } from '@rallia/design-system';
+import { neutral, spacingPixels } from '@rallia/design-system';
 
 import {
   useAuth,
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
-  useSuggestionInviteHandler,
   useImpressionTracker,
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
 import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
-import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
+import { SportIcon } from '#/components/SportIcon';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
-import { FeedItemCard } from '#/features/matches/components/FeedItemCard';
 
 // A card counts as shown once it's ≥50% visible for 500ms. Module constant so
 // the FlatList viewability config never changes identity (a runtime crash).
@@ -248,59 +244,6 @@ export default function PublicMatches() {
   // Sort: chronological primary, relevance score as tiebreaker for same date+time
   const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
 
-  // Fetch a flat top-N list of opponent-deduped, score-sorted suggestions.
-  // Only used to pad the feed once matches genuinely run out — gate the fetch
-  // on `!hasNextPage && sortedMatches.length < 30` so the suggestion RPC
-  // doesn't fire on every screen open (it competes with the public-matches
-  // RPC for the same Postgres pool and is rarely consumed for users with
-  // enough nearby matches). `isLoading` is included so we don't kick off the
-  // RPC before the first page of matches has even resolved.
-  const suggestionsNeeded = showMatches && !isLoading && !hasNextPage && sortedMatches.length < 30;
-  const {
-    suggestions: rawSuggestions,
-    isLoading: loadingSuggestions,
-    refetch: refetchSuggestions,
-  } = useTopSuggestions({
-    playerId: player?.id,
-    sportId: selectedSport?.id,
-    sportName: selectedSport?.name,
-    latitude: location?.latitude,
-    longitude: location?.longitude,
-    maxItems: 30,
-    enabled: suggestionsNeeded,
-  });
-
-  // Build suggestion-applicable filters (stable ref via useMemo).
-  // Uses debouncedSearchQuery to avoid re-filtering on every keystroke.
-  const suggestionFilters = useMemo(
-    () => ({
-      searchQuery: debouncedSearchQuery,
-      matchType: filters.matchType,
-      duration: filters.duration,
-      format: filters.format,
-      dateRange: filters.dateRange,
-      timeOfDay: filters.timeOfDay,
-      specificDate: filters.specificDate,
-      specificTime: filters.specificTime,
-    }),
-    [
-      debouncedSearchQuery,
-      filters.matchType,
-      filters.duration,
-      filters.format,
-      filters.dateRange,
-      filters.timeOfDay,
-      filters.specificDate,
-      filters.specificTime,
-    ]
-  );
-
-  // Apply user-selected filters to suggestions (matches are already filtered server-side).
-  const filteredSuggestions = useMemo(() => {
-    const nowMs = Date.now();
-    return rawSuggestions.filter(s => doesSuggestionPassFilters(s, suggestionFilters, nowMs));
-  }, [rawSuggestions, suggestionFilters]);
-
   // Translate section labels once per locale change, not per match.
   const upcomingSectionLabels = useMemo<Record<UpcomingDateSection, string>>(
     () => ({
@@ -313,17 +256,14 @@ export default function PublicMatches() {
     [t]
   );
 
-  // Build the flat feed: matches first (chronological with score tiebreak),
-  // then a single light "Suggestions for you" divider, then up-to-N suggestions
-  // padding to a minimum of 30 total — but only once matches finish paginating.
+  // Build the flat feed: real matches only, grouped by upcoming-date section.
   type PublicFeedRow =
-    | { kind: 'item'; key: string; rank: number; data: UnifiedFeedItem }
-    | { kind: 'section-header'; key: string; title: string }
-    | { kind: 'frontier'; key: string };
+    | { kind: 'item'; key: string; rank: number; match: PublicMatch }
+    | { kind: 'section-header'; key: string; title: string };
   const feed = useMemo<PublicFeedRow[]>(() => {
-    const matchItems: PublicFeedRow[] = [];
+    const rows: PublicFeedRow[] = [];
     let currentSection = '';
-    // 1-indexed position among cards only — headers/frontier excluded.
+    // 1-indexed position among cards only — section headers excluded.
     let rank = 0;
 
     sortedMatches.forEach(m => {
@@ -331,52 +271,17 @@ export default function PublicMatches() {
       const label = upcomingSectionLabels[section];
       if (label !== currentSection) {
         currentSection = label;
-        matchItems.push({ kind: 'section-header', key: `section:${section}`, title: label });
+        rows.push({ kind: 'section-header', key: `section:${section}`, title: label });
       }
       rank += 1;
-      matchItems.push({
-        kind: 'item',
-        key: `match:${m.id}`,
-        rank,
-        data: { kind: 'match', key: `match:${m.id}`, sortTime: 0, data: m } as UnifiedFeedItem,
-      });
+      rows.push({ kind: 'item', key: `match:${m.id}`, rank, match: m });
     });
 
-    // Suggestions only kick in when matches genuinely exhausted (no more pages)
-    // and the feed has fewer than 30 real matches.
-    const padCount = Math.max(0, 30 - sortedMatches.length);
-    if (padCount === 0 || hasNextPage) return matchItems;
-
-    const suggestionItems: PublicFeedRow[] = filteredSuggestions.slice(0, padCount).map((s, i) => ({
-      kind: 'item' as const,
-      key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
-      rank: rank + i + 1,
-      data: {
-        kind: 'suggestion',
-        key: `suggestion:${s.opponentId}:${s.slot.datetime.getTime()}`,
-        sortTime: 0,
-        data: s,
-      },
-    }));
-
-    if (suggestionItems.length === 0) return matchItems;
-
-    const frontier: PublicFeedRow = { kind: 'frontier', key: 'frontier' };
-    return [...matchItems, frontier, ...suggestionItems];
-  }, [sortedMatches, filteredSuggestions, hasNextPage, upcomingSectionLabels]);
-
-  // Suggestion invite plumbing (shared with Home).
-  const {
-    cardLabels: suggestionLabels,
-    handleSendInvite,
-    getInviteState,
-    callerMatchType,
-  } = useSuggestionInviteHandler({ sportId: selectedSport?.id, source: 'public_matches_feed' });
+    return rows;
+  }, [sortedMatches, upcomingSectionLabels]);
 
   // Pagination is driven by FlatList `onEndReached` so the first page renders
-  // immediately and additional pages only fetch as the user scrolls. Padding
-  // suggestions surface when matches run out before the user scrolls past
-  // them (see the `padCount`/`hasNextPage` branch in the `feed` memo above).
+  // immediately and additional pages only fetch as the user scrolls.
 
   // Handle infinite scroll
   const pagesFetchedRef = useRef(0);
@@ -408,9 +313,9 @@ export default function PublicMatches() {
   }, [debouncedSearchQuery, isLoading, isFetching, totalCount]);
 
   // public_matches_feed_loaded: once per load signature (sport / location /
-  // filters / search / manual refresh), after matches AND suggestion padding
-  // settle. refreshNonce must be state — a ref wouldn't re-run the effect
-  // when a refresh returns identical data.
+  // filters / search / manual refresh), after the matches settle. refreshNonce
+  // must be state — a ref wouldn't re-run the effect when a refresh returns
+  // identical data.
   const [refreshNonce, setRefreshNonce] = useState(0);
   const loadSignature = useMemo(() => {
     const { searchQuery, ...nonSearchFilters } = filters;
@@ -426,26 +331,22 @@ export default function PublicMatches() {
 
   const lastLoadedSignature = useRef<string | null>(null);
   useEffect(() => {
-    if (!showMatches || isLoading || isFetching || loadingSuggestions) return;
+    if (!showMatches || isLoading || isFetching) return;
     if (lastLoadedSignature.current === loadSignature) return;
-    // Matches settle one render before useTopSuggestions flips to enabled —
-    // the grace timer absorbs that gap (cleanup cancels if suggestions start
-    // loading inside the window, and we re-arm when they finish).
+    // Small grace timer debounces rapid settles (e.g. a refresh returning
+    // identical data) before firing the one analytics row.
     const timer = setTimeout(() => {
       lastLoadedSignature.current = loadSignature;
-      const suggestionCount = feed.filter(
-        r => r.kind === 'item' && r.data.kind === 'suggestion'
-      ).length;
       Analytics.publicMatchesFeedLoaded({
         real_match_count: sortedMatches.length,
-        suggestion_count: suggestionCount,
+        suggestion_count: 0,
         total_match_count: totalCount,
         has_next_page: hasNextPage,
         active_filter_count: activeFilterCount,
         has_search_query: debouncedSearchQuery.length > 0,
-        padded_with_suggestions: suggestionCount > 0,
+        padded_with_suggestions: false,
       });
-      if (sortedMatches.length + suggestionCount === 0) {
+      if (sortedMatches.length === 0) {
         Analytics.feedEmptyStateShown({
           screen: 'public_matches',
           has_active_filters: hasActiveFilters,
@@ -459,8 +360,6 @@ export default function PublicMatches() {
     showMatches,
     isLoading,
     isFetching,
-    loadingSuggestions,
-    feed,
     sortedMatches.length,
     totalCount,
     hasNextPage,
@@ -508,26 +407,17 @@ export default function PublicMatches() {
           maxIndexViewedRef.current = token.index;
         }
         const row = token.item;
-        if (row.data.kind === 'suggestion') {
-          const s = row.data.data;
-          track(row.key, () =>
-            Analytics.matchSuggestionShown(
-              Analytics.buildSuggestionEventProps(s, 'public_matches_feed', sportId, sportName)
-            )
-          );
-        } else {
-          const m = row.data.data;
-          track(row.key, () =>
-            Analytics.matchCardShown({
-              match_id: m.id,
-              sport_id: m.sport?.id ?? sportId ?? 'unknown',
-              sport_name: m.sport?.name ?? sportName ?? 'unknown',
-              is_auto_generated: m.is_auto_generated ?? false,
-              surface: 'public_matches_feed',
-              rank: row.rank,
-            })
-          );
-        }
+        const m = row.match;
+        track(row.key, () =>
+          Analytics.matchCardShown({
+            match_id: m.id,
+            sport_id: m.sport?.id ?? sportId ?? 'unknown',
+            sport_name: m.sport?.name ?? sportName ?? 'unknown',
+            is_auto_generated: m.is_auto_generated ?? false,
+            surface: 'public_matches_feed',
+            rank: row.rank,
+          })
+        );
       }
     },
     [track]
@@ -555,8 +445,7 @@ export default function PublicMatches() {
     }, [])
   );
 
-  // Render feed row — either a match/suggestion card or the single hairline
-  // divider between the match block and the suggestion tail.
+  // Render feed row — a match card or a date section header.
   const renderFeedItem = useCallback(
     ({ item }: { item: PublicFeedRow }) => {
       if (item.kind === 'section-header') {
@@ -568,62 +457,37 @@ export default function PublicMatches() {
           </View>
         );
       }
-      if (item.kind === 'frontier') {
-        return (
-          <View style={styles.frontierRow}>
-            <View style={[styles.frontierLine, { backgroundColor: colors.border }]} />
-            <Text size="xs" color={colors.textMuted} style={styles.frontierLabel}>
-              {t('publicMatches.suggestionsFrontier')}
-            </Text>
-            <View style={[styles.frontierLine, { backgroundColor: colors.border }]} />
-          </View>
-        );
-      }
+      const match = item.match;
       return (
-        <FeedItemCard
-          item={item.data}
+        <MatchCard
+          match={match}
           isDark={isDark}
+          t={t}
           locale={locale}
-          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           currentPlayerId={player?.id}
-          themeColors={colors}
-          suggestionLabels={suggestionLabels}
-          getInviteState={getInviteState}
-          onMatchPress={match => {
+          sportIcon={
+            <SportIcon
+              sportName={match.sport?.name ?? 'tennis'}
+              size={100}
+              color={isDark ? neutral[600] : neutral[400]}
+            />
+          }
+          onPress={() => {
             Logger.logUserAction('public_match_pressed', { matchId: match.id });
             openMatchDetail(match, { source: 'public_matches_feed' });
           }}
-          onSendInvite={handleSendInvite}
-          suggestionSource="public_matches_feed"
-          trackSuggestionImpressionOnMount={false}
-          sportId={selectedSport?.id}
-          sportName={selectedSport?.name}
-          defaultMatchType={callerMatchType}
         />
       );
     },
-    [
-      isDark,
-      t,
-      locale,
-      openMatchDetail,
-      player?.id,
-      colors,
-      suggestionLabels,
-      getInviteState,
-      handleSendInvite,
-    ]
+    [isDark, t, locale, openMatchDetail, player?.id, colors]
   );
 
   // Check if we're loading due to filter/search changes (not initial load or pagination)
   const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
-  // Render empty state — only shows when both matches AND suggestions are
-  // empty. While suggestions are still loading (after matches exhausted but
-  // before the suggestion RPC returns), hold the empty card so we don't
-  // flash "no matches" → suggestions populating.
+  // Render empty state — shows once matches have settled and there are none.
   const renderEmptyComponent = useCallback(() => {
-    if (isLoading || isSearching || loadingSuggestions) return null;
+    if (isLoading || isSearching) return null;
     return (
       <EmptyState
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
@@ -631,19 +495,11 @@ export default function PublicMatches() {
         t={t}
       />
     );
-  }, [
-    isLoading,
-    isSearching,
-    loadingSuggestions,
-    hasActiveFilters,
-    debouncedSearchQuery,
-    colors.textMuted,
-    t,
-  ]);
+  }, [isLoading, isSearching, hasActiveFilters, debouncedSearchQuery, colors.textMuted, t]);
 
-  // Render footer — pagination spinner or suggestion-loading spinner.
+  // Render footer — pagination spinner only.
   const renderFooter = useCallback(() => {
-    if (isFetchingNextPage || (loadingSuggestions && feed.length < 30)) {
+    if (isFetchingNextPage) {
       return (
         <View style={styles.footerLoader}>
           <ActivityIndicator size="small" color={colors.primary} />
@@ -651,7 +507,7 @@ export default function PublicMatches() {
       );
     }
     return null;
-  }, [isFetchingNextPage, loadingSuggestions, feed.length, colors.primary]);
+  }, [isFetchingNextPage, colors.primary]);
 
   // Loading state for initial data
   const isInitialLoading = playerLoading || sportLoading;
@@ -784,7 +640,7 @@ export default function PublicMatches() {
                 isManualRefresh.current = true;
                 Analytics.feedRefreshed({ screen: 'public_matches' });
                 setRefreshNonce(n => n + 1);
-                Promise.all([refetch(), refetchSuggestions()]).finally(() => {
+                refetch().finally(() => {
                   isManualRefresh.current = false;
                 });
               }}
@@ -887,21 +743,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[1],
-  },
-  frontierRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: 0,
-    paddingBottom: spacingPixels[4],
-    gap: spacingPixels[3],
-  },
-  frontierLine: {
-    flex: 1,
-    height: 1,
-  },
-  frontierLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
