@@ -20,9 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import {
-  useTheme,
   useAuth,
   useDebounce,
   usePublicTournaments,
@@ -52,11 +51,9 @@ type Tournament = TournamentListItem;
 
 export const Tournaments: React.FC = () => {
   const { t } = useTranslation();
-  const { theme } = useTheme();
   const { selectedSport } = useSport();
   const { session } = useAuth();
   const colors = useTournamentListColors();
-  const isDark = theme === 'dark';
   const userId = session?.user?.id;
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -176,28 +173,12 @@ export const Tournaments: React.FC = () => {
           navigation.navigate('MyTournaments');
         }}
         activeOpacity={0.85}
-        style={[
-          styles.myTournamentsButton,
-          {
-            backgroundColor: isDark ? primary[950] : primary[50],
-            borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
-          },
-        ]}
+        style={styles.myTournamentsButton}
       >
-        <View
-          style={[
-            styles.myTournamentsIcon,
-            { backgroundColor: isDark ? `${primary[400]}20` : `${primary[500]}15` },
-          ]}
-        >
-          <Ionicons name="ribbon-outline" size={24} color={isDark ? primary[400] : primary[500]} />
+        <View style={styles.myTournamentsIcon}>
+          <Ionicons name="ribbon-outline" size={24} color="#ffffff" />
         </View>
-        <Text
-          size="base"
-          weight="semibold"
-          color={isDark ? primary[300] : primary[600]}
-          style={styles.myTournamentsLabel}
-        >
+        <Text size="base" weight="semibold" color="#ffffff" style={styles.myTournamentsLabel}>
           {t('tournamentList.myTournaments')}
         </Text>
       </TouchableOpacity>
@@ -264,6 +245,8 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[4],
     borderRadius: radiusPixels.xl,
     borderWidth: 1.5,
+    borderColor: accent[500],
+    backgroundColor: accent[400],
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[3],
@@ -274,6 +257,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },

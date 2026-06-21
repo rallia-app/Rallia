@@ -24,13 +24,13 @@ When `seeding_enabled = true`, the bracket-generation algorithm reads each regis
 3. Self-declared `self_declared_rank` ascending.
 4. `registered_at` ascending.
 
-If a registrant has no certified rating, their `rating_score` is treated as the league's `default_rating_for_unknown` (default `0`, configurable per league). This effectively places uncertified players at the bottom, encouraging certification.
+If a registrant has no certified rating, BY_RANK pairing and seed ordering treat their numeric rating as `rules.defaultRatingForUnknown` from the frozen season rules (default `0`, set in league `default_rules` at season open). This places uncertified players at the bottom, encouraging certification.
 
 ### Rating evolution
 
 T&L matches feed rating evolution **the same way casual matches do**:
 
-- After a match's score is `validated`, the `match-closure` evaluation pipeline (system 04) ingests the result.
+- After the linked `match_result.is_verified` flips true (match bridge), the `match-closure` evaluation pipeline (system 04) ingests the result.
 - The opponent's certified-rating-or-higher rule still applies for level evaluation.
 - The M5 last-five-evaluations rule continues to apply unchanged.
 
@@ -38,7 +38,9 @@ This means a player who plays exclusively in tournaments still has their rating 
 
 ### Rating gates
 
-`tournaments.min_rating`, `tournaments.max_rating`, `leagues.min_rating`, `leagues.max_rating` reject registrations / joins outside the band. Doubles partnerships require both partners to satisfy the band individually (no team-average exemption in v1).
+`tournaments.min_rating`, `tournaments.max_rating`, `leagues.min_rating`, `leagues.max_rating`, and `min_reputation` on both entity types reject registrations / joins outside the band. Doubles partnerships require both partners to satisfy the band individually (no team-average exemption in v1).
+
+> **Schema note:** `leagues` rating/reputation columns ship in the V6 migration delta ([data-model.md](./data-model.md#schema-deltas-from-f1)). Until applied, gates are not enforced server-side.
 
 ## 05 Reputation
 
@@ -58,7 +60,7 @@ This means a player who plays exclusively in tournaments still has their rating 
 | Repeat opponent in T&L match                     | `match_repeat_opponent` | +2                    |
 | First match bonus (any sport)                    | `first_match_bonus`     | +5                    |
 
-These are emitted by the `tg_emit_reputation_events` trigger on the `*_matches` tables and via RPC bodies for late-cancellation. The graduated late-cancellation logic re-uses [`reputation/reputationPenalties.ts`](../09-matches/match-lifecycle.md#late-cancellation-penalties).
+These are emitted when linked casual matches verify and via RPC bodies for late-cancellation (session presence). Match-bridge sync triggers enqueue reputation the same way as casual play. The graduated late-cancellation logic re-uses [`reputation/reputationPenalties.ts`](../09-matches/match-lifecycle.md#late-cancellation-penalties).
 
 ### Reputation gates
 
@@ -124,13 +126,13 @@ See [notifications.md](./notifications.md) for the full event taxonomy.
 
 ## 09 Matches
 
-L&T matches reuse the same data shape (sets, games, retirement semantics, walkover) as casual matches. The user-facing match detail page distinguishes the two via a small badge:
+L&T matches reuse the casual-match **score entry and verification loop** via the match bridge ([score-entry.md](./score-entry.md#architecture-match-bridge-canonical)). The user-facing match detail page distinguishes context via a badge:
 
 - "Friendly" — casual match
 - "Tournament — Quarterfinal" — tournament match
 - "League — Winter 2026 Session #4" — league session match
 
-L&T matches are stored in their own tables (`tournament_matches`, `session_matches`) rather than being shoehorned into the casual `matches` table — this keeps casual-match RLS and indexing simple — but the _displayed_ card is the same component.
+L&T structural rows live in `tournament_matches` / `session_matches`. Each playable row may link `match_id` → `public.match` for scoring. Display reuses the same match card component; ranking/bracket logic reads the L&T row after sync.
 
 ## 10 Club Portal
 

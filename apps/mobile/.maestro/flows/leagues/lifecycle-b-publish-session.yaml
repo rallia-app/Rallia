@@ -1,0 +1,31 @@
+# Lifecycle B: from an open season -> Sessions tab -> create session -> publish.
+# Reuses lifecycle A to reach a league with an open season.
+appId: com.mathisl971.rallia-app
+tags: [leagues]
+---
+- runFlow: lifecycle-a-create-season.yaml
+- extendedWaitUntil:
+    visible:
+      id: "league-tab-sessions"
+    timeout: 20000
+- tapOn:
+    id: "league-tab-sessions"
+- extendedWaitUntil:
+    visible:
+      id: "session-name-input"
+    timeout: 15000
+- tapOn:
+    id: "session-name-input"
+- inputText: "Maestro Night 1"
+- tapOn: "done"
+- tapOn:
+    id: "cta-create-session-submit"
+- extendedWaitUntil:
+    visible:
+      id: "cta-publish-session"
+    timeout: 20000
+- tapOn:
+    id: "cta-publish-session"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: /tmp/maestro-league-lifecycle-b

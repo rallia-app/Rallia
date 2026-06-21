@@ -12,6 +12,44 @@
 - All FKs use `ON DELETE CASCADE` for owned children, `ON DELETE RESTRICT` for cross-aggregate references (e.g., `user_id`).
 - All RLS-relevant policies are listed in [permissions.md](./permissions.md); this file lists only the column-level definitions.
 
+## Schema deltas from F1
+
+Migration `20260510165900_leagues_tournaments_schema.sql` (F1) is deployed. The following deltas are **required before league V6/V9** and are documented here so F1 is not rewritten in place:
+
+| Change                                       | Table                | Purpose                                                                                                   |
+| -------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `min_rating`, `max_rating`, `min_reputation` | `leagues`            | Mirror tournament registration gates ([integrations.md §04](./integrations.md#04-player-rating-ntrpdupr)) |
+| `match_id uuid REFERENCES match(id)`         | `tournament_matches` | Shipped in `20260510170009_lt_tournament_match_bridge.sql`                                                |
+| `match_id uuid REFERENCES match(id)`         | `session_matches`    | League match bridge (V9)                                                                                  |
+
+Apply via additive migrations (`ALTER TABLE ... ADD COLUMN`). Regenerate TypeScript types after each delta.
+
+## Match bridge
+
+L&T playable rows link to casual matches for score entry ([score-entry.md](./score-entry.md#architecture-match-bridge-canonical)).
+
+```sql
+-- tournament_matches (shipped)
+ALTER TABLE tournament_matches
+  ADD COLUMN IF NOT EXISTS match_id uuid UNIQUE REFERENCES match(id) ON DELETE SET NULL;
+
+-- session_matches (V9)
+ALTER TABLE session_matches
+  ADD COLUMN IF NOT EXISTS match_id uuid UNIQUE REFERENCES match(id) ON DELETE SET NULL;
+```
+
+| Function                                               | Purpose                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `lt_create_match_for_tournament_match(p_tm_id)`        | Idempotent: create `match` + participants when both bracket slots filled |
+| `lt_create_match_for_session_match(p_sm_id)`           | Same for session sheet rows (V9)                                         |
+| `attach_match_to_tournament_slot(p_tm_id, p_match_id)` | Link verified casual match to bracket slot                               |
+| `lt_sync_tournament_match_from_verified_result()`      | Trigger: copy verified result, advance bracket                           |
+| `lt_sync_session_match_from_verified_result()`         | Trigger: copy verified result, queue ranking recalc (V9)                 |
+| `tournament_override_score(...)`                       | Organizer authoritative result (shipped)                                 |
+| `session_override_score(...)`                          | League equivalent (V9)                                                   |
+
+Player submissions **do not** write to `*_match_scores` in v1. Those tables remain for optional organizer-override audit trails.
+
 ## Enums
 
 > Sport identity is **not** an enum. Rallia stores sports in a `public.sport` table; every L&T entity uses `sport_id uuid REFERENCES sport(id)`. See [integrations.md §02 Sport Modes](./integrations.md#02-sport-modes) for the lookup pattern.
@@ -309,6 +347,9 @@ CREATE TABLE tournament_matches (
   court_id uuid REFERENCES court(id),
   played_at timestamptz,
 
+  -- Match bridge: casual match row for score entry (see Match bridge section)
+  match_id uuid UNIQUE REFERENCES match(id) ON DELETE SET NULL,
+
   -- Bracket plumbing (so generation is deterministic and frontend can render)
   next_match_id uuid REFERENCES tournament_matches(id) ON DELETE SET NULL,
   next_match_slot smallint CHECK (next_match_slot IN (1, 2)),
@@ -354,6 +395,14 @@ CREATE TABLE leagues (
   -- League-level capacity (from co-founder brief: "Limites/quotas: nb max de membres, liste d'attente activable")
   member_capacity integer,                     -- null = unlimited
   waitlist_enabled boolean NOT NULL DEFAULT false,
+
+  -- Rating / reputation gates (mirror tournaments; migration delta — see Schema deltas)
+  min_rating numeric(3,1),
+  max_rating numeric(3,1),
+  min_reputation smallint,
+  CONSTRAINT leagues_rating_range CHECK (
+    min_rating IS NULL OR max_rating IS NULL OR min_rating <= max_rating
+  ),
 
   status league_status NOT NULL DEFAULT 'active',
 
@@ -566,6 +615,9 @@ CREATE TABLE session_matches (
   scheduled_at timestamptz,
   played_at timestamptz,
 
+  -- Match bridge (V9 migration delta)
+  match_id uuid UNIQUE REFERENCES match(id) ON DELETE SET NULL,
+
   version integer NOT NULL DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -578,7 +630,7 @@ CREATE INDEX session_matches_status_idx ON session_matches(status);
 
 ### `session_match_scores`
 
-Score submissions; an organizer can override and the override is recorded as a new row with `validated_by = organizer_id`. The match's `score` column always reflects the most recent `validated` row.
+**Organizer override audit trail only in v1.** Player submissions go through the linked `match` row. Shape retained for override RPC inserts and future v2 parallel stack if needed.
 
 ```sql
 CREATE TABLE session_match_scores (
@@ -601,7 +653,7 @@ CREATE INDEX session_match_scores_match_idx ON session_match_scores(session_matc
 
 ### `tournament_match_scores`
 
-Identical shape to `session_match_scores`, with the FK pointing at `tournament_matches`.
+Same as `session_match_scores`: **organizer override audit only in v1.** Player path uses match bridge.
 
 ```sql
 CREATE TABLE tournament_match_scores (
@@ -685,20 +737,21 @@ All organizer-initiated mutations to bracket/sheet structure, score overrides, m
 
 ## Triggers
 
-| Trigger                                     | Table                                   | Behavior                                                                                                                                                                                                                                                                                               |
-| ------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tg_updated_at`                             | all tables with `updated_at`            | Sets `updated_at = now()` on every UPDATE                                                                                                                                                                                                                                                              |
-| `tg_tournaments_lock_bracket`               | `tournament_matches`                    | When any non-BYE match transitions from non-terminal → terminal (`completed`/`walkover`/`retired`), sets `tournaments.bracket_locked_at = now()` if null. Round-1 BYE walkovers established at generation time do NOT trigger the lock (they have `played_at IS NULL` and one `playerX_is_bye = true`) |
-| `tg_tournaments_advance_winner`             | `tournament_matches`                    | When status → `completed/walkover/retired`, populates `next_match_id`'s slot from `winner_registration_id`                                                                                                                                                                                             |
-| `tg_tournaments_recompute_status`           | `tournament_matches`                    | When the final-round match completes, sets `tournaments.status = 'completed'`                                                                                                                                                                                                                          |
-| `tg_session_presence_promote_waitlist`      | `session_presence`                      | When a `confirmed` row → `declined`/`pending`, promotes the next `waitlisted` row (lowest `waitlist_position`)                                                                                                                                                                                         |
-| `tg_sessions_recompute_status`              | `session_matches`                       | When all matches in a session reach a terminal state and at least one is non-cancelled, sets `sessions.status = 'completed'` and queues `recalc_season_ranking(season_id)`                                                                                                                             |
-| `tg_seasons_block_close_with_open_sessions` | `seasons`                               | Rejects UPDATE to `status = 'closed'` if any child session is in `published`/`in_progress`                                                                                                                                                                                                             |
-| `tg_seasons_freeze_rules_on_open`           | `seasons`                               | When `status` transitions DRAFT → OPEN, copies `leagues.default_rules` into `seasons.rules` and sets `rules_locked_at` if not already set                                                                                                                                                              |
-| `tg_score_validate_outcome`                 | `*_match_scores`                        | Re-runs server-side score validation on INSERT; sets `winner` derivation                                                                                                                                                                                                                               |
-| `tg_emit_reputation_events`                 | `tournament_matches`, `session_matches` | When a match terminates, emits reputation events to `reputation_event` (no-show, late-cancel, on-time, completion, ratings)                                                                                                                                                                            |
-| `tg_emit_audit`                             | many                                    | Generic audit emitter installed per-table for organizer-only mutations                                                                                                                                                                                                                                 |
-| `tg_optimistic_lock`                        | all tables with `version`               | BEFORE UPDATE: increments `version`; if client supplied `version_was` (via SECURITY DEFINER RPC), enforces match                                                                                                                                                                                       |
+| Trigger                                         | Table                            | Behavior                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tg_updated_at`                                 | all tables with `updated_at`     | Sets `updated_at = now()` on every UPDATE                                                                                                                                                                                                                                                              |
+| `tg_tournaments_lock_bracket`                   | `tournament_matches`             | When any non-BYE match transitions from non-terminal → terminal (`completed`/`walkover`/`retired`), sets `tournaments.bracket_locked_at = now()` if null. Round-1 BYE walkovers established at generation time do NOT trigger the lock (they have `played_at IS NULL` and one `playerX_is_bye = true`) |
+| `tg_tournaments_advance_winner`                 | `tournament_matches`             | When status → `completed/walkover/retired`, populates `next_match_id`'s slot from `winner_registration_id`                                                                                                                                                                                             |
+| `tg_tournaments_recompute_status`               | `tournament_matches`             | When the final-round match completes, sets `tournaments.status = 'completed'`                                                                                                                                                                                                                          |
+| `lt_sync_tournament_match_from_verified_result` | `match_result`                   | When linked tournament match's casual result verifies, copies score/winner and runs advance-winner logic (shipped with match bridge)                                                                                                                                                                   |
+| `lt_sync_session_match_from_verified_result`    | `match_result`                   | Same for session matches; queues `recalc_season_ranking` (V9)                                                                                                                                                                                                                                          |
+| `tg_session_presence_promote_waitlist`          | `session_presence`               | When a `confirmed` row → `declined`/`pending`, promotes the next `waitlisted` row (lowest `waitlist_position`)                                                                                                                                                                                         |
+| `tg_sessions_recompute_status`                  | `session_matches`                | When all matches in a session reach a terminal state and at least one is non-cancelled, sets `sessions.status = 'completed'` and queues `recalc_season_ranking(season_id)`                                                                                                                             |
+| `tg_seasons_block_close_with_open_sessions`     | `seasons`                        | Rejects UPDATE to `status = 'closed'` if any child session is in `published`/`in_progress`                                                                                                                                                                                                             |
+| `tg_seasons_freeze_rules_on_open`               | `seasons`                        | When `status` transitions DRAFT → OPEN, merges `leagues.default_rules` + draft `seasons.rules` overrides, sets `rules_locked_at`                                                                                                                                                                       |
+| `tg_emit_reputation_events`                     | `session_presence` (late cancel) | Session attendance penalties; match completion reputation flows from verified `match_result` via system 09                                                                                                                                                                                             |
+| `tg_emit_audit`                                 | many                             | Generic audit emitter installed per-table for organizer-only mutations                                                                                                                                                                                                                                 |
+| `tg_optimistic_lock`                            | all tables with `version`        | BEFORE UPDATE: increments `version`; if client supplied `version_was` (via SECURITY DEFINER RPC), enforces match                                                                                                                                                                                       |
 
 ## RPC surface
 
@@ -743,10 +796,9 @@ See [permissions.md §Sport-scope enforcement](./permissions.md#sport-scope-enfo
 | `tournament_reset_match(match_id, version_was)`                                   | `tournament_matches[]`     | Resets a terminal match back to `pending`; recursively resets downstream advancements               |
 | `tournament_reschedule(tid, new_start, new_end, version_was)`                     | `tournaments`              | Shift dates; pending matches' `scheduled_at` shifted by same delta                                  |
 | `tournament_reschedule_match(match_id, scheduled_at, court_id, version_was)`      | `tournament_matches`       | Single-match reschedule with court-conflict validation                                              |
-| `tournament_submit_match_score(match_id, score, retired_team, walkover_team)`     | `tournament_match_scores`  | Player score submission                                                                             |
-| `tournament_validate_score(score_id, accept boolean, reason)`                     | `tournament_match_scores`  | Organizer validation                                                                                |
-| `tournament_override_score(match_id, score, winner_team, reason)`                 | `tournament_match_scores`  | Organizer-direct score override (writes a `validated` row)                                          |
-| `tournament_dispute_score(match_id, reason)`                                      | `tournament_matches`       | Player flags score; status → `disputed`                                                             |
+| `lt_create_match_for_tournament_match(p_tm_id)`                                   | uuid                       | Create/link casual `match` for playable bracket row (match bridge)                                  |
+| `attach_match_to_tournament_slot(p_tm_id, p_match_id)`                            | `tournament_matches`       | Attach verified casual match to bracket slot                                                        |
+| `tournament_override_score(p_tm_id, p_winner_registration_id, p_score, p_reason)` | `tournament_matches`       | Organizer-direct score override                                                                     |
 | `tournament_add_co_organizer(tid, user_id)`                                       | `tournament_co_organizers` | Organizer-only                                                                                      |
 | `tournament_remove_co_organizer(tid, user_id)`                                    | `tournament_co_organizers` | Organizer-only                                                                                      |
 | `tournament_transfer_organizer(tid, new_user_id)`                                 | `tournaments`              | Organizer-only; new owner must be an existing co-organizer                                          |
@@ -768,7 +820,7 @@ See [permissions.md §Sport-scope enforcement](./permissions.md#sport-scope-enfo
 | `league_add_co_organizer(league_id, user_id)`                                     | `league_members`           | Organizer-only; sets role `co_organizer`                                                            |
 | `league_remove_co_organizer(league_id, user_id)`                                  | `league_members`           | Organizer-only; demotes to `member`                                                                 |
 | `league_transfer_organizer(league_id, new_user_id)`                               | `leagues`                  | Organizer-only; recipient must be an existing co-organizer                                          |
-| `season_create(league_id, name, start, end, rules_override)`                      | `seasons`                  | Create draft season                                                                                 |
+| `season_create(league_id, name, start, end, rules_override jsonb)`                | `seasons`                  | Create draft season; optional `rules_override` merged into `seasons.rules` at OPEN                  |
 | `season_open(season_id, version_was)`                                             | `seasons`                  | DRAFT → OPEN; freezes rules                                                                         |
 | `season_close(season_id, version_was)`                                            | `seasons`                  | OPEN → CLOSED; snapshots final standings                                                            |
 | `session_create(season_id, payload)`                                              | `sessions`                 | Create draft session                                                                                |
@@ -783,9 +835,9 @@ See [permissions.md §Sport-scope enforcement](./permissions.md#sport-scope-enfo
 | `session_remove_match(match_id, version_was)`                                     | `session_matches`          | Delete a pending match                                                                              |
 | `session_set_match_format(match_id, format)`                                      | `session_matches`          | Per-match format override                                                                           |
 | `session_lock_match(match_id, locked boolean)`                                    | `session_matches`          | Toggle `locked`                                                                                     |
-| `session_submit_match_score(...)`                                                 | `session_match_scores`     | Same shape as tournament                                                                            |
-| `session_validate_score(...)`                                                     | `session_match_scores`     | Same shape                                                                                          |
-| `session_override_score(match_id, score, winner_team, reason)`                    | `session_match_scores`     | Organizer-direct score override                                                                     |
+| `lt_create_match_for_session_match(p_sm_id)`                                      | uuid                       | Create/link casual `match` for playable session row (V9)                                            |
+| `attach_match_to_session_slot(p_sm_id, p_match_id)`                               | `session_matches`          | Attach verified casual match (V9)                                                                   |
+| `session_override_score(p_sm_id, p_winner_team, p_score, p_reason)`               | `session_matches`          | Organizer-direct override (V9)                                                                      |
 | `session_award_bonus(match_id, user_id, kind, points)`                            | `season_rankings`          | Manual bonus (e.g., fair-play) when `enableBonuses = true`; writes audit row                        |
 | `session_complete(session_id, version_was)`                                       | `sessions`                 | Force-mark all-pending matches as cancelled and finalize                                            |
 | `session_cancel(session_id, reason, version_was)`                                 | `sessions`                 | Cancel session (rare; sheet may be discarded)                                                       |

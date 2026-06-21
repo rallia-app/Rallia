@@ -57,7 +57,6 @@ import {
 } from '@rallia/shared-services';
 import type { JustForYouItem } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   PENDING_REFERRAL_KEY,
@@ -180,14 +179,7 @@ const QuickNavButton: React.FC<{
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <LinearGradient
-        colors={[accent[300], accent[400], accent[500]]}
-        locations={[0, 0.55, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={quickNavStyles.gradient}
-      >
-        <View style={quickNavStyles.topHighlight} />
+      <View style={quickNavStyles.inner}>
         <View style={quickNavStyles.iconCircle}>{icon('#ffffff')}</View>
         <View style={quickNavStyles.labelBlock}>
           <Text
@@ -209,7 +201,7 @@ const QuickNavButton: React.FC<{
             {lineTwo}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -226,27 +218,22 @@ const quickNavStyles = StyleSheet.create({
     width: 190,
     borderRadius: radiusPixels['2xl'],
   },
-  gradient: {
+  inner: {
     flexDirection: 'row',
     borderRadius: radiusPixels['2xl'],
+    borderWidth: 1.5,
+    borderColor: accent[500],
+    backgroundColor: accent[400],
     alignItems: 'center',
     gap: spacingPixels[1],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[5],
     overflow: 'hidden',
   },
-  topHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-  },
   iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.22)',
@@ -294,8 +281,8 @@ const Home = () => {
 
   // Use custom hooks for auth, profile, and overlay context
   const { session, loading: authLoading } = useAuth();
-  const { profile } = useProfile();
   const { isAdmin } = useAdminStatus();
+  const { profile } = useProfile();
   const { setOnHomeScreen } = useOverlay();
   const { openSheet, openSheetForMatchCreation } = useActionsSheet();
   const { subscriptionStatus } = useSubscription();
@@ -1560,13 +1547,6 @@ const Home = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={quickNavStyles.row}
       >
-        {isOnboarded && (
-          <QuickNavButton
-            icon={color => <Ionicons name="sparkles" size={24} color={color} />}
-            label={t('home.quickNav.browseSuggestions')}
-            onPress={() => SheetManager.show('match-suggestions')}
-          />
-        )}
         <QuickNavButton
           icon={color => <SportIconComponent width={24} height={24} fill={color} />}
           label={t('home.quickNav.findGame')}
@@ -1576,23 +1556,22 @@ const Home = () => {
           }}
         />
         <QuickNavButton
-          icon={color => <Ionicons name="people-outline" size={24} color={color} />}
-          label={t('home.quickNav.joinCommunity')}
-          onPress={() =>
-            appNavigation.navigate('Main', {
-              screen: 'Community',
-              params: {
-                screen: 'Communities',
-                initial: false,
-              },
-            } as never)
-          }
+          icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+          label={t('home.quickNav.tournaments')}
+          onPress={() => appNavigation.navigate('Tournaments')}
         />
         {isAdmin && (
           <QuickNavButton
-            icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-            label={t('home.quickNav.tournaments')}
-            onPress={() => appNavigation.navigate('Tournaments')}
+            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+            label={t('home.quickNav.leagues')}
+            onPress={() => appNavigation.navigate('Leagues')}
+          />
+        )}
+        {isOnboarded && (
+          <QuickNavButton
+            icon={color => <Ionicons name="sparkles" size={24} color={color} />}
+            label={t('home.quickNav.browseSuggestions')}
+            onPress={() => SheetManager.show('match-suggestions')}
           />
         )}
       </ScrollView>
@@ -1686,7 +1665,6 @@ const Home = () => {
   }, [
     session,
     isOnboarded,
-    isAdmin,
     showNearbySection,
     colors.card,
     colors.border,
@@ -1729,6 +1707,8 @@ const Home = () => {
     weeklyCheckinCooldownActive,
     handleAvailabilityBannerAction,
     handleDismissAvailabilityBanner,
+    isAdmin,
+    navigation,
   ]);
 
   // No more full-page skeleton. Each section (My Matches, Just for you) owns

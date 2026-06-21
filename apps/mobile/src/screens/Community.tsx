@@ -2,19 +2,20 @@
  * Community Screen
  *
  * Main community hub with:
- * - Quick action buttons: Groups, Communities
+ * - Quick action buttons: Groups, Communities, Tournaments, Leagues (horizontal carousel)
  * - Player directory for finding and connecting with players
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { useAdminStatus } from '@rallia/shared-hooks';
+import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
@@ -43,8 +44,9 @@ interface ActionButton {
 }
 
 const Community = () => {
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
   const { session } = useAuth();
+  const { isAdmin } = useAdminStatus();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
   const { t } = useTranslation();
@@ -77,24 +79,55 @@ const Community = () => {
     navigation.navigate('Communities');
   }, [navigation]);
 
+  const handleTournaments = useCallback(() => {
+    if (!guardAction()) return;
+    lightHaptic();
+    navigation.navigate('Tournaments');
+  }, [navigation, guardAction]);
+
+  const handleLeagues = useCallback(() => {
+    if (!guardAction()) return;
+    lightHaptic();
+    navigation.navigate('Leagues');
+  }, [navigation, guardAction]);
+
   // Action buttons configuration
-  const actionButtons: ActionButton[] = useMemo(
-    () => [
-      {
-        id: 'groups',
-        icon: 'people-outline',
-        label: t('community.groups'),
-        onPress: handleGroups,
-      },
+  const actionButtons: ActionButton[] = useMemo(() => {
+    const buttons: ActionButton[] = [];
+
+    buttons.push({
+      id: 'tournaments',
+      icon: 'trophy-outline',
+      label: t('community.tournaments'),
+      onPress: handleTournaments,
+    });
+
+    if (isAdmin) {
+      buttons.push({
+        id: 'leagues',
+        icon: 'ribbon-outline',
+        label: t('community.leagues'),
+        onPress: handleLeagues,
+      });
+    }
+
+    buttons.push(
       {
         id: 'communities',
         icon: 'globe-outline',
         label: t('community.communities'),
         onPress: handleCommunities,
       },
-    ],
-    [handleGroups, handleCommunities, t]
-  );
+      {
+        id: 'groups',
+        icon: 'people-outline',
+        label: t('community.groups'),
+        onPress: handleGroups,
+      }
+    );
+
+    return buttons;
+  }, [handleGroups, handleCommunities, handleTournaments, handleLeagues, isAdmin, t]);
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handlePlayerPress = useCallback(
@@ -110,43 +143,39 @@ const Community = () => {
   const listHeader = useMemo(
     () => (
       <>
-        <View style={styles.actionButtonsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.actionButtonsRow}
+        >
           {actionButtons.map(button => (
             <TouchableOpacity
               key={button.id}
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: isDark ? primary[950] : primary[50],
-                  borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
-                },
-              ]}
+              style={styles.actionButton}
               onPress={button.onPress}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={button.label}
             >
-              <View
-                style={[
-                  styles.actionButtonIcon,
-                  { backgroundColor: isDark ? `${primary[400]}20` : `${primary[500]}15` },
-                ]}
-              >
-                <Ionicons
-                  name={button.icon}
-                  size={28}
-                  color={isDark ? primary[400] : primary[500]}
-                />
+              <View style={styles.actionButtonInner}>
+                <View style={styles.actionButtonIcon}>
+                  <Ionicons name={button.icon} size={26} color="#ffffff" />
+                </View>
+                <View style={styles.actionButtonLabelBlock}>
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color="#ffffff"
+                    style={styles.actionButtonLabel}
+                    numberOfLines={1}
+                  >
+                    {button.label}
+                  </Text>
+                </View>
               </View>
-              <Text
-                size="base"
-                weight="semibold"
-                color={isDark ? primary[300] : primary[600]}
-                style={styles.actionButtonLabel}
-              >
-                {button.label}
-              </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
         <View style={styles.sectionHeader}>
           <Text size="xl" weight="bold" color={colors.text} style={styles.sectionTitle}>
@@ -184,22 +213,36 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
   },
   actionButton: {
-    flex: 1,
-    aspectRatio: 1.5,
-    borderRadius: radiusPixels.xl,
+    width: 132,
+    borderRadius: radiusPixels['2xl'],
+  },
+  actionButtonInner: {
+    flexDirection: 'column',
+    borderRadius: radiusPixels['2xl'],
     borderWidth: 1.5,
+    borderColor: accent[500],
+    backgroundColor: accent[400],
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacingPixels[2],
     paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[3],
+    overflow: 'hidden',
   },
   actionButtonIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    flexShrink: 0,
+  },
+  actionButtonLabelBlock: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
   },
   actionButtonLabel: {
     textAlign: 'center',

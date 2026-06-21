@@ -2,6 +2,39 @@
 
 > Shared rules for entering, validating, and disputing match scores in both tournaments and leagues.
 
+## Architecture: match bridge (canonical)
+
+Tournament and league matches **do not** use a parallel score-submission stack. They reuse the casual-match loop from [system 09](../09-matches/README.md):
+
+```
+tournament_matches / session_matches
+        │ match_id (nullable FK)
+        ▼
+   public.match  +  match_participant  +  match_result
+        │
+        ▼
+RegisterMatchScoreSheet → submit_match_result_for_match
+                       → confirm_match_score / propose_rebuttal_score
+```
+
+| Path                    | Who          | How                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Play & score**        | Participants | When a slot becomes playable, `lt_create_match_for_*_match` creates (or reuses) a standalone `match` row. Players score through the existing match UI. When `match_result.is_verified` flips true, a trigger copies the verified result onto the L&T row and runs downstream logic (bracket advance or ranking recalc queue). |
+| **Link existing match** | Participants | `attach_match_to_tournament_slot` links an already-verified casual match whose participants match the bracket slot. Same trigger path.                                                                                                                                                                                        |
+| **Organizer override**  | Organizer    | `tournament_override_score` / `session_override_score` writes the authoritative result directly on the L&T row (and syncs or creates the linked `match` when needed). Used when players forget to submit or dispute resolution is needed.                                                                                     |
+
+Implications:
+
+- Player disputes and mutual confirmation follow [match lifecycle](../09-matches/match-lifecycle.md) rules on the linked `match` row — not `*_match_scores` rows.
+- `tournament_match_scores` and `session_match_scores` exist in schema for **organizer overrides and audit** only in v1. They are **not** the player submission path.
+- Reputation events and rating evolution fire from the verified `match_result`, same as casual play ([integrations.md §04–05](./integrations.md)).
+
+See [data-model.md § Match bridge](./data-model.md#match-bridge) for DDL, RPCs, and triggers.
+
+### Deferred: parallel L&T score RPCs (not v1)
+
+An earlier draft specified `tournament_submit_match_score`, `*_validate_score`, and `*_dispute_score` writing to `*_match_scores`. That path is **not implemented** and is deferred unless product explicitly requires organizer-only validation without the casual-match flow.
+
 ## Score string canonical format
 
 A canonical "score string" is stored on `tournament_matches.score` and `session_matches.score`. The same parser produces a canonical string from any accepted input.
@@ -49,11 +82,13 @@ The chosen resolution is captured in the audit log alongside the original `INT` 
 
 ## Validators
 
-All validators live in `shared-utils/src/score/` and are pure functions. The same validator runs:
+Score validation for **player-entered** results runs through the existing casual-match pipeline (`packages/shared-services/src/matches/matchScoring.ts` and the match RPCs). The canonical string rules in this file define what gets **stored** on `match_result` / copied to `tournament_matches.score` / `session_matches.score`.
 
-1. Client-side, before submission, to give immediate feedback.
-2. Server-side in the `*_submit_match_score` RPC.
-3. In the `tg_score_validate_outcome` trigger as a backstop.
+A dedicated `shared-utils/src/score/` module (pure functions, usable client-side for preview) is **optional follow-up** — not a blocker for v1. When extracted, the same rules run:
+
+1. Client-side in `RegisterMatchScoreSheet` / organizer override sheets for immediate feedback.
+2. Server-side in match result RPCs (already partially enforced today).
+3. In `lt_sync_*_match_from_verified_result` when copying onto L&T rows.
 
 ### Tennis validator pseudocode
 
@@ -142,60 +177,62 @@ function validatePickleballScore(
 }
 ```
 
-## Submission flow
+## Player submission flow (via match bridge)
 
 ```mermaid
 sequenceDiagram
     participant P as Player
-    participant API as *_submit_match_score
-    participant DB as Postgres
+    participant L&T as lt_create_match_for_*_match
+    participant M as match / match_result RPCs
+    participant T as lt_sync trigger
 
-    P->>API: submit(matchId, score, retired_team?, walkover_team?)
-    API->>DB: validate caller is participant
-    API->>API: validate score format & rules
-    alt validation fails
-        API-->>P: SCORE_FORMAT_INVALID / SCORE_RULES_INVALID
-    else
-        API->>DB: INSERT *_match_scores (status='pending_validation')
-        API->>DB: UPDATE *_matches set status='in_progress' if pending
-        API-->>P: PENDING_VALIDATION
-    end
-    Note over DB: Notification fired to organizer for review
+    L&T->>L&T: Create match row when slot playable
+    P->>M: submit_match_result_for_match
+    M->>M: Opponent confirms or rebuttal
+    M->>M: match_result.is_verified = true
+    M->>T: AFTER trigger on match_result
+    T->>T: Copy score + winner onto L&T row
+    T->>T: Advance bracket OR queue ranking recalc
 ```
 
-A second submission by the **opponent** with a _matching_ score automatically validates without organizer review (mutual confirmation):
+Mutual confirmation and rebuttal behave exactly like casual matches — see [match lifecycle](../09-matches/match-lifecycle.md).
 
-- If both submitted scores have the same canonical form → both rows transition to `validated`, the match's `score`, `winner_team`, and `status='completed'` are populated, and the organizer is notified for awareness only.
-- If they differ → both rows remain `pending_validation`, the match is flagged `disputed`, the organizer is alerted with both submissions side-by-side.
+Alternatively, participants may **link** an already-verified casual match to a tournament bracket slot (`attach_match_to_tournament_slot`). League sessions will expose the same pattern in V9.
 
-## Validation flow (organizer)
+## Organizer override flow
 
-`*_validate_score(score_id, accept boolean, reason?)`:
-
-- `accept = true`: row → `validated`. Match status set per the score (`completed`, `walkover`, `retired`). Other pending rows for the same match are auto-rejected with reason `SCORE_SUPERSEDED`.
-- `accept = false`: row → `rejected`, `rejection_reason` set. Player may resubmit; match remains in `in_progress`.
-
-Organizer can also override directly:
+When players do not submit, or after a match dispute stalls:
 
 ```sql
-SELECT *_override_score(match_id, score, winner_team, reason);
+SELECT tournament_override_score(p_tournament_match_id, p_winner_registration_id, p_score, p_reason);
+-- league equivalent (V9):
+SELECT session_override_score(p_session_match_id, p_winner_team, p_score, p_reason);
 ```
 
-This inserts a `score_validation_status = 'validated'` row with `submitted_by = validated_by = organizer_id`, sets the match's score and status, and writes an audit row. Used for "I watched the match, here's the result" — common when both players forget to submit.
+The override RPC:
+
+1. Validates caller is organizer/co-organizer.
+2. Writes canonical `score`, `winner_*`, and terminal `status` on the L&T row.
+3. Optionally inserts an audit row in `*_match_scores` (organizer-only trail).
+4. Runs bracket advance or queues `recalc_season_ranking` for leagues.
 
 ## Disputes
 
-A player who disagrees with the opponent's submission invokes `*_dispute_score(match_id, reason)`. The match's status flips to `disputed` and the organizer is alerted. Disputes are resolved by organizer override.
+Player disputes use the casual-match rebuttal flow on the linked `match` row. If unresolved, the organizer resolves via `*_override_score`. There is no separate `*_dispute_score` RPC in v1.
 
-## Score → ranking effect
+## Score → ranking / bracket effect
 
-The translation from a validated score to ranking points is in [ranking.md](./ranking.md#points-per-match).
+**Authoritative point rules** live in [ranking.md § Outcome matrix](./ranking.md#outcome-matrix-authoritative). This file only covers canonical score strings and statistics (`sets_won`, etc.).
 
-For BYE matches (already inserted with `status='walkover'`), no score is entered; ranking gets `pointLoss` (participation) per [ranking.md](./ranking.md#bye-treatment).
+Summary (league sessions only — tournaments advance bracket winners, no point table):
 
-For walkover (opponent no-show): winner gets `pointWin`, opponent gets `pointNoShow` (-5 default). A reputation event `match_no_show` (-50) is also emitted for the no-show player.
-
-For retirement: winner gets `pointWin`, retiring player gets `pointLoss` (participation, since they at least started). Reputation event `match_retired` (-3) emitted for the retiree (configurable in `reputation_config`).
+| Situation                                | Ranking points                                   | Reputation                 |
+| ---------------------------------------- | ------------------------------------------------ | -------------------------- |
+| BYE at sheet generation                  | `pointBye` to bye recipient                      | none                       |
+| Completed match                          | per [ranking.md](./ranking.md#points-per-match)  | `match_completed`          |
+| Walkover (played slot, opponent no-show) | `pointWalkoverWinner` / `pointWalkoverLoser`     | `match_no_show` on loser   |
+| Retirement                               | `pointRetirementWinner` / `pointRetirementLoser` | `match_retired` on retiree |
+| Session presence no-show (never played)  | `pointNoShow` / malus                            | `match_no_show`            |
 
 ## Sets won / sets lost on RET, W/O, DEF
 
@@ -232,14 +269,14 @@ The preview line shows the canonical string that will be submitted, plus the der
 
 ## Audit log
 
-Every score submission, validation, rejection, and override produces an audit row with:
+Organizer overrides and structural L&T mutations write to `leagues_tournaments_audit`. Verified casual-match results already audit through the match system. Override example:
 
 ```json
 {
   "scope": "session_match",
   "entity_id": "...",
-  "action": "submit_score" | "validate_score" | "reject_score" | "override_score" | "dispute_score",
+  "action": "override_score",
   "actor_id": "...",
-  "payload_after": { "score": "...", "winner_team": "a", "status": "..." }
+  "payload_after": { "score": "...", "winner_team": "a", "status": "completed" }
 }
 ```

@@ -29,6 +29,15 @@ The source brief in `_archive/SPEC_LEAGUES_TOURNAMENTS_V2.md` (and the upstream 
 
 Both choices simplify the data model and avoid a class of cross-cutting bugs at the cost of slightly more organizer setup. Documented here so future contributors don't reverse the decision without thinking through the implications.
 
+### Implementation alignment (2026-06)
+
+Tournament scoring ships via the **match bridge** to system 09 (see [score-entry.md § Architecture](./score-entry.md#architecture-match-bridge-canonical)). League sessions follow the same pattern in V9. The `*_submit_match_score` RPCs in early drafts are deferred.
+
+Pending schema deltas before league V6 (documented in [data-model.md § Schema deltas](./data-model.md#schema-deltas-from-f1)):
+
+- `leagues.min_rating`, `max_rating`, `min_reputation` (mirror tournaments)
+- `session_matches.match_id` (mirror `tournament_matches.match_id`)
+
 ## Document Structure
 
 | File                                             | Purpose                                                                                                     |

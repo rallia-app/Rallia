@@ -52,14 +52,36 @@ Every league carries `default_rules` (jsonb) and every season freezes a copy at 
   // Multiplier applied to points earned in each format. Default 1.0 = no weighting.
   // Example: { "singles": 1.0, "doubles": 0.8 } makes a doubles win count for 80% of a singles win.
   "formatWeights": { "singles": 1.0, "doubles": 1.0, "mixed_doubles": 1.0 },
+
+  // Pairing / seeding helpers (optional)
+  "defaultRatingForUnknown": 0,
 }
 ```
 
-The shape is validated by a JSON-schema in `supabase/functions/_shared/leagues-tournaments-schema.json`. RPCs reject malformed rules.
+The shape is validated at `season_open` (inline check in RPC for v1; optional JSON-schema in `supabase/functions/_shared/leagues-tournaments-schema.json` when added). RPCs reject malformed rules.
+
+## Outcome matrix (authoritative)
+
+Use this table everywhere points or reputation are assigned. [score-entry.md](./score-entry.md) and [match-sheet.md](./match-sheet.md) link here — do not duplicate with different defaults.
+
+| Situation                                     | Match row signal                        | Winner gets                 | Loser gets                           | Counts as win? | Reputation (loser/special)        |
+| --------------------------------------------- | --------------------------------------- | --------------------------- | ------------------------------------ | -------------- | --------------------------------- |
+| Regular completed match                       | `status = completed`                    | `pointWin` (+ bonuses v1.1) | `pointLoss`                          | yes / yes      | `match_completed` both            |
+| Retirement                                    | `status = retired`                      | `pointRetirementWinner`     | `pointRetirementLoser`               | yes / no       | `match_retired` on retiree        |
+| Walkover (match scheduled, opponent no-show)  | `status = walkover`, both teams slotted | `pointWalkoverWinner`       | `pointWalkoverLoser` (default **0**) | yes / no       | `match_no_show` on no-show player |
+| BYE (no opponent slotted at sheet gen)        | `status = walkover`, empty `team_b`     | `pointBye` (default **1**)  | —                                    | no             | none                              |
+| Presence no-show (confirmed but never played) | no match / cancelled match              | —                           | `pointNoShow` / `malusNoShow`        | no             | `match_no_show`                   |
+| Late decline (< 24h before session)           | n/a (presence row)                      | —                           | `malusLateWithdraw`                  | no             | `match_cancelled_late`            |
+| Drill match                                   | `is_drill = true`                       | 0                           | 0                                    | no             | none                              |
+| Cancelled match / session                     | `status = cancelled`                    | 0                           | 0                                    | no             | none                              |
+
+**BYE vs walkover:** BYE = odd player count at sheet generation, no opponent row. Walkover = opponent existed but failed to appear. They use different point keys (`pointBye` vs `pointWalkover*`).
+
+**Walkover vs presence no-show:** Walkover is decided at match time (organizer or W/O score on linked match). Presence no-show is a session-attendance penalty applied when a confirmed member never plays — configured via `pointNoShow` / `malusNoShow`, not `pointWalkoverLoser`.
 
 ## Points per match
 
-When a `session_match` reaches a terminal state, the recalc adds to each participant's `season_rankings` row:
+When a `session_match` reaches a terminal state, `recalc_season_ranking` applies points per the [Outcome matrix](./ranking.md#outcome-matrix-authoritative). This section expands the common cases:
 
 | Outcome                                | Winner side gets        | Loser side gets        | Reputation event             |
 | -------------------------------------- | ----------------------- | ---------------------- | ---------------------------- |

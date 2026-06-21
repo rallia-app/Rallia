@@ -3708,6 +3708,8 @@
     "createNetworkDescription": "Créez un groupe ou une communauté pour organiser des parties régulières",
     "createTournament": "Créer un tournoi",
     "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
+    "createLeague": "Créer une ligue",
+    "createLeagueDescription": "Organisez une ligue saisonnière avec des séances et un classement",
     "createEvent": "Créer un événement",
     "createEventDescription": "Organisez un tournoi ou une ligue et gérez les tableaux et horaires",
     "selectNetworkType": "Créer un réseau",
@@ -4054,6 +4056,303 @@
       "invitationsSentCount": "{count} invitation(s) envoyée(s)",
       "shareWithContacts": "Partager avec {count} contact(s)",
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
+    }
+  },
+  "leagueList": {
+    "title": "Ligues",
+    "myLeagues": "Mes ligues",
+    "loadError": "Impossible de charger les ligues",
+    "retry": "Réessayer",
+    "empty": "Aucune ligue publique pour l'instant",
+    "emptyDescription": "Revenez bientôt, ou créez la vôtre depuis le menu d'actions.",
+    "searchPlaceholder": "Rechercher des ligues...",
+    "discoverFilters": {
+      "joinMode": "Mode d'adhésion",
+      "allJoinModes": "Tous les modes",
+      "myRating": "Ma cote",
+      "reset": "Réinitialiser"
+    },
+    "emptySearch": {
+      "title": "Aucune ligue trouvée",
+      "description": "Essayez d'ajuster votre recherche ou vos filtres."
+    },
+    "sectionOpenJoin": "Ouverte",
+    "sectionApproval": "Approbation requise",
+    "sectionInviteOnly": "Sur invitation",
+    "roleOrganizer": "Organisateur",
+    "memberCount": "{count} membres",
+    "emptyMy": {
+      "title": "Aucune ligue pour l'instant",
+      "description": "Les ligues que vous rejoignez ou organisez apparaîtront ici. Créez-en une depuis le menu d'actions."
+    }
+  },
+  "leagueDetail": {
+    "title": "Ligue",
+    "loading": "Chargement de la ligue...",
+    "loadError": "Impossible de charger la ligue",
+    "retry": "Réessayer",
+    "notFound": "Ligue introuvable",
+    "notFoundDescription": "Cette ligue a peut-être été supprimée ou vous n'y avez pas accès.",
+    "joinSuccess": "Vous avez rejoint la ligue",
+    "joinPending": "Votre demande attend l'approbation de l'organisateur",
+    "membershipPending": "Votre adhésion est en attente d'approbation",
+    "memberActive": "Vous êtes membre actif",
+    "memberApproved": "Membre approuvé",
+    "seasonCreated": "Saison créée",
+    "seasonOpened": "La saison est maintenant ouverte",
+    "seasonClosed": "Saison fermée — le classement final est prêt",
+    "standings": {
+      "title": "Classement — {name}",
+      "player": "Joueur",
+      "wl": "V-D",
+      "pts": "Pts"
+    },
+    "unknownMember": "Joueur",
+    "noMembers": "Aucun membre actif",
+    "noSeasons": "Aucune saison",
+    "tabs": {
+      "overview": "Aperçu",
+      "members": "Membres",
+      "seasons": "Saisons",
+      "sessions": "Séances",
+      "details": "Détails"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "En pause",
+      "closed": "Fermée"
+    },
+    "hero": {
+      "membersCount": "{count} membres"
+    },
+    "labels": {
+      "visibility": "Visibilité",
+      "joinMode": "Mode d'adhésion",
+      "description": "Description",
+      "venue": "Lieu",
+      "ratingRange": "Plage de cote"
+    },
+    "dashboard": {
+      "organizedBy": "Organisée par {name}",
+      "steps": {
+        "setup": "Config.",
+        "season": "Saison",
+        "play": "Jeu",
+        "done": "Terminé"
+      },
+      "stats": {
+        "members": "Membres",
+        "seasons": "Saisons",
+        "currentSeason": "Saison",
+        "noSeason": "Aucune"
+      },
+      "pendingRequestsCta": {
+        "title": "Demandes d'adhésion en attente",
+        "description": "{count} joueurs attendent votre approbation",
+        "review": "Voir les demandes"
+      },
+      "pendingRequests": {
+        "title": "En attente ({count})",
+        "approveLabel": "Approuver {name}"
+      },
+      "members": {
+        "title": "Membres actifs"
+      },
+      "joinCta": {
+        "title": "Rejoindre cette ligue",
+        "description": "Demandez votre adhésion et participez aux saisons"
+      },
+      "createSeasonCta": {
+        "title": "Créez votre première saison",
+        "description": "Les saisons organisent les périodes de jeu et le classement",
+        "button": "Créer une saison"
+      },
+      "openSeasonCta": {
+        "title": "Ouvrir {name}",
+        "description": "Ouvrir une saison permet aux membres de s'inscrire et aux sessions de commencer"
+      }
+    },
+    "sections": {
+      "pending": "En attente d'approbation",
+      "members": "Membres",
+      "seasons": "Saisons"
+    },
+    "seasonStatus": {
+      "draft": "Brouillon",
+      "open": "Ouverte",
+      "closed": "Fermée"
+    },
+    "sessionStatus": {
+      "draft": "Brouillon",
+      "published": "Publiée",
+      "inProgress": "En cours",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "sessions": {
+      "title": "Séances",
+      "createTitle": "Planifier une séance",
+      "needOpenSeason": "Ouvre une saison avant de planifier des séances.",
+      "empty": "Aucune séance planifiée",
+      "namePlaceholder": "p. ex., Mardi soir",
+      "date": "Date",
+      "time": "Heure",
+      "capacityPlaceholder": "Capacité (optionnel)",
+      "submit": "Créer la séance",
+      "creating": "Création...",
+      "publish": "Publier",
+      "created": "Séance créée",
+      "published": "Séance publiée",
+      "validation": {
+        "nameRequired": "Le nom de la séance est requis",
+        "future": "Choisis une date et une heure à venir"
+      }
+    },
+    "values": {
+      "private": "Privée",
+      "public": "Publique",
+      "community": "Communauté",
+      "open": "Ouverte",
+      "approval": "Approbation requise",
+      "inviteOnly": "Sur invitation"
+    },
+    "actions": {
+      "join": "Rejoindre la ligue",
+      "joining": "Adhésion...",
+      "approve": "Approuver",
+      "openSeason": "Ouvrir la saison",
+      "openingSeason": "Ouverture...",
+      "closeSeason": "Fermer la saison",
+      "closingSeason": "Fermeture..."
+    },
+    "createSeason": {
+      "title": "Créer une saison",
+      "namePlaceholder": "p. ex., Été 2026",
+      "startDate": "Début",
+      "endDate": "Fin",
+      "submit": "Créer la saison",
+      "creating": "Création..."
+    },
+    "validation": {
+      "seasonNameRequired": "Le nom de la saison est requis",
+      "endBeforeStart": "La date de fin doit être égale ou postérieure à la date de début"
+    },
+    "errors": {
+      "generic": "Une erreur s'est produite. Réessayez."
+    }
+  },
+  "sessionDetail": {
+    "title": "Séance",
+    "loadError": "Impossible de charger la séance",
+    "retry": "Réessayer",
+    "unknownMember": "Joueur",
+    "confirmedCount": "{count} confirmés",
+    "confirmedOfCapacity": "{count}/{capacity} confirmés",
+    "confirmBy": "Confirme avant le {date}",
+    "status": {
+      "draft": "Brouillon",
+      "published": "Publiée",
+      "inProgress": "En cours",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "cta": {
+      "title": "Tu embarques?",
+      "confirmedTitle": "Ta place est confirmée",
+      "waitlistedTitle": "Tu es sur la liste d'attente",
+      "declinedTitle": "Tu as décliné — tu changes d'idée?",
+      "confirm": "J'embarque",
+      "decline": "Pas dispo"
+    },
+    "roster": {
+      "confirmed": "Confirmés",
+      "waitlisted": "Liste d'attente",
+      "pending": "Sans réponse",
+      "declined": "Déclinés"
+    },
+    "actions": {
+      "publish": "Publier la séance",
+      "publishing": "Publication...",
+      "cancel": "Annuler la séance",
+      "cancelling": "Annulation..."
+    },
+    "toasts": {
+      "confirmed": "Tu embarques 🙌",
+      "waitlisted": "Tu es sur la liste d'attente",
+      "declined": "Noté comme pas dispo",
+      "published": "Séance publiée",
+      "cancelled": "Séance annulée"
+    },
+    "sheet": {
+      "title": "Feuille de match",
+      "empty": "Aucune feuille de match générée",
+      "generate": "Générer la feuille",
+      "regenerate": "Régénérer la feuille",
+      "generating": "Génération...",
+      "ready": "Feuille de match prête 🙌",
+      "round": "Ronde {n}",
+      "vs": "vs",
+      "bye": "Bye : {names}",
+      "lock": "Verrouiller la partie",
+      "unlock": "Déverrouiller la partie"
+    },
+    "score": {
+      "title": "Entrer le pointage",
+      "winnerPrompt": "Qui a gagné?",
+      "scorePlaceholder": "Pointage (p. ex. 6-4 6-2)",
+      "enter": "Entrer le pointage",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "cancel": "Annuler",
+      "saved": "Pointage enregistré 🙌",
+      "played": "Jouée"
+    },
+    "errors": {
+      "generic": "Une erreur s'est produite. Réessayez."
+    }
+  },
+  "leagueCreation": {
+    "title": "Créer une ligue",
+    "step": "Étape {current} sur {total}",
+    "stepNames": {
+      "details": "Détails",
+      "visibility": "Visibilité"
+    },
+    "step1Title": "Détails",
+    "step1Description": "Nommez votre ligue et ajoutez une description (optionnel)",
+    "visibilityStepTitle": "Visibilité",
+    "visibilityStepDescription": "Qui peut trouver et rejoindre votre ligue?",
+    "next": "Suivant",
+    "createLeague": "Créer la ligue",
+    "creating": "Création...",
+    "success": "Ligue créée!",
+    "successDescription": "Invitez des joueurs et créez votre première saison quand vous serez prêt.",
+    "viewLeague": "Voir la ligue",
+    "createAnother": "Créer une autre",
+    "fields": {
+      "name": "Nom",
+      "namePlaceholder": "p. ex., Ligue d'été de Montréal",
+      "description": "Description",
+      "descriptionPlaceholder": "Décrivez la ligue (optionnel)",
+      "visibility": "Visibilité",
+      "visibilityPrivate": "Privée",
+      "visibilityPrivateDescription": "Seules les personnes invitées peuvent trouver cette ligue",
+      "visibilityPublic": "Publique",
+      "visibilityPublicDescription": "Tous les joueurs de votre sport peuvent la trouver et demander à rejoindre",
+      "joinMode": "Mode d'adhésion",
+      "joinModeOpen": "Ouverte",
+      "joinModeOpenDescription": "Les joueurs rejoignent immédiatement",
+      "joinModeApproval": "Approbation",
+      "joinModeApprovalDescription": "Vous approuvez chaque demande"
+    },
+    "validation": {
+      "nameRequired": "Le nom de la ligue est requis",
+      "nameTooLong": "Le nom doit contenir 100 caractères ou moins"
+    },
+    "errors": {
+      "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",
+      "rateLimited": "Vous pouvez créer jusqu'à 5 ligues par jour",
+      "generic": "Impossible de créer la ligue. Réessayez."
     }
   },
   "tournamentList": {
@@ -4520,7 +4819,8 @@
       "bookCourt": "Réserver un terrain",
       "findGame": "Trouver une partie",
       "browseSuggestions": "Découvrir mes suggestions",
-      "tournaments": "Rejoindre un tournoi"
+      "tournaments": "Rejoindre un tournoi",
+      "leagues": "Rejoindre une ligue"
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
@@ -9877,6 +10177,149 @@
       "qrHint": "Ouvrez Rallia sur votre téléphone pour rejoindre cette communauté."
     }
   },
+  "webJoin": {
+    "pageTitle": "Rejoindre une partie de {sport} sur Rallia",
+    "notFound": "Partie introuvable",
+    "progress": "Création du profil",
+    "continue": "Continuer",
+    "back": "Retour",
+    "finish": "Rejoindre la partie",
+    "finishRequest": "Demander à rejoindre",
+    "finishWaitlist": "Rejoindre la liste d'attente",
+    "stepCounter": "Étape {current} sur {total}",
+    "steps": {
+      "account": "Compte",
+      "profile": "Profil",
+      "level": "Niveau",
+      "location": "Secteur",
+      "preferences": "Préférences"
+    },
+    "auth": {
+      "title": "Connectez-vous pour rejoindre",
+      "description": "Créez votre compte ou connectez-vous pour rejoindre cette partie.",
+      "requestTitle": "Connectez-vous pour demander",
+      "requestDescription": "Créez votre compte ou connectez-vous pour demander une place. L'hôte examinera votre demande.",
+      "google": "Continuer avec Google",
+      "orEmail": "ou",
+      "email": "Courriel",
+      "emailPlaceholder": "vous@exemple.com",
+      "otp": "Code de vérification",
+      "otpHint": "Entrez le code à 6 chiffres envoyé à {email}",
+      "continue": "Envoyer le code",
+      "verify": "Vérifier",
+      "resend": "Renvoyer le code",
+      "changeEmail": "Utiliser un autre courriel"
+    },
+    "review": {
+      "title": "Prêt à rejoindre?",
+      "description": "Vous êtes connecté et votre profil est prêt. Confirmez pour rejoindre cette partie.",
+      "cta": "Rejoindre cette partie",
+      "requestTitle": "Prêt à demander?",
+      "requestDescription": "L'hôte approuve les joueurs avant qu'ils rejoignent. Envoyez une demande et nous vous aviserons de sa réponse.",
+      "requestCta": "Demander à rejoindre",
+      "waitlistCta": "Rejoindre la liste d'attente"
+    },
+    "profile": {
+      "vs": "VS",
+      "matchup": "La formation",
+      "you": "Vous",
+      "addToCalendar": "Ajouter au calendrier",
+      "openDirections": "Itinéraire",
+      "startsToday": "Commence aujourd'hui",
+      "startsTomorrow": "Commence demain",
+      "startsInDays": "Dans {count, plural, one {1 jour} other {# jours}}",
+      "startedAlready": "En cours"
+    },
+    "personal": {
+      "title": "À propos de vous",
+      "description": "Quelques infos pour que les autres joueurs sachent avec qui ils jouent.",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "birthDate": "Date de naissance",
+      "gender": "Genre",
+      "genderOptions": {
+        "male": "Homme",
+        "female": "Femme",
+        "other": "Autre"
+      }
+    },
+    "rating": {
+      "title": "Votre niveau en {sport}",
+      "description": "Choisissez le niveau qui vous décrit le mieux. Vous pourrez le modifier plus tard dans l'app."
+    },
+    "location": {
+      "title": "Où jouez-vous?",
+      "description": "Votre code postal nous aide à trouver des parties près de chez vous.",
+      "postalCode": "Code postal",
+      "geocoding": "Recherche de votre secteur...",
+      "detected": "Secteur confirmé"
+    },
+    "preferences": {
+      "title": "Préférences de jeu",
+      "description": "Presque fini — encore quelques détails.",
+      "playingHand": "Main dominante",
+      "matchType": "Type de partie",
+      "handOptions": {
+        "right": "Droite",
+        "left": "Gauche",
+        "both": "Les deux"
+      },
+      "matchTypeOptions": {
+        "casual": "Loisir",
+        "competitive": "Compétitif",
+        "both": "Les deux"
+      }
+    },
+    "success": {
+      "joinedTitle": "C'est confirmé!",
+      "joinedDescription": "Votre profil est prêt. Téléchargez l'app et connectez-vous avec le même compte pour discuter avec les autres joueurs, voir les détails de la partie et recevoir les notifications.",
+      "requestTitle": "Demande envoyée!",
+      "requestDescription": "Votre demande a été envoyée au créateur de la partie. Téléchargez l'app pour discuter avec les autres joueurs, suivre sa réponse et recevoir les notifications.",
+      "waitlistTitle": "Vous êtes sur la liste d'attente",
+      "waitlistDescription": "La partie est complète, mais vous êtes sur la liste d'attente. Téléchargez l'app pour discuter avec les autres joueurs, être avisé si une place se libère et suivre les mises à jour.",
+      "qrHint": "Scannez avec votre téléphone pour télécharger Rallia",
+      "chatCta": "Discuter avec les joueurs",
+      "chatLocked": "Le clavardage avec les autres joueurs s'ouvre une fois que vous êtes dans la partie.",
+      "leaveCta": "Quitter cette partie"
+    },
+    "left": {
+      "title": "Vous avez quitté la partie",
+      "description": "Vous ne faites plus partie de cette partie. Pour en rejoindre une autre, téléchargez l'application Rallia."
+    },
+    "errors": {
+      "authFailed": "La connexion a échoué. Veuillez réessayer.",
+      "requiredFields": "Veuillez remplir tous les champs obligatoires.",
+      "minimumAge": "Vous devez avoir au moins 18 ans pour utiliser cette application.",
+      "selectRating": "Veuillez sélectionner votre niveau.",
+      "invalidPostalCode": "Entrez un code postal valide.",
+      "ratingsLoadFailed": "Impossible de charger les niveaux. Actualisez la page.",
+      "submitFailed": "Une erreur est survenue. Veuillez réessayer.",
+      "genderMismatch": "Cette partie est réservée à des joueurs d'un autre genre, vous ne pouvez donc pas la rejoindre.",
+      "matchUnavailable": "Cette partie n'est plus disponible. Elle a peut-être été annulée ou a déjà commencé.",
+      "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
+      "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
+      "webJoinLimit": "Vous avez déjà rejoint une partie sur le web. Téléchargez l'application Rallia pour rejoindre d'autres parties et discuter avec les joueurs.",
+      "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici."
+    },
+    "chat": {
+      "title": "Clavardage de la partie",
+      "subtitle": "{count, plural, one {# joueur} other {# joueurs}}",
+      "back": "Retour à la partie",
+      "loadEarlier": "Voir les messages précédents",
+      "empty": "Aucun message pour l'instant. Lancez la conversation!",
+      "notReady": "Le clavardage s'ouvre dès qu'un autre joueur rejoint la partie. Revenez bientôt!",
+      "signInPrompt": "Connectez-vous et rejoignez la partie pour discuter avec les autres joueurs.",
+      "signInCta": "Aller à la partie",
+      "composerPlaceholder": "Écrivez un message…",
+      "send": "Envoyer",
+      "you": "Vous",
+      "rules": {
+        "title": "On garde ça amical",
+        "body": "Restez respectueux, gardez les messages en lien avec la partie et évitez de partager vos coordonnées personnelles tant que vous n'êtes pas à l'aise. Les messages peuvent être modérés.",
+        "accept": "Compris, on clavarde"
+      }
+    }
+  },
   "gamesPage": {
     "title": "Parties à venir",
     "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
@@ -9902,6 +10345,12 @@
     "allGames": "Toutes les parties",
     "myGames": "Mes parties",
     "copied": "Lien copié!",
+    "cardStatus": {
+      "joined": "Vous êtes inscrit",
+      "requested": "En attente d'approbation",
+      "waitlisted": "Sur la liste d'attente",
+      "invited": "Vous êtes invité"
+    },
     "emptyTitle": "Aucune partie à proximité",
     "emptyDescription": "Il n'y a pas de parties à venir dans votre secteur pour le moment. Revenez bientôt ou inscrivez-vous à la liste d'attente.",
     "emptyCta": "Rejoindre la liste d'attente",
@@ -9924,12 +10373,6 @@
       "title": "Rejoindre cette partie",
       "description": "Scannez le code QR avec votre téléphone pour télécharger Rallia et rejoindre cette partie.",
       "qrHint": "Ouvrez Rallia sur votre téléphone pour rejoindre cette partie."
-    },
-    "cardStatus": {
-      "joined": "Vous êtes inscrit",
-      "requested": "En attente d'approbation",
-      "waitlisted": "Sur la liste d'attente",
-      "invited": "Vous êtes invité"
     }
   },
   "matchPage": {
@@ -10755,149 +11198,6 @@
       "description": "Cette version de Rallia n'est plus prise en charge. Mets à jour vers la dernière version pour continuer à jouer.",
       "versionInfo": "Tu as la version {current} · la version {required} ou plus récente est requise",
       "cta": "Mettre à jour"
-    }
-  },
-  "webJoin": {
-    "pageTitle": "Rejoindre une partie de {sport} sur Rallia",
-    "notFound": "Partie introuvable",
-    "progress": "Création du profil",
-    "continue": "Continuer",
-    "back": "Retour",
-    "finish": "Rejoindre la partie",
-    "finishRequest": "Demander à rejoindre",
-    "finishWaitlist": "Rejoindre la liste d'attente",
-    "stepCounter": "Étape {current} sur {total}",
-    "steps": {
-      "account": "Compte",
-      "profile": "Profil",
-      "level": "Niveau",
-      "location": "Secteur",
-      "preferences": "Préférences"
-    },
-    "auth": {
-      "title": "Connectez-vous pour rejoindre",
-      "description": "Créez votre compte ou connectez-vous pour rejoindre cette partie.",
-      "requestTitle": "Connectez-vous pour demander",
-      "requestDescription": "Créez votre compte ou connectez-vous pour demander une place. L'hôte examinera votre demande.",
-      "google": "Continuer avec Google",
-      "orEmail": "ou",
-      "email": "Courriel",
-      "emailPlaceholder": "vous@exemple.com",
-      "otp": "Code de vérification",
-      "otpHint": "Entrez le code à 6 chiffres envoyé à {email}",
-      "continue": "Envoyer le code",
-      "verify": "Vérifier",
-      "resend": "Renvoyer le code",
-      "changeEmail": "Utiliser un autre courriel"
-    },
-    "review": {
-      "title": "Prêt à rejoindre?",
-      "description": "Vous êtes connecté et votre profil est prêt. Confirmez pour rejoindre cette partie.",
-      "cta": "Rejoindre cette partie",
-      "requestTitle": "Prêt à demander?",
-      "requestDescription": "L'hôte approuve les joueurs avant qu'ils rejoignent. Envoyez une demande et nous vous aviserons de sa réponse.",
-      "requestCta": "Demander à rejoindre",
-      "waitlistCta": "Rejoindre la liste d'attente"
-    },
-    "profile": {
-      "vs": "VS",
-      "matchup": "La formation",
-      "you": "Vous",
-      "addToCalendar": "Ajouter au calendrier",
-      "openDirections": "Itinéraire",
-      "startsToday": "Commence aujourd'hui",
-      "startsTomorrow": "Commence demain",
-      "startsInDays": "Dans {count, plural, one {1 jour} other {# jours}}",
-      "startedAlready": "En cours"
-    },
-    "personal": {
-      "title": "À propos de vous",
-      "description": "Quelques infos pour que les autres joueurs sachent avec qui ils jouent.",
-      "firstName": "Prénom",
-      "lastName": "Nom",
-      "birthDate": "Date de naissance",
-      "gender": "Genre",
-      "genderOptions": {
-        "male": "Homme",
-        "female": "Femme",
-        "other": "Autre"
-      }
-    },
-    "rating": {
-      "title": "Votre niveau en {sport}",
-      "description": "Choisissez le niveau qui vous décrit le mieux. Vous pourrez le modifier plus tard dans l'app."
-    },
-    "location": {
-      "title": "Où jouez-vous?",
-      "description": "Votre code postal nous aide à trouver des parties près de chez vous.",
-      "postalCode": "Code postal",
-      "geocoding": "Recherche de votre secteur...",
-      "detected": "Secteur confirmé"
-    },
-    "preferences": {
-      "title": "Préférences de jeu",
-      "description": "Presque fini — encore quelques détails.",
-      "playingHand": "Main dominante",
-      "matchType": "Type de partie",
-      "handOptions": {
-        "right": "Droite",
-        "left": "Gauche",
-        "both": "Les deux"
-      },
-      "matchTypeOptions": {
-        "casual": "Loisir",
-        "competitive": "Compétitif",
-        "both": "Les deux"
-      }
-    },
-    "success": {
-      "joinedTitle": "C'est confirmé!",
-      "joinedDescription": "Votre profil est prêt. Téléchargez l'app et connectez-vous avec le même compte pour discuter avec les autres joueurs, voir les détails de la partie et recevoir les notifications.",
-      "requestTitle": "Demande envoyée!",
-      "requestDescription": "Votre demande a été envoyée au créateur de la partie. Téléchargez l'app pour discuter avec les autres joueurs, suivre sa réponse et recevoir les notifications.",
-      "waitlistTitle": "Vous êtes sur la liste d'attente",
-      "waitlistDescription": "La partie est complète, mais vous êtes sur la liste d'attente. Téléchargez l'app pour discuter avec les autres joueurs, être avisé si une place se libère et suivre les mises à jour.",
-      "qrHint": "Scannez avec votre téléphone pour télécharger Rallia",
-      "chatCta": "Discuter avec les joueurs",
-      "chatLocked": "Le clavardage avec les autres joueurs s'ouvre une fois que vous êtes dans la partie.",
-      "leaveCta": "Quitter cette partie"
-    },
-    "left": {
-      "title": "Vous avez quitté la partie",
-      "description": "Vous ne faites plus partie de cette partie. Pour en rejoindre une autre, téléchargez l'application Rallia."
-    },
-    "errors": {
-      "authFailed": "La connexion a échoué. Veuillez réessayer.",
-      "requiredFields": "Veuillez remplir tous les champs obligatoires.",
-      "minimumAge": "Vous devez avoir au moins 18 ans pour utiliser cette application.",
-      "selectRating": "Veuillez sélectionner votre niveau.",
-      "invalidPostalCode": "Entrez un code postal valide.",
-      "ratingsLoadFailed": "Impossible de charger les niveaux. Actualisez la page.",
-      "submitFailed": "Une erreur est survenue. Veuillez réessayer.",
-      "genderMismatch": "Cette partie est réservée à des joueurs d'un autre genre, vous ne pouvez donc pas la rejoindre.",
-      "matchUnavailable": "Cette partie n'est plus disponible. Elle a peut-être été annulée ou a déjà commencé.",
-      "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
-      "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
-      "webJoinLimit": "Vous avez déjà rejoint une partie sur le web. Téléchargez l'application Rallia pour rejoindre d'autres parties et discuter avec les joueurs.",
-      "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici."
-    },
-    "chat": {
-      "title": "Clavardage de la partie",
-      "subtitle": "{count, plural, one {# joueur} other {# joueurs}}",
-      "back": "Retour à la partie",
-      "loadEarlier": "Voir les messages précédents",
-      "empty": "Aucun message pour l'instant. Lancez la conversation!",
-      "notReady": "Le clavardage s'ouvre dès qu'un autre joueur rejoint la partie. Revenez bientôt!",
-      "signInPrompt": "Connectez-vous et rejoignez la partie pour discuter avec les autres joueurs.",
-      "signInCta": "Aller à la partie",
-      "composerPlaceholder": "Écrivez un message…",
-      "send": "Envoyer",
-      "you": "Vous",
-      "rules": {
-        "title": "On garde ça amical",
-        "body": "Restez respectueux, gardez les messages en lien avec la partie et évitez de partager vos coordonnées personnelles tant que vous n'êtes pas à l'aise. Les messages peuvent être modérés.",
-        "accept": "Compris, on clavarde"
-      }
     }
   }
 }

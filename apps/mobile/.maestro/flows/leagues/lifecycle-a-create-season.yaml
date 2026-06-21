@@ -1,0 +1,57 @@
+# Lifecycle A: create league -> view detail -> create season -> open season.
+appId: com.mathisl971.rallia-app
+tags: [leagues]
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "tab-create-fab"
+    timeout: 120000
+- tapOn:
+    id: "tab-create-fab"
+- extendedWaitUntil:
+    visible:
+      id: "action-create-league"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "action-create-league"
+- extendedWaitUntil:
+    visible:
+      id: "league-name-input"
+    timeout: 15000
+- tapOn:
+    id: "league-name-input"
+- inputText: "Maestro Summer Ladder"
+- tapOn: "done"
+- tapOn:
+    id: "league-wizard-submit"
+- extendedWaitUntil:
+    visible: ".*Visibility.*"
+    timeout: 10000
+- tapOn:
+    id: "league-wizard-submit"
+- extendedWaitUntil:
+    visible:
+      id: "league-success-view"
+    timeout: 30000
+- tapOn:
+    id: "league-success-view"
+- extendedWaitUntil:
+    visible:
+      id: "season-name-input"
+    timeout: 20000
+- tapOn:
+    id: "season-name-input"
+- inputText: "Spring 2026"
+- tapOn: "done"
+- tapOn:
+    id: "cta-create-season"
+- extendedWaitUntil:
+    visible:
+      id: "cta-open-season"
+    timeout: 20000
+- tapOn:
+    id: "cta-open-season"
+- takeScreenshot: /tmp/maestro-league-lifecycle-a
