@@ -10677,16 +10677,15 @@
       "title": "What's a Coveted Player?",
       "overview": {
         "title": "Coveted Player",
-        "body": "Coveted Player is the top distinction on Rallia. It's reserved for players who are both highly skilled and rock-solid reliable — the kind of player everyone wants on the court."
+        "body": "Coveted Player is the top distinction on Rallia. It's reserved for players who've verified their rating and built a rock-solid reputation — the kind of player everyone wants on the court."
       },
       "requirements": {
         "title": "How to earn it",
         "certified": "A certified rating",
-        "certifiedDetail": "Your skill level is verified through peer references or proof.",
+        "certifiedDetail": "Your rating is verified through references or proof. Your level doesn't matter — only that it's certified.",
         "reputation": "A Platinum reputation",
-        "reputationDetail": "A reputation score of 90 or higher.",
-        "events": "A solid track record",
-        "eventsDetail": "At least 5 reputation events, so the score reflects real history."
+        "reputationDetail": "The highest reputation tier, earned by being reliable and fair.",
+        "note": "Play a few games and, once both are true, the badge shows up on your profile automatically."
       },
       "benefits": {
         "title": "Why it matters",
