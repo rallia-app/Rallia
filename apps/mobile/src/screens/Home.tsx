@@ -1629,13 +1629,6 @@ const Home = () => {
             onPress={() => appNavigation.navigate('Leagues')}
           />
         )}
-        {isOnboarded && (
-          <QuickNavButton
-            icon={color => <Ionicons name="sparkles" size={24} color={color} />}
-            label={t('home.quickNav.browseSuggestions')}
-            onPress={() => SheetManager.show('match-suggestions')}
-          />
-        )}
       </ScrollView>
     );
 
