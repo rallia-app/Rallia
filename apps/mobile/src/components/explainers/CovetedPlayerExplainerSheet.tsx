@@ -118,14 +118,9 @@ export function CovetedPlayerExplainerActionSheet(_props: SheetProps<'coveted-pl
             textColor={textColor}
             mutedColor={mutedColor}
           />
-          <RequirementRow
-            icon="calendar"
-            iconColor={tealIcon}
-            label={t('explainers.covetedPlayer.requirements.events')}
-            detail={t('explainers.covetedPlayer.requirements.eventsDetail')}
-            textColor={textColor}
-            mutedColor={mutedColor}
-          />
+          <Text size="sm" color={mutedColor} style={styles.note}>
+            {t('explainers.covetedPlayer.requirements.note')}
+          </Text>
         </ExplainerSection>
 
         {/* Why it matters */}
@@ -180,6 +175,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   bodyText: {
+    lineHeight: 20,
+  },
+  note: {
+    marginTop: spacingPixels[1],
     lineHeight: 20,
   },
   requirementRow: {
