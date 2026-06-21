@@ -37,7 +37,7 @@ import {
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { resolveStorageUrl } from '#/services/imageUpload';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ProofViewerProps {
   visible: boolean;
@@ -460,7 +460,10 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
                 onClose();
                 onReport(proof.id, proof.title);
               }}
-              style={[styles.closeButton, { backgroundColor: colors.inputBackground }]}
+              style={[
+                styles.closeButton,
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
+              ]}
             >
               <Ionicons name="flag-outline" size={24} color={colors.text} />
             </TouchableOpacity>
@@ -483,7 +486,10 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
           </View>
           <TouchableOpacity
             onPress={onClose}
-            style={[styles.closeButton, { backgroundColor: colors.inputBackground }]}
+            style={[
+              styles.closeButton,
+              { backgroundColor: colors.inputBackground, borderColor: colors.border },
+            ]}
           >
             <Ionicons name="close-outline" size={28} color={colors.text} />
           </TouchableOpacity>
@@ -605,6 +611,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: Platform.OS === 'ios' ? 60 : spacingPixels[4],
     paddingBottom: spacingPixels[3],
+    zIndex: 1,
   },
   closeButton: {
     width: 44,
@@ -612,6 +619,12 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerCenter: {
     flex: 1,
@@ -639,6 +652,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -648,8 +662,8 @@ const styles = StyleSheet.create({
   },
   // Video styles
   videoContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.6,
+    flex: 1,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -659,8 +673,8 @@ const styles = StyleSheet.create({
   },
   // Image styles
   imageContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.7,
+    flex: 1,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
