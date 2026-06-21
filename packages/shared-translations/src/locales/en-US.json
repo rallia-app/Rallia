@@ -1122,7 +1122,7 @@
           "recordVideo": "Record Video",
           "selectFromGallery": "Select from Gallery",
           "maxDuration": "Maximum duration: 1 minute",
-          "maxSize": "Maximum size: 50 MB"
+          "maxSize": "Maximum size: 100 MB"
         },
         "image": {
           "title": "Screenshot / Image",
