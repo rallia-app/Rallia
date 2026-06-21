@@ -46,6 +46,7 @@ interface ParticipantForNotification {
   sport_name: string;
   format: string;
   timezone: string;
+  player_expectation: string;
 }
 
 interface OpponentInfo {
@@ -194,26 +195,37 @@ async function buildNotificationInput(
   // Format sport name (lowercase)
   const sportName = participant.sport_name.toLowerCase();
 
+  // Casual games never collect a score — ask for feedback only, no score copy.
+  const isCasual = participant.player_expectation === 'casual';
+
   // Build title and body based on notification type
   let title: string;
   let body: string;
 
   if (notificationType === 'feedback_request') {
     title = 'How was your game?';
-    body = `Submit your score and rate your ${sportName} match with ${formattedOpponentNames} while it's fresh!`;
+    body = isCasual
+      ? `Rate your ${sportName} game with ${formattedOpponentNames} while it's fresh!`
+      : `Submit your score and rate your ${sportName} match with ${formattedOpponentNames} while it's fresh!`;
   } else {
-    title = 'You have a match to close out';
-    body = `Your ${sportName} score and rating with ${formattedOpponentNames} are still pending — complete them before the window closes.`;
+    title = isCasual ? 'You have a game to rate' : 'You have a match to close out';
+    body = isCasual
+      ? `Your ${sportName} rating with ${formattedOpponentNames} is still pending. Share it before the window closes.`
+      : `Your ${sportName} score and rating with ${formattedOpponentNames} are still pending — complete them before the window closes.`;
   }
 
   // French translations if needed
   if (locale.startsWith('fr')) {
     if (notificationType === 'feedback_request') {
       title = 'Comment était votre partie?';
-      body = `Soumettez votre score et évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`;
+      body = isCasual
+        ? `Évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`
+        : `Soumettez votre score et évaluez votre partie de ${sportName} avec ${formattedOpponentNames} pendant que c'est frais!`;
     } else {
-      title = 'Une partie à clôturer';
-      body = `Votre score et évaluation de ${sportName} avec ${formattedOpponentNames} sont toujours en attente — clôturez-les avant la fermeture.`;
+      title = isCasual ? 'Une partie à évaluer' : 'Une partie à clôturer';
+      body = isCasual
+        ? `Votre évaluation de ${sportName} avec ${formattedOpponentNames} est encore en attente. Partagez-la avant la fermeture.`
+        : `Votre score et évaluation de ${sportName} avec ${formattedOpponentNames} sont toujours en attente — clôturez-les avant la fermeture.`;
     }
   }
 

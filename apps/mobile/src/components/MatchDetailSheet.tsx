@@ -2235,6 +2235,9 @@ export const MatchDetailSheet: React.FC = () => {
   const hasMatchEnded = derivedStatus === 'completed';
   const hasResult = !!match.result;
 
+  // Casual games skip score entry/confirmation entirely — feedback only.
+  const isCasual = match.player_expectation === 'casual';
+
   // Extract result object for score confirmation checks
   const resultObj = match.result
     ? ((Array.isArray(match.result) ? match.result[0] : match.result) as {
@@ -2326,6 +2329,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Opponent needs to confirm or propose rebuttal (no rebuttal exists yet)
   const scoreNeedsConfirmation =
+    !isCasual &&
     !!resultObj &&
     !resultObj.is_verified &&
     !resultObj.disputed &&
@@ -2340,6 +2344,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Original team needs to respond to a rebuttal
   const rebuttalNeedsResponse =
+    !isCasual &&
     isRebuttalPending &&
     !!currentPlayerParticipant &&
     currentPlayerTeam != null &&
@@ -2355,7 +2360,7 @@ export const MatchDetailSheet: React.FC = () => {
 
   // Register-score is a single CTA (no score submitted yet, within feedback window, match was full)
   const hasRegisterScoreAction =
-    !hasResult && isWithinFeedbackWindow && !!currentPlayerParticipant && isFull;
+    !isCasual && !hasResult && isWithinFeedbackWindow && !!currentPlayerParticipant && isFull;
 
   // Any score action + pending feedback → show feedback button in sticky footer
   const needsScoreConfirmAndFeedback =
@@ -2753,8 +2758,8 @@ export const MatchDetailSheet: React.FC = () => {
         }
       }
 
-      // Score registration (when no score exists yet)
-      if (!hasResult && isWithinFeedbackWindow && currentPlayerParticipant && isFull) {
+      // Score registration (when no score exists yet, and not a casual game)
+      if (hasRegisterScoreAction) {
         actions.push(
           <Button
             key="register-score"
