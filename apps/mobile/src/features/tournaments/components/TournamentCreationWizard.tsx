@@ -28,6 +28,9 @@ import {
   Platform,
   Modal,
   Keyboard,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -41,12 +44,19 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  getTournamentLogoUrl,
+} from '@rallia/shared-utils';
 import { useTheme, useCreateTournament, useUpdateTournament } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
+import { uploadImage, deleteImage } from '../../../services/imageUpload';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
 import * as Analytics from '../../../services/analytics';
@@ -137,6 +147,8 @@ export interface TournamentEditData {
   status: Enums<'tournament_status'>;
   name: string;
   description: string | null;
+  rules: string | null;
+  logoUrl: string | null;
   visibility: Enums<'tournament_visibility'>;
   startDate: string; // ISO
   endDate: string; // ISO
@@ -396,6 +408,14 @@ const DetailsStep: React.FC<{
   setName: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
+  /** Rules are edit-only (set on the tournament sheet after creation). */
+  rules: string;
+  setRules: (v: string) => void;
+  /** Poster/logo is edit-only too (uploaded to the tournament-logos bucket). */
+  logoUrl: string | null;
+  posterUploading: boolean;
+  onPickPoster: () => void;
+  onRemovePoster: () => void;
   bracketSize: BracketSize;
   setBracketSize: (v: BracketSize) => void;
   matchFormat: MatchFormat;
@@ -423,6 +443,12 @@ const DetailsStep: React.FC<{
   setName,
   description,
   setDescription,
+  rules,
+  setRules,
+  logoUrl,
+  posterUploading,
+  onPickPoster,
+  onRemovePoster,
   bracketSize,
   setBracketSize,
   matchFormat,
@@ -557,6 +583,92 @@ const DetailsStep: React.FC<{
           multiline
           autoCapitalize="sentences"
         />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <FieldLabel colors={colors}>
+          {t('tournamentCreation.fields.rules' as TranslationKey)}
+        </FieldLabel>
+        <TextInput
+          style={[
+            styles.textInput,
+            styles.textArea,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: colors.inputBorder,
+              color: colors.text,
+            },
+          ]}
+          placeholder={t('tournamentCreation.fields.rulesPlaceholder' as TranslationKey)}
+          placeholderTextColor={colors.textMuted}
+          value={rules}
+          onChangeText={setRules}
+          maxLength={2000}
+          multiline
+          autoCapitalize="sentences"
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <FieldLabel colors={colors}>
+          {t('tournamentCreation.fields.poster' as TranslationKey)}
+        </FieldLabel>
+        {logoUrl ? (
+          <View>
+            <Image
+              source={{
+                uri: logoUrl.startsWith('http')
+                  ? (getTournamentLogoUrl(logoUrl) ?? logoUrl)
+                  : logoUrl,
+              }}
+              style={styles.posterPreview}
+              resizeMode="cover"
+            />
+            <TouchableOpacity
+              style={[styles.posterRemoveBtn, { backgroundColor: colors.cardBackground }]}
+              onPress={onRemovePoster}
+              disabled={posterUploading}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t('tournamentCreation.fields.posterRemove' as TranslationKey)}
+            >
+              <Ionicons name="close" size={18} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.posterChangeBtn}
+              onPress={onPickPoster}
+              disabled={posterUploading}
+            >
+              {posterUploading ? (
+                <ActivityIndicator color={colors.textSecondary} />
+              ) : (
+                <Text size="xs" weight="semibold" color={colors.textSecondary}>
+                  {t('tournamentCreation.fields.posterChange' as TranslationKey)}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.posterAddBtn,
+              { borderColor: colors.inputBorder, backgroundColor: colors.inputBackground },
+            ]}
+            onPress={onPickPoster}
+            disabled={posterUploading}
+            activeOpacity={0.7}
+          >
+            {posterUploading ? (
+              <ActivityIndicator color={colors.textSecondary} />
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
+                <Text size="sm" weight="medium" color={colors.textSecondary}>
+                  {t('tournamentCreation.fields.posterAdd' as TranslationKey)}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {canEditStructure && (
@@ -896,6 +1008,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [currentStep, setCurrentStep] = useState(1);
   const [name, setName] = useState(editTournament?.name ?? '');
   const [description, setDescription] = useState(editTournament?.description ?? '');
+  const [rules, setRules] = useState(editTournament?.rules ?? '');
+  const [logoUrl, setLogoUrl] = useState<string | null>(editTournament?.logoUrl ?? null);
+  const [posterUploading, setPosterUploading] = useState(false);
   const [bracketSize, setBracketSize] = useState<BracketSize>(
     (editTournament?.maxParticipants as BracketSize) ?? 8
   );
@@ -924,6 +1039,23 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
+
+  // Poster upload to the public tournament-logos bucket. Errors use Alert (not
+  // toast) because the wizard runs inside a sheet, where toasts render behind it.
+  // Pick + crop only — the upload is deferred to submit (handleSubmit) so an
+  // abandoned/cancelled form never orphans an uploaded file. logoUrl holds the
+  // local URI until then.
+  const handlePickPoster = useCallback(async () => {
+    const { uri } = await pickImageWithCropper({ aspectRatio: [16, 9], quality: 0.85 });
+    if (!uri) return;
+    lightHaptic();
+    setLogoUrl(uri);
+  }, []);
+
+  const handleRemovePoster = useCallback(() => {
+    lightHaptic();
+    setLogoUrl(null);
+  }, []);
 
   const startTimeRef = useRef(Date.now());
   const startedTrackedRef = useRef(false);
@@ -1052,6 +1184,25 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     }
     if (!startDate || !endDate) return;
 
+    // Upload a freshly-picked poster now (on submit) rather than at selection,
+    // so abandoning the form never orphans an uploaded file. logoUrl is a local
+    // URI for a new pick, or an existing remote URL (https) when unchanged.
+    let resolvedLogoUrl = logoUrl;
+    if (logoUrl && !/^https?:\/\//.test(logoUrl)) {
+      setPosterUploading(true);
+      const { url } = await uploadImage(logoUrl, 'tournament-logos');
+      setPosterUploading(false);
+      if (!url) {
+        warningHaptic();
+        Alert.alert(
+          t('tournamentCreation.errors.posterUploadFailedTitle' as TranslationKey),
+          t('tournamentCreation.errors.posterUploadFailed' as TranslationKey)
+        );
+        return;
+      }
+      resolvedLogoUrl = url;
+    }
+
     // ---- Edit mode: diff against the original and PATCH only what changed ----
     if (isEditMode && editTournament) {
       const patch: TournamentUpdatePatch = {};
@@ -1060,6 +1211,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       const desc = description.trim();
       if (desc !== (editTournament.description ?? ''))
         patch.description = desc.length ? desc : null;
+      const trimmedRules = rules.trim();
+      if (trimmedRules !== (editTournament.rules ?? ''))
+        patch.rules = trimmedRules.length ? trimmedRules : null;
+      if (resolvedLogoUrl !== (editTournament.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
       if (visibility !== editTournament.visibility) patch.visibility = visibility;
       if (startDate.toISOString() !== new Date(editTournament.startDate).toISOString())
         patch.startDate = startDate.toISOString();
@@ -1081,6 +1236,13 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           patch,
         });
         successHaptic();
+        // Only after the update commits: clean up the previous poster file when
+        // it was replaced or removed, so the bucket doesn't accumulate orphans.
+        // Done post-success so a failed update never strips a still-referenced file.
+        const oldPoster = editTournament.logoUrl;
+        if (oldPoster && oldPoster !== resolvedLogoUrl && oldPoster.startsWith('http')) {
+          void deleteImage(oldPoster, 'tournament-logos');
+        }
         onSuccess(editTournament.id);
       } catch {
         // Error toast handled by hook's onError.
@@ -1094,6 +1256,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       const tournament = await createTournamentAsync({
         name: name.trim(),
         description: description.trim() || undefined,
+        rules: rules.trim() || undefined,
+        logoUrl: resolvedLogoUrl ?? undefined,
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
         startDate: startDate.toISOString(),
@@ -1124,6 +1288,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     selectedSport,
     name,
     description,
+    rules,
+    logoUrl,
     bracketSize,
     matchFormat,
     startDate,
@@ -1135,11 +1301,15 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     onClose,
     onSuccess,
     validateStep,
+    t,
   ]);
 
   const handleCreateAnother = useCallback(() => {
     setName('');
     setDescription('');
+    setRules('');
+    setLogoUrl(null);
+    setPosterUploading(false);
     setBracketSize(8);
     setMatchFormat(defaultFormatForSport(sportName));
     setEntryFormat('singles');
@@ -1262,6 +1432,12 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             setName={setName}
             description={description}
             setDescription={setDescription}
+            rules={rules}
+            setRules={setRules}
+            logoUrl={logoUrl}
+            posterUploading={posterUploading}
+            onPickPoster={handlePickPoster}
+            onRemovePoster={handleRemovePoster}
             bracketSize={bracketSize}
             setBracketSize={setBracketSize}
             matchFormat={matchFormat}
@@ -1413,6 +1589,35 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 96,
     textAlignVertical: 'top',
+  },
+  posterAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    height: 120,
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  posterPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: radiusPixels.lg,
+  },
+  posterRemoveBtn: {
+    position: 'absolute',
+    top: spacingPixels[2],
+    right: spacingPixels[2],
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  posterChangeBtn: {
+    alignSelf: 'center',
+    paddingVertical: spacingPixels[2],
   },
   dateButton: {
     flexDirection: 'row',

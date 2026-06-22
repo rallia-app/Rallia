@@ -18,6 +18,7 @@ import {
   getMyRegistration,
   openTournamentRegistration,
   closeTournamentRegistration,
+  reopenTournamentRegistration,
   registerForTournament,
   withdrawFromTournament,
   removeTournamentRegistration,
@@ -427,6 +428,24 @@ export function useCloseTournamentRegistration(options: MutationOptions<Tourname
   const mutation = useMutation<Tournament, Error, { tournamentId: string; versionWas: number }>({
     mutationFn: ({ tournamentId, versionWas }) =>
       closeTournamentRegistration(tournamentId, versionWas),
+    onSuccess: t => {
+      invalidate(t.id);
+      options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useReopenTournamentRegistration(options: MutationOptions<Tournament> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<Tournament, Error, { tournamentId: string; versionWas: number }>({
+    mutationFn: ({ tournamentId, versionWas }) =>
+      reopenTournamentRegistration(tournamentId, versionWas),
     onSuccess: t => {
       invalidate(t.id);
       options.onSuccess?.(t);

@@ -4444,6 +4444,7 @@
     },
     "dashboard": {
       "details": "Details",
+      "rulesTitle": "Tournament rules",
       "organizedBy": "Organized by {name}",
       "champion": "Champion",
       "steps": {
@@ -4558,6 +4559,7 @@
     "actions": {
       "openRegistration": "Open registration",
       "closeRegistration": "Close registration",
+      "reopenRegistration": "Reopen registration",
       "register": "Register",
       "addMyself": "Add myself",
       "withdraw": "Withdraw",
@@ -4694,6 +4696,7 @@
       "confirm": "Save result",
       "errors": {
         "notOverridable": "This match can't be edited anymore.",
+        "nextMatchPlayed": "You can't change this score now. The next game has already been played.",
         "winnerNotInMatch": "Pick one of the two players in this match.",
         "notInProgress": "The tournament isn't in progress.",
         "slotsIncomplete": "Both players aren't set yet for this match.",
@@ -4709,6 +4712,7 @@
     "errors": {
       "openFailed": "Couldn't open registration. Please try again.",
       "closeFailed": "Couldn't close registration. Please try again.",
+      "reopenFailed": "Couldn't reopen registration. Please try again.",
       "registerFailed": "Couldn't complete registration. Please try again.",
       "withdrawFailed": "Couldn't withdraw. Please try again.",
       "withdrawClosed": "Registration has closed — you can't withdraw anymore.",
@@ -4758,6 +4762,12 @@
       "namePlaceholder": "e.g., Spring Singles 2026",
       "description": "Description",
       "descriptionPlaceholder": "Tell players what to expect (optional)",
+      "rules": "Rules",
+      "rulesPlaceholder": "Format, scoring, check-in, conduct… (optional)",
+      "poster": "Poster",
+      "posterAdd": "Add a poster",
+      "posterChange": "Change poster",
+      "posterRemove": "Remove poster",
       "maxParticipants": "Bracket size",
       "maxParticipantsHint": "Number of players the bracket holds",
       "maxTeams": "Bracket size (teams)",
@@ -4806,6 +4816,8 @@
     "errors": {
       "sportMismatch": "You don't have this sport active on your profile",
       "rateLimited": "You've created too many tournaments recently. Try again later.",
+      "posterUploadFailedTitle": "Upload failed",
+      "posterUploadFailed": "Couldn't upload the poster. Please try again.",
       "generic": "Couldn't create the tournament. Please try again."
     }
   },

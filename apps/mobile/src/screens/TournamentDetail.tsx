@@ -21,6 +21,7 @@ import {
   Platform,
   Pressable,
   TextInput,
+  Image,
   Animated,
   Easing,
 } from 'react-native';
@@ -42,7 +43,13 @@ import {
   secondary,
   duration,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic, getHumanName } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  getHumanName,
+  getTournamentLogoUrl,
+} from '@rallia/shared-utils';
 import {
   useTheme,
   useTournament,
@@ -50,6 +57,7 @@ import {
   useMyTournamentRegistration,
   useOpenTournamentRegistration,
   useCloseTournamentRegistration,
+  useReopenTournamentRegistration,
   useRegisterForTournament,
   useWithdrawFromTournament,
   useRemoveTournamentRegistration,
@@ -716,6 +724,10 @@ export const TournamentDetail: React.FC = () => {
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.closeFailed'),
   });
+  const reopen = useReopenTournamentRegistration({
+    onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.reopenFailed'),
+  });
   const register = useRegisterForTournament({
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.registerFailed'),
@@ -847,6 +859,12 @@ export const TournamentDetail: React.FC = () => {
     lightHaptic();
     close.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
   }, [tournament, close]);
+
+  const onReopen = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    reopen.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, reopen]);
 
   const isDoubles = !!tournament && tournament.entry_format !== 'singles';
 
@@ -1211,6 +1229,7 @@ export const TournamentDetail: React.FC = () => {
           player1Name: nameByRegId.get(p1RegId) ?? `Seed ${seedByRegId.get(p1RegId) ?? '?'}`,
           player2Name: nameByRegId.get(p2RegId) ?? `Seed ${seedByRegId.get(p2RegId) ?? '?'}`,
           isPickleball: sportName === 'pickleball',
+          matchFormat: tournament.match_format,
           onSuccess: () => {
             successHaptic();
           },
@@ -1268,9 +1287,11 @@ export const TournamentDetail: React.FC = () => {
       s === 'registration_closed' ||
       s === 'in_progress';
     const canArchive = s === 'completed' || s === 'cancelled';
-    const enabled = isOrganizer && (canEdit || canInvite || canCancel || canArchive);
-    return { canEdit, canInvite, canCancel, canArchive, enabled };
-  }, [isOrganizer, tournament?.status]);
+    // Reopen a closed window for late entrants, while the bracket isn't generated.
+    const canReopen = s === 'registration_closed' && !tournament?.bracket_locked_at;
+    const enabled = isOrganizer && (canEdit || canInvite || canReopen || canCancel || canArchive);
+    return { canEdit, canInvite, canReopen, canCancel, canArchive, enabled };
+  }, [isOrganizer, tournament?.status, tournament?.bracket_locked_at]);
 
   // Creation-success handoff: land here with openInviteSheet=true and the
   // invite sheet opens once, after the screen settles. The param is cleared
@@ -1314,6 +1335,40 @@ export const TournamentDetail: React.FC = () => {
     () => sports.find(s => s.id === tournament?.sport_id),
     [sports, tournament]
   );
+
+  // Edit/Invite are reachable from the header overflow, a prominent Overview
+  // action row, and the Players tab — so the open logic lives in one callback.
+  const handleEditDetails = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    openSheetForTournamentEdit({
+      id: tournament.id,
+      version: tournament.version,
+      status: tournament.status,
+      name: tournament.name,
+      description: tournament.description,
+      rules: tournament.rules,
+      logoUrl: tournament.logo_url,
+      visibility: tournament.visibility,
+      startDate: tournament.start_date,
+      endDate: tournament.end_date,
+      maxParticipants: tournament.max_participants,
+      matchFormat: tournament.match_format,
+      sport: {
+        id: tournament.sport_id,
+        name: sport?.name ?? '',
+        display_name: sport?.display_name ?? '',
+      },
+    });
+  }, [tournament, sport, openSheetForTournamentEdit]);
+
+  const handleInvitePlayers = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    void SheetManager.show('tournament-invite', {
+      payload: { tournamentId: tournament.id, tournamentName: tournament.name },
+    });
+  }, [tournament]);
 
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -1448,6 +1503,13 @@ export const TournamentDetail: React.FC = () => {
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
           >
+            {tournament.logo_url ? (
+              <Image
+                source={{ uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }}
+                style={styles.heroPoster}
+                resizeMode="cover"
+              />
+            ) : null}
             <View style={styles.heroTopRow}>
               {isLive ? (
                 <LiveBadge label={t('tournamentDetail.status.in_progress')} isDark={isDark} />
@@ -1629,6 +1691,50 @@ export const TournamentDetail: React.FC = () => {
 
             {/* Champion banner */}
             {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
+
+            {/* Organizer: edit & invite up front (also in the header ⋯ menu) */}
+            {isOrganizer && (adminActions.canEdit || adminActions.canInvite) && (
+              <View style={styles.organizerActionRow}>
+                {adminActions.canEdit && (
+                  <Pressable
+                    onPress={handleEditDetails}
+                    style={({ pressed }) => [
+                      styles.organizerActionBtn,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.cardBackground,
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                    testID="action-edit-details"
+                  >
+                    <Ionicons name="create-outline" size={18} color={colors.primary} />
+                    <Text size="sm" weight="semibold" color={colors.text}>
+                      {t('tournamentDetail.actions.editDetails')}
+                    </Text>
+                  </Pressable>
+                )}
+                {adminActions.canInvite && (
+                  <Pressable
+                    onPress={handleInvitePlayers}
+                    style={({ pressed }) => [
+                      styles.organizerActionBtn,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.cardBackground,
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                    testID="action-invite-players"
+                  >
+                    <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                    <Text size="sm" weight="semibold" color={colors.text}>
+                      {t('tournamentDetail.actions.invitePlayers')}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
 
             {isOrganizer && pendingRequestRows.length > 0 && (
               <DashboardCtaCard
@@ -1949,6 +2055,21 @@ export const TournamentDetail: React.FC = () => {
         {/* ============================ PLAYERS ============================= */}
         {currentTabKey === 'players' && showPlayersTab && (
           <View style={styles.playersTabContent}>
+            {adminActions.canInvite && (
+              <Pressable
+                onPress={handleInvitePlayers}
+                style={({ pressed }) => [
+                  styles.playersInviteBtn,
+                  { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                ]}
+                testID="players-invite-cta"
+              >
+                <Ionicons name="share-social-outline" size={18} color="#ffffff" />
+                <Text size="sm" weight="semibold" color="#ffffff">
+                  {t('tournamentDetail.actions.invitePlayers')}
+                </Text>
+              </Pressable>
+            )}
             <PendingRequestsSection
               rows={pendingRequestRows}
               onPlayerPress={handlePlayerPress}
@@ -2021,6 +2142,13 @@ export const TournamentDetail: React.FC = () => {
                 colors={colors}
               />
             </Section>
+            {tournament.rules?.trim() ? (
+              <Section title={t('tournamentDetail.dashboard.rulesTitle')} colors={colors}>
+                <Text size="sm" color={colors.text} style={styles.rulesText}>
+                  {tournament.rules}
+                </Text>
+              </Section>
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -2050,24 +2178,7 @@ export const TournamentDetail: React.FC = () => {
                 testID="menu-edit-details"
                 onPress={() => {
                   setShowActionsMenu(false);
-                  lightHaptic();
-                  openSheetForTournamentEdit({
-                    id: tournament.id,
-                    version: tournament.version,
-                    status: tournament.status,
-                    name: tournament.name,
-                    description: tournament.description,
-                    visibility: tournament.visibility,
-                    startDate: tournament.start_date,
-                    endDate: tournament.end_date,
-                    maxParticipants: tournament.max_participants,
-                    matchFormat: tournament.match_format,
-                    sport: {
-                      id: tournament.sport_id,
-                      name: sport?.name ?? '',
-                      display_name: sport?.display_name ?? '',
-                    },
-                  });
+                  handleEditDetails();
                 }}
                 colors={colors}
               />
@@ -2080,10 +2191,20 @@ export const TournamentDetail: React.FC = () => {
                 showDivider={adminActions.canEdit}
                 onPress={() => {
                   setShowActionsMenu(false);
-                  lightHaptic();
-                  void SheetManager.show('tournament-invite', {
-                    payload: { tournamentId: tournament.id, tournamentName: tournament.name },
-                  });
+                  handleInvitePlayers();
+                }}
+                colors={colors}
+              />
+            )}
+            {adminActions.canReopen && (
+              <MenuItem
+                icon="lock-open-outline"
+                label={t('tournamentDetail.actions.reopenRegistration')}
+                testID="menu-reopen-registration"
+                showDivider={adminActions.canEdit || adminActions.canInvite}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  onReopen();
                 }}
                 colors={colors}
               />
@@ -2229,6 +2350,7 @@ const slotLabel = (
   isPhantom: boolean,
   seedByRegId: Map<string, number>,
   nameByRegId: Map<string, string>,
+  showSeed: boolean,
   t: (k: TranslationKey) => string
 ): string => {
   if (isPhantom) return t('tournamentDetail.bracket.phantom');
@@ -2236,8 +2358,10 @@ const slotLabel = (
   if (!regId) return t('tournamentDetail.bracket.tbd');
   const name = nameByRegId.get(regId);
   if (name) return name;
+  // Seed-rank labels are organizer-only; participants see TBD for slots whose
+  // player isn't determined yet (no leaking of the seeding to competitors).
   const seed = seedByRegId.get(regId);
-  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
+  return showSeed && seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
 };
 
 type SlotKind = 'player' | 'bye' | 'tbd' | 'phantom';
@@ -2363,15 +2487,18 @@ const BracketSection: React.FC<{
       : [];
     const callerIsParticipant =
       !!currentUserId && (p1Members.includes(currentUserId) || p2Members.includes(currentUserId));
-    const isPlayable =
-      m.status === 'pending' &&
+    const slotsReady =
       !m.player1_is_bye &&
       !m.player2_is_bye &&
       !!m.player1_registration_id &&
       !!m.player2_registration_id;
-    // Organizers record results (override); non-organizer
-    // participants link their own played match.
-    const canOrganizerOverride = isPlayable && isOrganizer;
+    const isPlayable = m.status === 'pending' && slotsReady;
+    // Organizers record results (override) and may also CORRECT a completed
+    // match; the RPC rejects (NEXT_MATCH_ALREADY_PLAYED) once the downstream
+    // match has its own result. Non-organizer participants link their own
+    // played match.
+    const canOrganizerOverride =
+      isOrganizer && slotsReady && (m.status === 'pending' || m.status === 'completed');
     const canParticipantAttach = isPlayable && callerIsParticipant && !isOrganizer;
     const isTappable = canOrganizerOverride || canParticipantAttach;
 
@@ -2425,9 +2552,14 @@ const BracketSection: React.FC<{
             isPhantom,
             seedByRegId,
             nameByRegId,
+            isOrganizer,
             t
           )}
-          seed={m.player1_registration_id ? seedByRegId.get(m.player1_registration_id) : undefined}
+          seed={
+            isOrganizer && m.player1_registration_id
+              ? seedByRegId.get(m.player1_registration_id)
+              : undefined
+          }
           kind={slotKind(m.player1_registration_id, m.player1_is_bye, isPhantom)}
           isWinner={winnerSlot === 1}
           isFinalWinner={winnerSlot === 1 && isFinalRound}
@@ -2444,9 +2576,14 @@ const BracketSection: React.FC<{
             isPhantom,
             seedByRegId,
             nameByRegId,
+            isOrganizer,
             t
           )}
-          seed={m.player2_registration_id ? seedByRegId.get(m.player2_registration_id) : undefined}
+          seed={
+            isOrganizer && m.player2_registration_id
+              ? seedByRegId.get(m.player2_registration_id)
+              : undefined
+          }
           kind={slotKind(m.player2_registration_id, m.player2_is_bye, isPhantom)}
           isWinner={winnerSlot === 2}
           isFinalWinner={winnerSlot === 2 && isFinalRound}
@@ -2758,6 +2895,32 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
   },
+  organizerActionRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[4],
+  },
+  organizerActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  playersInviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[4],
+  },
   heroFixed: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[5],
@@ -2815,6 +2978,12 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
+  heroPoster: {
+    width: '100%',
+    height: 160,
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[3],
+  },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2860,6 +3029,9 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   heroDescription: {
+    lineHeight: 20,
+  },
+  rulesText: {
     lineHeight: 20,
   },
   heroDivider: {

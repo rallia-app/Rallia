@@ -16,19 +16,60 @@ export type Tournament = Tables<'tournaments'>;
 export type TournamentRegistration = Tables<'tournament_registrations'>;
 export type TournamentMatch = Tables<'tournament_matches'>;
 
-/** List-surface row: tournament plus its confirmed-registration count. */
-export type TournamentListItem = Tournament & { registration_count: number };
+/** A registered player surfaced on a tournament card's avatar stack. */
+export type RegistrantPreview = { id: string; avatarUrl: string | null; name: string };
 
-const LIST_SELECT = '*, tournament_registrations(count)';
+/** List-surface row: tournament plus its confirmed-registration count and a
+ *  small avatar preview of the earliest registrants (like game cards). */
+export type TournamentListItem = Tournament & {
+  registration_count: number;
+  registrant_preview: RegistrantPreview[];
+};
 
-function toListItem(row: Record<string, unknown>): TournamentListItem {
-  const { tournament_registrations, ...tournament } = row as Tournament & {
-    tournament_registrations?: { count: number }[];
-  };
-  return {
-    ...(tournament as Tournament),
-    registration_count: tournament_registrations?.[0]?.count ?? 0,
-  };
+/** How many registrant avatars to surface on a list card. */
+const PREVIEW_LIMIT = 5;
+
+// Pull the registrant rows (not just a count) so we can both count them and
+// show a few faces. The status='registered' filter is applied by the caller.
+const LIST_SELECT = '*, tournament_registrations(user_id, registered_at)';
+
+type ListRow = Tournament & {
+  tournament_registrations?: { user_id: string; registered_at: string }[];
+};
+
+/**
+ * Shape raw list rows into list items, attaching an avatar preview. Avatars
+ * live in the `profile` table (registrations only FK to `player`), so we
+ * batch-fetch them by id in one round trip across the whole list.
+ */
+async function toListItems(rows: ListRow[]): Promise<TournamentListItem[]> {
+  const staged = rows.map(row => {
+    const { tournament_registrations, ...tournament } = row;
+    const regs = (tournament_registrations ?? [])
+      .slice()
+      .sort((a, b) => a.registered_at.localeCompare(b.registered_at));
+    return {
+      tournament: tournament as Tournament,
+      count: regs.length,
+      previewIds: regs.slice(0, PREVIEW_LIMIT).map(r => r.user_id),
+    };
+  });
+
+  const allIds = [...new Set(staged.flatMap(s => s.previewIds))];
+  const profiles = await getProfilesByIds(allIds);
+
+  return staged.map(s => ({
+    ...s.tournament,
+    registration_count: s.count,
+    registrant_preview: s.previewIds.map(id => {
+      const p = profiles[id];
+      return {
+        id,
+        avatarUrl: p?.profile_picture_url ?? null,
+        name: p ? [p.first_name, p.last_name].filter(Boolean).join(' ') : '',
+      };
+    }),
+  }));
 }
 
 export interface CreateTournamentInput {
@@ -38,6 +79,8 @@ export interface CreateTournamentInput {
   startDate: string; // ISO 8601
   endDate: string; // ISO 8601
   description?: string;
+  rules?: string;
+  logoUrl?: string;
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   bracketType?: Enums<'bracket_type'>;
@@ -69,7 +112,7 @@ export async function listPublicTournaments(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Record<string, unknown>[]).map(toListItem);
+  return toListItems((data ?? []) as ListRow[]);
 }
 
 /**
@@ -102,7 +145,7 @@ export async function listMyTournaments(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Record<string, unknown>[]).map(toListItem);
+  return toListItems((data ?? []) as ListRow[]);
 }
 
 /**
@@ -148,6 +191,8 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_network_id: input.networkId,
     p_registration_opens_at: input.registrationOpensAt,
     p_registration_closes_at: input.registrationClosesAt,
+    p_rules: input.rules,
+    p_logo_url: input.logoUrl,
   });
 
   if (error) {
@@ -160,6 +205,8 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
 export interface TournamentUpdatePatch {
   name?: string;
   description?: string | null;
+  rules?: string | null;
+  logoUrl?: string | null;
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   registrationOpensAt?: string | null;
@@ -177,6 +224,8 @@ export interface TournamentUpdatePatch {
 const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   name: 'name',
   description: 'description',
+  rules: 'rules',
+  logoUrl: 'logo_url',
   visibility: 'visibility',
   registrationMode: 'registration_mode',
   registrationOpensAt: 'registration_opens_at',
@@ -518,6 +567,22 @@ export async function closeTournamentRegistration(
   versionWas: number
 ): Promise<Tournament> {
   const { data, error } = await supabase.rpc('tournament_close_registration', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
+/**
+ * Organizer reopens a closed registration window (→ registration_open) while
+ * the bracket hasn't been generated yet, for late entrants.
+ */
+export async function reopenTournamentRegistration(
+  tournamentId: string,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_reopen_registration', {
     p_tournament_id: tournamentId,
     p_version_was: versionWas,
   });

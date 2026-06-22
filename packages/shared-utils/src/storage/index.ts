@@ -172,6 +172,15 @@ export function getProfilePictureUrl(profilePictureUrl: string | null | undefine
 }
 
 /**
+ * Resolve a tournament poster/logo URL for display. Served raw from the public
+ * `tournament-logos` bucket (no Supabase image transform).
+ * @returns Normalized raw URL or null
+ */
+export function getTournamentLogoUrl(logoUrl: string | null | undefined): string | null {
+  return normalizeStorageUrl(logoUrl, 'tournament-logos');
+}
+
+/**
  * Get a thumbnail URL for a group/community cover image.
  * Defaults to 800×400 q75 list-row sizing (retina-friendly); override per
  * surface for headers (e.g. 1200×600 for hero) or square avatars.
