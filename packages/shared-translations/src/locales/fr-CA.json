@@ -4834,7 +4834,12 @@
     },
     "favoriteAvailability": {
       "title": "Tes terrains favoris",
-      "subtitle": "Des disponibilités à réserver en temps réel"
+      "subtitle": "Des disponibilités à réserver en temps réel",
+      "empty": {
+        "title": "Aucune disponibilité pour l'instant",
+        "description": "Explore les terrains pour des disponibilités en ville",
+        "cta": "Voir les terrains"
+      }
     },
     "quickNav": {
       "joinCommunity": "Rejoindre une communauté",
