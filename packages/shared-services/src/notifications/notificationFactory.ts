@@ -448,6 +448,8 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   tournament_updated: 'normal',
   tournament_cancelled: 'urgent',
   tournament_completed: 'normal',
+  session_published: 'normal',
+  season_closed: 'normal',
 };
 
 /**
@@ -546,6 +548,8 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_updated: 'Tournament updated',
   tournament_cancelled: 'Tournament cancelled',
   tournament_completed: 'Tournament complete',
+  session_published: 'Session schedule published',
+  season_closed: 'Season closed',
 };
 
 /**
@@ -673,6 +677,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_updated: '{tournamentName}: the dates or venue changed. Check the latest details.',
   tournament_cancelled: '{tournamentName} has been cancelled.',
   tournament_completed: '{tournamentName} has wrapped up. Champion: {championName}.',
+  session_published: 'The schedule for {sessionName} is now available.',
+  season_closed: '{seasonName} has ended. Final standings are in.',
 };
 
 /**
