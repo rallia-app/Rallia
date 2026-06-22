@@ -41,25 +41,61 @@ export interface HourRangeFilter {
 }
 
 /**
- * UI presets for the hour-range chip. The data layer is range-based so a
- * future commit can swap in a true from/to picker without touching the
- * service or the filter shape. For v1 we keep the legacy AM/PM macros
- * (now actually executed server-side via the hourly column).
+ * Time-of-day presets for the availability chip. These are macros over the
+ * range-based data layer; the dropdown also exposes a specific-hour picker
+ * (sets minHour === maxHour). The hourly column is filtered server-side.
  */
-export type HourRangePreset = 'all' | 'am' | 'pm';
+export type HourRangePreset = 'all' | 'am' | 'pm' | 'eve';
 
 const HOUR_RANGE_PRESETS: Record<HourRangePreset, HourRangeFilter> = {
   all: { minHour: null, maxHour: null },
-  am: { minHour: 6, maxHour: 11 },
-  pm: { minHour: 12, maxHour: 22 },
+  am: { minHour: 6, maxHour: 11 }, // morning
+  pm: { minHour: 12, maxHour: 17 }, // afternoon
+  eve: { minHour: 18, maxHour: 22 }, // evening
 };
 
 function presetFromRange(r: HourRangeFilter | undefined): HourRangePreset {
   if (!r) return 'all';
   if (r.minHour == null && r.maxHour == null) return 'all';
   if (r.minHour === 6 && r.maxHour === 11) return 'am';
-  if (r.minHour === 12 && r.maxHour === 22) return 'pm';
-  return 'all';
+  if (r.minHour === 12 && r.maxHour === 17) return 'pm';
+  if (r.minHour === 18 && r.maxHour === 22) return 'eve';
+  return 'all'; // specific-hour or custom range → no preset highlighted
+}
+
+/** Hours the availability picker exposes: 06..22 inclusive (matches the grid). */
+const MIN_AVAILABILITY_HOUR = 6;
+const MAX_AVAILABILITY_HOUR = 22;
+const SPECIFIC_HOUR_OPTIONS: number[] = Array.from(
+  { length: MAX_AVAILABILITY_HOUR - MIN_AVAILABILITY_HOUR + 1 },
+  (_, i) => MIN_AVAILABILITY_HOUR + i
+);
+
+/** A specific single hour is encoded as minHour === maxHour (no preset uses that). */
+function specificHourFromRange(r: HourRangeFilter | undefined): number | null {
+  if (!r || r.minHour == null || r.maxHour == null) return null;
+  return r.minHour === r.maxHour ? r.minHour : null;
+}
+
+/** Any hour bound set (preset or specific hour) counts as an active filter. */
+function isHourRangeActive(r: HourRangeFilter | undefined): boolean {
+  return !!r && (r.minHour != null || r.maxHour != null);
+}
+
+// Locale-aware hour label (e.g. "7 PM" / "19 h"). Mirrors HourlyAvailabilityGrid.
+const hourFormatterCache = new Map<string, Intl.DateTimeFormat>();
+function formatHourLabel(hour: number, locale: string): string {
+  let f = hourFormatterCache.get(locale);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, {
+      hour: 'numeric',
+      hour12: locale.toLowerCase().startsWith('en'),
+    });
+    hourFormatterCache.set(locale, f);
+  }
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  return f.format(d);
 }
 export type DayFilter =
   | 'all'
@@ -126,7 +162,7 @@ export const DEFAULT_PLAYER_FILTERS: PlayerFilters = {
 // =============================================================================
 
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
-const HOUR_RANGE_PRESET_OPTIONS: HourRangePreset[] = ['all', 'am', 'pm'];
+const HOUR_RANGE_PRESET_OPTIONS: HourRangePreset[] = ['all', 'am', 'pm', 'eve'];
 const DAY_OPTIONS: DayFilter[] = [
   'all',
   'monday',
@@ -176,6 +212,7 @@ const HOUR_RANGE_LABEL_KEYS: Record<HourRangePreset, TranslationKey> = {
   all: 'playerDirectory.filters.availabilityAll',
   am: 'playerDirectory.filters.availabilityAm',
   pm: 'playerDirectory.filters.availabilityPm',
+  eve: 'playerDirectory.filters.availabilityEve',
 };
 
 const DAY_LABEL_KEYS: Record<DayFilter, string> = {
@@ -437,6 +474,218 @@ function FilterDropdown<T extends string | number>({
 }
 
 // =============================================================================
+// AVAILABILITY FILTER DROPDOWN COMPONENT
+// Time-of-day presets (All / AM / PM / EVE) plus a specific-hour picker. Both
+// write the same range-based HourRangeFilter, so they're mutually exclusive.
+// =============================================================================
+
+interface AvailabilityFilterDropdownProps {
+  visible: boolean;
+  title: string;
+  presetOptions: HourRangePreset[];
+  selectedPreset: HourRangePreset;
+  onSelectPreset: (preset: HourRangePreset) => void;
+  hourOptions: number[];
+  selectedHour: number | null;
+  onSelectHour: (hour: number) => void;
+  getPresetLabel: (preset: HourRangePreset) => string;
+  formatHour: (hour: number) => string;
+  presetSectionLabel: string;
+  specificTimeLabel: string;
+  onClose: () => void;
+  isDark: boolean;
+}
+
+function AvailabilityFilterDropdown({
+  visible,
+  title,
+  presetOptions,
+  selectedPreset,
+  onSelectPreset,
+  hourOptions,
+  selectedHour,
+  onSelectHour,
+  getPresetLabel,
+  formatHour,
+  presetSectionLabel,
+  specificTimeLabel,
+  onClose,
+  isDark,
+}: AvailabilityFilterDropdownProps) {
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);
+
+  const themeColors = isDark ? darkTheme : lightTheme;
+  const colors = {
+    dropdownBg: themeColors.card,
+    dropdownBorder: themeColors.border,
+    itemText: themeColors.foreground,
+    itemTextSelected: primary[500],
+    itemBg: 'transparent',
+    itemBgSelected: isDark ? `${primary[500]}20` : `${primary[500]}10`,
+    itemBorder: themeColors.border,
+    overlayBg: 'rgba(0, 0, 0, 0.5)',
+    checkmark: primary[500],
+    presetInactiveBg: isDark ? neutral[800] : neutral[100],
+    presetInactiveBorder: isDark ? neutral[700] : neutral[200],
+    presetInactiveText: isDark ? neutral[300] : neutral[600],
+  };
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: duration.fast,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
+    }
+  }, [visible, fadeAnim, scaleAnim]);
+
+  const handleSelectPreset = (preset: HourRangePreset) => {
+    selectionHaptic();
+    onSelectPreset(preset);
+    onClose();
+  };
+
+  const handleSelectHour = (hour: number) => {
+    selectionHaptic();
+    onSelectHour(hour);
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <Animated.View
+          style={[
+            styles.overlayBackground,
+            {
+              opacity: fadeAnim,
+              backgroundColor: colors.overlayBg,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.dropdownContainer,
+            {
+              backgroundColor: colors.dropdownBg,
+              borderColor: colors.dropdownBorder,
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          {/* Header */}
+          <View style={[styles.dropdownHeader, { borderBottomColor: colors.itemBorder }]}>
+            <Text size="base" weight="semibold" color={themeColors.foreground}>
+              {title}
+            </Text>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Preset pills */}
+          <View style={styles.availabilitySection}>
+            <Text size="xs" weight="semibold" color={themeColors.mutedForeground}>
+              {presetSectionLabel}
+            </Text>
+            <View style={styles.availabilityPresetRow}>
+              {presetOptions.map(preset => {
+                const isSelected = selectedPreset === preset;
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[
+                      styles.availabilityPresetPill,
+                      {
+                        backgroundColor: isSelected ? primary[500] : colors.presetInactiveBg,
+                        borderColor: isSelected ? primary[400] : colors.presetInactiveBorder,
+                      },
+                    ]}
+                    onPress={() => handleSelectPreset(preset)}
+                    activeOpacity={0.85}
+                  >
+                    <Text
+                      size="xs"
+                      weight={isSelected ? 'semibold' : 'medium'}
+                      color={isSelected ? '#ffffff' : colors.presetInactiveText}
+                    >
+                      {getPresetLabel(preset)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Specific-hour list */}
+          <View style={[styles.availabilitySpecificHeader, { borderTopColor: colors.itemBorder }]}>
+            <Text size="xs" weight="semibold" color={themeColors.mutedForeground}>
+              {specificTimeLabel}
+            </Text>
+          </View>
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces>
+            {hourOptions.map((hour, index) => {
+              const isSelected = selectedHour === hour;
+              const isLast = index === hourOptions.length - 1;
+              return (
+                <TouchableOpacity
+                  key={hour}
+                  style={[
+                    styles.dropdownItem,
+                    {
+                      backgroundColor: isSelected ? colors.itemBgSelected : colors.itemBg,
+                      borderBottomColor: isLast ? 'transparent' : colors.itemBorder,
+                    },
+                  ]}
+                  onPress={() => handleSelectHour(hour)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dropdownItemContent}>
+                    <Text
+                      size="base"
+                      weight={isSelected ? 'semibold' : 'regular'}
+                      color={isSelected ? colors.itemTextSelected : colors.itemText}
+                    >
+                      {formatHour(hour)}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle-outline" size={22} color={colors.checkmark} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// =============================================================================
 // MULTI-SELECT FILTER DROPDOWN COMPONENT
 // =============================================================================
 
@@ -650,7 +899,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
   ratingOptions = [],
 }: PlayerFiltersBarProps) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isDark = theme === 'dark';
 
   // Dropdown visibility states
@@ -673,7 +922,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       filters.reputation !== 'all' ||
       filters.certifiedOnly ||
       filters.maxDistance !== 'all' ||
-      presetFromRange(filters.hourRange) !== 'all' ||
+      isHourRangeActive(filters.hourRange) ||
       filters.day !== 'all' ||
       filters.playStyle !== 'all' ||
       (filters.sortBy && filters.sortBy !== 'distance')
@@ -716,6 +965,13 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
   const handleHourRangeChange = useCallback(
     (preset: HourRangePreset) => {
       onFiltersChange({ ...filters, hourRange: HOUR_RANGE_PRESETS[preset] });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleSpecificHourChange = useCallback(
+    (hour: number) => {
+      onFiltersChange({ ...filters, hourRange: { minHour: hour, maxHour: hour } });
     },
     [filters, onFiltersChange]
   );
@@ -820,10 +1076,14 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       ? t('playerDirectory.filters.distance')
       : `< ${filters.maxDistance} km`;
   const hourRangePreset = presetFromRange(filters.hourRange);
+  const specificHour = specificHourFromRange(filters.hourRange);
+  const hourRangeActive = isHourRangeActive(filters.hourRange);
   const hourRangeDisplay =
-    hourRangePreset === 'all'
-      ? t('playerDirectory.filters.availability')
-      : t(HOUR_RANGE_LABEL_KEYS[hourRangePreset]);
+    specificHour != null
+      ? formatHourLabel(specificHour, locale)
+      : hourRangePreset === 'all'
+        ? t('playerDirectory.filters.availability')
+        : t(HOUR_RANGE_LABEL_KEYS[hourRangePreset]);
   const dayDisplay =
     filters.day === 'all'
       ? t('playerDirectory.filters.day')
@@ -908,12 +1168,12 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         onPress: () => setShowGenderDropdown(true),
         show: true,
       },
-      // Hour-range Filter (AM/PM v1 — preset chips on top of HourRangeFilter)
+      // Availability Filter (AM/PM/EVE presets + specific-hour picker)
       {
         key: 'hourRange',
         label: t('playerDirectory.filters.availability'),
         value: hourRangeDisplay,
-        isActive: hourRangePreset !== 'all',
+        isActive: hourRangeActive,
         onPress: () => setShowAvailabilityDropdown(true),
         show: true,
       },
@@ -971,7 +1231,7 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
       genderDisplay,
       distanceDisplay,
       hourRangeDisplay,
-      hourRangePreset,
+      hourRangeActive,
       dayDisplay,
       styleDisplay,
       sortDisplay,
@@ -1102,15 +1362,21 @@ export const PlayerFiltersBar = memo(function PlayerFiltersBar({
         getLabel={getDistanceLabel}
       />
 
-      <FilterDropdown
+      <AvailabilityFilterDropdown
         visible={showAvailabilityDropdown}
         title={t('playerDirectory.filters.selectAvailability')}
-        options={HOUR_RANGE_PRESET_OPTIONS}
-        selectedValue={hourRangePreset}
-        onSelect={handleHourRangeChange}
+        presetOptions={HOUR_RANGE_PRESET_OPTIONS}
+        selectedPreset={hourRangePreset}
+        onSelectPreset={handleHourRangeChange}
+        hourOptions={SPECIFIC_HOUR_OPTIONS}
+        selectedHour={specificHour}
+        onSelectHour={handleSpecificHourChange}
+        getPresetLabel={getHourRangeLabel}
+        formatHour={hour => formatHourLabel(hour, locale)}
+        presetSectionLabel={t('playerDirectory.filters.availabilityTimeOfDay')}
+        specificTimeLabel={t('playerDirectory.filters.availabilitySpecificTime')}
         onClose={() => setShowAvailabilityDropdown(false)}
         isDark={isDark}
-        getLabel={getHourRangeLabel}
       />
 
       <FilterDropdown
@@ -1231,6 +1497,29 @@ const styles = StyleSheet.create({
   },
   dropdownItemIcon: {
     marginRight: spacingPixels[2],
+  },
+  availabilitySection: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  availabilityPresetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  availabilityPresetPill: {
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  availabilitySpecificHeader: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   multiSelectHeaderActions: {
     flexDirection: 'row' as const,
