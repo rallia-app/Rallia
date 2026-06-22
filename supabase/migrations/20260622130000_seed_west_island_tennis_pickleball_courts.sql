@@ -71,7 +71,7 @@ insert into facility (id, organization_id, name, slug, facility_type, address, c
 select md5('rallia-seed:facility:' || s.fslug)::uuid,
        md5('rallia-seed:org:' || s.org_slug)::uuid,
        s.fname, s.fslug, 'park'::facility_type_enum, s.address, s.city, s.postal_code, 'Canada'::country_enum,
-       s.lat, s.lng, ST_SetSRID(ST_MakePoint(s.lng, s.lat), 4326)::geography,
+       s.lat, s.lng, extensions.ST_SetSRID(extensions.ST_MakePoint(s.lng, s.lat), 4326)::extensions.geography,
        s.membership_required, false, 'America/Toronto', s.description,
        jsonb_build_object('access', s.access, 'source', 'west_island_court_survey_2026_06'),
        true
