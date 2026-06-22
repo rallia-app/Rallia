@@ -4834,7 +4834,12 @@
     },
     "favoriteAvailability": {
       "title": "Open at your favorites",
-      "subtitle": "Live openings ready to book"
+      "subtitle": "Live openings ready to book",
+      "empty": {
+        "title": "No open slots right now",
+        "description": "Browse facilities to find openings in your city",
+        "cta": "Browse facilities"
+      }
     },
     "quickNav": {
       "joinCommunity": "Join a community",

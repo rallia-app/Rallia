@@ -44,6 +44,7 @@ import {
   useProfileCompleteness,
   useReferral,
   useAdminStatus,
+  formatInlineSnapshotSlots,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { MatchScoringPreferences } from '@rallia/shared-hooks';
@@ -950,6 +951,18 @@ const Home = () => {
     }, [refetchFavoriteAvailability])
   );
 
+  // Keep only favorites that currently have at least one bookable slot.
+  // formatInlineSnapshotSlots applies the same future-only filter the card
+  // uses, so a favorite whose snapshots are all past/empty is dropped from the
+  // section entirely instead of rendering a "no slots" card.
+  const favoriteAvailabilityWithSlots = useMemo(
+    () =>
+      favoriteAvailability.filter(
+        f => formatInlineSnapshotSlots(f.availability_slots, f.timezone).slots.length > 0
+      ),
+    [favoriteAvailability]
+  );
+
   // Default search radius for signed-out users
   const GUEST_SEARCH_RADIUS_KM = 20;
 
@@ -1262,7 +1275,11 @@ const Home = () => {
           {!loadingMyMatches && myMatches.length === 0 ? (
             <View style={styles.myMatchesEmptyWrap}>
               <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
-                <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+                <SportIcon
+                  sportName={selectedSport?.name ?? 'tennis'}
+                  size={32}
+                  color={colors.textMuted}
+                />
                 <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
                   {t('home.myMatchesEmpty.title')}
                 </Text>
@@ -1350,19 +1367,29 @@ const Home = () => {
     openMatchDetail,
     openSheetForMatchCreation,
     player,
+    selectedSport?.name,
   ]);
 
   // Render the personalized "Open at your favorites" section: a horizontal
-  // carousel of the player's provider-enabled favorite facilities with their
-  // next bookable slots. Returns null when the player has no provider
-  // favorites (no empty shell). Onboarded users only.
+  // carousel of the player's favorite facilities that currently have an open
+  // slot. When none do, it falls back to an empty-state card (mirroring My
+  // Games) whose CTA opens the facilities directory. Onboarded users only.
   const renderFavoriteAvailabilitySection = useCallback(() => {
     if (!isOnboarded) return null;
-    const showLoading = loadingFavoriteAvailability && favoriteAvailability.length === 0;
-    if (!showLoading && favoriteAvailability.length === 0) return null;
+    const showLoading = loadingFavoriteAvailability && favoriteAvailabilityWithSlots.length === 0;
+    const isEmpty = !showLoading && favoriteAvailabilityWithSlots.length === 0;
 
     // A lone favorite reads better filling the row than as a peek-able card.
-    const isSingle = !showLoading && favoriteAvailability.length === 1;
+    const isSingle = !showLoading && favoriteAvailabilityWithSlots.length === 1;
+
+    const goToFacilitiesDirectory = () => {
+      lightHaptic();
+      Logger.logUserAction('favorite_availability_view_all_pressed');
+      appNavigation.navigate('Main', {
+        screen: 'Courts',
+        params: { screen: 'FacilitiesDirectory' },
+      } as never);
+    };
 
     const renderCard = (facility: FacilitySearchResult, fullWidth = false) => (
       <FavoriteAvailabilityCard
@@ -1392,14 +1419,7 @@ const Home = () => {
           </View>
           <TouchableOpacity
             style={styles.viewAllButton}
-            onPress={() => {
-              lightHaptic();
-              Logger.logUserAction('favorite_availability_view_all_pressed');
-              appNavigation.navigate('Main', {
-                screen: 'Courts',
-                params: { screen: 'FacilitiesDirectory' },
-              } as never);
-            }}
+            onPress={goToFacilitiesDirectory}
             activeOpacity={0.7}
           >
             <Text size="base" weight="medium" color={colors.primary}>
@@ -1413,8 +1433,29 @@ const Home = () => {
             />
           </TouchableOpacity>
         </View>
-        {isSingle ? (
-          <View style={styles.favAvailSingleWrap}>{renderCard(favoriteAvailability[0], true)}</View>
+        {isEmpty ? (
+          <View style={styles.myMatchesEmptyWrap}>
+            <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+              <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.favoriteAvailability.empty.title')}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.favoriteAvailability.empty.description')}
+              </Text>
+              <Button
+                variant="primary"
+                onPress={goToFacilitiesDirectory}
+                style={styles.myMatchesEmptyCta}
+              >
+                {t('home.favoriteAvailability.empty.cta')}
+              </Button>
+            </View>
+          </View>
+        ) : isSingle ? (
+          <View style={styles.favAvailSingleWrap}>
+            {renderCard(favoriteAvailabilityWithSlots[0], true)}
+          </View>
         ) : (
           <GestureScrollView
             horizontal
@@ -1423,7 +1464,7 @@ const Home = () => {
           >
             {showLoading
               ? [1, 2].map(i => <FavoriteAvailabilityCardSkeleton key={i} />)
-              : favoriteAvailability.map(facility => renderCard(facility))}
+              : favoriteAvailabilityWithSlots.map(facility => renderCard(facility))}
           </GestureScrollView>
         )}
       </View>
@@ -1431,13 +1472,12 @@ const Home = () => {
   }, [
     isOnboarded,
     loadingFavoriteAvailability,
-    favoriteAvailability,
+    favoriteAvailabilityWithSlots,
     colors.text,
     colors.textMuted,
     colors.primary,
+    colors.card,
     t,
-    selectedSport?.name,
-    selectedSport?.id,
     appNavigation,
   ]);
 
@@ -1705,8 +1745,8 @@ const Home = () => {
     }
 
     // Personalized realtime availability at the player's favorite facilities.
-    // The renderer returns null when there are no provider favorites, so this
-    // push is inert for those users.
+    // The renderer shows an empty-state card when no favorite has an open slot,
+    // and returns null only for non-onboarded users.
     headerComponents.push(
       <View key="favorite-availability">{renderFavoriteAvailabilitySection()}</View>
     );
