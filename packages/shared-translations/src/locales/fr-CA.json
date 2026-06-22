@@ -10317,7 +10317,6 @@
       "matchUnavailable": "Cette partie n'est plus disponible. Elle a peut-être été annulée ou a déjà commencé.",
       "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
       "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
-      "webJoinLimit": "Vous avez déjà rejoint une partie sur le web. Téléchargez l'application Rallia pour rejoindre d'autres parties et discuter avec les joueurs.",
       "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici."
     },
     "chat": {

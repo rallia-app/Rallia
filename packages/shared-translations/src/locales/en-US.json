@@ -10317,7 +10317,6 @@
       "matchUnavailable": "This game is no longer available. It may have been cancelled or already started.",
       "alreadyHost": "You're the host of this game, so you're already in it.",
       "eligibilityUnverified": "We couldn't verify your eligibility for this game. Please try again.",
-      "webJoinLimit": "You've already joined a game on the web. Download the Rallia app to join more games and chat with players.",
       "matchStarted": "This game has already started, so you can't leave it from here."
     },
     "chat": {

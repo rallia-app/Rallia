@@ -63,32 +63,6 @@ async function resolveJoinStatus(
   }
 }
 
-/**
- * Enforce the one-web-join-per-player cap. Throws WEB_JOIN_LIMIT if the player
- * already joined a DIFFERENT match via the web; re-attempts on the same match
- * are allowed (idempotent). `web_join` is service-role-only and not yet in the
- * generated Database types, hence the cast.
- */
-export async function assertWebJoinAllowed(
-  admin: SupabaseClient<Database>,
-  userId: string,
-  matchId: string
-): Promise<void> {
-  const { data, error } = await (admin as SupabaseClient)
-    .from('web_join')
-    .select('match_id')
-    .eq('player_id', userId)
-    .neq('match_id', matchId)
-    .limit(1);
-
-  if (error) {
-    throw new Error(`Failed to check web join limit: ${error.message}`);
-  }
-  if (data && data.length > 0) {
-    throw new Error('WEB_JOIN_LIMIT');
-  }
-}
-
 /** Record that the player joined this match via the web (idempotent). */
 export async function recordWebJoin(
   admin: SupabaseClient<Database>,
@@ -205,9 +179,8 @@ export async function joinMatchForExistingUser(
 }
 
 /**
- * Removes the player from the match. Does NOT touch their web_join record — the
- * one-web-join allowance stays spent, so after leaving they must use the app to
- * join a different match (they can still re-join this same one).
+ * Removes the player from the match. Leaves the web_join record in place — it's
+ * a historical log of web joins, not a gate, so there's nothing to roll back.
  */
 export async function leaveWebJoinMatch(
   admin: SupabaseClient<Database>,
