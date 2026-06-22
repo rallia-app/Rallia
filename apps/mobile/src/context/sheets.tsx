@@ -341,6 +341,7 @@ declare module 'react-native-actions-sheet' {
         player1Name: string;
         player2Name: string;
         isPickleball: boolean;
+        matchFormat?: import('@rallia/shared-types').Enums<'match_format'>;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };

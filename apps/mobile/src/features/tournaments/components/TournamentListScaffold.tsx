@@ -8,10 +8,11 @@
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
+import { getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   lightTheme,
   darkTheme,
@@ -184,6 +185,70 @@ function formatRatingRange(min: number | null, max: number | null): string | nul
   return null;
 }
 
+const AVATARS_SHOWN = 4;
+
+/** Initials for the avatar fallback when a registrant has no profile picture. */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+/** Stacked faces of the earliest registrants, mirroring the game card. */
+const RegistrantAvatars: React.FC<{
+  preview: TournamentListItem['registrant_preview'];
+  total: number;
+  colors: TournamentListColors;
+}> = ({ preview, total, colors }) => {
+  if (preview.length === 0) return null;
+  const shown = preview.slice(0, AVATARS_SHOWN);
+  const extra = total - shown.length;
+  return (
+    <View style={styles.avatarsRow}>
+      {shown.map((r, i) => {
+        const uri = getProfilePictureUrl(r.avatarUrl);
+        const initials = getInitials(r.name);
+        return (
+          <View
+            key={r.id}
+            style={[
+              styles.avatarSlot,
+              i > 0 && styles.avatarSlotOverlap,
+              {
+                backgroundColor: uri ? colors.cardBackground : colors.chipPrimaryBg,
+                borderColor: colors.cardBorder,
+              },
+            ]}
+          >
+            {uri ? (
+              <Image source={{ uri }} style={styles.avatarImg} />
+            ) : initials ? (
+              <Text size="xs" weight="semibold" color={colors.chipPrimaryText}>
+                {initials}
+              </Text>
+            ) : (
+              <Ionicons name="person" size={12} color={colors.chipPrimaryText} />
+            )}
+          </View>
+        );
+      })}
+      {extra > 0 && (
+        <View
+          style={[
+            styles.avatarSlot,
+            styles.avatarSlotOverlap,
+            { backgroundColor: colors.chipPrimaryBg, borderColor: colors.cardBorder },
+          ]}
+        >
+          <Text size="xs" weight="semibold" color={colors.chipPrimaryText}>
+            +{extra}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 export const TournamentCard: React.FC<{
   tournament: TournamentListItem;
   colors: TournamentListColors;
@@ -296,6 +361,12 @@ export const TournamentCard: React.FC<{
         />
         {tournament.level && <MetaChip label={tournament.level} colors={colors} />}
       </View>
+
+      <RegistrantAvatars
+        preview={tournament.registrant_preview}
+        total={tournament.registration_count}
+        colors={colors}
+      />
     </TouchableOpacity>
   );
 };
@@ -577,6 +648,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
+  },
+  avatarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacingPixels[2],
+  },
+  avatarSlot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    overflow: 'hidden',
+  },
+  avatarSlotOverlap: {
+    marginLeft: -6,
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
   statusPill: {
     paddingHorizontal: spacingPixels[2],

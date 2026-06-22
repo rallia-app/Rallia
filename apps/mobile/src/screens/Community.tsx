@@ -95,14 +95,14 @@ const Community = () => {
   const actionButtons: ActionButton[] = useMemo(() => {
     const buttons: ActionButton[] = [];
 
-    buttons.push({
-      id: 'tournaments',
-      icon: 'trophy-outline',
-      label: t('community.tournaments'),
-      onPress: handleTournaments,
-    });
-
+    // Tournaments & Leagues are admin-gated while the features are in rollout.
     if (isAdmin) {
+      buttons.push({
+        id: 'tournaments',
+        icon: 'trophy-outline',
+        label: t('community.tournaments'),
+        onPress: handleTournaments,
+      });
       buttons.push({
         id: 'leagues',
         icon: 'ribbon-outline',

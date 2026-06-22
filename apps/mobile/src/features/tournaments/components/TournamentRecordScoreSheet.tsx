@@ -31,11 +31,34 @@ import {
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useOverrideTournamentMatchScore } from '@rallia/shared-hooks';
+import type { Enums } from '@rallia/shared-types';
 
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 
 const MAX_SETS = 5;
 const BASE_WHITE = '#ffffff';
+
+// Sets the organizer can enter, per the tournament's match format: the cap on
+// set count and how many set wins clinch the match (so we stop offering "add
+// set" once the result is already decided). Pickleball "to N" formats are
+// single games. Unknown/absent format falls back to the old loose cap.
+const FORMAT_SET_RULES: Partial<
+  Record<Enums<'match_format'>, { maxSets: number; setsToWin: number }>
+> = {
+  one_set: { maxSets: 1, setsToWin: 1 },
+  two_of_three: { maxSets: 3, setsToWin: 2 },
+  three_of_five: { maxSets: 5, setsToWin: 3 },
+  pickleball_to_11: { maxSets: 1, setsToWin: 1 },
+  pickleball_to_15: { maxSets: 1, setsToWin: 1 },
+  pickleball_to_21: { maxSets: 1, setsToWin: 1 },
+};
+
+function setRulesFor(format: Enums<'match_format'> | undefined): {
+  maxSets: number;
+  setsToWin: number;
+} {
+  return (format && FORMAT_SET_RULES[format]) || { maxSets: MAX_SETS, setsToWin: MAX_SETS + 1 };
+}
 
 interface SetScore {
   player1Score: number | null;
@@ -92,6 +115,8 @@ function serializeSets(sets: SetScore[]): string {
 
 /** Map an override RPC error message to a user-facing translation key. */
 function overrideErrorKey(message: string): TranslationKey {
+  if (message.includes('NEXT_MATCH_ALREADY_PLAYED'))
+    return 'tournamentDetail.override.errors.nextMatchPlayed';
   if (message.includes('MATCH_NOT_OVERRIDABLE'))
     return 'tournamentDetail.override.errors.notOverridable';
   if (message.includes('WINNER_NOT_IN_MATCH'))
@@ -117,6 +142,7 @@ export function TournamentRecordScoreActionSheet({
   const player1Name = payload?.player1Name ?? '';
   const player2Name = payload?.player2Name ?? '';
   const isPickleballSport = payload?.isPickleball ?? false;
+  const matchFormat = payload?.matchFormat;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -148,6 +174,20 @@ export function TournamentRecordScoreActionSheet({
     [sets]
   );
   const winningSide = useMemo(() => deriveWinningSideFromSets(validSets), [validSets]);
+
+  // Cap set entry to the tournament's match-format winning-sets logic.
+  const { maxSets, setsToWin } = useMemo(() => setRulesFor(matchFormat), [matchFormat]);
+  const someoneClinched = useMemo(() => {
+    let p1 = 0;
+    let p2 = 0;
+    for (const s of validSets) {
+      if (s.player1Score === null || s.player2Score === null) continue;
+      if (s.player1Score > s.player2Score) p1 += 1;
+      else if (s.player2Score > s.player1Score) p2 += 1;
+    }
+    return p1 >= setsToWin || p2 >= setsToWin;
+  }, [validSets, setsToWin]);
+  const canAddSet = sets.length < maxSets && !someoneClinched;
 
   // Track whether submit succeeded so onClose can skip the dismiss callback.
   const didSubmitRef = useRef(false);
@@ -181,11 +221,11 @@ export function TournamentRecordScoreActionSheet({
   }, []);
 
   const handleAddSet = useCallback(() => {
-    if (sets.length < MAX_SETS) {
+    if (canAddSet) {
       lightHaptic();
       setSets(prev => [...prev, { player1Score: null, player2Score: null }]);
     }
-  }, [sets.length]);
+  }, [canAddSet]);
 
   const handleRemoveSet = useCallback(
     (setIndex: number) => {
@@ -436,7 +476,7 @@ export function TournamentRecordScoreActionSheet({
             </View>
           ))}
 
-          {sets.length < MAX_SETS && (
+          {canAddSet && (
             <TouchableOpacity
               style={[styles.addSetButton, { borderColor: colors.border }]}
               onPress={handleAddSet}

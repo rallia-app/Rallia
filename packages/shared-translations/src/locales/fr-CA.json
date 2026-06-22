@@ -4444,6 +4444,7 @@
     },
     "dashboard": {
       "details": "Détails",
+      "rulesTitle": "Règles du tournoi",
       "organizedBy": "Organisé par {name}",
       "champion": "Champion",
       "steps": {
@@ -4558,6 +4559,7 @@
     "actions": {
       "openRegistration": "Ouvrir les inscriptions",
       "closeRegistration": "Fermer les inscriptions",
+      "reopenRegistration": "Rouvrir les inscriptions",
       "register": "S'inscrire",
       "addMyself": "M'ajouter",
       "withdraw": "Se retirer",
@@ -4694,6 +4696,7 @@
       "confirm": "Enregistrer le résultat",
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
+        "nextMatchPlayed": "Vous ne pouvez plus modifier ce score. La prochaine partie a déjà été jouée.",
         "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
@@ -4709,6 +4712,7 @@
     "errors": {
       "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",
       "closeFailed": "Impossible de fermer les inscriptions. Veuillez réessayer.",
+      "reopenFailed": "Impossible de rouvrir les inscriptions. Veuillez réessayer.",
       "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
       "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
       "withdrawClosed": "Les inscriptions sont fermées, tu peux plus te retirer.",
@@ -4758,6 +4762,12 @@
       "namePlaceholder": "ex. : Simples du printemps 2026",
       "description": "Description",
       "descriptionPlaceholder": "Dis aux joueurs à quoi s'attendre (optionnel)",
+      "rules": "Règles",
+      "rulesPlaceholder": "Format, pointage, présence, conduite… (optionnel)",
+      "poster": "Affiche",
+      "posterAdd": "Ajouter une affiche",
+      "posterChange": "Changer l'affiche",
+      "posterRemove": "Retirer l'affiche",
       "maxParticipants": "Taille du tableau",
       "maxParticipantsHint": "Nombre de joueurs que le tableau accueille",
       "maxTeams": "Taille du tableau (équipes)",
@@ -4806,6 +4816,8 @@
     "errors": {
       "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
       "rateLimited": "Vous avez créé trop de tournois récemment. Réessayez plus tard.",
+      "posterUploadFailedTitle": "Échec du téléversement",
+      "posterUploadFailed": "Impossible de téléverser l'affiche. Veuillez réessayer.",
       "generic": "Impossible de créer le tournoi. Veuillez réessayer."
     }
   },

@@ -1657,17 +1657,20 @@ const Home = () => {
             navigation.navigate('PublicMatches');
           }}
         />
-        <QuickNavButton
-          icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-          label={t('home.quickNav.tournaments')}
-          onPress={() => appNavigation.navigate('Tournaments')}
-        />
+        {/* Tournaments & Leagues are admin-gated while the features are in rollout. */}
         {isAdmin && (
-          <QuickNavButton
-            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-            label={t('home.quickNav.leagues')}
-            onPress={() => appNavigation.navigate('Leagues')}
-          />
+          <>
+            <QuickNavButton
+              icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+              label={t('home.quickNav.tournaments')}
+              onPress={() => appNavigation.navigate('Tournaments')}
+            />
+            <QuickNavButton
+              icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+              label={t('home.quickNav.leagues')}
+              onPress={() => appNavigation.navigate('Leagues')}
+            />
+          </>
         )}
       </ScrollView>
     );
