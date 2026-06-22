@@ -156,8 +156,6 @@ async function loadAuthenticatedWizardState(
 /** Turn a stable join error code from the API into a friendly, localized message. */
 function joinErrorMessage(code: string, t: ReturnType<typeof useTranslations<'webJoin'>>): string {
   switch (code) {
-    case 'WEB_JOIN_LIMIT':
-      return t('errors.webJoinLimit');
     case 'MATCH_STARTED':
       return t('errors.matchStarted');
     case 'GENDER_MISMATCH':

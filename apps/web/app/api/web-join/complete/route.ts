@@ -4,7 +4,6 @@ import { meetsMinimumAge } from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import {
-  assertWebJoinAllowed,
   completeWebJoinProfile,
   DEFAULT_WEB_JOIN_PREFERENCES,
   joinMatchForExistingUser,
@@ -60,8 +59,6 @@ const StatusSchema = z.object({
  */
 function toJoinErrorCode(message: string): string {
   switch (message) {
-    case 'WEB_JOIN_LIMIT':
-      return 'WEB_JOIN_LIMIT';
     case 'GENDER_MISMATCH':
       return 'GENDER_MISMATCH';
     case 'Match not found':
@@ -148,9 +145,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'MATCH_UNAVAILABLE' }, { status: 404 });
     }
 
-    // One web join per player — block joining a second, different match here.
-    await assertWebJoinAllowed(admin, user.id, matchId);
-
     const { data: profile } = await admin
       .from('profile')
       .select('onboarding_completed')
@@ -203,7 +197,7 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'An error occurred';
     console.error('[web-join/complete]', message);
     const code = toJoinErrorCode(message);
-    const status = code === 'JOIN_FAILED' ? 500 : code === 'WEB_JOIN_LIMIT' ? 403 : 400;
+    const status = code === 'JOIN_FAILED' ? 500 : 400;
     return NextResponse.json({ error: code }, { status });
   }
 }
