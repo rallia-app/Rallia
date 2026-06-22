@@ -79,23 +79,47 @@ function chain(result: { data: unknown; error: unknown }) {
 // ---------------------------------------------------------------------------
 
 describe('listPublicTournaments', () => {
-  it('returns rows filtered to public visibility and discovery statuses', async () => {
+  it('returns rows with registration count + registrant preview, filtered to public visibility and discovery statuses', async () => {
     const rows = [
-      { id: 't1', tournament_registrations: [{ count: 3 }] },
+      {
+        id: 't1',
+        tournament_registrations: [
+          { user_id: 'u1', registered_at: '2026-06-01' },
+          { user_id: 'u2', registered_at: '2026-06-02' },
+          { user_id: 'u3', registered_at: '2026-06-03' },
+        ],
+      },
       { id: 't2', tournament_registrations: [] },
     ];
-    const { p, calls } = chain({ data: rows, error: null });
-    mockFrom.mockReturnValue(p);
+    const tnChain = chain({ data: rows, error: null });
+    const profileChain = chain({
+      data: [
+        { id: 'u1', first_name: 'Ada', last_name: 'L', profile_picture_url: null },
+        { id: 'u2', first_name: 'Bo', last_name: null, profile_picture_url: 'a.jpg' },
+        { id: 'u3', first_name: 'Cy', last_name: 'Z', profile_picture_url: null },
+      ],
+      error: null,
+    });
+    mockFrom.mockReturnValueOnce(tnChain.p).mockReturnValueOnce(profileChain.p);
 
     const out = await listPublicTournaments();
     expect(out).toEqual([
-      { id: 't1', registration_count: 3 },
-      { id: 't2', registration_count: 0 },
+      {
+        id: 't1',
+        registration_count: 3,
+        registrant_preview: [
+          { id: 'u1', avatarUrl: null, name: 'Ada L' },
+          { id: 'u2', avatarUrl: 'a.jpg', name: 'Bo' },
+          { id: 'u3', avatarUrl: null, name: 'Cy Z' },
+        ],
+      },
+      { id: 't2', registration_count: 0, registrant_preview: [] },
     ]);
-    expect(mockFrom).toHaveBeenCalledWith('tournaments');
-    expect(calls.eq).toHaveBeenCalledWith('visibility', 'public');
-    expect(calls.eq).toHaveBeenCalledWith('tournament_registrations.status', 'registered');
-    expect(calls.in).toHaveBeenCalledWith('status', [
+    expect(mockFrom).toHaveBeenNthCalledWith(1, 'tournaments');
+    expect(mockFrom).toHaveBeenNthCalledWith(2, 'profile');
+    expect(tnChain.calls.eq).toHaveBeenCalledWith('visibility', 'public');
+    expect(tnChain.calls.eq).toHaveBeenCalledWith('tournament_registrations.status', 'registered');
+    expect(tnChain.calls.in).toHaveBeenCalledWith('status', [
       'registration_open',
       'registration_closed',
       'in_progress',
@@ -135,15 +159,43 @@ describe('listMyTournaments', () => {
       error: null,
     });
     const tnChain = chain({
-      data: [{ id: 't1', tournament_registrations: [{ count: 2 }] }],
+      data: [
+        {
+          id: 't1',
+          tournament_registrations: [
+            { user_id: 'u1', registered_at: '2026-06-01' },
+            { user_id: 'u2', registered_at: '2026-06-02' },
+          ],
+        },
+      ],
       error: null,
     });
-    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(tnChain.p);
+    const profileChain = chain({
+      data: [
+        { id: 'u1', first_name: 'Ada', last_name: 'L', profile_picture_url: null },
+        { id: 'u2', first_name: 'Bo', last_name: null, profile_picture_url: 'a.jpg' },
+      ],
+      error: null,
+    });
+    mockFrom
+      .mockReturnValueOnce(regChain.p)
+      .mockReturnValueOnce(tnChain.p)
+      .mockReturnValueOnce(profileChain.p);
 
     const out = await listMyTournaments('u1');
-    expect(out).toEqual([{ id: 't1', registration_count: 2 }]);
+    expect(out).toEqual([
+      {
+        id: 't1',
+        registration_count: 2,
+        registrant_preview: [
+          { id: 'u1', avatarUrl: null, name: 'Ada L' },
+          { id: 'u2', avatarUrl: 'a.jpg', name: 'Bo' },
+        ],
+      },
+    ]);
     expect(mockFrom).toHaveBeenNthCalledWith(1, 'tournament_registrations');
     expect(mockFrom).toHaveBeenNthCalledWith(2, 'tournaments');
+    expect(mockFrom).toHaveBeenNthCalledWith(3, 'profile');
     expect(tnChain.calls.or).toHaveBeenCalledWith('organizer_id.eq.u1,id.in.(r1,r2)');
     expect(tnChain.calls.neq).toHaveBeenCalledWith('status', 'archived');
   });
