@@ -92,9 +92,12 @@ import {
   readRequestContext,
 } from '@/lib/match-smoke-test/session';
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null;
+// Fake-door: never charges, so it uses a TEST publishable key on purpose (always
+// renders, can't charge). Falls back to the default key for local dev (already test).
+const smokeTestStripeKey =
+  process.env.NEXT_PUBLIC_STRIPE_SMOKE_TEST_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = smokeTestStripeKey ? loadStripe(smokeTestStripeKey) : null;
 
 const WIZARD_STEPS = [
   'intro',
