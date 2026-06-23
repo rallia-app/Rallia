@@ -18,6 +18,16 @@ function formatMatchTime(pgTime: string): string {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// Formats a Postgres DATE ("YYYY-MM-DD") as "MMM d" in local time; building the
+// Date from parts avoids the UTC-midnight parse that shifts the day in -UTC zones.
+function formatMatchDate(pgDate: string): string {
+  const [year, month, day] = pgDate.split('T')[0].split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 /**
  * Derive the display name for a conversation from its data.
  *
@@ -46,12 +56,7 @@ export function getConversationDisplayName(
     if (mi) {
       const formatLabel =
         mi.format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
-      const dateStr = mi.match_date
-        ? new Date(mi.match_date).toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-          })
-        : '';
+      const dateStr = mi.match_date ? formatMatchDate(mi.match_date) : '';
       const timeStr = mi.start_time ? formatMatchTime(mi.start_time) : '';
       const datePart = [dateStr, timeStr].filter(Boolean).join(', ');
       return datePart ? `${formatLabel} - ${datePart}` : formatLabel;
