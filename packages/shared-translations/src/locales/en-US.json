@@ -11011,6 +11011,13 @@
       "smsNote": "When a match is locked in, we'll text you the details — reply to accept.",
       "previewNote": "Early preview — AI coordination is rolling out market by market while we validate demand."
     },
+    "reveal": {
+      "badge": "Heads up",
+      "headline": "This was a test, and you weren't charged.",
+      "message": "We're validating how many players want AI to find and lock in their games for them. You just helped us prove it — no card was charged and nothing was saved.",
+      "thanks": "Thanks for helping us build the real thing.",
+      "note": "We'll open this up for real soon. Hang tight."
+    },
     "success": {
       "badge": "You're in",
       "headline": "Thanks — you're on the early access list.",

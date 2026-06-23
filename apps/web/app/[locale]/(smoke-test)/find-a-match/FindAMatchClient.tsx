@@ -107,6 +107,7 @@ const WIZARD_STEPS = [
   'checkout',
   'phone',
   'done',
+  'reveal',
 ] as const;
 
 const DEFAULT_PLAN_TIER: MatchPlanTier = 'pack_3';
@@ -420,13 +421,10 @@ function WizardShell({ step, showBack, onBack, questionStep, children }: WizardS
 
 interface PaymentFormProps {
   formattedAmount: string;
-  rating: RatingOption;
-  plan: MatchPlanConfig;
   onSuccess: () => void;
-  onError: (msg: string) => void;
 }
 
-function PaymentForm({ formattedAmount, rating, plan, onSuccess, onError }: PaymentFormProps) {
+function PaymentForm({ formattedAmount, onSuccess }: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const t = useTranslations('findAMatch');
@@ -435,24 +433,9 @@ function PaymentForm({ formattedAmount, rating, plan, onSuccess, onError }: Paym
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
     setIsSubmitting(true);
-
-    const returnUrl = `${window.location.origin}${window.location.pathname}`;
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
-      redirect: 'if_required',
-    });
-
-    if (error) {
-      onError(error.message ?? t('payment.failed'));
-      matchSmokeTestFailed({
-        ...paymentAnalyticsProps(rating, plan),
-        stage: 'payment_confirm',
-      });
-      setIsSubmitting(false);
-    } else {
-      onSuccess();
-    }
+    // Smoke test: never charge — simulate processing, then reveal it was a test.
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    onSuccess();
   };
 
   return (
@@ -873,7 +856,8 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const handlePaymentSuccess = () => {
     if (!rating) return;
     matchSmokeTestCompleted(paymentAnalyticsProps(rating, activePlan));
-    setStep('phone');
+    clearRequestContext();
+    setStep('reveal');
     setError(null);
   };
 
@@ -1519,13 +1503,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           stripe={stripePromise}
           options={{ clientSecret, appearance: getAppearance(resolvedTheme) }}
         >
-          <PaymentForm
-            formattedAmount={formattedAmount}
-            rating={rating}
-            plan={activePlan}
-            onSuccess={handlePaymentSuccess}
-            onError={msg => setError(msg)}
-          />
+          <PaymentForm formattedAmount={formattedAmount} onSuccess={handlePaymentSuccess} />
         </Elements>
         {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
         <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -1614,6 +1592,27 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
             </button>
           </div>
         )}
+      </WizardShell>
+    );
+  }
+
+  if (step === 'reveal') {
+    return (
+      <WizardShell step={step}>
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
+            <ShieldCheck className="h-10 w-10 text-primary" />
+          </div>
+          <Badge className="bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
+            {t('reveal.badge')}
+          </Badge>
+          <div className="flex flex-col gap-3">
+            <h2 className="text-2xl font-bold sm:text-3xl">{t('reveal.headline')}</h2>
+            <p className="text-muted-foreground">{t('reveal.message')}</p>
+            <p className="text-sm font-medium text-foreground">{t('reveal.thanks')}</p>
+            <p className="text-xs text-muted-foreground">{t('reveal.note')}</p>
+          </div>
+        </div>
       </WizardShell>
     );
   }

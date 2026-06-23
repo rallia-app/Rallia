@@ -11011,6 +11011,13 @@
       "smsNote": "Quand la partie est confirmée, on vous texte les détails — répondez pour accepter.",
       "previewNote": "Aperçu anticipé — la coordination par IA se déploie marché par marché pendant la validation de la demande."
     },
+    "reveal": {
+      "badge": "Petit mot",
+      "headline": "C'était un test, pis t'as rien payé.",
+      "message": "On valide combien de joueurs veulent qu'une IA trouve et organise leurs parties à leur place. Tu viens de nous aider à le prouver. Aucune carte n'a été chargée et rien n'a été enregistré.",
+      "thanks": "Merci de nous aider à bâtir la vraie affaire.",
+      "note": "On ouvre ça pour vrai bientôt. Reste à l'affût."
+    },
     "success": {
       "badge": "C'est noté",
       "headline": "Merci — vous êtes sur la liste d'accès anticipé.",
