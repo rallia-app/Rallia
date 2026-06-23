@@ -150,6 +150,10 @@ export function matchSmokeTestSubscriptionInterest(props: { rating: MatchSmokeTe
   capture('match_smoke_test_subscription_interest', props);
 }
 
+export function matchSmokeTestEmailCaptured(props: MatchSmokeTestPaymentProps): void {
+  capture('match_smoke_test_email_captured', props);
+}
+
 export function matchSmokeTestCheckoutStarted(props: MatchSmokeTestPaymentProps): void {
   capture('match_smoke_test_checkout_started', props);
 }

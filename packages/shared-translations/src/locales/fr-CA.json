@@ -10974,6 +10974,17 @@
       "subscriptionNote": "Les forfaits illimités ne sont pas encore disponibles dans cet aperçu — nous vous aviserons au lancement.",
       "continueCta": "Continuer vers le paiement"
     },
+    "email": {
+      "badge": "Presque fini",
+      "title": "On t'envoie les détails de ta partie où?",
+      "subtitle": "On t'écrit dès que ta partie est confirmée. C'est comme ça que tu vas recevoir l'intro.",
+      "placeholder": "toi@courriel.com",
+      "submit": "Continuer vers le paiement",
+      "privacyNote": "On va l'utiliser juste pour te rejoindre au sujet de ta partie.",
+      "errors": {
+        "invalid": "Entre une adresse courriel valide."
+      }
+    },
     "payment": {
       "title": "Finaliser votre achat",
       "subtitleSingle": "Payez {amount} pour 1 crédit de recherche.",

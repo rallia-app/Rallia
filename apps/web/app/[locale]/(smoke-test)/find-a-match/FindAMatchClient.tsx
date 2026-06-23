@@ -3,7 +3,7 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import type { Appearance } from '@stripe/stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { validatePhoneNumber } from '@rallia/shared-utils';
+import { validateEmail, validatePhoneNumber } from '@rallia/shared-utils';
 import { usePlacesAutocomplete } from '@rallia/shared-hooks';
 import type {
   FacilityAvailabilitySlotRow,
@@ -33,6 +33,7 @@ import {
   matchSmokeTestCheckoutViewed,
   matchSmokeTestCompleted,
   matchSmokeTestDone,
+  matchSmokeTestEmailCaptured,
   matchSmokeTestFailed,
   matchSmokeTestFormSubmitted,
   matchSmokeTestPhoneCodeSent,
@@ -104,6 +105,7 @@ const WIZARD_STEPS = [
   'time',
   'promise',
   'plan',
+  'email',
   'checkout',
   'phone',
   'done',
@@ -465,6 +467,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
   const [step, setStep] = useState<Step>('intro');
   const [rating, setRating] = useState<RatingOption | null>(null);
+  const [email, setEmail] = useState('');
   const [matchFormat, setMatchFormat] = useState<MatchFormatOption | null>(null);
   const [matchNature, setMatchNature] = useState<MatchNatureOption | null>(null);
   const [timeSlot, setTimeSlot] = useState<string | null>(null);
@@ -786,6 +789,12 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const handlePurchase = async () => {
     if (!rating || !matchFormat || !matchNature || !timeSlot) return;
 
+    const trimmedEmail = email.trim();
+    if (!validateEmail(trimmedEmail)) {
+      setError(t('email.errors.invalid'));
+      return;
+    }
+
     const plan = getMatchPlan(selectedPlanTier);
     if (!plan.purchasable) {
       setError(t('payment.genericError'));
@@ -816,6 +825,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           facilityId: selectedFacilityId,
           facilityName: selectedFacilityName ?? undefined,
           planTier: plan.tier,
+          email: trimmedEmail,
         }),
       });
 
@@ -841,6 +851,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         credits: plan.credits,
       });
       setStep('checkout');
+      matchSmokeTestEmailCaptured(paymentAnalyticsProps(rating, plan));
       matchSmokeTestCheckoutStarted(paymentAnalyticsProps(rating, plan));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('payment.genericError'));
@@ -1459,8 +1470,57 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
 
         <Button
+          onClick={() => {
+            setError(null);
+            setStep('email');
+          }}
+          disabled={!selectedPlan.purchasable}
+          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+        >
+          {t('plans.continueCta')}
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </WizardShell>
+    );
+  }
+
+  if (step === 'email' && rating) {
+    return (
+      <WizardShell
+        step={step}
+        showBack
+        onBack={() => {
+          setStep('plan');
+          setError(null);
+        }}
+      >
+        <div className="flex flex-col gap-3">
+          <Badge className="w-fit bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
+            {t('email.badge')}
+          </Badge>
+          <h2 className="text-2xl font-bold sm:text-3xl">{t('email.title')}</h2>
+          <p className="text-muted-foreground">{t('email.subtitle')}</p>
+        </div>
+
+        <Input
+          value={email}
+          onChange={e => {
+            setEmail(e.target.value);
+            setError(null);
+          }}
+          placeholder={t('email.placeholder')}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoFocus
+          className="h-14 rounded-2xl border-2 px-5 text-lg"
+        />
+
+        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
+
+        <Button
           onClick={handlePurchase}
-          disabled={isSubmitting || !selectedPlan.purchasable}
+          disabled={isSubmitting || !validateEmail(email.trim())}
           className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
         >
           {isSubmitting ? (
@@ -1470,11 +1530,15 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
             </>
           ) : (
             <>
-              {t('plans.continueCta')}
+              {t('email.submit')}
               <ArrowRight className="ml-2 h-5 w-5" />
             </>
           )}
         </Button>
+        <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+          <Lock className="h-3 w-3" />
+          {t('email.privacyNote')}
+        </p>
       </WizardShell>
     );
   }

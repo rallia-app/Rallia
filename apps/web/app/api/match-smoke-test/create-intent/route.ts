@@ -8,6 +8,7 @@ import {
   type MatchPlanTier,
 } from '@/lib/match-smoke-test/constants';
 import { isValidTimeSlot } from '@/lib/match-smoke-test/time-selection';
+import { validateEmail } from '@rallia/shared-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -24,10 +25,18 @@ export async function POST(request: NextRequest) {
       facilityId,
       facilityName,
       planTier,
+      email,
     } = body;
 
     if (!rating || !RATING_OPTIONS.includes(rating)) {
       return NextResponse.json({ error: 'Invalid rating.' }, { status: 400 });
+    }
+
+    const normalizedEmail = String(email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!validateEmail(normalizedEmail)) {
+      return NextResponse.json({ error: 'Invalid email.' }, { status: 400 });
     }
     if (!matchFormat || !MATCH_FORMAT_OPTIONS.includes(matchFormat)) {
       return NextResponse.json({ error: 'Invalid format.' }, { status: 400 });
@@ -77,6 +86,7 @@ export async function POST(request: NextRequest) {
         facility_name: facilityName ? String(facilityName) : '',
         plan_tier: plan.tier,
         credits: plan.credits !== null ? String(plan.credits) : '',
+        email: normalizedEmail,
       },
     });
 
