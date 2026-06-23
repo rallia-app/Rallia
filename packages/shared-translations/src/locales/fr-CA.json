@@ -4846,7 +4846,7 @@
     },
     "favoriteAvailability": {
       "title": "Tes terrains favoris",
-      "subtitle": "Des disponibilités à réserver en temps réel",
+      "subtitle": "Des disponibilités en temps réel",
       "empty": {
         "title": "Aucune disponibilité pour l'instant",
         "description": "Explore les terrains pour des disponibilités en ville",
