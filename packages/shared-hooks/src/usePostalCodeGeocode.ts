@@ -102,6 +102,11 @@ const getApiKey = (): string | null => {
   return null;
 };
 
+/** Web: proxy through the Next.js API when only the server-side GOOGLE_PLACES_API_KEY is set. */
+function shouldUseServerPlacesProxy(): boolean {
+  return typeof window !== 'undefined' && !getApiKey();
+}
+
 // =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
@@ -156,6 +161,45 @@ export function usePostalCodeGeocode(): UsePostalCodeGeocodeReturn {
           const mocked = await mockGeocodePostalCode(validation.normalized, validation.country);
           setResult(mocked);
           return mocked;
+        } finally {
+          setIsLoading(false);
+        }
+      }
+
+      if (shouldUseServerPlacesProxy()) {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const response = await fetch('/api/places/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              postalCode: validation.normalized,
+              country: validation.country,
+            }),
+          });
+
+          if (response.status === 404) {
+            setError('notFound');
+            return null;
+          }
+          if (!response.ok) {
+            setError('networkError');
+            return null;
+          }
+
+          const data = (await response.json()) as { location?: PostalCodeLocation };
+          if (!data.location) {
+            setError('notFound');
+            return null;
+          }
+
+          setResult(data.location);
+          return data.location;
+        } catch (err) {
+          console.error('Postal code geocode proxy error:', err);
+          setError('networkError');
+          return null;
         } finally {
           setIsLoading(false);
         }

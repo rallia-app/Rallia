@@ -1,9 +1,10 @@
 import type { PlacePrediction } from '@rallia/shared-types';
-import type { PlaceDetails, PlacesScope } from '@rallia/shared-hooks';
+import type { PlaceDetails, PlacesScope, PostalCodeLocation } from '@rallia/shared-hooks';
 
 const AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
 const TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
+const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 /** GMA bounding box — matches usePlacesAutocomplete client restriction. */
 const GMA_LOCATION_RESTRICTION = {
@@ -155,5 +156,66 @@ export async function fetchPlaceDetails(placeId: string): Promise<PlaceDetails |
     ...(city && { city }),
     ...(province && { province }),
     ...(postalCode && { postalCode }),
+  };
+}
+
+// Geocoding API returns snake_case address_components (unlike the new Places API).
+function parsePostalAddressComponents(
+  components: Array<{ long_name?: string; short_name?: string; types?: string[] }> | undefined
+): { city?: string; province?: string } {
+  if (!components?.length) return {};
+  const get = (types: string[], useShort = false): string => {
+    const c = components.find(comp => types.some(type => comp.types?.includes(type)));
+    return (useShort ? c?.short_name : c?.long_name) || '';
+  };
+  const city =
+    get(['locality']) || get(['administrative_area_level_3']) || get(['sublocality_level_1']);
+  const province = get(['administrative_area_level_1'], true);
+  return { ...(city && { city }), ...(province && { province }) };
+}
+
+export async function geocodePostalCode(
+  postalCode: string,
+  country: 'CA' | 'US'
+): Promise<PostalCodeLocation | null> {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('Google Places API not configured');
+  }
+
+  const countryComponent = country === 'CA' ? 'country:CA' : 'country:US';
+  const url = `${GEOCODING_URL}?address=${encodeURIComponent(postalCode)}&components=${countryComponent}&key=${apiKey}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    console.error('Google Geocoding API error:', response.status);
+    throw new Error('Failed to geocode postal code');
+  }
+
+  const data = await response.json();
+  if (data.status === 'ZERO_RESULTS' || !data.results?.length) {
+    return null;
+  }
+  if (data.status !== 'OK') {
+    console.error('Geocoding API error:', data.status, data.error_message);
+    throw new Error('Failed to geocode postal code');
+  }
+
+  const firstResult = data.results[0];
+  const location = firstResult.geometry?.location;
+  if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+    return null;
+  }
+
+  const { city, province } = parsePostalAddressComponents(firstResult.address_components);
+
+  return {
+    postalCode,
+    country,
+    formattedAddress: firstResult.formatted_address || postalCode,
+    ...(city && { city }),
+    ...(province && { province }),
+    latitude: location.lat,
+    longitude: location.lng,
   };
 }
