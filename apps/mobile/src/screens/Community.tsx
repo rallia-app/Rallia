@@ -129,6 +129,10 @@ const Community = () => {
     return buttons;
   }, [handleGroups, handleCommunities, handleTournaments, handleLeagues, isAdmin, t]);
 
+  // When there are few enough buttons to fit without scrolling (e.g. signed-out /
+  // non-admin users only see Communities + Groups), stretch them to fill the width.
+  const fillWidth = actionButtons.length <= 2;
+
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
@@ -140,42 +144,51 @@ const Community = () => {
   );
 
   // List header with action buttons and section title
-  const listHeader = useMemo(
-    () => (
-      <>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.actionButtonsRow}
-        >
-          {actionButtons.map(button => (
-            <TouchableOpacity
-              key={button.id}
-              style={styles.actionButton}
-              onPress={button.onPress}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={button.label}
+  const listHeader = useMemo(() => {
+    const buttonElements = actionButtons.map(button => (
+      <TouchableOpacity
+        key={button.id}
+        style={[
+          styles.actionButton,
+          fillWidth ? styles.actionButtonFill : styles.actionButtonFixed,
+        ]}
+        onPress={button.onPress}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={button.label}
+      >
+        <View style={styles.actionButtonInner}>
+          <View style={styles.actionButtonIcon}>
+            <Ionicons name={button.icon} size={26} color="#ffffff" />
+          </View>
+          <View style={styles.actionButtonLabelBlock}>
+            <Text
+              size="sm"
+              weight="semibold"
+              color="#ffffff"
+              style={styles.actionButtonLabel}
+              numberOfLines={1}
             >
-              <View style={styles.actionButtonInner}>
-                <View style={styles.actionButtonIcon}>
-                  <Ionicons name={button.icon} size={26} color="#ffffff" />
-                </View>
-                <View style={styles.actionButtonLabelBlock}>
-                  <Text
-                    size="sm"
-                    weight="semibold"
-                    color="#ffffff"
-                    style={styles.actionButtonLabel}
-                    numberOfLines={1}
-                  >
-                    {button.label}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {button.label}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    ));
+
+    return (
+      <>
+        {fillWidth ? (
+          <View style={styles.actionButtonsRow}>{buttonElements}</View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.actionButtonsRow}
+          >
+            {buttonElements}
+          </ScrollView>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text size="xl" weight="bold" color={colors.text} style={styles.sectionTitle}>
@@ -183,9 +196,8 @@ const Community = () => {
           </Text>
         </View>
       </>
-    ),
-    [actionButtons, colors.text, t]
-  );
+    );
+  }, [actionButtons, fillWidth, colors.text, t]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
@@ -213,8 +225,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
   },
   actionButton: {
-    width: 132,
     borderRadius: radiusPixels['2xl'],
+  },
+  actionButtonFixed: {
+    width: 132,
+  },
+  actionButtonFill: {
+    flex: 1,
   },
   actionButtonInner: {
     flexDirection: 'column',

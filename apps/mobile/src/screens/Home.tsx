@@ -166,7 +166,8 @@ const QuickNavButton: React.FC<{
   icon: (color: string) => React.ReactNode;
   label: string;
   onPress: () => void;
-}> = ({ icon, label, onPress }) => {
+  fullWidth?: boolean;
+}> = ({ icon, label, onPress, fullWidth = false }) => {
   const [lineOne, lineTwo] = splitLabelTwoLines(label);
   const handlePress = () => {
     void lightHaptic();
@@ -176,7 +177,7 @@ const QuickNavButton: React.FC<{
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.85}
-      style={quickNavStyles.item}
+      style={[quickNavStyles.item, fullWidth && quickNavStyles.itemFullWidth]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
@@ -218,6 +219,10 @@ const quickNavStyles = StyleSheet.create({
   item: {
     width: 190,
     borderRadius: radiusPixels['2xl'],
+  },
+  itemFullWidth: {
+    width: undefined,
+    flex: 1,
   },
   inner: {
     flexDirection: 'row',
@@ -1642,37 +1647,45 @@ const Home = () => {
     // which gate themselves where needed.
     const SportIconComponent =
       selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
+    // Tournaments & Leagues are admin-gated while the features are in rollout.
+    // When they're hidden the lone "find a game" button stretches full-width so
+    // it doesn't look stranded next to empty space.
+    const findGameButton = (
+      <QuickNavButton
+        icon={color => <SportIconComponent width={24} height={24} fill={color} />}
+        label={t('home.quickNav.findGame')}
+        fullWidth={!isAdmin}
+        onPress={() => {
+          Analytics.publicMatchesOpened({ cta: 'find_game' });
+          navigation.navigate('PublicMatches');
+        }}
+      />
+    );
     headerComponents.push(
-      <ScrollView
-        key="quick-nav"
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={quickNavStyles.row}
-      >
-        <QuickNavButton
-          icon={color => <SportIconComponent width={24} height={24} fill={color} />}
-          label={t('home.quickNav.findGame')}
-          onPress={() => {
-            Analytics.publicMatchesOpened({ cta: 'find_game' });
-            navigation.navigate('PublicMatches');
-          }}
-        />
-        {/* Tournaments & Leagues are admin-gated while the features are in rollout. */}
-        {isAdmin && (
-          <>
-            <QuickNavButton
-              icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-              label={t('home.quickNav.tournaments')}
-              onPress={() => appNavigation.navigate('Tournaments')}
-            />
-            <QuickNavButton
-              icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-              label={t('home.quickNav.leagues')}
-              onPress={() => appNavigation.navigate('Leagues')}
-            />
-          </>
-        )}
-      </ScrollView>
+      isAdmin ? (
+        <ScrollView
+          key="quick-nav"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={quickNavStyles.row}
+        >
+          {findGameButton}
+          <QuickNavButton
+            icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+            label={t('home.quickNav.tournaments')}
+            onPress={() => appNavigation.navigate('Tournaments')}
+          />
+          <QuickNavButton
+            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+            label={t('home.quickNav.leagues')}
+            onPress={() => appNavigation.navigate('Leagues')}
+          />
+        </ScrollView>
+      ) : (
+        <View key="quick-nav" style={quickNavStyles.row}>
+          {findGameButton}
+        </View>
+      )
     );
 
     if (!session) {

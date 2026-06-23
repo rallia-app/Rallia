@@ -4846,7 +4846,7 @@
     },
     "favoriteAvailability": {
       "title": "Tes terrains favoris",
-      "subtitle": "Des disponibilités à réserver en temps réel",
+      "subtitle": "Des disponibilités en temps réel",
       "empty": {
         "title": "Aucune disponibilité pour l'instant",
         "description": "Explore les terrains pour des disponibilités en ville",
@@ -4856,7 +4856,7 @@
     "quickNav": {
       "joinCommunity": "Rejoindre une communauté",
       "bookCourt": "Réserver un terrain",
-      "findGame": "Trouver une partie",
+      "findGame": "Explorer les parties publiques",
       "browseSuggestions": "Découvrir mes suggestions",
       "tournaments": "Rejoindre un tournoi",
       "leagues": "Rejoindre une ligue"
