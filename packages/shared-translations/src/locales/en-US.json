@@ -10974,6 +10974,17 @@
       "subscriptionNote": "Unlimited plans aren't available in this preview yet — we'll notify you when they launch.",
       "continueCta": "Continue to payment"
     },
+    "email": {
+      "badge": "Almost there",
+      "title": "Where should we send your game details?",
+      "subtitle": "We'll email you the moment your game is locked in — that's how you'll get the intro.",
+      "placeholder": "you@email.com",
+      "submit": "Continue to payment",
+      "privacyNote": "We'll only use this to reach you about your game.",
+      "errors": {
+        "invalid": "Enter a valid email address."
+      }
+    },
     "payment": {
       "title": "Complete your purchase",
       "subtitleSingle": "Pay {amount} for 1 search credit.",
