@@ -9688,6 +9688,21 @@
       "hasOpenSlots": {
         "label": "Créneaux libres"
       },
+      "day": {
+        "label": "Jour",
+        "select": "Choisir le jour",
+        "all": "Tous les jours"
+      },
+      "time": {
+        "label": "Heure",
+        "select": "Choisir l'heure",
+        "all": "Toutes",
+        "am": "AM",
+        "pm": "PM",
+        "eve": "Soir",
+        "timeOfDay": "Moment de la journée",
+        "specificTime": "Heure précise"
+      },
       "organizationNature": {
         "label": "Type",
         "all": "Tous",

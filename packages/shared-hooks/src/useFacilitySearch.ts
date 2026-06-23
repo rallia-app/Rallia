@@ -118,6 +118,16 @@ export const facilityKeys = {
     ] as const,
 };
 
+/**
+ * Hour-range bounds for the day/time availability filter, sent to
+ * search_facilities_nearby as p_min_hour / p_max_hour (local start hour,
+ * 6..22). `null` means open-ended on that bound; both null = no hour filter.
+ */
+export interface FacilityHourRange {
+  minHour: number | null;
+  maxHour: number | null;
+}
+
 /** Facility filter state */
 export interface FacilityFilters {
   distance: FacilityDistanceFilter;
@@ -129,6 +139,10 @@ export interface FacilityFilters {
   organizationNature: OrganizationNatureFilter;
   hasAvailabilities: boolean;
   hasOpenSlots: boolean;
+  /** Specific local day to require open slots on (ISO yyyy-mm-dd), or null for any day. */
+  slotDate: string | null;
+  /** Time-of-day window the open slots must start within. */
+  hourRange: FacilityHourRange;
   favoritesOnly: boolean;
 }
 
@@ -143,6 +157,8 @@ export const DEFAULT_FACILITY_FILTERS: FacilityFilters = {
   organizationNature: 'all',
   hasAvailabilities: false,
   hasOpenSlots: false,
+  slotDate: null,
+  hourRange: { minHour: null, maxHour: null },
   favoritesOnly: false,
 };
 
@@ -237,6 +253,9 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
       ),
       filters.favoritesOnly,
       filters.organizationNature,
+      filters.slotDate,
+      filters.hourRange.minHour,
+      filters.hourRange.maxHour,
       pageSize,
     ],
     queryFn: async ({ pageParam }) => {
@@ -265,6 +284,9 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
         membershipRequired,
         hasAvailabilities: filters.hasAvailabilities ? true : undefined,
         hasOpenSlots: filters.hasOpenSlots ? true : undefined,
+        slotDate: filters.slotDate ?? undefined,
+        minHour: filters.hourRange.minHour ?? undefined,
+        maxHour: filters.hourRange.maxHour ?? undefined,
         favoritesOnly: filters.favoritesOnly ? true : undefined,
         organizationNature:
           filters.organizationNature === 'all' ? undefined : filters.organizationNature,

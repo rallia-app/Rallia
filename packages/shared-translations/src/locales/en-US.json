@@ -9688,6 +9688,21 @@
       "hasOpenSlots": {
         "label": "Slots open"
       },
+      "day": {
+        "label": "Day",
+        "select": "Select day",
+        "all": "Any day"
+      },
+      "time": {
+        "label": "Time",
+        "select": "Select time",
+        "all": "All",
+        "am": "AM",
+        "pm": "PM",
+        "eve": "EVE",
+        "timeOfDay": "Time of day",
+        "specificTime": "Specific time"
+      },
       "organizationNature": {
         "label": "Ownership",
         "all": "All",

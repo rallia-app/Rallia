@@ -154,6 +154,9 @@ export default function FacilitiesDirectory() {
       filters.organizationNature !== 'all' ||
       filters.hasAvailabilities ||
       filters.hasOpenSlots ||
+      filters.slotDate !== null ||
+      filters.hourRange.minHour !== null ||
+      filters.hourRange.maxHour !== null ||
       filters.favoritesOnly
     );
   }, [filters]);

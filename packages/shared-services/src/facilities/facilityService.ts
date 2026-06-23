@@ -64,6 +64,12 @@ export interface SearchFacilitiesParams {
   hasAvailabilities?: boolean;
   /** When true, only return facilities with at least one currently-open snapshot slot (slot_start > now() AND is_available = true) */
   hasOpenSlots?: boolean;
+  /** Only return facilities with an open slot on this local day (ISO yyyy-mm-dd, facility timezone). Also scopes returned slots. */
+  slotDate?: string | null;
+  /** Inclusive lower bound on the slot's local start hour (0..23). Also scopes returned slots. */
+  minHour?: number | null;
+  /** Inclusive upper bound on the slot's local start hour (0..23). Also scopes returned slots. */
+  maxHour?: number | null;
   /** When true, only return facilities favorited by the player */
   favoritesOnly?: boolean;
   /** Filter by organization nature ('public' or 'private') */
@@ -247,6 +253,9 @@ export async function searchFacilitiesNearby(
     membershipRequired,
     hasAvailabilities,
     hasOpenSlots,
+    slotDate,
+    minHour,
+    maxHour,
     favoritesOnly,
     organizationNature,
     userGender,
@@ -276,6 +285,9 @@ export async function searchFacilitiesNearby(
       p_favorites_only: favoritesOnly ?? null,
       p_organization_nature: organizationNature || null,
       p_has_open_slots: hasOpenSlots ?? null,
+      p_slot_date: slotDate ?? null,
+      p_min_hour: minHour ?? null,
+      p_max_hour: maxHour ?? null,
     }),
     // Only fetch count on first page (offset === 0) to avoid unnecessary queries
     offset === 0
@@ -292,6 +304,9 @@ export async function searchFacilitiesNearby(
           p_membership_required: membershipRequired ?? null,
           p_has_availabilities: hasAvailabilities ?? null,
           p_has_open_slots: hasOpenSlots ?? null,
+          p_slot_date: slotDate ?? null,
+          p_min_hour: minHour ?? null,
+          p_max_hour: maxHour ?? null,
         })
       : Promise.resolve({ data: null, error: null }),
   ]);

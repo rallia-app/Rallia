@@ -11043,11 +11043,14 @@ export type Database = {
           p_limit?: number
           p_longitude: number
           p_max_distance_km?: number
+          p_max_hour?: number
           p_membership_required?: boolean
+          p_min_hour?: number
           p_offset?: number
           p_organization_nature?: string
           p_player_id?: string
           p_search_query?: string
+          p_slot_date?: string
           p_sport_ids: string[]
           p_surface_types?: string[]
           p_user_gender?: string
@@ -11086,8 +11089,11 @@ export type Database = {
           p_latitude: number
           p_longitude: number
           p_max_distance_km?: number
+          p_max_hour?: number
           p_membership_required?: boolean
+          p_min_hour?: number
           p_search_query?: string
+          p_slot_date?: string
           p_sport_ids: string[]
           p_surface_types?: string[]
         }
