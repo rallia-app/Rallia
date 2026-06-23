@@ -284,24 +284,24 @@
         "body": "{playerName} a demandé à rejoindre ta partie le {matchDate}. Examine et approuve."
       },
       "match_join_accepted": {
-        "title": "C'est confirmé — ta partie de {sportName} arrive",
+        "title": "C'est confirmé, ta partie de {sportName} arrive",
         "body": "Ta partie le {matchDate}{locationName} est confirmée. Ajoute-la à ton agenda pour ne pas l'oublier."
       },
       "match_join_rejected": {
         "title": "Ta demande n'a pas été approuvée",
-        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi — touche pour les voir."
+        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi. Touche pour les voir."
       },
       "match_player_joined": {
         "title": "{playerName} a rejoint ta partie",
-        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate} — encore {spotsLeft} à combler.",
-        "body_full": "{playerName} a pris la dernière place — ta partie de {sportName} le {matchDate} est complète."
+        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate}. Encore {spotsLeft} à combler.",
+        "body_full": "{playerName} a pris la dernière place. Ta partie de {sportName} le {matchDate} est complète."
       },
       "match_cancelled": {
         "title": "Ta partie de {sportName} a été annulée",
         "body": "La partie de {sportName} le {matchDate}{locationName} a été annulée. Touche pour trouver une autre partie près de chez toi."
       },
       "match_updated": {
-        "title": "Attention — ta partie a changé",
+        "title": "Attention, ta partie a changé",
         "body": "Ta partie de {sportName} le {matchDate} a été mise à jour. Touche pour voir les nouveaux détails."
       },
       "match_starting_soon": {
@@ -322,7 +322,7 @@
       },
       "player_left": {
         "title": "{playerName} a quitté ta partie",
-        "body": "{playerName} s'est désisté de ta partie de {sportName} — encore {spotsLeft} à combler. Invite un ami?"
+        "body": "{playerName} s'est désisté de ta partie de {sportName}. Encore {spotsLeft} à combler. Invite un ami?"
       },
       "new_message": {
         "title": "Message de {senderName}",
@@ -437,11 +437,11 @@
         "body": "{amountFormatted} a été remboursé à {playerName}."
       },
       "daily_summary": {
-        "title": "Résumé quotidien — {orgName}",
+        "title": "Résumé quotidien : {orgName}",
         "body": "Touchez pour consulter les réservations et activités d'aujourd'hui."
       },
       "weekly_report": {
-        "title": "Rapport hebdomadaire — {orgName}",
+        "title": "Rapport hebdomadaire : {orgName}",
         "body": "Votre rapport hebdomadaire est prêt. Touchez pour le consulter."
       },
       "booking_confirmed": {
@@ -470,7 +470,7 @@
       },
       "payouts_released": {
         "title": "{amount} en route",
-        "body": "Ton remboursement est en route vers ta banque — arrive en 1 à 2 jours ouvrables."
+        "body": "Ton remboursement est en route vers ta banque, il arrive en 1 à 2 jours ouvrables."
       },
       "payouts_expired_refunded": {
         "title": "Remboursement non complété",
@@ -486,7 +486,7 @@
       },
       "match_time_suggested": {
         "title": "{playerName} propose {suggestedStartTime}",
-        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue — il propose {suggestedStartTime}. Touche pour accepter ou refuser."
+        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue. Il propose plutôt {suggestedStartTime}. Touche pour accepter ou refuser."
       },
       "match_time_suggestion_accepted": {
         "title": "Ta proposition a été acceptée",
