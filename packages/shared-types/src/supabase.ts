@@ -3427,12 +3427,13 @@ export type Database = {
           amount_cents: number
           created_at: string
           credits: number | null
+          email: string | null
           id: string
           location_type: string
           match_format: string | null
           match_nature: string | null
-          payment_intent_id: string
-          phone: string
+          payment_intent_id: string | null
+          phone: string | null
           phone_verified: boolean
           plan_tier: string
           postal_code: string | null
@@ -3444,12 +3445,13 @@ export type Database = {
           amount_cents: number
           created_at?: string
           credits?: number | null
+          email?: string | null
           id?: string
           location_type: string
           match_format?: string | null
           match_nature?: string | null
-          payment_intent_id: string
-          phone: string
+          payment_intent_id?: string | null
+          phone?: string | null
           phone_verified?: boolean
           plan_tier: string
           postal_code?: string | null
@@ -3461,12 +3463,13 @@ export type Database = {
           amount_cents?: number
           created_at?: string
           credits?: number | null
+          email?: string | null
           id?: string
           location_type?: string
           match_format?: string | null
           match_nature?: string | null
-          payment_intent_id?: string
-          phone?: string
+          payment_intent_id?: string | null
+          phone?: string | null
           phone_verified?: boolean
           plan_tier?: string
           postal_code?: string | null
