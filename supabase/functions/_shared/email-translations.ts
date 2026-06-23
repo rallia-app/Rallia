@@ -170,7 +170,7 @@ const translations: Translations = {
     'matchInterest.time': 'Time',
     'matchInterest.location': 'Location',
     'matchInterest.valueProp':
-      "Once you're signed up, you'll also be able to discover more games near you, connect with local players, and organize your own matches.",
+      "Once you're signed up, you'll also be able to discover more games near you, connect with local players, and organize your own games.",
     'matchInterest.disclaimer':
       "You received this email because you expressed interest in a game on Rallia. If this wasn't you, you can safely ignore this email.",
     'matchInterest.footerNote': 'Rallia — Find players, join games, play more',
@@ -404,7 +404,7 @@ const translations: Translations = {
     'matchInterest.time': 'Heure',
     'matchInterest.location': 'Lieu',
     'matchInterest.valueProp':
-      "Une fois inscrit, tu pourras aussi découvrir d'autres parties près de chez toi, rencontrer des joueurs locaux et organiser tes propres matchs.",
+      "Une fois inscrit, tu pourras aussi découvrir d'autres parties près de chez toi, rencontrer des joueurs locaux et organiser tes propres parties.",
     'matchInterest.disclaimer':
       "Tu reçois ce courriel parce que tu as manifesté de l'intérêt pour une partie sur Rallia. Si ce n'était pas toi, ignore simplement ce courriel.",
     'matchInterest.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
@@ -446,12 +446,12 @@ const translations: Translations = {
     'digest.matchesSection': 'Parties près de toi',
     'digest.suggestionsSection': 'Joueurs à défier',
     'digest.feedSection': 'Parties et suggestions du jour',
-    'digest.sportSection.tennis': 'Tennis — sélectionné pour vous',
-    'digest.sportSection.pickleball': 'Pickleball — sélectionné pour vous',
+    'digest.sportSection.tennis': 'Tennis — sélectionné pour toi',
+    'digest.sportSection.pickleball': 'Pickleball — sélectionné pour toi',
     'digest.dateLabel.today': "Aujourd'hui",
     'digest.dateLabel.tomorrow': 'Demain',
     'digest.joinButton': 'Rejoindre',
-    'digest.askToJoinButton': 'Demander à joindre',
+    'digest.askToJoinButton': 'Demander à rejoindre',
     'digest.challengeButton': 'Défier',
     'digest.suggestionInviteButton': 'Envoyer une invitation',
     'digest.browseAllGames': 'Voir toutes les parties',

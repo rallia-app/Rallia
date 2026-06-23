@@ -55,7 +55,7 @@
   </head>
   <body style="margin: 0; padding: 0">
     <!-- Preheader -->
-    <span style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification Rallia est à l'intérieur{{ else }}Your Rallia verification code is inside{{ end }}</span>
+    <span style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Ton code de vérification Rallia est à l'intérieur{{ else }}Your Rallia verification code is inside{{ end }}</span>
     <table
       role="presentation"
       cellspacing="0"
@@ -116,7 +116,7 @@
                     letter-spacing: 0.12em;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vérifiez votre courriel{{ else }}Verify your email{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vérifie ton courriel{{ else }}Verify your email{{ end }}
                 </p>
                 <h2
                   style="
@@ -130,7 +130,7 @@
                     line-height: 1.2;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Voici votre code de connexion{{ else }}Here's your login code{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Voici ton code de connexion{{ else }}Here's your login code{{ end }}
                 </h2>
 
                 <p
@@ -143,7 +143,7 @@
                     color: #525252;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Bienvenue sur Rallia ! Entrez le code ci-dessous pour terminer votre connexion. Il est valide pendant les 10 prochaines minutes.{{ else }}Welcome back! Enter the code below to finish signing in. It's valid for the next 10 minutes.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Bienvenue sur Rallia ! Entre le code ci-dessous pour terminer ta connexion. Il est valide pendant les 10 prochaines minutes.{{ else }}Welcome to Rallia! Enter the code below to finish signing in. It's valid for the next 10 minutes.{{ end }}
                 </p>
 
                 <!-- OTP Code Box -->
@@ -183,7 +183,7 @@
                                 letter-spacing: 0.16em;
                               "
                             >
-                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Votre code de vérification{{ else }}Your verification code{{ end }}
+                              {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Ton code de vérification{{ else }}Your verification code{{ end }}
                             </p>
                             <p
                               class="email-otp-code"
@@ -233,7 +233,7 @@
                     text-align: center;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entrez ce code dans le formulaire de connexion pour vérifier votre courriel.{{ else }}Enter this code in the sign-in form to verify your email address.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Entre ce code dans le formulaire de connexion pour vérifier ton courriel.{{ else }}Enter this code in the sign-in form to verify your email address.{{ end }}
                 </p>
 
                 <!-- Divider -->
@@ -260,7 +260,7 @@
                     text-align: center;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce courriel. Votre compte reste sécurisé.{{ else }}If you didn't request this code, you can safely ignore this email. Your account remains secure.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Si tu n'es pas à l'origine de cette demande, tu peux ignorer ce courriel. Ton compte reste sécurisé.{{ else }}If you didn't request this code, you can safely ignore this email. Your account remains secure.{{ end }}
                 </p>
               </td>
             </tr>
@@ -298,13 +298,13 @@
                     color: #525252;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}En cas de problème, contactez-nous à <a href="mailto:contact@rallia.ca" style="color: #0d9488; text-decoration: none;">contact@rallia.ca</a>{{ else }}If you're having trouble, contact us at <a href="mailto:contact@rallia.ca" style="color: #0d9488; text-decoration: none;">contact@rallia.ca</a>{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}En cas de problème, écris-nous à <a href="mailto:contact@rallia.ca" style="color: #0d9488; text-decoration: none;">contact@rallia.ca</a>{{ else }}If you're having trouble, contact us at <a href="mailto:contact@rallia.ca" style="color: #0d9488; text-decoration: none;">contact@rallia.ca</a>{{ end }}
                 </p>
                 <!-- App Store Badges -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
                     <td align="center" style="padding: 18px 0 0 0;">
-                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
+                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharge l'application{{ else }}Download the app{{ end }}</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td style="padding: 0 6px 0 0;">
@@ -358,7 +358,7 @@
                     color: #737373;
                   "
                 >
-                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Vous recevez ce courriel car vous vous êtes inscrit sur Rallia.{{ else }}You're receiving this email because you signed up for Rallia.{{ end }}
+                  {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Tu reçois ce courriel parce que tu t'es inscrit sur Rallia.{{ else }}You're receiving this email because you signed up for Rallia.{{ end }}
                 </p>
               </td>
             </tr>
