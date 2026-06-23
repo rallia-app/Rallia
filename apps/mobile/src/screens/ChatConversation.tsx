@@ -627,6 +627,15 @@ export default function ChatConversationScreen() {
     [playerId, conversationId, toggleReactionMutation, fetchReactions]
   );
 
+  // Open a player's profile when tapping their avatar in a message
+  const handleAvatarPress = useCallback(
+    (senderId: string) => {
+      lightHaptic();
+      navigateToPlayerProfile(senderId);
+    },
+    [navigateToPlayerProfile]
+  );
+
   // Handle reply to message
   const handleReplyToMessage = useCallback((message: MessageWithSender) => {
     setReplyToMessage(message);
@@ -820,6 +829,7 @@ export default function ChatConversationScreen() {
         reactions={reactions}
         onReplyToMessage={handleReplyToMessage}
         onLongPressMessage={handleLongPressMessage}
+        onAvatarPress={handleAvatarPress}
         searchQuery={searchQuery}
         highlightedMessageIds={highlightedMessageIds}
         currentHighlightedId={currentHighlightedId}
