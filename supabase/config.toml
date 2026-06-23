@@ -477,6 +477,11 @@ verify_jwt = false
 [functions.stripe-connect-webhook]
 verify_jwt = false
 
+# Rating-proof LLM triage — pg_net (dispatch trigger) invokes with apikey header;
+# auth validated internally via requireSecretApikey().
+[functions.flag-rating-proof]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

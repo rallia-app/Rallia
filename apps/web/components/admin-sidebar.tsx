@@ -24,6 +24,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Flag,
   Globe,
   LayoutDashboard,
   LogOut,
@@ -116,6 +117,12 @@ export function AdminSidebar() {
       href: '/admin/moderation',
       label: t('moderation'),
       icon: Shield,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/rating-proofs',
+      label: t('ratingProofs'),
+      icon: Flag,
       exactMatch: false,
     },
     {

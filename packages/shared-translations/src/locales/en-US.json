@@ -6563,12 +6563,28 @@
       "titleMeta": "Admin Sign In - Rallia",
       "descriptionMeta": "Sign in to access the Rallia administration dashboard."
     },
+    "ratingProofs": {
+      "title": "Flagged Proofs",
+      "subtitle": "Rating proofs the automated check thinks may not be valid. Review and approve or reject from each player's page.",
+      "empty": "No flagged proofs right now.",
+      "unknownPlayer": "Unknown player",
+      "flagStatus": {
+        "implausible": "Likely not a proof",
+        "error": "Check failed"
+      },
+      "proofStatus": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Dashboard",
       "organizations": "Organizations",
       "users": "Users",
       "moderation": "Moderation",
+      "ratingProofs": "Rating Proofs",
       "activityLog": "Activity Log",
       "alerts": "Alerts",
       "networks": "Networks",
@@ -7651,6 +7667,11 @@
             "file": "File Upload"
           },
           "reviewNotes": "Review Notes",
+          "autoFlag": {
+            "flagged": "Auto-flagged",
+            "error": "Auto-check failed",
+            "label": "Auto-check"
+          },
           "references": "Rating References",
           "refEmpty": "No reference requests",
           "refStatuses": {

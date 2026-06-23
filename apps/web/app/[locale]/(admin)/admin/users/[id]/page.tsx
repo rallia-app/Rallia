@@ -153,6 +153,10 @@ export default async function UserDetailPage({
     review_notes: string | null;
     reviewed_at: string | null;
     created_at: string;
+    auto_flag_status: string;
+    auto_flag_reason: string | null;
+    auto_flag_confidence: number | null;
+    auto_flag_media_kind: string | null;
     rating_score: { label: string } | null;
   }> = [];
   let ratingReferences: Array<{
@@ -327,6 +331,7 @@ export default async function UserDetailPage({
             `
             id, proof_type, title, description, external_url, status, is_active,
             review_notes, reviewed_at, created_at,
+            auto_flag_status, auto_flag_reason, auto_flag_confidence, auto_flag_media_kind,
             rating_score(label)
           `
           )
@@ -891,6 +896,16 @@ export default async function UserDetailPage({
                                   {proof.rating_score.label}
                                 </Badge>
                               )}
+                              {proof.auto_flag_status === 'implausible' && (
+                                <Badge variant="destructive" className="text-xs">
+                                  {t('rating.autoFlag.flagged')}
+                                </Badge>
+                              )}
+                              {proof.auto_flag_status === 'error' && (
+                                <Badge variant="outline" className="text-xs">
+                                  {t('rating.autoFlag.error')}
+                                </Badge>
+                              )}
                             </div>
                             <p className="font-medium text-sm m-0 mt-1">{proof.title}</p>
                             {proof.description && (
@@ -913,6 +928,15 @@ export default async function UserDetailPage({
                                 {t('rating.reviewNotes')}: {proof.review_notes}
                               </p>
                             )}
+                            {proof.auto_flag_reason &&
+                              proof.auto_flag_status !== 'skipped' &&
+                              proof.auto_flag_status !== 'pending' && (
+                                <p className="text-xs text-muted-foreground m-0 mt-2">
+                                  {t('rating.autoFlag.label')}: {proof.auto_flag_reason}
+                                  {proof.auto_flag_confidence != null &&
+                                    ` (${Math.round(proof.auto_flag_confidence * 100)}%)`}
+                                </p>
+                              )}
                           </div>
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatDate(proof.created_at)}

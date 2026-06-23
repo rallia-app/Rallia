@@ -6563,12 +6563,28 @@
       "titleMeta": "Connexion Admin - Rallia",
       "descriptionMeta": "Connectez-vous pour accéder au tableau de bord d'administration de Rallia."
     },
+    "ratingProofs": {
+      "title": "Preuves signalées",
+      "subtitle": "Preuves de classement que la vérification automatique juge possiblement non valides. Approuve ou rejette depuis la page du joueur.",
+      "empty": "Aucune preuve signalée pour le moment.",
+      "unknownPlayer": "Joueur inconnu",
+      "flagStatus": {
+        "implausible": "Probablement pas une preuve",
+        "error": "Échec de la vérification"
+      },
+      "proofStatus": {
+        "pending": "En attente",
+        "approved": "Approuvée",
+        "rejected": "Rejetée"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Tableau de bord",
       "organizations": "Organisations",
       "users": "Utilisateurs",
       "moderation": "Modération",
+      "ratingProofs": "Preuves signalées",
       "activityLog": "Journal d'activité",
       "alerts": "Alertes",
       "networks": "Réseaux",
@@ -7651,6 +7667,11 @@
             "file": "Fichier téléversé"
           },
           "reviewNotes": "Notes de révision",
+          "autoFlag": {
+            "flagged": "Signalé auto",
+            "error": "Échec vérif auto",
+            "label": "Vérif auto"
+          },
           "references": "Références de classement",
           "refEmpty": "Aucune demande de référence",
           "refStatuses": {

@@ -6644,6 +6644,12 @@ export type Database = {
       }
       rating_proof: {
         Row: {
+          auto_flag_confidence: number | null
+          auto_flag_media_kind: string | null
+          auto_flag_model: string | null
+          auto_flag_reason: string | null
+          auto_flag_status: Database["public"]["Enums"]["proof_auto_flag_status_enum"]
+          auto_flagged_at: string | null
           created_at: string
           description: string | null
           external_url: string | null
@@ -6661,6 +6667,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_flag_confidence?: number | null
+          auto_flag_media_kind?: string | null
+          auto_flag_model?: string | null
+          auto_flag_reason?: string | null
+          auto_flag_status?: Database["public"]["Enums"]["proof_auto_flag_status_enum"]
+          auto_flagged_at?: string | null
           created_at?: string
           description?: string | null
           external_url?: string | null
@@ -6678,6 +6690,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_flag_confidence?: number | null
+          auto_flag_media_kind?: string | null
+          auto_flag_model?: string | null
+          auto_flag_reason?: string | null
+          auto_flag_status?: Database["public"]["Enums"]["proof_auto_flag_status_enum"]
+          auto_flagged_at?: string | null
           created_at?: string
           description?: string | null
           external_url?: string | null
@@ -10824,6 +10842,7 @@ export type Database = {
         }
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
+      lt_user_is_fr: { Args: { p_user_id: string }; Returns: boolean }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
         Returns: boolean
@@ -12702,6 +12721,12 @@ export type Database = {
       playing_hand_enum: "right" | "left" | "both"
       program_status_enum: "draft" | "published" | "cancelled" | "completed"
       program_type_enum: "program" | "lesson"
+      proof_auto_flag_status_enum:
+        | "pending"
+        | "plausible"
+        | "implausible"
+        | "skipped"
+        | "error"
       proof_report_reason_enum:
         | "fake_proof"
         | "misleading"
@@ -13352,6 +13377,13 @@ export const Constants = {
       playing_hand_enum: ["right", "left", "both"],
       program_status_enum: ["draft", "published", "cancelled", "completed"],
       program_type_enum: ["program", "lesson"],
+      proof_auto_flag_status_enum: [
+        "pending",
+        "plausible",
+        "implausible",
+        "skipped",
+        "error",
+      ],
       proof_report_reason_enum: [
         "fake_proof",
         "misleading",
