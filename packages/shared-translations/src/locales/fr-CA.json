@@ -10238,6 +10238,8 @@
       "description": "Créez votre compte ou connectez-vous pour rejoindre cette partie.",
       "requestTitle": "Connectez-vous pour demander",
       "requestDescription": "Créez votre compte ou connectez-vous pour demander une place. L'hôte examinera votre demande.",
+      "waitlistTitle": "Connectez-vous pour la liste d'attente",
+      "waitlistDescription": "La partie est complète. Créez votre compte ou connectez-vous pour rejoindre la liste d'attente; on vous avise si une place se libère.",
       "google": "Continuer avec Google",
       "orEmail": "ou",
       "email": "Courriel",
@@ -10256,6 +10258,8 @@
       "requestTitle": "Prêt à demander?",
       "requestDescription": "L'hôte approuve les joueurs avant qu'ils rejoignent. Envoyez une demande et nous vous aviserons de sa réponse.",
       "requestCta": "Demander à rejoindre",
+      "waitlistTitle": "La partie est complète",
+      "waitlistDescription": "Toutes les places sont prises, mais vous pouvez rejoindre la liste d'attente. On vous avise si une place se libère.",
       "waitlistCta": "Rejoindre la liste d'attente"
     },
     "profile": {

@@ -10238,6 +10238,8 @@
       "description": "Create your account or sign in to join this game.",
       "requestTitle": "Sign in to request",
       "requestDescription": "Create your account or sign in to request a spot in this game. The host will review your request.",
+      "waitlistTitle": "Sign in for the waitlist",
+      "waitlistDescription": "This game is full. Create your account or sign in to join the waitlist, and we'll notify you if a spot opens up.",
       "google": "Continue with Google",
       "orEmail": "or",
       "email": "Email",
@@ -10256,6 +10258,8 @@
       "requestTitle": "Ready to request?",
       "requestDescription": "The host approves players before they join. Send a request and we'll notify you when they respond.",
       "requestCta": "Request to join",
+      "waitlistTitle": "This game is full",
+      "waitlistDescription": "All the spots are taken, but you can join the waitlist. We'll notify you if one opens up.",
       "waitlistCta": "Join waitlist"
     },
     "profile": {

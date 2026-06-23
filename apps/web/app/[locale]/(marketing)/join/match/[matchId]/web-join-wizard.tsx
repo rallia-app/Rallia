@@ -223,15 +223,18 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
   const joinedCount = match.participants?.filter(p => p.status === 'joined').length ?? 0;
   const isFull = joinedCount >= matchCapacity;
 
-  const finishCtaLabel = isRequestMode
-    ? t('finishRequest')
-    : isFull
-      ? t('finishWaitlist')
+  // A full game always waitlists the joiner, regardless of join_mode — mirror
+  // the backend precedence (availableSpots <= 0 wins over request mode) so the
+  // pre-join copy matches the outcome.
+  const finishCtaLabel = isFull
+    ? t('finishWaitlist')
+    : isRequestMode
+      ? t('finishRequest')
       : t('finish');
-  const reviewCtaLabel = isRequestMode
-    ? t('review.requestCta')
-    : isFull
-      ? t('review.waitlistCta')
+  const reviewCtaLabel = isFull
+    ? t('review.waitlistCta')
+    : isRequestMode
+      ? t('review.requestCta')
       : t('review.cta');
 
   const matchDeepLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/${pageLocale}/match/${match.id}?utm_source=web_join&utm_medium=qr&utm_campaign=join_match`;
@@ -557,9 +560,19 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
             <CardContent className="flex flex-col gap-5 pt-6">
               <StepHeader
                 icon={CheckCircle2}
-                title={isRequestMode ? t('review.requestTitle') : t('review.title')}
+                title={
+                  isFull
+                    ? t('review.waitlistTitle')
+                    : isRequestMode
+                      ? t('review.requestTitle')
+                      : t('review.title')
+                }
                 description={
-                  isRequestMode ? t('review.requestDescription') : t('review.description')
+                  isFull
+                    ? t('review.waitlistDescription')
+                    : isRequestMode
+                      ? t('review.requestDescription')
+                      : t('review.description')
                 }
               />
               <Button
@@ -583,8 +596,20 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
             <CardContent className="flex flex-col gap-5 pt-6">
               <StepHeader
                 icon={User}
-                title={isRequestMode ? t('auth.requestTitle') : t('auth.title')}
-                description={isRequestMode ? t('auth.requestDescription') : t('auth.description')}
+                title={
+                  isFull
+                    ? t('auth.waitlistTitle')
+                    : isRequestMode
+                      ? t('auth.requestTitle')
+                      : t('auth.title')
+                }
+                description={
+                  isFull
+                    ? t('auth.waitlistDescription')
+                    : isRequestMode
+                      ? t('auth.requestDescription')
+                      : t('auth.description')
+                }
               />
 
               {authPhase === 'email' ? (
