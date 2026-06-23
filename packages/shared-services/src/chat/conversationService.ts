@@ -24,6 +24,16 @@ function formatMatchTime(pgTime: string): string {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// Formats a Postgres DATE ("YYYY-MM-DD") as "MMM d" in local time; building the
+// Date from parts avoids the UTC-midnight parse that shifts the day in -UTC zones.
+function formatMatchDate(pgDate: string): string {
+  const [year, month, day] = pgDate.split('T')[0].split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 // Type for the optimized RPC function return
 interface ConversationRPCRow {
   id: string;
@@ -780,12 +790,7 @@ export async function syncMatchConversationTitle(
 
     // Build new title
     const formatLabel = format === 'doubles' ? 'Doubles' : 'Singles';
-    const dateStr = matchDate
-      ? new Date(matchDate).toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-        })
-      : '';
+    const dateStr = matchDate ? formatMatchDate(matchDate) : '';
     const startTime = matchData.start_time as string | null;
     const timeStr = startTime ? formatMatchTime(startTime) : '';
 
