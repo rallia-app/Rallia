@@ -334,7 +334,7 @@
       },
       "rating_verified": {
         "title": "Your {sportName} rating is verified",
-        "body": "Your {ratingSystemName} rating of {ratingValue} is now certified. Players will see the verified badge on your profile."
+        "body": "Your {ratingSystemName} rating of {ratingValue} is now verified. Players will see the verified badge on your profile."
       },
       "reminder": {
         "title": "Game coming up on {matchDate}",

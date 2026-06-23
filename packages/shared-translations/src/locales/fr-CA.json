@@ -333,8 +333,8 @@
         "body": "Tu as un nouveau message en attente."
       },
       "rating_verified": {
-        "title": "Ton niveau en {sportName} est certifié",
-        "body": "Ton classement {ratingSystemName} de {ratingValue} est maintenant certifié. Le badge vérifié apparaîtra sur ton profil."
+        "title": "Ton niveau en {sportName} est vérifié",
+        "body": "Ton niveau {ratingSystemName} de {ratingValue} est maintenant vérifié. Le badge vérifié apparaîtra sur ton profil."
       },
       "reminder": {
         "title": "Partie à venir le {matchDate}",
@@ -465,7 +465,7 @@
         "body": "{orgName} a partagé une nouvelle annonce. Touche pour lire."
       },
       "payouts_setup_required": {
-        "title": "{amount} prêt à recevoir",
+        "title": "{amount} à recevoir",
         "body": "Un joueur t'a remboursé. Vérifie ton compte bancaire pour recevoir l'argent (5 min)."
       },
       "payouts_released": {
@@ -474,7 +474,7 @@
       },
       "payouts_expired_refunded": {
         "title": "Remboursement non complété",
-        "body": "{amount} a été remboursé au joueur car le paiement n'a pas pu être configuré à temps."
+        "body": "{amount} a été remboursé au joueur car le paiement n'a pas pu être mis en place à temps."
       },
       "reimbursement_received": {
         "title": "Remboursement reçu : {amount}",
@@ -486,7 +486,7 @@
       },
       "match_time_suggested": {
         "title": "{playerName} propose {suggestedStartTime}",
-        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue. Il propose plutôt {suggestedStartTime}. Touche pour accepter ou refuser."
+        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue et propose plutôt {suggestedStartTime}. Touche pour accepter ou refuser."
       },
       "match_time_suggestion_accepted": {
         "title": "Ta proposition a été acceptée",
