@@ -48,6 +48,7 @@ interface MessageListProps {
   reactions?: Map<string, ReactionSummary[]>;
   onReplyToMessage?: (message: MessageWithSender) => void;
   onLongPressMessage?: (message: MessageWithSender, pageY?: number) => void;
+  onAvatarPress?: (senderId: string) => void;
   searchQuery?: string;
   highlightedMessageIds?: string[];
   currentHighlightedId?: string;
@@ -117,6 +118,7 @@ function MessageListComponent(
     reactions = new Map(),
     onReplyToMessage,
     onLongPressMessage,
+    onAvatarPress,
     searchQuery = '',
     highlightedMessageIds = [],
     currentHighlightedId,
@@ -284,6 +286,7 @@ function MessageListComponent(
                 ? (pageY: number) => onLongPressMessage(item.message!, pageY)
                 : undefined
             }
+            onAvatarPress={onAvatarPress ? () => onAvatarPress(item.message!.sender_id) : undefined}
             searchQuery={searchQuery}
             isHighlighted={isHighlighted}
             isCurrentHighlight={isCurrentHighlight}
@@ -300,6 +303,7 @@ function MessageListComponent(
       reactions,
       onReplyToMessage,
       onLongPressMessage,
+      onAvatarPress,
       searchQuery,
       highlightedSet,
       currentHighlightedId,

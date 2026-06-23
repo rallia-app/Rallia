@@ -31,6 +31,7 @@ interface MessageBubbleProps {
   onReact: (emoji: string) => void;
   onLongPress?: (pageY: number) => void;
   onReplyPress?: () => void;
+  onAvatarPress?: () => void;
   reactions?: ReactionSummary[];
   searchQuery?: string;
   isHighlighted?: boolean;
@@ -50,6 +51,7 @@ function MessageBubbleComponent({
   onReact,
   onLongPress,
   onReplyPress,
+  onAvatarPress,
   reactions = [],
   searchQuery = '',
   isHighlighted = false,
@@ -271,7 +273,12 @@ function MessageBubbleComponent({
         <View style={[styles.container, isOwnMessage && styles.containerOwn]}>
           {/* Avatar - only for other's messages */}
           {!isOwnMessage && showSenderInfo && (
-            <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={onAvatarPress}
+              disabled={!onAvatarPress}
+              activeOpacity={onAvatarPress ? 0.7 : 1}
+            >
               {senderAvatar ? (
                 <Image source={{ uri: senderAvatar }} style={styles.avatar} />
               ) : (
@@ -279,7 +286,7 @@ function MessageBubbleComponent({
                   <Ionicons name="person-outline" size={16} color={colors.textMuted} />
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Spacer for messages without avatar */}
