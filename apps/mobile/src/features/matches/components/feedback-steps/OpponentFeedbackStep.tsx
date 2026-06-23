@@ -245,6 +245,14 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
         </Text>
       </View>
 
+      {/* Anonymity reassurance */}
+      <View style={[styles.anonymityNote, { backgroundColor: `${colors.buttonActive}10` }]}>
+        <Ionicons name="lock-closed-outline" size={16} color={colors.buttonActive} />
+        <Text size="xs" color={colors.textSecondary} style={styles.infoText}>
+          {t('matchFeedback.opponentStep.anonymityNote')}
+        </Text>
+      </View>
+
       {/* Attendance Toggle (disabled for checked-in players) */}
       <View style={styles.fieldGroup}>
         {opponent.checkedInAt ? (
@@ -419,6 +427,14 @@ const styles = StyleSheet.create({
     padding: spacingPixels[3],
     borderRadius: radiusPixels.md,
     marginTop: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  anonymityNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    marginBottom: spacingPixels[5],
     gap: spacingPixels[2],
   },
   infoText: {

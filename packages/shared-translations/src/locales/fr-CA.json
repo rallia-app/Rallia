@@ -3515,6 +3515,7 @@
     },
     "opponentStep": {
       "rateExperience": "Évaluez votre expérience avec ce joueur",
+      "anonymityNote": "Ton évaluation est anonyme. Ça influence seulement la réputation de ce joueur. Personne ne voit que ça vient de toi, ni ce que tu as répondu.",
       "showedUp": "S'est-il/elle présenté(e)?",
       "noShowInfo": "Si quelqu'un d'autre que le joueur inscrit s'est présenté, sélectionnez aussi « Non »",
       "wasLate": "Était-il/elle en retard?",

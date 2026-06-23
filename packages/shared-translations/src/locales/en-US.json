@@ -3515,6 +3515,7 @@
     },
     "opponentStep": {
       "rateExperience": "Rate your experience with this player",
+      "anonymityNote": "Your feedback is anonymous. It only feeds into this player's reputation. No one sees that it came from you, or what you answered.",
       "showedUp": "Did they show up?",
       "noShowInfo": "If someone other than the registered player showed up, also select 'No'",
       "wasLate": "Were they late?",
