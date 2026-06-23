@@ -438,7 +438,7 @@ const translations: Translations = {
     'notification.nearby.tomorrow': 'Demain',
 
     // Morning digest
-    'digest.subject': 'Ton briefing matinal de partie',
+    'digest.subject': 'Ton briefing matinal',
     'digest.preheader': 'Parties à venir près de toi + joueurs à défier cette semaine',
     'digest.heading': 'Bonjour, {firstName}',
     'digest.headingDefault': 'Bonjour',
