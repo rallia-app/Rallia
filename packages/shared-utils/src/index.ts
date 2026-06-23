@@ -9,6 +9,7 @@ export * from './errors';
 export * from './logger';
 export * from './storage';
 export * from './match';
+export * from './player';
 export * from './tournament';
 export * from './leagues';
 export * from './geo';

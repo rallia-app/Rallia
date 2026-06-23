@@ -293,7 +293,7 @@
       },
       "match_player_joined": {
         "title": "{playerName} a rejoint ta partie",
-        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate} — {spotsLeft} place(s) restante(s).",
+        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate} — encore {spotsLeft} à combler.",
         "body_full": "{playerName} a pris la dernière place — ta partie de {sportName} le {matchDate} est complète."
       },
       "match_cancelled": {
@@ -322,7 +322,7 @@
       },
       "player_left": {
         "title": "{playerName} a quitté ta partie",
-        "body": "{playerName} s'est désisté de ta partie de {sportName} — {spotsLeft} place(s) maintenant ouverte(s). Invite un ami?"
+        "body": "{playerName} s'est désisté de ta partie de {sportName} — encore {spotsLeft} à combler. Invite un ami?"
       },
       "new_message": {
         "title": "Message de {senderName}",
@@ -434,7 +434,7 @@
       },
       "refund_processed": {
         "title": "Remboursement émis : {amountFormatted}",
-        "body": "{amountFormatted} ont été remboursés à {playerName}."
+        "body": "{amountFormatted} a été remboursé à {playerName}."
       },
       "daily_summary": {
         "title": "Résumé quotidien — {orgName}",
@@ -1398,6 +1398,9 @@
       "switchToManualConfirmTitle": "Passer au suivi manuel?",
       "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
     }
+  },
+  "playerBadges": {
+    "foundingMember": "Membre fondateur"
   },
   "playerProfile": {
     "title": "Profil du joueur",
@@ -10738,6 +10741,21 @@
       "benefits": {
         "title": "Pourquoi ça compte",
         "body": "Les joueurs convoités se démarquent sur Rallia. Leurs parties sont mises en valeur auprès des autres joueurs, ça fait qu'ils se font remarquer plus vite et reçoivent plus d'invitations et de demandes."
+      }
+    },
+    "foundingMember": {
+      "title": "C'est quoi un membre fondateur?",
+      "overview": {
+        "title": "Membre fondateur",
+        "body": "Les membres fondateurs étaient là dès le début. C'est un badge permanent pour les joueurs qui ont rejoint Rallia et complété leur profil avant le 1er juin 2026."
+      },
+      "forever": {
+        "title": "Une seule chance",
+        "body": "Ce badge ne s'obtient plus. C'est notre façon de reconnaître les joueurs qui ont embarqué tôt et aidé à lancer Rallia."
+      },
+      "benefits": {
+        "title": "Porte-le avec fierté",
+        "body": "Ça montre que tu fais partie de la gang des débuts, celle qui a bâti la communauté derrière chaque partie sur Rallia aujourd'hui."
       }
     }
   },

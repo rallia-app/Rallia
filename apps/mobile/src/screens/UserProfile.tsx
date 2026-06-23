@@ -73,7 +73,7 @@ import { MATCH_REIMBURSEMENT_ENABLED } from '#/constants/features';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 import RatingBadge from '#/components/RatingBadge';
 import ReputationBadge from '#/components/ReputationBadge';
-import CovetedBadge from '#/components/CovetedBadge';
+import HeroBadgeRow from '#/components/HeroBadgeRow';
 import SportIcon from '#/components/SportIcon';
 import ProfileCompletionChecklist from '#/features/profile/components/ProfileCompletionChecklist';
 
@@ -903,14 +903,6 @@ const UserProfile = () => {
                       </Text>
                     </View>
                     <View style={styles.profileBadgesRow}>
-                      <CovetedBadge
-                        reputationScore={reputationDisplay?.score}
-                        certificationStatus={primaryRating?.badge_status}
-                        totalEvents={reputationTotalEvents}
-                        isDark={isDark}
-                        isLoading={playerLoading}
-                        onInfoPress={() => SheetManager.show('coveted-player-explainer')}
-                      />
                       <RatingBadge
                         ratingValue={primaryRating?.value}
                         ratingLabel={primaryRating?.label}
@@ -958,6 +950,17 @@ const UserProfile = () => {
                     />
                   </TouchableOpacity>
                 </View>
+
+                <HeroBadgeRow
+                  createdAt={player?.created_at}
+                  onboardingCompleted={profile?.onboarding_completed}
+                  reputationScore={reputationDisplay?.score}
+                  certificationStatus={primaryRating?.badge_status}
+                  totalEvents={reputationTotalEvents}
+                  isDark={isDark}
+                  onFoundingInfoPress={() => SheetManager.show('founding-member-explainer')}
+                  onCovetedInfoPress={() => SheetManager.show('coveted-player-explainer')}
+                />
               </>
             )}
           </WalkthroughableView>

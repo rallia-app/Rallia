@@ -293,7 +293,7 @@
       },
       "match_player_joined": {
         "title": "{playerName} joined your game",
-        "body": "{playerName} is in for {sportName} on {matchDate} — {spotsLeft} spot(s) left.",
+        "body": "{playerName} is in for {sportName} on {matchDate} — {spotsLeft} to go.",
         "body_full": "{playerName} took the last spot — your {sportName} game on {matchDate} is full."
       },
       "match_cancelled": {
@@ -322,7 +322,7 @@
       },
       "player_left": {
         "title": "{playerName} left your game",
-        "body": "{playerName} dropped out of your {sportName} game — {spotsLeft} spot(s) now open. Invite a friend?"
+        "body": "{playerName} dropped out of your {sportName} game — {spotsLeft} now open. Invite a friend?"
       },
       "new_message": {
         "title": "Message from {senderName}",
@@ -1398,6 +1398,9 @@
       "switchToManualConfirmTitle": "Switch to manual tracking?",
       "switchToManualConfirmMessage": "Future payments won't go through Stripe — you'll mark each player as paid yourself. Pending payments already in Stripe will still be released to you."
     }
+  },
+  "playerBadges": {
+    "foundingMember": "Founding Member"
   },
   "playerProfile": {
     "title": "Player Profile",
@@ -10738,6 +10741,21 @@
       "benefits": {
         "title": "Why it matters",
         "body": "Coveted Players stand out across Rallia. Their games are highlighted to other players, so they get noticed faster and pull in more invites and join requests."
+      }
+    },
+    "foundingMember": {
+      "title": "What's a Founding Member?",
+      "overview": {
+        "title": "Founding Member",
+        "body": "Founding Members were here from day one. It's a permanent badge for the players who joined Rallia and finished setting up their profile before June 1st, 2026."
+      },
+      "forever": {
+        "title": "A one-time thing",
+        "body": "This badge is closed for good and can't be earned anymore. It's our way of recognizing the players who showed up early and helped get Rallia going."
+      },
+      "benefits": {
+        "title": "Wear it proudly",
+        "body": "It marks you as part of the original crew that built the community behind every game on Rallia today."
       }
     }
   },
