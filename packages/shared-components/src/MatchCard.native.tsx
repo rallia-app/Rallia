@@ -163,6 +163,9 @@ export interface MatchCardProps {
   sportIcon?: React.ReactNode;
   /** Optional custom CTA renderer, replaces the default CardFooter when provided */
   renderCta?: (match: MatchWithDetails) => React.ReactNode;
+  /** Tap handler for a participant avatar — receives that player's id. When set,
+   *  filled avatar slots become pressable (e.g. to open the player's profile). */
+  onPlayerPress?: (playerId: string) => void;
 }
 
 interface ThemeColors {
@@ -358,6 +361,8 @@ interface PlayerSlotsProps {
   currentPlayerId?: string;
   /** Match tier for tier-aware avatar border coloring */
   tier: MatchTier;
+  /** Tap handler for a filled avatar — receives that player's id. */
+  onPlayerPress?: (playerId: string) => void;
 }
 
 /**
@@ -371,6 +376,7 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
   t,
   currentPlayerId,
   tier,
+  onPlayerPress,
 }) => {
   // Tier-aware avatar border color
   const avatarBorderColor = (() => {
@@ -418,6 +424,7 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
     filled: boolean;
     avatarUrl?: string | null;
     isHost: boolean;
+    playerId?: string | null;
   }> = [];
 
   // First slot is always the host
@@ -427,6 +434,11 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
     filled: true,
     avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     isHost: true,
+    playerId:
+      hostParticipant?.player?.id ??
+      hostParticipant?.player_id ??
+      match.created_by_player?.id ??
+      match.created_by,
   });
 
   // Add participant slots (only non-host joined participants)
@@ -437,65 +449,78 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
       filled: !!participant,
       avatarUrl: getProfilePictureUrl(participant?.player?.profile?.profile_picture_url),
       isHost: false,
+      playerId: participant?.player?.id ?? participant?.player_id,
     });
   }
 
   return (
     <View style={styles.slotsContainer}>
       <View style={styles.slotsRow}>
-        {slots.map((slot, index) => (
-          <View key={index} style={styles.slotWrapper}>
-            <View
-              style={[
-                styles.slot,
-                index > 0 && { marginLeft: -8 }, // Overlap avatars
-                slot.filled
+        {slots.map((slot, index) => {
+          const isPressable = slot.filled && !!slot.playerId && !!onPlayerPress;
+          const SlotContainer = isPressable ? TouchableOpacity : View;
+          return (
+            <View key={index} style={styles.slotWrapper}>
+              <SlotContainer
+                {...(isPressable
                   ? {
-                      backgroundColor: slot.avatarUrl
-                        ? colors.tierAccent
-                        : colors.avatarPlaceholder,
-                      borderWidth: 2,
-                      borderColor: avatarBorderColor,
-                      shadowColor: avatarBorderColor,
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 4,
-                      elevation: 3,
+                      onPress: () => onPlayerPress!(slot.playerId!),
+                      activeOpacity: 0.7,
+                      accessibilityRole: 'button' as const,
+                      hitSlop: { top: 6, bottom: 6, left: 0, right: 0 },
                     }
-                  : {
-                      backgroundColor: colors.slotEmpty,
-                      borderWidth: 2,
-                      borderStyle: 'dashed',
-                      borderColor: colors.slotEmptyBorder,
-                    },
-              ]}
-            >
-              {slot.filled ? (
-                slot.avatarUrl ? (
-                  <Image source={{ uri: slot.avatarUrl }} style={styles.slotAvatar} />
-                ) : (
-                  <Ionicons
-                    name="person-outline"
-                    size={14}
-                    color={isDark ? neutral[400] : neutral[500]}
-                  />
-                )
-              ) : (
-                <Ionicons name="add-outline" size={16} color={colors.slotEmptyBorder} />
-              )}
-            </View>
-            {slot.isHost && (
-              <View
+                  : {})}
                 style={[
-                  styles.hostIndicator,
-                  { backgroundColor: isDark ? primary[400] : primary[500] },
+                  styles.slot,
+                  index > 0 && { marginLeft: -8 }, // Overlap avatars
+                  slot.filled
+                    ? {
+                        backgroundColor: slot.avatarUrl
+                          ? colors.tierAccent
+                          : colors.avatarPlaceholder,
+                        borderWidth: 2,
+                        borderColor: avatarBorderColor,
+                        shadowColor: avatarBorderColor,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }
+                    : {
+                        backgroundColor: colors.slotEmpty,
+                        borderWidth: 2,
+                        borderStyle: 'dashed',
+                        borderColor: colors.slotEmptyBorder,
+                      },
                 ]}
               >
-                <Ionicons name="star" size={8} color={base.white} />
-              </View>
-            )}
-          </View>
-        ))}
+                {slot.filled ? (
+                  slot.avatarUrl ? (
+                    <Image source={{ uri: slot.avatarUrl }} style={styles.slotAvatar} />
+                  ) : (
+                    <Ionicons
+                      name="person-outline"
+                      size={14}
+                      color={isDark ? neutral[400] : neutral[500]}
+                    />
+                  )
+                ) : (
+                  <Ionicons name="add-outline" size={16} color={colors.slotEmptyBorder} />
+                )}
+              </SlotContainer>
+              {slot.isHost && (
+                <View
+                  style={[
+                    styles.hostIndicator,
+                    { backgroundColor: isDark ? primary[400] : primary[500] },
+                  ]}
+                >
+                  <Ionicons name="star" size={8} color={base.white} />
+                </View>
+              )}
+            </View>
+          );
+        })}
       </View>
       {/* Invited indicator for players with pending status */}
       {isInvited && (
@@ -962,6 +987,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
   currentPlayerId,
   sportIcon,
   renderCta,
+  onPlayerPress,
 }) => {
   // Compute participant info early to check for expired state
   const participantInfo = getParticipantInfo(match);
@@ -1389,6 +1415,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
             t={t}
             currentPlayerId={currentPlayerId}
             tier={tier}
+            onPlayerPress={onPlayerPress}
           />
 
           {/* Badges row - horizontal scroll for consistent card height */}

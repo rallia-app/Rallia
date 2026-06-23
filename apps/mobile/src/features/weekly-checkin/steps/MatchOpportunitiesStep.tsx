@@ -5,7 +5,9 @@
  * spots that fit the availability the player just declared (same MatchCard used
  * across the app). The CTA is one-click — Join / Ask to join fires the join
  * directly, no MatchDetailSheet — and the card flips to a disabled
- * Joined/Requested state on success. The card body itself is inert here.
+ * Joined/Requested state on success. The card body itself is inert here, but
+ * tapping a participant avatar pushes that player's profile (PlayerProfile) over
+ * the wizard so the player can vet who they'd be playing before joining.
  *
  * Optional step: joining is a bonus, the footer CTA always continues to the
  * auto-match step. When no matches fit, the wizard auto-skips this step, so the
@@ -21,7 +23,7 @@ import type { MatchWithDetails } from '@rallia/shared-types';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import type { JoinOutcome } from '#/features/weekly-checkin/useJoinOpportunity';
-import { useTranslation } from '#/hooks';
+import { useTranslation, useNavigateToPlayerProfile } from '#/hooks';
 import { useLocale } from '#/context';
 
 interface MatchOpportunitiesStepProps {
@@ -49,6 +51,7 @@ export function MatchOpportunitiesStep({
   const { t } = useTranslation();
   const { locale } = useLocale();
   const { colors, isDark } = useThemeStyles();
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const renderCta = useCallback(
     (match: MatchWithDetails) => (
@@ -99,6 +102,7 @@ export function MatchOpportunitiesStep({
                 currentPlayerId={playerId ?? undefined}
                 onPress={NOOP}
                 renderCta={renderCta}
+                onPlayerPress={pid => navigateToPlayerProfile(pid, match.sport?.id)}
               />
             ))}
           </View>
