@@ -17,7 +17,7 @@ export interface MatchSmokeRequestContext {
   facilityId?: string;
   facilityName?: string;
   planTier: MatchPlanTier;
-  paymentIntentId: string;
+  paymentIntentId?: string;
   amountCents: number;
   credits: number | null;
 }

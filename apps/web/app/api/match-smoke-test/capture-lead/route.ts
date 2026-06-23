@@ -1,4 +1,4 @@
-import { createMatchUnlockPaymentIntent } from '@/lib/stripe/payments';
+import { getAdminClient } from '@/lib/match-smoke-test/admin';
 import {
   MATCH_FORMAT_OPTIONS,
   MATCH_NATURE_OPTIONS,
@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
       homeAddress,
       postalCode,
       facilityId,
-      facilityName,
       planTier,
       email,
     } = body;
@@ -70,35 +69,38 @@ export async function POST(request: NextRequest) {
 
     const normalizedPostal = postalCode
       ? String(postalCode).trim().toUpperCase().replace(/\s+/g, ' ')
-      : '';
+      : null;
 
-    const result = await createMatchUnlockPaymentIntent({
-      amountCents: plan.amountCents,
-      metadata: {
+    const supabase = getAdminClient();
+    const { error: upsertError } = await supabase.from('match_smoke_test_lead').upsert(
+      {
+        email: normalizedEmail,
         rating: String(rating),
         match_format: String(matchFormat),
         match_nature: String(matchNature),
         time_slot: String(timeSlot),
         location_type: String(locationType),
-        home_address: normalizedAddress,
         postal_code: normalizedPostal,
-        facility_id: facilityId ? String(facilityId) : '',
-        facility_name: facilityName ? String(facilityName) : '',
         plan_tier: plan.tier,
-        credits: plan.credits !== null ? String(plan.credits) : '',
-        email: normalizedEmail,
+        credits: plan.credits,
+        amount_cents: plan.amountCents,
       },
-    });
+      { onConflict: 'email' }
+    );
+
+    if (upsertError) {
+      console.error('Failed to capture match smoke test lead:', upsertError);
+      return NextResponse.json({ error: 'Failed to save your info.' }, { status: 500 });
+    }
 
     return NextResponse.json({
-      clientSecret: result.clientSecret,
-      paymentIntentId: result.paymentIntentId,
+      ok: true,
       amountCents: plan.amountCents,
       planTier: plan.tier,
       credits: plan.credits,
     });
   } catch (error) {
-    console.error('Error creating match smoke test payment intent:', error);
-    return NextResponse.json({ error: 'Failed to create payment.' }, { status: 500 });
+    console.error('Error capturing match smoke test lead:', error);
+    return NextResponse.json({ error: 'Failed to save your info.' }, { status: 500 });
   }
 }

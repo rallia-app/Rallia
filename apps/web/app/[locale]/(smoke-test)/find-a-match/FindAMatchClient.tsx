@@ -494,7 +494,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier>(DEFAULT_PLAN_TIER);
   const [activePlan, setActivePlan] = useState<MatchPlanConfig>(getMatchPlan(DEFAULT_PLAN_TIER));
   const [subscriptionNoteVisible, setSubscriptionNoteVisible] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [phonePhase, setPhonePhase] = useState<PhonePhase>('enter');
@@ -580,7 +579,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     setSelectedPlanTier(DEFAULT_PLAN_TIER);
     setActivePlan(getMatchPlan(DEFAULT_PLAN_TIER));
     setSubscriptionNoteVisible(false);
-    setClientSecret(null);
     setPaymentIntentId(null);
     setPhoneDigits('');
     setPhonePhase('enter');
@@ -811,7 +809,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/match-smoke-test/create-intent', {
+      const res = await fetch('/api/match-smoke-test/capture-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -834,9 +832,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         throw new Error(data.error || t('payment.genericError'));
       }
 
-      const data = await res.json();
-      setClientSecret(data.clientSecret);
-      setPaymentIntentId(data.paymentIntentId);
       persistRequestContext({
         rating,
         matchFormat,
@@ -846,7 +841,6 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         facilityId: selectedFacilityId ?? undefined,
         facilityName: selectedFacilityName ?? undefined,
         planTier: plan.tier,
-        paymentIntentId: data.paymentIntentId,
         amountCents: plan.amountCents,
         credits: plan.credits,
       });
@@ -1543,14 +1537,13 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     );
   }
 
-  if (step === 'checkout' && clientSecret && stripePromise && rating) {
+  if (step === 'checkout' && stripePromise && rating) {
     return (
       <WizardShell
         step={step}
         showBack
         onBack={() => {
           setStep('plan');
-          setClientSecret(null);
           setError(null);
         }}
       >
@@ -1565,7 +1558,12 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         <Elements
           key={resolvedTheme}
           stripe={stripePromise}
-          options={{ clientSecret, appearance: getAppearance(resolvedTheme) }}
+          options={{
+            mode: 'payment',
+            amount: activePlan.amountCents,
+            currency: MATCH_SMOKE_TEST_CURRENCY.toLowerCase(),
+            appearance: getAppearance(resolvedTheme),
+          }}
         >
           <PaymentForm formattedAmount={formattedAmount} onSuccess={handlePaymentSuccess} />
         </Elements>
