@@ -42,9 +42,9 @@ const translations: Translations = {
     'preheader.orgGeneral': 'Update from {orgName}',
 
     // Invitation
-    'invitation.subject': "You're Invited to Join Rallia",
-    'invitation.heading': "You're Invited!",
-    'invitation.ctaButton': 'Accept Invitation',
+    'invitation.subject': "You're invited to join Rallia",
+    'invitation.heading': "You're invited!",
+    'invitation.ctaButton': 'Accept invitation',
     'invitation.expiresAt': 'This invitation will expire on',
     'invitation.disclaimer':
       "If you didn't expect this invitation, you can safely ignore this email.",
@@ -79,22 +79,22 @@ const translations: Translations = {
     'match.downloadIcs': 'Download .ics file',
 
     // Match action buttons
-    'match.button.viewInvitation': 'View Invitation',
-    'match.button.reviewRequest': 'Review Request',
-    'match.button.browseGames': 'Browse Games',
-    'match.button.rateGame': 'Rate Your Game',
-    'match.button.viewGame': 'View Game',
-    'match.button.viewGameDetails': 'View Game Details',
-    'match.button.viewMessage': 'View Message',
-    'match.button.viewProfile': 'View Profile',
-    'match.button.viewRating': 'View Rating',
+    'match.button.viewInvitation': 'View invitation',
+    'match.button.reviewRequest': 'Review request',
+    'match.button.browseGames': 'Browse games',
+    'match.button.rateGame': 'Rate your game',
+    'match.button.viewGame': 'View game',
+    'match.button.viewGameDetails': 'View game details',
+    'match.button.viewMessage': 'View message',
+    'match.button.viewProfile': 'View profile',
+    'match.button.viewRating': 'View rating',
     'match.button.openRallia': 'Open Rallia',
 
     // Match status badges
     'match.status.cancelled': 'Cancelled',
     'match.status.updated': 'Updated',
-    'match.status.startingSoon': 'Starting Soon',
-    'match.status.checkInOpen': 'Check-in Open',
+    'match.status.startingSoon': 'Starting soon',
+    'match.status.checkInOpen': 'Check-in open',
 
     // Organization email
     'org.court': 'Court',
@@ -109,12 +109,12 @@ const translations: Translations = {
     'org.disclaimer': 'You received this email because you are a member of {org}.',
     'org.managePreferences': 'Manage notification preferences',
     'org.poweredBy': 'Powered by Rallia',
-    'org.button.viewBooking': 'View Booking',
-    'org.button.viewMembers': 'View Members',
-    'org.button.viewPayments': 'View Payments',
-    'org.button.viewReport': 'View Report',
-    'org.button.viewAnnouncement': 'View Announcement',
-    'org.button.viewDetails': 'View Details',
+    'org.button.viewBooking': 'View booking',
+    'org.button.viewMembers': 'View members',
+    'org.button.viewPayments': 'View payments',
+    'org.button.viewReport': 'View report',
+    'org.button.viewAnnouncement': 'View announcement',
+    'org.button.viewDetails': 'View details',
     'org.scanQrCode': 'Scan this QR code at the venue',
     'match.dateAt': 'at',
     'org.dateAt': 'at',
@@ -158,19 +158,19 @@ const translations: Translations = {
     // Match Interest (public visitor conversion email)
     'matchInterest.subject': 'Join this {sportName} game on Rallia',
     'matchInterest.preheader': 'Download Rallia to join the {sportName} game on {matchDate}',
-    'matchInterest.heading': 'Your Spot Is Waiting',
+    'matchInterest.heading': 'Your spot is waiting',
     'matchInterest.greeting': 'Hi {name},',
     'matchInterest.greetingDefault': 'Hi there,',
     'matchInterest.body':
       "You're one step away from joining this game. Download the Rallia app and create your free account to secure your spot.",
-    'matchInterest.ctaButton': 'Get Rallia & Join the Game',
+    'matchInterest.ctaButton': 'Get Rallia & join the game',
     'matchInterest.gameInfoLabel': 'Game info',
     'matchInterest.sport': 'Sport',
     'matchInterest.date': 'Date',
     'matchInterest.time': 'Time',
     'matchInterest.location': 'Location',
     'matchInterest.valueProp':
-      "Once you're signed up, you'll also be able to discover more games near you, connect with local players, and organize your own matches.",
+      "Once you're signed up, you'll also be able to discover more games near you, connect with local players, and organize your own games.",
     'matchInterest.disclaimer':
       "You received this email because you expressed interest in a game on Rallia. If this wasn't you, you can safely ignore this email.",
     'matchInterest.footerNote': 'Rallia — Find players, join games, play more',
@@ -217,7 +217,7 @@ const translations: Translations = {
     'digest.dateLabel.today': 'Today',
     'digest.dateLabel.tomorrow': 'Tomorrow',
     'digest.joinButton': 'Join',
-    'digest.askToJoinButton': 'Ask to Join',
+    'digest.askToJoinButton': 'Ask to join',
     'digest.challengeButton': 'Challenge',
     'digest.suggestionInviteButton': 'Send invite',
     'digest.browseAllGames': 'Browse all games',
@@ -233,7 +233,7 @@ const translations: Translations = {
     'digest.vibeLabel.casual': 'Casual',
     'digest.vibeLabel.competitive': 'Competitive',
     'digest.costFree': 'Free',
-    'digest.courtBooked': 'Court Booked',
+    'digest.courtBooked': 'Court booked',
     'digest.period.morning': 'Mornings',
     'digest.period.afternoon': 'Afternoons',
     'digest.period.evening': 'Evenings',
@@ -255,14 +255,14 @@ const translations: Translations = {
     'preheader.invitation': 'Tu as été invité à rejoindre {networkName} sur Rallia',
     'preheader.matchInvitation': '{playerName} veut jouer au {sportName} avec toi',
     'preheader.matchJoinRequest': '{playerName} veut rejoindre ta partie',
-    'preheader.matchJoinAccepted': "C'est confirmé — ta partie est réservée",
+    'preheader.matchJoinAccepted': "C'est confirmé, ta partie est réservée",
     'preheader.matchJoinRejected': "Ta demande n'a pas été retenue",
     'preheader.matchPlayerJoined': '{playerName} a rejoint ta partie',
     'preheader.matchCancelled': 'Une partie à laquelle tu participais a été annulée',
     'preheader.matchUpdated': 'Les détails de ta partie ont changé',
-    'preheader.matchStartingSoon': "Ta partie commence bientôt — c'est l'heure de t'échauffer",
+    'preheader.matchStartingSoon': "Ta partie commence bientôt, c'est l'heure de t'échauffer",
     'preheader.matchCheckInAvailable':
-      "L'enregistrement est ouvert — confirme ta présence à l'arrivée",
+      "L'enregistrement est ouvert, confirme ta présence à l'arrivée",
     'preheader.playerKicked': "Tu as été retiré d'une partie",
     'preheader.playerLeft': 'Un joueur a quitté ta partie',
     'preheader.reminder': "N'oublie pas ta prochaine partie",
@@ -386,7 +386,7 @@ const translations: Translations = {
     'welcome.signoffTeam': "L'équipe Rallia",
     'welcome.disclaimer':
       'Tu reçois ce courriel parce que tu viens de terminer la création de ton compte Rallia.',
-    'welcome.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
+    'welcome.footerNote': 'Rallia. Trouve des joueurs, rejoins des parties, joue plus',
 
     // Match Interest (public visitor conversion email)
     'matchInterest.subject': 'Rejoins cette partie de {sportName} sur Rallia',
@@ -404,10 +404,10 @@ const translations: Translations = {
     'matchInterest.time': 'Heure',
     'matchInterest.location': 'Lieu',
     'matchInterest.valueProp':
-      "Une fois inscrit, tu pourras aussi découvrir d'autres parties près de chez toi, rencontrer des joueurs locaux et organiser tes propres matchs.",
+      "Une fois inscrit, tu pourras aussi découvrir d'autres parties près de chez toi, rencontrer des joueurs locaux et organiser tes propres parties.",
     'matchInterest.disclaimer':
       "Tu reçois ce courriel parce que tu as manifesté de l'intérêt pour une partie sur Rallia. Si ce n'était pas toi, ignore simplement ce courriel.",
-    'matchInterest.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
+    'matchInterest.footerNote': 'Rallia. Trouve des joueurs, rejoins des parties, joue plus',
 
     // SMS formatter
     'sms.prefix': 'Rallia : ',
@@ -422,7 +422,7 @@ const translations: Translations = {
     'sms.reminder': 'Rappel',
     'sms.at': 'à {location}',
     'sms.gameOn': 'Partie le {date}',
-    'sms.separator': ' — ',
+    'sms.separator': ' - ',
 
     // Push: nearby_match_available
     'notification.nearby.title': 'Nouvelle partie de {sportName} près de toi',
@@ -438,7 +438,7 @@ const translations: Translations = {
     'notification.nearby.tomorrow': 'Demain',
 
     // Morning digest
-    'digest.subject': 'Ton briefing matinal de partie',
+    'digest.subject': 'Ton briefing matinal',
     'digest.preheader': 'Parties à venir près de toi + joueurs à défier cette semaine',
     'digest.heading': 'Bonjour, {firstName}',
     'digest.headingDefault': 'Bonjour',
@@ -446,19 +446,19 @@ const translations: Translations = {
     'digest.matchesSection': 'Parties près de toi',
     'digest.suggestionsSection': 'Joueurs à défier',
     'digest.feedSection': 'Parties et suggestions du jour',
-    'digest.sportSection.tennis': 'Tennis — sélectionné pour vous',
-    'digest.sportSection.pickleball': 'Pickleball — sélectionné pour vous',
+    'digest.sportSection.tennis': 'Tennis : sélectionné pour toi',
+    'digest.sportSection.pickleball': 'Pickleball : sélectionné pour toi',
     'digest.dateLabel.today': "Aujourd'hui",
     'digest.dateLabel.tomorrow': 'Demain',
     'digest.joinButton': 'Rejoindre',
-    'digest.askToJoinButton': 'Demander à joindre',
+    'digest.askToJoinButton': 'Demander à rejoindre',
     'digest.challengeButton': 'Défier',
     'digest.suggestionInviteButton': 'Envoyer une invitation',
     'digest.browseAllGames': 'Voir toutes les parties',
     'digest.discoverAllSuggestions': 'Découvrir toutes les suggestions',
     'digest.disclaimer':
       "Tu reçois ce courriel parce que tu as un compte Rallia. Pour arrêter ces courriels, modifie tes préférences de notification dans l'application.",
-    'digest.footerNote': 'Rallia — Trouve des joueurs, rejoins des parties, joue plus',
+    'digest.footerNote': 'Rallia. Trouve des joueurs, rejoins des parties, joue plus',
     'digest.formatSingles': 'Simple',
     'digest.formatDoubles': 'Double',
     'digest.spotLeft': '1 place libre',

@@ -6644,6 +6644,12 @@ export type Database = {
       }
       rating_proof: {
         Row: {
+          auto_flag_confidence: number | null
+          auto_flag_media_kind: string | null
+          auto_flag_model: string | null
+          auto_flag_reason: string | null
+          auto_flag_status: Database["public"]["Enums"]["proof_auto_flag_status_enum"]
+          auto_flagged_at: string | null
           created_at: string
           description: string | null
           external_url: string | null
@@ -6661,6 +6667,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_flag_confidence?: number | null
+          auto_flag_media_kind?: string | null
+          auto_flag_model?: string | null
+          auto_flag_reason?: string | null
+          auto_flag_status?: Database["public"]["Enums"]["proof_auto_flag_status_enum"]
+          auto_flagged_at?: string | null
           created_at?: string
           description?: string | null
           external_url?: string | null
@@ -6678,6 +6690,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_flag_confidence?: number | null
+          auto_flag_media_kind?: string | null
+          auto_flag_model?: string | null
+          auto_flag_reason?: string | null
+          auto_flag_status?: Database["public"]["Enums"]["proof_auto_flag_status_enum"]
+          auto_flagged_at?: string | null
           created_at?: string
           description?: string | null
           external_url?: string | null
@@ -10824,6 +10842,7 @@ export type Database = {
         }
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
+      lt_user_is_fr: { Args: { p_user_id: string }; Returns: boolean }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
         Returns: boolean
@@ -11043,11 +11062,14 @@ export type Database = {
           p_limit?: number
           p_longitude: number
           p_max_distance_km?: number
+          p_max_hour?: number
           p_membership_required?: boolean
+          p_min_hour?: number
           p_offset?: number
           p_organization_nature?: string
           p_player_id?: string
           p_search_query?: string
+          p_slot_date?: string
           p_sport_ids: string[]
           p_surface_types?: string[]
           p_user_gender?: string
@@ -11086,8 +11108,11 @@ export type Database = {
           p_latitude: number
           p_longitude: number
           p_max_distance_km?: number
+          p_max_hour?: number
           p_membership_required?: boolean
+          p_min_hour?: number
           p_search_query?: string
+          p_slot_date?: string
           p_sport_ids: string[]
           p_surface_types?: string[]
         }
@@ -12696,6 +12721,12 @@ export type Database = {
       playing_hand_enum: "right" | "left" | "both"
       program_status_enum: "draft" | "published" | "cancelled" | "completed"
       program_type_enum: "program" | "lesson"
+      proof_auto_flag_status_enum:
+        | "pending"
+        | "plausible"
+        | "implausible"
+        | "skipped"
+        | "error"
       proof_report_reason_enum:
         | "fake_proof"
         | "misleading"
@@ -13346,6 +13377,13 @@ export const Constants = {
       playing_hand_enum: ["right", "left", "both"],
       program_status_enum: ["draft", "published", "cancelled", "completed"],
       program_type_enum: ["program", "lesson"],
+      proof_auto_flag_status_enum: [
+        "pending",
+        "plausible",
+        "implausible",
+        "skipped",
+        "error",
+      ],
       proof_report_reason_enum: [
         "fake_proof",
         "misleading",

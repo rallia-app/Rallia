@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "@std/encoding": "jsr:@std/encoding@1",
+    "@supabase/functions-js": "jsr:@supabase/functions-js@2",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable", "dom"]
+  }
+}

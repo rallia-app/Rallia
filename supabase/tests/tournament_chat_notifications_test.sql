@@ -304,10 +304,13 @@ BEGIN
     SELECT count(*) INTO v_count FROM notification
      WHERE type = 'tournament_bracket_published' AND target_id = v_tid;
     ASSERT v_count = 5, 'expected 5 bracket_published notifications, got ' || v_count;
+    -- Byes carry no round-1 opponent in the payload. Assert on the structured
+    -- payload, not the body text, so the check is locale-independent (the body
+    -- is localized per recipient — fr-CA seed players get French wording).
     SELECT count(*) INTO v_count FROM notification
      WHERE type = 'tournament_bracket_published' AND target_id = v_tid
-       AND body LIKE '%bye%';
-    ASSERT v_count = 3, 'expected 3 bye-worded notifications (5 entries in 8-bracket), got ' || v_count;
+       AND (payload->>'opponentName') IS NULL;
+    ASSERT v_count = 3, 'expected 3 bye notifications (no round-1 opponent), got ' || v_count;
     SELECT count(*) INTO v_count FROM notification
      WHERE type = 'tournament_bracket_published' AND target_id = v_tid
        AND (payload->>'opponentName') IS NOT NULL;

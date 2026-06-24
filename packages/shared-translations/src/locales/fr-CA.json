@@ -284,24 +284,24 @@
         "body": "{playerName} a demandé à rejoindre ta partie le {matchDate}. Examine et approuve."
       },
       "match_join_accepted": {
-        "title": "C'est confirmé — ta partie de {sportName} arrive",
+        "title": "C'est confirmé, ta partie de {sportName} arrive",
         "body": "Ta partie le {matchDate}{locationName} est confirmée. Ajoute-la à ton agenda pour ne pas l'oublier."
       },
       "match_join_rejected": {
         "title": "Ta demande n'a pas été approuvée",
-        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi — touche pour les voir."
+        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi. Touche pour les voir."
       },
       "match_player_joined": {
         "title": "{playerName} a rejoint ta partie",
-        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate} — {spotsLeft} place(s) restante(s).",
-        "body_full": "{playerName} a pris la dernière place — ta partie de {sportName} le {matchDate} est complète."
+        "body": "{playerName} embarque pour ta partie de {sportName} le {matchDate}. Encore {spotsLeft} à combler.",
+        "body_full": "{playerName} a pris la dernière place. Ta partie de {sportName} le {matchDate} est complète."
       },
       "match_cancelled": {
         "title": "Ta partie de {sportName} a été annulée",
         "body": "La partie de {sportName} le {matchDate}{locationName} a été annulée. Touche pour trouver une autre partie près de chez toi."
       },
       "match_updated": {
-        "title": "Attention — ta partie a changé",
+        "title": "Attention, ta partie a changé",
         "body": "Ta partie de {sportName} le {matchDate} a été mise à jour. Touche pour voir les nouveaux détails."
       },
       "match_starting_soon": {
@@ -322,7 +322,7 @@
       },
       "player_left": {
         "title": "{playerName} a quitté ta partie",
-        "body": "{playerName} s'est désisté de ta partie de {sportName} — {spotsLeft} place(s) maintenant ouverte(s). Invite un ami?"
+        "body": "{playerName} s'est désisté de ta partie de {sportName}. Encore {spotsLeft} à combler. Invite un ami?"
       },
       "new_message": {
         "title": "Message de {senderName}",
@@ -333,8 +333,8 @@
         "body": "Tu as un nouveau message en attente."
       },
       "rating_verified": {
-        "title": "Ton niveau en {sportName} est certifié",
-        "body": "Ton classement {ratingSystemName} de {ratingValue} est maintenant certifié. Le badge vérifié apparaîtra sur ton profil."
+        "title": "Ton niveau en {sportName} est vérifié",
+        "body": "Ton niveau {ratingSystemName} de {ratingValue} est maintenant vérifié. Le badge vérifié apparaîtra sur ton profil."
       },
       "reminder": {
         "title": "Partie à venir le {matchDate}",
@@ -434,14 +434,14 @@
       },
       "refund_processed": {
         "title": "Remboursement émis : {amountFormatted}",
-        "body": "{amountFormatted} ont été remboursés à {playerName}."
+        "body": "{amountFormatted} a été remboursé à {playerName}."
       },
       "daily_summary": {
-        "title": "Résumé quotidien — {orgName}",
+        "title": "Résumé quotidien : {orgName}",
         "body": "Touchez pour consulter les réservations et activités d'aujourd'hui."
       },
       "weekly_report": {
-        "title": "Rapport hebdomadaire — {orgName}",
+        "title": "Rapport hebdomadaire : {orgName}",
         "body": "Votre rapport hebdomadaire est prêt. Touchez pour le consulter."
       },
       "booking_confirmed": {
@@ -465,16 +465,16 @@
         "body": "{orgName} a partagé une nouvelle annonce. Touche pour lire."
       },
       "payouts_setup_required": {
-        "title": "{amount} prêt à recevoir",
+        "title": "{amount} à recevoir",
         "body": "Un joueur t'a remboursé. Vérifie ton compte bancaire pour recevoir l'argent (5 min)."
       },
       "payouts_released": {
         "title": "{amount} en route",
-        "body": "Ton remboursement est en route vers ta banque — arrive en 1 à 2 jours ouvrables."
+        "body": "Ton remboursement est en route vers ta banque, il arrive en 1 à 2 jours ouvrables."
       },
       "payouts_expired_refunded": {
         "title": "Remboursement non complété",
-        "body": "{amount} a été remboursé au joueur car le paiement n'a pas pu être configuré à temps."
+        "body": "{amount} a été remboursé au joueur car le paiement n'a pas pu être mis en place à temps."
       },
       "reimbursement_received": {
         "title": "Remboursement reçu : {amount}",
@@ -486,7 +486,7 @@
       },
       "match_time_suggested": {
         "title": "{playerName} propose {suggestedStartTime}",
-        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue — il propose {suggestedStartTime}. Touche pour accepter ou refuser."
+        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue et propose plutôt {suggestedStartTime}. Touche pour accepter ou refuser."
       },
       "match_time_suggestion_accepted": {
         "title": "Ta proposition a été acceptée",
@@ -1398,6 +1398,9 @@
       "switchToManualConfirmTitle": "Passer au suivi manuel?",
       "switchToManualConfirmMessage": "Les paiements futurs ne passeront plus par Stripe — tu marqueras chaque joueur comme payé toi-même. Les paiements en attente dans Stripe te seront quand même versés."
     }
+  },
+  "playerBadges": {
+    "foundingMember": "Membre fondateur"
   },
   "playerProfile": {
     "title": "Profil du joueur",
@@ -3515,6 +3518,7 @@
     },
     "opponentStep": {
       "rateExperience": "Évaluez votre expérience avec ce joueur",
+      "anonymityNote": "Ton évaluation est anonyme. Ça influence seulement la réputation de ce joueur. Personne ne voit que ça vient de toi, ni ce que tu as répondu.",
       "showedUp": "S'est-il/elle présenté(e)?",
       "noShowInfo": "Si quelqu'un d'autre que le joueur inscrit s'est présenté, sélectionnez aussi « Non »",
       "wasLate": "Était-il/elle en retard?",
@@ -6559,12 +6563,28 @@
       "titleMeta": "Connexion Admin - Rallia",
       "descriptionMeta": "Connectez-vous pour accéder au tableau de bord d'administration de Rallia."
     },
+    "ratingProofs": {
+      "title": "Preuves signalées",
+      "subtitle": "Preuves de classement que la vérification automatique juge possiblement non valides. Approuve ou rejette depuis la page du joueur.",
+      "empty": "Aucune preuve signalée pour le moment.",
+      "unknownPlayer": "Joueur inconnu",
+      "flagStatus": {
+        "implausible": "Probablement pas une preuve",
+        "error": "Échec de la vérification"
+      },
+      "proofStatus": {
+        "pending": "En attente",
+        "approved": "Approuvée",
+        "rejected": "Rejetée"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Tableau de bord",
       "organizations": "Organisations",
       "users": "Utilisateurs",
       "moderation": "Modération",
+      "ratingProofs": "Preuves signalées",
       "activityLog": "Journal d'activité",
       "alerts": "Alertes",
       "networks": "Réseaux",
@@ -7647,6 +7667,11 @@
             "file": "Fichier téléversé"
           },
           "reviewNotes": "Notes de révision",
+          "autoFlag": {
+            "flagged": "Signalé auto",
+            "error": "Échec vérif auto",
+            "label": "Vérif auto"
+          },
           "references": "Références de classement",
           "refEmpty": "Aucune demande de référence",
           "refStatuses": {
@@ -9687,6 +9712,21 @@
       "hasOpenSlots": {
         "label": "Créneaux libres"
       },
+      "day": {
+        "label": "Jour",
+        "select": "Choisir le jour",
+        "all": "Tous les jours"
+      },
+      "time": {
+        "label": "Heure",
+        "select": "Choisir l'heure",
+        "all": "Toutes",
+        "am": "AM",
+        "pm": "PM",
+        "eve": "Soir",
+        "timeOfDay": "Moment de la journée",
+        "specificTime": "Heure précise"
+      },
       "organizationNature": {
         "label": "Type",
         "all": "Tous",
@@ -10238,6 +10278,8 @@
       "description": "Créez votre compte ou connectez-vous pour rejoindre cette partie.",
       "requestTitle": "Connectez-vous pour demander",
       "requestDescription": "Créez votre compte ou connectez-vous pour demander une place. L'hôte examinera votre demande.",
+      "waitlistTitle": "Connectez-vous pour la liste d'attente",
+      "waitlistDescription": "La partie est complète. Créez votre compte ou connectez-vous pour rejoindre la liste d'attente; on vous avise si une place se libère.",
       "google": "Continuer avec Google",
       "orEmail": "ou",
       "email": "Courriel",
@@ -10256,6 +10298,8 @@
       "requestTitle": "Prêt à demander?",
       "requestDescription": "L'hôte approuve les joueurs avant qu'ils rejoignent. Envoyez une demande et nous vous aviserons de sa réponse.",
       "requestCta": "Demander à rejoindre",
+      "waitlistTitle": "La partie est complète",
+      "waitlistDescription": "Toutes les places sont prises, mais vous pouvez rejoindre la liste d'attente. On vous avise si une place se libère.",
       "waitlistCta": "Rejoindre la liste d'attente"
     },
     "profile": {
@@ -10718,6 +10762,21 @@
       "benefits": {
         "title": "Pourquoi ça compte",
         "body": "Les joueurs convoités se démarquent sur Rallia. Leurs parties sont mises en valeur auprès des autres joueurs, ça fait qu'ils se font remarquer plus vite et reçoivent plus d'invitations et de demandes."
+      }
+    },
+    "foundingMember": {
+      "title": "C'est quoi un membre fondateur?",
+      "overview": {
+        "title": "Membre fondateur",
+        "body": "Les membres fondateurs étaient là dès le début. C'est un badge permanent pour les joueurs qui ont rejoint Rallia et complété leur profil avant le 1er juin 2026."
+      },
+      "forever": {
+        "title": "Une seule chance",
+        "body": "Ce badge ne s'obtient plus. C'est notre façon de reconnaître les joueurs qui ont embarqué tôt et aidé à lancer Rallia."
+      },
+      "benefits": {
+        "title": "Porte-le avec fierté",
+        "body": "Ça montre que tu fais partie de la gang des débuts, celle qui a bâti la communauté derrière chaque partie sur Rallia aujourd'hui."
       }
     }
   },

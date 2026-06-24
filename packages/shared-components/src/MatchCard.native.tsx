@@ -665,6 +665,9 @@ const CardFooter: React.FC<CardFooterProps> = ({
       )
     : undefined;
 
+  // Casual games skip score entry/confirmation entirely — feedback only.
+  const isCasual = match.player_expectation === 'casual';
+
   const hasJoined = userParticipant?.status === 'joined';
   // 'pending' (invited by host) shows "Accept Invitation" CTA
   const isInvited = userParticipant?.status === 'pending';
@@ -696,6 +699,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
 
   // Check if a rebuttal is pending (opponent proposed a different score)
   const isRebuttalPending =
+    !isCasual &&
     hasScore &&
     !match.result?.is_verified &&
     !match.result?.disputed &&
@@ -719,6 +723,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
   // Check if the current player still needs to confirm/dispute the score
   // (score exists but not verified/disputed, player hasn't responded yet, player isn't the submitter)
   const scoreNeedsPlayerConfirmation =
+    !isCasual &&
     hasScore &&
     !match.result?.is_verified &&
     !match.result?.disputed &&
@@ -731,7 +736,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
     isWithinFeedbackWindow &&
     currentPlayerParticipant &&
     (!playerHasCompletedFeedback ||
-      !hasScore ||
+      (!isCasual && !hasScore) ||
       scoreNeedsPlayerConfirmation ||
       rebuttalNeedsPlayerResponse);
 
@@ -798,7 +803,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
   } else if (playerNeedsFeedback) {
     // Feedback CTA - label and icon vary based on what's still needed
     const needsFeedback = !playerHasCompletedFeedback;
-    const needsScore = !hasScore;
+    const needsScore = !isCasual && !hasScore;
     const needsScoreConfirmation = !!scoreNeedsPlayerConfirmation;
     const needsRebuttalResponse = !!rebuttalNeedsPlayerResponse;
     if (needsRebuttalResponse && needsFeedback) {

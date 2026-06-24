@@ -17,6 +17,7 @@ import {
   type LightingFilter,
   type MembershipFilter,
   type OrganizationNatureFilter,
+  type FacilityHourRange,
 } from '@rallia/shared-hooks';
 import {
   spacingPixels,
@@ -62,6 +63,74 @@ const COURT_TYPES: ('all' | CourtTypeFilter)[] = ['all', 'indoor', 'outdoor'];
 const LIGHTING_OPTIONS: LightingFilter[] = ['all', 'with_lights', 'no_lights'];
 const MEMBERSHIP_OPTIONS: MembershipFilter[] = ['all', 'public', 'members_only'];
 const ORGANIZATION_NATURE_OPTIONS: OrganizationNatureFilter[] = ['all', 'public', 'private'];
+
+// =============================================================================
+// DAY + TIME-OF-DAY AVAILABILITY FILTER (mirrors the Community directory)
+// =============================================================================
+
+// Time-of-day presets over the hour-range data layer (p_min_hour / p_max_hour).
+// The dropdown also exposes a specific-hour picker (minHour === maxHour). Both
+// the day and the hour are evaluated server-side in the facility timezone.
+type HourRangePreset = 'all' | 'am' | 'pm' | 'eve';
+
+const HOUR_RANGE_PRESETS: Record<HourRangePreset, FacilityHourRange> = {
+  all: { minHour: null, maxHour: null },
+  am: { minHour: 6, maxHour: 11 }, // morning
+  pm: { minHour: 12, maxHour: 17 }, // afternoon
+  eve: { minHour: 18, maxHour: 22 }, // evening
+};
+
+const HOUR_RANGE_PRESET_OPTIONS: HourRangePreset[] = ['all', 'am', 'pm', 'eve'];
+
+function presetFromRange(r: FacilityHourRange | undefined): HourRangePreset {
+  if (!r) return 'all';
+  if (r.minHour == null && r.maxHour == null) return 'all';
+  if (r.minHour === 6 && r.maxHour === 11) return 'am';
+  if (r.minHour === 12 && r.maxHour === 17) return 'pm';
+  if (r.minHour === 18 && r.maxHour === 22) return 'eve';
+  return 'all'; // specific-hour or custom range → no preset highlighted
+}
+
+// Hours the picker exposes: 06..22 inclusive (matches the snapshot day window).
+const MIN_AVAILABILITY_HOUR = 6;
+const MAX_AVAILABILITY_HOUR = 22;
+const SPECIFIC_HOUR_OPTIONS: number[] = Array.from(
+  { length: MAX_AVAILABILITY_HOUR - MIN_AVAILABILITY_HOUR + 1 },
+  (_, i) => MIN_AVAILABILITY_HOUR + i
+);
+
+/** A specific single hour is encoded as minHour === maxHour (no preset uses that). */
+function specificHourFromRange(r: FacilityHourRange | undefined): number | null {
+  if (!r || r.minHour == null || r.maxHour == null) return null;
+  return r.minHour === r.maxHour ? r.minHour : null;
+}
+
+/** Any hour bound set (preset or specific hour) counts as an active filter. */
+function isHourRangeActive(r: FacilityHourRange | undefined): boolean {
+  return !!r && (r.minHour != null || r.maxHour != null);
+}
+
+// Locale-aware hour label (e.g. "7 PM" / "19 h"). Mirrors the Community filter.
+const hourFormatterCache = new Map<string, Intl.DateTimeFormat>();
+function formatHourLabel(hour: number, locale: string): string {
+  let f = hourFormatterCache.get(locale);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, {
+      hour: 'numeric',
+      hour12: locale.toLowerCase().startsWith('en'),
+    });
+    hourFormatterCache.set(locale, f);
+  }
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  return f.format(d);
+}
+
+interface DayOption {
+  /** 'all' sentinel, or ISO yyyy-mm-dd in local time. */
+  key: string;
+  label: string;
+}
 
 // =============================================================================
 // FILTER CHIP COMPONENT
@@ -304,6 +373,220 @@ function FilterDropdown<T extends string | number>({
 }
 
 // =============================================================================
+// TIME-OF-DAY DROPDOWN (presets + specific hour)
+// =============================================================================
+
+interface AvailabilityFilterDropdownProps {
+  visible: boolean;
+  title: string;
+  presetOptions: HourRangePreset[];
+  selectedPreset: HourRangePreset;
+  onSelectPreset: (preset: HourRangePreset) => void;
+  hourOptions: number[];
+  selectedHour: number | null;
+  onSelectHour: (hour: number) => void;
+  getPresetLabel: (preset: HourRangePreset) => string;
+  formatHour: (hour: number) => string;
+  presetSectionLabel: string;
+  specificTimeLabel: string;
+  onClose: () => void;
+  isDark: boolean;
+}
+
+function AvailabilityFilterDropdown({
+  visible,
+  title,
+  presetOptions,
+  selectedPreset,
+  onSelectPreset,
+  hourOptions,
+  selectedHour,
+  onSelectHour,
+  getPresetLabel,
+  formatHour,
+  presetSectionLabel,
+  specificTimeLabel,
+  onClose,
+  isDark,
+}: AvailabilityFilterDropdownProps) {
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);
+
+  const themeColors = isDark ? darkTheme : lightTheme;
+  const colors = {
+    dropdownBg: themeColors.card,
+    dropdownBorder: themeColors.border,
+    itemText: themeColors.foreground,
+    itemTextSelected: primary[500],
+    itemBg: 'transparent',
+    itemBgSelected: isDark ? `${primary[500]}20` : `${primary[500]}10`,
+    itemBorder: themeColors.border,
+    overlayBg: 'rgba(0, 0, 0, 0.5)',
+    checkmark: primary[500],
+    presetInactiveBg: isDark ? neutral[800] : neutral[100],
+    presetInactiveBorder: isDark ? neutral[700] : neutral[200],
+    presetInactiveText: isDark ? neutral[300] : neutral[600],
+  };
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: animDuration.fast,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
+    }
+  }, [visible, fadeAnim, scaleAnim]);
+
+  const handleSelectPreset = (preset: HourRangePreset) => {
+    selectionHaptic();
+    onSelectPreset(preset);
+    onClose();
+  };
+
+  const handleSelectHour = (hour: number) => {
+    selectionHaptic();
+    onSelectHour(hour);
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <Animated.View
+          style={[
+            styles.overlayBackground,
+            {
+              opacity: fadeAnim,
+              backgroundColor: colors.overlayBg,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.dropdownContainer,
+            {
+              backgroundColor: colors.dropdownBg,
+              borderColor: colors.dropdownBorder,
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          {/* Header */}
+          <View style={[styles.dropdownHeader, { borderBottomColor: colors.itemBorder }]}>
+            <Text size="base" weight="semibold" color={themeColors.foreground}>
+              {title}
+            </Text>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Preset pills */}
+          <View style={styles.availabilitySection}>
+            <Text size="xs" weight="semibold" color={themeColors.mutedForeground}>
+              {presetSectionLabel}
+            </Text>
+            <View style={styles.availabilityPresetRow}>
+              {presetOptions.map(preset => {
+                const isSelected = selectedPreset === preset;
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[
+                      styles.availabilityPresetPill,
+                      {
+                        backgroundColor: isSelected ? primary[500] : colors.presetInactiveBg,
+                        borderColor: isSelected ? primary[400] : colors.presetInactiveBorder,
+                      },
+                    ]}
+                    onPress={() => handleSelectPreset(preset)}
+                    activeOpacity={0.85}
+                  >
+                    <Text
+                      size="xs"
+                      weight={isSelected ? 'semibold' : 'medium'}
+                      color={isSelected ? '#ffffff' : colors.presetInactiveText}
+                    >
+                      {getPresetLabel(preset)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Specific-hour list */}
+          <View style={[styles.availabilitySpecificHeader, { borderTopColor: colors.itemBorder }]}>
+            <Text size="xs" weight="semibold" color={themeColors.mutedForeground}>
+              {specificTimeLabel}
+            </Text>
+          </View>
+          <ScrollView
+            style={styles.dropdownScrollView}
+            showsVerticalScrollIndicator={false}
+            bounces
+          >
+            {hourOptions.map((hour, index) => {
+              const isSelected = selectedHour === hour;
+              const isLast = index === hourOptions.length - 1;
+              return (
+                <TouchableOpacity
+                  key={hour}
+                  style={[
+                    styles.dropdownItem,
+                    {
+                      backgroundColor: isSelected ? colors.itemBgSelected : colors.itemBg,
+                      borderBottomColor: isLast ? 'transparent' : colors.itemBorder,
+                    },
+                  ]}
+                  onPress={() => handleSelectHour(hour)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dropdownItemContent}>
+                    <Text
+                      size="base"
+                      weight={isSelected ? 'semibold' : 'regular'}
+                      color={isSelected ? colors.itemTextSelected : colors.itemText}
+                    >
+                      {formatHour(hour)}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle-outline" size={22} color={colors.checkmark} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -333,7 +616,7 @@ export default function FacilityFiltersBar({
   showFavoritesFilter = true,
 }: FacilityFiltersBarProps) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isDark = theme === 'dark';
 
   // Dropdown visibility states
@@ -344,6 +627,35 @@ export default function FacilityFiltersBar({
   const [showLightingDropdown, setShowLightingDropdown] = useState(false);
   const [showMembershipDropdown, setShowMembershipDropdown] = useState(false);
   const [showOrgNatureDropdown, setShowOrgNatureDropdown] = useState(false);
+  const [showDayDropdown, setShowDayDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+
+  // Day options: 'Any day' + the next 7 calendar days (snapshot horizon),
+  // keyed by local ISO date so the server can match in facility-local time.
+  const dayOptions = useMemo<DayOption[]>(() => {
+    const opts: DayOption[] = [{ key: 'all', label: t('facilitiesTab.filters.day.all') }];
+    const fmt = new Intl.DateTimeFormat(locale, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate()
+      ).padStart(2, '0')}`;
+      const label =
+        i === 0 ? t('common.time.today') : i === 1 ? t('common.time.tomorrow') : fmt.format(d);
+      opts.push({ key, label });
+    }
+    return opts;
+  }, [t, locale]);
+
+  const dayOptionKeys = useMemo(() => dayOptions.map(o => o.key), [dayOptions]);
+  const dayLabelByKey = useMemo(() => new Map(dayOptions.map(o => [o.key, o.label])), [dayOptions]);
 
   // =============================================================================
   // LABEL GETTERS
@@ -396,6 +708,13 @@ export default function FacilityFiltersBar({
     (v: OrganizationNatureFilter) => {
       return t(`facilitiesTab.filters.organizationNature.${v}`);
     },
+    [t]
+  );
+
+  const getDayLabel = useCallback((v: string) => dayLabelByKey.get(v) ?? v, [dayLabelByKey]);
+
+  const getHourPresetLabel = useCallback(
+    (v: HourRangePreset) => t(`facilitiesTab.filters.time.${v}`),
     [t]
   );
 
@@ -469,6 +788,22 @@ export default function FacilityFiltersBar({
       ? t('facilitiesTab.filters.organizationNature.label')
       : getOrgNatureLabel(filters.organizationNature);
 
+  // Day + time-of-day derived state
+  const selectedDayKey = filters.slotDate ?? 'all';
+  const selectedHourPreset = presetFromRange(filters.hourRange);
+  const selectedSpecificHour = specificHourFromRange(filters.hourRange);
+  const hourFilterActive = isHourRangeActive(filters.hourRange);
+
+  const dayDisplay =
+    filters.slotDate === null
+      ? t('facilitiesTab.filters.day.label')
+      : getDayLabel(filters.slotDate);
+  const timeDisplay = !hourFilterActive
+    ? t('facilitiesTab.filters.time.label')
+    : selectedSpecificHour !== null
+      ? formatHourLabel(selectedSpecificHour, locale)
+      : getHourPresetLabel(selectedHourPreset);
+
   // =============================================================================
   // HANDLERS
   // =============================================================================
@@ -535,6 +870,27 @@ export default function FacilityFiltersBar({
     onFiltersChange({ ...filters, hasOpenSlots: !filters.hasOpenSlots });
   }, [filters, onFiltersChange]);
 
+  const handleSlotDateChange = useCallback(
+    (value: string) => {
+      onFiltersChange({ ...filters, slotDate: value === 'all' ? null : value });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleHourPresetChange = useCallback(
+    (preset: HourRangePreset) => {
+      onFiltersChange({ ...filters, hourRange: HOUR_RANGE_PRESETS[preset] });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleSpecificHourChange = useCallback(
+    (hour: number) => {
+      onFiltersChange({ ...filters, hourRange: { minHour: hour, maxHour: hour } });
+    },
+    [filters, onFiltersChange]
+  );
+
   const handleFavoritesOnlyToggle = useCallback(() => {
     onFiltersChange({ ...filters, favoritesOnly: !filters.favoritesOnly });
   }, [filters, onFiltersChange]);
@@ -544,6 +900,13 @@ export default function FacilityFiltersBar({
   // =============================================================================
 
   const filterChips = useMemo(() => {
+    // Availability gates are nested: a Day/Time window ⊆ "Slots open" ⊆
+    // "Bookable". Hide a looser gate once a stricter one that already implies
+    // it is active, so the bar doesn't offer redundant toggles.
+    const dayOrTimeActive = filters.slotDate !== null || hourFilterActive;
+    const showSlotsOpenChip = !dayOrTimeActive;
+    const showBookableChip = !filters.hasOpenSlots && !dayOrTimeActive;
+
     const chips: {
       key: string;
       value: string;
@@ -565,21 +928,43 @@ export default function FacilityFiltersBar({
           ]
         : []),
       {
-        key: 'hasOpenSlots',
-        value: t('facilitiesTab.filters.hasOpenSlots.label'),
-        isActive: filters.hasOpenSlots,
-        onPress: handleHasOpenSlotsToggle,
-        icon: 'flash-outline',
-        hasDropdown: false,
+        key: 'day',
+        value: dayDisplay,
+        isActive: filters.slotDate !== null,
+        onPress: () => setShowDayDropdown(true),
+        icon: 'calendar-number-outline',
       },
       {
-        key: 'hasAvailabilities',
-        value: t('facilitiesTab.filters.hasAvailabilities.label'),
-        isActive: filters.hasAvailabilities,
-        onPress: handleHasAvailabilitiesToggle,
-        icon: 'calendar-outline',
-        hasDropdown: false,
+        key: 'time',
+        value: timeDisplay,
+        isActive: hourFilterActive,
+        onPress: () => setShowTimeDropdown(true),
+        icon: 'time-outline',
       },
+      ...(showSlotsOpenChip
+        ? [
+            {
+              key: 'hasOpenSlots',
+              value: t('facilitiesTab.filters.hasOpenSlots.label'),
+              isActive: filters.hasOpenSlots,
+              onPress: handleHasOpenSlotsToggle,
+              icon: 'flash-outline' as keyof typeof Ionicons.glyphMap,
+              hasDropdown: false,
+            },
+          ]
+        : []),
+      ...(showBookableChip
+        ? [
+            {
+              key: 'hasAvailabilities',
+              value: t('facilitiesTab.filters.hasAvailabilities.label'),
+              isActive: filters.hasAvailabilities,
+              onPress: handleHasAvailabilitiesToggle,
+              icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap,
+              hasDropdown: false,
+            },
+          ]
+        : []),
       {
         key: 'distance',
         value: distanceDisplay,
@@ -646,6 +1031,9 @@ export default function FacilityFiltersBar({
     lightingDisplay,
     membershipDisplay,
     orgNatureDisplay,
+    dayDisplay,
+    timeDisplay,
+    hourFilterActive,
     handleFavoritesOnlyToggle,
     handleHasAvailabilitiesToggle,
     handleHasOpenSlotsToggle,
@@ -806,6 +1194,36 @@ export default function FacilityFiltersBar({
         getLabel={getOrgNatureLabel}
         getIcon={getOrgNatureIcon}
       />
+
+      {/* Day Dropdown — pick a specific day within the snapshot horizon */}
+      <FilterDropdown
+        visible={showDayDropdown}
+        title={t('facilitiesTab.filters.day.select')}
+        options={dayOptionKeys}
+        selectedValue={selectedDayKey}
+        onSelect={handleSlotDateChange}
+        onClose={() => setShowDayDropdown(false)}
+        isDark={isDark}
+        getLabel={getDayLabel}
+      />
+
+      {/* Time-of-day Dropdown — AM/PM/Eve presets + specific hour */}
+      <AvailabilityFilterDropdown
+        visible={showTimeDropdown}
+        title={t('facilitiesTab.filters.time.select')}
+        presetOptions={HOUR_RANGE_PRESET_OPTIONS}
+        selectedPreset={selectedHourPreset}
+        onSelectPreset={handleHourPresetChange}
+        hourOptions={SPECIFIC_HOUR_OPTIONS}
+        selectedHour={selectedSpecificHour}
+        onSelectHour={handleSpecificHourChange}
+        getPresetLabel={getHourPresetLabel}
+        formatHour={hour => formatHourLabel(hour, locale)}
+        presetSectionLabel={t('facilitiesTab.filters.time.timeOfDay')}
+        specificTimeLabel={t('facilitiesTab.filters.time.specificTime')}
+        onClose={() => setShowTimeDropdown(false)}
+        isDark={isDark}
+      />
     </View>
   );
 }
@@ -892,5 +1310,28 @@ const styles = StyleSheet.create({
   },
   dropdownItemIcon: {
     marginRight: spacingPixels[2],
+  },
+  availabilitySection: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  availabilityPresetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  availabilityPresetPill: {
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  availabilitySpecificHeader: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

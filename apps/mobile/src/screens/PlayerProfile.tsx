@@ -63,7 +63,7 @@ import {
 } from '#/features/onboarding/components/HourlyAvailabilityGrid';
 import RatingBadge from '#/components/RatingBadge';
 import ReputationBadge from '#/components/ReputationBadge';
-import CovetedBadge from '#/components/CovetedBadge';
+import HeroBadgeRow from '#/components/HeroBadgeRow';
 import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
 import * as Analytics from '#/services/analytics';
 import type { RootStackParamList } from '#/navigation/types';
@@ -1932,16 +1932,8 @@ const PlayerProfile = () => {
                 </View>
               )}
 
-              {/* Badges row */}
+              {/* Rating + reputation chips */}
               <View style={styles.profileBadgesRow}>
-                <CovetedBadge
-                  reputationScore={reputationDisplay?.score}
-                  certificationStatus={primarySport?.badgeStatus}
-                  totalEvents={reputationTotalEvents}
-                  isDark={isDark}
-                  isLoading={loading}
-                  onInfoPress={() => SheetManager.show('coveted-player-explainer')}
-                />
                 <RatingBadge
                   ratingValue={primarySport?.ratingValue}
                   ratingLabel={primarySport?.ratingLabel}
@@ -1965,6 +1957,17 @@ const PlayerProfile = () => {
               </View>
             </View>
           </View>
+
+          <HeroBadgeRow
+            createdAt={player?.created_at}
+            onboardingCompleted={profile?.onboarding_completed}
+            reputationScore={reputationDisplay?.score}
+            certificationStatus={primarySport?.badgeStatus}
+            totalEvents={reputationTotalEvents}
+            isDark={isDark}
+            onFoundingInfoPress={() => SheetManager.show('founding-member-explainer')}
+            onCovetedInfoPress={() => SheetManager.show('coveted-player-explainer')}
+          />
         </View>
 
         {/* Action buttons — horizontal scroll, transparent, sits under the hero card */}
