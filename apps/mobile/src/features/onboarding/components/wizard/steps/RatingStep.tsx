@@ -147,10 +147,12 @@ export const RatingStep: React.FC<RatingStepProps> = ({
     const loadRatings = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport(
+        // Guard the destructure: a null/undefined resolution would throw "Cannot convert undefined value to object" on Hermes
+        const response = await DatabaseService.RatingScore.getRatingScoresBySport(
           sport,
           ratingSystem
         );
+        const { data, error } = response ?? { data: null, error: null };
 
         if (error || !data) {
           Logger.error(`Failed to load ${sport} ratings`, error as Error, {
