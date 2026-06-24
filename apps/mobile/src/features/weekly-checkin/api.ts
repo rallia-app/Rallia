@@ -64,6 +64,16 @@ export interface CheckInWindowDay {
   dayOfWeek: DayEnum;
 }
 
+/** Streak-history marker for one completed week. */
+export type WeekStatus = 'hit' | 'frozen' | 'miss' | 'none';
+
+/** One completed week in the streak strip, keyed by its real start date. */
+export interface HistoryWeek {
+  /** ISO date `YYYY-MM-DD` of that week's Monday (player-local). */
+  weekStart: string;
+  status: WeekStatus;
+}
+
 export interface CheckInContext {
   currentStreak: number;
   longestStreak: number;
@@ -71,9 +81,8 @@ export interface CheckInContext {
   freezeCap: number;
   lastWeekFrequencyGoal: number | null;
   lastWeekSessionsPlayed: number | null;
-  goalsHitLast4Weeks: boolean[];
-  /** Parallel to goalsHitLast4Weeks: TRUE where a freeze rescued that miss. */
-  freezesUsedLast4Weeks: boolean[];
+  /** Last 4 completed weeks, newest-first, each with its real date + status. */
+  historyWeeks: HistoryWeek[];
   lastFrequencyGoal: number | null;
   /** Coverage-based: the player is past the last date they declared for. */
   isPendingCheckIn: boolean;
@@ -96,6 +105,21 @@ function mapWindow(raw: unknown): CheckInWindowDay[] {
         !!d && typeof d.date === 'string' && typeof d.day_of_week === 'string'
     )
     .map(d => ({ date: d.date, dayOfWeek: d.day_of_week as DayEnum }));
+}
+
+/** Parse the JSONB `history_weeks` the RPC returns into typed entries. */
+function mapHistoryWeeks(raw: unknown): HistoryWeek[] {
+  if (!Array.isArray(raw)) return [];
+  const valid: WeekStatus[] = ['hit', 'frozen', 'miss', 'none'];
+  return raw
+    .filter(
+      (w): w is { week_start: string; status: string } =>
+        !!w && typeof w.week_start === 'string' && typeof w.status === 'string'
+    )
+    .map(w => ({
+      weekStart: w.week_start,
+      status: (valid.includes(w.status as WeekStatus) ? w.status : 'none') as WeekStatus,
+    }));
 }
 
 export interface CheckInResult {
@@ -139,8 +163,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       freezeCap: 2,
       lastWeekFrequencyGoal: null,
       lastWeekSessionsPlayed: null,
-      goalsHitLast4Weeks: [],
-      freezesUsedLast4Weeks: [],
+      historyWeeks: [],
       lastFrequencyGoal: null,
       isPendingCheckIn: false, // no user → don't trigger the wizard
       timezone: deviceTimezone ?? 'UTC',
@@ -170,8 +193,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       freezeCap: 2,
       lastWeekFrequencyGoal: null,
       lastWeekSessionsPlayed: null,
-      goalsHitLast4Weeks: [],
-      freezesUsedLast4Weeks: [],
+      historyWeeks: [],
       lastFrequencyGoal: null,
       isPendingCheckIn: true,
       timezone: deviceTimezone ?? 'UTC',
@@ -188,8 +210,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
     freezeCap: row.freeze_cap ?? 2,
     lastWeekFrequencyGoal: row.last_week_frequency_goal,
     lastWeekSessionsPlayed: row.last_week_sessions_played,
-    goalsHitLast4Weeks: row.goals_hit_last_4_weeks ?? [],
-    freezesUsedLast4Weeks: row.freezes_used_last_4_weeks ?? [],
+    historyWeeks: mapHistoryWeeks(row.history_weeks),
     lastFrequencyGoal: row.last_frequency_goal,
     isPendingCheckIn: row.is_pending_check_in ?? true,
     timezone: row.timezone ?? deviceTimezone ?? 'UTC',

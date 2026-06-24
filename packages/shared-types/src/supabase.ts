@@ -9304,9 +9304,8 @@ export type Database = {
           current_streak: number
           freeze_cap: number
           freeze_inventory: number
-          freezes_used_last_4_weeks: boolean[]
           frequency_already_set_this_week: boolean
-          goals_hit_last_4_weeks: boolean[]
+          history_weeks: Json
           is_pending_check_in: boolean
           last_frequency_goal: number
           last_week_frequency_goal: number

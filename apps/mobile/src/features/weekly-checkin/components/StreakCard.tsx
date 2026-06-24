@@ -7,25 +7,29 @@
  *   • goal tracking: last-week result + the 4-week hit/miss history strip
  *
  * The streak advances at week-end when sessions_played >= frequency_goal
- * (evaluate_weekly_goals). Only games the player checked into count as sessions,
- * so checking in at the court is what makes a game count — completing this weekly
- * wizard does not itself advance the streak. A freeze auto-rescues one miss.
+ * (evaluate_weekly_goals). Any game the player joined and played counts as a
+ * session — completing this weekly wizard does not itself advance the streak.
+ * A freeze auto-rescues one miss.
  *
- * History markers are three-state so the strip always justifies the streak
- * number: ✓ hit, ❄️ missed-but-rescued (streak survived), ✗ missed (streak
- * broke). Counting non-✗ from the right = min(streak, 4).
+ * The strip shows the last 4 COMPLETED weeks, each rendered in its OWN slot by
+ * its real date (historyWeeks from the RPC) — so a skipped week shows in place
+ * instead of being hidden, and the streak number is self-evident. Markers are
+ * four-state: ✓ hit, ❄️ missed-but-rescued (streak survived), ✗ missed-while-
+ * checked-in (streak broke), and a dashed slot for a week with no check-in at
+ * all (also a break). Weeks are labelled "month + week-of-month" (e.g. Jun /
+ * Week 2) rather than a raw Monday date.
  *
  * Deliberately compact — the goal picker below must stay on screen without
  * scrolling, so everything is single-purpose: one hero row (streak + freeze
- * chip), one last-week line, one marker strip, one short court-check-in note.
+ * chip), one last-week line, one marker strip.
  *
  *   ┌────────────────────────────────────────────────┐
- *   │  🔥 4 WEEKLY GOAL STREAK              ❄️ ×1   │
+ *   │  🔥 1 WEEKLY GOAL STREAK              ❄️ ×0   │
  *   │  ────────────────────────────────────────────  │
- *   │  Last week: 2 played · goal 3  ✗               │
- *   │   ✓     ✓     ❄️    ✗                          │
- *   │  May4  May11 May18 May25                        │
- *   │  📍 Games only count with an on-court check-in.│
+ *   │  Last week: 8 played · goal 2  ✓               │
+ *   │    ✗       ✓       ⬚       ✓                   │
+ *   │   May     Jun     Jun     Jun                   │
+ *   │  Week 4  Week 1  Week 2  Week 3                 │
  *   └────────────────────────────────────────────────┘
  */
 import React, { useEffect, useRef, useState } from 'react';
@@ -45,21 +49,18 @@ import {
 
 import { useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
+import type { HistoryWeek } from '../api';
 
 const COUNT_UP_DURATION_MS = 800;
-const HISTORY_WEEKS = 4;
-
-type WeekMark = 'hit' | 'frozen' | 'miss';
 
 interface StreakCardProps {
   currentStreak: number;
   freezeInventory: number;
   lastWeekGoal: number | null;
   lastWeekPlayed: number | null;
-  /** Newest-first array of booleans from get_check_in_context RPC. */
-  goalsHitLast4Weeks: boolean[];
-  /** Parallel to goalsHitLast4Weeks: TRUE where a freeze rescued that miss. */
-  freezesUsedLast4Weeks: boolean[];
+  /** Last 4 completed weeks (any order) from get_check_in_context, each with its
+   *  real start date + status. Rendered by week, so gap weeks show in place. */
+  historyWeeks: HistoryWeek[];
 }
 
 export function StreakCard({
@@ -67,8 +68,7 @@ export function StreakCard({
   freezeInventory,
   lastWeekGoal,
   lastWeekPlayed,
-  goalsHitLast4Weeks,
-  freezesUsedLast4Weeks,
+  historyWeeks,
 }: StreakCardProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
@@ -87,7 +87,6 @@ export function StreakCard({
   const dateLabelColor = isDark ? `${accent[200]}99` : `${accent[800]}88`;
   const dividerColor = isDark ? `${accent[700]}66` : `${accent[300]}99`;
   const emptyBorderColor = isDark ? `${accent[300]}66` : `${accent[700]}55`;
-  const noteColor = isDark ? accent[200] : accent[800];
 
   // Count-up animation on streak number
   const countAnim = useRef(new Animated.Value(0)).current;
@@ -113,22 +112,14 @@ export function StreakCard({
         : t('weeklyCheckIn.step1.freezeCount', { count: freezeInventory });
 
   // ── Goal-hit history ──────────────────────────────────────────────────────
-  // Fold hit + freeze-used into one mark per week, then reverse the
-  // newest-first arrays to render left-to-right chronological.
-  const marks: WeekMark[] = goalsHitLast4Weeks
-    .slice(0, HISTORY_WEEKS)
-    .map((hit, i) => (hit ? 'hit' : freezesUsedLast4Weeks[i] ? 'frozen' : 'miss'));
-  const historyOldestFirst = marks.slice().reverse();
-  const emptySlots = HISTORY_WEEKS - historyOldestFirst.length;
-  const dateFormatter = new Intl.DateTimeFormat(locale ?? 'en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const thisMonday = startOfIsoWeek(new Date());
-  const historyDates: Date[] = [];
-  for (let i = HISTORY_WEEKS; i >= 1; i--) {
-    historyDates.push(subWeeks(thisMonday, i));
-  }
+  // One marker per completed week, oldest-first (left-to-right). Each week keeps
+  // its real date + status, so a no-check-in gap week shows in its true slot
+  // instead of being hidden and the labels lining up with the marks.
+  const monthFormatter = new Intl.DateTimeFormat(locale ?? 'en-US', { month: 'short' });
+  const historyOldestFirst = [...historyWeeks].sort((a, b) =>
+    a.weekStart.localeCompare(b.weekStart)
+  );
+  const hasAnyHistory = historyWeeks.some(w => w.status !== 'none');
 
   const hasLastWeek = lastWeekGoal != null;
   const playedCount = lastWeekPlayed ?? 0;
@@ -141,7 +132,7 @@ export function StreakCard({
       ? secondary[300]
       : secondary[600];
   // No streak AND no goal history at all → brand-new / rebaselined player.
-  const isFirstTimeGoals = goalsHitLast4Weeks.length === 0 && lastWeekGoal == null;
+  const isFirstTimeGoals = !hasAnyHistory && lastWeekGoal == null;
 
   return (
     <View style={[styles.card, { borderColor: surfaceBorder }]}>
@@ -206,23 +197,13 @@ export function StreakCard({
           {t('weeklyCheckIn.step1.goalsCardNoHistory')}
         </Text>
       ) : (
-        goalsHitLast4Weeks.length > 0 && (
+        hasAnyHistory && (
           <View style={styles.markersRow}>
-            {Array.from({ length: emptySlots }, (_, i) => (
-              <View key={`e-${i}`} style={styles.markerCol}>
-                <View
-                  style={[styles.marker, styles.markerEmpty, { borderColor: emptyBorderColor }]}
-                />
-                <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
-                  {dateFormatter.format(historyDates[i])}
-                </Text>
-              </View>
-            ))}
-            {historyOldestFirst.map((mark, i) => {
-              const date = historyDates[emptySlots + i];
+            {historyOldestFirst.map(week => {
+              const date = new Date(`${week.weekStart}T00:00:00`);
               return (
-                <View key={`h-${i}`} style={styles.markerCol}>
-                  {mark === 'frozen' ? (
+                <View key={week.weekStart} style={styles.markerCol}>
+                  {week.status === 'frozen' ? (
                     // Missed but a freeze rescued it — the streak survived this
                     // week, so it must not read as a break.
                     <View
@@ -234,44 +215,42 @@ export function StreakCard({
                     >
                       <Text style={styles.markerFrozenText}>❄️</Text>
                     </View>
+                  ) : week.status === 'none' ? (
+                    // No check-in / no goal that week — a real streak break.
+                    <View
+                      style={[styles.marker, styles.markerEmpty, { borderColor: emptyBorderColor }]}
+                    />
                   ) : (
                     <View
-                      style={[styles.marker, mark === 'hit' ? styles.markerHit : styles.markerMiss]}
+                      style={[
+                        styles.marker,
+                        week.status === 'hit' ? styles.markerHit : styles.markerMiss,
+                      ]}
                     >
-                      <Text style={styles.markerText}>{mark === 'hit' ? '✓' : '✗'}</Text>
+                      <Text style={styles.markerText}>{week.status === 'hit' ? '✓' : '✗'}</Text>
                     </View>
                   )}
-                  <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
-                    {dateFormatter.format(date)}
-                  </Text>
+                  <View style={styles.markerLabel}>
+                    <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
+                      {monthFormatter.format(date)}
+                    </Text>
+                    <Text style={[styles.markerDate, { color: dateLabelColor }]} numberOfLines={1}>
+                      {t('weeklyCheckIn.step1.weekOfMonth', { week: weekOfMonth(date) })}
+                    </Text>
+                  </View>
                 </View>
               );
             })}
           </View>
         )
       )}
-
-      {/* How games count — checking in at the court is what advances the streak */}
-      <Text style={[styles.checkInNote, { color: noteColor }]}>
-        {t('weeklyCheckIn.step1.checkInNote')}
-      </Text>
     </View>
   );
 }
 
-// Date helpers
-function startOfIsoWeek(d: Date): Date {
-  const date = new Date(d);
-  const day = date.getDay();
-  const offsetToMonday = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + offsetToMonday);
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-function subWeeks(d: Date, n: number): Date {
-  const x = new Date(d);
-  x.setDate(x.getDate() - n * 7);
-  return x;
+// Week-of-month for a week's Monday: Jun 1-7 → 1, Jun 8-14 → 2, …
+function weekOfMonth(d: Date): number {
+  return Math.floor((d.getDate() - 1) / 7) + 1;
 }
 
 const styles = StyleSheet.create({
@@ -389,20 +368,18 @@ const styles = StyleSheet.create({
     color: base.white,
     lineHeight: 14,
   },
+  markerLabel: {
+    alignItems: 'center',
+  },
   markerDate: {
     fontSize: 9,
     fontWeight: '600',
     letterSpacing: 0.1,
+    lineHeight: 14,
   },
   placeholder: {
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 17,
-  },
-  checkInNote: {
-    fontSize: 10.5,
-    fontWeight: '600',
-    lineHeight: 14,
-    marginTop: spacingPixels[2.5],
   },
 });
