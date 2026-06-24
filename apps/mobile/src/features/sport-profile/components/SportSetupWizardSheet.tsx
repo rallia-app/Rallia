@@ -263,10 +263,12 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
     const loadRatings = async () => {
       setIsLoadingRatings(true);
       try {
-        const { data, error } = await DatabaseService.RatingScore.getRatingScoresBySport(
+        // Guard the destructure: a null/undefined resolution would throw "Cannot convert undefined value to object" on Hermes
+        const response = await DatabaseService.RatingScore.getRatingScoresBySport(
           sportName,
           ratingSystem
         );
+        const { data, error } = response ?? { data: null, error: null };
 
         if (error || !data) {
           Logger.error('Failed to load ratings', error as Error, {
