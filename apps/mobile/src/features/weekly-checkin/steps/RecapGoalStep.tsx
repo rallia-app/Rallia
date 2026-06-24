@@ -29,7 +29,9 @@ export function deriveVariant(ctx: CheckInContext): RecapVariant {
     // in, so this bucket holds true first-timers AND returning players (lapsed,
     // or last week simply not evaluated yet). Greet returners as such.
     const hasHistory =
-      ctx.lastFrequencyGoal != null || ctx.goalsHitLast4Weeks.length > 0 || ctx.currentStreak > 0;
+      ctx.lastFrequencyGoal != null ||
+      ctx.historyWeeks.some(w => w.status !== 'none') ||
+      ctx.currentStreak > 0;
     return hasHistory ? 'back' : 'first';
   }
   const played = ctx.lastWeekSessionsPlayed ?? 0;
@@ -93,8 +95,7 @@ export function RecapGoalStep({
             freezeInventory={context.freezeInventory}
             lastWeekGoal={context.lastWeekFrequencyGoal}
             lastWeekPlayed={context.lastWeekSessionsPlayed}
-            goalsHitLast4Weeks={context.goalsHitLast4Weeks}
-            freezesUsedLast4Weeks={context.freezesUsedLast4Weeks}
+            historyWeeks={context.historyWeeks}
           />
         </View>
 
