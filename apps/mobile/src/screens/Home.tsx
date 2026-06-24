@@ -151,15 +151,22 @@ const SecondSportBanner: React.FC<{
   />
 );
 
-// Splits a label at the last space so every quick-nav button renders exactly
-// two lines, regardless of locale. Single-word labels (rare) still take two
-// lines of vertical space — the second line is empty but reserves height so
-// the row stays visually aligned.
+// Splits a label across two lines at the space nearest its midpoint, so every
+// quick-nav button renders exactly two balanced lines regardless of locale —
+// e.g. FR "Explorer les parties publiques" → "Explorer les" / "parties
+// publiques" rather than stranding "publiques" on its own. Single-word labels
+// (rare) still take two lines of vertical space — the second line is empty but
+// reserves height so the row stays visually aligned.
 const splitLabelTwoLines = (label: string): [string, string] => {
   const trimmed = label.trim();
-  const lastSpace = trimmed.lastIndexOf(' ');
-  if (lastSpace === -1) return [trimmed, ' '];
-  return [trimmed.slice(0, lastSpace), trimmed.slice(lastSpace + 1)];
+  const mid = trimmed.length / 2;
+  let splitAt = -1;
+  for (let i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] !== ' ') continue;
+    if (splitAt === -1 || Math.abs(i - mid) <= Math.abs(splitAt - mid)) splitAt = i;
+  }
+  if (splitAt === -1) return [trimmed, ' '];
+  return [trimmed.slice(0, splitAt), trimmed.slice(splitAt + 1)];
 };
 
 const QuickNavButton: React.FC<{
@@ -217,7 +224,9 @@ const quickNavStyles = StyleSheet.create({
     paddingBottom: spacingPixels[2],
   },
   item: {
-    width: 190,
+    // Wide enough to fit the longest two-line label without clipping — e.g.
+    // FR "Explorer les parties publiques" → "parties publiques" on line two.
+    width: 230,
     borderRadius: radiusPixels['2xl'],
   },
   itemFullWidth: {
