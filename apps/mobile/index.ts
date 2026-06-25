@@ -1,3 +1,6 @@
+// Bootstrap i18n before App imports so the first render can call useTranslation().
+import './src/i18n';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

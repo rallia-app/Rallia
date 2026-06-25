@@ -17,7 +17,7 @@ import {
 } from '@rallia/shared-translations';
 
 import { supabase } from '#/lib/supabase';
-import { initI18n, changeLanguage, getDeviceLocale } from '#/i18n';
+import { changeLanguage, getCurrentLanguage, getDeviceLocale } from '#/i18n';
 
 const LOCALE_STORAGE_KEY = '@rallia/locale';
 
@@ -47,7 +47,7 @@ interface LocaleProviderProps {
 }
 
 export function LocaleProvider({ children }: LocaleProviderProps) {
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+  const [locale, setLocaleState] = useState<Locale>(getDeviceLocale);
   const [isManuallySet, setIsManuallySet] = useState(false);
   const [isReady, setIsReady] = useState(false);
   // Track current user ID for syncing locale to database
@@ -117,16 +117,19 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
           initialLocale = getDeviceLocale();
         }
 
-        // Initialize i18next with the determined locale
-        await initI18n(initialLocale);
+        // i18n is bootstrapped synchronously at app entry — apply saved preference if any.
+        if (getCurrentLanguage() !== initialLocale) {
+          await changeLanguage(initialLocale);
+        }
 
         setLocaleState(initialLocale);
         setIsManuallySet(manuallySet);
         setIsReady(true);
       } catch (error) {
         console.error('Failed to initialize i18n:', error);
-        // Fallback to default
-        await initI18n(defaultLocale);
+        if (getCurrentLanguage() !== defaultLocale) {
+          await changeLanguage(defaultLocale);
+        }
         setLocaleState(defaultLocale);
         setIsReady(true);
       }

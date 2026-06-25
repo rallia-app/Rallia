@@ -22,34 +22,52 @@ export function getDeviceLocale(): Locale {
   return defaultLocale;
 }
 
+const i18nInitOptions = {
+  resources: {
+    'en-US': { translation: translations['en-US'] },
+    'fr-CA': { translation: translations['fr-CA'] },
+  },
+  fallbackLng: defaultLocale,
+  // Use single braces {} to match next-intl format for consistency
+  interpolation: {
+    escapeValue: false, // React already handles XSS
+    prefix: '{',
+    suffix: '}',
+  },
+  // Disable react-i18next suspense for better control
+  react: {
+    useSuspense: false,
+  },
+  // Compatibility settings
+  compatibilityJSON: 'v4' as const,
+  returnNull: false,
+  returnEmptyString: false,
+};
+
 /**
- * Initialize i18next with our translations and configuration
+ * Synchronous bootstrap with the device locale so `useTranslation()` is safe
+ * on the first React render. Called at module load from apps/mobile/index.ts.
+ */
+export function bootstrapI18n(): void {
+  if (i18next.isInitialized) return;
+
+  void i18next.use(initReactI18next).init({
+    ...i18nInitOptions,
+    lng: getDeviceLocale(),
+  });
+}
+
+/**
+ * Ensure i18next is initialized and set the active locale.
+ * Safe to call after bootstrap — only changes language when needed.
  */
 export async function initI18n(savedLocale?: Locale): Promise<void> {
-  const locale = savedLocale || getDeviceLocale();
+  bootstrapI18n();
 
-  await i18next.use(initReactI18next).init({
-    resources: {
-      'en-US': { translation: translations['en-US'] },
-      'fr-CA': { translation: translations['fr-CA'] },
-    },
-    lng: locale,
-    fallbackLng: defaultLocale,
-    // Use single braces {} to match next-intl format for consistency
-    interpolation: {
-      escapeValue: false, // React already handles XSS
-      prefix: '{',
-      suffix: '}',
-    },
-    // Disable react-i18next suspense for better control
-    react: {
-      useSuspense: false,
-    },
-    // Compatibility settings
-    compatibilityJSON: 'v4',
-    returnNull: false,
-    returnEmptyString: false,
-  });
+  const locale = savedLocale || getDeviceLocale();
+  if (getCurrentLanguage() !== locale) {
+    await changeLanguage(locale);
+  }
 }
 
 /**
@@ -67,3 +85,6 @@ export function getCurrentLanguage(): Locale {
 }
 
 export { i18next };
+
+// Side effect: register react-i18next before the React tree mounts.
+bootstrapI18n();
