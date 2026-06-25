@@ -11,9 +11,18 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, type ReactNode } from 'react';
 import { useFavoriteFacilities } from './useFavoriteFacilities';
-import { supabase } from '@rallia/shared-services';
 
-jest.mock('@rallia/shared-services');
+jest.mock('@rallia/shared-services', () => ({
+  ...jest.requireActual('../../shared-services/src/sports/sportId'),
+  supabase: {
+    from: jest.fn(),
+  },
+  Logger: {
+    error: jest.fn(),
+  },
+}));
+
+import { supabase } from '@rallia/shared-services';
 
 const PLAYER_UUID = '11111111-1111-4111-8111-111111111111';
 const SPORT_UUID = '22222222-2222-4222-8222-222222222222';

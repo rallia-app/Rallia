@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase';
+import { isRealSportId, fallbackSportSlug } from './sports';
 import type {
   Profile,
   ProfileInsert,
@@ -37,6 +38,27 @@ import type {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
+/**
+ * Resolve a possibly-synthetic onboarding sport id to a real DB uuid.
+ *
+ * Onboarding screens fall back to `${slug}-fallback` ids when the sport-catalog
+ * fetch fails; those must never reach a `sport_id` uuid column (Postgres 22P02).
+ * Real uuids pass straight through (no network); synthetic ids are resolved by
+ * slug. Throws a clear error when an id can't be resolved so callers surface a
+ * friendly message instead of a cryptic Postgres failure.
+ */
+async function resolveSportId(sportId: string): Promise<string> {
+  if (isRealSportId(sportId)) return sportId;
+
+  const slug = fallbackSportSlug(sportId);
+  if (slug) {
+    const { data } = await SportService.getSportByName(slug);
+    if (isRealSportId(data?.id)) return data!.id;
+  }
+
+  throw new Error(`Cannot resolve sport id "${sportId}" to a real sport`);
+}
 
 /**
  * Handle Supabase errors and format them consistently
@@ -448,9 +470,10 @@ export const PlayerSportService = {
    */
   async addPlayerSport(playerSport: PlayerSportInsert): Promise<DatabaseResponse<PlayerSport>> {
     try {
+      const sport_id = await resolveSportId(playerSport.sport_id);
       const { data, error } = await supabase
         .from('player_sport')
-        .insert(playerSport)
+        .insert({ ...playerSport, sport_id })
         .select()
         .single();
 
@@ -471,11 +494,12 @@ export const PlayerSportService = {
     updates: PlayerSportUpdate
   ): Promise<DatabaseResponse<PlayerSport>> {
     try {
+      const resolvedSportId = await resolveSportId(sportId);
       const { data, error } = await supabase
         .from('player_sport')
         .update(updates)
         .eq('player_id', playerId)
-        .eq('sport_id', sportId)
+        .eq('sport_id', resolvedSportId)
         .select()
         .single();
 
@@ -492,11 +516,12 @@ export const PlayerSportService = {
    */
   async removePlayerSport(playerId: string, sportId: string): Promise<DatabaseResponse<null>> {
     try {
+      const resolvedSportId = await resolveSportId(sportId);
       const { error } = await supabase
         .from('player_sport')
         .delete()
         .eq('player_id', playerId)
-        .eq('sport_id', sportId);
+        .eq('sport_id', resolvedSportId);
 
       if (error) throw error;
 
@@ -516,13 +541,14 @@ export const PlayerSportService = {
     isSelected: boolean
   ): Promise<DatabaseResponse<PlayerSport | null>> {
     try {
+      const resolvedSportId = await resolveSportId(sportId);
       if (isSelected) {
         // Add sport with minimal data (preferences added later in PlayerPreferencesOverlay)
         const { data, error } = await supabase
           .from('player_sport')
           .insert({
             player_id: playerId,
-            sport_id: sportId,
+            sport_id: resolvedSportId,
             is_primary: false, // Will be updated in PlayerPreferencesOverlay
           })
           .select()
@@ -536,7 +562,7 @@ export const PlayerSportService = {
           .from('player_sport')
           .delete()
           .eq('player_id', playerId)
-          .eq('sport_id', sportId);
+          .eq('sport_id', resolvedSportId);
 
         if (error) throw error;
         return { data: null, error: null };
@@ -551,11 +577,12 @@ export const PlayerSportService = {
    */
   async hasPlayerSport(playerId: string, sportId: string): Promise<DatabaseResponse<boolean>> {
     try {
+      const resolvedSportId = await resolveSportId(sportId);
       const { data, error } = await supabase
         .from('player_sport')
         .select('id')
         .eq('player_id', playerId)
-        .eq('sport_id', sportId)
+        .eq('sport_id', resolvedSportId)
         .maybeSingle();
 
       if (error) throw error;
@@ -987,14 +1014,17 @@ export const OnboardingService = {
 
       if (playerError) throw playerError;
 
-      // Insert player sports with preferences
-      const playerSportsData = preferences.sports.map(sport => ({
-        player_id: userId,
-        sport_id: sport.sport_id,
-        preferred_match_duration: sport.preferred_match_duration,
-        preferred_match_type: sport.preferred_match_type,
-        is_primary: sport.is_primary,
-      }));
+      // Insert player sports with preferences. Resolve any synthetic onboarding
+      // sport ids to real uuids before they hit the player_sport uuid column.
+      const playerSportsData = await Promise.all(
+        preferences.sports.map(async sport => ({
+          player_id: userId,
+          sport_id: await resolveSportId(sport.sport_id),
+          preferred_match_duration: sport.preferred_match_duration,
+          preferred_match_type: sport.preferred_match_type,
+          is_primary: sport.is_primary,
+        }))
+      );
 
       const { data: playerSports, error: sportsError } = await supabase
         .from('player_sport')
@@ -1020,11 +1050,14 @@ export const OnboardingService = {
       }
 
       const ratingPromises = ratings.map(async rating => {
+        // Resolve any synthetic onboarding sport id before it reaches the
+        // rating_system.sport_id uuid filter.
+        const sportId = await resolveSportId(rating.sport_id);
         // Find the rating_score_id based on sport, rating system code, and score value
         const { data: ratingScore, error: scoreError } = await supabase
           .from('rating_score')
           .select('id, rating_system!inner(sport_id, code)')
-          .eq('rating_system.sport_id', rating.sport_id)
+          .eq('rating_system.sport_id', sportId)
           .eq('rating_system.code', rating.rating_system_code)
           .eq('value', rating.score_value)
           .single();

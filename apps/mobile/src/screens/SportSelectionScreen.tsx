@@ -24,7 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Spinner, Button } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, secondary, neutral } from '@rallia/design-system';
-import { SportService, Logger } from '@rallia/shared-services';
+import { SportService, Logger, makeFallbackSportId } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import type { Sport as DatabaseSport } from '@rallia/shared-types';
 
@@ -92,8 +92,12 @@ export function SportSelectionScreen() {
           Logger.error('Failed to fetch sports for selection screen', error as Error);
           // Fallback sports
           setSports([
-            { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-            { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
+            { id: makeFallbackSportId('tennis'), name: 'tennis', display_name: 'Tennis' },
+            {
+              id: makeFallbackSportId('pickleball'),
+              name: 'pickleball',
+              display_name: 'Pickleball',
+            },
           ]);
         } else if (data) {
           const activeSports: Sport[] = data
@@ -109,8 +113,8 @@ export function SportSelectionScreen() {
       } catch (error) {
         Logger.error('Unexpected error fetching sports', error as Error);
         setSports([
-          { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-          { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
+          { id: makeFallbackSportId('tennis'), name: 'tennis', display_name: 'Tennis' },
+          { id: makeFallbackSportId('pickleball'), name: 'pickleball', display_name: 'Pickleball' },
         ]);
       }
       setIsLoading(false);

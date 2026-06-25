@@ -34,7 +34,7 @@ import { spacingPixels, primary, secondary, neutral } from '@rallia/design-syste
 import { mediumHaptic } from '@rallia/shared-utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PostalCodeLocation } from '@rallia/shared-hooks';
-import { SportService, Logger } from '@rallia/shared-services';
+import { SportService, Logger, makeFallbackSportId } from '@rallia/shared-services';
 import type { Sport as DatabaseSport } from '@rallia/shared-types';
 
 import { useThemeStyles } from '#/hooks';
@@ -81,8 +81,8 @@ export function PreOnboardingScreen() {
   // spinner, then reconcile fallback IDs with real DB IDs in the background.
   const FALLBACK_SPORTS = useMemo<Sport[]>(
     () => [
-      { id: 'tennis-fallback', name: 'tennis', display_name: 'Tennis' },
-      { id: 'pickleball-fallback', name: 'pickleball', display_name: 'Pickleball' },
+      { id: makeFallbackSportId('tennis'), name: 'tennis', display_name: 'Tennis' },
+      { id: makeFallbackSportId('pickleball'), name: 'pickleball', display_name: 'Pickleball' },
     ],
     []
   );
