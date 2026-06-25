@@ -112,18 +112,6 @@ BEGIN
     WHERE m IS DISTINCT FROM v_actor;
   END IF;
 
-  -- Clear the now-stale organizer invitation notification once a pending invite
-  -- is resolved (accepted, declined/withdrawn, or removed by an organizer).
-  IF TG_OP = 'UPDATE'
-     AND OLD.status = 'pending'
-     AND OLD.invited_by IS NOT NULL
-     AND NEW.status IS DISTINCT FROM 'pending' THEN
-    DELETE FROM notification
-     WHERE type      = 'tournament_invitation'
-       AND target_id = NEW.tournament_id
-       AND user_id   = NEW.user_id;
-  END IF;
-
   RETURN NEW;
 END;
 $function$;
