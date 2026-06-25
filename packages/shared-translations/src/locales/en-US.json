@@ -4853,6 +4853,7 @@
     },
     "favoriteAvailability": {
       "title": "Open at your favorites",
+      "nearbyTitle": "Open courts near you",
       "subtitle": "Live openings ready to book",
       "empty": {
         "title": "No open slots right now",

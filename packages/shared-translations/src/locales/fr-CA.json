@@ -4853,6 +4853,7 @@
     },
     "favoriteAvailability": {
       "title": "Tes terrains favoris",
+      "nearbyTitle": "Des terrains près de toi",
       "subtitle": "Des disponibilités en temps réel",
       "empty": {
         "title": "Aucune disponibilité pour l'instant",
