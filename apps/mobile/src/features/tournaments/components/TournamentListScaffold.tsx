@@ -12,7 +12,7 @@ import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { getProfilePictureUrl } from '@rallia/shared-utils';
+import { getProfilePictureUrl, getTournamentLogoUrl } from '@rallia/shared-utils';
 import {
   lightTheme,
   darkTheme,
@@ -294,6 +294,14 @@ export const TournamentCard: React.FC<{
           {watermark}
         </View>
       )}
+
+      {tournament.logo_url ? (
+        <Image
+          source={{ uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }}
+          style={styles.cardBanner}
+          resizeMode="cover"
+        />
+      ) : null}
 
       <View style={styles.cardHeader}>
         <Text
@@ -585,6 +593,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[1],
+  },
+  cardBanner: {
+    height: 120,
+    marginTop: -spacingPixels[4],
+    marginHorizontal: -spacingPixels[4],
   },
   card: {
     marginHorizontal: spacingPixels[4],

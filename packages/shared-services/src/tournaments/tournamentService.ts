@@ -207,6 +207,7 @@ export interface TournamentUpdatePatch {
   description?: string | null;
   rules?: string | null;
   logoUrl?: string | null;
+  minRating?: number | null;
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   registrationOpensAt?: string | null;
@@ -226,6 +227,7 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   description: 'description',
   rules: 'rules',
   logoUrl: 'logo_url',
+  minRating: 'min_rating',
   visibility: 'visibility',
   registrationMode: 'registration_mode',
   registrationOpensAt: 'registration_opens_at',

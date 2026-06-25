@@ -1349,6 +1349,7 @@ export const TournamentDetail: React.FC = () => {
       description: tournament.description,
       rules: tournament.rules,
       logoUrl: tournament.logo_url,
+      minRating: tournament.min_rating,
       visibility: tournament.visibility,
       startDate: tournament.start_date,
       endDate: tournament.end_date,

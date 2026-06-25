@@ -50,7 +50,12 @@ import {
   warningHaptic,
   getTournamentLogoUrl,
 } from '@rallia/shared-utils';
-import { useTheme, useCreateTournament, useUpdateTournament } from '@rallia/shared-hooks';
+import {
+  useTheme,
+  useCreateTournament,
+  useUpdateTournament,
+  useRatingScoresForSport,
+} from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
 
@@ -63,7 +68,7 @@ import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
 const TOTAL_STEPS = 2;
-const BRACKET_SIZES = [4, 8, 16, 32] as const;
+const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number];
 
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>; // V1: private/public only
@@ -149,6 +154,7 @@ export interface TournamentEditData {
   description: string | null;
   rules: string | null;
   logoUrl: string | null;
+  minRating: number | null;
   visibility: Enums<'tournament_visibility'>;
   startDate: string; // ISO
   endDate: string; // ISO
@@ -411,6 +417,10 @@ const DetailsStep: React.FC<{
   /** Rules are edit-only (set on the tournament sheet after creation). */
   rules: string;
   setRules: (v: string) => void;
+  /** Minimum required level (edit-only); ratingOptions are the sport's tiers. */
+  minRating: number | null;
+  setMinRating: (v: number | null) => void;
+  ratingOptions: { value: number; label: string }[];
   /** Poster/logo is edit-only too (uploaded to the tournament-logos bucket). */
   logoUrl: string | null;
   posterUploading: boolean;
@@ -445,6 +455,9 @@ const DetailsStep: React.FC<{
   setDescription,
   rules,
   setRules,
+  minRating,
+  setMinRating,
+  ratingOptions,
   logoUrl,
   posterUploading,
   onPickPoster,
@@ -670,6 +683,72 @@ const DetailsStep: React.FC<{
           </TouchableOpacity>
         )}
       </View>
+
+      {isEditMode && ratingOptions.length > 0 && (
+        <View style={styles.fieldGroup}>
+          <FieldLabel colors={colors}>
+            {t('tournamentCreation.fields.minLevel' as TranslationKey)}
+          </FieldLabel>
+          <View style={styles.minLevelRow}>
+            <TouchableOpacity
+              onPress={() => {
+                lightHaptic();
+                setMinRating(null);
+              }}
+              activeOpacity={0.7}
+              style={[
+                styles.minLevelChip,
+                {
+                  backgroundColor:
+                    minRating === null ? `${colors.buttonActive}15` : colors.buttonInactive,
+                  borderColor: minRating === null ? colors.buttonActive : colors.border,
+                },
+              ]}
+            >
+              <Text
+                size="sm"
+                weight={minRating === null ? 'semibold' : 'regular'}
+                color={minRating === null ? colors.buttonActive : colors.text}
+              >
+                {t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+            {ratingOptions.map(opt => {
+              const selected = minRating === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => {
+                    lightHaptic();
+                    setMinRating(opt.value);
+                  }}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.minLevelChip,
+                    {
+                      backgroundColor: selected
+                        ? `${colors.buttonActive}15`
+                        : colors.buttonInactive,
+                      borderColor: selected ? colors.buttonActive : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    size="sm"
+                    weight={selected ? 'semibold' : 'regular'}
+                    color={selected ? colors.buttonActive : colors.text}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+            {t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
+          </Text>
+        </View>
+      )}
 
       {canEditStructure && (
         <>
@@ -1011,6 +1090,15 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [rules, setRules] = useState(editTournament?.rules ?? '');
   const [logoUrl, setLogoUrl] = useState<string | null>(editTournament?.logoUrl ?? null);
   const [posterUploading, setPosterUploading] = useState(false);
+  const [minRating, setMinRating] = useState<number | null>(editTournament?.minRating ?? null);
+  const { ratingScores } = useRatingScoresForSport(
+    sportName,
+    editTournament?.sport.id ?? selectedSport?.id
+  );
+  const ratingOptions = useMemo(
+    () => ratingScores.map(r => ({ value: r.value, label: r.label })),
+    [ratingScores]
+  );
   const [bracketSize, setBracketSize] = useState<BracketSize>(
     (editTournament?.maxParticipants as BracketSize) ?? 8
   );
@@ -1215,6 +1303,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       if (trimmedRules !== (editTournament.rules ?? ''))
         patch.rules = trimmedRules.length ? trimmedRules : null;
       if (resolvedLogoUrl !== (editTournament.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
+      if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
       if (visibility !== editTournament.visibility) patch.visibility = visibility;
       if (startDate.toISOString() !== new Date(editTournament.startDate).toISOString())
         patch.startDate = startDate.toISOString();
@@ -1290,6 +1379,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     description,
     rules,
     logoUrl,
+    minRating,
     bracketSize,
     matchFormat,
     startDate,
@@ -1309,6 +1399,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setDescription('');
     setRules('');
     setLogoUrl(null);
+    setMinRating(null);
     setPosterUploading(false);
     setBracketSize(8);
     setMatchFormat(defaultFormatForSport(sportName));
@@ -1434,6 +1525,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             setDescription={setDescription}
             rules={rules}
             setRules={setRules}
+            minRating={minRating}
+            setMinRating={setMinRating}
+            ratingOptions={ratingOptions}
             logoUrl={logoUrl}
             posterUploading={posterUploading}
             onPickPoster={handlePickPoster}
@@ -1673,6 +1767,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  minLevelRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  minLevelChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
   },
