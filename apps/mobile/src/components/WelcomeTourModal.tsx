@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTour } from '#/context/TourContext';
 import { useTranslation } from '#/hooks';
 import { lightHaptic, mediumHaptic } from '#/utils/haptics';
-import { TOURS_ENABLED } from '#/hooks/useTourSequence';
+import { WELCOME_TOUR_ENABLED } from '#/hooks/useTourSequence';
 
 interface WelcomeTourModalProps {
   /** Whether the splash animation is complete */
@@ -33,7 +33,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors } = useThemeStyles();
-  const { startTour, isTourCompleted, isLoading } = useTour();
+  const { startTour, completeTour, isTourCompleted, isLoading, tourStatus } = useTour();
   const insets = useSafeAreaInsets();
   const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for icon rings
 
@@ -45,7 +45,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   // Check if we should show the modal
   useEffect(() => {
     const checkShowModal = async () => {
-      if (!TOURS_ENABLED) return;
+      if (!WELCOME_TOUR_ENABLED) return;
       // Wait for tour loading to complete and prerequisites
       if (isLoading || !splashComplete || !permissionsHandled) {
         return;
@@ -82,7 +82,15 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
     };
 
     checkShowModal();
-  }, [isLoading, splashComplete, permissionsHandled, isTourCompleted, fadeAnim, slideAnim]);
+  }, [
+    isLoading,
+    splashComplete,
+    permissionsHandled,
+    isTourCompleted,
+    tourStatus,
+    fadeAnim,
+    slideAnim,
+  ]);
 
   const handleStartTour = () => {
     mediumHaptic();
@@ -100,7 +108,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
     animateOut(async () => {
       setVisible(false);
       // Mark welcome as completed so we don't show again
-      await tourService.setTourCompleted('welcome', true);
+      await completeTour('welcome');
     });
   };
 
@@ -142,7 +150,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
             },
           ]}
         >
-          {/* Icon */}
+          {/* Hero icon */}
           <View style={[styles.iconContainer, { backgroundColor: tintedPrimaryBg }]}>
             <Ionicons name="map-outline" size={48} color={colors.primary} />
           </View>
@@ -153,28 +161,9 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
           </Text>
 
           {/* Subtitle */}
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {isReturningUser ? t('tour.welcome.returnUser.subtitle') : t('tour.welcome.subtitle')}
           </Text>
-
-          {/* Feature highlights */}
-          <View style={styles.featuresContainer}>
-            <FeatureItem
-              colors={colors}
-              icon="game-controller-outline"
-              text={t('tour.mainNavigation.matches.title')}
-            />
-            <FeatureItem
-              colors={colors}
-              icon="chatbubbles-outline"
-              text={t('tour.mainNavigation.chat.title')}
-            />
-            <FeatureItem
-              colors={colors}
-              icon="person-outline"
-              text={t('tour.mainNavigation.profile.title')}
-            />
-          </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
@@ -203,7 +192,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
               }
               accessibilityRole="button"
             >
-              <Text style={[styles.secondaryButtonText, { color: colors.textSecondary }]}>
+              <Text style={[styles.secondaryButtonText, { color: colors.textMuted }]}>
                 {isReturningUser
                   ? t('tour.welcome.returnUser.noThanks')
                   : t('tour.welcome.skipTour')}
@@ -215,26 +204,6 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
     </Modal>
   );
 };
-
-interface FeatureItemProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  text: string;
-  colors: { primary: string; text: string };
-}
-
-// Declared at module scope so it keeps a stable component identity across the
-// parent's renders (an in-render definition remounts the subtree each render).
-function FeatureItem({ icon, text, colors }: FeatureItemProps) {
-  const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for icon rings
-  return (
-    <View style={styles.featureItem}>
-      <View style={[styles.featureIconContainer, { backgroundColor: tintedPrimaryBg }]}>
-        <Ionicons name={icon} size={20} color={colors.primary} />
-      </View>
-      <Text style={[styles.featureText, { color: colors.text }]}>{text}</Text>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   overlay: {
@@ -265,6 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 12,
     marginBottom: 20,
   },
   title: {
@@ -279,28 +249,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
     paddingHorizontal: 16,
-  },
-  featuresContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 32,
-    gap: 24,
-  },
-  featureItem: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  featureIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featureText: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
   },
   buttonContainer: {
     width: '100%',

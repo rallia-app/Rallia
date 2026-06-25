@@ -20,12 +20,20 @@ import React, {
   ReactNode,
 } from 'react';
 import { CopilotProvider, CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { tourService, TourId, TourStatus, Logger } from '@rallia/shared-services';
 
 // Direct import to avoid the hooks→useTourSequence→TourContext→hooks cycle.
-import { useTranslation } from '#/hooks/useTranslation';
+import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
 import { lightHaptic, selectionHaptic, successHaptic } from '#/utils/haptics';
 import { runWhenIdle } from '#/utils/runWhenIdle';
 
@@ -46,6 +54,8 @@ export interface TourContextType {
   resetTour: (tourId: TourId) => Promise<void>;
   /** Reset all tours */
   resetAllTours: () => Promise<void>;
+  /** Reset welcome sheet + main navigation tour so the welcome sheet can show again */
+  restartWelcomeTour: () => Promise<void>;
   /** Current active tour ID */
   activeTourId: TourId | null;
   /** Whether any tour is currently active */
@@ -81,6 +91,28 @@ interface TooltipProps {
   };
 }
 
+// Per-step header: a title + icon keyed by the CopilotStep `name`. Unknown steps
+// fall back to description-only (no header), so screen tours degrade gracefully.
+const STEP_META: Record<
+  string,
+  { titleKey: TranslationKey; icon: keyof typeof Ionicons.glyphMap }
+> = {
+  'home-tab': { titleKey: 'navigation.matches', icon: 'home' },
+  'courts-tab': { titleKey: 'tour.mainNavigation.courts.title', icon: 'location' },
+  'actions-tab': { titleKey: 'tour.mainNavigation.actions.title', icon: 'add-circle' },
+  'community-tab': { titleKey: 'tour.mainNavigation.community.title', icon: 'people' },
+  'chat-tab': { titleKey: 'tour.mainNavigation.chat.title', icon: 'chatbubbles' },
+  'header-profile': { titleKey: 'tour.header.profile.title', icon: 'person-circle' },
+  'header-sport-toggle': { titleKey: 'tour.header.sportToggle.title', icon: 'swap-horizontal' },
+  'header-actions': { titleKey: 'tour.header.actions.title', icon: 'notifications' },
+  home_my_matches: { titleKey: 'tour.homeScreen.upcomingMatches.title', icon: 'calendar' },
+  profile_picture: { titleKey: 'tour.profileScreen.picture.title', icon: 'camera' },
+  my_sports: { titleKey: 'tour.profileScreen.sports.title', icon: 'stats-chart' },
+  my_availability: { titleKey: 'tour.profileScreen.availability.title', icon: 'time' },
+  chat_search: { titleKey: 'tour.chatScreen.search.title', icon: 'search' },
+  chat_filters: { titleKey: 'tour.chatScreen.filters.title', icon: 'filter' },
+};
+
 const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   const { t } = useTranslation();
   const { colors } = useThemeStyles();
@@ -100,6 +132,10 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   const previousLabel = t('tour.buttons.previous') || labels?.previous || 'Previous';
   const nextLabel = t('tour.buttons.next') || labels?.next || 'Next';
   const finishLabel = t('tour.buttons.finish') || labels?.finish || 'Finish';
+
+  const stepName = currentStep?.name;
+  const meta = stepName ? STEP_META[stepName] : undefined;
+  const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for the icon ring
 
   const handleNext = async () => {
     // Subtle tick on every step advance; success notification on the final tap.
@@ -125,7 +161,7 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
   };
 
   const handleStop = async () => {
-    // The same handler is used for "Skip" (first step) and "Finish" (last step).
+    // Used by the always-present close (✕) and by "Finish" on the last step.
     if (isLastStep) {
       successHaptic();
     } else {
@@ -140,43 +176,69 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
 
   return (
     <View style={[tooltipStyles.container, { backgroundColor: colors.cardBackground }]}>
+      {/* Header: icon + title, with an always-available close */}
+      <View style={tooltipStyles.header}>
+        <View style={tooltipStyles.titleRow}>
+          {meta && (
+            <>
+              <View style={[tooltipStyles.iconCircle, { backgroundColor: tintedPrimaryBg }]}>
+                <Ionicons name={meta.icon} size={18} color={colors.primary} />
+              </View>
+              <Text style={[tooltipStyles.title, { color: colors.text }]} numberOfLines={1}>
+                {t(meta.titleKey)}
+              </Text>
+            </>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={handleStop}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel={skipLabel}
+          accessibilityRole="button"
+        >
+          <Ionicons name="close" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
       {/* Step content */}
-      <Text style={[tooltipStyles.text, { color: colors.text }]}>{currentStep?.text || ''}</Text>
+      <Text style={[tooltipStyles.text, { color: colors.textMuted }]}>
+        {currentStep?.text || ''}
+      </Text>
 
-      {/* Navigation buttons */}
-      <View style={tooltipStyles.buttonContainer}>
-        {/* Skip button (only on first step) */}
-        {isFirstStep && (
-          <TouchableOpacity
-            onPress={handleStop}
-            style={[tooltipStyles.skipButton, { backgroundColor: colors.buttonInactive }]}
-            accessibilityLabel={skipLabel}
-            accessibilityRole="button"
-          >
-            <Text style={[tooltipStyles.skipButtonText, { color: colors.textSecondary }]}>
-              {skipLabel}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Previous button (not on first step) */}
+      {/* Footer: previous · progress dots · next */}
+      <View style={tooltipStyles.footer}>
         {!isFirstStep && (
           <TouchableOpacity
             onPress={handlePrev}
-            style={[tooltipStyles.prevButton, { backgroundColor: colors.buttonInactive }]}
+            style={tooltipStyles.prevButton}
             accessibilityLabel={previousLabel}
             accessibilityRole="button"
           >
-            <Text style={[tooltipStyles.prevButtonText, { color: colors.textSecondary }]}>
+            <Text style={[tooltipStyles.prevButtonText, { color: colors.textMuted }]}>
               {previousLabel}
             </Text>
           </TouchableOpacity>
         )}
 
-        {/* Spacer */}
-        <View style={tooltipStyles.spacer} />
+        {totalStepsNumber > 1 && (
+          <View
+            style={tooltipStyles.dots}
+            accessibilityLabel={`${currentStepNumber}/${totalStepsNumber}`}
+          >
+            {Array.from({ length: totalStepsNumber }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  tooltipStyles.dot,
+                  i === currentStepNumber - 1
+                    ? [tooltipStyles.dotActive, { backgroundColor: colors.primary }]
+                    : { backgroundColor: colors.progressInactive },
+                ]}
+              />
+            ))}
+          </View>
+        )}
 
-        {/* Next/Finish button */}
         <TouchableOpacity
           onPress={isLastStep ? handleStop : handleNext}
           style={[tooltipStyles.nextButton, { backgroundColor: colors.primary }]}
@@ -188,13 +250,6 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Step indicator */}
-      {currentStep && (
-        <Text style={[tooltipStyles.stepIndicator, { color: colors.textMuted }]}>
-          {t('tour.stepIndicator', { current: currentStepNumber, total: totalStepsNumber })}
-        </Text>
-      )}
     </View>
   );
 };
@@ -203,7 +258,6 @@ const tooltipStyles = StyleSheet.create({
   container: {
     borderRadius: 16,
     padding: 16,
-    maxWidth: 320,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -216,49 +270,72 @@ const tooltipStyles = StyleSheet.create({
       },
     }),
   },
-  text: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
-  buttonContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  skipButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
   },
-  skipButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  text: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 18,
+  },
+  dots: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    marginHorizontal: 8,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dotActive: {
+    width: 14,
   },
   prevButton: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingRight: 8,
   },
   prevButtonText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  spacer: {
-    flex: 1,
-  },
   nextButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingHorizontal: 22,
+    borderRadius: 10,
   },
   nextButtonText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  stepIndicator: {
-    marginTop: 12,
-    fontSize: 12,
-    textAlign: 'center',
   },
 });
 
@@ -391,6 +468,12 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
     }
   }, []);
 
+  const restartWelcomeTour = useCallback(async () => {
+    await resetTour('welcome');
+    await resetTour('main_navigation');
+    Logger.logUserAction('welcome_tour_restarted', {});
+  }, [resetTour]);
+
   // Ref to track if we're processing tour completion to prevent loops
   const isProcessingCompletionRef = useRef(false);
   // Ref to track tourHasStarted to avoid dependency loop
@@ -449,6 +532,7 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
       completeTour,
       resetTour,
       resetAllTours,
+      restartWelcomeTour,
       activeTourId,
       isTourActive: visible,
       tourStatus,
@@ -464,6 +548,7 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
       completeTour,
       resetTour,
       resetAllTours,
+      restartWelcomeTour,
       activeTourId,
       visible,
       tourStatus,
@@ -494,6 +579,11 @@ interface TourProviderProps {
 const SPOTLIGHT_PADDING = 8;
 const SPOTLIGHT_RADIUS = 14;
 
+// Horizontal gutter for the tooltip card. We pin the card to the full container
+// width (left + right margins) instead of letting copilot size it to the target,
+// so the bubble is the same width on every step.
+const TOOLTIP_H_MARGIN = 16;
+
 // react-native-copilot's TS type claims Animated.ValueXY for size/position/canvasSize,
 // but at runtime it actually passes plain `{x: number, y: number}`. We accept either.
 const num = (v: unknown): number => {
@@ -516,19 +606,35 @@ const buildSpotlightPath = (args: any): string => {
   const cx = num(canvasSize?.x);
   const cy = num(canvasSize?.y);
 
-  // Bottom-tab icons are wrapped tightly around the glyph but the tab cell also
-  // reserves space below for the label. Without compensation, the spotlight sits
-  // at the icon's vertical center and reads as "too high" relative to the tab
-  // slot. Shift it downward by reducing top pad and adding bottom pad.
   const stepName: string | undefined = step?.name;
-  const isTabStep = typeof stepName === 'string' && stepName.endsWith('-tab');
-  const padTop = isTabStep ? 2 : SPOTLIGHT_PADDING;
-  const padBottom = isTabStep ? 18 : SPOTLIGHT_PADDING;
-  const padX = SPOTLIGHT_PADDING;
+  const isCenterAction = stepName === 'actions-tab';
+  // Labeled bottom tabs (home/courts/community/chat) wrap tightly around the glyph
+  // but the tab cell reserves space below for the text label. Shift the spotlight
+  // down (less top pad, more bottom pad) to cover the label. The center "+" button
+  // has no label, so it stays symmetric (handled by the defaults below).
+  const isLabeledTab = typeof stepName === 'string' && stepName.endsWith('-tab') && !isCenterAction;
+  const isHeaderProfile = stepName === 'header-profile';
 
-  const x = px - padX;
+  let padTop = SPOTLIGHT_PADDING;
+  let padBottom = SPOTLIGHT_PADDING;
+  let padLeft = SPOTLIGHT_PADDING;
+  let padRight = SPOTLIGHT_PADDING;
+
+  if (isLabeledTab) {
+    padTop = 2;
+    padBottom = 18;
+  } else if (isHeaderProfile) {
+    // The avatar is measured as a row that includes ~8px of left margin before
+    // the ring. Crop that margin out and hug the ring with a tight halo.
+    padTop = 4;
+    padBottom = 4;
+    padLeft = -4;
+    padRight = 4;
+  }
+
+  const x = px - padLeft;
   const y = py - padTop;
-  const w = sx + padX * 2;
+  const w = sx + padLeft + padRight;
   const h = sy + padTop + padBottom;
   const r = Math.max(0, Math.min(SPOTLIGHT_RADIUS, w / 2, h / 2));
   // Outer canvas rect (even-odd / non-zero fill rule -> hole), then rounded cutout.
@@ -548,6 +654,7 @@ const buildSpotlightPath = (args: any): string => {
 
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { colors } = useThemeStyles();
+  const { width: screenWidth } = useWindowDimensions();
 
   // With `androidStatusBarVisible={true}` and expo-status-bar (translucent by
   // default), the Copilot Modal and `measure()` share the same coordinate
@@ -561,12 +668,18 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       overlay="svg"
       androidStatusBarVisible={true}
       verticalOffset={0}
-      arrowColor={colors.cardBackground}
+      // The default copilot arrow is positioned on its (transparent) wrapper, so it
+      // detaches from our custom card and can't share its shadow. Hide it — the
+      // spotlight cutout already points at the target.
+      arrowColor="transparent"
       backdropColor="rgba(0, 0, 0, 0.7)"
       svgMaskPath={buildSpotlightPath}
       // Copilot wraps the tooltipComponent in its own card. We render the card
       // ourselves inside CustomTooltip so the wrapper has to be a transparent
       // passthrough — otherwise we get a stale white card behind the themed one.
+      // tooltipStyle is applied last (after copilot's computed position), so we
+      // override left/right/maxWidth to pin the card to the full container width
+      // on every step, and overflow:visible so the card's shadow isn't clipped.
       tooltipStyle={{
         backgroundColor: 'transparent',
         padding: 0,
@@ -574,6 +687,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         shadowRadius: 0,
         elevation: 0,
         borderRadius: 16,
+        overflow: 'visible',
+        left: TOOLTIP_H_MARGIN,
+        right: TOOLTIP_H_MARGIN,
+        maxWidth: screenWidth,
       }}
       stopOnOutsideClick={false}
     >

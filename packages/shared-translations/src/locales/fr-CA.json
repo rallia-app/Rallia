@@ -149,7 +149,7 @@
   },
   "navigation": {
     "home": "Accueil",
-    "matches": "Matchs",
+    "matches": "Parties",
     "map": "Carte",
     "community": "Communauté",
     "profile": "Profil",
@@ -9990,27 +9990,27 @@
     "mainNavigation": {
       "home": {
         "title": "Parties",
-        "description": "Vos parties à venir en un coup d'œil, ainsi que les matchs qui se déroulent près de chez vous."
+        "description": "Vos parties à venir en un coup d'œil, des parties suggérées près de chez vous, et les terrains libres à proximité."
       },
       "courts": {
         "title": "Terrains",
-        "description": "Parcourez les terrains et installations sportives à proximité, consultez les détails et réservez un créneau."
+        "description": "Parcourez les terrains et installations à proximité et voyez quand ils sont libres pour jouer."
       },
       "actions": {
-        "title": "Actions",
-        "description": "Créez une partie, invitez des joueurs ou lancez un réseau — le tout au même endroit."
+        "title": "Créer et inviter",
+        "description": "Créez une partie, invitez des amis ou lancez un groupe, le tout d'ici."
       },
       "community": {
         "title": "Joueurs",
-        "description": "Trouvez des joueurs autour de vous et parcourez les groupes et communautés que vous avez rejoints."
+        "description": "Trouvez des joueurs près de chez vous selon le niveau et les disponibilités, ainsi que vos groupes et communautés."
       },
       "matches": {
         "title": "Parties",
-        "description": "Parcourez les parties disponibles, créez de nouveaux matchs et gérez votre calendrier."
+        "description": "Parcourez les parties ouvertes, créez les vôtres et gérez votre calendrier."
       },
       "chat": {
         "title": "Messages",
-        "description": "Discutez avec d'autres joueurs, coordonnez les détails du match et restez connecté."
+        "description": "Vos conversations avec les joueurs, pour régler les détails des parties et garder le contact."
       },
       "profile": {
         "title": "Profil",
@@ -10020,15 +10020,15 @@
     "header": {
       "profile": {
         "title": "Votre profil",
-        "description": "Appuyez sur votre photo de profil pour consulter et modifier votre profil, vos statistiques et vos préférences."
+        "description": "Touchez votre photo pour voir votre profil, votre niveau, vos disponibilités et votre réputation."
       },
       "sportToggle": {
-        "title": "Sélecteur de sport",
-        "description": "Basculez entre vos sports pour voir les parties et joueurs pertinents."
+        "title": "Vos sports",
+        "description": "Basculez entre vos sports pour voir les bonnes parties et les bons joueurs."
       },
       "actions": {
-        "title": "Actions rapides",
-        "description": "Accédez aux notifications et aux paramètres de l'application ici."
+        "title": "Alertes et réglages",
+        "description": "Retrouvez vos notifications et les réglages de l'application ici."
       }
     },
     "homeScreen": {
@@ -10136,7 +10136,7 @@
     "settings": {
       "restartTour": "Redémarrer la visite de l'application",
       "restartTourDescription": "Refaites la visite guidée pour en apprendre davantage sur les fonctionnalités de l'application",
-      "tourReset": "La visite a été réinitialisée. La visite commencera lors de votre prochaine ouverture de l'application."
+      "tourReset": "Visite réinitialisée. L'écran d'accueil de la visite s'affichera dans un instant."
     },
     "completion": {
       "title": "Vous êtes prêt!",

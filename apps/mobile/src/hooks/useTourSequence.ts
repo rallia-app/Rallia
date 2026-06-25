@@ -15,7 +15,11 @@ import { TourId, Logger } from '@rallia/shared-services';
 
 import { useTour } from '#/context/TourContext';
 
-export const TOURS_ENABLED = false;
+/** Welcome sheet + main navigation copilot tour */
+export const WELCOME_TOUR_ENABLED = true;
+
+/** Per-screen spotlight tours (Home, Profile, Chat, …) */
+export const SCREEN_TOURS_ENABLED = false;
 
 export const SCREEN_TOURS: Record<string, TourId> = {
   home: 'home_screen',
@@ -69,7 +73,7 @@ export const useTourSequence = ({
   const hasAttemptedRef = useRef(false);
 
   useEffect(() => {
-    if (!TOURS_ENABLED) return;
+    if (!SCREEN_TOURS_ENABLED) return;
     if (!autoStart) return;
     if (isLoading) return;
     if (!isReady) return;
@@ -115,6 +119,7 @@ export const useTourSequence = ({
 
   const isTourCompleted = isTourCompletedFn(tourId);
   const shouldShowTour =
+    SCREEN_TOURS_ENABLED &&
     !isLoading &&
     isReady &&
     isTourCompletedFn('main_navigation') &&
