@@ -1194,8 +1194,11 @@ const Home = () => {
       : 'home.soonAndNearbySubtitle';
 
     return (
-      <View style={[styles.sectionHeader]}>
-        <View style={styles.sectionHeaderText}>
+      <View style={styles.sectionHeaderStacked}>
+        {/* Title (+ optional location selector) and "View all" share one
+            centered row so "View all" stays aligned to the title even when the
+            taller LocationSelector pill grows the row. The subtitle sits below. */}
+        <View style={styles.sectionHeaderTopRow}>
           <View style={styles.sectionTitleRow}>
             <Text size="xl" weight="bold" color={colors.text}>
               {t(titleKey)}
@@ -1214,29 +1217,29 @@ const Home = () => {
               </View>
             )}
           </View>
-          <Text size="sm" color={colors.textMuted}>
-            {t(subtitleKey)}
-          </Text>
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => {
+              lightHaptic();
+              Analytics.publicMatchesOpened({ cta: 'view_all' });
+              navigation.navigate('PublicMatches');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text size="base" weight="medium" color={colors.primary}>
+              {t('home.viewAll')}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.primary}
+              style={styles.chevronIcon}
+            />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.viewAllButton}
-          onPress={() => {
-            lightHaptic();
-            Analytics.publicMatchesOpened({ cta: 'view_all' });
-            navigation.navigate('PublicMatches');
-          }}
-          activeOpacity={0.7}
-        >
-          <Text size="base" weight="medium" color={colors.primary}>
-            {t('home.viewAll')}
-          </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={colors.primary}
-            style={styles.chevronIcon}
-          />
-        </TouchableOpacity>
+        <Text size="sm" color={colors.textMuted}>
+          {t(subtitleKey)}
+        </Text>
       </View>
     );
   };
@@ -2123,6 +2126,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[5],
+  },
+  // Variant of sectionHeader used when the title row carries inline controls
+  // (the LocationSelector). The title row and "View all" live in a centered top
+  // row, with the description stacked below — so a taller control can't drag
+  // "View all" out of alignment with the title.
+  sectionHeaderStacked: {
+    gap: spacingPixels[0.5],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[5],
+  },
+  sectionHeaderTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacingPixels[3],
   },
   // Left column of a section header: title (+ optional inline controls) stacked
   // above a muted one-line description.
