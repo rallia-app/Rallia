@@ -21,6 +21,7 @@ import {
   reopenTournamentRegistration,
   inviteTournamentPlayers,
   acceptTournamentInvite,
+  revokeTournamentInvite,
   registerForTournament,
   withdrawFromTournament,
   removeTournamentRegistration,
@@ -557,6 +558,28 @@ export function useRemoveTournamentRegistration(
   >({
     mutationFn: ({ registrationId, versionWas }) =>
       removeTournamentRegistration(registrationId, versionWas),
+    onSuccess: (r, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(r);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useRevokeTournamentInvite(options: MutationOptions<TournamentRegistration> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { registrationId: string; versionWas: number; tournamentId: string }
+  >({
+    mutationFn: ({ registrationId, versionWas }) =>
+      revokeTournamentInvite(registrationId, versionWas),
     onSuccess: (r, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(r);

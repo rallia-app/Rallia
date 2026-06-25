@@ -4530,7 +4530,12 @@
         "approvedToast": "Player approved"
       },
       "invited": {
-        "title": "Invited ({count}) · awaiting response"
+        "title": "Invited ({count}) · awaiting response",
+        "revokeLabel": "Revoke invitation to {name}",
+        "revokeConfirmTitle": "Revoke invitation?",
+        "revokeConfirmMessage": "{name} will be un-invited. You can re-invite them later.",
+        "revokeConfirm": "Revoke",
+        "revokeCancel": "Keep"
       }
     },
     "labels": {
@@ -4736,6 +4741,7 @@
       "withdrawFailed": "Couldn't withdraw. Please try again.",
       "acceptInviteFailed": "Couldn't accept the invitation. Please try again.",
       "invitePlayersFailed": "Couldn't send the invitations. Please try again.",
+      "revokeInviteFailed": "Couldn't revoke the invitation. Please try again.",
       "withdrawClosed": "Registration has closed — you can't withdraw anymore.",
       "tournamentFull": "This tournament is full.",
       "alreadyRegistered": "You're already registered for this tournament.",

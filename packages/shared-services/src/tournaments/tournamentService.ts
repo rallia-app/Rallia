@@ -628,6 +628,23 @@ export async function acceptTournamentInvite(
 }
 
 /**
+ * Organizer retracts an outstanding invite. Non-terminal: the invited row goes
+ * to 'withdrawn' (frees the slot, clears the invitation notification, and lets
+ * the player be re-invited later) — unlike removal, which disqualifies.
+ */
+export async function revokeTournamentInvite(
+  registrationId: string,
+  versionWas: number
+): Promise<TournamentRegistration> {
+  const { data, error } = await supabase.rpc('tournament_revoke_invite', {
+    p_registration_id: registrationId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentRegistration;
+}
+
+/**
  * Self-register for a tournament. Initial status depends on the
  * tournament's registration_mode: open → 'registered', approval → 'pending',
  * invite_only → flips an existing pending invite to 'registered'.
