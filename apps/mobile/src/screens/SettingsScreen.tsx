@@ -31,6 +31,7 @@ import {
 
 import { useAppNavigation } from '#/navigation/hooks';
 import { useLocale, useFeedbackReportSheet, useSubscription } from '#/context';
+import { useTour } from '#/context/TourContext';
 import { useAuth, useTranslation } from '#/hooks';
 
 const BASE_WHITE = '#ffffff';
@@ -88,6 +89,7 @@ const SettingsScreen: React.FC = () => {
   const { t } = useTranslation();
 
   const { openFeedbackReport } = useFeedbackReportSheet();
+  const { restartWelcomeTour } = useTour();
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { subscriptionStatus, presentPaywall } = useSubscription();
   const { profile, loading: profileLoading } = useProfile();
@@ -190,6 +192,18 @@ const SettingsScreen: React.FC = () => {
     lightHaptic();
     openFeedbackReport('settings');
     Logger.logUserAction('feedback_pressed');
+  };
+
+  const handleRestartTour = async () => {
+    lightHaptic();
+    try {
+      await restartWelcomeTour();
+      toast.success(t('tour.settings.tourReset'));
+      Logger.logUserAction('tour_restart_from_settings');
+    } catch (error) {
+      Logger.error('Failed to restart app tour from settings', error as Error);
+      toast.error(t('errors.unknown'));
+    }
   };
 
   const handleAdminPanel = () => {
@@ -321,6 +335,14 @@ const SettingsScreen: React.FC = () => {
             title={t('settings.permissions')}
             onPress={handlePermissions}
           />
+          {isOnboarded && (
+            <SettingsItem
+              colors={colors}
+              icon="map-outline"
+              title={t('tour.settings.restartTour')}
+              onPress={handleRestartTour}
+            />
+          )}
           <SettingsItem
             colors={colors}
             icon="document-text-outline"

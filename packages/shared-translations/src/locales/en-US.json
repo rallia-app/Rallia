@@ -9990,27 +9990,27 @@
     "mainNavigation": {
       "home": {
         "title": "Games",
-        "description": "Your upcoming games at a glance, plus matches happening near you."
+        "description": "Your upcoming games at a glance, games we suggest nearby, and open courts near you."
       },
       "courts": {
         "title": "Courts",
-        "description": "Browse nearby courts and sports facilities, view details, and book a slot."
+        "description": "Browse nearby courts and facilities and check when they're available to play."
       },
       "actions": {
-        "title": "Actions",
-        "description": "Create a match, invite players, or start a network — all from one place."
+        "title": "Create & invite",
+        "description": "Create a game, invite friends, or start a group, all from here."
       },
       "community": {
         "title": "Players",
-        "description": "Find players around you and browse the groups and communities you've joined."
+        "description": "Find players near you by level and availability, plus your groups and communities."
       },
       "matches": {
         "title": "Games",
-        "description": "Browse available games, create new matches, and manage your game schedule."
+        "description": "Browse open games, create your own, and manage your game schedule."
       },
       "chat": {
         "title": "Messages",
-        "description": "Chat with other players, coordinate game details, and stay connected."
+        "description": "Your conversations with players, to lock in game details and stay in touch."
       },
       "profile": {
         "title": "Profile",
@@ -10019,16 +10019,16 @@
     },
     "header": {
       "profile": {
-        "title": "Your Profile",
-        "description": "Tap your profile picture to view and edit your profile, stats, and preferences."
+        "title": "Your profile",
+        "description": "Tap your photo to view your profile, rating, availability, and reputation."
       },
       "sportToggle": {
-        "title": "Sport Selector",
-        "description": "Switch between your sports to see relevant games and players."
+        "title": "Your sports",
+        "description": "Switch between your sports to see the right games and players."
       },
       "actions": {
-        "title": "Quick Actions",
-        "description": "Access notifications and app settings from here."
+        "title": "Alerts & settings",
+        "description": "Find your notifications and app settings here."
       }
     },
     "homeScreen": {
@@ -10136,7 +10136,7 @@
     "settings": {
       "restartTour": "Restart App Tour",
       "restartTourDescription": "Take the guided tour again to learn about app features",
-      "tourReset": "Tour has been reset. The tour will start on your next app launch."
+      "tourReset": "App tour reset. The welcome screen will appear in a moment."
     },
     "completion": {
       "title": "You're all set!",

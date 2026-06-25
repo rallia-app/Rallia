@@ -102,7 +102,7 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
 
           <Text style={[styles.title, { color: colors.text }]}>{t('tour.complete.title')}</Text>
 
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {t('tour.complete.description')}
           </Text>
 
