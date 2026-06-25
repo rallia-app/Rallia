@@ -44,7 +44,6 @@ import {
   useProfileCompleteness,
   useReferral,
   useAdminStatus,
-  formatInlineSnapshotSlots,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { MatchScoringPreferences } from '@rallia/shared-hooks';
@@ -289,6 +288,9 @@ const SECOND_SPORT_BANNER_FADE_MS = 10 * 60 * 1000; // 10 minutes
 // availability-staleness proxy.
 const AVAILABILITY_BANNER_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 const AVAILABILITY_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+// Default search radius for signed-out users (no max_travel_distance to read).
+const GUEST_SEARCH_RADIUS_KM = 20;
 
 const Home = () => {
   // Warm sibling tab stacks in the background so their first open is instant.
@@ -936,10 +938,18 @@ const Home = () => {
   const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
   const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
-  // Realtime availability at the player's provider-enabled favorite facilities.
-  // Powers the personalized "Open at your favorites" carousel below My Matches.
+  // Use player's travel distance if signed in, otherwise the guest default.
+  // Bounds both the nearby-availability fallback below and the "Just for you"
+  // carousel further down.
+  const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
+
+  // Realtime availability at the player's provider-enabled favorite facilities,
+  // or — when no favorite has an open slot (incl. signed-out users) — the
+  // closest facilities within range that do. Powers the personalized "Open at
+  // your favorites" carousel below My Matches.
   const {
     facilities: favoriteAvailability,
+    source: availabilitySource,
     isLoading: loadingFavoriteAvailability,
     refetch: refetchFavoriteAvailability,
   } = useFavoriteFacilityAvailability({
@@ -947,7 +957,9 @@ const Home = () => {
     sportId: selectedSport?.id,
     latitude: location?.latitude,
     longitude: location?.longitude,
-    enabled: !!isOnboarded && !!location && !!selectedSport?.id && !!player?.id,
+    maxDistanceKm: searchRadiusKm,
+    // Location + sport gated; signed-out users get the nearby fallback.
+    enabled: !!location && !!selectedSport?.id,
   });
 
   // Favorites are edited on other screens (sport profile, onboarding) while Home
@@ -964,24 +976,6 @@ const Home = () => {
       refetchFavoriteAvailability();
     }, [refetchFavoriteAvailability])
   );
-
-  // Keep only favorites that currently have at least one bookable slot.
-  // formatInlineSnapshotSlots applies the same future-only filter the card
-  // uses, so a favorite whose snapshots are all past/empty is dropped from the
-  // section entirely instead of rendering a "no slots" card.
-  const favoriteAvailabilityWithSlots = useMemo(
-    () =>
-      favoriteAvailability.filter(
-        f => formatInlineSnapshotSlots(f.availability_slots, f.timezone).slots.length > 0
-      ),
-    [favoriteAvailability]
-  );
-
-  // Default search radius for signed-out users
-  const GUEST_SEARCH_RADIUS_KM = 20;
-
-  // Use player's travel distance if signed in, otherwise use guest default
-  const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
 
   // The section becomes visible as soon as we have sport + location, and
   // stays visible across transitions (sign-in, sport switching) so the
@@ -1387,17 +1381,24 @@ const Home = () => {
     selectedSport?.name,
   ]);
 
-  // Render the personalized "Open at your favorites" section: a horizontal
-  // carousel of the player's favorite facilities that currently have an open
-  // slot. When none do, it falls back to an empty-state card (mirroring My
-  // Games) whose CTA opens the facilities directory. Onboarded users only.
+  // Render the personalized availability section: a horizontal carousel of the
+  // player's favorite facilities with an open slot, or — when none qualify
+  // (incl. signed-out users) — the closest facilities within range that do.
+  // When even the fallback is empty, an empty-state card (mirroring My Games)
+  // points to the facilities directory. Shown once location + sport are ready.
   const renderFavoriteAvailabilitySection = useCallback(() => {
-    if (!isOnboarded) return null;
-    const showLoading = loadingFavoriteAvailability && favoriteAvailabilityWithSlots.length === 0;
-    const isEmpty = !showLoading && favoriteAvailabilityWithSlots.length === 0;
+    if (!showNearbySection) return null;
+    const showLoading = loadingFavoriteAvailability && favoriteAvailability.length === 0;
+    const isEmpty = !showLoading && favoriteAvailability.length === 0;
 
-    // A lone favorite reads better filling the row than as a peek-able card.
-    const isSingle = !showLoading && favoriteAvailabilityWithSlots.length === 1;
+    // A lone card reads better filling the row than as a peek-able card.
+    const isSingle = !showLoading && favoriteAvailability.length === 1;
+
+    // The fallback shows non-favorites, so the header reflects which list it is.
+    const sectionTitle =
+      availabilitySource === 'favorites'
+        ? t('home.favoriteAvailability.title')
+        : t('home.favoriteAvailability.nearbyTitle');
 
     const goToFacilitiesDirectory = () => {
       lightHaptic();
@@ -1428,7 +1429,7 @@ const Home = () => {
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderText}>
             <Text size="xl" weight="bold" color={colors.text}>
-              {t('home.favoriteAvailability.title')}
+              {sectionTitle}
             </Text>
             <Text size="sm" color={colors.textMuted}>
               {t('home.favoriteAvailability.subtitle')}
@@ -1470,9 +1471,7 @@ const Home = () => {
             </View>
           </View>
         ) : isSingle ? (
-          <View style={styles.favAvailSingleWrap}>
-            {renderCard(favoriteAvailabilityWithSlots[0], true)}
-          </View>
+          <View style={styles.favAvailSingleWrap}>{renderCard(favoriteAvailability[0], true)}</View>
         ) : (
           <GestureScrollView
             horizontal
@@ -1481,15 +1480,16 @@ const Home = () => {
           >
             {showLoading
               ? [1, 2].map(i => <FavoriteAvailabilityCardSkeleton key={i} />)
-              : favoriteAvailabilityWithSlots.map(facility => renderCard(facility))}
+              : favoriteAvailability.map(facility => renderCard(facility))}
           </GestureScrollView>
         )}
       </View>
     );
   }, [
-    isOnboarded,
+    showNearbySection,
     loadingFavoriteAvailability,
-    favoriteAvailabilityWithSlots,
+    favoriteAvailability,
+    availabilitySource,
     colors.text,
     colors.textMuted,
     colors.primary,
@@ -1890,9 +1890,11 @@ const Home = () => {
               isManualRefresh.current = true;
               Analytics.feedRefreshed({ screen: 'home' });
               refetchJustForYou();
+              // Availability section shows for signed-out users too (nearby
+              // fallback), so refresh it regardless of auth state.
+              refetchFavoriteAvailability();
               if (session?.user?.id) {
                 refetchMyMatches();
-                refetchFavoriteAvailability();
               }
             }}
             tintColor={colors.primary}
