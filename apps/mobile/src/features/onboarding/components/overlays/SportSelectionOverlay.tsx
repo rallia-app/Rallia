@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Overlay, Text, Heading, Button, Spinner } from '@rallia/shared-components';
 import { Sport } from '@rallia/shared-types';
-import DatabaseService, { Logger } from '@rallia/shared-services';
+import DatabaseService, { Logger, makeFallbackSportId } from '@rallia/shared-services';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
@@ -76,7 +76,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         // Fallback to hardcoded sports if fetch fails
         setSports([
           {
-            id: 'tennis-fallback',
+            id: makeFallbackSportId('tennis'),
             name: 'tennis',
             display_name: 'Tennis',
             description: null,
@@ -88,7 +88,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
             updated_at: new Date().toISOString(),
           },
           {
-            id: 'pickleball-fallback',
+            id: makeFallbackSportId('pickleball'),
             name: 'pickleball',
             display_name: 'Pickleball',
             description: null,
