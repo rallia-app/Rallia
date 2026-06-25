@@ -19,6 +19,8 @@ import {
   openTournamentRegistration,
   closeTournamentRegistration,
   reopenTournamentRegistration,
+  inviteTournamentPlayers,
+  acceptTournamentInvite,
   registerForTournament,
   withdrawFromTournament,
   removeTournamentRegistration,
@@ -449,6 +451,44 @@ export function useReopenTournamentRegistration(options: MutationOptions<Tournam
     onSuccess: t => {
       invalidate(t.id);
       options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useInviteTournamentPlayers(options: MutationOptions<number> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<number, Error, { tournamentId: string; userIds: string[] }>({
+    mutationFn: ({ tournamentId, userIds }) => inviteTournamentPlayers(tournamentId, userIds),
+    onSuccess: (count, { tournamentId }) => {
+      invalidate(tournamentId);
+      options.onSuccess?.(count);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useAcceptTournamentInvite(options: MutationOptions<TournamentRegistration> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { tournamentId: string; partnerId?: string }
+  >({
+    mutationFn: ({ tournamentId, partnerId }) => acceptTournamentInvite(tournamentId, partnerId),
+    onSuccess: r => {
+      invalidate(r.tournament_id);
+      options.onSuccess?.(r);
     },
     onError: e => options.onError?.(e),
   });

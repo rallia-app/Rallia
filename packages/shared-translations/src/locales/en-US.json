@@ -4694,6 +4694,18 @@
       "confirmCta": "Register with {name}",
       "confirmCtaEmpty": "Pick a partner"
     },
+    "invitePlayers": {
+      "title": "Invite players",
+      "searchPlaceholder": "Search players",
+      "searchHint": "Type a name to find players to invite.",
+      "noResults": "No players found",
+      "sendCta": "Send {count} invitations",
+      "sendCtaEmpty": "Select players to invite",
+      "sending": "Sending…",
+      "sentToast": "{count} players invited",
+      "noneToast": "No new invitations sent",
+      "shareLinkInstead": "Share a link instead"
+    },
     "override": {
       "title": "Record the result",
       "subtitle": "Enter the final score. The winner is set automatically.",
@@ -4719,6 +4731,8 @@
       "reopenFailed": "Couldn't reopen registration. Please try again.",
       "registerFailed": "Couldn't complete registration. Please try again.",
       "withdrawFailed": "Couldn't withdraw. Please try again.",
+      "acceptInviteFailed": "Couldn't accept the invitation. Please try again.",
+      "invitePlayersFailed": "Couldn't send the invitations. Please try again.",
       "withdrawClosed": "Registration has closed — you can't withdraw anymore.",
       "tournamentFull": "This tournament is full.",
       "alreadyRegistered": "You're already registered for this tournament.",

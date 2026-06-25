@@ -4694,6 +4694,18 @@
       "confirmCta": "S'inscrire avec {name}",
       "confirmCtaEmpty": "Choisis un partenaire"
     },
+    "invitePlayers": {
+      "title": "Inviter des joueurs",
+      "searchPlaceholder": "Chercher des joueurs",
+      "searchHint": "Tape un nom pour trouver des joueurs à inviter.",
+      "noResults": "Aucun joueur trouvé",
+      "sendCta": "Envoyer {count} invitations",
+      "sendCtaEmpty": "Sélectionne des joueurs à inviter",
+      "sending": "Envoi…",
+      "sentToast": "{count} joueurs invités",
+      "noneToast": "Aucune nouvelle invitation",
+      "shareLinkInstead": "Partager un lien à la place"
+    },
     "override": {
       "title": "Inscrire le résultat",
       "subtitle": "Entrez le score final. Le gagnant est déterminé automatiquement.",
@@ -4719,6 +4731,8 @@
       "reopenFailed": "Impossible de rouvrir les inscriptions. Veuillez réessayer.",
       "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
       "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
+      "acceptInviteFailed": "Impossible d'accepter l'invitation. Veuillez réessayer.",
+      "invitePlayersFailed": "Impossible d'envoyer les invitations. Veuillez réessayer.",
       "withdrawClosed": "Les inscriptions sont fermées, tu peux plus te retirer.",
       "tournamentFull": "Ce tournoi est complet.",
       "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",

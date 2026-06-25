@@ -41,6 +41,7 @@ import { TournamentLinkMatchActionSheet } from '#/features/tournaments/component
 import { TournamentPartnerPickerActionSheet } from '#/features/tournaments/components/TournamentPartnerPickerSheet';
 import { TournamentEditActionSheet } from '#/features/tournaments/components/TournamentEditSheet';
 import { TournamentInviteSheet } from '#/features/tournaments/components/TournamentInviteSheet';
+import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import type { TournamentEditData } from '#/features/tournaments';
 // Facilities components
 import { ExternalBookingActionSheet } from '#/features/facilities/components/ExternalBookingSheet';
@@ -375,6 +376,14 @@ declare module 'react-native-actions-sheet' {
       payload: {
         tournamentId: string;
         tournamentName: string;
+      };
+    }>;
+    'tournament-invite-players': SheetDefinition<{
+      payload: {
+        tournamentId: string;
+        tournamentName: string;
+        sportId: string;
+        excludeUserIds: string[];
       };
     }>;
     'court-selection': SheetDefinition<{
@@ -880,6 +889,7 @@ export const Sheets = () => {
         'tournament-partner-picker': TournamentPartnerPickerActionSheet,
         'tournament-edit': TournamentEditActionSheet,
         'tournament-invite': TournamentInviteSheet,
+        'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'court-selection': CourtSelectionActionSheet,
         'report-issue': ReportIssueActionSheet,
         'external-booking': ExternalBookingActionSheet,

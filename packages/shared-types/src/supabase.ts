@@ -11952,6 +11952,7 @@ export type Database = {
           p_logo_url?: string
           p_match_format?: Database["public"]["Enums"]["match_format"]
           p_max_participants: number
+          p_min_rating?: number
           p_name: string
           p_network_id?: string
           p_registration_closes_at?: string

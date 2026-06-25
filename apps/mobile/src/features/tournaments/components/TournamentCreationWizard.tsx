@@ -684,7 +684,7 @@ const DetailsStep: React.FC<{
         )}
       </View>
 
-      {isEditMode && ratingOptions.length > 0 && (
+      {ratingOptions.length > 0 && (
         <View style={styles.fieldGroup}>
           <FieldLabel colors={colors}>
             {t('tournamentCreation.fields.minLevel' as TranslationKey)}
@@ -1347,6 +1347,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         description: description.trim() || undefined,
         rules: rules.trim() || undefined,
         logoUrl: resolvedLogoUrl ?? undefined,
+        minRating: minRating ?? undefined,
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
         startDate: startDate.toISOString(),
