@@ -283,7 +283,11 @@ export async function createPlayedMatch(
       // Only for new matches, as existing match participants are already aware
       if (isNewMatch) {
         try {
-          await notifyOpponentsOfPendingScore(matchId, createdBy, team2PlayerIds);
+          // Exclude the submitter so they're never notified about their own score
+          const opponentIds = team2PlayerIds.filter(id => id !== createdBy);
+          if (opponentIds.length > 0) {
+            await notifyOpponentsOfPendingScore(matchId, createdBy, opponentIds);
+          }
         } catch (notifyError) {
           console.error('Error sending notifications:', notifyError);
           // Don't fail - notification failure shouldn't break the flow
