@@ -441,6 +441,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   tournament_partner_withdrew: 'high',
   // Tournament lifecycle (produced DB-side by triggers; listed for completeness)
   tournament_registration_received: 'normal',
+  tournament_invitation: 'high',
   tournament_registration_approved: 'high',
   tournament_registration_removed: 'high',
   tournament_bracket_published: 'high',
@@ -541,6 +542,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_partner_withdrew: 'Team withdrawn',
   // Tournament lifecycle (produced DB-side by triggers; listed for completeness)
   tournament_registration_received: 'New registration request',
+  tournament_invitation: 'Tournament invitation',
   tournament_registration_approved: "You're in",
   tournament_registration_removed: 'Removed from tournament',
   tournament_bracket_published: 'Bracket published',
@@ -670,6 +672,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_partner_withdrew: '{playerName} withdrew your team from {tournamentName}.',
   // Tournament lifecycle (produced DB-side by triggers; listed for completeness)
   tournament_registration_received: '{registrantName} wants to join {tournamentName}.',
+  tournament_invitation: '{inviterName} invited you to {tournamentName}.',
   tournament_registration_approved: 'Your registration for {tournamentName} was approved.',
   tournament_registration_removed: 'An organizer removed you from {tournamentName}.',
   tournament_bracket_published: '{tournamentName}: round 1 vs {opponentName}.',

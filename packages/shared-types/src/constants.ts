@@ -340,6 +340,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_partner_withdrew: 'exit-outline',
   // Tournament lifecycle
   tournament_registration_received: 'person-add-outline',
+  tournament_invitation: 'mail-outline',
   tournament_registration_approved: 'checkmark-circle-outline',
   tournament_registration_removed: 'remove-circle-outline',
   tournament_bracket_published: 'git-network-outline',
@@ -439,6 +440,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_partner_withdrew: '#FF9800', // Orange
   // Tournament lifecycle
   tournament_registration_received: '#FF9800', // Orange — action required from organizer
+  tournament_invitation: '#4DB8A8', // Teal — invite
   tournament_registration_approved: '#4CAF50', // Green
   tournament_registration_removed: '#F44336', // Red
   tournament_bracket_published: '#4DB8A8', // Teal
@@ -534,6 +536,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_partner_withdrew: 'Team Withdrawn',
   // Tournament lifecycle
   tournament_registration_received: 'Registration Request',
+  tournament_invitation: 'Tournament invitation',
   tournament_registration_approved: 'Registration Approved',
   tournament_registration_removed: 'Removed from Tournament',
   tournament_bracket_published: 'Bracket Published',
@@ -637,6 +640,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_partner_withdrew: 'match',
   // Tournament lifecycle
   tournament_registration_received: 'match',
+  tournament_invitation: 'match',
   tournament_registration_approved: 'match',
   tournament_registration_removed: 'match',
   tournament_bracket_published: 'match',
@@ -783,6 +787,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_partner_withdrew: { email: false, push: true, sms: false },
   // Tournament lifecycle — mirror the edge function DEFAULT_PREFERENCES
   tournament_registration_received: { email: false, push: true, sms: false },
+  tournament_invitation: { email: false, push: true, sms: false },
   tournament_registration_approved: { email: false, push: true, sms: false },
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },

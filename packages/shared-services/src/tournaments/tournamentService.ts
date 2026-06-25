@@ -81,6 +81,7 @@ export interface CreateTournamentInput {
   description?: string;
   rules?: string;
   logoUrl?: string;
+  minRating?: number;
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   bracketType?: Enums<'bracket_type'>;
@@ -193,6 +194,7 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_registration_closes_at: input.registrationClosesAt,
     p_rules: input.rules,
     p_logo_url: input.logoUrl,
+    p_min_rating: input.minRating,
   });
 
   if (error) {
@@ -590,6 +592,39 @@ export async function reopenTournamentRegistration(
   });
   if (error) throw new Error(error.message);
   return data as Tournament;
+}
+
+/**
+ * Organizer/co-organizer invites existing players. Each becomes a 'pending'
+ * registration the invitee accepts via acceptTournamentInvite. Returns how many
+ * invites were actually created (already-registered / unknown players skipped).
+ */
+export async function inviteTournamentPlayers(
+  tournamentId: string,
+  userIds: string[]
+): Promise<number> {
+  const { data, error } = await supabase.rpc('tournament_invite_players', {
+    p_tournament_id: tournamentId,
+    p_user_ids: userIds,
+  });
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
+/**
+ * Invitee accepts their pending organizer invite. Doubles tournaments require
+ * a partner (supplied at accept); singles must omit it.
+ */
+export async function acceptTournamentInvite(
+  tournamentId: string,
+  partnerId?: string
+): Promise<TournamentRegistration> {
+  const { data, error } = await supabase.rpc('tournament_accept_invite', {
+    p_tournament_id: tournamentId,
+    p_partner_id: partnerId,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentRegistration;
 }
 
 /**
