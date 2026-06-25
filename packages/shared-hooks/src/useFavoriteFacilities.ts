@@ -12,6 +12,10 @@ import { facilityKeys } from './useFacilitySearch';
  *  expose an unfavorite affordance can render consistent messaging. */
 export const MIN_FAVORITE_FACILITIES = 3;
 
+/** Guards against synthetic ids (e.g. `tennis-fallback`, persisted when the
+ *  sport catalog fetch fails during onboarding) reaching uuid columns. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface FavoriteFacility {
   id: string;
   facilityId: string;
@@ -69,6 +73,13 @@ export function useFavoriteFacilities(
 
   const fetchFavorites = useCallback(async () => {
     if (!playerId) {
+      setFavorites([]);
+      return;
+    }
+
+    // A synthetic sport id (or any non-uuid) can't match a row and would make
+    // Postgres reject the whole query. Treat it as "no favorites yet".
+    if (!UUID_RE.test(playerId) || (sportId && !UUID_RE.test(sportId))) {
       setFavorites([]);
       return;
     }
@@ -142,6 +153,7 @@ export function useFavoriteFacilities(
   const addFavorite = useCallback(
     async (facility: FacilitySearchResult): Promise<boolean> => {
       if (!playerId || !sportId) return false;
+      if (!UUID_RE.test(playerId) || !UUID_RE.test(sportId)) return false;
       if (favorites.some(f => f.facilityId === facility.id)) return false;
 
       try {
