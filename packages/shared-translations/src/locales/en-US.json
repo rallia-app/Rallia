@@ -1951,7 +1951,7 @@
     "invitations": "Invitations",
     "pendingInvitations": "Pending Invitations",
     "declinedInvitations": "Declined",
-    "cancelInvite": "Cancel",
+    "cancelInvite": "Cancel invitation",
     "resendInvite": "Resend",
     "cancelInviteConfirmTitle": "Cancel Invitation?",
     "cancelInviteConfirmMessage": "This will revoke the invitation. The player will no longer be able to join through this invite.",
