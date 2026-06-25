@@ -4528,6 +4528,9 @@
         "approveLabel": "Approve {name}",
         "declineLabel": "Decline {name}",
         "approvedToast": "Player approved"
+      },
+      "invited": {
+        "title": "Invited ({count}) · awaiting response"
       }
     },
     "labels": {

@@ -599,6 +599,33 @@ const PendingRequestsSection: React.FC<{
   );
 };
 
+/** Organizer-only, read-only list of players the organizer invited who haven't
+ *  accepted yet. Distinct from the approval queue — these await the invitee. */
+const InvitedSection: React.FC<{
+  rows: PendingRequestRow[];
+  onPlayerPress: (player: PlayerSearchResult) => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ rows, onPlayerPress, colors, t }) => {
+  if (rows.length === 0) return null;
+  return (
+    <View style={styles.pendingSection}>
+      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
+        {t('tournamentDetail.dashboard.invited.title', { count: String(rows.length) })}
+      </Text>
+      {rows.map(({ player, registrationId }) => (
+        <PlayerCard
+          key={registrationId}
+          player={player}
+          onPress={onPlayerPress}
+          reputationDisplay={reputationDisplayFor(player)}
+          showActivity={false}
+        />
+      ))}
+    </View>
+  );
+};
+
 // =============================================================================
 
 export const TournamentDetail: React.FC = () => {
@@ -1080,6 +1107,19 @@ export const TournamentDetail: React.FC = () => {
     }
     return rows;
   }, [registrations, participantById, canRemoveRegistrants]);
+
+  // Organizer-only: players invited via the in-app picker who haven't accepted
+  // yet (status pending + invited_by). Shown read-only in the Players tab.
+  const invitedPendingRows = useMemo<PendingRequestRow[]>(() => {
+    if (!isOrganizer) return [];
+    const rows: PendingRequestRow[] = [];
+    for (const r of registrations) {
+      if (r.status !== 'pending' || !r.invited_by) continue;
+      const player = participantById.get(r.user_id);
+      if (player) rows.push({ player, registrationId: r.id, version: r.version });
+    }
+    return rows;
+  }, [registrations, participantById, isOrganizer]);
 
   const handleRemovePress = useCallback((player: PlayerSearchResult) => {
     lightHaptic();
@@ -2144,6 +2184,12 @@ export const TournamentDetail: React.FC = () => {
               onPlayerPress={handlePlayerPress}
               onApprove={handleApprovePress}
               onDecline={handleRemovePress}
+              colors={colors}
+              t={t}
+            />
+            <InvitedSection
+              rows={invitedPendingRows}
+              onPlayerPress={handlePlayerPress}
               colors={colors}
               t={t}
             />
