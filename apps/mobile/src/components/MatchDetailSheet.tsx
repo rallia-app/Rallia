@@ -5701,7 +5701,7 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         title={t('matchActions.cancelInviteConfirmTitle')}
         message={t('matchActions.cancelInviteConfirmMessage')}
         confirmLabel={t('matchActions.cancelInvite')}
-        cancelLabel={t('common.cancel')}
+        cancelLabel={t('common.goBack')}
         destructive
         isLoading={isCancellingInvite}
       />
