@@ -24,6 +24,7 @@ import {
   Image,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -60,6 +61,7 @@ import {
   useReopenTournamentRegistration,
   useRegisterForTournament,
   useAcceptTournamentInvite,
+  useRevokeTournamentInvite,
   useWithdrawFromTournament,
   useRemoveTournamentRegistration,
   useApproveTournamentRegistration,
@@ -604,22 +606,33 @@ const PendingRequestsSection: React.FC<{
 const InvitedSection: React.FC<{
   rows: PendingRequestRow[];
   onPlayerPress: (player: PlayerSearchResult) => void;
+  onRevoke: (row: PendingRequestRow) => void;
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
-}> = ({ rows, onPlayerPress, colors, t }) => {
+}> = ({ rows, onPlayerPress, onRevoke, colors, t }) => {
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
       <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
         {t('tournamentDetail.dashboard.invited.title', { count: String(rows.length) })}
       </Text>
-      {rows.map(({ player, registrationId }) => (
+      {rows.map(row => (
         <PlayerCard
-          key={registrationId}
-          player={player}
+          key={row.registrationId}
+          player={row.player}
           onPress={onPlayerPress}
-          reputationDisplay={reputationDisplayFor(player)}
+          reputationDisplay={reputationDisplayFor(row.player)}
           showActivity={false}
+          trailingActions={[
+            {
+              icon: 'close-circle',
+              color: colors.danger,
+              accessibilityLabel: t('tournamentDetail.dashboard.invited.revokeLabel', {
+                name: getHumanName(row.player, ''),
+              }),
+              onPress: () => onRevoke(row),
+            },
+          ]}
         />
       ))}
     </View>
@@ -786,6 +799,10 @@ export const TournamentDetail: React.FC = () => {
   const acceptInvite = useAcceptTournamentInvite({
     onSuccess: () => successHaptic(),
     onError: e => showError(e.message, 'tournamentDetail.errors.acceptInviteFailed'),
+  });
+  const revokeInvite = useRevokeTournamentInvite({
+    onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.revokeInviteFailed'),
   });
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -1125,6 +1142,34 @@ export const TournamentDetail: React.FC = () => {
     lightHaptic();
     setRemoveTarget(player);
   }, []);
+
+  const handleRevokeInvite = useCallback(
+    (row: PendingRequestRow) => {
+      if (!tournament) return;
+      lightHaptic();
+      Alert.alert(
+        t('tournamentDetail.dashboard.invited.revokeConfirmTitle'),
+        t('tournamentDetail.dashboard.invited.revokeConfirmMessage').replace(
+          '{name}',
+          getHumanName(row.player, '')
+        ),
+        [
+          { text: t('tournamentDetail.dashboard.invited.revokeCancel'), style: 'cancel' },
+          {
+            text: t('tournamentDetail.dashboard.invited.revokeConfirm'),
+            style: 'destructive',
+            onPress: () =>
+              revokeInvite.mutate({
+                registrationId: row.registrationId,
+                versionWas: row.version,
+                tournamentId: tournament.id,
+              }),
+          },
+        ]
+      );
+    },
+    [tournament, revokeInvite, t]
+  );
 
   // Decline a pending request reuses the remove confirmation modal, but with
   // decline-flavored copy and the disqualify-is-terminal warning.
@@ -2190,6 +2235,7 @@ export const TournamentDetail: React.FC = () => {
             <InvitedSection
               rows={invitedPendingRows}
               onPlayerPress={handlePlayerPress}
+              onRevoke={handleRevokeInvite}
               colors={colors}
               t={t}
             />

@@ -4530,7 +4530,12 @@
         "approvedToast": "Joueur accepté"
       },
       "invited": {
-        "title": "Invités ({count}) · en attente de réponse"
+        "title": "Invités ({count}) · en attente de réponse",
+        "revokeLabel": "Retirer l'invitation à {name}",
+        "revokeConfirmTitle": "Retirer l'invitation?",
+        "revokeConfirmMessage": "{name} ne sera plus invité. Tu peux le réinviter plus tard.",
+        "revokeConfirm": "Retirer",
+        "revokeCancel": "Garder"
       }
     },
     "labels": {
@@ -4736,6 +4741,7 @@
       "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
       "acceptInviteFailed": "Impossible d'accepter l'invitation. Veuillez réessayer.",
       "invitePlayersFailed": "Impossible d'envoyer les invitations. Veuillez réessayer.",
+      "revokeInviteFailed": "Impossible de retirer l'invitation. Veuillez réessayer.",
       "withdrawClosed": "Les inscriptions sont fermées, tu peux plus te retirer.",
       "tournamentFull": "Ce tournoi est complet.",
       "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",
