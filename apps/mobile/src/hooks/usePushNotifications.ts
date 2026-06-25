@@ -153,13 +153,17 @@ function isPhysicalDevice(): boolean {
   return true;
 }
 
-// Configure how notifications are handled when app is foregrounded
+// Configure how notifications are handled when app is foregrounded.
+// shouldSetBadge is false: if the app is open, the user is already seeing the
+// activity, so a foreground-delivered push must not bump the home-screen icon.
+// The badge only matters while backgrounded (set by the OS from the push
+// payload) and is cleared on foreground by useBadgeCountSync.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: false,
   }),
 });
 

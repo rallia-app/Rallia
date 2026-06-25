@@ -4786,6 +4786,7 @@ export type Database = {
           notification_match_requests: boolean | null
           notification_messages: boolean | null
           notification_reminders: boolean | null
+          notifications_seen_at: string
           payouts_mode: string
           playing_hand: Database["public"]["Enums"]["playing_hand"] | null
           postal_code: string | null
@@ -4816,6 +4817,7 @@ export type Database = {
           notification_match_requests?: boolean | null
           notification_messages?: boolean | null
           notification_reminders?: boolean | null
+          notifications_seen_at?: string
           payouts_mode?: string
           playing_hand?: Database["public"]["Enums"]["playing_hand"] | null
           postal_code?: string | null
@@ -4846,6 +4848,7 @@ export type Database = {
           notification_match_requests?: boolean | null
           notification_messages?: boolean | null
           notification_reminders?: boolean | null
+          notifications_seen_at?: string
           payouts_mode?: string
           playing_hand?: Database["public"]["Enums"]["playing_hand"] | null
           postal_code?: string | null
@@ -8495,6 +8498,7 @@ export type Database = {
           bracket_position: number | null
           created_at: string
           id: string
+          invited_by: string | null
           notes: string | null
           partner_user_id: string | null
           partnership_id: string | null
@@ -8514,6 +8518,7 @@ export type Database = {
           bracket_position?: number | null
           created_at?: string
           id?: string
+          invited_by?: string | null
           notes?: string | null
           partner_user_id?: string | null
           partnership_id?: string | null
@@ -8533,6 +8538,7 @@ export type Database = {
           bracket_position?: number | null
           created_at?: string
           id?: string
+          invited_by?: string | null
           notes?: string | null
           partner_user_id?: string | null
           partnership_id?: string | null
@@ -8550,6 +8556,13 @@ export type Database = {
           {
             foreignKeyName: "tournament_registrations_approved_by_fkey"
             columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_registrations_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
@@ -10875,6 +10888,7 @@ export type Database = {
         Args: { p_conversation_id: string; p_reader_id: string }
         Returns: undefined
       }
+      mark_notifications_seen: { Args: never; Returns: undefined }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }
         Returns: number
@@ -11683,6 +11697,35 @@ export type Database = {
         }
         Returns: string
       }
+      tournament_accept_invite: {
+        Args: { p_partner_id?: string; p_tournament_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          bracket_position: number | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          notes: string | null
+          partner_user_id: string | null
+          partnership_id: string | null
+          registered_at: string
+          seed_rank: number | null
+          self_declared_rank: number | null
+          status: Database["public"]["Enums"]["registration_status"]
+          tournament_id: string
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_registrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_approve_registration: {
         Args: { p_registration_id: string; p_version_was: number }
         Returns: {
@@ -11691,6 +11734,7 @@ export type Database = {
           bracket_position: number | null
           created_at: string
           id: string
+          invited_by: string | null
           notes: string | null
           partner_user_id: string | null
           partnership_id: string | null
@@ -12025,6 +12069,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_invite_players: {
+        Args: { p_tournament_id: string; p_user_ids: string[] }
+        Returns: number
+      }
       tournament_invite_reset: {
         Args: { p_tournament_id: string }
         Returns: {
@@ -12058,6 +12106,7 @@ export type Database = {
           bracket_position: number | null
           created_at: string
           id: string
+          invited_by: string | null
           notes: string | null
           partner_user_id: string | null
           partnership_id: string | null
@@ -12173,6 +12222,7 @@ export type Database = {
           bracket_position: number | null
           created_at: string
           id: string
+          invited_by: string | null
           notes: string | null
           partner_user_id: string | null
           partnership_id: string | null
@@ -12201,6 +12251,7 @@ export type Database = {
           bracket_position: number | null
           created_at: string
           id: string
+          invited_by: string | null
           notes: string | null
           partner_user_id: string | null
           partnership_id: string | null
@@ -12329,6 +12380,7 @@ export type Database = {
           bracket_position: number | null
           created_at: string
           id: string
+          invited_by: string | null
           notes: string | null
           partner_user_id: string | null
           partnership_id: string | null
@@ -12680,6 +12732,7 @@ export type Database = {
         | "tournament_completed"
         | "session_published"
         | "season_closed"
+        | "tournament_invitation"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       organization_nature_enum: "public" | "private"
       organization_type:
@@ -13330,6 +13383,7 @@ export const Constants = {
         "tournament_completed",
         "session_published",
         "season_closed",
+        "tournament_invitation",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       organization_nature_enum: ["public", "private"],

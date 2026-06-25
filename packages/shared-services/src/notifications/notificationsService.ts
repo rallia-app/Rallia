@@ -150,6 +150,21 @@ export async function markAsRead(notificationId: string): Promise<Notification> 
 }
 
 /**
+ * Advance the app-icon badge "seen" cursor to now for the current user.
+ *
+ * Drives the home-screen badge (notifications since `player.notifications_seen_at`),
+ * which the client clears on every app foreground. Distinct from `markAllAsRead`,
+ * which sets per-item `read_at` (the in-app bell/bold rows).
+ */
+export async function markNotificationsSeen(): Promise<void> {
+  const { error } = await supabase.rpc('mark_notifications_seen');
+
+  if (error) {
+    throw new Error(`Failed to mark notifications seen: ${error.message}`);
+  }
+}
+
+/**
  * Mark all notifications as read for a user
  */
 export async function markAllAsRead(userId: string): Promise<void> {
@@ -204,6 +219,7 @@ export const notificationsService = {
   getUnreadCount,
   getUnreadCountForSport,
   getUnreadCountBySport,
+  markNotificationsSeen,
   markAsRead,
   markAllAsRead,
   deleteNotification,

@@ -225,18 +225,36 @@ function hasValidContact(
 }
 
 /**
- * Get unread notification count for a user (for push badge)
+ * Get the "unseen" notification count for a user (for the push badge).
+ *
+ * Canonical app-icon badge model: count notifications that arrived since the
+ * user last opened the app (`player.notifications_seen_at`), not lifetime
+ * unread. The client resets the cursor (and clears the icon) on every
+ * foreground, so this naturally returns to 0 once the user opens the app.
  */
-async function getUnreadNotificationCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
+async function getUnseenNotificationCount(userId: string): Promise<number> {
+  const { data: player } = await supabase
+    .from('player')
+    .select('notifications_seen_at')
+    .eq('id', userId)
+    .maybeSingle();
+  const seenAt = player?.notifications_seen_at ?? null;
+
+  let query = supabase
     .from('notification')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .is('read_at', null)
+    .is('organization_id', null)
     .or('expires_at.is.null,expires_at.gt.now()');
 
+  if (seenAt) {
+    query = query.gt('created_at', seenAt);
+  }
+
+  const { count, error } = await query;
+
   if (error) {
-    console.error('Failed to fetch unread count:', error);
+    console.error('Failed to fetch unseen count:', error);
     return 0;
   }
 
@@ -361,10 +379,10 @@ async function handleNotification(notification: NotificationRecord): Promise<voi
       } else {
         // Actually send the notification
         console.log(`Sending via ${channel}...`);
-        // For push channel, fetch unread count for badge
+        // For push channel, fetch the unseen count for the badge
         let badgeCount: number | undefined;
         if (channel === 'push') {
-          badgeCount = await getUnreadNotificationCount(userId);
+          badgeCount = await getUnseenNotificationCount(userId);
         }
         const result = await sendViaChannel(
           channel,
