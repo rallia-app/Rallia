@@ -4574,7 +4574,6 @@ export const MatchDetailSheet: React.FC = () => {
                             <Text
                               size="xs"
                               color={colors.textMuted}
-                              numberOfLines={3}
                               style={styles.timeSuggestionNote}
                             >
                               {suggestion.note}
