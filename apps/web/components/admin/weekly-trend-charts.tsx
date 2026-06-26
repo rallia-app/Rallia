@@ -29,9 +29,10 @@ const AXIS_PROPS = {
 } as const;
 
 /**
- * Weekly conversion trend: a faint volume series (bars, left axis) behind one or
- * more rate lines as % of that volume (right axis, 0–100). Slopes read as the
- * week-over-week trend; the gap between nested lines is the per-stage drop-off.
+ * Per-bucket conversion trend (week or day): a faint volume series (bars, left
+ * axis) behind one or more rate lines as % of that volume (right axis, 0–100).
+ * Slopes read as the bucket-over-bucket trend; the gap between nested lines is
+ * the per-stage drop-off.
  */
 export function RateTrendChart({
   data,
@@ -39,19 +40,21 @@ export function RateTrendChart({
   volumeLabel,
   series,
   height = 230,
+  xKey = 'week',
 }: {
   data: TrendPoint[];
   volumeKey: string;
   volumeLabel: string;
   series: { key: string; label: string; color: string; dash?: string }[];
   height?: number;
+  xKey?: string;
 }) {
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-          <XAxis dataKey="week" {...AXIS_PROPS} />
+          <XAxis dataKey={xKey} {...AXIS_PROPS} />
           <YAxis yAxisId="left" allowDecimals={false} width={32} {...AXIS_PROPS} />
           <YAxis
             yAxisId="right"
@@ -102,17 +105,19 @@ export function StackedFunnelChart({
   data,
   segments,
   height = 230,
+  xKey = 'week',
 }: {
   data: TrendPoint[];
   segments: { key: string; label: string; color: string; opacity?: number }[];
   height?: number;
+  xKey?: string;
 }) {
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-          <XAxis dataKey="week" {...AXIS_PROPS} />
+          <XAxis dataKey={xKey} {...AXIS_PROPS} />
           <YAxis allowDecimals={false} width={32} {...AXIS_PROPS} />
           <Tooltip contentStyle={TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ fontSize: 11 }} />

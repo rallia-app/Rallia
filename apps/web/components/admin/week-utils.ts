@@ -20,6 +20,16 @@ export function daysCoveringLastNWeeks(n: number): number {
   return ((new Date().getUTCDay() + 6) % 7) + (n - 1) * 7;
 }
 
+/** ISO dates (YYYY-MM-DD) of the last n calendar days, oldest first, ending today (UTC). */
+export function lastNDayStarts(n: number): string[] {
+  const today = new Date().toISOString().split('T')[0];
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - (n - 1 - i));
+    return d.toISOString().split('T')[0];
+  });
+}
+
 export function formatWeekLabel(weekStart: string): string {
   const start = new Date(`${weekStart}T00:00:00`);
   const end = new Date(start);
@@ -31,6 +41,14 @@ export function formatWeekLabel(weekStart: string): string {
 /** Compact axis label for an ISO week start (the Monday, e.g. "May 5"). */
 export function shortWeekLabel(weekStart: string): string {
   return new Date(`${weekStart}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/** Compact axis label for a single ISO day (e.g. "May 5"). */
+export function shortDayLabel(dayStart: string): string {
+  return new Date(`${dayStart}T00:00:00`).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
   });

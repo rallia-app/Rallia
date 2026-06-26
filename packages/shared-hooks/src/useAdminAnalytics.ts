@@ -1269,7 +1269,7 @@ export function useAutoInviteFunnel(
   days: number = 14,
   settleHours: number = 48,
   isAuto: boolean | null = true,
-  bucket: 'total' | 'week' = 'total'
+  bucket: 'total' | 'week' | 'day' = 'total'
 ): {
   data: AutoInviteFunnelPoint[];
   loading: boolean;
