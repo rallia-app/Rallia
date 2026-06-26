@@ -451,6 +451,9 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   tournament_completed: 'normal',
   session_published: 'normal',
   season_closed: 'normal',
+  league_invitation: 'high',
+  league_member_request: 'normal',
+  league_member_approved: 'high',
 };
 
 /**
@@ -552,6 +555,9 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_completed: 'Tournament complete',
   session_published: 'Session schedule published',
   season_closed: 'Season closed',
+  league_invitation: 'League invitation',
+  league_member_request: 'New join request',
+  league_member_approved: "You're in",
 };
 
 /**
@@ -682,6 +688,9 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_completed: '{tournamentName} has wrapped up. Champion: {championName}.',
   session_published: 'The schedule for {sessionName} is now available.',
   season_closed: '{seasonName} has ended. Final standings are in.',
+  league_invitation: 'You have a new league invitation.',
+  league_member_request: 'A player wants to join your league.',
+  league_member_approved: 'Your league membership was approved.',
 };
 
 /**

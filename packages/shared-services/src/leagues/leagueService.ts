@@ -450,3 +450,36 @@ export async function listSeasonRankings(seasonId: string): Promise<SeasonRankin
   const profiles = await getProfilesByIds(rows.map(r => r.user_id));
   return rows.map(r => ({ ...r, profile: profiles[r.user_id] ?? null }));
 }
+
+// ---------------------------------------------------------------------------
+// Member invites (intra-app)
+// ---------------------------------------------------------------------------
+
+export async function inviteLeagueMembers(leagueId: string, userIds: string[]): Promise<number> {
+  const { data, error } = await supabase.rpc('league_invite_members', {
+    p_league_id: leagueId,
+    p_user_ids: userIds,
+  });
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
+export async function acceptLeagueInvite(leagueId: string): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_accept_invite', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+export async function revokeLeagueInvite(
+  memberId: string,
+  versionWas: number
+): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_revoke_invite', {
+    p_member_id: memberId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}

@@ -412,9 +412,10 @@ BEGIN
     SELECT * INTO v_session FROM session_publish(v_session.id, NULL, v_session.version);
 
     -- session_published notifications fan out to the 4 active members
+    -- 3 members notified; the organizer who published is excluded (skip-actor).
     SELECT count(*) INTO v_pub_notifs FROM notification
       WHERE type='session_published' AND target_id=v_session.id;
-    ASSERT v_pub_notifs = 4, format('expected 4 session_published notifs, got %s', v_pub_notifs);
+    ASSERT v_pub_notifs = 3, format('expected 3 session_published notifs, got %s', v_pub_notifs);
 
     -- org + 3 members confirm (4 -> 2 matches)
     PERFORM session_confirm_presence(v_session.id, 'confirmed');
@@ -444,10 +445,66 @@ BEGIN
     SELECT * INTO v_closed FROM season_close(v_season.id, v_season.version);
     ASSERT v_closed.status='closed', 'season should be closed';
     ASSERT jsonb_array_length(v_closed.final_standings)=4, 'final_standings should have 4 entries';
-    ASSERT (SELECT count(*) FROM notification WHERE type='season_closed' AND target_id=v_season.id)=4,
-           'expected 4 season_closed notifs';
+    -- 3 ranked members notified; the organizer who closed is excluded.
+    ASSERT (SELECT count(*) FROM notification WHERE type='season_closed' AND target_id=v_season.id)=3,
+           'expected 3 season_closed notifs';
 
     RAISE NOTICE 'PASS 7: full season cycle (score -> recalc -> close + notifications)';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 8. intra-app invite: invite -> notify -> accept; revoke; self-request ->
+--    organizer notified; approve -> member notified
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_players uuid[]; v_org uuid; v_p1 uuid; v_p2 uuid; v_p3 uuid;
+    v_league leagues; v_n int; v_ver int; v_mid uuid;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name='tennis';
+    SELECT array_agg(player_id) INTO v_players FROM (
+        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true
+        ORDER BY player_id LIMIT 4) s;
+    -- player[4] has organized no league in earlier passes (rate-limit safe).
+    v_org:=v_players[4]; v_p1:=v_players[1]; v_p2:=v_players[2]; v_p3:=v_players[3];
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_league FROM league_create(p_name=>'Invite Cycle', p_sport_id=>v_sport,
+        p_visibility=>'private', p_join_mode=>'approval');
+
+    -- invite p1 + p2 (pending, invited_by set, invitation notif each)
+    SELECT league_invite_members(v_league.id, ARRAY[v_p1, v_p2]) INTO v_n;
+    ASSERT v_n=2, format('expected 2 invited, got %s', v_n);
+    ASSERT (SELECT count(*) FROM notification WHERE type='league_invitation' AND target_id=v_league.id)=2,
+           'expected 2 invitation notifs';
+
+    -- p1 accepts -> active, its invitation notif cleared
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_p1::text)::text, true);
+    PERFORM league_accept_invite(v_league.id);
+    ASSERT (SELECT status FROM league_members WHERE league_id=v_league.id AND user_id=v_p1)='active',
+           'p1 should be active';
+    ASSERT (SELECT count(*) FROM notification WHERE type='league_invitation' AND target_id=v_league.id AND user_id=v_p1)=0,
+           'p1 invitation notif cleared';
+
+    -- org revokes p2 -> inactive, notif cleared
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT id, version INTO v_mid, v_ver FROM league_members WHERE league_id=v_league.id AND user_id=v_p2;
+    PERFORM league_revoke_invite(v_mid, v_ver);
+    ASSERT (SELECT status FROM league_members WHERE league_id=v_league.id AND user_id=v_p2)='inactive',
+           'p2 should be inactive after revoke';
+
+    -- p3 self-requests -> organizer notified; approve -> p3 notified
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_p3::text)::text, true);
+    PERFORM league_join(v_league.id);
+    ASSERT (SELECT count(*) FROM notification WHERE type='league_member_request' AND target_id=v_league.id AND user_id=v_org)=1,
+           'organizer notified of join request';
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT id, version INTO v_mid, v_ver FROM league_members WHERE league_id=v_league.id AND user_id=v_p3;
+    PERFORM league_approve_member(v_mid, v_ver);
+    ASSERT (SELECT count(*) FROM notification WHERE type='league_member_approved' AND target_id=v_league.id AND user_id=v_p3)=1,
+           'approved member notified';
+
+    RAISE NOTICE 'PASS 8: intra-app invite (invite/accept/revoke + request/approve notifications)';
 END $$;
 
 ROLLBACK;

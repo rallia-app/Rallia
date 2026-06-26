@@ -2389,6 +2389,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           id: string
+          invited_by: string | null
           joined_at: string
           league_id: string
           left_at: string | null
@@ -2406,6 +2407,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: string
+          invited_by?: string | null
           joined_at?: string
           league_id: string
           left_at?: string | null
@@ -2423,6 +2425,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: string
+          invited_by?: string | null
           joined_at?: string
           league_id?: string
           left_at?: string | null
@@ -2439,6 +2442,13 @@ export type Database = {
           {
             foreignKeyName: "league_members_approved_by_fkey"
             columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_members_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
@@ -10688,6 +10698,33 @@ export type Database = {
         Args: { p_invite_code: string; p_player_id: string }
         Returns: Json
       }
+      league_accept_invite: {
+        Args: { p_league_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_approve_member: {
         Args: { p_member_id: string; p_version_was: number }
         Returns: {
@@ -10695,6 +10732,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           id: string
+          invited_by: string | null
           joined_at: string
           league_id: string
           left_at: string | null
@@ -10761,6 +10799,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_invite_members: {
+        Args: { p_league_id: string; p_user_ids: string[] }
+        Returns: number
+      }
       league_is_public: { Args: { p_league_id: string }; Returns: boolean }
       league_join: {
         Args: { p_league_id: string }
@@ -10769,6 +10811,34 @@ export type Database = {
           approved_by: string | null
           created_at: string
           id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_revoke_invite: {
+        Args: { p_member_id: string; p_version_was: number }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
           joined_at: string
           league_id: string
           left_at: string | null
@@ -12837,6 +12907,9 @@ export type Database = {
         | "session_published"
         | "season_closed"
         | "tournament_invitation"
+        | "league_invitation"
+        | "league_member_request"
+        | "league_member_approved"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       organization_nature_enum: "public" | "private"
       organization_type:
@@ -13488,6 +13561,9 @@ export const Constants = {
         "session_published",
         "season_closed",
         "tournament_invitation",
+        "league_invitation",
+        "league_member_request",
+        "league_member_approved",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       organization_nature_enum: ["public", "private"],

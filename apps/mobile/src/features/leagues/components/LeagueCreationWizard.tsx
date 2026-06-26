@@ -365,6 +365,14 @@ const VisibilityStep: React.FC<{
           onPress={() => setJoinMode('approval')}
           colors={colors}
         />
+        <OptionCard
+          icon="mail-outline"
+          title={t('leagueCreation.fields.joinModeInviteOnly' as TranslationKey)}
+          description={t('leagueCreation.fields.joinModeInviteOnlyDescription' as TranslationKey)}
+          selected={joinMode === 'invite_only'}
+          onPress={() => setJoinMode('invite_only')}
+          colors={colors}
+        />
       </View>
     </View>
   </SheetScrollView>

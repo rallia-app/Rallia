@@ -44,6 +44,8 @@ import {
   useLeagueSeasons,
   useJoinLeague,
   useApproveLeagueMember,
+  useAcceptLeagueInvite,
+  useRevokeLeagueInvite,
   useCreateSeason,
   useOpenSeason,
   useCloseSeason,
@@ -53,6 +55,7 @@ import {
   usePublishSession,
   useProfilesByIds,
 } from '@rallia/shared-hooks';
+import { SheetManager } from 'react-native-actions-sheet';
 import { isLeagueOrganizer } from '@rallia/shared-services';
 import type { LeagueMemberWithProfile, PlayerSearchResult } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
@@ -409,6 +412,41 @@ const PendingMembersSection: React.FC<{
   );
 };
 
+const InvitedMembersSection: React.FC<{
+  rows: PendingMemberRow[];
+  onPlayerPress: (player: PlayerSearchResult) => void;
+  onRevoke: (memberId: string, version: number) => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ rows, onPlayerPress, onRevoke, colors, t }) => {
+  if (rows.length === 0) return null;
+  return (
+    <View style={styles.pendingSection}>
+      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
+        {t('leagueDetail.dashboard.invited.title', { count: String(rows.length) })}
+      </Text>
+      {rows.map(({ player, memberId, version }) => (
+        <PlayerCard
+          key={memberId}
+          player={player}
+          onPress={onPlayerPress}
+          showActivity={false}
+          trailingActions={[
+            {
+              icon: 'close-circle',
+              color: colors.danger,
+              accessibilityLabel: t('leagueDetail.dashboard.invited.revokeLabel', {
+                name: getHumanName(player, ''),
+              }),
+              onPress: () => onRevoke(memberId, version),
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+};
+
 const MembersSection: React.FC<{
   players: PlayerSearchResult[];
   onPlayerPress: (player: PlayerSearchResult) => void;
@@ -566,6 +604,30 @@ export const LeagueDetail: React.FC = () => {
     },
   });
 
+  const { mutate: acceptInvite, isPending: isAccepting } = useAcceptLeagueInvite(leagueId, {
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('leagueDetail.inviteAccepted'));
+      invalidateAll();
+    },
+    onError: e => {
+      warningHaptic();
+      toast.error(e.message || t('leagueDetail.errors.generic'));
+    },
+  });
+
+  const { mutate: revokeInvite, isPending: isRevoking } = useRevokeLeagueInvite(leagueId, {
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('leagueDetail.inviteRevoked'));
+      invalidateAll();
+    },
+    onError: e => {
+      warningHaptic();
+      toast.error(e.message || t('leagueDetail.errors.generic'));
+    },
+  });
+
   const { mutate: createSeason, isPending: isCreatingSeason } = useCreateSeason(leagueId, {
     onSuccess: season => {
       successHaptic();
@@ -597,19 +659,40 @@ export const LeagueDetail: React.FC = () => {
     },
   });
 
-  const pendingMembers = useMemo(() => members.filter(m => m.status === 'pending'), [members]);
+  // Pending self-requests (await organizer approval) vs organizer invites
+  // (await the player accepting).
+  const pendingRequests = useMemo(
+    () => members.filter(m => m.status === 'pending' && !m.invited_by),
+    [members]
+  );
+  const invitedMembers = useMemo(
+    () => members.filter(m => m.status === 'pending' && !!m.invited_by),
+    [members]
+  );
   const activeMembers = useMemo(() => members.filter(m => m.status === 'active'), [members]);
 
   const pendingMemberRows = useMemo<PendingMemberRow[]>(
     () =>
       isOrganizer
-        ? pendingMembers.map(m => ({
+        ? pendingRequests.map(m => ({
             player: memberToPlayer(m),
             memberId: m.id,
             version: m.version,
           }))
         : [],
-    [pendingMembers, isOrganizer]
+    [pendingRequests, isOrganizer]
+  );
+
+  const invitedMemberRows = useMemo<PendingMemberRow[]>(
+    () =>
+      isOrganizer
+        ? invitedMembers.map(m => ({
+            player: memberToPlayer(m),
+            memberId: m.id,
+            version: m.version,
+          }))
+        : [],
+    [invitedMembers, isOrganizer]
   );
 
   const activeMemberPlayers = useMemo(() => activeMembers.map(memberToPlayer), [activeMembers]);
@@ -777,6 +860,31 @@ export const LeagueDetail: React.FC = () => {
     },
     [approveMember, isApproving]
   );
+
+  const handleRevokePress = useCallback(
+    (memberId: string, version: number) => {
+      if (isRevoking) return;
+      warningHaptic();
+      revokeInvite({ memberId, versionWas: version });
+    },
+    [revokeInvite, isRevoking]
+  );
+
+  const handleInvitePress = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    const exclude = members
+      .filter(m => m.status === 'active' || m.status === 'pending' || m.status === 'suspended')
+      .map(m => m.user_id);
+    void SheetManager.show('league-invite-players', {
+      payload: {
+        leagueId,
+        leagueName: league.name,
+        sportId: league.sport_id,
+        excludeUserIds: exclude,
+      },
+    });
+  }, [league, members, leagueId]);
 
   const handleCreateSeason = useCallback(() => {
     const name = seasonName.trim();
@@ -1008,7 +1116,23 @@ export const LeagueDetail: React.FC = () => {
               ) : null}
             </View>
 
-            {!isOrganizer && myMembership?.status === 'pending' && (
+            {!isOrganizer && myMembership?.status === 'pending' && myMembership.invited_by && (
+              <TouchableOpacity
+                onPress={() => {
+                  lightHaptic();
+                  acceptInvite();
+                }}
+                disabled={isAccepting}
+                style={[styles.heroRegistered, { backgroundColor: colors.primary }]}
+                testID="cta-accept-invite"
+              >
+                <Ionicons name="mail-open-outline" size={18} color="#ffffff" />
+                <Text size="sm" weight="semibold" color="#ffffff">
+                  {isAccepting ? t('leagueDetail.accepting') : t('leagueDetail.acceptInvite')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {!isOrganizer && myMembership?.status === 'pending' && !myMembership.invited_by && (
               <View
                 style={[styles.heroRegistered, { backgroundColor: colors.secondaryHighlightBg }]}
               >
@@ -1266,10 +1390,33 @@ export const LeagueDetail: React.FC = () => {
         {/* Members */}
         {currentTabKey === 'members' && (
           <View style={styles.playersTabContent}>
+            {isOrganizer && (
+              <TouchableOpacity
+                onPress={handleInvitePress}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                testID="cta-invite-players"
+              >
+                <Ionicons name="person-add-outline" size={20} color="#ffffff" />
+                <Text size="base" weight="semibold" color="#ffffff">
+                  {t('leagueDetail.invitePlayers.button')}
+                </Text>
+              </TouchableOpacity>
+            )}
             <PendingMembersSection
               rows={pendingMemberRows}
               onPlayerPress={handlePlayerPress}
               onApprove={handleApprovePress}
+              colors={colors}
+              t={t}
+            />
+            <InvitedMembersSection
+              rows={invitedMemberRows}
+              onPlayerPress={handlePlayerPress}
+              onRevoke={handleRevokePress}
               colors={colors}
               t={t}
             />
@@ -1896,6 +2043,10 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
   },
   buttonDisabled: { opacity: 0.6 },
+  inviteButton: {
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+  },
   seasonRow: {
     flexDirection: 'row',
     alignItems: 'center',

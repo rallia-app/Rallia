@@ -4154,6 +4154,23 @@
     "membershipPending": "Votre adhésion est en attente d'approbation",
     "memberActive": "Vous êtes membre actif",
     "memberApproved": "Membre approuvé",
+    "inviteAccepted": "Invitation acceptée — tu embarques!",
+    "inviteRevoked": "Invitation retirée",
+    "acceptInvite": "Accepter l'invitation",
+    "accepting": "Acceptation...",
+    "invitePlayers": {
+      "button": "Inviter des joueurs",
+      "title": "Inviter des joueurs",
+      "searchPlaceholder": "Rechercher des joueurs...",
+      "searchHint": "Tape au moins 2 lettres pour rechercher",
+      "noResults": "Aucun joueur trouvé",
+      "sending": "Envoi...",
+      "sendCta": "Inviter {count}",
+      "sendCtaEmpty": "Sélectionne des joueurs à inviter",
+      "sentToast": "{count} invitation(s) envoyée(s)",
+      "noneToast": "Aucune nouvelle invitation envoyée",
+      "failed": "Impossible d'envoyer les invitations. Réessaie."
+    },
     "seasonCreated": "Saison créée",
     "seasonOpened": "La saison est maintenant ouverte",
     "seasonClosed": "Saison fermée — le classement final est prêt",
@@ -4210,6 +4227,10 @@
       "pendingRequests": {
         "title": "En attente ({count})",
         "approveLabel": "Approuver {name}"
+      },
+      "invited": {
+        "title": "Invités · en attente de réponse ({count})",
+        "revokeLabel": "Retirer l'invitation de {name}"
       },
       "members": {
         "title": "Membres actifs"

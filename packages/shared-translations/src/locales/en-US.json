@@ -4154,6 +4154,23 @@
     "membershipPending": "Your membership is pending approval",
     "memberActive": "You're an active member",
     "memberApproved": "Member approved",
+    "inviteAccepted": "Invitation accepted — you're in!",
+    "inviteRevoked": "Invitation revoked",
+    "acceptInvite": "Accept invitation",
+    "accepting": "Accepting...",
+    "invitePlayers": {
+      "button": "Invite players",
+      "title": "Invite players",
+      "searchPlaceholder": "Search players...",
+      "searchHint": "Type at least 2 letters to search",
+      "noResults": "No players found",
+      "sending": "Sending...",
+      "sendCta": "Invite {count}",
+      "sendCtaEmpty": "Select players to invite",
+      "sentToast": "Sent {count} invitation(s)",
+      "noneToast": "No new invitations sent",
+      "failed": "Couldn't send invitations. Try again."
+    },
     "seasonCreated": "Season created",
     "seasonOpened": "Season is now open",
     "seasonClosed": "Season closed — final standings are in",
@@ -4210,6 +4227,10 @@
       "pendingRequests": {
         "title": "Pending approval ({count})",
         "approveLabel": "Approve {name}"
+      },
+      "invited": {
+        "title": "Invited · awaiting response ({count})",
+        "revokeLabel": "Revoke invite for {name}"
       },
       "members": {
         "title": "Active members"
