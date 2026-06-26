@@ -3456,7 +3456,7 @@ export async function getMatchQualityAnalytics(
  * `requests*` is the separate self-request → host-approval population.
  */
 export interface AutoInviteFunnelPoint {
-  /** Monday of the ISO-week cohort when bucket='week'; null in 'total' mode. */
+  /** Bucket key: Monday of the ISO week (bucket='week'), the day (bucket='day'); null in 'total' mode. */
   bucketStart: string | null;
   sportId: string;
   sportName: string;
@@ -3486,7 +3486,7 @@ export async function getAutoInviteFunnel(
   endDate: Date,
   settleHours = 48,
   isAuto: boolean | null = true,
-  bucket: 'total' | 'week' = 'total'
+  bucket: 'total' | 'week' | 'day' = 'total'
 ): Promise<AutoInviteFunnelPoint[]> {
   try {
     const { data, error } = await supabase.rpc('get_auto_invite_funnel', {

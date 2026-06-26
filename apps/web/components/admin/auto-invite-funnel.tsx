@@ -4,7 +4,13 @@ import { useAutoInviteFunnel, type AutoInviteFunnelPoint } from '@rallia/shared-
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
-import { daysCoveringLastNWeeks, lastNWeekStarts, shortWeekLabel } from './week-utils';
+import {
+  daysCoveringLastNWeeks,
+  lastNDayStarts,
+  lastNWeekStarts,
+  shortDayLabel,
+  shortWeekLabel,
+} from './week-utils';
 import { RateTrendChart, StackedFunnelChart, type TrendPoint } from './weekly-trend-charts';
 
 import { InsightCardHeader, SegmentedToggle } from '@/components/admin/insight-card';
@@ -17,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const DAY_OPTIONS = [7, 14, 30] as const;
 type DaysWindow = (typeof DAY_OPTIONS)[number];
 
-type FunnelView = 'cumulative' | 'weekly';
+type FunnelView = 'cumulative' | 'weekly' | 'daily';
 
 // Match source the funnel is scoped to. Maps to the RPC's p_is_auto:
 // all -> null, auto -> true, organic -> false.
@@ -34,6 +40,7 @@ const SOURCE_HINT: Record<Source, string> = {
 };
 
 const WEEKS_SHOWN = 6;
+const DAYS_SHOWN = 14;
 
 interface AutoInviteTotals {
   matchesCreated: number;
@@ -122,28 +129,30 @@ export function AutoInviteFunnel() {
   const [days, setDays] = useState<DaysWindow>(14);
   const [source, setSource] = useState<Source>('all');
   const [view, setView] = useState<FunnelView>('weekly');
-  // Weekly view always covers the last 6 ISO weeks, independent of the window.
+  // Weekly covers the last 6 ISO weeks, daily the last 14 days; both independent
+  // of the cumulative window.
   const { data, loading } = useAutoInviteFunnel(
-    view === 'weekly' ? daysCoveringLastNWeeks(WEEKS_SHOWN) : days,
+    view === 'weekly' ? daysCoveringLastNWeeks(WEEKS_SHOWN) : view === 'daily' ? DAYS_SHOWN : days,
     48,
     source === 'all' ? null : source === 'auto',
-    view === 'weekly' ? 'week' : 'total'
+    view === 'weekly' ? 'week' : view === 'daily' ? 'day' : 'total'
   );
   const totals = useMemo(() => aggregate(data), [data]);
-  const weekly = useMemo(() => {
-    // Exactly the last WEEKS_SHOWN tiles, zero-filled; rows outside are dropped.
+  const trend = useMemo(() => {
+    // Exactly the last N tiles, zero-filled; rows outside are dropped.
+    const starts = view === 'daily' ? lastNDayStarts(DAYS_SHOWN) : lastNWeekStarts(WEEKS_SHOWN);
     const map = new Map<string, AutoInviteFunnelPoint[]>(
-      lastNWeekStarts(WEEKS_SHOWN).map(week => [week, [] as AutoInviteFunnelPoint[]])
+      starts.map(s => [s, [] as AutoInviteFunnelPoint[]])
     );
     for (const row of data) {
       if (!row.bucketStart) continue;
       map.get(row.bucketStart)?.push(row);
     }
-    return Array.from(map.entries()).map(([weekStart, rows]) => ({
-      weekStart,
+    return Array.from(map.entries()).map(([start, rows]) => ({
+      start,
       totals: aggregate(rows),
     }));
-  }, [data]);
+  }, [data, view]);
 
   const reasonRows = useMemo(() => {
     const entries = Object.entries(totals.declineReasons).sort((a, b) => b[1] - a[1]);
@@ -166,7 +175,13 @@ export function AutoInviteFunnel() {
     <Card>
       <InsightCardHeader
         title={t(SOURCE_TITLE[source])}
-        hint={view === 'weekly' ? t('autoInvite.weeklyHint') : t(SOURCE_HINT[source])}
+        hint={
+          view === 'daily'
+            ? t('autoInvite.dailyHint')
+            : view === 'weekly'
+              ? t('autoInvite.weeklyHint')
+              : t(SOURCE_HINT[source])
+        }
         controls={
           <>
             <SegmentedToggle
@@ -182,6 +197,7 @@ export function AutoInviteFunnel() {
               value={view}
               onChange={v => setView(v as FunnelView)}
               options={[
+                { value: 'daily', label: t('matchesTab.viewDaily') },
                 { value: 'weekly', label: t('matchesTab.viewWeekly') },
                 { value: 'cumulative', label: t('matchesTab.viewCumulative') },
               ]}
@@ -243,8 +259,15 @@ export function AutoInviteFunnel() {
               </p>
             )}
 
-            {view === 'weekly' ? (
-              <WeeklyInviteFunnels weeks={weekly} t={t} />
+            {view !== 'cumulative' ? (
+              <TrendInviteFunnels
+                buckets={trend}
+                labelOf={view === 'daily' ? shortDayLabel : shortWeekLabel}
+                progressNote={t(
+                  view === 'daily' ? 'autoInvite.dailyInProgress' : 'matchesTab.weeklyInProgress'
+                )}
+                t={t}
+              />
             ) : (
               <>
                 {/* Response funnel over the settled cohort */}
@@ -371,20 +394,24 @@ const TONE_CLASS: Record<string, string> = {
   muted: 'bg-muted-foreground/40',
 };
 
-function WeeklyInviteFunnels({
-  weeks,
+function TrendInviteFunnels({
+  buckets,
+  labelOf,
+  progressNote,
   t,
 }: {
-  weeks: { weekStart: string; totals: AutoInviteTotals }[];
+  buckets: { start: string; totals: AutoInviteTotals }[];
+  labelOf: (start: string) => string;
+  progressNote: string;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
-  if (weeks.length === 0) {
+  if (buckets.length === 0) {
     return <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>;
   }
-  const points: TrendPoint[] = weeks.map(({ weekStart, totals }) => {
+  const points: TrendPoint[] = buckets.map(({ start, totals }) => {
     const s = totals.invitesSettled;
     return {
-      week: shortWeekLabel(weekStart),
+      bucket: labelOf(start),
       settled: s,
       response: s > 0 ? Math.round((totals.responded / s) * 100) : 0,
       accept: s > 0 ? Math.round((totals.accepted / s) * 100) : 0,
@@ -403,6 +430,7 @@ function WeeklyInviteFunnels({
         </p>
         <RateTrendChart
           data={points}
+          xKey="bucket"
           volumeKey="settled"
           volumeLabel={t('autoInvite.stageEligible')}
           series={[
@@ -417,6 +445,7 @@ function WeeklyInviteFunnels({
         </p>
         <StackedFunnelChart
           data={points}
+          xKey="bucket"
           segments={[
             { key: 'accepted', label: t('autoInvite.catOui'), color: '#10b981' },
             { key: 'declined', label: t('autoInvite.catNon'), color: '#f43f5e' },
@@ -430,7 +459,7 @@ function WeeklyInviteFunnels({
           ]}
         />
       </div>
-      <p className="text-[11px] text-muted-foreground m-0">{t('matchesTab.weeklyInProgress')}</p>
+      <p className="text-[11px] text-muted-foreground m-0">{progressNote}</p>
     </div>
   );
 }

@@ -4,7 +4,14 @@ import { useMatchQualityAnalytics, type MatchQualityPoint } from '@rallia/shared
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
-import { daysCoveringLastNWeeks, lastNWeekStarts, shortWeekLabel, weekStartOf } from './week-utils';
+import {
+  daysCoveringLastNWeeks,
+  lastNDayStarts,
+  lastNWeekStarts,
+  shortDayLabel,
+  shortWeekLabel,
+  weekStartOf,
+} from './week-utils';
 import { RateTrendChart, StackedFunnelChart, type TrendPoint } from './weekly-trend-charts';
 
 import { AutoInviteFunnel } from '@/components/admin/auto-invite-funnel';
@@ -34,9 +41,16 @@ const SEGMENT_LABEL: Record<Segment, string> = {
   organic: 'matchesTab.sourceOrganic',
 };
 
-type FunnelView = 'cumulative' | 'weekly';
+type FunnelView = 'cumulative' | 'weekly' | 'daily';
+
+const VIEW_OPTIONS = (t: (key: string) => string): { value: FunnelView; label: string }[] => [
+  { value: 'daily', label: t('matchesTab.viewDaily') },
+  { value: 'weekly', label: t('matchesTab.viewWeekly') },
+  { value: 'cumulative', label: t('matchesTab.viewCumulative') },
+];
 
 const WEEKS_SHOWN = 6;
+const DAYS_SHOWN = 14;
 
 export function MatchesTab() {
   const t = useTranslations('admin.analytics');
@@ -77,8 +91,9 @@ function LifecycleFunnelCard() {
   const [segment, setSegment] = useState<Segment>('all');
   const [funnelView, setFunnelView] = useState<FunnelView>('weekly');
 
-  // Cumulative is window-bound; weekly always covers the last 6 ISO weeks
-  // (through Sunday so the current week shows). Only the active view fetches.
+  // Cumulative is window-bound; weekly covers the last 6 ISO weeks (through Sunday
+  // so the current week shows); daily covers the last 14 days. Only the active
+  // view fetches.
   const { data, loading } = useMatchQualityAnalytics(days, false, funnelView === 'cumulative');
   const { totals, autoTotals, nonAutoTotals } = useMemo(() => aggregate(data), [data]);
   const { data: weeklyData, loading: weeklyLoading } = useMatchQualityAnalytics(
@@ -86,7 +101,18 @@ function LifecycleFunnelCard() {
     true,
     funnelView === 'weekly'
   );
-  const weeklyFunnels = useMemo(() => aggregateWeekly(weeklyData, segment), [weeklyData, segment]);
+  const { data: dailyData, loading: dailyLoading } = useMatchQualityAnalytics(
+    DAYS_SHOWN,
+    false,
+    funnelView === 'daily'
+  );
+  const trendBuckets = useMemo(
+    () =>
+      funnelView === 'daily'
+        ? aggregateBuckets(dailyData, segment, lastNDayStarts(DAYS_SHOWN), d => d)
+        : aggregateBuckets(weeklyData, segment, lastNWeekStarts(WEEKS_SHOWN), weekStartOf),
+    [funnelView, dailyData, weeklyData, segment]
+  );
 
   const funnelTotals =
     segment === 'auto' ? autoTotals : segment === 'organic' ? nonAutoTotals : totals;
@@ -95,11 +121,20 @@ function LifecycleFunnelCard() {
       ? (funnelTotals.feedbackPresent / funnelTotals.feedbackExpected) * 100
       : null;
 
+  const isTrend = funnelView !== 'cumulative';
+  const trendLoading = funnelView === 'daily' ? dailyLoading : weeklyLoading;
+  const hintKey =
+    funnelView === 'daily'
+      ? 'matchesTab.dailyFunnelHint'
+      : funnelView === 'weekly'
+        ? 'matchesTab.weeklyFunnelHint'
+        : 'matchesTab.funnelHint';
+
   return (
     <Card>
       <InsightCardHeader
         title={t('matchesTab.funnelTitle')}
-        hint={t(funnelView === 'weekly' ? 'matchesTab.weeklyFunnelHint' : 'matchesTab.funnelHint')}
+        hint={t(hintKey)}
         controls={
           <>
             <SegmentedToggle
@@ -110,10 +145,7 @@ function LifecycleFunnelCard() {
             <SegmentedToggle
               value={funnelView}
               onChange={v => setFunnelView(v as FunnelView)}
-              options={[
-                { value: 'weekly', label: t('matchesTab.viewWeekly') },
-                { value: 'cumulative', label: t('matchesTab.viewCumulative') },
-              ]}
+              options={VIEW_OPTIONS(t)}
             />
             {funnelView === 'cumulative' && (
               <WindowSelect
@@ -126,15 +158,24 @@ function LifecycleFunnelCard() {
         }
       />
       <CardContent>
-        {(funnelView === 'weekly' ? weeklyLoading : loading) ? (
+        {(isTrend ? trendLoading : loading) ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-8 w-full" />
             ))}
           </div>
-        ) : funnelView === 'weekly' ? (
-          weeklyFunnels.some(w => w.totals.created > 0) ? (
-            <WeeklyFunnels weeks={weeklyFunnels} t={t} />
+        ) : isTrend ? (
+          trendBuckets.some(b => b.totals.created > 0) ? (
+            <TrendFunnels
+              buckets={trendBuckets}
+              labelOf={funnelView === 'daily' ? shortDayLabel : shortWeekLabel}
+              progressNote={t(
+                funnelView === 'daily'
+                  ? 'matchesTab.dailyInProgress'
+                  : 'matchesTab.weeklyInProgress'
+              )}
+              t={t}
+            />
           ) : (
             <p className="text-sm text-muted-foreground m-0">{t('matchesTab.noData')}</p>
           )
@@ -157,7 +198,8 @@ function FeedbackCard() {
   const [days, setDays] = useState<DaysWindow>(30);
   const [view, setView] = useState<FunnelView>('weekly');
 
-  // Only the active view fetches; weekly always covers the last 6 ISO weeks.
+  // Only the active view fetches; weekly covers the last 6 ISO weeks, daily the
+  // last 14 days.
   const { data, loading } = useMatchQualityAnalytics(days, false, view === 'cumulative');
   const { totals } = useMemo(() => aggregate(data), [data]);
   const { data: weeklyData, loading: weeklyLoading } = useMatchQualityAnalytics(
@@ -165,7 +207,18 @@ function FeedbackCard() {
     true,
     view === 'weekly'
   );
-  const weeks = useMemo(() => aggregateWeekly(weeklyData, 'all'), [weeklyData]);
+  const { data: dailyData, loading: dailyLoading } = useMatchQualityAnalytics(
+    DAYS_SHOWN,
+    false,
+    view === 'daily'
+  );
+  const trendBuckets = useMemo(
+    () =>
+      view === 'daily'
+        ? aggregateBuckets(dailyData, 'all', lastNDayStarts(DAYS_SHOWN), d => d)
+        : aggregateBuckets(weeklyData, 'all', lastNWeekStarts(WEEKS_SHOWN), weekStartOf),
+    [view, dailyData, weeklyData]
+  );
 
   // Each post-match step as a share of expected participants (closed matches).
   // Not strictly nested — check-in happens before the others — so these are
@@ -177,32 +230,37 @@ function FeedbackCard() {
     { label: t('matchesTab.stepDone'), count: totals.feedbackDone },
   ] as const;
 
-  const weeklyPoints: TrendPoint[] = weeks.map(({ weekStart, totals: wt }) => {
-    const e = wt.feedbackExpected;
+  const labelOf = view === 'daily' ? shortDayLabel : shortWeekLabel;
+  const trendPoints: TrendPoint[] = trendBuckets.map(({ start, totals: bt }) => {
+    const e = bt.feedbackExpected;
     return {
-      week: shortWeekLabel(weekStart),
+      bucket: labelOf(start),
       expected: e,
-      reported: e > 0 ? Math.round((wt.feedbackPresent / e) * 100) : 0,
-      done: e > 0 ? Math.round((wt.feedbackDone / e) * 100) : 0,
+      reported: e > 0 ? Math.round((bt.feedbackPresent / e) * 100) : 0,
+      done: e > 0 ? Math.round((bt.feedbackDone / e) * 100) : 0,
     };
   });
+
+  const isTrend = view !== 'cumulative';
+  const trendLoading = view === 'daily' ? dailyLoading : weeklyLoading;
+  const hintKey =
+    view === 'daily'
+      ? 'matchesTab.feedbackDailyHint'
+      : view === 'weekly'
+        ? 'matchesTab.feedbackWeeklyHint'
+        : 'matchesTab.feedbackHint';
 
   return (
     <Card>
       <InsightCardHeader
         title={t('matchesTab.feedbackTitle')}
-        hint={t(view === 'weekly' ? 'matchesTab.feedbackWeeklyHint' : 'matchesTab.feedbackHint', {
-          expected: totals.feedbackExpected,
-        })}
+        hint={t(hintKey, { expected: totals.feedbackExpected })}
         controls={
           <>
             <SegmentedToggle
               value={view}
               onChange={v => setView(v as FunnelView)}
-              options={[
-                { value: 'weekly', label: t('matchesTab.viewWeekly') },
-                { value: 'cumulative', label: t('matchesTab.viewCumulative') },
-              ]}
+              options={VIEW_OPTIONS(t)}
             />
             {view === 'cumulative' && (
               <WindowSelect
@@ -215,17 +273,18 @@ function FeedbackCard() {
         }
       />
       <CardContent>
-        {(view === 'weekly' ? weeklyLoading : loading) ? (
+        {(isTrend ? trendLoading : loading) ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-7 w-full" />
             ))}
           </div>
-        ) : view === 'weekly' ? (
-          weeks.some(w => w.totals.feedbackExpected > 0) ? (
+        ) : isTrend ? (
+          trendBuckets.some(b => b.totals.feedbackExpected > 0) ? (
             <div className="flex flex-col gap-3">
               <RateTrendChart
-                data={weeklyPoints}
+                data={trendPoints}
+                xKey="bucket"
                 volumeKey="expected"
                 volumeLabel={t('matchesTab.feedbackExpectedLabel')}
                 series={[
@@ -239,7 +298,7 @@ function FeedbackCard() {
                 ]}
               />
               <p className="text-[11px] text-muted-foreground m-0">
-                {t('matchesTab.weeklyInProgress')}
+                {t(view === 'daily' ? 'matchesTab.dailyInProgress' : 'matchesTab.weeklyInProgress')}
               </p>
             </div>
           ) : (
@@ -415,43 +474,50 @@ function FunnelBars({
 }
 
 // ---------------------------------------------------------------------------
-// Weekly cohort view — one mini funnel per calendar week (Mon–Sun)
+// Trend cohort view — one mini funnel per bucket (ISO week or calendar day)
 // ---------------------------------------------------------------------------
 
-interface WeekFunnel {
-  weekStart: string;
+interface TrendBucket {
+  start: string;
   totals: Totals;
 }
 
-function aggregateWeekly(data: MatchQualityPoint[], segment: Segment): WeekFunnel[] {
-  // Exactly the last WEEKS_SHOWN tiles, zero-filled; rows outside are dropped.
-  const map = new Map<string, Totals>(
-    lastNWeekStarts(WEEKS_SHOWN).map(week => [week, emptyTotals()])
-  );
+/** Bucket daily rows into the given zero-filled bucket starts; rows outside drop. */
+function aggregateBuckets(
+  data: MatchQualityPoint[],
+  segment: Segment,
+  starts: string[],
+  keyOf: (date: string) => string
+): TrendBucket[] {
+  const map = new Map<string, Totals>(starts.map(s => [s, emptyTotals()]));
   for (const row of data) {
     if (segment === 'auto' && !row.isAutoGenerated) continue;
     if (segment === 'organic' && row.isAutoGenerated) continue;
-    const totals = map.get(weekStartOf(row.date));
+    const totals = map.get(keyOf(row.date));
     if (!totals) continue;
     addToTotals(totals, row);
   }
-  return Array.from(map.entries()).map(([weekStart, totals]) => ({ weekStart, totals }));
+  return Array.from(map.entries()).map(([start, totals]) => ({ start, totals }));
 }
 
-function WeeklyFunnels({
-  weeks,
+function TrendFunnels({
+  buckets,
+  labelOf,
+  progressNote,
   t,
 }: {
-  weeks: WeekFunnel[];
+  buckets: TrendBucket[];
+  labelOf: (start: string) => string;
+  progressNote: string;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   // Headline = the reliable commitment signal (filled/created). Played/quality
-  // depend on post-match feedback, so they stay out of the weekly trend and live
-  // only in the cumulative funnel where coverage is shown.
-  const points: TrendPoint[] = weeks.map(({ weekStart, totals }) => {
+  // depend on post-match feedback, so they stay out of the trend and live only
+  // in the cumulative funnel where coverage is shown.
+  const points: TrendPoint[] = buckets.map(({ start, totals }) => {
     const c = totals.created;
     return {
-      week: shortWeekLabel(weekStart),
+      bucket: labelOf(start),
       created: c,
       commitment: c > 0 ? Math.round((totals.filled / c) * 100) : 0,
       filled: totals.filled,
@@ -467,6 +533,7 @@ function WeeklyFunnels({
         </p>
         <RateTrendChart
           data={points}
+          xKey="bucket"
           volumeKey="created"
           volumeLabel={t('matchesTab.stageCreated')}
           series={[
@@ -480,6 +547,7 @@ function WeeklyFunnels({
         </p>
         <StackedFunnelChart
           data={points}
+          xKey="bucket"
           segments={[
             { key: 'filled', label: t('matchesTab.stageFilled'), color: 'var(--chart-1)' },
             {
@@ -491,7 +559,7 @@ function WeeklyFunnels({
           ]}
         />
       </div>
-      <p className="text-[11px] text-muted-foreground m-0">{t('matchesTab.weeklyInProgress')}</p>
+      <p className="text-[11px] text-muted-foreground m-0">{progressNote}</p>
     </div>
   );
 }
