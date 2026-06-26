@@ -72,7 +72,10 @@ export type NotificationType =
   | 'tournament_cancelled'
   | 'tournament_completed'
   | 'session_published'
-  | 'season_closed';
+  | 'season_closed'
+  | 'league_invitation'
+  | 'league_member_request'
+  | 'league_member_approved';
 
 // Organization notification types (subset for org-specific handling)
 export type OrgNotificationType =
@@ -259,6 +262,9 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   tournament_completed: { email: false, push: true, sms: false },
   session_published: { email: true, push: true, sms: false },
   season_closed: { email: true, push: true, sms: false },
+  league_invitation: { email: true, push: true, sms: false },
+  league_member_request: { email: false, push: true, sms: false },
+  league_member_approved: { email: true, push: true, sms: false },
 };
 
 /**

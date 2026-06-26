@@ -350,6 +350,9 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_completed: 'trophy-outline',
   session_published: 'calendar-outline',
   season_closed: 'flag-outline',
+  league_invitation: 'mail-outline',
+  league_member_request: 'person-add-outline',
+  league_member_approved: 'checkmark-circle-outline',
 };
 
 /**
@@ -450,6 +453,9 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_completed: '#4CAF50', // Green — celebration
   session_published: '#4DB8A8', // Teal — info
   season_closed: '#4CAF50', // Green — completion
+  league_invitation: '#4DB8A8', // Teal — info
+  league_member_request: '#FF9800', // Amber — action needed
+  league_member_approved: '#4CAF50', // Green — accepted
 };
 
 /**
@@ -546,6 +552,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_completed: 'Tournament Complete',
   session_published: 'Session Schedule Published',
   season_closed: 'Season Closed',
+  league_invitation: 'League Invitation',
+  league_member_request: 'New Join Request',
+  league_member_approved: 'Membership Approved',
 };
 
 /**
@@ -650,6 +659,9 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_completed: 'match',
   session_published: 'organization',
   season_closed: 'organization',
+  league_invitation: 'organization',
+  league_member_request: 'organization',
+  league_member_approved: 'organization',
 };
 
 /**
@@ -797,6 +809,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_completed: { email: false, push: true, sms: false },
   session_published: { email: true, push: true, sms: false },
   season_closed: { email: true, push: true, sms: false },
+  league_invitation: { email: true, push: true, sms: false },
+  league_member_request: { email: false, push: true, sms: false },
+  league_member_approved: { email: true, push: true, sms: false },
 };
 
 // ============================================

@@ -5,9 +5,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Enums } from '@rallia/shared-types';
 import {
+  acceptLeagueInvite,
   approveLeagueMember,
   cancelLeagueSession,
   closeSeason,
+  inviteLeagueMembers,
+  revokeLeagueInvite,
   confirmSessionPresence,
   createLeague,
   createLeagueSession,
@@ -438,6 +441,53 @@ export function useCloseSeason(leagueId: string, options: MutationOptions<Season
     onSuccess: result => {
       invalidate(leagueId);
       qc.invalidateQueries({ queryKey: leagueKeys.rankings(result.id) });
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Member invites (intra-app)
+// ---------------------------------------------------------------------------
+
+export function useInviteLeagueMembers(leagueId: string, options: MutationOptions<number> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: (userIds: string[]) => inviteLeagueMembers(leagueId, userIds),
+    onSuccess: result => {
+      invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useAcceptLeagueInvite(
+  leagueId: string,
+  options: MutationOptions<LeagueMember> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: () => acceptLeagueInvite(leagueId),
+    onSuccess: result => {
+      invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useRevokeLeagueInvite(
+  leagueId: string,
+  options: MutationOptions<LeagueMember> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: ({ memberId, versionWas }: { memberId: string; versionWas: number }) =>
+      revokeLeagueInvite(memberId, versionWas),
+    onSuccess: result => {
+      invalidate(leagueId);
       options.onSuccess?.(result);
     },
     onError: options.onError,
