@@ -132,6 +132,39 @@ export function subscribeToReactions(
 }
 
 /**
+ * Subscribe to match-organizer vote changes in a conversation.
+ *
+ * Uses a private Broadcast channel fed by a database trigger
+ * (realtime.broadcast_changes -> topic 'votes:<conversationId>', see
+ * 20260626160000_match_time_vote). Lets both players see each other's option
+ * votes live without polling. RLS-authorized to conversation participants.
+ */
+export function subscribeToMatchVotes(
+  conversationId: string,
+  onVoteChange: (payload: { eventType: 'INSERT' | 'DELETE'; messageId: string }) => void
+): RealtimeChannel {
+  authorizeRealtime();
+
+  const channel = supabase
+    .channel(`votes:${conversationId}`, { config: { private: true } })
+    .on('broadcast', { event: 'INSERT' }, message => {
+      const vote = (message.payload as BroadcastBody<{ message_id?: string }>)?.record;
+      if (vote?.message_id) {
+        onVoteChange({ eventType: 'INSERT', messageId: vote.message_id });
+      }
+    })
+    .on('broadcast', { event: 'DELETE' }, message => {
+      const vote = (message.payload as BroadcastBody<{ message_id?: string }>)?.old_record;
+      if (vote?.message_id) {
+        onVoteChange({ eventType: 'DELETE', messageId: vote.message_id });
+      }
+    })
+    .subscribe();
+
+  return channel;
+}
+
+/**
  * Subscribe to conversation updates: new/removed messages in any conversation,
  * plus this player's own conversation_participant changes (e.g. last_read_at
  * updated from another device) so unread counts stay in sync across devices.

@@ -3226,6 +3226,46 @@
       "subtitle": "Rendez-vous sur le terrain à {facility}."
     }
   },
+  "matchOrganizer": {
+    "card": {
+      "title": "Organiser une partie",
+      "subtitlePrompt": "Touche les moments qui te conviennent",
+      "subtitleMutual": "Vous avez trouvé un moment 🙌",
+      "created": "Partie créée 🙌",
+      "createdSubtitle": "Bonne partie",
+      "viewGame": "Voir la partie",
+      "createGame": "Créer la partie",
+      "creating": "Création…",
+      "noOptions": "Aucun moment commun pour l'instant"
+    },
+    "tier": {
+      "courtAvailable": "Terrain dispo",
+      "usuallyFree": "Souvent libre"
+    },
+    "cost": {
+      "free": "Gratuit"
+    },
+    "votes": {
+      "you": "Tu embarques",
+      "everyone": "Tout le monde embarque",
+      "count": "{count} partants"
+    },
+    "setup": {
+      "title": "Propose des moments pour jouer",
+      "sportLabel": "Sport",
+      "formatLabel": "Format",
+      "singles": "Simple",
+      "doubles": "Double",
+      "previewTitle": "Meilleures suggestions",
+      "previewLoading": "On cherche des moments qui adonnent…",
+      "previewEmpty": "Aucun moment commun trouvé. Tu peux quand même proposer une heure dans le chat.",
+      "submit": "Proposer ces moments",
+      "submitting": "Envoi…",
+      "entryLabel": "Organiser une partie",
+      "error": "Impossible de proposer des moments. Réessaie."
+    },
+    "preview": "A proposé des moments pour jouer"
+  },
   "matchDetail": {
     "title": "Détails de la partie",
     "preferences": "Préférences",
@@ -4359,7 +4399,9 @@
       "joinModeOpen": "Ouverte",
       "joinModeOpenDescription": "Les joueurs rejoignent immédiatement",
       "joinModeApproval": "Approbation",
-      "joinModeApprovalDescription": "Vous approuvez chaque demande"
+      "joinModeApprovalDescription": "Vous approuvez chaque demande",
+      "joinModeInviteOnly": "Sur invitation",
+      "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre"
     },
     "validation": {
       "nameRequired": "Le nom de la ligue est requis",

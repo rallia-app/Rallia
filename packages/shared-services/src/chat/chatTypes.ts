@@ -55,7 +55,7 @@ export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
  * posted by the "Rallia" sender (see migration 20260605120000) and rendered as
  * rich cards instead of text bubbles.
  */
-export type MessageType = 'user' | 'court_booking_prompt' | 'court_booked';
+export type MessageType = 'user' | 'court_booking_prompt' | 'court_booked' | 'match_organizer';
 
 /** metadata for a 'court_booking_prompt' system message. */
 export interface CourtBookingPromptMetadata {
@@ -71,9 +71,47 @@ export interface CourtBookedMetadata {
   booked_by: string | null;
 }
 
+/**
+ * A single time/place option inside a 'match_organizer' card. Snapshotted into
+ * the message metadata at post time (NOT recomputed live) so an option_index
+ * means the same option to everyone voting.
+ */
+export interface MatchOrganizerOption {
+  /** ISO timestamp of the proposed start (timezone-resolved by the engine). */
+  slot_start: string;
+  /** Lowercase weekday key, e.g. 'monday' (display via i18n). */
+  day_label: string;
+  hour_of_day: number;
+  facility_id: string | null;
+  facility_name: string | null;
+  /** Present only when a real bookable court slot was found at that hour. */
+  court_name: string | null;
+  price_cents: number | null;
+  court_confirmed: boolean;
+  /** 'bookable' = a court is open now; 'usually_free' = recurring availability. */
+  tier: 'bookable' | 'usually_free';
+  distance_km: number | null;
+}
+
+/** metadata for a 'match_organizer' card (chat Match Organizer). */
+export interface MatchOrganizerMetadata {
+  kind: 'match_organizer';
+  sport_id: string;
+  sport_name: string | null;
+  format: 'singles' | 'doubles';
+  /** Players who must each thumbs-up an option for it to become mutual. */
+  participant_ids: string[];
+  organizer_id: string;
+  options: MatchOrganizerOption[];
+  /** Set once a game is created from this card (flips the card to a final state). */
+  created_match_id?: string | null;
+  confirmed_option_index?: number | null;
+}
+
 export type MessageMetadata =
   | CourtBookingPromptMetadata
   | CourtBookedMetadata
+  | MatchOrganizerMetadata
   | Record<string, unknown>;
 
 /**
@@ -344,6 +382,10 @@ export interface SendMessageInput {
   content: string;
   sender_id: string;
   reply_to_message_id?: string;
+  /** Defaults to 'user' when omitted. Set for structured cards (e.g. 'match_organizer'). */
+  message_type?: MessageType;
+  /** Structured payload for non-'user' message types. */
+  metadata?: MessageMetadata | null;
 }
 
 /**

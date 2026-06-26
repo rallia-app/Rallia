@@ -3226,6 +3226,46 @@
       "subtitle": "See you on the court at {facility}."
     }
   },
+  "matchOrganizer": {
+    "card": {
+      "title": "Organize a game",
+      "subtitlePrompt": "Tap the times that work for you",
+      "subtitleMutual": "You agreed on a time 🙌",
+      "created": "Game created 🙌",
+      "createdSubtitle": "See you on the court",
+      "viewGame": "View game",
+      "createGame": "Create this game",
+      "creating": "Creating…",
+      "noOptions": "No shared times found yet"
+    },
+    "tier": {
+      "courtAvailable": "Court available",
+      "usuallyFree": "Usually open"
+    },
+    "cost": {
+      "free": "Free"
+    },
+    "votes": {
+      "you": "You're in",
+      "everyone": "Everyone's in",
+      "count": "{count} in"
+    },
+    "setup": {
+      "title": "Suggest times to play",
+      "sportLabel": "Sport",
+      "formatLabel": "Format",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "previewTitle": "Top suggestions",
+      "previewLoading": "Finding times that work…",
+      "previewEmpty": "No shared times found. You can still suggest a time in the chat.",
+      "submit": "Suggest these times",
+      "submitting": "Posting…",
+      "entryLabel": "Organize a game",
+      "error": "Couldn't suggest times. Please try again."
+    },
+    "preview": "Suggested some times to play"
+  },
   "matchDetail": {
     "title": "Game details",
     "preferences": "Preferences",
@@ -4359,7 +4399,9 @@
       "joinModeOpen": "Open",
       "joinModeOpenDescription": "Players join immediately",
       "joinModeApproval": "Approval",
-      "joinModeApprovalDescription": "You approve each join request"
+      "joinModeApprovalDescription": "You approve each join request",
+      "joinModeInviteOnly": "Invite only",
+      "joinModeInviteOnlyDescription": "Only players you invite can join"
     },
     "validation": {
       "nameRequired": "League name is required",

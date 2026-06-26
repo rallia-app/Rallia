@@ -28,6 +28,8 @@ export type {
   MessageMetadata,
   CourtBookingPromptMetadata,
   CourtBookedMetadata,
+  MatchOrganizerOption,
+  MatchOrganizerMetadata,
   MessageReaction,
   ReactionSummary,
   MessageWithSender,
@@ -107,12 +109,30 @@ export {
   subscribeToMessages,
   subscribeToConversations,
   subscribeToReactions,
+  subscribeToMatchVotes,
   unsubscribeFromChannel,
   subscribeToTypingIndicators,
   sendTypingIndicator,
   unsubscribeFromTypingIndicators,
   type MessageEventCallback,
 } from './realtimeService';
+
+// ============================================================================
+// MATCH ORGANIZER OPERATIONS
+// ============================================================================
+
+export {
+  getMatchOrganizerOptions,
+  getSharedSports,
+  postMatchOrganizerCard,
+  getMatchTimeVotes,
+  addMatchTimeVote,
+  removeMatchTimeVote,
+  toggleMatchTimeVote,
+  createCasualMatch,
+  type OrganizerSport,
+  type MatchTimeVote,
+} from './matchOrganizerService';
 
 // ============================================================================
 // REACTION OPERATIONS

@@ -13,6 +13,8 @@ export {
   type MessageMetadata,
   type CourtBookingPromptMetadata,
   type CourtBookedMetadata,
+  type MatchOrganizerOption,
+  type MatchOrganizerMetadata,
   type MessageWithSender,
   type ConversationWithDetails,
   type ConversationPreview,
@@ -86,8 +88,21 @@ export {
   subscribeToMessages,
   subscribeToConversations,
   subscribeToReactions,
+  subscribeToMatchVotes,
   unsubscribeFromChannel,
   type MessageEventCallback,
+
+  // Match Organizer Operations
+  getMatchOrganizerOptions,
+  getSharedSports,
+  postMatchOrganizerCard,
+  getMatchTimeVotes,
+  addMatchTimeVote,
+  removeMatchTimeVote,
+  toggleMatchTimeVote,
+  createCasualMatch,
+  type OrganizerSport,
+  type MatchTimeVote,
 
   // Utility Functions
   getTotalUnreadCount,

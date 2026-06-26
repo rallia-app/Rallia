@@ -135,6 +135,14 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
     insertData.reply_to_message_id = input.reply_to_message_id;
   }
 
+  // Structured cards (e.g. 'match_organizer') carry a message_type + metadata.
+  if (input.message_type && input.message_type !== 'user') {
+    insertData.message_type = input.message_type;
+  }
+  if (input.metadata !== undefined) {
+    insertData.metadata = input.metadata;
+  }
+
   const { data, error } = await supabase
     .from('message')
     .insert(insertData)

@@ -31,6 +31,7 @@ import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services
 import { useThemeStyles, useTranslation } from '#/hooks';
 
 import { CourtSystemMessageCard } from './CourtSystemMessageCard';
+import { MatchOrganizerCard } from './MatchOrganizerCard';
 import { MessageBubble } from './MessageBubble';
 
 export interface MessageListRef {
@@ -267,6 +268,11 @@ function MessageListComponent(
           item.message.message_type === 'court_booked'
         ) {
           return <CourtSystemMessageCard message={item.message} />;
+        }
+
+        // Match Organizer card: votable time/place options, full-width.
+        if (item.message.message_type === 'match_organizer') {
+          return <MatchOrganizerCard message={item.message} />;
         }
 
         const messageReactions = reactions.get(item.message.id) || [];
