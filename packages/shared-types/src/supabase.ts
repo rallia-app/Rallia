@@ -10889,6 +10889,28 @@ export type Database = {
         Returns: undefined
       }
       mark_notifications_seen: { Args: never; Returns: undefined }
+      match_organizer_options: {
+        Args: {
+          p_limit?: number
+          p_player_ids: string[]
+          p_sport_id: string
+          p_window_days?: number
+        }
+        Returns: {
+          court_confirmed: boolean
+          court_name: string
+          day_label: string
+          distance_km: number
+          facility_id: string
+          facility_name: string
+          fav_count: number
+          hour_of_day: number
+          price_cents: number
+          score: number
+          slot_start: string
+          tier: string
+        }[]
+      }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }
         Returns: number
