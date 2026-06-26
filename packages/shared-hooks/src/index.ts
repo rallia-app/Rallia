@@ -56,6 +56,7 @@ export * from './usePendingFeedbackCheck';
 export * from './useFeedbackBrowse';
 export * from './useCommunities';
 export * from './useChat';
+export * from './useMatchOrganizer';
 export * from './useConversationFilter';
 export * from './useBlockedStatus';
 export * from './useFavoriteStatus';

@@ -19,6 +19,7 @@ import {
   useToggleReaction,
   useChatRealtime,
   useReactionsRealtime,
+  useMatchVotesRealtime,
   useChatAgreement,
   useAgreeToChatRules,
   useEditMessage,
@@ -205,6 +206,9 @@ export default function ChatConversationScreen() {
   // Real-time subscription for reactions
   useReactionsRealtime(conversationId);
 
+  // Real-time subscription for Match Organizer votes
+  useMatchVotesRealtime(conversationId);
+
   // Suppress new-message notifications for this conversation while it's open
   useActiveConversation(conversationId);
 
@@ -381,6 +385,33 @@ export default function ChatConversationScreen() {
   const isDirectChat = useMemo(() => {
     return conversation?.conversation_type === 'direct';
   }, [conversation]);
+
+  // Participant ids (used by the Match Organizer)
+  const participantIds = useMemo(
+    () => conversation?.participants?.map(p => p.player_id) ?? [],
+    [conversation]
+  );
+
+  // Match Organizer is offered in small direct / group chats (2-4 players), where
+  // an "everyone is free" suggestion is meaningful. Skip large/network chats.
+  const canOrganizeMatch = useMemo(() => {
+    if (!conversation || !playerId) return false;
+    const type = conversation.conversation_type;
+    if (type !== 'direct' && type !== 'group_chat') return false;
+    return participantIds.length >= 2 && participantIds.length <= 4;
+  }, [conversation, playerId, participantIds]);
+
+  const handleOrganizeMatch = useCallback(() => {
+    if (!playerId || !conversationId || participantIds.length < 2) return;
+    lightHaptic();
+    SheetManager.show('match-organizer-setup', {
+      payload: {
+        conversationId,
+        organizerId: playerId,
+        participantIds,
+      },
+    });
+  }, [playerId, conversationId, participantIds]);
 
   // Get the other user's ID for direct chats (used for blocking)
   const otherUserId = useMemo(() => {
@@ -855,6 +886,7 @@ export default function ChatConversationScreen() {
           onCancelReply={handleCancelReply}
           onTypingChange={handleTypingChange}
           keyboardVisible={isKeyboardVisible}
+          onOrganizeMatch={canOrganizeMatch ? handleOrganizeMatch : undefined}
         />
       )}
 

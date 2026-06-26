@@ -3570,6 +3570,45 @@ export type Database = {
           },
         ]
       }
+      match_time_vote: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          option_index: number
+          player_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          option_index: number
+          player_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          option_index?: number
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_time_vote_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_time_vote_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message: {
         Row: {
           content: string
@@ -9021,6 +9060,19 @@ export type Database = {
           p_target_rating_score_id: string
         }
         Returns: number
+      }
+      create_casual_match: {
+        Args: {
+          p_duration_minutes?: number
+          p_facility_id?: string
+          p_format?: Database["public"]["Enums"]["match_format_enum"]
+          p_option_index?: number
+          p_player_ids: string[]
+          p_slot_start: string
+          p_source_message_id?: string
+          p_sport_id: string
+        }
+        Returns: string
       }
       create_utm_campaign: {
         Args: { p_description?: string; p_display_name: string; p_slug: string }

@@ -68,6 +68,7 @@ import { ReportUserActionSheet } from '#/features/chat/components/ReportUserModa
 import { ChatAgreementActionSheet } from '#/features/chat/components/ChatAgreementModal';
 import { AddMembersToChatActionSheet } from '#/features/chat/components/AddMembersToChatModal';
 import { CreateGroupChatActionSheet } from '#/features/chat/components/CreateGroupChatModal';
+import { MatchOrganizerSetupActionSheet } from '#/features/chat/components/MatchOrganizerSetupSheet';
 // Onboarding/Profile components
 import { PersonalInformationActionSheet } from '#/features/onboarding/components/overlays/PersonalInformationOverlay';
 import { PlayerInformationActionSheet } from '#/features/onboarding/components/overlays/PlayerInformationOverlay';
@@ -206,6 +207,14 @@ declare module 'react-native-actions-sheet' {
     'create-group-chat': SheetDefinition<{
       payload: {
         onSuccess?: (conversationId: string) => void;
+      };
+    }>;
+    'match-organizer-setup': SheetDefinition<{
+      payload: {
+        conversationId: string;
+        organizerId: string;
+        participantIds: string[];
+        defaultSportId?: string | null;
       };
     }>;
     // Group sheets
@@ -868,6 +877,7 @@ export const Sheets = () => {
         'chat-agreement': ChatAgreementActionSheet,
         'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
+        'match-organizer-setup': MatchOrganizerSetupActionSheet,
         // Group sheets
         'group-options': GroupOptionsActionSheet,
         'member-options': MemberOptionsActionSheet,
