@@ -1351,15 +1351,12 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   if (availableSpots <= 0) {
     // Match is full - add to waitlist
     participantStatus = 'waitlisted';
-  } else if (existingParticipant?.status === 'pending') {
-    // Accepting a host-initiated invitation joins directly — the invite is the
-    // approval, so no second hop through 'requested' even in request mode
-    participantStatus = 'joined';
   } else if (match.join_mode === 'request') {
-    // Match has spots but requires host approval
+    // Request-to-join always needs host approval, invited players included: an
+    // invite is not a standing approval (auto-gen matches invite for an absentee host)
     participantStatus = 'requested';
   } else {
-    // Match has spots and allows direct join
+    // Direct-join match: joining cold or accepting an invite both land joined
     participantStatus = 'joined';
   }
 
