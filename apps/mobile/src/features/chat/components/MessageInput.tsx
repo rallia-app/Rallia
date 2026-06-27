@@ -148,7 +148,8 @@ function MessageInputComponent({
         </View>
       )}
 
-      <View style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}>
+      <View style={styles.inputRow}>
+        {/* Match Organizer entry — sits outside the input pill, on its left. */}
         {onOrganizeMatch ? (
           <TouchableOpacity
             style={styles.organizeButton}
@@ -156,38 +157,43 @@ function MessageInputComponent({
             disabled={disabled}
             accessibilityLabel={t('matchOrganizer.setup.entryLabel')}
           >
-            <Ionicons name="calendar-outline" size={22} color={primary[500]} />
+            <Ionicons name="calendar-outline" size={24} color={primary[500]} />
           </TouchableOpacity>
         ) : null}
-        <TextInput
-          ref={inputRef}
-          style={[
-            styles.input,
-            { color: colors.text },
-            Platform.OS === 'android' && { textAlignVertical: 'center' },
-          ]}
-          value={message}
-          onChangeText={handleTextChange}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
-          multiline
-          maxLength={2000}
-          editable={!disabled}
-          returnKeyType="default"
-        />
 
-        {/* Send button */}
-        <TouchableOpacity
-          style={[styles.sendButton, canSend && { backgroundColor: primary[500] }]}
-          onPress={handleSend}
-          disabled={!canSend}
+        <View
+          style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}
         >
-          <Ionicons
-            name="paper-plane-outline"
-            size={18}
-            color={canSend ? '#FFFFFF' : colors.textMuted}
+          <TextInput
+            ref={inputRef}
+            style={[
+              styles.input,
+              { color: colors.text },
+              Platform.OS === 'android' && { textAlignVertical: 'center' },
+            ]}
+            value={message}
+            onChangeText={handleTextChange}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textMuted}
+            multiline
+            maxLength={2000}
+            editable={!disabled}
+            returnKeyType="default"
           />
-        </TouchableOpacity>
+
+          {/* Send button */}
+          <TouchableOpacity
+            style={[styles.sendButton, canSend && { backgroundColor: primary[500] }]}
+            onPress={handleSend}
+            disabled={!canSend}
+          >
+            <Ionicons
+              name="paper-plane-outline"
+              size={18}
+              color={canSend ? '#FFFFFF' : colors.textMuted}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -231,7 +237,13 @@ const styles = StyleSheet.create({
   cancelReplyButton: {
     padding: spacingPixels[1],
   },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacingPixels[2],
+  },
   inputContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 24,
@@ -258,11 +270,9 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[2],
   },
   organizeButton: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-end',
-    marginRight: spacingPixels[1],
   },
 });

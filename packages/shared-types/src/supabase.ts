@@ -723,6 +723,7 @@ export type Database = {
           picture_url: string | null
           title: string | null
           tournament_id: string | null
+          tournament_match_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -734,6 +735,7 @@ export type Database = {
           picture_url?: string | null
           title?: string | null
           tournament_id?: string | null
+          tournament_match_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -745,6 +747,7 @@ export type Database = {
           picture_url?: string | null
           title?: string | null
           tournament_id?: string | null
+          tournament_match_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -767,6 +770,13 @@ export type Database = {
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_tournament_match_id_fkey"
+            columns: ["tournament_match_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_matches"
             referencedColumns: ["id"]
           },
         ]
@@ -9851,6 +9861,10 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: string
       }
+      get_or_create_tournament_round_chat: {
+        Args: { p_tournament_match_id: string }
+        Returns: string
+      }
       get_participants_for_check_in_reminder: {
         Args: { p_window_end: string; p_window_start: string }
         Returns: {
@@ -10923,6 +10937,10 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: string
       }
+      lt_get_or_create_tournament_round_chat_unchecked: {
+        Args: { p_tournament_match_id: string }
+        Returns: string
+      }
       lt_league_default_rules: { Args: { p_sport_id: string }; Returns: Json }
       lt_parse_score: {
         Args: { p_score: string }
@@ -11020,6 +11038,7 @@ export type Database = {
         }
         Returns: {
           court_confirmed: boolean
+          court_count: number
           court_name: string
           day_label: string
           distance_km: number
@@ -11981,6 +12000,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      tournament_attach_match_pre_play: {
+        Args: { p_match_id: string; p_tournament_match_id: string }
+        Returns: undefined
       }
       tournament_cancel: {
         Args: {

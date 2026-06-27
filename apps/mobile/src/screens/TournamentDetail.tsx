@@ -68,6 +68,7 @@ import {
   useTournamentInvitePreview,
   useJoinTournamentViaInvite,
   useTournamentMatches,
+  useOpenTournamentRoundChat,
   useGenerateTournamentBracket,
   useCancelTournament,
   useArchiveTournament,
@@ -1329,6 +1330,28 @@ export const TournamentDetail: React.FC = () => {
     [membersByRegId, tournament]
   );
 
+  // Open (get-or-create) the per-pairing round chat and drop the caller in, so
+  // they can organize the game with their opponent (creating it links the match
+  // to this bracket round, and the chat becomes the match chat — no duplicate).
+  const openRoundChat = useOpenTournamentRoundChat();
+  const handleOpenRoundChat = useCallback(
+    (tournamentMatchId: string) => {
+      lightHaptic();
+      openRoundChat.mutate(tournamentMatchId, {
+        onSuccess: conversationId => {
+          navigation.navigate('ChatConversation', {
+            conversationId,
+            title: tournament?.name,
+          });
+        },
+        onError: () => {
+          toast.error(t('tournamentDetail.dashboard.myMatch.organizeError'));
+        },
+      });
+    },
+    [openRoundChat, navigation, tournament?.name, toast, t]
+  );
+
   // Organizer-only: record an authoritative result for a stalled/disputed
   // bracket match via the structured set-entry sheet.
   const handleOrganizerOverride = useCallback(
@@ -2104,30 +2127,61 @@ export const TournamentDetail: React.FC = () => {
                   {t('tournamentDetail.dashboard.myMatch.title').toUpperCase()}
                 </Text>
                 {myBracketState === 'next' && myNextMatch && myMatchP1 && myMatchP2 ? (
-                  <TouchableOpacity
-                    onPress={() => handleBracketMatchTap(myNextMatch.id, myMatchP1, myMatchP2)}
-                    activeOpacity={0.7}
-                    style={[
-                      styles.card,
-                      styles.myMatchCard,
-                      { backgroundColor: colors.highlightBg, borderColor: colors.primary },
-                    ]}
-                    accessibilityRole="button"
-                  >
-                    <View style={styles.myMatchMain}>
-                      <Text size="lg" weight="bold" color={colors.text}>
-                        {t('tournamentDetail.dashboard.myMatch.vs').replace(
-                          '{name}',
-                          myOpponentLabel ?? '?'
-                        )}
+                  <>
+                    <TouchableOpacity
+                      onPress={() => handleBracketMatchTap(myNextMatch.id, myMatchP1, myMatchP2)}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.card,
+                        styles.myMatchCard,
+                        { backgroundColor: colors.highlightBg, borderColor: colors.primary },
+                      ]}
+                      accessibilityRole="button"
+                    >
+                      <View style={styles.myMatchMain}>
+                        <Text size="lg" weight="bold" color={colors.text}>
+                          {t('tournamentDetail.dashboard.myMatch.vs').replace(
+                            '{name}',
+                            myOpponentLabel ?? '?'
+                          )}
+                        </Text>
+                        <Text size="xs" color={colors.textMuted}>
+                          {roundLabel(myNextMatch.round_number, totalRounds, t)} ·{' '}
+                          {t('tournamentDetail.dashboard.myMatch.hint')}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+
+                    {/* Organize the game with your opponent in a shared round chat. */}
+                    <TouchableOpacity
+                      onPress={() => handleOpenRoundChat(myNextMatch.id)}
+                      activeOpacity={0.7}
+                      disabled={openRoundChat.isPending}
+                      style={[
+                        styles.card,
+                        styles.myMatchCard,
+                        styles.roundChatBtn,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                      ]}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        color={colors.primary}
+                        style={styles.myMatchStateText}
+                      >
+                        {t('tournamentDetail.dashboard.myMatch.organize')}
                       </Text>
-                      <Text size="xs" color={colors.textMuted}>
-                        {roundLabel(myNextMatch.round_number, totalRounds, t)} ·{' '}
-                        {t('tournamentDetail.dashboard.myMatch.hint')}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-                  </TouchableOpacity>
+                      {openRoundChat.isPending ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                      )}
+                    </TouchableOpacity>
+                  </>
                 ) : (
                   <View
                     style={[
@@ -3332,6 +3386,9 @@ const styles = StyleSheet.create({
   },
   myMatchStateText: {
     flex: 1,
+  },
+  roundChatBtn: {
+    marginTop: spacingPixels[2],
   },
   primaryButton: {
     flexDirection: 'row',

@@ -392,12 +392,16 @@ export default function ChatConversationScreen() {
     [conversation]
   );
 
-  // Match Organizer is offered in small direct / group chats (2-4 players), where
-  // an "everyone is free" suggestion is meaningful. Skip large/network chats.
+  // Match Organizer is offered in small direct / group chats (2-4 players), and
+  // in tournament "round chats" (a per-pairing chat tagged tournament_match_id).
+  // Once a game has been created from the chat (match_id set), it's hidden.
   const canOrganizeMatch = useMemo(() => {
     if (!conversation || !playerId) return false;
+    if (conversation.match_id) return false; // a game was already created here
+    const isRoundChat = !!conversation.tournament_match_id;
     const type = conversation.conversation_type;
-    if (type !== 'direct' && type !== 'group_chat') return false;
+    const isSmallChat = type === 'direct' || type === 'group_chat';
+    if (!isRoundChat && !isSmallChat) return false;
     return participantIds.length >= 2 && participantIds.length <= 4;
   }, [conversation, playerId, participantIds]);
 

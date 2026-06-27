@@ -18,6 +18,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
 import { getMatchWithDetails } from '@rallia/shared-services';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  formatIntuitiveDateInTimezone,
+} from '@rallia/shared-utils';
 import type {
   MatchOrganizerMetadata,
   MatchOrganizerOption,
@@ -37,6 +43,9 @@ import { formatTimeOfDay } from '#/utils/dateFormatting';
 interface MatchOrganizerCardProps {
   message: MessageWithSender;
 }
+
+const localDateKey = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   const { t, locale } = useTranslation();
@@ -70,6 +79,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   const handleToggle = useCallback(
     (optionIndex: number) => {
       if (!currentUserId || createdMatchId) return;
+      void lightHaptic();
       const voters = votersByOption.get(optionIndex) ?? new Set<string>();
       toggleVote.mutate({
         messageId: message.id,
@@ -84,6 +94,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   const handleCreate = useCallback(
     async (option: MatchOrganizerOption, optionIndex: number) => {
       if (!currentUserId || createMatch.isPending || createdMatchId) return;
+      void lightHaptic();
       setCreatingIndex(optionIndex);
       try {
         await createMatch.mutateAsync({
@@ -96,6 +107,10 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           optionIndex,
           conversationId: message.conversation_id,
         });
+        void successHaptic();
+      } catch (error) {
+        console.error('Failed to create game from organizer card:', error);
+        void warningHaptic();
       } finally {
         setCreatingIndex(null);
       }
@@ -113,6 +128,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 
   const handleOpenMatch = useCallback(async () => {
     if (!createdMatchId || isOpening) return;
+    void lightHaptic();
     setIsOpening(true);
     try {
       const match = await getMatchWithDetails(createdMatchId);
@@ -121,6 +137,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
       setIsOpening(false);
     }
   }, [createdMatchId, isOpening, openSheet]);
+
+  // User-friendly date label: Today / Tomorrow / weekday / "Mon, Jan 6".
+  const friendlyDate = useCallback(
+    (date: Date): string => {
+      const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const r = formatIntuitiveDateInTimezone(localDateKey(date), deviceTz, locale);
+      return r.translationKey ? t(r.translationKey) : r.label;
+    },
+    [locale, t]
+  );
 
   // Defensive: no structured payload -> plain text (shouldn't happen).
   if (!metadata || !Array.isArray(metadata.options) || metadata.options.length === 0) {
@@ -172,11 +198,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             </Text>
             <Text size="xs" color={colors.textMuted} style={styles.subtitle}>
               {confirmed && start
-                ? `${start.toLocaleDateString(locale, {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                  })} · ${formatTimeOfDay(start, locale)}${
+                ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}${
                     confirmed.facility_name ? ` · ${confirmed.facility_name}` : ''
                   }`
                 : t('matchOrganizer.card.createdSubtitle')}
@@ -232,16 +254,17 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             const hasVoted = currentUserId ? voters.has(currentUserId) : false;
             const isMutual = participants.length > 0 && participants.every(p => voters.has(p));
             const start = new Date(option.slot_start);
-            const dateLabel = start.toLocaleDateString(locale, {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-            });
+            const dateLabel = friendlyDate(start);
             const timeLabel = formatTimeOfDay(start, locale);
             const priceLabel = formatPrice(option.price_cents);
-            const tierLabel = option.court_confirmed
-              ? t('matchOrganizer.tier.courtAvailable')
-              : t('matchOrganizer.tier.usuallyFree');
+            const courtCount = option.court_count ?? 0;
+            const courtLabel = !option.court_confirmed
+              ? t('matchOrganizer.tier.usuallyFree')
+              : courtCount > 1
+                ? t('matchOrganizer.tier.courtsMany').replace('{count}', String(courtCount))
+                : courtCount === 1
+                  ? t('matchOrganizer.tier.courtsOne')
+                  : t('matchOrganizer.tier.courtAvailable');
             const isCreatingThis = creatingIndex === index;
 
             return (
@@ -251,7 +274,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                   styles.option,
                   {
                     borderColor: isMutual ? accent : colors.border,
-                    backgroundColor: isMutual ? accent + '0D' : 'transparent',
+                    backgroundColor: isMutual ? `${accent}15` : colors.buttonInactive,
                   },
                 ]}
               >
@@ -264,7 +287,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       {option.facility_name}
                     </Text>
                   ) : null}
-                  <View style={styles.optionMeta}>
+                  <View
+                    style={[
+                      styles.courtPill,
+                      {
+                        backgroundColor: option.court_confirmed
+                          ? statusColors.success.DEFAULT + '1A'
+                          : colors.border + '66',
+                      },
+                    ]}
+                  >
                     <Ionicons
                       name={option.court_confirmed ? 'tennisball-outline' : 'time-outline'}
                       size={12}
@@ -274,12 +306,13 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                     />
                     <Text
                       size="xs"
+                      weight="semibold"
                       color={
                         option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
                       }
                     >
-                      {tierLabel}
-                      {priceLabel ? ` · ${priceLabel}` : ''}
+                      {courtLabel}
+                      {option.court_confirmed && priceLabel ? ` · ${priceLabel}` : ''}
                     </Text>
                   </View>
                 </View>
@@ -373,7 +406,7 @@ const styles = StyleSheet.create({
   },
   options: {
     marginTop: spacingPixels[3],
-    gap: spacingPixels[2],
+    gap: spacingPixels[1.5],
   },
   option: {
     flexDirection: 'row',
@@ -381,9 +414,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacingPixels[3],
     borderWidth: 1,
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.xl,
+    padding: spacingPixels[4],
   },
   optionInfo: {
     flex: 1,
@@ -392,11 +424,15 @@ const styles = StyleSheet.create({
   optionFacility: {
     marginTop: 1,
   },
-  optionMeta: {
+  courtPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: spacingPixels[1],
-    marginTop: 2,
+    borderRadius: 999,
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 3,
+    marginTop: spacingPixels[1],
   },
   voteBtn: {
     flexDirection: 'row',

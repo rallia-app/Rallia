@@ -3240,6 +3240,8 @@
     },
     "tier": {
       "courtAvailable": "Court available",
+      "courtsOne": "1 court open",
+      "courtsMany": "{count} courts open",
       "usuallyFree": "Usually open"
     },
     "cost": {
@@ -3257,6 +3259,7 @@
       "singles": "Singles",
       "doubles": "Doubles",
       "previewTitle": "Top suggestions",
+      "previewHint": "Tap to choose which times to suggest",
       "previewLoading": "Finding times that work…",
       "previewEmpty": "No shared times found. You can still suggest a time in the chat.",
       "submit": "Suggest these times",
@@ -4574,6 +4577,8 @@
         "title": "Your next game",
         "vs": "vs {name}",
         "hint": "Tap to link your played game",
+        "organize": "Organize your game",
+        "organizeError": "Couldn't open the game chat. Please try again.",
         "waiting": "Waiting for your next opponent",
         "eliminated": "You've been eliminated. Good run!",
         "champion": "You won the tournament!"
