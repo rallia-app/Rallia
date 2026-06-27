@@ -12,7 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { tourService, Logger } from '@rallia/shared-services';
+import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTour } from '#/context/TourContext';
@@ -33,7 +33,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors } = useThemeStyles();
-  const { startTour, completeTour, isTourCompleted, isLoading, tourStatus } = useTour();
+  const { startTour, completeTour, isLoading, tourStatus } = useTour();
   const insets = useSafeAreaInsets();
   const tintedPrimaryBg = `${colors.primary}26`; // ~15% alpha tint for icon rings
 
@@ -44,7 +44,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
 
   // Check if we should show the modal
   useEffect(() => {
-    const checkShowModal = async () => {
+    const checkShowModal = () => {
       if (!WELCOME_TOUR_ENABLED) return;
       // Wait for tour loading to complete and prerequisites
       if (isLoading || !splashComplete || !permissionsHandled) {
@@ -52,14 +52,20 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
       }
 
       try {
-        // Check if welcome tour is completed
-        const welcomeCompleted = isTourCompleted('welcome');
-        const mainNavCompleted = isTourCompleted('main_navigation');
+        // Read completion straight from the reactive tourStatus snapshot, NOT the
+        // ref-backed isTourCompleted: a dismissal's own setTourStatus re-triggers this
+        // effect, but the context's ref sync is a parent effect that runs AFTER this
+        // child effect — so isTourCompleted would still report stale "false" and the
+        // modal would pop back up (in the "Welcome back" state, since storage is fresh).
+        const welcomeCompleted = tourStatus.welcome === true;
+        const mainNavCompleted = tourStatus.main_navigation === true;
 
         if (!welcomeCompleted && !mainNavCompleted) {
-          // New user or never took the tour
-          const isFirstTime = await tourService.isFirstTimeUser();
-          setIsReturningUser(!isFirstTime);
+          // Returning = any tour completed before. Derive it from the same tourStatus
+          // snapshot so the show-guard and the welcome/welcome-back variant can never
+          // disagree (the old async isFirstTimeUser() read a different source).
+          const isReturning = Object.values(tourStatus).some(completed => completed === true);
+          setIsReturningUser(isReturning);
           setVisible(true);
 
           // Animate in
@@ -82,15 +88,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
     };
 
     checkShowModal();
-  }, [
-    isLoading,
-    splashComplete,
-    permissionsHandled,
-    isTourCompleted,
-    tourStatus,
-    fadeAnim,
-    slideAnim,
-  ]);
+  }, [isLoading, splashComplete, permissionsHandled, tourStatus, fadeAnim, slideAnim]);
 
   const handleStartTour = () => {
     mediumHaptic();
