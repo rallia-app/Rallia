@@ -121,8 +121,10 @@ export function WeeklyCheckInScreen() {
 
   // Slide pager — single translateX animation across all 5 steps. A skip (recap
   // or "Games for you") moves more than one step at once; animating that would
-  // visibly fly over the hidden middle step, so snap instantly for multi-step
-  // jumps and only animate genuine single-step navigation.
+  // visibly fly over the hidden middle step, so snap (duration 0) for multi-step
+  // jumps and slide for genuine single-step navigation. Always drive through
+  // Animated.timing — a bare setValue() can be dropped by the native driver mid-
+  // animation, which left the back-from-auto-match jump stuck on the old step.
   const slideAnim = useMemo(() => new Animated.Value(0), []);
   const prevStepRef = useRef(wizard.currentStep);
 
@@ -130,26 +132,22 @@ export function WeeklyCheckInScreen() {
     const delta = Math.abs(wizard.currentStep - prevStepRef.current);
     prevStepRef.current = wizard.currentStep;
     const target = -(wizard.currentStep - 1) * SCREEN_WIDTH;
-    if (delta > 1) {
-      slideAnim.setValue(target);
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: target,
-        duration: 280,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
+    Animated.timing(slideAnim, {
+      toValue: target,
+      duration: delta > 1 ? 0 : 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   }, [wizard.currentStep, slideAnim]);
 
-  // Progress dots: drop any skipped step from both the total and the current
-  // index so the header reads e.g. "2 of 4" when "Games for you" is skipped.
-  const skippedBefore =
-    (wizard.skipRecapStep && wizard.currentStep > 1 ? 1 : 0) +
-    (wizard.skipOpportunitiesStep && wizard.currentStep > 3 ? 1 : 0);
-  const displayedStep = wizard.currentStep - skippedBefore;
-  const displayedTotalSteps =
-    wizard.totalSteps - (wizard.skipRecapStep ? 1 : 0) - (wizard.skipOpportunitiesStep ? 1 : 0);
+  // Progress dots count the core steps only: Goal (skipped when the goal is
+  // already set this week), Availability, Plan, Done. The optional "Games for
+  // you" interstitial (step 3) shares Availability's dot — its eligibility
+  // resolves async, so letting it add/drop a dot made the count jump mid-flow.
+  const recapOffset = wizard.skipRecapStep && wizard.currentStep > 1 ? 1 : 0;
+  const opportunitiesOffset = wizard.currentStep >= 3 ? 1 : 0;
+  const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset;
+  const displayedTotalSteps = 4 - (wizard.skipRecapStep ? 1 : 0);
 
   // CTA → submit transition from the auto-match step to the All-Set step.
   // Fire mediumHaptic immediately on press so the tap feels responsive — the
@@ -195,6 +193,7 @@ export function WeeklyCheckInScreen() {
         currentStep={displayedStep}
         totalSteps={displayedTotalSteps}
         showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 5}
+        showDots={!!wizard.context}
         onBack={wizard.goBack}
       />
 

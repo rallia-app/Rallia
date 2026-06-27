@@ -20,9 +20,17 @@ interface WizardHeaderProps {
   onBack: () => void;
   /** Hide the back chevron on the first step. */
   showBack: boolean;
+  /** Hold the dots until the count is final (context loaded) so it never jumps. */
+  showDots?: boolean;
 }
 
-export function WizardHeader({ currentStep, totalSteps, onBack, showBack }: WizardHeaderProps) {
+export function WizardHeader({
+  currentStep,
+  totalSteps,
+  onBack,
+  showBack,
+  showDots = true,
+}: WizardHeaderProps) {
   const { colors } = useThemeStyles();
 
   return (
@@ -44,7 +52,7 @@ export function WizardHeader({ currentStep, totalSteps, onBack, showBack }: Wiza
         )}
       </View>
 
-      <ProgressDots current={currentStep} total={totalSteps} />
+      {showDots ? <ProgressDots current={currentStep} total={totalSteps} /> : <View />}
 
       {/* Empty slot balances the back chevron so the dots stay centered. */}
       <View style={styles.sideSlot} />
