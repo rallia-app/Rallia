@@ -3240,6 +3240,8 @@
     },
     "tier": {
       "courtAvailable": "Terrain dispo",
+      "courtsOne": "1 terrain libre",
+      "courtsMany": "{count} terrains libres",
       "usuallyFree": "Souvent libre"
     },
     "cost": {
@@ -3257,6 +3259,7 @@
       "singles": "Simple",
       "doubles": "Double",
       "previewTitle": "Meilleures suggestions",
+      "previewHint": "Touche pour choisir les moments à proposer",
       "previewLoading": "On cherche des moments qui adonnent…",
       "previewEmpty": "Aucun moment commun trouvé. Tu peux quand même proposer une heure dans le chat.",
       "submit": "Proposer ces moments",
@@ -4574,6 +4577,8 @@
         "title": "Votre prochaine partie",
         "vs": "contre {name}",
         "hint": "Touchez pour lier votre partie jouée",
+        "organize": "Organise ta partie",
+        "organizeError": "Impossible d'ouvrir le chat de la partie. Réessaie.",
         "waiting": "En attente de votre prochain adversaire",
         "eliminated": "Vous avez été éliminé. Belle performance!",
         "champion": "Vous avez gagné le tournoi!"

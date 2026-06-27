@@ -182,6 +182,7 @@ export async function getConversation(
       title,
       picture_url,
       match_id,
+      tournament_match_id,
       created_by,
       created_at,
       updated_at
@@ -431,6 +432,24 @@ export async function getMatchChat(matchId: string): Promise<Conversation | null
   }
 
   return data;
+}
+
+/**
+ * Get or create the per-pairing "round chat" for a tournament bracket match.
+ * Idempotent: both opponents share one conversation tagged with the round. The
+ * caller must be one of the round's players. Returns the conversation id.
+ */
+export async function getOrCreateTournamentRoundChat(tournamentMatchId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('get_or_create_tournament_round_chat', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error getting/creating tournament round chat:', error);
+    throw error;
+  }
+
+  return data as string;
 }
 
 // ============================================================================

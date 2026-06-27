@@ -13,6 +13,7 @@ import {
   getMatchTimeVotes,
   toggleMatchTimeVote,
   createCasualMatch,
+  getOrCreateTournamentRoundChat,
   subscribeToMatchVotes,
   unsubscribeFromChannel,
 } from '@rallia/shared-services';
@@ -140,6 +141,16 @@ export function useMatchVotesRealtime(conversationId: string | undefined) {
 // ============================================================================
 // MATCH CREATION
 // ============================================================================
+
+/**
+ * Open (get-or-create) the per-pairing tournament round chat for a bracket
+ * match. Returns the conversation id to navigate to.
+ */
+export function useOpenTournamentRoundChat() {
+  return useMutation({
+    mutationFn: (tournamentMatchId: string) => getOrCreateTournamentRoundChat(tournamentMatchId),
+  });
+}
 
 export function useCreateCasualMatch() {
   const queryClient = useQueryClient();

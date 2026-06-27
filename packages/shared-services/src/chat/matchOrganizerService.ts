@@ -29,6 +29,7 @@ function toOption(row: {
   facility_id: string | null;
   facility_name: string | null;
   court_name: string | null;
+  court_count: number | null;
   price_cents: number | null;
   court_confirmed: boolean;
   tier: string;
@@ -41,6 +42,7 @@ function toOption(row: {
     facility_id: row.facility_id,
     facility_name: row.facility_name,
     court_name: row.court_name,
+    court_count: row.court_count ?? 0,
     price_cents: row.price_cents,
     court_confirmed: row.court_confirmed,
     tier: row.tier === 'bookable' ? 'bookable' : 'usually_free',
@@ -78,7 +80,10 @@ export async function getMatchOrganizerOptions(
 
 export interface OrganizerSport {
   id: string;
+  /** Lowercase sport key (e.g. 'tennis') — used for the sport icon. */
   name: string;
+  /** Human label (e.g. 'Tennis') — used for display. */
+  displayName: string;
 }
 
 /**
@@ -93,20 +98,29 @@ export async function getSharedSports(playerIds: string[]): Promise<OrganizerSpo
 
   const { data, error } = await supabase
     .from('player_sport')
-    .select('player_id, sport_id, sport(id, name)')
-    .in('player_id', uniqueIds);
+    .select('player_id, sport_id, sport(id, name, display_name)')
+    .in('player_id', uniqueIds)
+    .eq('is_active', true);
 
   if (error) {
     console.error('Error resolving shared sports:', error);
     throw error;
   }
 
-  const bySport = new Map<string, { name: string; players: Set<string> }>();
+  const bySport = new Map<string, { name: string; displayName: string; players: Set<string> }>();
   for (const row of data ?? []) {
-    const sport = row.sport as unknown as { id: string; name: string } | null;
+    const sport = row.sport as unknown as {
+      id: string;
+      name: string;
+      display_name: string | null;
+    } | null;
     if (!sport) continue;
     if (!bySport.has(sport.id)) {
-      bySport.set(sport.id, { name: sport.name, players: new Set() });
+      bySport.set(sport.id, {
+        name: sport.name,
+        displayName: sport.display_name ?? sport.name,
+        players: new Set(),
+      });
     }
     bySport.get(sport.id)!.players.add(row.player_id);
   }
@@ -114,9 +128,10 @@ export async function getSharedSports(playerIds: string[]): Promise<OrganizerSpo
   const shared: OrganizerSport[] = [];
   const all: OrganizerSport[] = [];
   for (const [id, info] of bySport) {
-    all.push({ id, name: info.name });
+    const entry: OrganizerSport = { id, name: info.name, displayName: info.displayName };
+    all.push(entry);
     if (info.players.size === uniqueIds.length) {
-      shared.push({ id, name: info.name });
+      shared.push(entry);
     }
   }
 

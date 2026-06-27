@@ -84,8 +84,10 @@ export interface MatchOrganizerOption {
   hour_of_day: number;
   facility_id: string | null;
   facility_name: string | null;
-  /** Present only when a real bookable court slot was found at that hour. */
+  /** Cheapest open court's label at that hour (present only when court_confirmed). */
   court_name: string | null;
+  /** Number of distinct courts open at the facility at that hour. */
+  court_count: number;
   price_cents: number | null;
   court_confirmed: boolean;
   /** 'bookable' = a court is open now; 'usually_free' = recurring availability. */
@@ -132,6 +134,8 @@ export interface Conversation {
   picture_url: string | null;
   match_id: string | null;
   tournament_id?: string | null;
+  /** Set on a tournament "round chat" — the per-pairing chat for a bracket match. */
+  tournament_match_id?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
