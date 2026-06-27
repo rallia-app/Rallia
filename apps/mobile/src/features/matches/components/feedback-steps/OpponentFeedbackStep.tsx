@@ -5,7 +5,7 @@
  * Includes attendance toggle, late toggle, star rating, and comments.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, type ComponentProps } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Image } from 'react-native';
 import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,10 +16,35 @@ import type {
   OpponentForFeedback,
   OpponentFeedbackFormState,
   MatchReportReasonEnum,
+  OpponentLevelAssessmentEnum,
 } from '@rallia/shared-types';
 
 import { StarRating } from '#/components/StarRating';
 import type { TranslationKey } from '#/hooks/useTranslation';
+
+// =============================================================================
+// LEVEL ASSESSMENT OPTIONS
+// =============================================================================
+
+interface LevelAssessmentOption {
+  value: OpponentLevelAssessmentEnum;
+  icon: ComponentProps<typeof Ionicons>['name'];
+  labelKey: TranslationKey;
+}
+
+const LEVEL_ASSESSMENT_OPTIONS: LevelAssessmentOption[] = [
+  {
+    value: 'below',
+    icon: 'trending-down-outline',
+    labelKey: 'matchFeedback.opponentStep.levelBelow',
+  },
+  { value: 'at', icon: 'remove-outline', labelKey: 'matchFeedback.opponentStep.levelAt' },
+  {
+    value: 'above',
+    icon: 'trending-up-outline',
+    labelKey: 'matchFeedback.opponentStep.levelAbove',
+  },
+];
 
 // =============================================================================
 // TYPES
@@ -141,7 +166,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
   t,
   isDark: _isDark,
 }) => {
-  const { showedUp, wasLate, starRating, comments } = feedback;
+  const { showedUp, wasLate, starRating, levelAssessment, comments } = feedback;
 
   // Handle report submission (called from action sheet via payload)
   const handleReportSubmit = useCallback(
@@ -174,6 +199,7 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
         showedUp: value,
         wasLate: value ? feedback.wasLate : false,
         starRating: value ? feedback.starRating : undefined,
+        levelAssessment: value ? feedback.levelAssessment : undefined,
       });
     },
     [feedback, onFeedbackChange]
@@ -194,6 +220,17 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
       onFeedbackChange({
         ...feedback,
         starRating: rating,
+      });
+    },
+    [feedback, onFeedbackChange]
+  );
+
+  const handleLevelAssessmentChange = useCallback(
+    (value: OpponentLevelAssessmentEnum) => {
+      lightHaptic();
+      onFeedbackChange({
+        ...feedback,
+        levelAssessment: value,
       });
     },
     [feedback, onFeedbackChange]
@@ -302,6 +339,53 @@ export const OpponentFeedbackStep: React.FC<OpponentFeedbackStepProps> = ({
         </View>
       )}
 
+      {/* Level vs rating assessment (only if showed up) */}
+      {showedUp && (
+        <View style={styles.fieldGroup}>
+          <View style={styles.fieldHeader}>
+            <Text size="sm" weight="semibold" color={colors.textSecondary}>
+              {t('matchFeedback.opponentStep.levelAssessment')}
+            </Text>
+            <Text size="xs" color={colors.textMuted}>
+              {t('matchFeedback.opponentStep.levelAssessmentDescription')}
+            </Text>
+          </View>
+          <View style={styles.levelOptions}>
+            {LEVEL_ASSESSMENT_OPTIONS.map(option => {
+              const isSelected = levelAssessment === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.levelOption,
+                    {
+                      backgroundColor: isSelected ? colors.buttonActive : colors.buttonInactive,
+                      borderColor: isSelected ? colors.buttonActive : colors.border,
+                    },
+                  ]}
+                  onPress={() => handleLevelAssessmentChange(option.value)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={option.icon}
+                    size={22}
+                    color={isSelected ? colors.buttonTextActive : colors.textMuted}
+                  />
+                  <Text
+                    size="sm"
+                    weight={isSelected ? 'semibold' : 'regular'}
+                    color={isSelected ? colors.buttonTextActive : colors.textMuted}
+                    style={styles.levelOptionLabel}
+                  >
+                    {t(option.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
       {/* Star Rating (only if showed up) */}
       {showedUp && (
         <View style={styles.fieldGroup}>
@@ -399,6 +483,10 @@ const styles = StyleSheet.create({
   fieldLabel: {
     marginBottom: spacingPixels[2],
   },
+  fieldHeader: {
+    marginBottom: spacingPixels[2],
+    gap: spacingPixels[1],
+  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -443,6 +531,23 @@ const styles = StyleSheet.create({
   ratingContainer: {
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
+  },
+  levelOptions: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  levelOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[1],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: radiusPixels.md,
+    borderWidth: 1,
+  },
+  levelOptionLabel: {
+    textAlign: 'center',
   },
   commentsInput: {
     padding: spacingPixels[4],

@@ -62,6 +62,8 @@ export type MatchParticipantStatusEnum = DbEnum<'match_participant_status_enum'>
 // Match Feedback (enums for feedback wizard)
 export type MatchOutcomeEnum = DbEnum<'match_outcome_enum'>;
 export type CancellationReasonEnum = DbEnum<'cancellation_reason_enum'>;
+/** How an opponent played relative to their rating: 'below' | 'at' | 'above' */
+export type OpponentLevelAssessmentEnum = DbEnum<'opponent_level_assessment_enum'>;
 
 // Match Report (enums for moderation)
 export type MatchReportReasonEnum = DbEnum<'match_report_reason_enum'>;

@@ -221,6 +221,9 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
           showed_up: submittedFeedback.showedUp,
           was_late: submittedFeedback.showedUp ? submittedFeedback.wasLate : null,
           star_rating: submittedFeedback.showedUp ? (submittedFeedback.starRating ?? null) : null,
+          level_assessment: submittedFeedback.showedUp
+            ? (submittedFeedback.levelAssessment ?? null)
+            : null,
         });
       }
       if (result.allOpponentsRated || currentStep >= totalSteps - 1) {
@@ -369,6 +372,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       showedUp: feedback.showedUp,
       wasLate: feedback.wasLate,
       starRating: feedback.starRating,
+      levelAssessment: feedback.levelAssessment,
       comments: feedback.comments,
     });
   }, [submitFeedback, opponents, currentStep, opponentFeedback, getOpponentIndex]);
@@ -409,10 +413,21 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
       if (outcome === 'opponent_no_show') return noShowPlayerIds.length > 0;
       return false;
     } else {
-      // Opponent step - always can proceed (can skip)
-      return true;
+      // Opponent step - the level assessment is required when the opponent showed up
+      const feedback = opponentFeedback[getOpponentIndex(currentStep)];
+      const showedUp = feedback?.showedUp ?? true;
+      if (!showedUp) return true;
+      return !!feedback?.levelAssessment;
     }
-  }, [isOnOutcomeStep, outcome, cancellationReason, noShowPlayerIds]);
+  }, [
+    isOnOutcomeStep,
+    outcome,
+    cancellationReason,
+    noShowPlayerIds,
+    opponentFeedback,
+    currentStep,
+    getOpponentIndex,
+  ]);
 
   // Determine button text and action
   const getFooterButton = useMemo(() => {
@@ -544,6 +559,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
               showedUp: true,
               wasLate: false,
               starRating: undefined,
+              levelAssessment: undefined,
               comments: '',
             };
             return (
