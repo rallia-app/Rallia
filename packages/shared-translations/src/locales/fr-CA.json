@@ -1522,6 +1522,12 @@
     "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Modifie tes préférences dans l'application.",
     "managePreferences": "Gérer les préférences de notification"
   },
+  "notificationsUnsubscribe": {
+    "successTitle": "Désabonnement effectué",
+    "successMessage": "Tu ne recevras plus de courriels de notification de Rallia. Tu peux réactiver certains courriels en tout temps dans l'application sous Réglages → Notifications.",
+    "errorTitle": "Impossible de te désabonner",
+    "errorMessage": "Ce lien de désabonnement semble invalide ou expiré. Tu peux quand même désactiver les courriels dans l'application sous Réglages → Notifications."
+  },
   "onboarding": {
     "pageTitle": "Créer votre organisation",
     "pageDescription": "Configurez le profil de votre organisation pour commencer",
