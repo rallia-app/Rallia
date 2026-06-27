@@ -1522,6 +1522,12 @@
     "errorMessage": "This unsubscribe link looks invalid or expired. Please update your preferences in the app instead.",
     "managePreferences": "Manage notification preferences"
   },
+  "notificationsUnsubscribe": {
+    "successTitle": "You're unsubscribed",
+    "successMessage": "You won't receive notification emails from Rallia anymore. You can re-enable specific emails anytime in the app under Settings → Notifications.",
+    "errorTitle": "Couldn't unsubscribe",
+    "errorMessage": "This unsubscribe link looks invalid or expired. You can still turn off emails in the app under Settings → Notifications."
+  },
   "onboarding": {
     "pageTitle": "Create Your Organization",
     "pageDescription": "Set up your organization profile to get started",

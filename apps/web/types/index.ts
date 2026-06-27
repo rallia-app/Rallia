@@ -7038,6 +7038,10 @@ export type Database = {
         Args: { p_location: unknown };
         Returns: string;
       };
+      disable_all_email_notifications: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
       dismiss_alert: {
         Args: { p_admin_id: string; p_alert_id: string };
         Returns: boolean;

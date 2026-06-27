@@ -304,7 +304,8 @@ function generateActionButton(
 export function generateEmailHtml(
   notification: NotificationRecord,
   locale: string,
-  siteUrl?: string
+  siteUrl?: string,
+  unsubscribeUrl?: string
 ): string {
   const { title, body, type, payload } = notification;
   const T = EMAIL_TOKENS;
@@ -368,6 +369,13 @@ export function generateEmailHtml(
     preheader,
     showUnsubscribe: true,
     ...(siteUrl && { siteUrl }),
+    ...(unsubscribeUrl && {
+      unsubscribeUrl,
+      unsubscribeLabel:
+        locale === 'fr-CA' || locale === 'fr'
+          ? 'Se désabonner de ces courriels'
+          : 'Unsubscribe from these emails',
+    }),
   });
 }
 
