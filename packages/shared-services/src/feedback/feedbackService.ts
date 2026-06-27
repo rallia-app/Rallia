@@ -123,7 +123,16 @@ export async function submitMatchOutcome(input: MatchOutcomeInput): Promise<Matc
 export async function submitOpponentFeedback(
   input: MatchFeedbackInput
 ): Promise<MatchFeedbackResult> {
-  const { matchId, reviewerId, opponentId, showedUp, wasLate, starRating, comments } = input;
+  const {
+    matchId,
+    reviewerId,
+    opponentId,
+    showedUp,
+    wasLate,
+    starRating,
+    levelAssessment,
+    comments,
+  } = input;
 
   // Insert feedback record
   const { data: feedback, error: feedbackError } = await supabase
@@ -135,6 +144,7 @@ export async function submitOpponentFeedback(
       showed_up: showedUp,
       was_late: showedUp ? wasLate : null,
       star_rating: showedUp ? starRating : null,
+      level_assessment: showedUp ? (levelAssessment ?? null) : null,
       comments: comments || null,
     })
     .select('id')

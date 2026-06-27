@@ -10,6 +10,7 @@ import type {
   MatchOutcomeEnum,
   MatchReportReasonEnum,
   MatchReportPriorityEnum,
+  OpponentLevelAssessmentEnum,
 } from './database';
 
 // ============================================
@@ -69,6 +70,8 @@ export interface MatchFeedbackInput {
   wasLate?: boolean;
   /** Star rating 1-5 - only if showedUp is true */
   starRating?: number;
+  /** How the opponent played vs their rating - only if showedUp is true */
+  levelAssessment?: OpponentLevelAssessmentEnum;
   /** Optional comments */
   comments?: string;
 }
@@ -172,6 +175,8 @@ export interface OpponentFeedbackFormState {
   wasLate: boolean;
   /** Star rating (1-5, undefined if not set) */
   starRating?: number;
+  /** How the opponent played vs their rating (undefined if not set) */
+  levelAssessment?: OpponentLevelAssessmentEnum;
   /** Optional comments */
   comments: string;
 }

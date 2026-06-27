@@ -182,6 +182,8 @@ export function opponentFeedbackSubmitted(props: {
   showed_up: boolean;
   was_late: boolean | null;
   star_rating: number | null;
+  /** 'below' | 'at' | 'above' — how they played vs their rating (null if unanswered) */
+  level_assessment: string | null;
 }): void {
   capture('opponent_feedback_submitted', props);
 }

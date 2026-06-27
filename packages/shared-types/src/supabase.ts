@@ -2835,6 +2835,9 @@ export type Database = {
           comments: string | null
           created_at: string
           id: string
+          level_assessment:
+            | Database["public"]["Enums"]["opponent_level_assessment_enum"]
+            | null
           match_id: string
           opponent_id: string
           reviewer_id: string
@@ -2846,6 +2849,9 @@ export type Database = {
           comments?: string | null
           created_at?: string
           id?: string
+          level_assessment?:
+            | Database["public"]["Enums"]["opponent_level_assessment_enum"]
+            | null
           match_id: string
           opponent_id: string
           reviewer_id: string
@@ -2857,6 +2863,9 @@ export type Database = {
           comments?: string | null
           created_at?: string
           id?: string
+          level_assessment?:
+            | Database["public"]["Enums"]["opponent_level_assessment_enum"]
+            | null
           match_id?: string
           opponent_id?: string
           reviewer_id?: string
@@ -12938,6 +12947,7 @@ export type Database = {
         | "league_member_request"
         | "league_member_approved"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
+      opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
       organization_type:
         | "club"
@@ -13593,6 +13603,7 @@ export const Constants = {
         "league_member_approved",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
+      opponent_level_assessment_enum: ["below", "at", "above"],
       organization_nature_enum: ["public", "private"],
       organization_type: [
         "club",
