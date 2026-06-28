@@ -114,3 +114,25 @@ export function navigateToTournamentDetailFromOutside(tournamentId: string) {
     navigationRef.navigate('TournamentDetail', { tournamentId });
   }
 }
+
+/**
+ * Navigate to LeagueDetail from outside the NavigationContainer.
+ * Used for league push notification tap handling (invites, member requests,
+ * approvals, season closed).
+ */
+export function navigateToLeagueDetailFromOutside(leagueId: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('LeagueDetail', { leagueId });
+  }
+}
+
+/**
+ * Navigate to SessionDetail from outside the NavigationContainer.
+ * Used for session push notification tap handling (published, confirm
+ * reminder). SessionDetail needs both the session and its league.
+ */
+export function navigateToSessionDetailFromOutside(sessionId: string, leagueId: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('SessionDetail', { sessionId, leagueId });
+  }
+}

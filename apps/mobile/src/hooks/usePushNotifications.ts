@@ -17,6 +17,8 @@ import {
   navigateFromOutside,
   navigateToChatConversationFromOutside,
   navigateToTournamentDetailFromOutside,
+  navigateToLeagueDetailFromOutside,
+  navigateToSessionDetailFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
   navigateToUserProfileFromOutside,
@@ -109,7 +111,27 @@ const TOURNAMENT_NOTIFICATION_TYPES = [
   'tournament_updated',
   'tournament_cancelled',
   'tournament_completed',
+  'tournament_invitation',
 ] as const;
+
+/**
+ * League notifications that deep-link to the league detail screen. The league
+ * id arrives as the payload's leagueId (season_closed) or the target_id (the
+ * membership/invite types, whose target is the league).
+ */
+const LEAGUE_NOTIFICATION_TYPES = [
+  'league_invitation',
+  'league_member_request',
+  'league_member_approved',
+  'season_closed',
+] as const;
+
+/**
+ * Session notifications that deep-link to the session detail screen (its
+ * confirm CTA). SessionDetail needs both the session and its league, both
+ * carried in the payload.
+ */
+const SESSION_NOTIFICATION_TYPES = ['session_published', 'session_confirm_reminder'] as const;
 
 /**
  * Open the Stripe Connect Express hosted onboarding URL for the current user.
@@ -532,6 +554,44 @@ export function usePushNotifications(
           navigateToTournamentDetailFromOutside(tournamentId);
           Logger.logUserAction('push_notification_deep_link', {
             tournamentId,
+            type: notificationType,
+          });
+        }
+      }
+    }
+
+    // Handle session notifications — deep-link to the session detail (confirm CTA).
+    if (notificationType) {
+      const isSessionNotification = SESSION_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof SESSION_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isSessionNotification) {
+        const sessionId = (data.sessionId ?? data.targetId) as string | undefined;
+        const leagueId = data.leagueId as string | undefined;
+        if (sessionId && leagueId) {
+          navigateToSessionDetailFromOutside(sessionId, leagueId);
+          Logger.logUserAction('push_notification_deep_link', {
+            sessionId,
+            leagueId,
+            type: notificationType,
+          });
+        }
+      }
+    }
+
+    // Handle league notifications — deep-link to the league detail screen.
+    if (notificationType) {
+      const isLeagueNotification = LEAGUE_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof LEAGUE_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isLeagueNotification) {
+        const leagueId = (data.leagueId ?? data.targetId) as string | undefined;
+        if (leagueId) {
+          navigateToLeagueDetailFromOutside(leagueId);
+          Logger.logUserAction('push_notification_deep_link', {
+            leagueId,
             type: notificationType,
           });
         }

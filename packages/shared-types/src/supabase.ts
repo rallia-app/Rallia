@@ -8018,6 +8018,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -8044,6 +8045,7 @@ export type Database = {
           cancelled_reason?: string | null
           capacity?: number | null
           completed_at?: string | null
+          confirm_reminder_sent_at?: string | null
           confirmation_deadline_at?: string | null
           created_at?: string
           duration_minutes?: number
@@ -8070,6 +8072,7 @@ export type Database = {
           cancelled_reason?: string | null
           capacity?: number | null
           completed_at?: string | null
+          confirm_reminder_sent_at?: string | null
           confirmation_deadline_at?: string | null
           created_at?: string
           duration_minutes?: number
@@ -11007,6 +11010,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -11035,6 +11039,7 @@ export type Database = {
         }
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
+      lt_send_session_confirm_reminders: { Args: never; Returns: number }
       lt_user_is_fr: { Args: { p_user_id: string }; Returns: boolean }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
@@ -11564,6 +11569,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -11637,6 +11643,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -11672,6 +11679,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -11711,6 +11719,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -11782,6 +11791,7 @@ export type Database = {
           cancelled_reason: string | null
           capacity: number | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           confirmation_deadline_at: string | null
           created_at: string
           duration_minutes: number
@@ -12974,6 +12984,7 @@ export type Database = {
         | "league_invitation"
         | "league_member_request"
         | "league_member_approved"
+        | "session_confirm_reminder"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -13629,6 +13640,7 @@ export const Constants = {
         "league_invitation",
         "league_member_request",
         "league_member_approved",
+        "session_confirm_reminder",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

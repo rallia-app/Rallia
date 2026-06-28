@@ -4407,6 +4407,7 @@
       "winnerPrompt": "Qui a gagné?",
       "scorePlaceholder": "Pointage (p. ex. 6-4 6-2)",
       "enter": "Entrer le pointage",
+      "edit": "Modifier le pointage",
       "save": "Enregistrer",
       "saving": "Enregistrement...",
       "cancel": "Annuler",

@@ -4407,6 +4407,7 @@
       "winnerPrompt": "Who won?",
       "scorePlaceholder": "Score (e.g. 6-4 6-2)",
       "enter": "Enter score",
+      "edit": "Edit score",
       "save": "Save",
       "saving": "Saving...",
       "cancel": "Cancel",
