@@ -277,8 +277,9 @@ export const SessionDetail: React.FC = () => {
   const openScoreEntry = useCallback((m: SessionMatch) => {
     lightHaptic();
     setScoringMatch(m);
-    setScoreWinner('a');
-    setScoreText('');
+    // Prefill when editing an already-recorded score; default for a fresh entry.
+    setScoreWinner(m.winner_team ?? 'a');
+    setScoreText(m.score ?? '');
   }, []);
 
   const submitScore = useCallback(() => {
@@ -582,31 +583,47 @@ export const SessionDetail: React.FC = () => {
                       >
                         <Ionicons name="create-outline" size={18} color={colors.primary} />
                       </TouchableOpacity>
+                    ) : isScored(m) &&
+                      isOrganizer &&
+                      (sess.status === 'published' || sess.status === 'in_progress') ? (
+                      // A recorded score stays editable by the organizer, with the
+                      // lock toggle alongside (lock protects it from a regenerate).
+                      <View style={styles.matchActions}>
+                        <TouchableOpacity
+                          onPress={() => openScoreEntry(m)}
+                          style={styles.lockButton}
+                          accessibilityLabel={t('sessionDetail.score.edit')}
+                          testID="cta-edit-score"
+                        >
+                          <Ionicons name="create-outline" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            lightHaptic();
+                            setLock({
+                              sessionMatchId: m.id,
+                              locked: !m.locked,
+                              versionWas: m.version,
+                            });
+                          }}
+                          disabled={isLocking}
+                          accessibilityLabel={
+                            m.locked
+                              ? t('sessionDetail.sheet.unlock')
+                              : t('sessionDetail.sheet.lock')
+                          }
+                          style={styles.lockButton}
+                          testID="cta-lock-match"
+                        >
+                          <Ionicons
+                            name={m.locked ? 'lock-closed' : 'lock-open-outline'}
+                            size={18}
+                            color={m.locked ? colors.primary : colors.textMuted}
+                          />
+                        </TouchableOpacity>
+                      </View>
                     ) : isScored(m) ? (
                       <Ionicons name="checkmark-circle" size={18} color={colors.positiveText} />
-                    ) : isOrganizer && sess.status === 'published' ? (
-                      <TouchableOpacity
-                        onPress={() => {
-                          lightHaptic();
-                          setLock({
-                            sessionMatchId: m.id,
-                            locked: !m.locked,
-                            versionWas: m.version,
-                          });
-                        }}
-                        disabled={isLocking}
-                        accessibilityLabel={
-                          m.locked ? t('sessionDetail.sheet.unlock') : t('sessionDetail.sheet.lock')
-                        }
-                        style={styles.lockButton}
-                        testID="cta-lock-match"
-                      >
-                        <Ionicons
-                          name={m.locked ? 'lock-closed' : 'lock-open-outline'}
-                          size={18}
-                          color={m.locked ? colors.primary : colors.textMuted}
-                        />
-                      </TouchableOpacity>
                     ) : m.locked ? (
                       <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
                     ) : null}
@@ -705,7 +722,9 @@ export const SessionDetail: React.FC = () => {
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
             <Text size="lg" weight="bold" color={colors.text}>
-              {t('sessionDetail.score.title')}
+              {scoringMatch && isScored(scoringMatch)
+                ? t('sessionDetail.score.edit')
+                : t('sessionDetail.score.title')}
             </Text>
             {scoringMatch ? (
               <>
@@ -859,6 +878,7 @@ const styles = StyleSheet.create({
   vsRow: { flexDirection: 'row', alignItems: 'center', gap: spacingPixels[2] },
   vsName: { flexShrink: 1 },
   lockButton: { padding: spacingPixels[1] },
+  matchActions: { flexDirection: 'row', alignItems: 'center', gap: spacingPixels[1] },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
     borderTopLeftRadius: radiusPixels.xl,
