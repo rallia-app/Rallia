@@ -53,6 +53,7 @@ import {
 } from '@rallia/shared-hooks';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
+import { getMatchWithDetails } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
 import {
   primary,
@@ -71,7 +72,7 @@ import {
   useNavigateToPlayerProfile,
   useRequireOnboarding,
 } from '#/hooks';
-import { useSport } from '#/context';
+import { useSport, useMatchDetailSheet, type MatchDetailData } from '#/context';
 import { getJoinErrorToastMessage } from '#/utils/joinErrorToast';
 import { SportIcon } from '#/components/SportIcon';
 import RatingBadge from '#/components/RatingBadge';
@@ -99,6 +100,32 @@ const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
 // Storage key for "never show intro again"
 const ADD_SCORE_INTRO_KEY = 'rallia_add_score_intro_dismissed';
 
+/**
+ * Minimal MatchDetailData built from a community GroupMatch. Used as a fallback
+ * when the full match can't be read directly, so the detail sheet still shows
+ * the score for the recent game.
+ */
+const groupMatchToMatchSeed = (gm: GroupMatch): MatchDetailData => {
+  const m = gm.match;
+  return {
+    id: m.id,
+    sport_id: m.sport_id,
+    created_by: m.created_by,
+    match_date: m.match_date,
+    start_time: m.start_time,
+    end_time: m.start_time,
+    player_expectation: m.player_expectation,
+    format: m.format,
+    timezone: 'UTC',
+    visibility: 'private',
+    cancelled_at: m.cancelled_at,
+    host_edited_at: null,
+    sport: m.sport ? { id: m.sport.id, name: m.sport.name, icon_url: m.sport.icon_url } : undefined,
+    participants: m.participants.map(p => ({ ...p, match_id: m.id, status: 'joined' })),
+    result: m.result ? { ...m.result, match_id: m.id } : null,
+  } as unknown as MatchDetailData;
+};
+
 export default function CommunityDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<CommunityDetailRouteProp>();
@@ -108,6 +135,7 @@ export default function CommunityDetailScreen() {
   const { session } = useAuth();
   const { t, locale } = useTranslation();
   const toast = useToast();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { guardAction } = useRequireOnboarding();
   const { selectedSport } = useSport();
   const { sports } = useSports();
@@ -261,15 +289,20 @@ export default function CommunityDetailScreen() {
   );
 
   const handleNavigateToMatch = useCallback(
-    (match: GroupMatch) => {
+    async (match: GroupMatch) => {
       if (!guardAction()) return;
       if (!isActiveMember) {
         showJoinPrompt();
         return;
       }
-      navigation.navigate('PlayedMatchDetail', { match });
+      // Open the shared match-detail sheet; fall back to a seed from the group
+      // payload if the full match can't be read directly.
+      const full = await getMatchWithDetails(match.match_id).catch(() => null);
+      openMatchDetail((full ?? groupMatchToMatchSeed(match)) as MatchDetailData, {
+        source: 'community_recent_games',
+      });
     },
-    [guardAction, isActiveMember, showJoinPrompt, navigation]
+    [guardAction, isActiveMember, showJoinPrompt, openMatchDetail]
   );
 
   const handleNavigateToFacility = useCallback(

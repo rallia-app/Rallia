@@ -1415,6 +1415,7 @@
       "rating": "Niveau",
       "reputation": "Réputation",
       "statistics": "Statistiques",
+      "gameHistory": "Historique des parties",
       "availabilities": "Disponibilités"
     },
     "fields": {
@@ -1426,6 +1427,20 @@
       "hoursPlayed": "Heures jouées",
       "gamesHosted": "Parties organisées",
       "weekStreak": "Série de semaines"
+    },
+    "gameHistory": {
+      "empty": "Aucune partie avec un pointage enregistré pour l'instant.",
+      "error": "Impossible de charger l'historique des parties.",
+      "showMore": "Voir plus de parties",
+      "win": "Victoire",
+      "loss": "Défaite",
+      "draw": "Nulle",
+      "vs": "contre",
+      "expectation": {
+        "competitive": "Compétitif",
+        "casual": "Amical",
+        "both": "Amical et compétitif"
+      }
     },
     "rating": {
       "unrated": "Non classé",

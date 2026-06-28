@@ -577,6 +577,61 @@ export interface MatchParticipantWithPlayer extends MatchParticipant {
   player: PlayerWithProfile;
 }
 
+/**
+ * One participant inside a {@link PlayerMatchHistoryItem}. Shaped to match what
+ * the PlayedMatchDetail screen reads, so a history row can be handed straight to it.
+ */
+export interface PlayerMatchHistoryParticipant {
+  id: string;
+  player_id: string;
+  team_number: number | null;
+  is_host: boolean;
+  player?: {
+    id: string;
+    profile?: {
+      first_name: string | null;
+      last_name: string | null;
+      display_name: string | null;
+      profile_picture_url: string | null;
+    };
+  };
+}
+
+/** One set inside a {@link PlayerMatchHistoryItem}. */
+export interface PlayerMatchHistorySet {
+  id: string;
+  set_number: number;
+  team1_score: number;
+  team2_score: number;
+}
+
+/**
+ * A past game with a verified score, as returned by the `get_player_match_history`
+ * RPC. Fully hydrated (both teams + per-set scores) so the profile game-history
+ * section can render a row AND open PlayedMatchDetail without a second fetch.
+ */
+export interface PlayerMatchHistoryItem {
+  match_id: string;
+  match_date: string;
+  start_time: string;
+  sport_id: string;
+  sport_name: string;
+  sport_icon_url: string | null;
+  format: MatchFormatEnum | null;
+  player_expectation: MatchTypeEnum;
+  location_name: string | null;
+  /** The viewed player's team (1 or 2); used to derive their win/loss. */
+  target_team_number: number | null;
+  result_id: string;
+  winning_team: number | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  is_verified: boolean;
+  created_by: string;
+  participants: PlayerMatchHistoryParticipant[];
+  sets: PlayerMatchHistorySet[];
+}
+
 // ============================================
 // ONBOARDING TYPES
 // ============================================

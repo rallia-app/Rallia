@@ -70,7 +70,6 @@ export type RootStackParamList = {
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
-  PlayedMatchDetail: { match: unknown }; // Played match detail view
   NetworkMatches: {
     networkId: string;
     networkType: 'community' | 'group';

@@ -69,6 +69,7 @@ import * as Analytics from '#/services/analytics';
 import type { RootStackParamList } from '#/navigation/types';
 import { formatDateMonthYear } from '#/utils/dateFormatting';
 import { CertificationBadge, ProofViewer, type BadgeStatus } from '#/features/ratings/components';
+import { PlayerMatchHistorySection } from '#/screens/components/PlayerMatchHistorySection';
 import { useVideoThumbnail } from '#/hooks/useVideoThumbnail';
 import { useOgImage } from '#/hooks/useOgImage';
 
@@ -2044,6 +2045,13 @@ const PlayerProfile = () => {
             </View>
           </View>
         </View>
+
+        {/* Game History — past games with a verified score (always public per product). */}
+        <PlayerMatchHistorySection
+          playerId={playerId}
+          sportId={sportId}
+          sportName={selectedSport?.name}
+        />
 
         {/* Rating Section */}
         {primarySport && (
