@@ -525,3 +525,64 @@ export function renderNearbyMatchPush(
 
   return { title, body: body.trim() };
 }
+
+/**
+ * Render the localized {title, body} for a `new_message` push.
+ *
+ * notify_new_message hardcodes an English "Message from {sender}" title and
+ * stores the raw message content as the body. For the lock screen we re-render
+ * in the recipient's locale:
+ *  - the title prefix is always ours, so it's localized for every chat push;
+ *  - court_booking_prompt / court_booked are fully app-generated, so title AND
+ *    body are localized (mirrors the in-app CourtSystemMessageCard copy);
+ *  - match_organizer's body is app copy stored in the poster's locale, so it's
+ *    re-rendered for the recipient;
+ *  - a plain human message keeps the sender's own words as the body.
+ *
+ * `fallback` is the stored English title/body, used when the payload lacks the
+ * fields needed to localize (older rows, missing sender name).
+ */
+export function renderChatMessagePush(
+  payload: Record<string, unknown> | null | undefined,
+  locale: string,
+  fallback: { title: string; body: string }
+): { title: string; body: string } {
+  const messageType = payload?.messageType;
+  const facility = (payload?.facilityName as string | undefined)?.trim();
+
+  // Court system messages: fully app-generated — localize title + body.
+  if (messageType === 'court_booking_prompt') {
+    return {
+      title: t(locale, 'notification.courtPrompt.title'),
+      body: facility
+        ? t(locale, 'notification.courtPrompt.body', { facility })
+        : t(locale, 'notification.courtPrompt.bodyNoFacility'),
+    };
+  }
+  if (messageType === 'court_booked') {
+    const court =
+      (payload?.courtLabel as string | undefined)?.trim() ||
+      t(locale, 'notification.courtFallback');
+    return {
+      title: t(locale, 'notification.courtBooked.title', { court }),
+      body: facility
+        ? t(locale, 'notification.courtBooked.body', { facility })
+        : t(locale, 'notification.courtBooked.bodyNoFacility'),
+    };
+  }
+
+  // Human + match_organizer messages share the generic "message from {sender}"
+  // title — localize it (the trigger hardcodes English).
+  const senderName = (payload?.senderName as string | undefined)?.trim();
+  const title = senderName
+    ? t(locale, 'notification.chat.titleFrom', { senderName })
+    : fallback.title;
+
+  // match_organizer body is app copy in the poster's locale — re-render it.
+  if (messageType === 'match_organizer') {
+    return { title, body: t(locale, 'notification.matchOrganizer.body') };
+  }
+
+  // Plain human message: keep the sender's own words.
+  return { title, body: fallback.body };
+}

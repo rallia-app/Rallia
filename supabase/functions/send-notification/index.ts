@@ -18,7 +18,7 @@ import { captureEvent } from '../_shared/posthog.ts';
 import { sendEmail, sendOrgEmail } from './handlers/email.ts';
 import { sendPush } from './handlers/push.ts';
 import { sendSms, isValidPhoneNumber } from './handlers/sms.ts';
-import { renderNearbyMatchPush } from './templates/match.ts';
+import { renderNearbyMatchPush, renderChatMessagePush } from './templates/match.ts';
 import type {
   NotificationRecord,
   UserContactInfo,
@@ -287,6 +287,11 @@ async function sendViaChannel(
       let pushOverride: { title: string; body: string } | undefined;
       if (notification.type === 'nearby_match_available') {
         pushOverride = renderNearbyMatchPush(notification.payload, contact.preferred_locale);
+      } else if (notification.type === 'new_message') {
+        pushOverride = renderChatMessagePush(notification.payload, contact.preferred_locale, {
+          title: notification.title,
+          body: notification.body ?? '',
+        });
       }
       return sendPush(notification, contact.expo_push_token, badgeCount, supabase, pushOverride);
     }

@@ -203,6 +203,23 @@ const translations: Translations = {
     'notification.nearby.today': 'Today',
     'notification.nearby.tomorrow': 'Tomorrow',
 
+    // Chat message push (localizes the generic title prefix for every new_message)
+    'notification.chat.titleFrom': 'Message from {senderName}',
+
+    // Court system chat messages (push localization for court_booking_prompt / court_booked)
+    'notification.courtFallback': 'the court',
+    'notification.courtPrompt.title': 'Your match is full!',
+    'notification.courtPrompt.body':
+      'No court booked yet at {facility}. Grab one to lock in your game.',
+    'notification.courtPrompt.bodyNoFacility':
+      'No court booked yet. Grab one to lock in your game.',
+    'notification.courtBooked.title': '{court} is booked!',
+    'notification.courtBooked.body': 'See you on the court at {facility}.',
+    'notification.courtBooked.bodyNoFacility': 'The court is booked. See you there!',
+
+    // Match organizer card push (body mirrors the conversation-list preview copy)
+    'notification.matchOrganizer.body': 'I suggested some times to play',
+
     // Morning digest
     'digest.subject': 'Your morning game briefing',
     'digest.preheader': 'Upcoming games near you + players to challenge this week',
@@ -436,6 +453,23 @@ const translations: Translations = {
     'notification.nearby.spotsLabel_plural': ' · {count} places libres',
     'notification.nearby.today': "Aujourd'hui",
     'notification.nearby.tomorrow': 'Demain',
+
+    // Chat message push (localizes the generic title prefix for every new_message)
+    'notification.chat.titleFrom': 'Message de {senderName}',
+
+    // Court system chat messages (push localization for court_booking_prompt / court_booked)
+    'notification.courtFallback': 'le terrain',
+    'notification.courtPrompt.title': 'Votre partie est complète!',
+    'notification.courtPrompt.body':
+      'Aucun terrain réservé à {facility}. Réservez-en un pour confirmer votre partie.',
+    'notification.courtPrompt.bodyNoFacility':
+      'Aucun terrain réservé. Réservez-en un pour confirmer votre partie.',
+    'notification.courtBooked.title': '{court} est réservé!',
+    'notification.courtBooked.body': 'Rendez-vous sur le terrain à {facility}.',
+    'notification.courtBooked.bodyNoFacility': 'Le terrain est réservé. À bientôt!',
+
+    // Match organizer card push (body mirrors the conversation-list preview copy)
+    'notification.matchOrganizer.body': "J'ai proposé des moments pour jouer",
 
     // Morning digest
     'digest.subject': 'Ton briefing matinal',
