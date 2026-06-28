@@ -1772,14 +1772,9 @@ const Home = () => {
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
 
-    // Personalized realtime availability at the player's favorite facilities.
-    // The renderer shows an empty-state card when no favorite has an open slot,
-    // and returns null only for non-onboarded users.
-    headerComponents.push(
-      <View key="favorite-availability">{renderFavoriteAvailabilitySection()}</View>
-    );
-
-    // Only show "Soon & Nearby" section header if we have location
+    // Only show "Soon & Nearby" section header if we have location.
+    // The favorite-availability section renders below the Just-for-you carousel
+    // (a sibling of this header in the ScrollView), so it's not pushed here.
     if (showNearbySection) {
       headerComponents.push(<View key="section-header">{renderSectionHeader()}</View>);
     }
@@ -1798,7 +1793,6 @@ const Home = () => {
     openSheet,
     selectedSport,
     renderMyMatchesSection,
-    renderFavoriteAvailabilitySection,
     renderSectionHeader,
     otherSportsUnreadCount,
     dismissedBannerSports,
@@ -2024,6 +2018,12 @@ const Home = () => {
             )}
           </View>
         )}
+
+        {/* Personalized realtime availability at the player's favorite
+            facilities, now below the Just-for-you carousel. The renderer shows
+            an empty-state card when no favorite has an open slot, and returns
+            null only for non-onboarded users. */}
+        {renderFavoriteAvailabilitySection()}
       </ScrollView>
     </SafeAreaView>
   );
