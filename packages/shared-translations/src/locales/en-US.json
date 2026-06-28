@@ -1415,6 +1415,7 @@
       "rating": "Level",
       "reputation": "Reputation",
       "statistics": "Statistics",
+      "gameHistory": "Game History",
       "availabilities": "Availabilities"
     },
     "fields": {
@@ -1426,6 +1427,20 @@
       "hoursPlayed": "Hours Played",
       "gamesHosted": "Games Hosted",
       "weekStreak": "Week Streak"
+    },
+    "gameHistory": {
+      "empty": "No games with a recorded score yet.",
+      "error": "Couldn't load game history.",
+      "showMore": "Show more games",
+      "win": "Win",
+      "loss": "Loss",
+      "draw": "Draw",
+      "vs": "vs",
+      "expectation": {
+        "competitive": "Competitive",
+        "casual": "Casual",
+        "both": "Casual & Competitive"
+      }
     },
     "rating": {
       "unrated": "Unrated",

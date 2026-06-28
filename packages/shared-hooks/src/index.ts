@@ -35,6 +35,7 @@ export * from './suggestionFilters';
 export * from './feedTypes';
 export * from './useMatchRelevanceScore';
 export * from './usePlayerMatches';
+export * from './usePlayerMatchHistory';
 export * from './usePlayerMatchFilters';
 export * from './usePublicMatches';
 export * from './usePublicMatchFilters';

@@ -36,6 +36,7 @@ import type {
   MatchWithDetails,
   MatchParticipantWithPlayer,
   MatchParticipant,
+  PlayerMatchHistoryItem,
   Profile,
   PlayerWithProfile,
   MatchFormatEnum,
@@ -3273,6 +3274,58 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
 
   return {
     matches: enrichedData as MatchWithDetails[],
+    hasMore,
+    nextOffset: hasMore ? offset + limit : null,
+  };
+}
+
+export interface GetPlayerMatchHistoryParams {
+  /** The player whose game history to fetch (the profile being viewed). */
+  playerId: string;
+  /** Optional sport filter (matches the viewed profile's selected sport). */
+  sportId?: string;
+  /** Page size. */
+  limit?: number;
+  /** Page offset. */
+  offset?: number;
+}
+
+/**
+ * Fetch a player's past games that have a verified, non-disputed score, for the
+ * profile game-history section. Backed by the `get_player_match_history` RPC
+ * (SECURITY DEFINER) so it returns the player's results even from matches the
+ * viewer isn't part of. Each row is fully hydrated (both teams + per-set scores),
+ * so a row can be opened in PlayedMatchDetail without a second round-trip.
+ */
+export async function getPlayerMatchHistory(params: GetPlayerMatchHistoryParams): Promise<{
+  matches: PlayerMatchHistoryItem[];
+  hasMore: boolean;
+  nextOffset: number | null;
+}> {
+  const { playerId, sportId, limit = 10, offset = 0 } = params;
+
+  const { data, error } = await supabase.rpc('get_player_match_history', {
+    p_player_id: playerId,
+    p_sport_id: sportId ?? null,
+    p_limit: limit + 1, // Fetch one extra to detect hasMore
+    p_offset: offset,
+  });
+
+  if (error) {
+    throw new Error(`Failed to get player match history: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as unknown as PlayerMatchHistoryItem[];
+  // jsonb columns can arrive null; the RPC COALESCEs to '[]' but normalize defensively.
+  const normalized = rows.map(r => ({
+    ...r,
+    participants: r.participants ?? [],
+    sets: r.sets ?? [],
+  }));
+
+  const hasMore = normalized.length > limit;
+  return {
+    matches: hasMore ? normalized.slice(0, limit) : normalized,
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
   };

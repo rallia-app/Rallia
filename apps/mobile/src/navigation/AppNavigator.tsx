@@ -84,7 +84,6 @@ import Groups from '#/screens/Groups';
 import GroupDetail from '#/screens/GroupDetail';
 import PreOnboardingScreen from '#/screens/PreOnboarding';
 import GroupChatInfo from '#/screens/GroupChatInfo';
-import PlayedMatchDetail from '#/screens/PlayedMatchDetail';
 import Communities from '#/screens/Communities';
 import CommunityDetail from '#/screens/CommunityDetail';
 import TournamentDetail from '#/screens/TournamentDetail';
@@ -1614,14 +1613,6 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="GroupChatInfo"
         getComponent={() => GroupChatInfo}
-        options={{
-          headerShown: false,
-        }}
-      />
-
-      <RootStack.Screen
-        name="PlayedMatchDetail"
-        getComponent={() => PlayedMatchDetail}
         options={{
           headerShown: false,
         }}

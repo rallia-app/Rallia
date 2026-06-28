@@ -10128,6 +10128,34 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_player_match_history: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_player_id: string
+          p_sport_id?: string
+        }
+        Returns: {
+          created_by: string
+          format: string
+          is_verified: boolean
+          location_name: string
+          match_date: string
+          match_id: string
+          participants: Json
+          player_expectation: string
+          result_id: string
+          sets: Json
+          sport_icon_url: string
+          sport_id: string
+          sport_name: string
+          start_time: string
+          target_team_number: number
+          team1_score: number
+          team2_score: number
+          winning_team: number
+        }[]
+      }
       get_player_matches: {
         Args: {
           p_limit?: number
