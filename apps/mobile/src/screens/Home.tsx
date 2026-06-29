@@ -1666,7 +1666,7 @@ const Home = () => {
       <QuickNavButton
         icon={color => <SportIconComponent width={24} height={24} fill={color} />}
         label={t('home.quickNav.findGame')}
-        fullWidth={!isAdmin}
+        fullWidth={!session}
         onPress={() => {
           Analytics.publicMatchesOpened({ cta: 'find_game' });
           navigation.navigate('PublicMatches');
@@ -1674,7 +1674,7 @@ const Home = () => {
       />
     );
     headerComponents.push(
-      isAdmin ? (
+      session ? (
         <ScrollView
           key="quick-nav"
           horizontal
@@ -1687,11 +1687,13 @@ const Home = () => {
             label={t('home.quickNav.tournaments')}
             onPress={() => appNavigation.navigate('Tournaments')}
           />
-          <QuickNavButton
-            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-            label={t('home.quickNav.leagues')}
-            onPress={() => appNavigation.navigate('Leagues')}
-          />
+          {isAdmin ? (
+            <QuickNavButton
+              icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+              label={t('home.quickNav.leagues')}
+              onPress={() => appNavigation.navigate('Leagues')}
+            />
+          ) : null}
         </ScrollView>
       ) : (
         <View key="quick-nav" style={quickNavStyles.row}>
