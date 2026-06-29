@@ -38,16 +38,29 @@ tags: [leagues]
     timeout: 30000
 - tapOn:
     id: "league-success-view"
+# Season creation now lives in a bottom sheet opened from the Seasons tab.
+- extendedWaitUntil:
+    visible:
+      id: "league-tab-seasons"
+    timeout: 20000
+- tapOn:
+    id: "league-tab-seasons"
+- extendedWaitUntil:
+    visible:
+      id: "cta-create-season"
+    timeout: 15000
+- tapOn:
+    id: "cta-create-season"
 - extendedWaitUntil:
     visible:
       id: "season-name-input"
-    timeout: 20000
+    timeout: 15000
 - tapOn:
     id: "season-name-input"
 - inputText: "Spring 2026"
 - tapOn: "done"
 - tapOn:
-    id: "cta-create-season"
+    id: "cta-create-season-submit"
 - extendedWaitUntil:
     visible:
       id: "cta-open-season"

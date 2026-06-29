@@ -11,6 +11,12 @@ import {
   closeSeason,
   inviteLeagueMembers,
   revokeLeagueInvite,
+  leaveLeague,
+  removeLeagueMember,
+  suspendLeagueMember,
+  reinstateLeagueMember,
+  listLinkableMatchesForSessionSlot,
+  attachMatchToSessionSlot,
   confirmSessionPresence,
   createLeague,
   createLeagueSession,
@@ -48,6 +54,7 @@ import {
   type SessionPresenceWithProfile,
   type PairingTeam,
   type MatchStatus,
+  type LinkableMatch,
 } from '@rallia/shared-services';
 
 export const leagueKeys = {
@@ -488,6 +495,139 @@ export function useRevokeLeagueInvite(
       revokeLeagueInvite(memberId, versionWas),
     onSuccess: result => {
       invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Member lifecycle (leave / remove / suspend / reinstate)
+// ---------------------------------------------------------------------------
+
+export function useLeaveLeague(leagueId: string, options: MutationOptions<LeagueMember> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: () => leaveLeague(leagueId),
+    onSuccess: result => {
+      invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useRemoveLeagueMember(
+  leagueId: string,
+  options: MutationOptions<LeagueMember> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: ({ memberId, versionWas }: { memberId: string; versionWas: number }) =>
+      removeLeagueMember(memberId, versionWas),
+    onSuccess: result => {
+      invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useSuspendLeagueMember(
+  leagueId: string,
+  options: MutationOptions<LeagueMember> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: ({
+      memberId,
+      versionWas,
+      reason,
+      until,
+    }: {
+      memberId: string;
+      versionWas: number;
+      reason?: string;
+      until?: string;
+    }) => suspendLeagueMember(memberId, versionWas, { reason, until }),
+    onSuccess: result => {
+      invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useReinstateLeagueMember(
+  leagueId: string,
+  options: MutationOptions<LeagueMember> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  return useMutation({
+    mutationFn: ({ memberId, versionWas }: { memberId: string; versionWas: number }) =>
+      reinstateLeagueMember(memberId, versionWas),
+    onSuccess: result => {
+      invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Session match bridge — link a verified casual match to a session pairing
+// ---------------------------------------------------------------------------
+
+export function useLinkableMatchesForSessionSlot(params: {
+  sessionMatchId: string | undefined;
+  team1UserIds: string[] | undefined;
+  team2UserIds: string[] | undefined;
+  sportId: string | undefined;
+  entryFormat: Enums<'entry_format'> | undefined;
+  enabled?: boolean;
+}) {
+  const enabled =
+    (params.enabled ?? true) &&
+    !!params.sessionMatchId &&
+    !!params.team1UserIds?.length &&
+    !!params.team2UserIds?.length &&
+    !!params.sportId &&
+    !!params.entryFormat;
+
+  return useQuery<LinkableMatch[]>({
+    queryKey: [
+      ...leagueKeys.all,
+      'linkableSession',
+      params.sessionMatchId ?? '',
+      (params.team1UserIds ?? []).join('+'),
+      (params.team2UserIds ?? []).join('+'),
+    ],
+    queryFn: () =>
+      listLinkableMatchesForSessionSlot({
+        sessionMatchId: params.sessionMatchId!,
+        team1UserIds: params.team1UserIds!,
+        team2UserIds: params.team2UserIds!,
+        sportId: params.sportId!,
+        entryFormat: params.entryFormat!,
+      }),
+    enabled,
+  });
+}
+
+export function useAttachMatchToSessionSlot(
+  sessionId: string,
+  seasonId: string,
+  options: MutationOptions<SessionMatch> = {}
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sessionMatchId, matchId }: { sessionMatchId: string; matchId: string }) =>
+      attachMatchToSessionSlot(sessionMatchId, matchId),
+    onSuccess: result => {
+      qc.invalidateQueries({ queryKey: leagueKeys.sessionMatches(sessionId) });
+      qc.invalidateQueries({ queryKey: leagueKeys.session(sessionId) });
+      qc.invalidateQueries({ queryKey: leagueKeys.sessionPresence(sessionId) });
+      qc.invalidateQueries({ queryKey: leagueKeys.rankings(seasonId) });
       options.onSuccess?.(result);
     },
     onError: options.onError,

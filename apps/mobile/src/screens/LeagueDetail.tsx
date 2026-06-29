@@ -14,12 +14,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  TextInput,
-  Modal,
-  Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,12 +43,14 @@ import {
   useApproveLeagueMember,
   useAcceptLeagueInvite,
   useRevokeLeagueInvite,
-  useCreateSeason,
+  useLeaveLeague,
+  useRemoveLeagueMember,
+  useSuspendLeagueMember,
+  useReinstateLeagueMember,
   useOpenSeason,
   useCloseSeason,
   useSeasonSessions,
   useSeasonRankings,
-  useCreateSession,
   usePublishSession,
   useProfilesByIds,
 } from '@rallia/shared-hooks';
@@ -62,7 +61,6 @@ import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
 import { useTranslation, type TranslationKey } from '../hooks';
-import { formatTimeOfDay } from '../utils/dateFormatting';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -132,7 +130,6 @@ interface ScreenColors {
   secondaryAccentBg: string;
   danger: string;
   dangerBg: string;
-  inputBg: string;
 }
 
 const InfoRow: React.FC<{ label: string; value: string; colors: ScreenColors }> = ({
@@ -447,29 +444,112 @@ const InvitedMembersSection: React.FC<{
   );
 };
 
+type ManageMemberRow = {
+  player: PlayerSearchResult;
+  memberId: string;
+  version: number;
+  userId: string;
+};
+
 const MembersSection: React.FC<{
-  players: PlayerSearchResult[];
+  rows: ManageMemberRow[];
+  ownerId: string;
   onPlayerPress: (player: PlayerSearchResult) => void;
+  organizerActions?: {
+    onSuspend: (memberId: string, version: number, name: string) => void;
+    onRemove: (memberId: string, version: number, name: string) => void;
+  };
   colors: ScreenColors;
-  t: (k: TranslationKey) => string;
-}> = ({ players, onPlayerPress, colors, t }) => (
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ rows, ownerId, onPlayerPress, organizerActions, colors, t }) => (
   <View>
     <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
       {t('leagueDetail.dashboard.members.title')}
     </Text>
-    {players.length === 0 ? (
+    {rows.length === 0 ? (
       <View style={styles.participantEmpty}>
         <Text size="sm" color={colors.textMuted}>
           {t('leagueDetail.noMembers')}
         </Text>
       </View>
     ) : (
-      players.map(player => (
-        <PlayerCard key={player.id} player={player} onPress={onPlayerPress} showActivity={false} />
-      ))
+      rows.map(({ player, memberId, version, userId }) => {
+        const name = getHumanName(player, '');
+        return (
+          <PlayerCard
+            key={memberId}
+            player={player}
+            onPress={onPlayerPress}
+            showActivity={false}
+            trailingActions={
+              organizerActions && userId !== ownerId
+                ? [
+                    {
+                      icon: 'pause-circle-outline',
+                      color: colors.textMuted,
+                      accessibilityLabel: t('leagueDetail.dashboard.members.suspendLabel', {
+                        name,
+                      }),
+                      onPress: () => organizerActions.onSuspend(memberId, version, name),
+                    },
+                    {
+                      icon: 'remove-circle-outline',
+                      color: colors.danger,
+                      accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
+                      onPress: () => organizerActions.onRemove(memberId, version, name),
+                    },
+                  ]
+                : undefined
+            }
+          />
+        );
+      })
     )}
   </View>
 );
+
+const SuspendedMembersSection: React.FC<{
+  rows: ManageMemberRow[];
+  onPlayerPress: (player: PlayerSearchResult) => void;
+  onReinstate: (memberId: string, version: number, name: string) => void;
+  onRemove: (memberId: string, version: number, name: string) => void;
+  colors: ScreenColors;
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ rows, onPlayerPress, onReinstate, onRemove, colors, t }) => {
+  if (rows.length === 0) return null;
+  return (
+    <View style={styles.pendingSection}>
+      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
+        {t('leagueDetail.dashboard.members.suspendedTitle', { count: String(rows.length) })}
+      </Text>
+      {rows.map(({ player, memberId, version }) => {
+        const name = getHumanName(player, '');
+        return (
+          <PlayerCard
+            key={memberId}
+            player={player}
+            onPress={onPlayerPress}
+            showActivity={false}
+            trailingActions={[
+              {
+                icon: 'play-circle-outline',
+                color: colors.statusPositiveText,
+                accessibilityLabel: t('leagueDetail.dashboard.members.reinstateLabel', { name }),
+                onPress: () => onReinstate(memberId, version, name),
+              },
+              {
+                icon: 'remove-circle-outline',
+                color: colors.danger,
+                accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
+                onPress: () => onRemove(memberId, version, name),
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+};
 
 export const LeagueDetail: React.FC = () => {
   const { theme } = useTheme();
@@ -508,7 +588,6 @@ export const LeagueDetail: React.FC = () => {
       secondaryAccentBg: isDark ? `${secondary[500]}30` : `${secondary[500]}20`,
       danger: isDark ? secondary[400] : secondary[500],
       dangerBg: isDark ? `${secondary[500]}30` : `${secondary[500]}1f`,
-      inputBg: isDark ? neutral[800] : neutral[100],
     }),
     [themeColors, isDark]
   );
@@ -546,25 +625,6 @@ export const LeagueDetail: React.FC = () => {
     (!myMembership || myMembership.status === 'inactive');
 
   const [activeTabIdx, setActiveTabIdx] = useState(0);
-  const [seasonName, setSeasonName] = useState('');
-  const [seasonStart, setSeasonStart] = useState<Date>(() => new Date());
-  const [seasonEnd, setSeasonEnd] = useState<Date>(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 3);
-    return d;
-  });
-  const [sessionName, setSessionName] = useState('');
-  const [sessionCapacity, setSessionCapacity] = useState('');
-  const [sessionAt, setSessionAt] = useState<Date>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    d.setHours(18, 0, 0, 0);
-    return d;
-  });
-  const [datePickerField, setDatePickerField] = useState<
-    'start' | 'end' | 'sessionDate' | 'sessionTime' | null
-  >(null);
-  const [pickerValue, setPickerValue] = useState<Date>(() => new Date());
 
   const invalidateAll = useCallback(() => {
     void refetchLeague();
@@ -628,23 +688,50 @@ export const LeagueDetail: React.FC = () => {
     },
   });
 
-  const { mutate: createSeason, isPending: isCreatingSeason } = useCreateSeason(leagueId, {
-    onSuccess: season => {
-      successHaptic();
-      toast.success(t('leagueDetail.seasonCreated'));
-      Analytics.seasonCreatedAnalytics({
-        leagueId,
-        seasonId: season.id,
-        hasOverride: false,
-      });
-      setSeasonName('');
-      invalidateAll();
-    },
-    onError: e => {
+  const onMemberLifecycleError = useCallback(
+    (e: Error) => {
       warningHaptic();
       toast.error(e.message || t('leagueDetail.errors.generic'));
     },
+    [toast, t]
+  );
+
+  const { mutate: leaveLeagueMut, isPending: isLeaving } = useLeaveLeague(leagueId, {
+    onError: onMemberLifecycleError,
   });
+
+  const { mutate: removeMemberMut, isPending: isRemovingMember } = useRemoveLeagueMember(leagueId, {
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('leagueDetail.memberRemoved'));
+      invalidateAll();
+    },
+    onError: onMemberLifecycleError,
+  });
+
+  const { mutate: suspendMemberMut, isPending: isSuspendingMember } = useSuspendLeagueMember(
+    leagueId,
+    {
+      onSuccess: () => {
+        successHaptic();
+        toast.success(t('leagueDetail.memberSuspended'));
+        invalidateAll();
+      },
+      onError: onMemberLifecycleError,
+    }
+  );
+
+  const { mutate: reinstateMemberMut, isPending: isReinstatingMember } = useReinstateLeagueMember(
+    leagueId,
+    {
+      onSuccess: () => {
+        successHaptic();
+        toast.success(t('leagueDetail.memberReinstated'));
+        invalidateAll();
+      },
+      onError: onMemberLifecycleError,
+    }
+  );
 
   const { mutate: openSeasonMut, isPending: isOpeningSeason } = useOpenSeason(leagueId, {
     onSuccess: season => {
@@ -670,6 +757,7 @@ export const LeagueDetail: React.FC = () => {
     [members]
   );
   const activeMembers = useMemo(() => members.filter(m => m.status === 'active'), [members]);
+  const suspendedMembers = useMemo(() => members.filter(m => m.status === 'suspended'), [members]);
 
   const pendingMemberRows = useMemo<PendingMemberRow[]>(
     () =>
@@ -695,7 +783,26 @@ export const LeagueDetail: React.FC = () => {
     [invitedMembers, isOrganizer]
   );
 
-  const activeMemberPlayers = useMemo(() => activeMembers.map(memberToPlayer), [activeMembers]);
+  const activeMemberRows = useMemo<ManageMemberRow[]>(
+    () =>
+      activeMembers.map(m => ({
+        player: memberToPlayer(m),
+        memberId: m.id,
+        version: m.version,
+        userId: m.user_id,
+      })),
+    [activeMembers]
+  );
+  const suspendedMemberRows = useMemo<ManageMemberRow[]>(
+    () =>
+      suspendedMembers.map(m => ({
+        player: memberToPlayer(m),
+        memberId: m.id,
+        version: m.version,
+        userId: m.user_id,
+      })),
+    [suspendedMembers]
+  );
 
   const openSeason = useMemo(() => seasons.find(s => s.status === 'open'), [seasons]);
   const draftSeasons = useMemo(() => seasons.filter(s => s.status === 'draft'), [seasons]);
@@ -721,29 +828,6 @@ export const LeagueDetail: React.FC = () => {
       toast.error(e.message || t('leagueDetail.errors.generic'));
     },
   });
-
-  const { mutate: createSessionMut, isPending: isCreatingSession } = useCreateSession(
-    openSeason?.id ?? '',
-    {
-      onSuccess: created => {
-        successHaptic();
-        toast.success(t('leagueDetail.sessions.created'));
-        if (openSeason) {
-          Analytics.sessionCreatedAnalytics({
-            leagueId,
-            seasonId: openSeason.id,
-            sessionId: created.id,
-          });
-        }
-        setSessionName('');
-        setSessionCapacity('');
-      },
-      onError: e => {
-        warningHaptic();
-        toast.error(e.message || t('leagueDetail.errors.generic'));
-      },
-    }
-  );
 
   const { mutate: publishSessionMut, isPending: isPublishingSession } = usePublishSession(
     openSeason?.id ?? '',
@@ -793,8 +877,6 @@ export const LeagueDetail: React.FC = () => {
     },
     [locale]
   );
-
-  const formatTime = useCallback((d: Date): string => formatTimeOfDay(d, locale), [locale]);
 
   const currentSeasonLabel = openSeason
     ? openSeason.name
@@ -870,6 +952,109 @@ export const LeagueDetail: React.FC = () => {
     [revokeInvite, isRevoking]
   );
 
+  const handleLeavePress = useCallback(() => {
+    if (isLeaving) return;
+    Alert.alert(
+      t('leagueDetail.confirm.leaveTitle'),
+      t('leagueDetail.confirm.leaveMessage', { name: league?.name ?? '' }),
+      [
+        { text: t('leagueDetail.confirm.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.confirm.leaveConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            warningHaptic();
+            leaveLeagueMut(undefined, {
+              onSuccess: () => {
+                successHaptic();
+                toast.success(t('leagueDetail.leftLeague'));
+                invalidateAll();
+              },
+            });
+          },
+        },
+      ]
+    );
+  }, [isLeaving, leaveLeagueMut, t, toast, league?.name, invalidateAll]);
+
+  const handleCancelRequestPress = useCallback(() => {
+    if (isLeaving) return;
+    Alert.alert(
+      t('leagueDetail.confirm.cancelRequestTitle'),
+      t('leagueDetail.confirm.cancelRequestMessage', { name: league?.name ?? '' }),
+      [
+        { text: t('leagueDetail.confirm.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.confirm.cancelRequestConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            warningHaptic();
+            leaveLeagueMut(undefined, {
+              onSuccess: () => {
+                successHaptic();
+                toast.success(t('leagueDetail.requestCancelled'));
+                invalidateAll();
+              },
+            });
+          },
+        },
+      ]
+    );
+  }, [isLeaving, leaveLeagueMut, t, toast, league?.name, invalidateAll]);
+
+  const handleRemoveMemberPress = useCallback(
+    (memberId: string, version: number, name: string) => {
+      if (isRemovingMember) return;
+      Alert.alert(
+        t('leagueDetail.confirm.removeTitle', { name }),
+        t('leagueDetail.confirm.removeMessage', { name }),
+        [
+          { text: t('leagueDetail.confirm.cancel'), style: 'cancel' },
+          {
+            text: t('leagueDetail.confirm.removeConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              warningHaptic();
+              removeMemberMut({ memberId, versionWas: version });
+            },
+          },
+        ]
+      );
+    },
+    [isRemovingMember, removeMemberMut, t]
+  );
+
+  const handleSuspendMemberPress = useCallback(
+    (memberId: string, version: number, name: string) => {
+      if (isSuspendingMember) return;
+      Alert.alert(
+        t('leagueDetail.confirm.suspendTitle', { name }),
+        t('leagueDetail.confirm.suspendMessage', { name }),
+        [
+          { text: t('leagueDetail.confirm.cancel'), style: 'cancel' },
+          {
+            text: t('leagueDetail.confirm.suspendConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              warningHaptic();
+              suspendMemberMut({ memberId, versionWas: version });
+            },
+          },
+        ]
+      );
+    },
+    [isSuspendingMember, suspendMemberMut, t]
+  );
+
+  const handleReinstateMemberPress = useCallback(
+    (memberId: string, version: number) => {
+      if (isReinstatingMember) return;
+      lightHaptic();
+      reinstateMemberMut({ memberId, versionWas: version });
+    },
+    [isReinstatingMember, reinstateMemberMut]
+  );
+
   const handleInvitePress = useCallback(() => {
     if (!league) return;
     lightHaptic();
@@ -886,46 +1071,18 @@ export const LeagueDetail: React.FC = () => {
     });
   }, [league, members, leagueId]);
 
-  const handleCreateSeason = useCallback(() => {
-    const name = seasonName.trim();
-    if (!name) {
-      warningHaptic();
-      toast.error(t('leagueDetail.validation.seasonNameRequired'));
-      return;
-    }
-    if (seasonEnd < seasonStart) {
-      warningHaptic();
-      toast.error(t('leagueDetail.validation.endBeforeStart'));
-      return;
-    }
-    createSeason({
-      name,
-      startDate: seasonStart.toISOString().slice(0, 10),
-      endDate: seasonEnd.toISOString().slice(0, 10),
-    });
-  }, [seasonName, seasonEnd, seasonStart, createSeason, toast, t]);
+  const handleOpenCreateSeason = useCallback(() => {
+    lightHaptic();
+    void SheetManager.show('create-season', { payload: { leagueId } });
+  }, [leagueId]);
 
-  const handleCreateSession = useCallback(() => {
+  const handleOpenCreateSession = useCallback(() => {
     if (!openSeason) return;
-    const name = sessionName.trim();
-    if (!name) {
-      warningHaptic();
-      toast.error(t('leagueDetail.sessions.validation.nameRequired'));
-      return;
-    }
-    if (sessionAt <= new Date()) {
-      warningHaptic();
-      toast.error(t('leagueDetail.sessions.validation.future'));
-      return;
-    }
-    const parsedCapacity = sessionCapacity.trim() ? Number.parseInt(sessionCapacity, 10) : NaN;
-    createSessionMut({
-      name,
-      scheduledAt: sessionAt.toISOString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      capacity: Number.isFinite(parsedCapacity) && parsedCapacity > 0 ? parsedCapacity : undefined,
+    lightHaptic();
+    void SheetManager.show('create-session', {
+      payload: { seasonId: openSeason.id, leagueId },
     });
-  }, [openSeason, sessionName, sessionAt, sessionCapacity, createSessionMut, toast, t]);
+  }, [openSeason, leagueId]);
 
   const handlePublishSession = useCallback(
     (sessionId: string, version: number) => {
@@ -942,39 +1099,6 @@ export const LeagueDetail: React.FC = () => {
       navigation.navigate('SessionDetail', { sessionId, leagueId, sessionName: name });
     },
     [navigation, leagueId]
-  );
-
-  const openDatePicker = useCallback(
-    (field: 'start' | 'end' | 'sessionDate' | 'sessionTime') => {
-      lightHaptic();
-      setPickerValue(field === 'start' ? seasonStart : field === 'end' ? seasonEnd : sessionAt);
-      setDatePickerField(field);
-    },
-    [seasonStart, seasonEnd, sessionAt]
-  );
-
-  const commitPickerDate = useCallback(
-    (field: 'start' | 'end' | 'sessionDate' | 'sessionTime', date: Date) => {
-      if (field === 'start') {
-        setSeasonStart(date);
-        if (seasonEnd < date) setSeasonEnd(date);
-      } else if (field === 'end') {
-        setSeasonEnd(date);
-      } else if (field === 'sessionDate') {
-        setSessionAt(prev => {
-          const next = new Date(prev);
-          next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-          return next;
-        });
-      } else {
-        setSessionAt(prev => {
-          const next = new Date(prev);
-          next.setHours(date.getHours(), date.getMinutes(), 0, 0);
-          return next;
-        });
-      }
-    },
-    [seasonEnd]
   );
 
   if (isLoading) {
@@ -1133,22 +1257,46 @@ export const LeagueDetail: React.FC = () => {
               </TouchableOpacity>
             )}
             {!isOrganizer && myMembership?.status === 'pending' && !myMembership.invited_by && (
-              <View
-                style={[styles.heroRegistered, { backgroundColor: colors.secondaryHighlightBg }]}
-              >
-                <Ionicons name="hourglass-outline" size={18} color={colors.secondaryAccent} />
-                <Text size="sm" weight="semibold" color={colors.secondaryAccent}>
-                  {t('leagueDetail.membershipPending')}
-                </Text>
-              </View>
+              <>
+                <View
+                  style={[styles.heroRegistered, { backgroundColor: colors.secondaryHighlightBg }]}
+                >
+                  <Ionicons name="hourglass-outline" size={18} color={colors.secondaryAccent} />
+                  <Text size="sm" weight="semibold" color={colors.secondaryAccent}>
+                    {t('leagueDetail.membershipPending')}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={handleCancelRequestPress}
+                  disabled={isLeaving}
+                  style={styles.heroTextAction}
+                  testID="cta-cancel-request"
+                >
+                  <Text size="sm" weight="semibold" color={colors.danger}>
+                    {t('leagueDetail.cancelRequest')}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
             {!isOrganizer && myMembership?.status === 'active' && (
-              <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                  {t('leagueDetail.memberActive')}
-                </Text>
-              </View>
+              <>
+                <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
+                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
+                    {t('leagueDetail.memberActive')}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={handleLeavePress}
+                  disabled={isLeaving}
+                  style={styles.heroTextAction}
+                  testID="cta-leave-league"
+                >
+                  <Text size="sm" weight="semibold" color={colors.danger}>
+                    {t('leagueDetail.leaveLeague')}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -1421,11 +1569,27 @@ export const LeagueDetail: React.FC = () => {
               t={t}
             />
             <MembersSection
-              players={activeMemberPlayers}
+              rows={activeMemberRows}
+              ownerId={league.organizer_id}
               onPlayerPress={handlePlayerPress}
+              organizerActions={
+                isOrganizer
+                  ? { onSuspend: handleSuspendMemberPress, onRemove: handleRemoveMemberPress }
+                  : undefined
+              }
               colors={colors}
               t={t}
             />
+            {isOrganizer && (
+              <SuspendedMembersSection
+                rows={suspendedMemberRows}
+                onPlayerPress={handlePlayerPress}
+                onReinstate={handleReinstateMemberPress}
+                onRemove={handleRemoveMemberPress}
+                colors={colors}
+                t={t}
+              />
+            )}
           </View>
         )}
 
@@ -1440,43 +1604,38 @@ export const LeagueDetail: React.FC = () => {
                   </Text>
                 </View>
               ) : (
-                seasons.map(s => (
-                  <View key={s.id} style={[styles.seasonRow, { borderBottomColor: colors.border }]}>
-                    <View style={styles.seasonRowMain}>
-                      <Text size="base" weight="semibold" color={colors.text}>
-                        {s.name}
-                      </Text>
-                      <Text size="xs" color={colors.textMuted}>
-                        {formatDate(s.start_date)} – {formatDate(s.end_date)}
-                      </Text>
-                    </View>
-                    <View style={styles.seasonRowActions}>
-                      <View
-                        style={[
-                          styles.seasonStatusPill,
-                          {
-                            backgroundColor:
-                              s.status === 'open'
-                                ? colors.statusPositiveBg
-                                : s.status === 'draft'
-                                  ? colors.statusNeutralBg
-                                  : colors.statusMutedBg,
-                          },
-                        ]}
-                      >
-                        <Text
-                          size="xs"
-                          weight="semibold"
-                          color={
-                            s.status === 'open'
-                              ? colors.statusPositiveText
-                              : s.status === 'draft'
-                                ? colors.statusNeutralText
-                                : colors.statusMutedText
-                          }
-                        >
-                          {t(SEASON_STATUS_KEY[s.status] as TranslationKey)}
-                        </Text>
+                seasons.map(s => {
+                  const statusBg =
+                    s.status === 'open'
+                      ? colors.statusPositiveBg
+                      : s.status === 'draft'
+                        ? colors.statusNeutralBg
+                        : colors.statusMutedBg;
+                  const statusFg =
+                    s.status === 'open'
+                      ? colors.statusPositiveText
+                      : s.status === 'draft'
+                        ? colors.statusNeutralText
+                        : colors.statusMutedText;
+                  return (
+                    <View
+                      key={s.id}
+                      style={[styles.seasonCard, { borderBottomColor: colors.border }]}
+                    >
+                      <View style={styles.seasonCardHeader}>
+                        <View style={styles.seasonCardInfo}>
+                          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+                            {s.name}
+                          </Text>
+                          <Text size="xs" color={colors.textMuted}>
+                            {formatDate(s.start_date)} – {formatDate(s.end_date)}
+                          </Text>
+                        </View>
+                        <View style={[styles.seasonStatusPill, { backgroundColor: statusBg }]}>
+                          <Text size="xs" weight="semibold" color={statusFg}>
+                            {t(SEASON_STATUS_KEY[s.status] as TranslationKey)}
+                          </Text>
+                        </View>
                       </View>
                       {isOrganizer && s.status === 'draft' && (
                         <TouchableOpacity
@@ -1486,7 +1645,7 @@ export const LeagueDetail: React.FC = () => {
                           }}
                           disabled={isOpeningSeason}
                           testID="cta-open-season"
-                          style={[styles.seasonActionButton, { borderColor: colors.primary }]}
+                          style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
                         >
                           <Text size="sm" weight="semibold" color={colors.primary}>
                             {t('leagueDetail.actions.openSeason')}
@@ -1501,7 +1660,7 @@ export const LeagueDetail: React.FC = () => {
                           }}
                           disabled={isClosingSeason}
                           testID="cta-close-season"
-                          style={[styles.seasonActionButton, { borderColor: colors.danger }]}
+                          style={[styles.seasonCtaButton, { borderColor: colors.danger }]}
                         >
                           <Text size="sm" weight="semibold" color={colors.danger}>
                             {isClosingSeason
@@ -1511,65 +1670,22 @@ export const LeagueDetail: React.FC = () => {
                         </TouchableOpacity>
                       )}
                     </View>
-                  </View>
-                ))
+                  );
+                })
               )}
             </Section>
 
             {isOrganizer && (
-              <Section title={t('leagueDetail.createSeason.title')} colors={colors}>
-                <View style={styles.createSeasonBody}>
-                  <TextInput
-                    value={seasonName}
-                    onChangeText={setSeasonName}
-                    placeholder={t('leagueDetail.createSeason.namePlaceholder')}
-                    placeholderTextColor={colors.textMuted}
-                    testID="season-name-input"
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: colors.inputBg,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                  />
-                  <TouchableOpacity
-                    onPress={() => openDatePicker('start')}
-                    style={[styles.dateField, { borderColor: colors.border }]}
-                  >
-                    <Text size="sm" color={colors.textMuted}>
-                      {t('leagueDetail.createSeason.startDate')}
-                    </Text>
-                    <Text size="base" weight="medium" color={colors.text}>
-                      {formatDate(seasonStart)}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => openDatePicker('end')}
-                    style={[styles.dateField, { borderColor: colors.border }]}
-                  >
-                    <Text size="sm" color={colors.textMuted}>
-                      {t('leagueDetail.createSeason.endDate')}
-                    </Text>
-                    <Text size="base" weight="medium" color={colors.text}>
-                      {formatDate(seasonEnd)}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-                    onPress={handleCreateSeason}
-                    disabled={isCreatingSeason}
-                    testID="cta-create-season"
-                  >
-                    <Text size="base" weight="semibold" color="#fff">
-                      {isCreatingSeason
-                        ? t('leagueDetail.createSeason.creating')
-                        : t('leagueDetail.createSeason.submit')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </Section>
+              <TouchableOpacity
+                onPress={handleOpenCreateSeason}
+                style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                testID="cta-create-season"
+              >
+                <Ionicons name="add-outline" size={20} color="#ffffff" />
+                <Text size="base" weight="semibold" color="#ffffff">
+                  {t('leagueDetail.createSeason.submit')}
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
         )}
@@ -1640,85 +1756,16 @@ export const LeagueDetail: React.FC = () => {
                 </Section>
 
                 {isOrganizer && (
-                  <Section title={t('leagueDetail.sessions.createTitle')} colors={colors}>
-                    <View style={styles.createSeasonBody}>
-                      <TextInput
-                        value={sessionName}
-                        onChangeText={setSessionName}
-                        placeholder={t('leagueDetail.sessions.namePlaceholder')}
-                        placeholderTextColor={colors.textMuted}
-                        testID="session-name-input"
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor: colors.inputBg,
-                            borderColor: colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                      <View style={styles.sessionDateTimeRow}>
-                        <TouchableOpacity
-                          onPress={() => openDatePicker('sessionDate')}
-                          style={[
-                            styles.dateField,
-                            styles.sessionDateTimeField,
-                            { borderColor: colors.border },
-                          ]}
-                        >
-                          <Text size="sm" color={colors.textMuted}>
-                            {t('leagueDetail.sessions.date')}
-                          </Text>
-                          <Text size="base" weight="medium" color={colors.text}>
-                            {formatDate(sessionAt)}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => openDatePicker('sessionTime')}
-                          style={[
-                            styles.dateField,
-                            styles.sessionDateTimeField,
-                            { borderColor: colors.border },
-                          ]}
-                        >
-                          <Text size="sm" color={colors.textMuted}>
-                            {t('leagueDetail.sessions.time')}
-                          </Text>
-                          <Text size="base" weight="medium" color={colors.text}>
-                            {formatTime(sessionAt)}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                      <TextInput
-                        value={sessionCapacity}
-                        onChangeText={setSessionCapacity}
-                        placeholder={t('leagueDetail.sessions.capacityPlaceholder')}
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="number-pad"
-                        testID="session-capacity-input"
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor: colors.inputBg,
-                            borderColor: colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                      <TouchableOpacity
-                        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-                        onPress={handleCreateSession}
-                        disabled={isCreatingSession}
-                        testID="cta-create-session-submit"
-                      >
-                        <Text size="base" weight="semibold" color="#fff">
-                          {isCreatingSession
-                            ? t('leagueDetail.sessions.creating')
-                            : t('leagueDetail.sessions.submit')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </Section>
+                  <TouchableOpacity
+                    onPress={handleOpenCreateSession}
+                    style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                    testID="cta-create-session"
+                  >
+                    <Ionicons name="add-outline" size={20} color="#ffffff" />
+                    <Text size="base" weight="semibold" color="#ffffff">
+                      {t('leagueDetail.sessions.submit')}
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </>
             )}
@@ -1770,62 +1817,6 @@ export const LeagueDetail: React.FC = () => {
           </View>
         )}
       </ScrollView>
-
-      {Platform.OS === 'ios' ? (
-        <Modal visible={datePickerField !== null} transparent animationType="slide">
-          <View style={styles.modalBackdrop}>
-            <View style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}>
-              {datePickerField !== null && (
-                <DateTimePicker
-                  value={pickerValue}
-                  mode={datePickerField === 'sessionTime' ? 'time' : 'date'}
-                  display="spinner"
-                  minimumDate={
-                    datePickerField === 'end'
-                      ? seasonStart
-                      : datePickerField === 'sessionDate'
-                        ? new Date()
-                        : undefined
-                  }
-                  onChange={(_, date) => {
-                    if (date) setPickerValue(date);
-                  }}
-                  themeVariant={isDark ? 'dark' : 'light'}
-                />
-              )}
-              <TouchableOpacity
-                onPress={() => {
-                  if (datePickerField) commitPickerDate(datePickerField, pickerValue);
-                  setDatePickerField(null);
-                }}
-                style={[styles.modalDoneButton, { backgroundColor: colors.primary }]}
-                accessibilityRole="button"
-              >
-                <Text size="base" weight="semibold" color="#ffffff">
-                  {t('common.done')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      ) : datePickerField !== null ? (
-        <DateTimePicker
-          value={pickerValue}
-          mode={datePickerField === 'sessionTime' ? 'time' : 'date'}
-          display="default"
-          minimumDate={
-            datePickerField === 'end'
-              ? seasonStart
-              : datePickerField === 'sessionDate'
-                ? new Date()
-                : undefined
-          }
-          onChange={(_, date) => {
-            setDatePickerField(null);
-            if (date && datePickerField) commitPickerDate(datePickerField, date);
-          }}
-        />
-      ) : null}
     </SafeAreaView>
   );
 };
@@ -1940,6 +1931,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     marginTop: spacingPixels[4],
+  },
+  heroTextAction: {
+    alignSelf: 'center',
+    paddingVertical: spacingPixels[2],
+    marginTop: spacingPixels[2],
   },
   section: { marginBottom: spacingPixels[5] },
   sectionTitle: {
@@ -2072,9 +2068,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[3],
     paddingVertical: spacingPixels[2],
   },
-  createSeasonBody: {
+  seasonCard: {
     padding: spacingPixels[4],
     gap: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  seasonCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacingPixels[3],
+  },
+  seasonCardInfo: { flex: 1, gap: spacingPixels[0.5] },
+  seasonCtaButton: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.md,
+    paddingVertical: spacingPixels[2.5],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   standingRow: {
     flexDirection: 'row',
@@ -2089,46 +2100,8 @@ const styles = StyleSheet.create({
   standingName: { flex: 1 },
   standingWl: { width: 56, textAlign: 'right' },
   standingPts: { width: 44, textAlign: 'right' },
-  sessionDateTimeRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[3],
-  },
-  sessionDateTimeField: {
-    flex: 1,
-  },
   sessionEmptyText: {
     textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    fontSize: 16,
-  },
-  dateField: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    gap: spacingPixels[1],
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  modalSheet: {
-    borderTopLeftRadius: radiusPixels.xl,
-    borderTopRightRadius: radiusPixels.xl,
-    paddingBottom: spacingPixels[6],
-  },
-  modalDoneButton: {
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
   },
 });
 

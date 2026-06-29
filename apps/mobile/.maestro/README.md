@@ -93,6 +93,8 @@ Key ids: `tab-create-fab`, `action-create-tournament`, `tournament-name-input`,
 | `leagues/lifecycle-a-create-season.yaml` | organizer | create → detail → create season → open season |
 
 Key ids: `action-create-league`, `league-name-input`, `league-wizard-submit`,
-`league-success-view`, `season-name-input`, `cta-create-season`, `cta-open-season`.
+`league-success-view`, `league-tab-seasons`, `cta-create-season` (opens the
+create-season sheet), `season-name-input`, `cta-create-season-submit`,
+`cta-open-season`.
 
 DB RPC smoke (local): `npm run db:test:leagues` from repo root.
