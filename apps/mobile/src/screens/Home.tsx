@@ -1683,6 +1683,11 @@ const Home = () => {
         >
           {findGameButton}
           <QuickNavButton
+            icon={color => <Ionicons name="podium-outline" size={24} color={color} />}
+            label={t('home.quickNav.leaderboard')}
+            onPress={() => appNavigation.navigate('Leaderboard')}
+          />
+          <QuickNavButton
             icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
             label={t('home.quickNav.tournaments')}
             onPress={() => appNavigation.navigate('Tournaments')}
