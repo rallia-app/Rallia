@@ -45,6 +45,7 @@ import {
   ChatHeader,
   MessageList,
   MessageInput,
+  MatchOrganizerBanner,
   TypingIndicator,
   ChatSearchBar,
   BlockedUserModal,
@@ -853,6 +854,9 @@ export default function ChatConversationScreen() {
         />
       )}
 
+      {/* Prominent pinned entry point into the Match Organizer. */}
+      {canOrganizeMatch && <MatchOrganizerBanner onPress={handleOrganizeMatch} />}
+
       <MessageList
         ref={messageListRef}
         messages={messages}
@@ -890,7 +894,6 @@ export default function ChatConversationScreen() {
           onCancelReply={handleCancelReply}
           onTypingChange={handleTypingChange}
           keyboardVisible={isKeyboardVisible}
-          onOrganizeMatch={canOrganizeMatch ? handleOrganizeMatch : undefined}
         />
       )}
 

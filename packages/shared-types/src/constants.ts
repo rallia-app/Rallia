@@ -345,6 +345,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_registration_removed: 'remove-circle-outline',
   tournament_bracket_published: 'git-network-outline',
   tournament_match_completed: 'podium-outline',
+  tournament_match_ready: 'flash-outline',
   tournament_updated: 'create-outline',
   tournament_cancelled: 'close-circle-outline',
   tournament_completed: 'trophy-outline',
@@ -449,6 +450,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_removed: '#F44336', // Red
   tournament_bracket_published: '#4DB8A8', // Teal
   tournament_match_completed: '#4DB8A8', // Teal
+  tournament_match_ready: '#4DB8A8', // Teal
   tournament_updated: '#FF9800', // Orange — details changed
   tournament_cancelled: '#F44336', // Red
   tournament_completed: '#4CAF50', // Green — celebration
@@ -549,6 +551,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_removed: 'Removed from Tournament',
   tournament_bracket_published: 'Bracket Published',
   tournament_match_completed: 'Tournament Result',
+  tournament_match_ready: 'Next Match',
   tournament_updated: 'Tournament Updated',
   tournament_cancelled: 'Tournament Cancelled',
   tournament_completed: 'Tournament Complete',
@@ -657,6 +660,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_registration_removed: 'match',
   tournament_bracket_published: 'match',
   tournament_match_completed: 'match',
+  tournament_match_ready: 'match',
   tournament_updated: 'match',
   tournament_cancelled: 'match',
   tournament_completed: 'match',
@@ -808,6 +812,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
+  tournament_match_ready: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
   tournament_cancelled: { email: true, push: true, sms: false },
   tournament_completed: { email: false, push: true, sms: false },

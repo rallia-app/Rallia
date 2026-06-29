@@ -69,7 +69,7 @@ import {
   useJoinTournamentViaInvite,
   useTournamentMatches,
   useOpenTournamentRoundChat,
-  useGenerateTournamentBracket,
+  useIsTournamentOrganizer,
   useCancelTournament,
   useArchiveTournament,
   useProfilesByIds,
@@ -674,7 +674,17 @@ export const TournamentDetail: React.FC = () => {
   } = useTournamentInvitePreview(params.inviteToken, invitePreviewEnabled);
   const tournament = directTournament ?? invitePreview?.tournament ?? null;
 
-  const isOrganizer = !!tournament && !!userId && tournament.organizer_id === userId;
+  const isPrimaryOrganizer = !!tournament && !!userId && tournament.organizer_id === userId;
+  // Co-organizers share full organizer rights; resolved server-side. OR with the
+  // sync primary check so the owner sees controls immediately (no query flicker).
+  const { data: amIOrganizer } = useIsTournamentOrganizer(tournament?.id);
+  const isOrganizer = isPrimaryOrganizer || !!amIOrganizer;
+  const canManageCoOrganizers =
+    isPrimaryOrganizer &&
+    !!tournament &&
+    tournament.status !== 'completed' &&
+    tournament.status !== 'cancelled' &&
+    tournament.status !== 'archived';
   const myActiveRegistration =
     myRegistration &&
     (myRegistration.status === 'registered' || myRegistration.status === 'pending')
@@ -882,22 +892,6 @@ export const TournamentDetail: React.FC = () => {
     },
   });
 
-  const generateBracket = useGenerateTournamentBracket({
-    onSuccess: () => successHaptic(),
-    onError: e => {
-      const lower = e.message.toLowerCase();
-      const key: TranslationKey = lower.includes('insufficient_participants')
-        ? 'tournamentDetail.generateBracketErrors.insufficientParticipants'
-        : lower.includes('bracket_already_generated')
-          ? 'tournamentDetail.generateBracketErrors.alreadyGenerated'
-          : lower.includes('tournament_not_draft')
-            ? 'tournamentDetail.generateBracketErrors.wrongStatus'
-            : 'tournamentDetail.generateBracketErrors.generic';
-      warningHaptic();
-      toast.error(t(key));
-    },
-  });
-
   const onOpen = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
@@ -1003,11 +997,11 @@ export const TournamentDetail: React.FC = () => {
     acceptInvite.mutate({ tournamentId: tournament.id });
   }, [tournament, isDoubles, acceptInvite]);
 
-  const onGenerateBracket = useCallback(() => {
+  const onSetUpBracket = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
-    generateBracket.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
-  }, [tournament, generateBracket]);
+    navigation.navigate('TournamentBracketSetup', { tournamentId: tournament.id });
+  }, [tournament, navigation]);
 
   // Bracket: only fetch when the bracket has been generated (status >= in_progress).
   const bracketStatuses: ReadonlyArray<Enums<'tournament_status'>> = [
@@ -1523,6 +1517,18 @@ export const TournamentDetail: React.FC = () => {
     });
   }, [tournament, registrations, userId]);
 
+  const handleManageCoOrganizers = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    void SheetManager.show('tournament-co-organizers', {
+      payload: {
+        tournamentId: tournament.id,
+        sportId: tournament.sport_id,
+        organizerId: tournament.organizer_id,
+      },
+    });
+  }, [tournament]);
+
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 
@@ -1845,8 +1851,8 @@ export const TournamentDetail: React.FC = () => {
             {/* Champion banner */}
             {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
 
-            {/* Organizer: edit & invite up front (also in the header ⋯ menu) */}
-            {isOrganizer && (adminActions.canEdit || adminActions.canInvite) && (
+            {/* Organizer: edit & co-organizers up front (also in the header ⋯ menu) */}
+            {isOrganizer && (adminActions.canEdit || canManageCoOrganizers) && (
               <View style={styles.organizerActionRow}>
                 {adminActions.canEdit && (
                   <Pressable
@@ -1867,9 +1873,9 @@ export const TournamentDetail: React.FC = () => {
                     </Text>
                   </Pressable>
                 )}
-                {adminActions.canInvite && (
+                {canManageCoOrganizers && (
                   <Pressable
-                    onPress={handleInvitePlayers}
+                    onPress={handleManageCoOrganizers}
                     style={({ pressed }) => [
                       styles.organizerActionBtn,
                       {
@@ -1878,15 +1884,30 @@ export const TournamentDetail: React.FC = () => {
                         opacity: pressed ? 0.7 : 1,
                       },
                     ]}
-                    testID="action-invite-players"
+                    testID="action-manage-co-organizers"
                   >
-                    <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                    <Ionicons name="people-circle-outline" size={18} color={colors.primary} />
                     <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('tournamentDetail.actions.invitePlayers')}
+                      {t('tournamentDetail.coOrganizers.ctaTitle')}
                     </Text>
                   </Pressable>
                 )}
               </View>
+            )}
+
+            {/* Invite players — prominent CTA */}
+            {isOrganizer && adminActions.canInvite && (
+              <DashboardCtaCard
+                icon="share-social-outline"
+                title={t('tournamentDetail.invitePlayers.ctaTitle')}
+                description={t('tournamentDetail.invitePlayers.ctaDescription')}
+                buttonLabel={t('tournamentDetail.actions.invitePlayers')}
+                buttonIcon="share-social-outline"
+                onPress={handleInvitePlayers}
+                accent="secondary"
+                colors={colors}
+                testID="cta-invite-players"
+              />
             )}
 
             {isOrganizer && pendingRequestRows.length > 0 && (
@@ -1951,16 +1972,11 @@ export const TournamentDetail: React.FC = () => {
                   '{count}',
                   String(activeCount)
                 )}
-                buttonLabel={
-                  generateBracket.isPending
-                    ? t('tournamentDetail.actions.generating')
-                    : t('tournamentDetail.actions.generateBracket')
-                }
+                buttonLabel={t('tournamentDetail.actions.setUpBracket')}
                 buttonIcon="git-network-outline"
-                onPress={onGenerateBracket}
-                disabled={generateBracket.isPending}
+                onPress={onSetUpBracket}
                 colors={colors}
-                testID="cta-generate-bracket"
+                testID="cta-setup-bracket"
               />
             )}
             {isOrganizer && isLive && (
@@ -2159,27 +2175,21 @@ export const TournamentDetail: React.FC = () => {
                       activeOpacity={0.7}
                       disabled={openRoundChat.isPending}
                       style={[
-                        styles.card,
-                        styles.myMatchCard,
+                        styles.primaryButton,
                         styles.roundChatBtn,
-                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                        { backgroundColor: colors.primary },
+                        openRoundChat.isPending && styles.buttonDisabled,
                       ]}
                       accessibilityRole="button"
                     >
-                      <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
-                      <Text
-                        size="sm"
-                        weight="semibold"
-                        color={colors.primary}
-                        style={styles.myMatchStateText}
-                      >
+                      {openRoundChat.isPending ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <Ionicons name="chatbubbles-outline" size={20} color="#ffffff" />
+                      )}
+                      <Text size="base" weight="semibold" color="#ffffff">
                         {t('tournamentDetail.dashboard.myMatch.organize')}
                       </Text>
-                      {openRoundChat.isPending ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : (
-                        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                      )}
                     </TouchableOpacity>
                   </>
                 ) : (

@@ -87,6 +87,7 @@ import GroupChatInfo from '#/screens/GroupChatInfo';
 import Communities from '#/screens/Communities';
 import CommunityDetail from '#/screens/CommunityDetail';
 import TournamentDetail from '#/screens/TournamentDetail';
+import TournamentBracketSetup from '#/screens/TournamentBracketSetup';
 import Tournaments from '#/screens/Tournaments';
 import MyTournaments from '#/screens/MyTournaments';
 import Leagues from '#/screens/Leagues';
@@ -1596,6 +1597,16 @@ export default function AppNavigator() {
         options={({ route, navigation }) => ({
           ...sharedOptions,
           headerTitle: route.params?.tournamentName || t('tournamentDetail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="TournamentBracketSetup"
+        component={TournamentBracketSetup}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('bracketSetup.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

@@ -39,6 +39,7 @@ import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
 import { useAuth, useTranslation, useThemeStyles } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
 interface MatchOrganizerCardProps {
   message: MessageWithSender;
@@ -238,11 +239,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             <Ionicons name="calendar-outline" size={20} color={accent} />
           </View>
           <View style={styles.headerText}>
-            <Text size="sm" weight="semibold" color={colors.text}>
+            <Text size="sm" weight="semibold" color={colors.text} lineHeight="tight">
               {t('matchOrganizer.card.title')}
               {metadata.sport_name ? ` · ${metadata.sport_name}` : ''}
             </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.subtitle}>
+            <Text
+              size="xs"
+              color={colors.textMuted}
+              lineHeight="tight"
+              style={styles.headerSubtitle}
+            >
               {t('matchOrganizer.card.subtitlePrompt')}
             </Text>
           </View>
@@ -297,13 +303,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       },
                     ]}
                   >
-                    <Ionicons
-                      name={option.court_confirmed ? 'tennisball-outline' : 'time-outline'}
-                      size={12}
-                      color={
-                        option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
-                      }
-                    />
+                    {option.court_confirmed ? (
+                      <TennisCourtIcon
+                        width={13}
+                        height={13}
+                        stroke={statusColors.success.DEFAULT}
+                        style={styles.courtIcon}
+                      />
+                    ) : (
+                      <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                    )}
                     <Text
                       size="xs"
                       weight="semibold"
@@ -404,8 +413,11 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 2,
   },
+  headerSubtitle: {
+    marginTop: spacingPixels[1],
+  },
   options: {
-    marginTop: spacingPixels[3],
+    marginTop: spacingPixels[4],
     gap: spacingPixels[1.5],
   },
   option: {
@@ -433,6 +445,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     paddingVertical: 3,
     marginTop: spacingPixels[1],
+  },
+  courtIcon: {
+    transform: [{ rotate: '90deg' }],
   },
   voteBtn: {
     flexDirection: 'row',

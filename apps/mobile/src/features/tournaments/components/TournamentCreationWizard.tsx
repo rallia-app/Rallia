@@ -67,7 +67,7 @@ import { SportIcon } from '../../../components/SportIcon';
 import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
-const TOTAL_STEPS = 2;
+const TOTAL_STEPS = 4;
 const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number];
 
@@ -119,7 +119,7 @@ const MATCH_FORMAT_KEYS: Record<MatchFormat, { label: string; hint: string }> = 
 const formatOptionsForSport = (sportName: string | undefined): readonly MatchFormat[] =>
   sportName === 'pickleball' ? PICKLEBALL_FORMATS : TENNIS_FORMATS;
 
-const STEP_ANALYTICS_NAMES = ['details', 'visibility'] as const;
+const STEP_ANALYTICS_NAMES = ['basics', 'format', 'schedule', 'rules_visibility'] as const;
 
 const defaultFormatForSport = (sportName: string | undefined): MatchFormat =>
   sportName === 'pickleball' ? 'pickleball_to_11' : 'two_of_three';
@@ -251,8 +251,10 @@ const ProgressBar: React.FC<{
 }> = ({ currentStep, colors, t }) => {
   const pct = (currentStep / TOTAL_STEPS) * 100;
   const stepNames = [
-    t('tournamentCreation.stepNames.details' as TranslationKey),
-    t('tournamentCreation.stepNames.visibility' as TranslationKey),
+    t('tournamentCreation.stepNames.basics' as TranslationKey),
+    t('tournamentCreation.stepNames.format' as TranslationKey),
+    t('tournamentCreation.stepNames.schedule' as TranslationKey),
+    t('tournamentCreation.stepNames.rulesVisibility' as TranslationKey),
   ];
   return (
     <View style={styles.progressContainer}>
@@ -410,14 +412,13 @@ const DateField: React.FC<{
 };
 
 const DetailsStep: React.FC<{
+  /** Which form step to render: 1 Basics, 2 Format, 3 Schedule. */
+  step: number;
   name: string;
   setName: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
-  /** Rules are edit-only (set on the tournament sheet after creation). */
-  rules: string;
-  setRules: (v: string) => void;
-  /** Minimum required level (edit-only); ratingOptions are the sport's tiers. */
+  /** Minimum required level; ratingOptions are the sport's tiers. */
   minRating: number | null;
   setMinRating: (v: number | null) => void;
   ratingOptions: { value: number; label: string }[];
@@ -449,12 +450,11 @@ const DetailsStep: React.FC<{
   /** Edit mode allows a start date in the past (the tournament may have begun). */
   isEditMode: boolean;
 }> = ({
+  step,
   name,
   setName,
   description,
   setDescription,
-  rules,
-  setRules,
   minRating,
   setMinRating,
   ratingOptions,
@@ -527,6 +527,19 @@ const DetailsStep: React.FC<{
     [pickerOpen, commitDate]
   );
 
+  const stepTitle =
+    step === 2
+      ? t('tournamentCreation.step2Title' as TranslationKey)
+      : step === 3
+        ? t('tournamentCreation.step3Title' as TranslationKey)
+        : t('tournamentCreation.step1Title' as TranslationKey);
+  const stepDescription =
+    step === 2
+      ? t('tournamentCreation.step2Description' as TranslationKey)
+      : step === 3
+        ? t('tournamentCreation.step3Description' as TranslationKey)
+        : t('tournamentCreation.step1Description' as TranslationKey);
+
   return (
     <SheetScrollView
       style={styles.stepContainer}
@@ -537,13 +550,15 @@ const DetailsStep: React.FC<{
     >
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('tournamentCreation.step1Title' as TranslationKey)}
+          {stepTitle}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('tournamentCreation.step1Description' as TranslationKey)}
+          {stepDescription}
         </Text>
       </View>
 
+      {step === 1 && (
+        <>
       <View style={styles.fieldGroup}>
         <FieldLabel colors={colors}>
           {t('tournamentCreation.fields.name' as TranslationKey)}
@@ -593,30 +608,6 @@ const DetailsStep: React.FC<{
           value={description}
           onChangeText={setDescription}
           maxLength={500}
-          multiline
-          autoCapitalize="sentences"
-        />
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <FieldLabel colors={colors}>
-          {t('tournamentCreation.fields.rules' as TranslationKey)}
-        </FieldLabel>
-        <TextInput
-          style={[
-            styles.textInput,
-            styles.textArea,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-          placeholder={t('tournamentCreation.fields.rulesPlaceholder' as TranslationKey)}
-          placeholderTextColor={colors.textMuted}
-          value={rules}
-          onChangeText={setRules}
-          maxLength={2000}
           multiline
           autoCapitalize="sentences"
         />
@@ -683,74 +674,10 @@ const DetailsStep: React.FC<{
           </TouchableOpacity>
         )}
       </View>
-
-      {ratingOptions.length > 0 && (
-        <View style={styles.fieldGroup}>
-          <FieldLabel colors={colors}>
-            {t('tournamentCreation.fields.minLevel' as TranslationKey)}
-          </FieldLabel>
-          <View style={styles.minLevelRow}>
-            <TouchableOpacity
-              onPress={() => {
-                lightHaptic();
-                setMinRating(null);
-              }}
-              activeOpacity={0.7}
-              style={[
-                styles.minLevelChip,
-                {
-                  backgroundColor:
-                    minRating === null ? `${colors.buttonActive}15` : colors.buttonInactive,
-                  borderColor: minRating === null ? colors.buttonActive : colors.border,
-                },
-              ]}
-            >
-              <Text
-                size="sm"
-                weight={minRating === null ? 'semibold' : 'regular'}
-                color={minRating === null ? colors.buttonActive : colors.text}
-              >
-                {t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-            {ratingOptions.map(opt => {
-              const selected = minRating === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  onPress={() => {
-                    lightHaptic();
-                    setMinRating(opt.value);
-                  }}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.minLevelChip,
-                    {
-                      backgroundColor: selected
-                        ? `${colors.buttonActive}15`
-                        : colors.buttonInactive,
-                      borderColor: selected ? colors.buttonActive : colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    size="sm"
-                    weight={selected ? 'semibold' : 'regular'}
-                    color={selected ? colors.buttonActive : colors.text}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-            {t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
-          </Text>
-        </View>
+        </>
       )}
 
-      {canEditStructure && (
+      {step === 2 && canEditStructure && (
         <>
           {canPickEntryFormat && (
             <View style={styles.fieldGroup}>
@@ -896,7 +823,7 @@ const DetailsStep: React.FC<{
         </>
       )}
 
-      {!canEditStructure && (
+      {step === 2 && !canEditStructure && (
         <View style={styles.fieldGroup}>
           <Text size="xs" color={colors.textMuted}>
             {t('tournamentDetail.editModal.draftOnlyHint' as TranslationKey)}
@@ -904,6 +831,8 @@ const DetailsStep: React.FC<{
         </View>
       )}
 
+      {step === 3 && (
+        <>
       <DateField
         label={t('tournamentCreation.fields.startDate' as TranslationKey)}
         date={startDate}
@@ -974,16 +903,86 @@ const DetailsStep: React.FC<{
           onChange={onChange}
         />
       ) : null}
+
+      {ratingOptions.length > 0 && (
+        <View style={styles.fieldGroup}>
+          <FieldLabel colors={colors}>
+            {t('tournamentCreation.fields.minLevel' as TranslationKey)}
+          </FieldLabel>
+          <View style={styles.minLevelRow}>
+            <TouchableOpacity
+              onPress={() => {
+                lightHaptic();
+                setMinRating(null);
+              }}
+              activeOpacity={0.7}
+              style={[
+                styles.minLevelChip,
+                {
+                  backgroundColor:
+                    minRating === null ? `${colors.buttonActive}15` : colors.buttonInactive,
+                  borderColor: minRating === null ? colors.buttonActive : colors.border,
+                },
+              ]}
+            >
+              <Text
+                size="sm"
+                weight={minRating === null ? 'semibold' : 'regular'}
+                color={minRating === null ? colors.buttonActive : colors.text}
+              >
+                {t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+            {ratingOptions.map(opt => {
+              const selected = minRating === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => {
+                    lightHaptic();
+                    setMinRating(opt.value);
+                  }}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.minLevelChip,
+                    {
+                      backgroundColor: selected
+                        ? `${colors.buttonActive}15`
+                        : colors.buttonInactive,
+                      borderColor: selected ? colors.buttonActive : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    size="sm"
+                    weight={selected ? 'semibold' : 'regular'}
+                    color={selected ? colors.buttonActive : colors.text}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+            {t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
+          </Text>
+        </View>
+      )}
+        </>
+      )}
     </SheetScrollView>
   );
 };
 
 const VisibilityStep: React.FC<{
+  rules: string;
+  setRules: (v: string) => void;
   visibility: Enums<'tournament_visibility'>;
   setVisibility: (v: Visibility) => void;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
-}> = ({ visibility, setVisibility, colors, t }) => (
+}> = ({ rules, setRules, visibility, setVisibility, colors, t }) => (
   <SheetScrollView
     style={styles.stepContainer}
     contentContainerStyle={styles.stepContent}
@@ -997,6 +996,30 @@ const VisibilityStep: React.FC<{
       <Text size="sm" color={colors.textMuted}>
         {t('tournamentCreation.visibilityStepDescription' as TranslationKey)}
       </Text>
+    </View>
+
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.fields.rules' as TranslationKey)}
+      </FieldLabel>
+      <TextInput
+        style={[
+          styles.textInput,
+          styles.textArea,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.inputBorder,
+            color: colors.text,
+          },
+        ]}
+        placeholder={t('tournamentCreation.fields.rulesPlaceholder' as TranslationKey)}
+        placeholderTextColor={colors.textMuted}
+        value={rules}
+        onChangeText={setRules}
+        maxLength={2000}
+        multiline
+        autoCapitalize="sentences"
+      />
     </View>
 
     <View style={styles.fieldGroup}>
@@ -1201,7 +1224,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (!trimmed) next.name = t('tournamentCreation.validation.nameRequired' as TranslationKey);
         else if (trimmed.length > 100)
           next.name = t('tournamentCreation.validation.nameTooLong' as TranslationKey);
-
+      }
+      if (step === 3) {
         if (!startDate || !endDate) {
           next.startDate = !startDate
             ? t('tournamentCreation.validation.datesRequired' as TranslationKey)
@@ -1268,6 +1292,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const handleSubmit = useCallback(async () => {
     if (!validateStep(1)) {
       setCurrentStep(1);
+      return;
+    }
+    if (!validateStep(3)) {
+      setCurrentStep(3);
       return;
     }
     if (!startDate || !endDate) return;
@@ -1518,14 +1546,13 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       <ProgressBar currentStep={currentStep} colors={colors} t={t} />
 
       <View style={styles.body}>
-        {currentStep === 1 && (
+        {currentStep <= 3 && (
           <DetailsStep
+            step={currentStep}
             name={name}
             setName={setName}
             description={description}
             setDescription={setDescription}
-            rules={rules}
-            setRules={setRules}
             minRating={minRating}
             setMinRating={setMinRating}
             ratingOptions={ratingOptions}
@@ -1554,8 +1581,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             isEditMode={isEditMode}
           />
         )}
-        {currentStep === 2 && (
+        {currentStep === 4 && (
           <VisibilityStep
+            rules={rules}
+            setRules={setRules}
             visibility={visibility}
             setVisibility={setVisibility}
             colors={colors}

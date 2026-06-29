@@ -236,6 +236,8 @@ export const ActionsBottomSheet: React.FC = () => {
     clearEditMatch,
     shouldOpenMatchCreation,
     clearMatchCreationFlag,
+    shouldOpenTournamentCreation,
+    clearTournamentCreationFlag,
     shouldOpenInvitePlayers,
     clearInvitePlayersFlag,
     initialBookingForWizard,
@@ -305,6 +307,29 @@ export const ActionsBottomSheet: React.FC = () => {
     showWizard,
     isEditMode,
     clearMatchCreationFlag,
+    slideIn,
+  ]);
+
+  // Effect to automatically open tournament creation wizard when flag is set
+  useEffect(() => {
+    if (
+      shouldOpenTournamentCreation &&
+      contentMode === 'actions' &&
+      !showTournamentWizard &&
+      !isEditMode
+    ) {
+      clearTournamentCreationFlag();
+      setTimeout(() => {
+        setShowTournamentWizard(true);
+        slideIn();
+      }, 100);
+    }
+  }, [
+    shouldOpenTournamentCreation,
+    contentMode,
+    showTournamentWizard,
+    isEditMode,
+    clearTournamentCreationFlag,
     slideIn,
   ]);
 

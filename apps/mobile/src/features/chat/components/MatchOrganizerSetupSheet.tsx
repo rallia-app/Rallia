@@ -46,6 +46,7 @@ import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { SportIcon } from '#/components/SportIcon';
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
 const SHEET_ID = 'match-organizer-setup';
 const BASE_WHITE = '#ffffff';
@@ -151,7 +152,9 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
         conversationId,
         organizerId,
         sportId: selectedSportId,
-        sportName: selectedSport?.displayName ?? null,
+        // Only label the card with the sport when the user actually chose one
+        // (the picker is shown only for 2+ shared sports; a single sport is auto).
+        sportName: sharedSports.length > 1 ? (selectedSport?.displayName ?? null) : null,
         format,
         participantIds,
         options: chosen,
@@ -172,6 +175,7 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
     organizerId,
     selectedSportId,
     selectedSport,
+    sharedSports,
     options,
     selectedKeys,
     format,
@@ -329,13 +333,16 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
                         },
                       ]}
                     >
-                      <Ionicons
-                        name={option.court_confirmed ? 'tennisball-outline' : 'time-outline'}
-                        size={12}
-                        color={
-                          option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
-                        }
-                      />
+                      {option.court_confirmed ? (
+                        <TennisCourtIcon
+                          width={13}
+                          height={13}
+                          stroke={statusColors.success.DEFAULT}
+                          style={styles.courtIcon}
+                        />
+                      ) : (
+                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                      )}
                       <Text
                         size="xs"
                         weight="semibold"
@@ -413,6 +420,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2],
     paddingVertical: 3,
     marginTop: spacingPixels[1],
+  },
+  courtIcon: {
+    transform: [{ rotate: '90deg' }],
   },
   cta: {
     flexDirection: 'row',

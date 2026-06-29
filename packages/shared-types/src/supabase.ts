@@ -10527,6 +10527,21 @@ export type Database = {
           network_name: string
         }[]
       }
+      get_tournament_co_organizers: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          added_at: string
+          added_by: string
+          tournament_id: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_co_organizers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_unread_conversations_count: {
         Args: { p_player_id: string }
         Returns: number
@@ -10986,6 +11001,10 @@ export type Database = {
         Returns: string
       }
       lt_league_default_rules: { Args: { p_sport_id: string }; Returns: Json }
+      lt_notify_tournament_match_ready: {
+        Args: { p_tm_id: string }
+        Returns: undefined
+      }
       lt_parse_score: {
         Args: { p_score: string }
         Returns: Record<string, unknown>
@@ -11940,6 +11959,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_add_co_organizer: {
+        Args: { p_tournament_id: string; p_user_id: string }
+        Returns: {
+          added_at: string
+          added_by: string
+          tournament_id: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_co_organizers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       tournament_approve_registration: {
         Args: { p_registration_id: string; p_version_was: number }
         Returns: {
@@ -12433,6 +12467,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_preview_bracket: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          is_phantom: boolean
+          match_position: number
+          player1_is_bye: boolean
+          player1_registration_id: string
+          player2_is_bye: boolean
+          player2_registration_id: string
+          round_number: number
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          winner_registration_id: string
+        }[]
+      }
       tournament_register: {
         Args: { p_partner_id?: string; p_tournament_id: string }
         Returns: {
@@ -12460,6 +12508,21 @@ export type Database = {
           to: "tournament_registrations"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      tournament_remove_co_organizer: {
+        Args: { p_tournament_id: string; p_user_id: string }
+        Returns: {
+          added_at: string
+          added_by: string
+          tournament_id: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_co_organizers"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       tournament_remove_registration: {
@@ -12568,6 +12631,39 @@ export type Database = {
           to: "tournament_registrations"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      tournament_set_seeds: {
+        Args: {
+          p_ordered_registration_ids: string[]
+          p_tournament_id: string
+          p_version_was: number
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          bracket_position: number | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          notes: string | null
+          partner_user_id: string | null
+          partnership_id: string | null
+          registered_at: string
+          seed_rank: number | null
+          self_declared_rank: number | null
+          status: Database["public"]["Enums"]["registration_status"]
+          tournament_id: string
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_registrations"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       tournament_update: {
@@ -12985,6 +13081,7 @@ export type Database = {
         | "league_member_request"
         | "league_member_approved"
         | "session_confirm_reminder"
+        | "tournament_match_ready"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -13641,6 +13738,7 @@ export const Constants = {
         "league_member_request",
         "league_member_approved",
         "session_confirm_reminder",
+        "tournament_match_ready",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
