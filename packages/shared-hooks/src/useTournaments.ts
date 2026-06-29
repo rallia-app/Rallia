@@ -23,6 +23,9 @@ import {
   acceptTournamentInvite,
   revokeTournamentInvite,
   registerForTournament,
+  getTournamentFeeQuote,
+  createTournamentRegistrationPayment,
+  refundTournamentRegistration,
   withdrawFromTournament,
   removeTournamentRegistration,
   approveTournamentRegistration,
@@ -60,6 +63,9 @@ import {
   type LinkableMatch,
   type PlayerProfile,
   type PlayerSearchResult,
+  type TournamentFeeQuote,
+  type RegistrationPaymentIntent,
+  type TournamentRefundResult,
 } from '@rallia/shared-services';
 
 export const tournamentKeys = {
@@ -88,6 +94,7 @@ export const tournamentKeys = {
   inviteLink: (tournamentId: string) =>
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
+  feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
 };
 
 /**
@@ -426,10 +433,7 @@ export function useGenerateTournamentBracket(options: MutationOptions<Tournament
  * Read-only bracket preview for the current seeds. Organizer-only; enable it
  * while the seeding screen is open (status registration_closed, no bracket yet).
  */
-export function useTournamentBracketPreview(
-  tournamentId: string | undefined,
-  enabled: boolean
-) {
+export function useTournamentBracketPreview(tournamentId: string | undefined, enabled: boolean) {
   return useQuery<PreviewBracketMatch[]>({
     queryKey: tournamentKeys.bracketPreview(tournamentId ?? ''),
     queryFn: () => previewTournamentBracket(tournamentId!),
@@ -541,6 +545,71 @@ export function useOpenTournamentRegistration(options: MutationOptions<Tournamen
     onSuccess: t => {
       invalidate(t.id);
       options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Server-authoritative price breakdown for registering in a tournament. Only
+ * runs for paid tournaments (entryFeeCents > 0); the quote returns null for
+ * free events.
+ */
+export function useTournamentFeeQuote(tournamentId: string | undefined, enabled = true) {
+  return useQuery<TournamentFeeQuote | null>({
+    queryKey: tournamentKeys.feeQuote(tournamentId ?? ''),
+    queryFn: () => getTournamentFeeQuote(tournamentId as string),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/**
+ * Reserve a slot + open a Stripe PaymentIntent for a paid registration. The
+ * screen drives the PaymentSheet with the returned clientSecret; the webhook
+ * finalizes the registration on success. Throws TournamentPaymentError(code)
+ * on guard failures.
+ */
+export function useCreateRegistrationPayment(
+  options: MutationOptions<RegistrationPaymentIntent> = {}
+) {
+  const mutation = useMutation<
+    RegistrationPaymentIntent,
+    Error,
+    { tournamentId: string; partnerId?: string }
+  >({
+    mutationFn: ({ tournamentId, partnerId }) =>
+      createTournamentRegistrationPayment(tournamentId, partnerId),
+    onSuccess: r => options.onSuccess?.(r),
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Withdraw from a paid tournament + issue the entry refund (lt-refund-registration).
+ * The webhook already finalized the registration on payment; this reverses it.
+ */
+export function useRefundRegistration(options: MutationOptions<TournamentRefundResult> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRefundResult,
+    Error,
+    { registrationId: string; versionWas: number; tournamentId: string }
+  >({
+    mutationFn: ({ registrationId, versionWas }) =>
+      refundTournamentRegistration(registrationId, versionWas),
+    onSuccess: (r, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(r);
     },
     onError: e => options.onError?.(e),
   });

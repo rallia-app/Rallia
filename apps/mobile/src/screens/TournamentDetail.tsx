@@ -44,18 +44,23 @@ import {
   secondary,
   duration,
 } from '@rallia/design-system';
+import { useStripe } from '@stripe/stripe-react-native';
 import {
   lightHaptic,
   successHaptic,
   warningHaptic,
   getHumanName,
   getTournamentLogoUrl,
+  formatPrice,
 } from '@rallia/shared-utils';
 import {
   useTheme,
   useTournament,
   useTournamentRegistrations,
   useMyTournamentRegistration,
+  useTournamentFeeQuote,
+  useCreateRegistrationPayment,
+  useRefundRegistration,
   useOpenTournamentRegistration,
   useCloseTournamentRegistration,
   useReopenTournamentRegistration,
@@ -76,9 +81,17 @@ import {
   useTournamentParticipants,
   useSports,
   useAuth,
+  tournamentKeys,
 } from '@rallia/shared-hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Enums, Tables } from '@rallia/shared-types';
-import { getTierConfig, getTournamentChat } from '@rallia/shared-services';
+import * as WebBrowser from 'expo-web-browser';
+import {
+  getTierConfig,
+  getTournamentChat,
+  TournamentPaymentError,
+  supabase,
+} from '@rallia/shared-services';
 import type {
   PlayerSearchResult,
   ReputationDisplay,
@@ -768,9 +781,41 @@ export const TournamentDetail: React.FC = () => {
     [t, toast]
   );
 
+  // Reuse the player-level Stripe Connect onboarding (same flow as match
+  // reimbursements). Organizers must finish this before a paid event can open.
+  const handleStripeOnboard = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
+      if (error || !data?.url) throw new Error(error?.message);
+      await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
+    } catch {
+      warningHaptic();
+      toast.error(t('tournamentDetail.payments.onboardingError'));
+    }
+  }, [toast, t]);
+
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
-    onError: e => showError(e.message, 'tournamentDetail.errors.openFailed'),
+    onError: e => {
+      // Paid event without completed payout setup: prompt the organizer to
+      // finish Stripe onboarding instead of a generic error.
+      if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
+        warningHaptic();
+        Alert.alert(
+          t('tournamentDetail.payments.payoutsSetupTitle'),
+          t('tournamentDetail.payments.payoutsSetupBody'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('tournamentDetail.payments.payoutsSetupCta'),
+              onPress: () => void handleStripeOnboard(),
+            },
+          ]
+        );
+        return;
+      }
+      showError(e.message, 'tournamentDetail.errors.openFailed');
+    },
   });
   const close = useCloseTournamentRegistration({
     onSuccess: () => successHaptic(),
@@ -803,8 +848,94 @@ export const TournamentDetail: React.FC = () => {
     },
   });
   const registerPending = register.isPending || joinViaInvite.isPending;
+
+  // Paid-registration flow (Stripe PaymentSheet). isPaidTournament gates the
+  // price display + the payment branch in onRegister.
+  const queryClient = useQueryClient();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const isPaidTournament = (tournament?.entry_fee_cents ?? 0) > 0;
+  const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
+  const createRegistrationPayment = useCreateRegistrationPayment();
+
+  const handlePaidRegister = useCallback(
+    async (partnerId?: string) => {
+      if (!tournament) return;
+      try {
+        const intent = await createRegistrationPayment.mutateAsync({
+          tournamentId: tournament.id,
+          partnerId,
+        });
+        const { error: initError } = await initPaymentSheet({
+          paymentIntentClientSecret: intent.clientSecret,
+          merchantDisplayName: 'Rallia',
+          applePay: { merchantCountryCode: 'CA' },
+          googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+        });
+        if (initError) throw new Error(initError.message);
+        const { error: paymentError } = await presentPaymentSheet();
+        if (paymentError) {
+          if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
+          throw new Error(paymentError.message);
+        }
+        successHaptic();
+        toast.success(t('tournamentDetail.payments.successToast'));
+        // The webhook flips payment_pending → registered; refetch now and again
+        // shortly after to catch the async finalize.
+        const invalidate = () => {
+          void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) });
+          void queryClient.invalidateQueries({
+            queryKey: tournamentKeys.registrations(tournament.id),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
+          });
+        };
+        invalidate();
+        setTimeout(invalidate, 2500);
+      } catch (e) {
+        warningHaptic();
+        const code = e instanceof TournamentPaymentError ? e.code : undefined;
+        const key =
+          code === 'tournament_full'
+            ? 'tournamentDetail.payments.errors.full'
+            : code === 'already_registered'
+              ? 'tournamentDetail.payments.errors.alreadyRegistered'
+              : code === 'organizer_not_ready'
+                ? 'tournamentDetail.payments.errors.organizerNotReady'
+                : code === 'tournament_reg_closed'
+                  ? 'tournamentDetail.payments.errors.closed'
+                  : 'tournamentDetail.payments.errors.generic';
+        toast.error(t(key as TranslationKey));
+      }
+    },
+    [
+      tournament,
+      userId,
+      createRegistrationPayment,
+      initPaymentSheet,
+      presentPaymentSheet,
+      queryClient,
+      toast,
+      t,
+    ]
+  );
+
   const withdraw = useWithdrawFromTournament({
     onSuccess: () => successHaptic(),
+    onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed'),
+  });
+  const refundRegistration = useRefundRegistration({
+    onSuccess: r => {
+      successHaptic();
+      toast.success(
+        r.refundedCents > 0
+          ? t('tournamentDetail.payments.refundIssued').replace(
+              '{amount}',
+              formatPrice(r.refundedCents, tournament?.currency ?? 'CAD', { locale })
+            )
+          : t('tournamentDetail.payments.withdrawnNoRefund')
+      );
+    },
     onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed'),
   });
   const acceptInvite = useAcceptTournamentInvite({
@@ -937,6 +1068,23 @@ export const TournamentDetail: React.FC = () => {
     // direct registrants take the normal path. Doubles routes through the
     // partner picker first in every case.
     const inviteToken = !isOrganizer && !isInvitePending ? params.inviteToken : undefined;
+    // Paid tournaments (open mode only in this slice) charge via Stripe before
+    // confirming the spot. No invite/accept path is paid, so those fall through.
+    if (isPaidTournament && !inviteToken && !isInvitePending) {
+      if (isDoubles) {
+        void SheetManager.show('tournament-partner-picker', {
+          payload: {
+            sportId: tournament.sport_id,
+            onPick: partner => {
+              void handlePaidRegister(partner.id);
+            },
+          },
+        });
+        return;
+      }
+      void handlePaidRegister();
+      return;
+    }
     if (isDoubles) {
       void SheetManager.show('tournament-partner-picker', {
         payload: {
@@ -969,17 +1117,63 @@ export const TournamentDetail: React.FC = () => {
     joinViaInvite,
     params.inviteToken,
     isOrganizer,
+    isPaidTournament,
+    handlePaidRegister,
   ]);
 
   const onWithdraw = useCallback(() => {
     if (!tournament || !myActiveRegistration) return;
     lightHaptic();
+
+    // Paid registration: confirm with the refund estimate, then withdraw+refund.
+    if (isPaidTournament) {
+      const pastCutoff =
+        !!feeQuote?.refundCutoffAt && new Date(feeQuote.refundCutoffAt) < new Date();
+      const estimateCents = !feeQuote
+        ? 0
+        : feeQuote.refundPolicyKind === 'none' || pastCutoff
+          ? 0
+          : feeQuote.refundPolicyKind === 'full'
+            ? feeQuote.entryCents
+            : Math.round((feeQuote.entryCents * (feeQuote.refundPartialBps ?? 0)) / 10000);
+      const amountLabel = formatPrice(estimateCents, tournament.currency ?? 'CAD', { locale });
+      Alert.alert(
+        t('tournamentDetail.payments.withdrawConfirmTitle'),
+        estimateCents > 0
+          ? t('tournamentDetail.payments.withdrawConfirmRefund').replace('{amount}', amountLabel)
+          : t('tournamentDetail.payments.withdrawConfirmNoRefund'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('tournamentDetail.actions.withdraw'),
+            style: 'destructive',
+            onPress: () =>
+              refundRegistration.mutate({
+                registrationId: myActiveRegistration.id,
+                versionWas: myActiveRegistration.version,
+                tournamentId: tournament.id,
+              }),
+          },
+        ]
+      );
+      return;
+    }
+
     withdraw.mutate({
       registrationId: myActiveRegistration.id,
       versionWas: myActiveRegistration.version,
       tournamentId: tournament.id,
     });
-  }, [tournament, myActiveRegistration, withdraw]);
+  }, [
+    tournament,
+    myActiveRegistration,
+    withdraw,
+    isPaidTournament,
+    feeQuote,
+    refundRegistration,
+    t,
+    locale,
+  ]);
 
   const onAcceptInvite = useCallback(() => {
     if (!tournament) return;
@@ -1493,6 +1687,13 @@ export const TournamentDetail: React.FC = () => {
         name: sport?.name ?? '',
         display_name: sport?.display_name ?? '',
       },
+      entryFeeCents: tournament.entry_fee_cents,
+      currency: tournament.currency,
+      feePayer: tournament.fee_payer,
+      payoutTiming: tournament.payout_timing,
+      refundPolicyKind: tournament.refund_policy_kind,
+      refundPartialBps: tournament.refund_partial_bps,
+      refundCutoffAt: tournament.refund_cutoff_at,
     });
   }, [tournament, sport, openSheetForTournamentEdit]);
 
@@ -1624,6 +1825,28 @@ export const TournamentDetail: React.FC = () => {
         formatDate(tournament.registration_closes_at)
       )
     : null;
+
+  // Paid-registration display: total to charge + a one-line refund summary.
+  const feeTotalLabel =
+    isPaidTournament && feeQuote
+      ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
+      : null;
+  const refundSummary = (() => {
+    if (!isPaidTournament || !feeQuote) return null;
+    const cutoff = feeQuote.refundCutoffAt ? formatDate(feeQuote.refundCutoffAt) : null;
+    if (feeQuote.refundPolicyKind === 'none') return t('tournamentDetail.payments.refundNone');
+    if (feeQuote.refundPolicyKind === 'full')
+      return cutoff
+        ? t('tournamentDetail.payments.refundFullUntil').replace('{date}', cutoff)
+        : t('tournamentDetail.payments.refundFull');
+    const pct = String(Math.round((feeQuote.refundPartialBps ?? 0) / 100));
+    return cutoff
+      ? t('tournamentDetail.payments.refundPartialUntil')
+          .replace('{pct}', pct)
+          .replace('{date}', cutoff)
+      : t('tournamentDetail.payments.refundPartial').replace('{pct}', pct);
+  })();
+  const registerBusy = registerPending || createRegistrationPayment.isPending;
 
   const showBracketTab = shouldFetchBracket && matches.length > 0;
   const showPlayersTab = tournament.status !== 'draft';
@@ -2008,6 +2231,7 @@ export const TournamentDetail: React.FC = () => {
                             : 'tournamentDetail.dashboard.registerCta.spotsLeft'
                         ).replace('{n}', String(spotsLeft)),
                         registerCloseHint,
+                        refundSummary,
                       ]
                         .filter(Boolean)
                         .join(' · ')
@@ -2015,14 +2239,16 @@ export const TournamentDetail: React.FC = () => {
                 }
                 buttonLabel={
                   spotsLeft > 0
-                    ? registerPending
+                    ? registerBusy
                       ? t('tournamentDetail.actions.registering')
-                      : t('tournamentDetail.actions.register')
+                      : feeTotalLabel
+                        ? `${t('tournamentDetail.actions.register')} · ${feeTotalLabel}`
+                        : t('tournamentDetail.actions.register')
                     : undefined
                 }
                 buttonIcon="person-add-outline"
                 onPress={spotsLeft > 0 ? onRegister : undefined}
-                disabled={registerPending}
+                disabled={registerBusy}
                 colors={colors}
                 testID="cta-register"
               />
@@ -2118,13 +2344,13 @@ export const TournamentDetail: React.FC = () => {
                       : t('tournamentDetail.dashboard.withdrawCta.description')
                 }
                 buttonLabel={
-                  withdraw.isPending
+                  withdraw.isPending || refundRegistration.isPending
                     ? t('tournamentDetail.actions.withdrawing')
                     : t('tournamentDetail.actions.withdraw')
                 }
                 buttonIcon="exit-outline"
                 onPress={onWithdraw}
-                disabled={withdraw.isPending}
+                disabled={withdraw.isPending || refundRegistration.isPending}
                 testID="cta-withdraw"
                 destructive
                 colors={colors}

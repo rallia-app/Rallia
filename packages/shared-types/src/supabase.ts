@@ -766,6 +766,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "conversation_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "conversation_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
@@ -2630,6 +2637,112 @@ export type Database = {
           },
         ]
       }
+      lt_registration_payment: {
+        Row: {
+          amount_charged_cents: number
+          created_at: string
+          currency: string
+          entry_cents: number
+          expires_at: string | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          id: string
+          organizer_amount_cents: number
+          organizer_id: string
+          payer_user_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_amount_cents: number
+          refunded_at: string | null
+          released_at: string | null
+          released_transfer_id: string | null
+          season_id: string | null
+          season_user_id: string | null
+          service_fee_cents: number
+          status: Database["public"]["Enums"]["lt_payment_status_enum"]
+          stripe_charge_id: string | null
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          tournament_registration_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          amount_charged_cents: number
+          created_at?: string
+          currency?: string
+          entry_cents: number
+          expires_at?: string | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          id?: string
+          organizer_amount_cents: number
+          organizer_id: string
+          payer_user_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_amount_cents?: number
+          refunded_at?: string | null
+          released_at?: string | null
+          released_transfer_id?: string | null
+          season_id?: string | null
+          season_user_id?: string | null
+          service_fee_cents: number
+          status?: Database["public"]["Enums"]["lt_payment_status_enum"]
+          stripe_charge_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tournament_registration_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          amount_charged_cents?: number
+          created_at?: string
+          currency?: string
+          entry_cents?: number
+          expires_at?: string | null
+          fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
+          id?: string
+          organizer_amount_cents?: number
+          organizer_id?: string
+          payer_user_id?: string
+          payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_amount_cents?: number
+          refunded_at?: string | null
+          released_at?: string | null
+          released_transfer_id?: string | null
+          season_id?: string | null
+          season_user_id?: string | null
+          service_fee_cents?: number
+          status?: Database["public"]["Enums"]["lt_payment_status_enum"]
+          stripe_charge_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tournament_registration_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lt_registration_payment_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lt_registration_payment_payer_user_id_fkey"
+            columns: ["payer_user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lt_registration_payment_tournament_registration_id_fkey"
+            columns: ["tournament_registration_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match: {
         Row: {
           booking_captain_id: string | null
@@ -2882,6 +2995,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_feedback_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "match_feedback_opponent_id_fkey"
             columns: ["opponent_id"]
             isOneToOne: false
@@ -2936,6 +3056,13 @@ export type Database = {
             referencedRelation: "match"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "match_interest_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
         ]
       }
       match_network: {
@@ -2967,6 +3094,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "match"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_network_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "match_network_network_id_fkey"
@@ -3102,6 +3236,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_participant_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "match_participant_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -3157,6 +3298,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "match"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_report_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "match_report_reported_id_fkey"
@@ -3267,6 +3415,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_result_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "match_result_rebuttal_submitted_by_fkey"
             columns: ["rebuttal_submitted_by"]
             isOneToOne: false
@@ -3358,6 +3513,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "match"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_share_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "match_share_shared_by_fkey"
@@ -3582,6 +3744,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "match"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_time_suggestion_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "match_time_suggestion_resolved_by_fkey"
@@ -4614,6 +4783,44 @@ export type Database = {
           },
         ]
       }
+      organizer_fee_override: {
+        Row: {
+          cap_cents: number | null
+          created_at: string
+          flat_cents: number | null
+          note: string | null
+          organizer_id: string
+          pct_bps: number | null
+          updated_at: string
+        }
+        Insert: {
+          cap_cents?: number | null
+          created_at?: string
+          flat_cents?: number | null
+          note?: string | null
+          organizer_id: string
+          pct_bps?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cap_cents?: number | null
+          created_at?: string
+          flat_cents?: number | null
+          note?: string | null
+          organizer_id?: string
+          pct_bps?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_fee_override_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: true
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       peer_rating_request: {
         Row: {
           assigned_rating_score_id: string | null
@@ -4756,6 +4963,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_service_fee_default: {
+        Row: {
+          cap_cents: number
+          flat_cents: number
+          id: boolean
+          pct_bps: number
+          updated_at: string
+        }
+        Insert: {
+          cap_cents?: number
+          flat_cents?: number
+          id?: boolean
+          pct_bps?: number
+          updated_at?: string
+        }
+        Update: {
+          cap_cents?: number
+          flat_cents?: number
+          id?: boolean
+          pct_bps?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       play_attribute: {
         Row: {
@@ -5474,6 +5705,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "match"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_report_related_match_id_fkey"
+            columns: ["related_match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "player_report_reported_player_id_fkey"
@@ -7335,6 +7573,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "report_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "report_reported_id_fkey"
             columns: ["reported_id"]
             isOneToOne: false
@@ -7437,6 +7682,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "match"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reputation_event_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "reputation_event_player_id_fkey"
@@ -7866,6 +8118,7 @@ export type Database = {
           is_drill: boolean
           is_three_player: boolean
           locked: boolean
+          match_id: string | null
           played_at: string | null
           round_number: number
           scheduled_at: string | null
@@ -7887,6 +8140,7 @@ export type Database = {
           is_drill?: boolean
           is_three_player?: boolean
           locked?: boolean
+          match_id?: string | null
           played_at?: string | null
           round_number?: number
           scheduled_at?: string | null
@@ -7908,6 +8162,7 @@ export type Database = {
           is_drill?: boolean
           is_three_player?: boolean
           locked?: boolean
+          match_id?: string | null
           played_at?: string | null
           round_number?: number
           scheduled_at?: string | null
@@ -7927,6 +8182,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "court"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_matches_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "match"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_matches_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
           {
             foreignKeyName: "session_matches_session_id_fkey"
@@ -8526,6 +8795,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tournament_matches_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "tournament_matches_next_match_id_fkey"
             columns: ["next_match_id"]
             isOneToOne: false
@@ -8722,10 +8998,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -8740,6 +9022,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -8763,10 +9049,16 @@ export type Database = {
           cancelled_reason?: string | null
           categories?: string[]
           created_at?: string
+          currency?: string
           description?: string | null
           end_date: string
+          entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
           facility_id?: string | null
+          fee_cap_cents_override?: number | null
+          fee_flat_cents_override?: number | null
+          fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override?: number | null
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
@@ -8781,6 +9073,10 @@ export type Database = {
           name: string
           network_id?: string | null
           organizer_id: string
+          payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at?: string | null
+          refund_partial_bps?: number | null
+          refund_policy_kind?: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at?: string | null
           registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at?: string | null
@@ -8804,10 +9100,16 @@ export type Database = {
           cancelled_reason?: string | null
           categories?: string[]
           created_at?: string
+          currency?: string
           description?: string | null
           end_date?: string
+          entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
           facility_id?: string | null
+          fee_cap_cents_override?: number | null
+          fee_flat_cents_override?: number | null
+          fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override?: number | null
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
@@ -8822,6 +9124,10 @@ export type Database = {
           name?: string
           network_id?: string | null
           organizer_id?: string
+          payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at?: string | null
+          refund_partial_bps?: number | null
+          refund_policy_kind?: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at?: string | null
           registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at?: string | null
@@ -8964,6 +9270,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "web_join_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
             foreignKeyName: "web_join_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -8986,8 +9299,57 @@ export type Database = {
         }
         Relationships: []
       }
+      qualifying_played_game: {
+        Row: {
+          facility_id: string | null
+          format: Database["public"]["Enums"]["match_format_enum"] | null
+          match_date: string | null
+          match_id: string | null
+          player_id: string | null
+          score: number | null
+          sport_id: string | null
+          team_number: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_participant_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      _lt_compute_bracket: {
+        Args: { p_seeded_regs: string[]; p_size: number }
+        Returns: {
+          is_phantom: boolean
+          match_position: number
+          player1_is_bye: boolean
+          player1_registration_id: string
+          player2_is_bye: boolean
+          player2_registration_id: string
+          round_number: number
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          winner_registration_id: string
+        }[]
+      }
       accept_match_time_suggestion: {
         Args: { p_suggestion_id: string }
         Returns: Json
@@ -9073,6 +9435,15 @@ export type Database = {
       clear_active_conversation: {
         Args: { p_conversation_id: string }
         Returns: undefined
+      }
+      compute_service_fee_cents: {
+        Args: {
+          p_cap_cents: number
+          p_entry_cents: number
+          p_flat_cents: number
+          p_pct_bps: number
+        }
+        Returns: number
       }
       confirm_match_score: {
         Args: { p_match_result_id: string; p_player_id: string }
@@ -9797,6 +10168,15 @@ export type Database = {
         Args: { p_contest_id: string; p_player_id: string }
         Returns: Json
       }
+      get_my_sport_rank: {
+        Args: { p_month?: string; p_sport_id: string }
+        Returns: {
+          games: number
+          points: number
+          rank: number
+          wins: number
+        }[]
+      }
       get_nearby_public_matches: {
         Args: {
           p_latitude: number
@@ -10501,6 +10881,23 @@ export type Database = {
           trend_date: string
         }[]
       }
+      get_sport_leaderboard: {
+        Args: {
+          p_limit?: number
+          p_month?: string
+          p_offset?: number
+          p_sport_id: string
+        }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          games: number
+          player_id: string
+          points: number
+          rank: number
+          wins: number
+        }[]
+      }
       get_sport_popularity: {
         Args: never
         Returns: {
@@ -10904,8 +11301,121 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_leave: {
+        Args: { p_league_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_reinstate_member: {
+        Args: { p_member_id: string; p_version_was: number }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_remove_member: {
+        Args: { p_member_id: string; p_version_was: number }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_revoke_invite: {
         Args: { p_member_id: string; p_version_was: number }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_suspend_member: {
+        Args: {
+          p_member_id: string
+          p_reason?: string
+          p_until?: string
+          p_version_was: number
+        }
         Returns: {
           approved_at: string | null
           approved_by: string | null
@@ -10990,8 +11500,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_cancel_refund_candidates: {
+        Args: never
+        Returns: {
+          currency: string
+          entry_cents: number
+          payment_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          released_transfer_id: string
+          stripe_charge_id: string
+          stripe_payment_intent_id: string
+        }[]
+      }
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
+      lt_expire_stale_registration_payments: { Args: never; Returns: number }
       lt_get_or_create_tournament_chat: {
         Args: { p_tournament_id: string }
         Returns: string
@@ -11013,9 +11536,25 @@ export type Database = {
         Args: { p_match_result_id: string }
         Returns: undefined
       }
+      lt_propagate_match_result_to_session: {
+        Args: { p_match_result_id: string }
+        Returns: undefined
+      }
       lt_registration_display_name: {
         Args: { p_registration_id: string }
         Returns: string
+      }
+      lt_release_candidates: {
+        Args: never
+        Returns: {
+          currency: string
+          organizer_amount_cents: number
+          organizer_id: string
+          organizer_onboarded: boolean
+          organizer_stripe_account_id: string
+          payment_id: string
+          stripe_charge_id: string
+        }[]
       }
       lt_rotate_for_round: {
         Args: { p_ids: string[]; p_round: number }
@@ -11267,6 +11806,19 @@ export type Database = {
         Returns: {
           display_name: string
           target_id: string
+        }[]
+      }
+      resolve_service_fee_policy: {
+        Args: {
+          p_event_cap_cents?: number
+          p_event_flat_cents?: number
+          p_event_pct_bps?: number
+          p_organizer_id: string
+        }
+        Returns: {
+          cap_cents: number
+          flat_cents: number
+          pct_bps: number
         }[]
       }
       review_player_report: {
@@ -11576,6 +12128,37 @@ export type Database = {
         }
         Returns: Json
       }
+      session_attach_match: {
+        Args: { p_match_id: string; p_session_match_id: string }
+        Returns: {
+          court_id: string | null
+          court_label: string | null
+          created_at: string
+          format: Database["public"]["Enums"]["entry_format"]
+          id: string
+          is_drill: boolean
+          is_three_player: boolean
+          locked: boolean
+          match_id: string | null
+          played_at: string | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["session_match_status"]
+          team_a_user_ids: string[]
+          team_b_user_ids: string[]
+          updated_at: string
+          version: number
+          winner_team: Database["public"]["Enums"]["pairing_team"] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "session_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       session_cancel: {
         Args: {
           p_reason?: string
@@ -11783,6 +12366,7 @@ export type Database = {
           is_drill: boolean
           is_three_player: boolean
           locked: boolean
+          match_id: string | null
           played_at: string | null
           round_number: number
           scheduled_at: string | null
@@ -11853,6 +12437,7 @@ export type Database = {
           is_drill: boolean
           is_three_player: boolean
           locked: boolean
+          match_id: string | null
           played_at: string | null
           round_number: number
           scheduled_at: string | null
@@ -11919,6 +12504,16 @@ export type Database = {
       snapshot_try_lock_facility: {
         Args: { p_facility_id: string }
         Returns: boolean
+      }
+      sport_ranked_board: {
+        Args: { p_month: string; p_sport_id: string }
+        Returns: {
+          games: number
+          player_id: string
+          points: number
+          rank: number
+          wins: number
+        }[]
       }
       submit_match_result_for_match: {
         Args: {
@@ -12013,10 +12608,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12031,6 +12632,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12090,6 +12695,23 @@ export type Database = {
         Args: { p_match_id: string; p_tournament_match_id: string }
         Returns: undefined
       }
+      tournament_begin_paid_registration: {
+        Args: { p_partner_user_id?: string; p_tournament_id: string }
+        Returns: {
+          amount_charged_cents: number
+          currency: string
+          entry_cents: number
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          organizer_amount_cents: number
+          organizer_id: string
+          organizer_onboarded: boolean
+          organizer_stripe_account_id: string
+          payment_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          registration_id: string
+          service_fee_cents: number
+        }[]
+      }
       tournament_cancel: {
         Args: {
           p_reason: string
@@ -12104,10 +12726,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12122,6 +12750,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12154,10 +12786,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12172,6 +12810,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12201,6 +12843,7 @@ export type Database = {
           p_end_date: string
           p_entry_format?: Database["public"]["Enums"]["entry_format"]
           p_facility_id?: string
+          p_fee?: Json
           p_logo_url?: string
           p_match_format?: Database["public"]["Enums"]["match_format"]
           p_max_participants: number
@@ -12224,10 +12867,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12242,6 +12891,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12263,6 +12916,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      tournament_fee_quote: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          currency: string
+          entry_cents: number
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          organizer_receives_cents: number
+          refund_cutoff_at: string
+          refund_partial_bps: number
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
+          service_fee_cents: number
+          total_cents: number
+        }[]
       }
       tournament_generate_bracket: {
         Args: { p_tournament_id: string; p_version_was: number }
@@ -12390,10 +13057,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12408,6 +13081,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12564,10 +13241,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12582,6 +13265,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12603,6 +13290,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      tournament_request_refund: {
+        Args: { p_registration_id: string; p_version_was: number }
+        Returns: {
+          currency: string
+          entry_cents: number
+          payment_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refundable_entry_cents: number
+          released_transfer_id: string
+          stripe_charge_id: string
+          stripe_payment_intent_id: string
+        }[]
       }
       tournament_revoke_invite: {
         Args: { p_registration_id: string; p_version_was: number }
@@ -12676,10 +13376,16 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           created_at: string
+          currency: string
           description: string | null
           end_date: string
+          entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
           facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
@@ -12694,6 +13400,10 @@ export type Database = {
           name: string
           network_id: string | null
           organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
           registration_closes_at: string | null
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
@@ -12920,6 +13630,7 @@ export type Database = {
         | "university"
         | "school"
         | "community_center"
+      fee_payer_enum: "player_pays" | "organizer_absorbs"
       file_type_enum: "image" | "video" | "document" | "audio" | "other"
       final_set_tiebreak: "none" | "standard_7pt" | "super_tb_10pt"
       gender_enum: "male" | "female" | "other"
@@ -12941,6 +13652,13 @@ export type Database = {
       league_status: "active" | "paused" | "closed"
       locale_enum: "en-US" | "en-CA" | "fr-CA" | "fr-FR"
       location_type_enum: "facility" | "custom" | "tbd"
+      lt_payment_status_enum:
+        | "pending"
+        | "succeeded"
+        | "refunded"
+        | "partially_refunded"
+        | "failed"
+        | "cancelled"
       match_duration_enum: "30" | "60" | "90" | "120" | "custom"
       match_format:
         | "one_set"
@@ -13107,6 +13825,7 @@ export type Database = {
         | "bank_transfer"
       payment_plan_enum: "full" | "installment"
       payment_status: "pending" | "completed" | "failed" | "refunded"
+      payout_timing_enum: "hold_until_event_end" | "pay_as_you_go"
       play_attribute_enum:
         | "serve_speed_and_placement"
         | "net_play"
@@ -13160,6 +13879,7 @@ export type Database = {
         | "self_tennis"
         | "dupr"
         | "self_pickle"
+      refund_policy_kind_enum: "full" | "partial" | "none"
       registration_payment_status_enum:
         | "pending"
         | "succeeded"
@@ -13172,6 +13892,7 @@ export type Database = {
         | "waitlisted"
         | "withdrawn"
         | "disqualified"
+        | "payment_pending"
       registration_status_enum:
         | "pending"
         | "confirmed"
@@ -13569,6 +14290,7 @@ export const Constants = {
         "school",
         "community_center",
       ],
+      fee_payer_enum: ["player_pays", "organizer_absorbs"],
       file_type_enum: ["image", "video", "document", "audio", "other"],
       final_set_tiebreak: ["none", "standard_7pt", "super_tb_10pt"],
       gender_enum: ["male", "female", "other"],
@@ -13592,6 +14314,14 @@ export const Constants = {
       league_status: ["active", "paused", "closed"],
       locale_enum: ["en-US", "en-CA", "fr-CA", "fr-FR"],
       location_type_enum: ["facility", "custom", "tbd"],
+      lt_payment_status_enum: [
+        "pending",
+        "succeeded",
+        "refunded",
+        "partially_refunded",
+        "failed",
+        "cancelled",
+      ],
       match_duration_enum: ["30", "60", "90", "120", "custom"],
       match_format: [
         "one_set",
@@ -13768,6 +14498,7 @@ export const Constants = {
       ],
       payment_plan_enum: ["full", "installment"],
       payment_status: ["pending", "completed", "failed", "refunded"],
+      payout_timing_enum: ["hold_until_event_end", "pay_as_you_go"],
       play_attribute_enum: [
         "serve_speed_and_placement",
         "net_play",
@@ -13829,6 +14560,7 @@ export const Constants = {
         "dupr",
         "self_pickle",
       ],
+      refund_policy_kind_enum: ["full", "partial", "none"],
       registration_payment_status_enum: [
         "pending",
         "succeeded",
@@ -13842,6 +14574,7 @@ export const Constants = {
         "waitlisted",
         "withdrawn",
         "disqualified",
+        "payment_pending",
       ],
       registration_status_enum: [
         "pending",

@@ -15,3 +15,4 @@ export * from './leagues';
 export * from './geo';
 export * from './devMocks';
 export * from './utm';
+export * from './fees';

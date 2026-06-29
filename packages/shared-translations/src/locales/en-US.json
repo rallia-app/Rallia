@@ -4136,6 +4136,20 @@
       "selectContactsFromLists": "Select contacts from your lists"
     }
   },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "{month} · Greater Montreal · {sport}",
+    "pointsNote": "Earn 10 points for every game you play, +5 for a win. Show up, climb the board.",
+    "yourRank": "You're #{rank} this month",
+    "gamesWins": "{games} games · {wins} wins",
+    "pts": "pts",
+    "youSuffix": "(you)",
+    "error": "Couldn't load the leaderboard. Pull to retry.",
+    "empty": {
+      "title": "No games yet this month",
+      "description": "Be the first on the board: play a game and check back."
+    }
+  },
   "leagueList": {
     "title": "Leagues",
     "myLeagues": "My leagues",
@@ -4178,6 +4192,28 @@
     "memberApproved": "Member approved",
     "inviteAccepted": "Invitation accepted — you're in!",
     "inviteRevoked": "Invitation revoked",
+    "leftLeague": "You left the league",
+    "requestCancelled": "Request withdrawn",
+    "memberRemoved": "Member removed",
+    "memberSuspended": "Member suspended",
+    "memberReinstated": "Member reinstated",
+    "leaveLeague": "Leave league",
+    "cancelRequest": "Cancel request",
+    "confirm": {
+      "cancel": "Cancel",
+      "leaveTitle": "Leave this league?",
+      "leaveMessage": "You'll stop getting sessions and standings for {name}. You can rejoin later.",
+      "leaveConfirm": "Leave",
+      "cancelRequestTitle": "Withdraw your request?",
+      "cancelRequestMessage": "Your pending request to join {name} will be withdrawn.",
+      "cancelRequestConfirm": "Withdraw",
+      "removeTitle": "Remove {name}?",
+      "removeMessage": "{name} will lose access to this league. They can rejoin later.",
+      "removeConfirm": "Remove",
+      "suspendTitle": "Suspend {name}?",
+      "suspendMessage": "{name} stays in the league but can't join sessions until you reinstate them.",
+      "suspendConfirm": "Suspend"
+    },
     "acceptInvite": "Accept invitation",
     "accepting": "Accepting...",
     "invitePlayers": {
@@ -4255,7 +4291,11 @@
         "revokeLabel": "Revoke invite for {name}"
       },
       "members": {
-        "title": "Active members"
+        "title": "Active members",
+        "suspendedTitle": "Suspended ({count})",
+        "suspendLabel": "Suspend {name}",
+        "removeLabel": "Remove {name}",
+        "reinstateLabel": "Reinstate {name}"
       },
       "joinCta": {
         "title": "Join this league",
@@ -4407,6 +4447,15 @@
       "saved": "Score saved 🙌",
       "played": "Played"
     },
+    "linkPicker": {
+      "title": "Link a played match",
+      "empty": "No matches found",
+      "emptyHint": "Play a game with your session opponent and submit a confirmed score, then come back to link it here.",
+      "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
+      "attachFailed": "Couldn't link the match",
+      "linkCta": "Link this game",
+      "addResult": "Add result"
+    },
     "errors": {
       "generic": "Something went wrong. Try again."
     }
@@ -4521,6 +4570,30 @@
   },
   "tournamentDetail": {
     "title": "Tournament",
+    "payments": {
+      "successToast": "Payment received — confirming your spot!",
+      "refundNone": "No refunds",
+      "refundFull": "Full refund available",
+      "refundFullUntil": "Full refund until {date}",
+      "refundPartial": "{pct}% refund available",
+      "refundPartialUntil": "{pct}% refund until {date}",
+      "payoutsSetupTitle": "Set up payouts first",
+      "payoutsSetupBody": "Before opening a paid tournament, finish setting up how you get paid.",
+      "payoutsSetupCta": "Set up payouts",
+      "onboardingError": "Couldn't start payout setup. Please try again.",
+      "refundIssued": "Withdrawn — {amount} refunded.",
+      "withdrawnNoRefund": "You've withdrawn. No refund applies.",
+      "withdrawConfirmTitle": "Withdraw from this tournament?",
+      "withdrawConfirmRefund": "You'll be refunded {amount} (the service fee isn't refundable).",
+      "withdrawConfirmNoRefund": "This entry isn't refundable, so you won't get money back.",
+      "errors": {
+        "full": "This tournament is full.",
+        "alreadyRegistered": "You're already registered.",
+        "organizerNotReady": "The organizer hasn't finished payout setup yet.",
+        "closed": "Registration is closed.",
+        "generic": "Couldn't start your registration. Please try again."
+      }
+    },
     "loading": "Loading tournament...",
     "notFound": "Tournament not found",
     "notFoundDescription": "This tournament may have been deleted or you don't have permission to view it.",
@@ -4891,7 +4964,42 @@
       "basics": "Basics",
       "format": "Format",
       "schedule": "Schedule",
-      "rulesVisibility": "Rules & visibility"
+      "rulesVisibility": "Rules & visibility",
+      "payments": "Entry & payments"
+    },
+    "payments": {
+      "stepTitle": "Entry & payments",
+      "stepDescription": "Set an entry fee, choose who covers the service fee, and your refund policy",
+      "lockedNote": "Entry fee and refund policy lock once registration opens",
+      "entryFeeLabel": "Entry fee",
+      "entryFeeHintFree": "Leave at $0 for a free event — players register with no payment",
+      "entryFeeHintPaid": "What each player pays to enter, before the service fee",
+      "freeNote": "Free event — players register without payment and there's no service fee.",
+      "previewPlayersPay": "Players pay",
+      "previewServiceFee": "Service fee",
+      "previewYouReceive": "You receive",
+      "whoPaysLabel": "Who covers the service fee?",
+      "playerPaysTitle": "Player pays",
+      "playerPaysDescription": "Added on top of the entry. You receive the full entry price.",
+      "organizerAbsorbsTitle": "I cover it",
+      "organizerAbsorbsDescription": "Taken from your earnings. Players pay only the entry price.",
+      "payoutLabel": "When do you get paid?",
+      "holdTitle": "After the event ends",
+      "holdDescription": "Funds are held until the event finishes, then paid out. Best for tournaments.",
+      "payAsYouGoTitle": "As players pay",
+      "payAsYouGoDescription": "Paid out on a rolling basis. Better for ongoing leagues.",
+      "refundLabel": "Refund policy",
+      "refundFeeNote": "The service fee is never refundable — this applies to the entry price only.",
+      "refundFullTitle": "Full refund",
+      "refundFullDescription": "Players get the full entry price back before the cutoff.",
+      "refundPartialTitle": "Partial refund",
+      "refundPartialDescription": "Players get part of the entry price back before the cutoff.",
+      "refundNoneTitle": "No refund",
+      "refundNoneDescription": "The entry price isn't refundable.",
+      "refundPctLabel": "Refund percentage",
+      "refundCutoffLabel": "Refund cutoff",
+      "refundCutoffPlaceholder": "Select a date",
+      "refundCutoffHint": "Refunds aren't allowed after this date. Defaults to the start date."
     },
     "step1Title": "Basics",
     "step1Description": "Name your tournament and add a poster",
@@ -4967,7 +5075,8 @@
       "nameTooLong": "Name must be 100 characters or fewer",
       "datesRequired": "Both start and end dates are required",
       "endBeforeStart": "End date must be on or after the start date",
-      "startInPast": "Start date must be in the future"
+      "startInPast": "Start date must be in the future",
+      "refundPctRange": "Enter a refund percentage between 1 and 100"
     },
     "errors": {
       "sportMismatch": "You don't have this sport active on your profile",
@@ -5016,7 +5125,8 @@
       "findGame": "Browse public games",
       "browseSuggestions": "Discover suggestions",
       "tournaments": "Join a tournament",
-      "leagues": "Join a league"
+      "leagues": "Join a league",
+      "leaderboard": "See where you rank"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",

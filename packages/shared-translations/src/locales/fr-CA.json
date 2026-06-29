@@ -4136,6 +4136,20 @@
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
     }
   },
+  "leaderboard": {
+    "title": "Classement",
+    "subtitle": "{month} · Grand Montréal · {sport}",
+    "pointsNote": "Gagne 10 points par partie jouée, +5 pour une victoire. Joue, pis monte dans le classement.",
+    "yourRank": "Tu es #{rank} ce mois-ci",
+    "gamesWins": "{games} parties · {wins} victoires",
+    "pts": "pts",
+    "youSuffix": "(toi)",
+    "error": "Impossible de charger le classement. Tire pour réessayer.",
+    "empty": {
+      "title": "Aucune partie ce mois-ci",
+      "description": "Sois le premier au classement. Joue une partie et reviens voir."
+    }
+  },
   "leagueList": {
     "title": "Ligues",
     "myLeagues": "Mes ligues",
@@ -4178,6 +4192,28 @@
     "memberApproved": "Membre approuvé",
     "inviteAccepted": "Invitation acceptée — tu embarques!",
     "inviteRevoked": "Invitation retirée",
+    "leftLeague": "T'as quitté la ligue",
+    "requestCancelled": "Demande retirée",
+    "memberRemoved": "Membre retiré",
+    "memberSuspended": "Membre suspendu",
+    "memberReinstated": "Membre réactivé",
+    "leaveLeague": "Quitter la ligue",
+    "cancelRequest": "Annuler ma demande",
+    "confirm": {
+      "cancel": "Annuler",
+      "leaveTitle": "Quitter cette ligue?",
+      "leaveMessage": "Tu ne recevras plus les sessions ni le classement de {name}. Tu peux revenir plus tard.",
+      "leaveConfirm": "Quitter",
+      "cancelRequestTitle": "Retirer ta demande?",
+      "cancelRequestMessage": "Ta demande en attente pour rejoindre {name} va être retirée.",
+      "cancelRequestConfirm": "Retirer",
+      "removeTitle": "Retirer {name}?",
+      "removeMessage": "{name} va perdre l'accès à la ligue. Cette personne peut revenir plus tard.",
+      "removeConfirm": "Retirer",
+      "suspendTitle": "Suspendre {name}?",
+      "suspendMessage": "{name} reste dans la ligue mais ne peut pas rejoindre de session tant que tu ne l'as pas réactivée.",
+      "suspendConfirm": "Suspendre"
+    },
     "acceptInvite": "Accepter l'invitation",
     "accepting": "Acceptation...",
     "invitePlayers": {
@@ -4255,7 +4291,11 @@
         "revokeLabel": "Retirer l'invitation de {name}"
       },
       "members": {
-        "title": "Membres actifs"
+        "title": "Membres actifs",
+        "suspendedTitle": "Suspendus ({count})",
+        "suspendLabel": "Suspendre {name}",
+        "removeLabel": "Retirer {name}",
+        "reinstateLabel": "Réactiver {name}"
       },
       "joinCta": {
         "title": "Rejoindre cette ligue",
@@ -4407,6 +4447,15 @@
       "saved": "Pointage enregistré 🙌",
       "played": "Jouée"
     },
+    "linkPicker": {
+      "title": "Lier une partie jouée",
+      "empty": "Aucune partie trouvée",
+      "emptyHint": "Joue ta partie avec ton adversaire de la session pis entre un pointage confirmé, ensuite reviens la lier ici.",
+      "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, entre un pointage confirmé, ensuite reviens la lier ici.",
+      "attachFailed": "Impossible de lier la partie",
+      "linkCta": "Lier cette partie",
+      "addResult": "Ajouter le résultat"
+    },
     "errors": {
       "generic": "Une erreur s'est produite. Réessayez."
     }
@@ -4521,6 +4570,30 @@
   },
   "tournamentDetail": {
     "title": "Tournoi",
+    "payments": {
+      "successToast": "Paiement reçu, on confirme ta place!",
+      "refundNone": "Aucun remboursement",
+      "refundFull": "Remboursement complet possible",
+      "refundFullUntil": "Remboursement complet jusqu'au {date}",
+      "refundPartial": "Remboursement de {pct} % possible",
+      "refundPartialUntil": "Remboursement de {pct} % jusqu'au {date}",
+      "payoutsSetupTitle": "Configure tes paiements d'abord",
+      "payoutsSetupBody": "Avant d'ouvrir un tournoi payant, termine la configuration pour recevoir ton argent.",
+      "payoutsSetupCta": "Configurer les paiements",
+      "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
+      "refundIssued": "Retiré, {amount} remboursé.",
+      "withdrawnNoRefund": "Tu t'es retiré. Aucun remboursement ne s'applique.",
+      "withdrawConfirmTitle": "Te retirer de ce tournoi?",
+      "withdrawConfirmRefund": "Tu seras remboursé de {amount} (les frais de service ne sont pas remboursables).",
+      "withdrawConfirmNoRefund": "Cette inscription n'est pas remboursable, tu ne récupéreras pas d'argent.",
+      "errors": {
+        "full": "Ce tournoi est complet.",
+        "alreadyRegistered": "Tu es déjà inscrit.",
+        "organizerNotReady": "L'organisateur n'a pas terminé sa configuration de paiement.",
+        "closed": "Les inscriptions sont fermées.",
+        "generic": "Impossible de démarrer ton inscription. Réessaie."
+      }
+    },
     "loading": "Chargement du tournoi...",
     "notFound": "Tournoi introuvable",
     "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
@@ -4891,7 +4964,42 @@
       "basics": "Infos",
       "format": "Format",
       "schedule": "Calendrier",
-      "rulesVisibility": "Règles et visibilité"
+      "rulesVisibility": "Règles et visibilité",
+      "payments": "Frais et paiements"
+    },
+    "payments": {
+      "stepTitle": "Frais et paiements",
+      "stepDescription": "Fixe des frais d'inscription, choisis qui paie les frais de service pis ta politique de remboursement",
+      "lockedNote": "Les frais d'inscription et la politique de remboursement se verrouillent à l'ouverture des inscriptions",
+      "entryFeeLabel": "Frais d'inscription",
+      "entryFeeHintFree": "Laisse à 0 $ pour un événement gratuit, les joueurs s'inscrivent sans payer",
+      "entryFeeHintPaid": "Ce que chaque joueur paie pour s'inscrire, avant les frais de service",
+      "freeNote": "Événement gratuit : les joueurs s'inscrivent sans payer et il n'y a aucun frais de service.",
+      "previewPlayersPay": "Les joueurs paient",
+      "previewServiceFee": "Frais de service",
+      "previewYouReceive": "Tu reçois",
+      "whoPaysLabel": "Qui paie les frais de service?",
+      "playerPaysTitle": "Le joueur paie",
+      "playerPaysDescription": "Ajouté par-dessus l'inscription. Tu reçois le plein montant.",
+      "organizerAbsorbsTitle": "Je les absorbe",
+      "organizerAbsorbsDescription": "Pris sur tes revenus. Les joueurs paient seulement l'inscription.",
+      "payoutLabel": "Quand es-tu payé?",
+      "holdTitle": "Après l'événement",
+      "holdDescription": "L'argent est retenu jusqu'à la fin de l'événement, puis versé. Idéal pour les tournois.",
+      "payAsYouGoTitle": "Au fur et à mesure",
+      "payAsYouGoDescription": "Versé en continu. Mieux pour les ligues en cours.",
+      "refundLabel": "Politique de remboursement",
+      "refundFeeNote": "Les frais de service ne sont jamais remboursables. Ça touche seulement le prix d'inscription.",
+      "refundFullTitle": "Remboursement complet",
+      "refundFullDescription": "Les joueurs récupèrent le plein montant avant la date limite.",
+      "refundPartialTitle": "Remboursement partiel",
+      "refundPartialDescription": "Les joueurs récupèrent une partie du montant avant la date limite.",
+      "refundNoneTitle": "Aucun remboursement",
+      "refundNoneDescription": "Le prix d'inscription n'est pas remboursable.",
+      "refundPctLabel": "Pourcentage remboursé",
+      "refundCutoffLabel": "Date limite de remboursement",
+      "refundCutoffPlaceholder": "Choisis une date",
+      "refundCutoffHint": "Aucun remboursement après cette date. Par défaut, la date de début."
     },
     "step1Title": "Infos de base",
     "step1Description": "Nomme ton tournoi et ajoute une affiche",
@@ -4967,7 +5075,8 @@
       "nameTooLong": "Le nom doit contenir au plus 100 caractères",
       "datesRequired": "Les dates de début et de fin sont requises",
       "endBeforeStart": "La date de fin doit être après ou égale à la date de début",
-      "startInPast": "La date de début doit être dans le futur"
+      "startInPast": "La date de début doit être dans le futur",
+      "refundPctRange": "Entre un pourcentage de remboursement entre 1 et 100"
     },
     "errors": {
       "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
@@ -5016,7 +5125,8 @@
       "findGame": "Explorer les parties publiques",
       "browseSuggestions": "Découvrir mes suggestions",
       "tournaments": "Rejoindre un tournoi",
-      "leagues": "Rejoindre une ligue"
+      "leagues": "Rejoindre une ligue",
+      "leaderboard": "Vois où tu te classes"
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",

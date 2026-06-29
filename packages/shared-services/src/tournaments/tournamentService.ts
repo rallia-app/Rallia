@@ -92,6 +92,39 @@ export interface CreateTournamentInput {
   networkId?: string;
   registrationOpensAt?: string;
   registrationClosesAt?: string;
+  // Paid-event settings. Omit (or entryFeeCents 0) for a free tournament.
+  entryFeeCents?: number;
+  currency?: string;
+  feePayer?: Enums<'fee_payer_enum'>;
+  payoutTiming?: Enums<'payout_timing_enum'>;
+  refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps?: number | null;
+  refundCutoffAt?: string | null;
+}
+
+/** Fee/refund settings shaped for the tournament_create `p_fee` jsonb param. */
+export interface TournamentFeeSettingsInput {
+  entryFeeCents?: number;
+  currency?: string;
+  feePayer?: Enums<'fee_payer_enum'>;
+  payoutTiming?: Enums<'payout_timing_enum'>;
+  refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps?: number | null;
+  refundCutoffAt?: string | null;
+}
+
+/** Build the `p_fee` jsonb payload, omitting undefined keys so the server
+ *  COALESCEs them to defaults. Returns undefined for a plain free event. */
+function buildFeePayload(input: TournamentFeeSettingsInput): Record<string, unknown> | undefined {
+  if (input.entryFeeCents == null || input.entryFeeCents <= 0) return undefined;
+  const fee: Record<string, unknown> = { entry_fee_cents: input.entryFeeCents };
+  if (input.currency) fee.currency = input.currency;
+  if (input.feePayer) fee.fee_payer = input.feePayer;
+  if (input.payoutTiming) fee.payout_timing = input.payoutTiming;
+  if (input.refundPolicyKind) fee.refund_policy_kind = input.refundPolicyKind;
+  if (input.refundPartialBps != null) fee.refund_partial_bps = input.refundPartialBps;
+  if (input.refundCutoffAt) fee.refund_cutoff_at = input.refundCutoffAt;
+  return fee;
 }
 
 /**
@@ -195,6 +228,7 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_rules: input.rules,
     p_logo_url: input.logoUrl,
     p_min_rating: input.minRating,
+    p_fee: buildFeePayload(input),
   });
 
   if (error) {
@@ -222,6 +256,14 @@ export interface TournamentUpdatePatch {
   facilityId?: string | null;
   venueName?: string | null;
   venueAddress?: string | null;
+  // Fee settings — server gates these to 'draft' only.
+  entryFeeCents?: number;
+  currency?: string;
+  feePayer?: Enums<'fee_payer_enum'>;
+  payoutTiming?: Enums<'payout_timing_enum'>;
+  refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps?: number | null;
+  refundCutoffAt?: string | null;
 }
 
 const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
@@ -242,6 +284,13 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   facilityId: 'facility_id',
   venueName: 'venue_name',
   venueAddress: 'venue_address',
+  entryFeeCents: 'entry_fee_cents',
+  currency: 'currency',
+  feePayer: 'fee_payer',
+  payoutTiming: 'payout_timing',
+  refundPolicyKind: 'refund_policy_kind',
+  refundPartialBps: 'refund_partial_bps',
+  refundCutoffAt: 'refund_cutoff_at',
 };
 
 /**
@@ -660,6 +709,144 @@ export async function registerForTournament(
   });
   if (error) throw new Error(error.message);
   return data as TournamentRegistration;
+}
+
+/** All-in price breakdown shown before a player pays. Mirrors tournament_fee_quote. */
+export interface TournamentFeeQuote {
+  entryCents: number;
+  serviceFeeCents: number;
+  /** What the player is charged. */
+  totalCents: number;
+  organizerReceivesCents: number;
+  feePayer: Enums<'fee_payer_enum'>;
+  currency: string;
+  refundPolicyKind: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps: number | null;
+  refundCutoffAt: string | null;
+}
+
+/**
+ * Server-authoritative price breakdown for registering in a tournament. Use
+ * this for the pay screen (the wizard preview can use the local
+ * `quoteRegistration` helper). Returns null for a free event (entry 0).
+ */
+export async function getTournamentFeeQuote(
+  tournamentId: string
+): Promise<TournamentFeeQuote | null> {
+  const { data, error } = await supabase.rpc('tournament_fee_quote', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    entryCents: row.entry_cents,
+    serviceFeeCents: row.service_fee_cents,
+    totalCents: row.total_cents,
+    organizerReceivesCents: row.organizer_receives_cents,
+    feePayer: row.fee_payer,
+    currency: row.currency,
+    refundPolicyKind: row.refund_policy_kind,
+    refundPartialBps: row.refund_partial_bps,
+    refundCutoffAt: row.refund_cutoff_at,
+  };
+}
+
+/** A guard-code error from the create-registration-payment edge function
+ *  (e.g. 'tournament_full', 'already_registered', 'organizer_not_ready'). */
+export class TournamentPaymentError extends Error {
+  constructor(public code: string) {
+    super(code);
+    this.name = 'TournamentPaymentError';
+  }
+}
+
+export interface RegistrationPaymentIntent {
+  clientSecret: string;
+  paymentId: string;
+  entryCents: number;
+  serviceFeeCents: number;
+  amountChargedCents: number;
+  currency: string;
+}
+
+/**
+ * Reserve a slot and open a Stripe PaymentIntent for a paid registration via
+ * the lt-create-registration-payment edge function. The caller then drives the
+ * Stripe PaymentSheet with `clientSecret`; the webhook finalizes the
+ * registration on success. Throws TournamentPaymentError(code) on guard
+ * failures so the UI can map them to specific messages.
+ */
+export async function createTournamentRegistrationPayment(
+  tournamentId: string,
+  partnerId?: string
+): Promise<RegistrationPaymentIntent> {
+  const { data, error } = await supabase.functions.invoke('lt-create-registration-payment', {
+    body: { tournamentId, ...(partnerId ? { partnerId } : {}) },
+  });
+
+  // Guard failures come back as { error: code }. supabase-js surfaces non-2xx
+  // as `error` (with the body on error.context) and may leave data null, so
+  // check both.
+  let code: string | undefined = (data as { error?: string } | null)?.error;
+  if (!code && error) {
+    const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+    if (ctx?.json) {
+      try {
+        code = (await ctx.json())?.error;
+      } catch {
+        // body wasn't JSON — fall through to the generic throw below
+      }
+    }
+  }
+  if (code) throw new TournamentPaymentError(code);
+  if (error || !data?.clientSecret) throw new Error(error?.message ?? 'no_client_secret');
+
+  return {
+    clientSecret: data.clientSecret,
+    paymentId: data.paymentId,
+    entryCents: data.entryCents,
+    serviceFeeCents: data.serviceFeeCents,
+    amountChargedCents: data.amountChargedCents,
+    currency: data.currency,
+  };
+}
+
+export interface TournamentRefundResult {
+  withdrawn: boolean;
+  refundedCents: number;
+}
+
+/**
+ * Withdraw from a PAID tournament and issue the entry refund (per the
+ * organizer's policy + cutoff; the service fee is never refunded) via the
+ * lt-refund-registration edge function. Free registrations use
+ * `withdrawFromTournament` instead. Throws TournamentPaymentError(code) on
+ * guard failures (e.g. 'withdraw_not_allowed', 'no_paid_registration').
+ */
+export async function refundTournamentRegistration(
+  registrationId: string,
+  versionWas: number
+): Promise<TournamentRefundResult> {
+  const { data, error } = await supabase.functions.invoke('lt-refund-registration', {
+    body: { registrationId, versionWas },
+  });
+
+  let code: string | undefined = (data as { error?: string } | null)?.error;
+  if (!code && error) {
+    const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+    if (ctx?.json) {
+      try {
+        code = (await ctx.json())?.error;
+      } catch {
+        // non-JSON body — fall through
+      }
+    }
+  }
+  if (code) throw new TournamentPaymentError(code);
+  if (error) throw new Error(error.message);
+
+  return { withdrawn: !!data?.withdrawn, refundedCents: data?.refundedCents ?? 0 };
 }
 
 /**
