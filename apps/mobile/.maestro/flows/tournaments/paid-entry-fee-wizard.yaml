@@ -1,0 +1,126 @@
+# E2E: the new "Entry & payments" wizard step (step 5).
+#
+# Verifies the fee preview math live in the app — no submit, so it writes
+# nothing to staging (a free create is already covered by create-tournament).
+#   $50 entry, player pays      → players pay $54.50, organizer receives $50.00
+#   $50 entry, organizer covers → players pay $50.00, organizer receives $45.50
+# Matches both en/fr money formats via [.,] in the regexes.
+#
+# Requires (same as the other tournament flows):
+#   - build running with EXPO_PUBLIC_E2E=1
+#   - demo@rallia.ca signed in and admin on the target env
+appId: com.mathisl971.rallia-app
+tags:
+  - tournaments
+  - payments
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "tab-create-fab"
+    timeout: 120000
+
+# Open the create sheet -> tournament wizard
+- tapOn:
+    id: "tab-create-fab"
+- extendedWaitUntil:
+    visible:
+      id: "action-create-tournament"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "action-create-tournament"
+- extendedWaitUntil:
+    visible:
+      id: "tournament-name-input"
+    timeout: 15000
+
+# Step 1: basics (name) -> next
+- tapOn:
+    id: "tournament-name-input"
+- inputText: "Maestro Paid Cup"
+- tapOn: "done"
+- tapOn:
+    id: "tournament-wizard-submit"
+
+# Step 2: format -> next (no required fields)
+- tapOn:
+    id: "tournament-wizard-submit"
+
+# Step 3: schedule (start/end dates) -> next
+- scrollUntilVisible:
+    element:
+      id: "tournament-start-date"
+    direction: DOWN
+    timeout: 12000
+- tapOn:
+    id: "tournament-start-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-end-date"
+- tapOn:
+    id: "tournament-date-done"
+- tapOn:
+    id: "tournament-wizard-submit"
+
+# Step 4: rules & visibility -> next (locale-agnostic: advance by the submit
+# button, then wait for the step-5 testID rather than a translated title)
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "tournament-wizard-submit"
+
+# Step 5: entry & payments
+- extendedWaitUntil:
+    visible:
+      id: "tournament-entry-fee-input"
+    timeout: 10000
+- tapOn:
+    id: "tournament-entry-fee-input"
+- inputText: "50"
+# decimal-pad has no return key and keyboardShouldPersistTaps blocks tap-to-
+# dismiss; the scrollview is keyboardDismissMode="interactive", so a downward
+# drag dismisses the keyboard and frees the controls below the preview.
+- swipe:
+    start: "50%,50%"
+    end: "50%,92%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Live preview (player pays): players pay $54.50, organizer receives $50.00
+- extendedWaitUntil:
+    visible:
+      id: "tournament-fee-preview"
+    timeout: 8000
+- assertVisible: ".*54[.,]50.*"
+- assertVisible: ".*50[.,]00.*"
+- takeScreenshot: /tmp/maestro-fee-player-pays
+
+# Switch to "organizer covers": players pay $50.00, organizer receives $45.50.
+# centerElement keeps the card clear of the fixed "Create" footer button so the
+# tap can't accidentally submit the wizard.
+- scrollUntilVisible:
+    element:
+      id: "fee-payer-organizer_absorbs"
+    direction: DOWN
+    centerElement: true
+    timeout: 8000
+- tapOn:
+    id: "fee-payer-organizer_absorbs"
+- assertVisible: ".*45[.,]50.*"
+- takeScreenshot: /tmp/maestro-fee-organizer-absorbs
+
+# Refund policy options are present
+- scrollUntilVisible:
+    element:
+      id: "refund-partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 8000
+- tapOn:
+    id: "refund-partial"
+- assertVisible:
+    id: "tournament-refund-pct-input"
+- takeScreenshot: /tmp/maestro-fee-refund-partial

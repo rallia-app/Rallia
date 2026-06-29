@@ -477,6 +477,22 @@ verify_jwt = false
 [functions.stripe-connect-webhook]
 verify_jwt = false
 
+# Client-invoked (app sends the user's JWT, validated via auth.getUser()).
+[functions.lt-create-registration-payment]
+verify_jwt = false
+
+# Stripe-invoked; signature verified internally via STRIPE_LT_WEBHOOK_SECRET.
+[functions.lt-payment-webhook]
+verify_jwt = false
+
+# Client-invoked (app sends the user's JWT, validated via auth.getUser()).
+[functions.lt-refund-registration]
+verify_jwt = false
+
+# Cron-invoked via pg_net with the anon bearer; runs as service role internally.
+[functions.lt-settle-event-payments]
+verify_jwt = false
+
 # Rating-proof LLM triage — pg_net (dispatch trigger) invokes with apikey header;
 # auth validated internally via requireSecretApikey().
 [functions.flag-rating-proof]

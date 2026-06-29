@@ -884,7 +884,7 @@ export function tournamentCreationStarted(props: { sportId: string; sportName: s
 
 export function tournamentCreationStepCompleted(props: {
   stepIndex: number;
-  stepName: 'basics' | 'format' | 'schedule' | 'rules_visibility';
+  stepName: 'basics' | 'format' | 'schedule' | 'rules_visibility' | 'payments';
   sportName: string;
 }): void {
   capture('lt.tournament.creation_step_completed', props);
