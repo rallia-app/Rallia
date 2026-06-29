@@ -3251,16 +3251,17 @@
     "card": {
       "title": "Organize a game",
       "subtitlePrompt": "Tap the times that work for you",
-      "subtitleMutual": "You agreed on a time 🙌",
       "created": "Game created 🙌",
       "createdSubtitle": "See you on the court",
       "viewGame": "View game",
-      "createGame": "Create this game",
-      "creating": "Creating…",
-      "noOptions": "No shared times found yet"
+      "createGame": "Create this game"
+    },
+    "banner": {
+      "title": "Organize a game",
+      "subtitle": "Suggest times that work and set up the game"
     },
     "tier": {
-      "courtAvailable": "Court available",
+      "courtAvailable": "Court open",
       "courtsOne": "1 court open",
       "courtsMany": "{count} courts open",
       "usuallyFree": "Usually open"
@@ -3268,27 +3269,19 @@
     "cost": {
       "free": "Free"
     },
-    "votes": {
-      "you": "You're in",
-      "everyone": "Everyone's in",
-      "count": "{count} in"
-    },
     "setup": {
       "title": "Suggest times to play",
       "sportLabel": "Sport",
-      "formatLabel": "Format",
-      "singles": "Singles",
-      "doubles": "Doubles",
       "previewTitle": "Top suggestions",
       "previewHint": "Tap to choose which times to suggest",
       "previewLoading": "Finding times that work…",
-      "previewEmpty": "No shared times found. You can still suggest a time in the chat.",
+      "previewEmpty": "No open courts at your shared times yet. You can still pick a time in the chat.",
       "submit": "Suggest these times",
       "submitting": "Posting…",
       "entryLabel": "Organize a game",
       "error": "Couldn't suggest times. Please try again."
     },
-    "preview": "Suggested some times to play"
+    "preview": "I suggested some times to play"
   },
   "matchDetail": {
     "title": "Game details",
@@ -4511,6 +4504,21 @@
     },
     "dateRange": "{start} – {end}"
   },
+  "bracketSetup": {
+    "title": "Set up bracket",
+    "intro": "Seeding is optional. The order below sets the first-round pairings, so move your strongest players to the top. Players never see seed numbers.",
+    "seedsLabel": "Seeds",
+    "previewLabel": "First round",
+    "previewSummary": "{players} players · {rounds} rounds · {byes} byes",
+    "vs": "vs",
+    "moveToTop": "Move to top",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "publish": "Publish bracket to players",
+    "confirmTitle": "Publish this bracket?",
+    "confirmMessage": "Players get notified and the bracket goes live. You can't reorder seeds after this.",
+    "confirmCta": "Publish"
+  },
   "tournamentDetail": {
     "title": "Tournament",
     "loading": "Loading tournament...",
@@ -4682,10 +4690,25 @@
       "registeredWithPartnerLabel": "You're registered with {name}",
       "generateBracket": "Generate bracket",
       "generating": "Generating bracket...",
+      "setUpBracket": "Set up bracket",
       "cancelTournament": "Cancel tournament",
       "archiveTournament": "Archive tournament",
       "editDetails": "Edit details",
-      "invitePlayers": "Invite players"
+      "invitePlayers": "Invite players",
+      "manageCoOrganizers": "Manage co-organizers"
+    },
+    "coOrganizers": {
+      "ctaTitle": "Co-organizers",
+      "ctaDescription": "Add people to help you run the tournament with full organizer access.",
+      "title": "Co-organizers",
+      "hint": "Co-organizers help you run this tournament: edit details, seed the bracket, record scores. They're added to the tournament chat.",
+      "addLabel": "Add a co-organizer",
+      "searchPlaceholder": "Search players",
+      "searchHint": "Search players by name to add them",
+      "noResults": "No players found",
+      "remove": "Remove",
+      "addFailed": "Couldn't add that co-organizer",
+      "removeFailed": "Couldn't remove that co-organizer"
     },
     "invite": {
       "title": "Invite players",
@@ -4799,6 +4822,8 @@
     },
     "invitePlayers": {
       "title": "Invite players",
+      "ctaTitle": "Invite players",
+      "ctaDescription": "Grow the field. Invite players in-app or share a link.",
       "searchPlaceholder": "Search players",
       "searchHint": "Type a name to find players to invite.",
       "noResults": "No players found",
@@ -4863,13 +4888,19 @@
     "forSport": "Creating tournament for {sport}",
     "step": "Step {current} of {total}",
     "stepNames": {
-      "details": "Details",
-      "visibility": "Visibility"
+      "basics": "Basics",
+      "format": "Format",
+      "schedule": "Schedule",
+      "rulesVisibility": "Rules & visibility"
     },
-    "step1Title": "Details",
-    "step1Description": "Name your tournament, pick a bracket size and scoring format, and set the dates",
-    "visibilityStepTitle": "Visibility",
-    "visibilityStepDescription": "Who can see and register?",
+    "step1Title": "Basics",
+    "step1Description": "Name your tournament and add a poster",
+    "step2Title": "Format",
+    "step2Description": "Singles or doubles, draw size, and scoring",
+    "step3Title": "Schedule",
+    "step3Description": "When it runs and who can join",
+    "visibilityStepTitle": "Rules & visibility",
+    "visibilityStepDescription": "Add rules and choose who can see it",
     "next": "Next",
     "back": "Back",
     "createTournament": "Create tournament",

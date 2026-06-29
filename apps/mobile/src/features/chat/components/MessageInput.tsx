@@ -21,8 +21,6 @@ interface MessageInputProps {
   onTypingChange?: (isTyping: boolean) => void;
   /** When true, bottom padding is reduced to avoid gap above keyboard (safe area already accounted for by system). */
   keyboardVisible?: boolean;
-  /** When provided, shows an "organize a game" affordance that opens the Match Organizer. */
-  onOrganizeMatch?: () => void;
 }
 
 function MessageInputComponent({
@@ -33,7 +31,6 @@ function MessageInputComponent({
   onCancelReply,
   onTypingChange,
   keyboardVisible = false,
-  onOrganizeMatch,
 }: MessageInputProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -149,17 +146,6 @@ function MessageInputComponent({
       )}
 
       <View style={styles.inputRow}>
-        {/* Match Organizer entry — sits outside the input pill, on its left. */}
-        {onOrganizeMatch ? (
-          <TouchableOpacity
-            style={styles.organizeButton}
-            onPress={onOrganizeMatch}
-            disabled={disabled}
-            accessibilityLabel={t('matchOrganizer.setup.entryLabel')}
-          >
-            <Ionicons name="calendar-outline" size={24} color={primary[500]} />
-          </TouchableOpacity>
-        ) : null}
 
         <View
           style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}
@@ -268,11 +254,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'flex-end',
     marginLeft: spacingPixels[2],
-  },
-  organizeButton: {
-    width: 40,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

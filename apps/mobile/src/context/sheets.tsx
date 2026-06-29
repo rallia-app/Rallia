@@ -42,6 +42,7 @@ import { TournamentPartnerPickerActionSheet } from '#/features/tournaments/compo
 import { TournamentEditActionSheet } from '#/features/tournaments/components/TournamentEditSheet';
 import { TournamentInviteSheet } from '#/features/tournaments/components/TournamentInviteSheet';
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
+import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
 import type { TournamentEditData } from '#/features/tournaments';
 // Facilities components
@@ -394,6 +395,13 @@ declare module 'react-native-actions-sheet' {
         tournamentName: string;
         sportId: string;
         excludeUserIds: string[];
+      };
+    }>;
+    'tournament-co-organizers': SheetDefinition<{
+      payload: {
+        tournamentId: string;
+        sportId: string;
+        organizerId: string;
       };
     }>;
     'league-invite-players': SheetDefinition<{
@@ -909,6 +917,7 @@ export const Sheets = () => {
         'tournament-edit': TournamentEditActionSheet,
         'tournament-invite': TournamentInviteSheet,
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
+        'tournament-co-organizers': TournamentCoOrganizerActionSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'court-selection': CourtSelectionActionSheet,
         'report-issue': ReportIssueActionSheet,

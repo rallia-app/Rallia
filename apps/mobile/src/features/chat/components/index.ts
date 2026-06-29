@@ -4,6 +4,7 @@
 
 export { MessageBubble } from './MessageBubble';
 export { MessageInput } from './MessageInput';
+export { MatchOrganizerBanner } from './MatchOrganizerBanner';
 export { MessageList } from './MessageList';
 export type { MessageListRef } from './MessageList';
 export { ChatHeader } from './ChatHeader';

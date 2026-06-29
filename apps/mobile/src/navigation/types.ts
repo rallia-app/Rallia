@@ -65,6 +65,7 @@ export type RootStackParamList = {
     /** Organizer handoff from the creation success screen: open the invite sheet on arrival. */
     openInviteSheet?: boolean;
   }; // Tournament detail view
+  TournamentBracketSetup: { tournamentId: string }; // Organizer seeding + bracket preview before publish
   LeagueDetail: { leagueId: string; leagueName?: string }; // League detail view
   SessionDetail: { sessionId: string; leagueId: string; sessionName?: string }; // League session detail + confirm CTA
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)

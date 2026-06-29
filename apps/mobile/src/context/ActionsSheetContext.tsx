@@ -46,6 +46,9 @@ interface ActionsSheetContextType {
   /** Open the Actions bottom sheet directly to match creation (skips actions menu) */
   openSheetForMatchCreation: () => void;
 
+  /** Open the Actions bottom sheet directly to tournament creation (skips actions menu) */
+  openSheetForTournamentCreation: () => void;
+
   /** Open match creation wizard with steps 1–2 pre-filled from a booking (e.g. from facility screen) */
   openSheetForMatchCreationFromBooking: (data: {
     facility: unknown;
@@ -79,6 +82,12 @@ interface ActionsSheetContextType {
 
   /** Clear the shouldOpenMatchCreation flag after it's been consumed */
   clearMatchCreationFlag: () => void;
+
+  /** Flag to indicate we should open directly to tournament creation wizard */
+  shouldOpenTournamentCreation: boolean;
+
+  /** Clear the shouldOpenTournamentCreation flag after it's been consumed */
+  clearTournamentCreationFlag: () => void;
 
   /** Open the Actions bottom sheet directly to invite players wizard (contacts tab) */
   openSheetForInvitePlayers: () => void;
@@ -129,6 +138,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   // Flag to open directly to match creation wizard
   const [shouldOpenMatchCreation, setShouldOpenMatchCreation] = useState(false);
+  const [shouldOpenTournamentCreation, setShouldOpenTournamentCreation] = useState(false);
 
   // Flag to open directly to invite players wizard (contacts tab)
   const [shouldOpenInvitePlayers, setShouldOpenInvitePlayers] = useState(false);
@@ -247,6 +257,25 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   }, [computeInitialMode]);
 
   /**
+   * Open the sheet directly to the tournament creation wizard (skips actions menu)
+   */
+  const openSheetForTournamentCreation = useCallback(() => {
+    const mode = computeInitialMode();
+    if (mode !== 'actions') {
+      setContentMode(mode);
+      setShouldOpenTournamentCreation(false);
+      SheetManager.show('main-actions');
+      return;
+    }
+    setEditMatchData(null);
+    setInitialBookingForWizard(null);
+    setShouldOpenMatchCreation(false);
+    setShouldOpenTournamentCreation(true);
+    setContentMode('actions');
+    SheetManager.show('main-actions');
+  }, [computeInitialMode]);
+
+  /**
    * Open match creation wizard with steps 1–2 pre-filled from a booking (from facility screen)
    */
   const openSheetForMatchCreationFromBooking = useCallback(
@@ -318,6 +347,10 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     setShouldOpenMatchCreation(false);
   }, []);
 
+  const clearTournamentCreationFlag = useCallback(() => {
+    setShouldOpenTournamentCreation(false);
+  }, []);
+
   /**
    * Clear initial booking data after wizard has consumed it
    */
@@ -348,6 +381,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     openSheetForEdit,
     openSheetForTournamentEdit,
     openSheetForMatchCreation,
+    openSheetForTournamentCreation,
     openSheetForMatchCreationFromBooking,
     closeSheet,
     contentMode,
@@ -357,6 +391,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     clearEditMatch,
     shouldOpenMatchCreation,
     clearMatchCreationFlag,
+    shouldOpenTournamentCreation,
+    clearTournamentCreationFlag,
     openSheetForInvitePlayers,
     shouldOpenInvitePlayers,
     clearInvitePlayersFlag,

@@ -28,6 +28,12 @@ import {
   approveTournamentRegistration,
   listTournamentMatches,
   generateTournamentBracket,
+  setTournamentSeeds,
+  previewTournamentBracket,
+  getTournamentCoOrganizers,
+  addTournamentCoOrganizer,
+  removeTournamentCoOrganizer,
+  amITournamentOrganizer,
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
   overrideTournamentMatchScore,
@@ -49,6 +55,8 @@ import {
   type TournamentListItem,
   type TournamentRegistration,
   type TournamentMatch,
+  type PreviewBracketMatch,
+  type TournamentCoOrganizer,
   type LinkableMatch,
   type PlayerProfile,
   type PlayerSearchResult,
@@ -71,6 +79,12 @@ export const tournamentKeys = {
   myActiveRegistrations: (userId: string) =>
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
+  bracketPreview: (tournamentId: string) =>
+    [...tournamentKeys.all, 'bracketPreview', tournamentId] as const,
+  coOrganizers: (tournamentId: string) =>
+    [...tournamentKeys.all, 'coOrganizers', tournamentId] as const,
+  amIOrganizer: (tournamentId: string) =>
+    [...tournamentKeys.all, 'amIOrganizer', tournamentId] as const,
   inviteLink: (tournamentId: string) =>
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
@@ -398,6 +412,117 @@ export function useGenerateTournamentBracket(options: MutationOptions<Tournament
     onSuccess: (matches, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(matches);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Read-only bracket preview for the current seeds. Organizer-only; enable it
+ * while the seeding screen is open (status registration_closed, no bracket yet).
+ */
+export function useTournamentBracketPreview(
+  tournamentId: string | undefined,
+  enabled: boolean
+) {
+  return useQuery<PreviewBracketMatch[]>({
+    queryKey: tournamentKeys.bracketPreview(tournamentId ?? ''),
+    queryFn: () => previewTournamentBracket(tournamentId!),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/**
+ * Organizer sets the seed order (seed 1 first). Refreshes the bracket preview
+ * and detail surfaces so the tree re-renders against the new seeds.
+ */
+export function useSetTournamentSeeds(options: MutationOptions<TournamentRegistration[]> = {}) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRegistration[],
+    Error,
+    { tournamentId: string; orderedRegistrationIds: string[]; versionWas: number }
+  >({
+    mutationFn: ({ tournamentId, orderedRegistrationIds, versionWas }) =>
+      setTournamentSeeds(tournamentId, orderedRegistrationIds, versionWas),
+    onSuccess: (regs, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.bracketPreview(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(regs);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Whether the caller is an organizer (primary or co-organizer) of the tournament. */
+export function useIsTournamentOrganizer(tournamentId: string | undefined) {
+  return useQuery<boolean>({
+    queryKey: tournamentKeys.amIOrganizer(tournamentId ?? ''),
+    queryFn: () => amITournamentOrganizer(tournamentId!),
+    enabled: !!tournamentId,
+  });
+}
+
+/** A tournament's co-organizers (organizer-only read). */
+export function useTournamentCoOrganizers(tournamentId: string | undefined) {
+  return useQuery<TournamentCoOrganizer[]>({
+    queryKey: tournamentKeys.coOrganizers(tournamentId ?? ''),
+    queryFn: () => getTournamentCoOrganizers(tournamentId!),
+    enabled: !!tournamentId,
+  });
+}
+
+export function useAddTournamentCoOrganizer(
+  options: MutationOptions<TournamentCoOrganizer[]> = {}
+) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentCoOrganizer[],
+    Error,
+    { tournamentId: string; userId: string }
+  >({
+    mutationFn: ({ tournamentId, userId }) => addTournamentCoOrganizer(tournamentId, userId),
+    onSuccess: (rows, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.coOrganizers(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(rows);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useRemoveTournamentCoOrganizer(
+  options: MutationOptions<TournamentCoOrganizer[]> = {}
+) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentCoOrganizer[],
+    Error,
+    { tournamentId: string; userId: string }
+  >({
+    mutationFn: ({ tournamentId, userId }) => removeTournamentCoOrganizer(tournamentId, userId),
+    onSuccess: (rows, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.coOrganizers(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(rows);
     },
     onError: e => options.onError?.(e),
   });

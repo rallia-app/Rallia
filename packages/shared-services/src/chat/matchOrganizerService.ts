@@ -71,7 +71,15 @@ export async function getMatchOrganizerOptions(
     throw error;
   }
 
-  return (data ?? []).map(toOption);
+  // Only suggest slots with a real court open (drop the "usually free" tier).
+  // Bookable options always outrank usually-free ones in the engine's score, so
+  // the top-N already surfaces every bookable option before any are cut.
+  const mapped: MatchOrganizerOption[] = (data ?? []).map(toOption);
+  const bookable = mapped.filter(o => o.court_confirmed);
+  // Display chronologically (the engine ranked by score to pick the best N).
+  return bookable.sort(
+    (a, b) => new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime()
+  );
 }
 
 // ============================================================================
@@ -169,13 +177,31 @@ export async function postMatchOrganizerCard(params: {
     confirmed_option_index: null,
   };
 
-  return sendMessage({
+  const message = await sendMessage({
     conversation_id: params.conversationId,
     sender_id: params.organizerId,
     content: params.previewText ?? 'Suggested some times to play',
     message_type: 'match_organizer',
     metadata,
   });
+
+  // The organizer's selection IS their thumbs-up — pre-vote every posted option
+  // so they don't have to tap them again on their own card.
+  if (params.options.length > 0) {
+    const { error } = await supabase.from('match_time_vote').insert(
+      params.options.map((_, index) => ({
+        message_id: message.id,
+        player_id: params.organizerId,
+        option_index: index,
+      }))
+    );
+    // Non-fatal: the card still works; the organizer can thumbs-up manually.
+    if (error && error.code !== '23505') {
+      console.error('Error pre-voting organizer options:', error);
+    }
+  }
+
+  return message;
 }
 
 // ============================================================================

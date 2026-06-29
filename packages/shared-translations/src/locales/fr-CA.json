@@ -3251,16 +3251,17 @@
     "card": {
       "title": "Organiser une partie",
       "subtitlePrompt": "Touche les moments qui te conviennent",
-      "subtitleMutual": "Vous avez trouvé un moment 🙌",
       "created": "Partie créée 🙌",
-      "createdSubtitle": "Bonne partie",
+      "createdSubtitle": "Rendez-vous sur le terrain",
       "viewGame": "Voir la partie",
-      "createGame": "Créer la partie",
-      "creating": "Création…",
-      "noOptions": "Aucun moment commun pour l'instant"
+      "createGame": "Créer la partie"
+    },
+    "banner": {
+      "title": "Organiser une partie",
+      "subtitle": "Propose des moments et organise la partie"
     },
     "tier": {
-      "courtAvailable": "Terrain dispo",
+      "courtAvailable": "Terrain libre",
       "courtsOne": "1 terrain libre",
       "courtsMany": "{count} terrains libres",
       "usuallyFree": "Souvent libre"
@@ -3268,27 +3269,19 @@
     "cost": {
       "free": "Gratuit"
     },
-    "votes": {
-      "you": "Tu embarques",
-      "everyone": "Tout le monde embarque",
-      "count": "{count} partants"
-    },
     "setup": {
       "title": "Propose des moments pour jouer",
       "sportLabel": "Sport",
-      "formatLabel": "Format",
-      "singles": "Simple",
-      "doubles": "Double",
       "previewTitle": "Meilleures suggestions",
       "previewHint": "Touche pour choisir les moments à proposer",
       "previewLoading": "On cherche des moments qui adonnent…",
-      "previewEmpty": "Aucun moment commun trouvé. Tu peux quand même proposer une heure dans le chat.",
+      "previewEmpty": "Aucun terrain libre à vos moments communs pour l'instant. Tu peux quand même proposer une heure dans le chat.",
       "submit": "Proposer ces moments",
       "submitting": "Envoi…",
       "entryLabel": "Organiser une partie",
       "error": "Impossible de proposer des moments. Réessaie."
     },
-    "preview": "A proposé des moments pour jouer"
+    "preview": "J'ai proposé des moments pour jouer"
   },
   "matchDetail": {
     "title": "Détails de la partie",
@@ -4511,6 +4504,21 @@
     },
     "dateRange": "{start} – {end}"
   },
+  "bracketSetup": {
+    "title": "Préparer le tableau",
+    "intro": "Le classement est optionnel. L'ordre ci-dessous détermine les duels du premier tour, donc place tes meilleurs joueurs en haut. Les joueurs ne voient jamais les numéros de tête de série.",
+    "seedsLabel": "Têtes de série",
+    "previewLabel": "Premier tour",
+    "previewSummary": "{players} joueurs · {rounds} tours · {byes} exempts",
+    "vs": "c.",
+    "moveToTop": "Mettre en premier",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "publish": "Publier le tableau aux joueurs",
+    "confirmTitle": "Publier ce tableau ?",
+    "confirmMessage": "Les joueurs sont avisés et le tableau devient officiel. Tu ne pourras plus réorganiser les têtes de série après.",
+    "confirmCta": "Publier"
+  },
   "tournamentDetail": {
     "title": "Tournoi",
     "loading": "Chargement du tournoi...",
@@ -4682,10 +4690,25 @@
       "registeredWithPartnerLabel": "T'es inscrit avec {name}",
       "generateBracket": "Générer le tableau",
       "generating": "Génération du tableau...",
+      "setUpBracket": "Préparer le tableau",
       "cancelTournament": "Annuler le tournoi",
       "archiveTournament": "Archiver le tournoi",
       "editDetails": "Modifier les détails",
-      "invitePlayers": "Inviter des joueurs"
+      "invitePlayers": "Inviter des joueurs",
+      "manageCoOrganizers": "Gérer les co-organisateurs"
+    },
+    "coOrganizers": {
+      "ctaTitle": "Co-organisateurs",
+      "ctaDescription": "Ajoute des gens pour t'aider à gérer le tournoi avec un accès organisateur complet.",
+      "title": "Co-organisateurs",
+      "hint": "Les co-organisateurs t'aident à gérer ce tournoi : modifier les détails, classer le tableau, entrer les scores. Ils sont ajoutés au chat du tournoi.",
+      "addLabel": "Ajouter un co-organisateur",
+      "searchPlaceholder": "Rechercher des joueurs",
+      "searchHint": "Cherche un joueur par son nom pour l'ajouter",
+      "noResults": "Aucun joueur trouvé",
+      "remove": "Retirer",
+      "addFailed": "Impossible d'ajouter ce co-organisateur",
+      "removeFailed": "Impossible de retirer ce co-organisateur"
     },
     "invite": {
       "title": "Inviter des joueurs",
@@ -4799,6 +4822,8 @@
     },
     "invitePlayers": {
       "title": "Inviter des joueurs",
+      "ctaTitle": "Inviter des joueurs",
+      "ctaDescription": "Remplis le tableau. Invite des joueurs dans l'app ou partage un lien.",
       "searchPlaceholder": "Chercher des joueurs",
       "searchHint": "Tape un nom pour trouver des joueurs à inviter.",
       "noResults": "Aucun joueur trouvé",
@@ -4863,13 +4888,19 @@
     "forSport": "Création d'un tournoi pour {sport}",
     "step": "Étape {current} sur {total}",
     "stepNames": {
-      "details": "Détails",
-      "visibility": "Visibilité"
+      "basics": "Infos",
+      "format": "Format",
+      "schedule": "Calendrier",
+      "rulesVisibility": "Règles et visibilité"
     },
-    "step1Title": "Détails",
-    "step1Description": "Nommez votre tournoi, choisissez la taille du tableau et le format des parties, et fixez les dates",
-    "visibilityStepTitle": "Visibilité",
-    "visibilityStepDescription": "Qui peut le voir et s'inscrire?",
+    "step1Title": "Infos de base",
+    "step1Description": "Nomme ton tournoi et ajoute une affiche",
+    "step2Title": "Format",
+    "step2Description": "Simple ou double, taille du tableau et pointage",
+    "step3Title": "Calendrier",
+    "step3Description": "Quand il se déroule et qui peut s'inscrire",
+    "visibilityStepTitle": "Règles et visibilité",
+    "visibilityStepDescription": "Ajoute des règles et choisis qui peut le voir",
     "next": "Suivant",
     "back": "Retour",
     "createTournament": "Créer le tournoi",

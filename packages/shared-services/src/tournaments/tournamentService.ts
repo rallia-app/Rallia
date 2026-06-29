@@ -5,7 +5,7 @@
  * RPC defined in supabase/migrations/20260510170002_*.sql onward.
  */
 
-import type { Tables, Enums } from '@rallia/shared-types';
+import type { Database, Tables, Enums } from '@rallia/shared-types';
 import type { UtmParams } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
@@ -690,6 +690,98 @@ export async function generateTournamentBracket(
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as TournamentMatch[];
+}
+
+/** A single computed bracket slot returned by the read-only preview RPC. */
+export type PreviewBracketMatch =
+  Database['public']['Functions']['tournament_preview_bracket']['Returns'][number];
+
+/**
+ * Organizer assigns seeds before generating the bracket. `orderedRegistrationIds`
+ * must be exactly the tournament's registered set (seed 1 first). Returns the
+ * registrations with their new seed_rank. Does not bump tournament.version.
+ */
+export async function setTournamentSeeds(
+  tournamentId: string,
+  orderedRegistrationIds: string[],
+  versionWas: number
+): Promise<TournamentRegistration[]> {
+  const { data, error } = await supabase.rpc('tournament_set_seeds', {
+    p_tournament_id: tournamentId,
+    p_ordered_registration_ids: orderedRegistrationIds,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentRegistration[];
+}
+
+/**
+ * Read-only dry run of the bracket for the current seeds — computes the full
+ * single-elimination tree without inserting rows or changing status. Organizer
+ * only. Used to live-preview the bracket on the seeding screen before publish.
+ */
+export async function previewTournamentBracket(
+  tournamentId: string
+): Promise<PreviewBracketMatch[]> {
+  const { data, error } = await supabase.rpc('tournament_preview_bracket', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PreviewBracketMatch[];
+}
+
+export type TournamentCoOrganizer = Tables<'tournament_co_organizers'>;
+
+/** List a tournament's co-organizers (organizer-only). */
+export async function getTournamentCoOrganizers(
+  tournamentId: string
+): Promise<TournamentCoOrganizer[]> {
+  const { data, error } = await supabase.rpc('get_tournament_co_organizers', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentCoOrganizer[];
+}
+
+/**
+ * Primary organizer adds a co-organizer (full organizer rights + tournament
+ * chat). Returns the updated co-organizer roster.
+ */
+export async function addTournamentCoOrganizer(
+  tournamentId: string,
+  userId: string
+): Promise<TournamentCoOrganizer[]> {
+  const { data, error } = await supabase.rpc('tournament_add_co_organizer', {
+    p_tournament_id: tournamentId,
+    p_user_id: userId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentCoOrganizer[];
+}
+
+/** Primary organizer removes a co-organizer. Returns the updated roster. */
+export async function removeTournamentCoOrganizer(
+  tournamentId: string,
+  userId: string
+): Promise<TournamentCoOrganizer[]> {
+  const { data, error } = await supabase.rpc('tournament_remove_co_organizer', {
+    p_tournament_id: tournamentId,
+    p_user_id: userId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentCoOrganizer[];
+}
+
+/**
+ * Whether the caller is an organizer of this tournament — primary organizer
+ * OR a co-organizer. Lets the client surface organizer controls to co-orgs.
+ */
+export async function amITournamentOrganizer(tournamentId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_tournament_organizer', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return !!data;
 }
 
 export interface LinkableMatch {
