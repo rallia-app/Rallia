@@ -19,6 +19,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -262,16 +263,50 @@ export const SessionDetail: React.FC = () => {
     []
   );
 
-  const canScoreMatch = useCallback(
+  const isParticipantOf = useCallback(
+    (m: SessionMatch) => !!userId && [...m.team_a_user_ids, ...m.team_b_user_ids].includes(userId),
+    [userId]
+  );
+
+  const sessionScoreable = !!sess && (sess.status === 'published' || sess.status === 'in_progress');
+
+  // Organizer/admin records an authoritative result directly (override path).
+  const canOverride = useCallback(
+    (m: SessionMatch) => sessionScoreable && isOrganizer && !isScored(m),
+    [sessionScoreable, isOrganizer, isScored]
+  );
+
+  // A participant settles their pairing by linking a played, verified casual
+  // match — the canonical flow (feedback + rating + confirmation come with it).
+  const canLink = useCallback(
+    (m: SessionMatch) =>
+      sessionScoreable &&
+      !isOrganizer &&
+      isParticipantOf(m) &&
+      !isScored(m) &&
+      !m.is_drill &&
+      !m.is_three_player,
+    [sessionScoreable, isOrganizer, isParticipantOf, isScored]
+  );
+
+  const openLinkMatch = useCallback(
     (m: SessionMatch) => {
-      if (!sess) return false;
-      if (sess.status !== 'published' && sess.status !== 'in_progress') return false;
-      if (isScored(m)) return false;
-      const isParticipant =
-        !!userId && [...m.team_a_user_ids, ...m.team_b_user_ids].includes(userId);
-      return isOrganizer || isParticipant;
+      if (!league) return;
+      lightHaptic();
+      void SheetManager.show('session-link-match', {
+        payload: {
+          sessionMatchId: m.id,
+          sessionId,
+          seasonId,
+          sportId: league.sport_id,
+          entryFormat: m.format,
+          team1UserIds: m.team_a_user_ids,
+          team2UserIds: m.team_b_user_ids,
+          onSuccess: () => invalidate(),
+        },
+      });
     },
-    [sess, isScored, isOrganizer, userId]
+    [league, sessionId, seasonId, invalidate]
   );
 
   const openScoreEntry = useCallback((m: SessionMatch) => {
@@ -574,7 +609,7 @@ export const SessionDetail: React.FC = () => {
                         </Text>
                       </View>
                     </View>
-                    {canScoreMatch(m) ? (
+                    {canOverride(m) ? (
                       <TouchableOpacity
                         onPress={() => openScoreEntry(m)}
                         style={styles.lockButton}
@@ -583,20 +618,32 @@ export const SessionDetail: React.FC = () => {
                       >
                         <Ionicons name="create-outline" size={18} color={colors.primary} />
                       </TouchableOpacity>
+                    ) : canLink(m) ? (
+                      <TouchableOpacity
+                        onPress={() => openLinkMatch(m)}
+                        style={styles.lockButton}
+                        accessibilityLabel={t('sessionDetail.linkPicker.addResult')}
+                        testID="cta-link-match"
+                      >
+                        <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                      </TouchableOpacity>
                     ) : isScored(m) &&
                       isOrganizer &&
                       (sess.status === 'published' || sess.status === 'in_progress') ? (
-                      // A recorded score stays editable by the organizer, with the
-                      // lock toggle alongside (lock protects it from a regenerate).
+                      // A recorded score stays editable by the organizer for the
+                      // direct-override path; an attached match is edited through the
+                      // match flow. The lock toggle protects it from a regenerate.
                       <View style={styles.matchActions}>
-                        <TouchableOpacity
-                          onPress={() => openScoreEntry(m)}
-                          style={styles.lockButton}
-                          accessibilityLabel={t('sessionDetail.score.edit')}
-                          testID="cta-edit-score"
-                        >
-                          <Ionicons name="create-outline" size={18} color={colors.primary} />
-                        </TouchableOpacity>
+                        {!m.match_id ? (
+                          <TouchableOpacity
+                            onPress={() => openScoreEntry(m)}
+                            style={styles.lockButton}
+                            accessibilityLabel={t('sessionDetail.score.edit')}
+                            testID="cta-edit-score"
+                          >
+                            <Ionicons name="create-outline" size={18} color={colors.primary} />
+                          </TouchableOpacity>
+                        ) : null}
                         <TouchableOpacity
                           onPress={() => {
                             lightHaptic();

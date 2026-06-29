@@ -6,7 +6,11 @@
 
 import type { Tables, Enums } from '@rallia/shared-types';
 
-import { getProfilesByIds, type PlayerProfile } from '../tournaments/tournamentService';
+import {
+  getProfilesByIds,
+  type PlayerProfile,
+  type LinkableMatch,
+} from '../tournaments/tournamentService';
 import { supabase } from '../supabase';
 
 export type League = Tables<'leagues'>;
@@ -482,4 +486,186 @@ export async function revokeLeagueInvite(
   });
   if (error) throw new Error(error.message);
   return data as LeagueMember;
+}
+
+// ---------------------------------------------------------------------------
+// Member lifecycle (leave / remove / suspend / reinstate)
+// ---------------------------------------------------------------------------
+
+export async function leaveLeague(leagueId: string): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_leave', { p_league_id: leagueId });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+export async function removeLeagueMember(
+  memberId: string,
+  versionWas: number
+): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_remove_member', {
+    p_member_id: memberId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+export async function suspendLeagueMember(
+  memberId: string,
+  versionWas: number,
+  opts: { reason?: string; until?: string } = {}
+): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_suspend_member', {
+    p_member_id: memberId,
+    p_version_was: versionWas,
+    p_reason: opts.reason ?? null,
+    p_until: opts.until ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+export async function reinstateLeagueMember(
+  memberId: string,
+  versionWas: number
+): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_reinstate_member', {
+    p_member_id: memberId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+// ---------------------------------------------------------------------------
+// Session match bridge — link a verified casual match to a session pairing
+// (mirror of listLinkableMatchesForSlot / attachMatchToTournamentSlot)
+// ---------------------------------------------------------------------------
+
+/**
+ * List the caller's verified matches that could be linked to a session pairing:
+ * every member of the pairing is a joined participant (2 for singles, 4 for
+ * doubles), same sport + format, has a verified result, and isn't already linked
+ * to another session pairing or a tournament bracket slot.
+ */
+export async function listLinkableMatchesForSessionSlot(params: {
+  sessionMatchId: string;
+  team1UserIds: string[];
+  team2UserIds: string[];
+  sportId: string;
+  entryFormat: Enums<'entry_format'>;
+}): Promise<LinkableMatch[]> {
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `id, match_date, start_time, end_time, format,
+       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
+         match_set ( set_number, team1_score, team2_score ) ),
+       match_participant!inner ( player_id, status, team_number )`
+    )
+    .eq('sport_id', params.sportId)
+    .order('match_date', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+
+  type MatchResultEmbed = {
+    id: string;
+    is_verified: boolean;
+    verified_at: string | null;
+    winning_team: number | null;
+    team1_score: number | null;
+    team2_score: number | null;
+    match_set?: Array<{ set_number: number; team1_score: number; team2_score: number }> | null;
+  };
+  type Row = {
+    id: string;
+    match_date: string;
+    start_time: string;
+    end_time: string;
+    format: string | null;
+    match_result: MatchResultEmbed | MatchResultEmbed[] | null;
+    match_participant: Array<{ player_id: string; status: string; team_number: number | null }>;
+  };
+
+  const rows = (data ?? []) as unknown as Row[];
+
+  const isDoubles = params.entryFormat !== 'singles';
+  const expected = new Set([...params.team1UserIds, ...params.team2UserIds]);
+  const expectedSize = isDoubles ? 4 : 2;
+  const eligible: LinkableMatch[] = [];
+
+  for (const row of rows) {
+    const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
+    if (!mr || !mr.is_verified) continue;
+    if ((row.format ?? 'singles') !== (isDoubles ? 'doubles' : 'singles')) continue;
+
+    const joined = row.match_participant.filter(p => p.status === 'joined');
+    const joinedUsers = joined.map(p => p.player_id);
+    if (expected.size !== expectedSize || joinedUsers.length !== expectedSize) continue;
+    if (!joinedUsers.every(u => expected.has(u))) continue;
+    if (!Array.from(expected).every(u => joinedUsers.includes(u))) continue;
+
+    let team1_user_ids = joined.filter(p => p.team_number === 1).map(p => p.player_id);
+    let team2_user_ids = joined.filter(p => p.team_number === 2).map(p => p.player_id);
+    if (!isDoubles && (team1_user_ids.length === 0 || team2_user_ids.length === 0)) {
+      const t1 = team1_user_ids[0] ?? joinedUsers.find(u => u !== team2_user_ids[0]) ?? null;
+      const t2 = team2_user_ids[0] ?? joinedUsers.find(u => u !== t1) ?? null;
+      team1_user_ids = t1 ? [t1] : [];
+      team2_user_ids = t2 ? [t2] : [];
+    }
+
+    const sets = (mr.match_set ?? [])
+      .slice()
+      .sort((a, b) => a.set_number - b.set_number)
+      .map(s => ({ team1: s.team1_score, team2: s.team2_score }));
+
+    eligible.push({
+      id: row.id,
+      match_date: row.match_date,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      match_result_id: mr.id,
+      winning_team: (mr.winning_team as 1 | 2 | null) ?? null,
+      team1_score: mr.team1_score,
+      team2_score: mr.team2_score,
+      verified_at: mr.verified_at,
+      team1_user_ids,
+      team2_user_ids,
+      sets,
+    });
+  }
+
+  if (eligible.length === 0) return eligible;
+  const ids = eligible.map(m => m.id);
+  const [sLinked, tLinked] = await Promise.all([
+    supabase
+      .from('session_matches')
+      .select('match_id')
+      .in('match_id', ids)
+      .neq('id', params.sessionMatchId),
+    supabase.from('tournament_matches').select('match_id').in('match_id', ids),
+  ]);
+  if (sLinked.error) throw new Error(sLinked.error.message);
+  if (tLinked.error) throw new Error(tLinked.error.message);
+  const taken = new Set<string>();
+  for (const r of sLinked.data ?? []) if (r.match_id) taken.add(r.match_id);
+  for (const r of tLinked.data ?? []) if (r.match_id) taken.add(r.match_id);
+
+  return eligible.filter(m => !taken.has(m.id));
+}
+
+/**
+ * Attach a verified, played match to a pending session pairing. The server
+ * validates participation, sport, verified result, and exact-participant match.
+ */
+export async function attachMatchToSessionSlot(
+  sessionMatchId: string,
+  matchId: string
+): Promise<SessionMatch> {
+  const { data, error } = await supabase.rpc('session_attach_match', {
+    p_session_match_id: sessionMatchId,
+    p_match_id: matchId,
+  });
+  if (error) throw new Error(error.message);
+  return data as SessionMatch;
 }

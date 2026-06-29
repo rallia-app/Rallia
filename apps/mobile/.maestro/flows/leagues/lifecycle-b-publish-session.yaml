@@ -10,6 +10,13 @@ tags: [leagues]
     timeout: 20000
 - tapOn:
     id: "league-tab-sessions"
+# Session creation now lives in a bottom sheet opened from the Sessions tab.
+- extendedWaitUntil:
+    visible:
+      id: "cta-create-session"
+    timeout: 15000
+- tapOn:
+    id: "cta-create-session"
 - extendedWaitUntil:
     visible:
       id: "session-name-input"
