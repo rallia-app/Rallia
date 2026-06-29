@@ -9,6 +9,7 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
@@ -22,6 +23,7 @@ import {
   secondary,
   accent,
   neutral,
+  base,
 } from '@rallia/design-system';
 import { useTheme } from '@rallia/shared-hooks';
 import type { TournamentListItem } from '@rallia/shared-services';
@@ -64,6 +66,8 @@ export interface TournamentListColors {
   textMuted: string;
   border: string;
   primary: string;
+  avatarPlaceholder: string;
+  avatarPlaceholderIcon: string;
   positiveBg: string;
   positiveText: string;
   activeBg: string;
@@ -98,6 +102,8 @@ export function useTournamentListColors(): TournamentListColors {
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       primary: isDark ? primary[400] : primary[500],
+      avatarPlaceholder: isDark ? neutral[700] : neutral[200],
+      avatarPlaceholderIcon: isDark ? neutral[400] : neutral[500],
       positiveBg: isDark ? '#16a34a30' : '#dcfce7',
       positiveText: isDark ? '#86efac' : '#15803d',
       activeBg: isDark ? `${primary[500]}30` : `${primary[600]}20`,
@@ -187,13 +193,6 @@ function formatRatingRange(min: number | null, max: number | null): string | nul
 
 const AVATARS_SHOWN = 4;
 
-/** Initials for the avatar fallback when a registrant has no profile picture. */
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
 /** Stacked faces of the earliest registrants, mirroring the game card. */
 const RegistrantAvatars: React.FC<{
   preview: TournamentListItem['registrant_preview'];
@@ -207,7 +206,6 @@ const RegistrantAvatars: React.FC<{
     <View style={styles.avatarsRow}>
       {shown.map((r, i) => {
         const uri = getProfilePictureUrl(r.avatarUrl);
-        const initials = getInitials(r.name);
         return (
           <View
             key={r.id}
@@ -215,19 +213,15 @@ const RegistrantAvatars: React.FC<{
               styles.avatarSlot,
               i > 0 && styles.avatarSlotOverlap,
               {
-                backgroundColor: uri ? colors.cardBackground : colors.chipPrimaryBg,
-                borderColor: colors.cardBorder,
+                backgroundColor: uri ? colors.cardBackground : colors.avatarPlaceholder,
+                borderColor: colors.primary,
               },
             ]}
           >
             {uri ? (
               <Image source={{ uri }} style={styles.avatarImg} />
-            ) : initials ? (
-              <Text size="xs" weight="semibold" color={colors.chipPrimaryText}>
-                {initials}
-              </Text>
             ) : (
-              <Ionicons name="person" size={12} color={colors.chipPrimaryText} />
+              <Ionicons name="person-outline" size={14} color={colors.avatarPlaceholderIcon} />
             )}
           </View>
         );
@@ -237,10 +231,10 @@ const RegistrantAvatars: React.FC<{
           style={[
             styles.avatarSlot,
             styles.avatarSlotOverlap,
-            { backgroundColor: colors.chipPrimaryBg, borderColor: colors.cardBorder },
+            { backgroundColor: colors.primary, borderColor: colors.primary },
           ]}
         >
-          <Text size="xs" weight="semibold" color={colors.chipPrimaryText}>
+          <Text size="xs" weight="semibold" color={base.white} style={styles.avatarExtraText}>
             +{extra}
           </Text>
         </View>
@@ -278,6 +272,7 @@ export const TournamentCard: React.FC<{
       : null;
 
   const ratingRange = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const hasRegistrants = tournament.registrant_preview.length > 0;
 
   return (
     <TouchableOpacity
@@ -303,18 +298,20 @@ export const TournamentCard: React.FC<{
         />
       ) : null}
 
-      <View style={styles.cardHeader}>
-        <Text
-          size="base"
-          weight="semibold"
-          color={colors.text}
-          numberOfLines={1}
-          style={styles.cardTitle}
-        >
-          {tournament.name}
-        </Text>
-        <StatusPill status={tournament.status} colors={colors} t={t} />
+      <View style={styles.cardTopRow}>
+        <RegistrantAvatars
+          preview={tournament.registrant_preview}
+          total={tournament.registration_count}
+          colors={colors}
+        />
+        <View style={hasRegistrants ? styles.cardStatusSlot : undefined}>
+          <StatusPill status={tournament.status} colors={colors} t={t} />
+        </View>
       </View>
+
+      <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+        {tournament.name}
+      </Text>
 
       <View style={styles.cardMetaLine}>
         <Ionicons name="calendar-outline" size={14} color={colors.primary} />
@@ -341,8 +338,15 @@ export const TournamentCard: React.FC<{
         </View>
       )}
 
-      {/* Importance order: role, eligibility (rating), what you play, room left, details */}
-      <View style={styles.chipRow}>
+      {/* Importance order: role, eligibility (rating), what you play, room left, details.
+          Horizontally scrollable so the chips always stay on a single row. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        nestedScrollEnabled
+        style={styles.chipScroll}
+        contentContainerStyle={styles.chipScrollContent}
+      >
         {isOrganizer && (
           <MetaChip
             label={t('tournamentList.roleOrganizer')}
@@ -368,13 +372,7 @@ export const TournamentCard: React.FC<{
           colors={colors}
         />
         {tournament.level && <MetaChip label={tournament.level} colors={colors} />}
-      </View>
-
-      <RegistrantAvatars
-        preview={tournament.registrant_preview}
-        total={tournament.registration_count}
-        colors={colors}
-      />
+      </ScrollView>
     </TouchableOpacity>
   );
 };
@@ -631,8 +629,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacingPixels[3],
   },
-  cardTitle: {
-    flex: 1,
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardStatusSlot: {
+    marginLeft: 'auto',
   },
   cardMetaLine: {
     flexDirection: 'row',
@@ -654,6 +656,16 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1.5],
     marginTop: spacingPixels[0.5],
   },
+  chipScroll: {
+    marginTop: spacingPixels[0.5],
+    flexGrow: 0,
+  },
+  chipScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    paddingRight: spacingPixels[1],
+  },
   metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -665,7 +677,6 @@ const styles = StyleSheet.create({
   avatarsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacingPixels[2],
   },
   avatarSlot: {
     width: 24,
@@ -680,8 +691,15 @@ const styles = StyleSheet.create({
     marginLeft: -6,
   },
   avatarImg: {
-    width: '100%',
-    height: '100%',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  avatarExtraText: {
+    lineHeight: 15,
+    includeFontPadding: false,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   statusPill: {
     paddingHorizontal: spacingPixels[2],

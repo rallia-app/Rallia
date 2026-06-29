@@ -652,6 +652,30 @@ function CreateListHeaderButton() {
   );
 }
 
+/** Header "+" that opens the tournament creation wizard. Live for everyone. */
+function TournamentCreateHeaderButton() {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+  const { openSheetForTournamentCreation } = useActionsSheet();
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (!guardAction()) return;
+        lightHaptic();
+        openSheetForTournamentCreation();
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ marginRight: spacingPixels[2] }}
+      accessibilityRole="button"
+      accessibilityLabel={t('actions.createTournament')}
+    >
+      <Ionicons name="add" size={28} color={colors.headerForeground} />
+    </TouchableOpacity>
+  );
+}
+
 /**
  * Community Stack - Social features
  */
@@ -1538,6 +1562,7 @@ export default function AppNavigator() {
           ...sharedOptions,
           headerTitle: t('tournamentList.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
+          headerRight: () => <TournamentCreateHeaderButton />,
         })}
       />
 
