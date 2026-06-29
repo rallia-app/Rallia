@@ -21,6 +21,11 @@ import {
   createLeague,
   createLeagueSession,
   createSeason,
+  enrollInSeason,
+  withdrawFromSeason,
+  removeSeasonMember,
+  listSeasonMembers,
+  getMySeasonMembership,
   generateSessionSheet,
   getLeague,
   getLeagueSession,
@@ -47,6 +52,8 @@ import {
   type LeagueMemberWithProfile,
   type PresenceStatus,
   type Season,
+  type SeasonMember,
+  type SeasonMemberWithProfile,
   type SeasonRankingWithProfile,
   type Session,
   type SessionMatch,
@@ -76,6 +83,9 @@ export const leagueKeys = {
     [...leagueKeys.all, 'mySessionPresence', sessionId, userId] as const,
   sessionMatches: (sessionId: string) => [...leagueKeys.all, 'sessionMatches', sessionId] as const,
   rankings: (seasonId: string) => [...leagueKeys.all, 'rankings', seasonId] as const,
+  seasonMembers: (seasonId: string) => [...leagueKeys.all, 'seasonMembers', seasonId] as const,
+  mySeasonMembership: (seasonId: string, userId: string) =>
+    [...leagueKeys.all, 'mySeasonMembership', seasonId, userId] as const,
 };
 
 interface MutationOptions<T> {
@@ -90,6 +100,15 @@ function useLeagueDetailInvalidator() {
     qc.invalidateQueries({ queryKey: leagueKeys.members(leagueId) });
     qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) });
     qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+  };
+}
+
+function useSeasonRosterInvalidator() {
+  const qc = useQueryClient();
+  return (seasonId: string) => {
+    qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(seasonId) });
+    qc.invalidateQueries({ queryKey: [...leagueKeys.all, 'mySeasonMembership', seasonId] });
+    qc.invalidateQueries({ queryKey: leagueKeys.rankings(seasonId) });
   };
 }
 
@@ -137,6 +156,22 @@ export function useLeagueSeasons(leagueId: string | undefined) {
     queryKey: leagueKeys.seasons(leagueId ?? ''),
     queryFn: () => listSeasons(leagueId!),
     enabled: !!leagueId,
+  });
+}
+
+export function useSeasonMembers(seasonId: string | undefined) {
+  return useQuery<SeasonMemberWithProfile[]>({
+    queryKey: leagueKeys.seasonMembers(seasonId ?? ''),
+    queryFn: () => listSeasonMembers(seasonId!),
+    enabled: !!seasonId,
+  });
+}
+
+export function useMySeasonMembership(seasonId: string | undefined, userId: string | undefined) {
+  return useQuery<SeasonMember | null>({
+    queryKey: leagueKeys.mySeasonMembership(seasonId ?? '', userId ?? ''),
+    queryFn: () => getMySeasonMembership(seasonId!, userId!),
+    enabled: !!seasonId && !!userId,
   });
 }
 
@@ -213,6 +248,49 @@ export function useOpenSeason(leagueId: string, options: MutationOptions<Season>
       openSeason(seasonId, versionWas),
     onSuccess: result => {
       invalidate(leagueId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useEnrollInSeason(seasonId: string, options: MutationOptions<SeasonMember> = {}) {
+  const invalidateRoster = useSeasonRosterInvalidator();
+  return useMutation({
+    mutationFn: () => enrollInSeason(seasonId),
+    onSuccess: result => {
+      invalidateRoster(seasonId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useWithdrawFromSeason(
+  seasonId: string,
+  options: MutationOptions<SeasonMember> = {}
+) {
+  const invalidateRoster = useSeasonRosterInvalidator();
+  return useMutation({
+    mutationFn: () => withdrawFromSeason(seasonId),
+    onSuccess: result => {
+      invalidateRoster(seasonId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useRemoveSeasonMember(
+  seasonId: string,
+  options: MutationOptions<SeasonMember> = {}
+) {
+  const invalidateRoster = useSeasonRosterInvalidator();
+  return useMutation({
+    mutationFn: ({ seasonMemberId, versionWas }: { seasonMemberId: string; versionWas: number }) =>
+      removeSeasonMember(seasonMemberId, versionWas),
+    onSuccess: result => {
+      invalidateRoster(seasonId);
       options.onSuccess?.(result);
     },
     onError: options.onError,

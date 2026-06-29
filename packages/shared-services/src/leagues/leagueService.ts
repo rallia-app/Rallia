@@ -20,6 +20,8 @@ export type Session = Tables<'sessions'>;
 export type SessionPresence = Tables<'session_presence'>;
 export type SessionMatch = Tables<'session_matches'>;
 export type SeasonRanking = Tables<'season_rankings'>;
+export type SeasonMember = Tables<'season_members'>;
+export type SeasonMemberStatus = Enums<'season_member_status'>;
 export type PresenceStatus = Enums<'session_presence_status'>;
 export type MatchStatus = Enums<'session_match_status'>;
 export type PairingTeam = Enums<'pairing_team'>;
@@ -29,6 +31,10 @@ export interface SeasonRankingWithProfile extends SeasonRanking {
 }
 
 export interface SessionPresenceWithProfile extends SessionPresence {
+  profile?: PlayerProfile | null;
+}
+
+export interface SeasonMemberWithProfile extends SeasonMember {
   profile?: PlayerProfile | null;
 }
 
@@ -229,6 +235,66 @@ export async function openSeason(seasonId: string, versionWas: number): Promise<
 export function isLeagueOrganizer(league: League, userId: string | undefined): boolean {
   if (!userId) return false;
   return league.organizer_id === userId;
+}
+
+// ---------------------------------------------------------------------------
+// Season enrollment (roster) — the per-season membership paid leagues attach to
+// ---------------------------------------------------------------------------
+
+export async function enrollInSeason(seasonId: string): Promise<SeasonMember> {
+  const { data, error } = await supabase.rpc('season_enroll', { p_season_id: seasonId });
+  if (error) throw new Error(error.message);
+  return data as SeasonMember;
+}
+
+export async function withdrawFromSeason(seasonId: string): Promise<SeasonMember> {
+  const { data, error } = await supabase.rpc('season_withdraw', { p_season_id: seasonId });
+  if (error) throw new Error(error.message);
+  return data as SeasonMember;
+}
+
+export async function removeSeasonMember(
+  seasonMemberId: string,
+  versionWas: number
+): Promise<SeasonMember> {
+  const { data, error } = await supabase.rpc('season_remove_member', {
+    p_season_member_id: seasonMemberId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as SeasonMember;
+}
+
+export async function listSeasonMembers(seasonId: string): Promise<SeasonMemberWithProfile[]> {
+  const { data, error } = await supabase
+    .from('season_members')
+    .select('*')
+    .eq('season_id', seasonId)
+    .eq('status', 'enrolled')
+    .order('enrolled_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  const members = (data ?? []) as SeasonMember[];
+  if (members.length === 0) return [];
+
+  const profiles = await getProfilesByIds(members.map(m => m.user_id));
+  return members.map(m => ({
+    ...m,
+    profile: profiles[m.user_id] ?? null,
+  }));
+}
+
+export async function getMySeasonMembership(
+  seasonId: string,
+  userId: string
+): Promise<SeasonMember | null> {
+  const { data, error } = await supabase
+    .from('season_members')
+    .select('*')
+    .eq('season_id', seasonId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as SeasonMember | null;
 }
 
 // ---------------------------------------------------------------------------

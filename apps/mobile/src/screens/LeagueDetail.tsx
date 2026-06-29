@@ -51,12 +51,21 @@ import {
   useCloseSeason,
   useSeasonSessions,
   useSeasonRankings,
+  useSeasonMembers,
+  useMySeasonMembership,
+  useEnrollInSeason,
+  useWithdrawFromSeason,
   usePublishSession,
   useProfilesByIds,
 } from '@rallia/shared-hooks';
 import { SheetManager } from 'react-native-actions-sheet';
 import { isLeagueOrganizer } from '@rallia/shared-services';
-import type { LeagueMemberWithProfile, PlayerSearchResult } from '@rallia/shared-services';
+import type {
+  LeagueMemberWithProfile,
+  PlayerProfile,
+  PlayerSearchResult,
+  SeasonMemberWithProfile,
+} from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
@@ -347,7 +356,10 @@ const DashboardCtaCard: React.FC<{
   );
 };
 
-function memberToPlayer(member: LeagueMemberWithProfile): PlayerSearchResult {
+function memberToPlayer(member: {
+  user_id: string;
+  profile?: PlayerProfile | null;
+}): PlayerSearchResult {
   const profile = member.profile;
   return {
     id: member.user_id,
@@ -808,6 +820,55 @@ export const LeagueDetail: React.FC = () => {
   const draftSeasons = useMemo(() => seasons.filter(s => s.status === 'draft'), [seasons]);
 
   const { data: seasonSessions = [] } = useSeasonSessions(openSeason?.id);
+
+  const openSeasonId = openSeason?.id;
+  const { data: seasonRoster = [] } = useSeasonMembers(openSeasonId);
+  const { data: mySeasonMembership } = useMySeasonMembership(openSeasonId, userId);
+  const isEnrolledInSeason = mySeasonMembership?.status === 'enrolled';
+  const canParticipateInSeason = isOrganizer || myMembership?.status === 'active';
+
+  const { mutate: enrollSeasonMut, isPending: isEnrollingSeason } = useEnrollInSeason(
+    openSeasonId ?? '',
+    {
+      onSuccess: () => {
+        successHaptic();
+        toast.success(t('leagueDetail.roster.enrolled'));
+      },
+      onError: e => {
+        warningHaptic();
+        toast.error(e.message || t('leagueDetail.errors.generic'));
+      },
+    }
+  );
+
+  const { mutate: withdrawSeasonMut, isPending: isWithdrawingSeason } = useWithdrawFromSeason(
+    openSeasonId ?? '',
+    {
+      onSuccess: () => {
+        lightHaptic();
+        toast.success(t('leagueDetail.roster.withdrew'));
+      },
+      onError: e => {
+        warningHaptic();
+        toast.error(e.message || t('leagueDetail.errors.generic'));
+      },
+    }
+  );
+
+  const handleWithdrawSeason = useCallback(() => {
+    Alert.alert(
+      t('leagueDetail.roster.leaveConfirmTitle'),
+      t('leagueDetail.roster.leaveConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.roster.leave'),
+          style: 'destructive',
+          onPress: () => withdrawSeasonMut(),
+        },
+      ]
+    );
+  }, [t, withdrawSeasonMut]);
 
   // Standings come from the open season, else the most recent closed one.
   const rankingSeason = useMemo(
@@ -1674,6 +1735,68 @@ export const LeagueDetail: React.FC = () => {
                 })
               )}
             </Section>
+
+            {openSeason && (
+              <Section title={t('leagueDetail.roster.title')} colors={colors}>
+                {seasonRoster.length === 0 ? (
+                  <View style={styles.participantEmpty}>
+                    <Text size="sm" color={colors.textMuted}>
+                      {t('leagueDetail.roster.empty')}
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text
+                      size="xs"
+                      weight="semibold"
+                      color={colors.textMuted}
+                      style={styles.pendingSectionTitle}
+                    >
+                      {t('leagueDetail.roster.count', { count: String(seasonRoster.length) })}
+                    </Text>
+                    {seasonRoster.map(m => (
+                      <PlayerCard
+                        key={m.id}
+                        player={memberToPlayer(m)}
+                        onPress={handlePlayerPress}
+                        showActivity={false}
+                      />
+                    ))}
+                  </>
+                )}
+                {canParticipateInSeason &&
+                  (isEnrolledInSeason ? (
+                    <TouchableOpacity
+                      onPress={handleWithdrawSeason}
+                      disabled={isWithdrawingSeason}
+                      testID="cta-leave-season"
+                      style={[styles.seasonCtaButton, { borderColor: colors.danger }]}
+                    >
+                      <Text size="sm" weight="semibold" color={colors.danger}>
+                        {isWithdrawingSeason
+                          ? t('leagueDetail.roster.leaving')
+                          : t('leagueDetail.roster.leave')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => {
+                        lightHaptic();
+                        enrollSeasonMut();
+                      }}
+                      disabled={isEnrollingSeason}
+                      testID="cta-enroll-season"
+                      style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
+                    >
+                      <Text size="sm" weight="semibold" color={colors.primary}>
+                        {isEnrollingSeason
+                          ? t('leagueDetail.roster.enrolling')
+                          : t('leagueDetail.roster.enroll')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </Section>
+            )}
 
             {isOrganizer && (
               <TouchableOpacity
