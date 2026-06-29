@@ -77,6 +77,7 @@ export * from './useModeration';
 export * from './useBooking';
 export * from './usePlayerBookingFilters';
 export * from './useReferral';
+export * from './useSportLeaderboard';
 export * from './useMapData';
 export * from './useProfileCompleteness';
 export * from './useCoverageCheck';
