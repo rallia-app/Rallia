@@ -18,8 +18,13 @@ import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
   NOTIFICATION_TYPE_COLORS,
-  NOTIFICATION_TYPE_CATEGORIES,
-  ExtendedNotificationTypeEnum,
+  MATCH_NOTIFICATION_TYPES,
+  COMMUNITY_NOTIFICATION_TYPES,
+  REFERENCE_RESPONSE_NOTIFICATION_TYPES,
+  TOURNAMENT_NOTIFICATION_TYPES,
+  LEAGUE_NOTIFICATION_TYPES,
+  SESSION_NOTIFICATION_TYPES,
+  PAYOUTS_NOTIFICATION_TYPES,
 } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
 import {
@@ -39,61 +44,9 @@ import { useCommunityNavigation, useAppNavigation } from '#/navigation/hooks';
 import SignInPrompt from '#/components/SignInPrompt';
 import { SportIcon } from '#/components/SportIcon';
 
-/**
- * Match-related notification types that should open match detail sheet
- */
-const MATCH_NOTIFICATION_TYPES: ExtendedNotificationTypeEnum[] = [
-  'match_invitation',
-  'match_join_request',
-  'match_join_accepted',
-  'match_join_rejected',
-  'match_player_joined',
-  'match_cancelled',
-  'match_updated',
-  'match_starting_soon',
-  'match_check_in_available',
-  'match_new_available',
-  'match_spot_opened',
-  'nearby_match_available',
-  'player_kicked',
-  'player_left',
-  'score_confirmation',
-  'feedback_request',
-  'feedback_reminder',
-];
-
-/**
- * Community-related notification types that should navigate to community detail
- */
-const COMMUNITY_NOTIFICATION_TYPES: string[] = [
-  'community_join_request',
-  'community_join_accepted',
-  'community_join_rejected',
-];
-
-/**
- * Reference request response types that should navigate to sport profile
- */
-const REFERENCE_RESPONSE_NOTIFICATION_TYPES: string[] = [
-  'reference_request_accepted',
-  'reference_request_declined',
-];
-
-/**
- * Tournament-related notification types that should navigate to tournament detail
- */
-const TOURNAMENT_NOTIFICATION_TYPES: string[] = [
-  'tournament_partner_registered',
-  'tournament_partner_withdrew',
-  'tournament_registration_received',
-  'tournament_registration_approved',
-  'tournament_registration_removed',
-  'tournament_bracket_published',
-  'tournament_match_completed',
-  'tournament_updated',
-  'tournament_cancelled',
-  'tournament_completed',
-];
+// Notification-type routing groups (match, community, reference, tournament,
+// league, session, payouts) come from @rallia/shared-types so this screen and
+// the push-notification tap handler stay in sync.
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
@@ -464,6 +417,21 @@ const Notifications: React.FC = () => {
         Analytics.notificationMarkedRead({ type: notification.type, source: 'tap' });
       }
 
+      // Payout/reimbursement notifications have no target_id. Only
+      // payouts_setup_required is actionable — send the host to their profile
+      // where the Stripe Connect onboarding CTA lives. The rest are
+      // informational (marking them read above is the whole interaction).
+      if (notification.type && PAYOUTS_NOTIFICATION_TYPES.includes(notification.type)) {
+        Logger.logUserAction('notification_payouts_tapped', {
+          notificationId: notification.id,
+          type: notification.type,
+        });
+        if (notification.type === 'payouts_setup_required') {
+          appNavigation.navigate('UserProfile', {});
+        }
+        return;
+      }
+
       // Navigate to target based on notification type and target_id
       if (notification.target_id && notification.type) {
         const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(notification.type);
@@ -504,6 +472,42 @@ const Notifications: React.FC = () => {
           appNavigation.navigate('TournamentDetail', {
             tournamentId: notification.target_id,
           });
+          return;
+        }
+
+        // Handle league notifications - navigate to LeagueDetail. The league id
+        // is the payload's leagueId (season_closed) or the target_id (the
+        // membership/invite types, whose target is the league itself).
+        if (LEAGUE_NOTIFICATION_TYPES.includes(notification.type)) {
+          const payload = notification.payload as Record<string, unknown> | null;
+          const leagueId = (payload?.leagueId as string | undefined) ?? notification.target_id;
+          Logger.logUserAction('notification_league_tapped', {
+            notificationId: notification.id,
+            leagueId,
+            type: notification.type,
+          });
+          if (leagueId) {
+            appNavigation.navigate('LeagueDetail', { leagueId });
+          }
+          return;
+        }
+
+        // Handle session notifications - navigate to SessionDetail (confirm CTA).
+        // SessionDetail needs both the session id (target_id) and its league id
+        // (payload.leagueId).
+        if (SESSION_NOTIFICATION_TYPES.includes(notification.type)) {
+          const payload = notification.payload as Record<string, unknown> | null;
+          const sessionId = (payload?.sessionId as string | undefined) ?? notification.target_id;
+          const leagueId = payload?.leagueId as string | undefined;
+          Logger.logUserAction('notification_session_tapped', {
+            notificationId: notification.id,
+            sessionId,
+            leagueId,
+            type: notification.type,
+          });
+          if (sessionId && leagueId) {
+            appNavigation.navigate('SessionDetail', { sessionId, leagueId });
+          }
           return;
         }
 

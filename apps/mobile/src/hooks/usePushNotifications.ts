@@ -9,6 +9,15 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
 import { registerPushToken, supabase, unregisterPushToken, Logger } from '@rallia/shared-services';
+import {
+  MATCH_NOTIFICATION_TYPES,
+  COMMUNITY_NOTIFICATION_TYPES,
+  REFERENCE_NOTIFICATION_TYPES,
+  PAYOUTS_NOTIFICATION_TYPES,
+  TOURNAMENT_NOTIFICATION_TYPES,
+  LEAGUE_NOTIFICATION_TYPES,
+  SESSION_NOTIFICATION_TYPES,
+} from '@rallia/shared-types';
 
 // Import from the dedicated navigationRef module (not the '#/navigation'
 // barrel) to avoid a require cycle: the barrel re-exports AppNavigator → every
@@ -42,96 +51,10 @@ interface NotificationPayload {
   [key: string]: unknown;
 }
 
-/**
- * Match-related notification types that should navigate to match detail
- */
-const MATCH_NOTIFICATION_TYPES = [
-  'match_invitation',
-  'match_join_request',
-  'match_join_accepted',
-  'match_join_rejected',
-  'match_player_joined',
-  'match_cancelled',
-  'match_updated',
-  'match_starting_soon',
-  'match_check_in_available',
-  'match_new_available',
-  'match_spot_opened',
-  'nearby_match_available',
-  'player_kicked',
-  'player_left',
-  'score_confirmation',
-  'feedback_request',
-  'feedback_reminder',
-] as const;
-
-/**
- * Community-related notification types that should navigate to community detail
- */
-const COMMUNITY_NOTIFICATION_TYPES = [
-  'community_join_request',
-  'community_join_accepted',
-  'community_join_rejected',
-] as const;
-
-/**
- * Reference request notification types that should navigate to incoming reference requests
- */
-const REFERENCE_NOTIFICATION_TYPES = [
-  'reference_request_received',
-  'reference_request_accepted',
-  'reference_request_declined',
-] as const;
-
-/**
- * Stripe JIT payouts notifications.
- * `payouts_setup_required` is the only one with a deep-link action — tapping it
- * fetches the host's Stripe Connect onboarding URL and opens it in the system
- * browser. The rest are informational and just open the app.
- */
-const PAYOUTS_NOTIFICATION_TYPES = [
-  'payouts_setup_required',
-  'payouts_released',
-  'payouts_expired_refunded',
-  'reimbursement_received',
-  'reimbursement_all_received',
-] as const;
-
-/**
- * Tournament notifications — all deep-link to the tournament detail screen.
- */
-const TOURNAMENT_NOTIFICATION_TYPES = [
-  'tournament_partner_registered',
-  'tournament_partner_withdrew',
-  'tournament_registration_received',
-  'tournament_registration_approved',
-  'tournament_registration_removed',
-  'tournament_bracket_published',
-  'tournament_match_completed',
-  'tournament_updated',
-  'tournament_cancelled',
-  'tournament_completed',
-  'tournament_invitation',
-] as const;
-
-/**
- * League notifications that deep-link to the league detail screen. The league
- * id arrives as the payload's leagueId (season_closed) or the target_id (the
- * membership/invite types, whose target is the league).
- */
-const LEAGUE_NOTIFICATION_TYPES = [
-  'league_invitation',
-  'league_member_request',
-  'league_member_approved',
-  'season_closed',
-] as const;
-
-/**
- * Session notifications that deep-link to the session detail screen (its
- * confirm CTA). SessionDetail needs both the session and its league, both
- * carried in the payload.
- */
-const SESSION_NOTIFICATION_TYPES = ['session_published', 'session_confirm_reminder'] as const;
+// Notification-type routing groups live in @rallia/shared-types so the in-app
+// Notifications screen and this push handler share one source of truth and
+// cannot drift. `payouts_setup_required` is the only payout type with a
+// deep-link action (Stripe onboarding); the rest just open the app.
 
 /**
  * Open the Stripe Connect Express hosted onboarding URL for the current user.
@@ -441,8 +364,11 @@ export function usePushNotifications(
       match_id: data.matchId,
     });
 
-    // Handle match-related notifications
-    if (data.matchId && notificationType) {
+    // Handle match-related notifications. match_time_* carry the match id as
+    // target_id (no matchId field), so fall back to targetId; the type-membership
+    // check below keeps non-match notifications from matching.
+    const matchId = (data.matchId ?? data.targetId) as string | undefined;
+    if (matchId && notificationType) {
       const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(
         notificationType as (typeof MATCH_NOTIFICATION_TYPES)[number]
       );
@@ -450,7 +376,7 @@ export function usePushNotifications(
       if (isMatchNotification) {
         // Set pending match ID for deep linking
         if (onMatchNotificationTappedRef.current) {
-          onMatchNotificationTappedRef.current(data.matchId);
+          onMatchNotificationTappedRef.current(matchId);
         }
 
         // Navigate to PlayerMatches screen (My Games)
@@ -458,7 +384,7 @@ export function usePushNotifications(
         navigateFromOutside('PlayerMatches');
 
         Logger.logUserAction('push_notification_deep_link', {
-          matchId: data.matchId,
+          matchId,
           type: notificationType,
         });
       }
