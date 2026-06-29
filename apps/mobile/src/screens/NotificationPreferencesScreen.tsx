@@ -42,6 +42,7 @@ import {
   type DeliveryChannelEnum,
 } from '@rallia/shared-types';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import type { TranslationKey } from '@rallia/shared-translations';
 
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation } from '#/hooks';
@@ -70,6 +71,7 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'nearby_match_available',
   'player_kicked',
   'player_left',
+  'match_completed',
   // Match time-suggestion (counter-proposal) flow
   'match_time_suggested',
   'match_time_suggestion_accepted',
@@ -91,6 +93,25 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'availability_refresh_reminder',
   // Platform-wide announcements (email-only broadcasts)
   'admin_broadcast',
+  // Leagues & Tournaments (player-facing competition lifecycle)
+  'tournament_partner_registered',
+  'tournament_partner_withdrew',
+  'tournament_registration_received',
+  'tournament_invitation',
+  'tournament_registration_approved',
+  'tournament_registration_removed',
+  'tournament_bracket_published',
+  'tournament_match_completed',
+  'tournament_match_ready',
+  'tournament_updated',
+  'tournament_cancelled',
+  'tournament_completed',
+  'league_invitation',
+  'league_member_request',
+  'league_member_approved',
+  'session_published',
+  'session_confirm_reminder',
+  'season_closed',
 ] as ExtendedNotificationTypeEnum[]);
 
 // Types where only the email channel is relevant — push and sms toggles are disabled.
@@ -137,6 +158,27 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   availability_refresh_reminder: primary[500],
   // Platform announcements
   admin_broadcast: status.info.DEFAULT,
+  // Match outcome
+  match_completed: status.success.light,
+  // Leagues & Tournaments
+  tournament_partner_registered: primary[500],
+  tournament_partner_withdrew: accent[600],
+  tournament_registration_received: primary[500],
+  tournament_invitation: primary[500],
+  tournament_registration_approved: status.success.light,
+  tournament_registration_removed: secondary[500],
+  tournament_bracket_published: status.info.DEFAULT,
+  tournament_match_completed: status.info.DEFAULT,
+  tournament_match_ready: accent[600],
+  tournament_updated: status.info.DEFAULT,
+  tournament_cancelled: secondary[500],
+  tournament_completed: status.success.light,
+  league_invitation: primary[500],
+  league_member_request: primary[500],
+  league_member_approved: status.success.light,
+  session_published: status.info.DEFAULT,
+  session_confirm_reminder: accent[600],
+  season_closed: status.info.DEFAULT,
 };
 
 // Group notification types by category
@@ -146,6 +188,7 @@ function groupByCategory(): Record<NotificationCategory, ExtendedNotificationTyp
     social: [],
     system: [],
     organization: [], // Organization notifications are managed separately in the web dashboard
+    leagues: [],
   };
 
   for (const [type, category] of Object.entries(NOTIFICATION_TYPE_CATEGORIES)) {
@@ -433,6 +476,7 @@ const NotificationPreferencesScreen: React.FC = () => {
       social: t('notifications.categories.social'),
       system: t('notifications.categories.system'),
       organization: t('notifications.categories.organization'),
+      leagues: t('notifications.categories.leagues'),
     }),
     [t]
   );
@@ -446,52 +490,15 @@ const NotificationPreferencesScreen: React.FC = () => {
     [t]
   );
 
-  const typeLabels = useMemo(
-    () =>
-      ({
-        // Match category
-        match_invitation: t('notifications.types.match_invitation'),
-        match_join_request: t('notifications.types.match_join_request'),
-        match_join_accepted: t('notifications.types.match_join_accepted'),
-        match_join_rejected: t('notifications.types.match_join_rejected'),
-        match_player_joined: t('notifications.types.match_player_joined'),
-        match_cancelled: t('notifications.types.match_cancelled'),
-        match_updated: t('notifications.types.match_updated'),
-        match_starting_soon: t('notifications.types.match_starting_soon'),
-        match_check_in_available: t('notifications.types.match_check_in_available'),
-        match_new_available: t('notifications.types.match_new_available'),
-        match_spot_opened: t('notifications.types.match_spot_opened'),
-        nearby_match_available: t('notifications.types.nearby_match_available'),
-        player_kicked: t('notifications.types.player_kicked'),
-        player_left: t('notifications.types.player_left'),
-        feedback_request: t('notifications.types.feedback_request'),
-        feedback_reminder: t('notifications.types.feedback_reminder'),
-        score_confirmation: t('notifications.types.score_confirmation'),
-        // Social category
-        chat: t('notifications.types.chat'),
-        new_message: t('notifications.types.new_message'),
-        rating_verified: t('notifications.types.rating_verified'),
-        // Reference request types
-        reference_request_received: t('notifications.types.reference_request_received'),
-        reference_request_accepted: t('notifications.types.reference_request_accepted'),
-        reference_request_declined: t('notifications.types.reference_request_declined'),
-        // Match time-suggestion flow
-        match_time_suggested: t('notifications.types.match_time_suggested'),
-        match_time_suggestion_accepted: t('notifications.types.match_time_suggestion_accepted'),
-        match_time_suggestion_declined: t('notifications.types.match_time_suggestion_declined'),
-        // Morning digest
-        morning_digest: t('notifications.types.morning_digest'),
-        // Weekly availability refresh
-        availability_refresh_reminder: t('notifications.types.availability_refresh_reminder'),
-        // System category
-        reminder: t('notifications.types.reminder'),
-        payment: t('notifications.types.payment'),
-        support: t('notifications.types.support'),
-        system: t('notifications.types.system'),
-        admin_broadcast: t('notifications.types.admin_broadcast'),
-      }) as Record<ExtendedNotificationTypeEnum, string>,
-    [t]
-  );
+  // Derive labels for exactly the rendered (active) types so every row has a
+  // real label and the map can never silently fall out of sync with the set.
+  const typeLabels = useMemo(() => {
+    const labels = {} as Record<ExtendedNotificationTypeEnum, string>;
+    for (const type of ACTIVE_NOTIFICATION_TYPES) {
+      labels[type] = t(`notifications.types.${type}` as TranslationKey);
+    }
+    return labels;
+  }, [t]);
 
   const handleToggle = useCallback(
     (type: ExtendedNotificationTypeEnum, channel: DeliveryChannelEnum, enabled: boolean) => {
@@ -562,7 +569,7 @@ const NotificationPreferencesScreen: React.FC = () => {
         </View>
 
         {/* Category sections */}
-        {(['match', 'social', 'system'] as NotificationCategory[])
+        {(['match', 'leagues', 'social', 'system'] as NotificationCategory[])
           .filter(category => categoryGroups[category].length > 0)
           .map(category => (
             <CategorySection

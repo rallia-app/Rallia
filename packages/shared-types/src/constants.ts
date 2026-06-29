@@ -566,7 +566,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
 /**
  * Notification type categories for grouping in preferences UI
  */
-export type NotificationCategory = 'match' | 'social' | 'system' | 'organization';
+export type NotificationCategory = 'match' | 'social' | 'system' | 'organization' | 'leagues';
 
 export const NOTIFICATION_TYPE_CATEGORIES: Record<
   ExtendedNotificationTypeEnum,
@@ -651,25 +651,27 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_time_suggested: 'match',
   match_time_suggestion_accepted: 'match',
   match_time_suggestion_declined: 'match',
-  tournament_partner_registered: 'match',
-  tournament_partner_withdrew: 'match',
-  // Tournament lifecycle
-  tournament_registration_received: 'match',
-  tournament_invitation: 'match',
-  tournament_registration_approved: 'match',
-  tournament_registration_removed: 'match',
-  tournament_bracket_published: 'match',
-  tournament_match_completed: 'match',
-  tournament_match_ready: 'match',
-  tournament_updated: 'match',
-  tournament_cancelled: 'match',
-  tournament_completed: 'match',
-  session_published: 'organization',
-  session_confirm_reminder: 'organization',
-  season_closed: 'organization',
-  league_invitation: 'organization',
-  league_member_request: 'organization',
-  league_member_approved: 'organization',
+  // Leagues & Tournaments — player-facing competition notifications. Grouped
+  // under the 'leagues' category so they surface in the mobile preferences
+  // screen (which intentionally hides true 'organization'/staff notifications).
+  tournament_partner_registered: 'leagues',
+  tournament_partner_withdrew: 'leagues',
+  tournament_registration_received: 'leagues',
+  tournament_invitation: 'leagues',
+  tournament_registration_approved: 'leagues',
+  tournament_registration_removed: 'leagues',
+  tournament_bracket_published: 'leagues',
+  tournament_match_completed: 'leagues',
+  tournament_match_ready: 'leagues',
+  tournament_updated: 'leagues',
+  tournament_cancelled: 'leagues',
+  tournament_completed: 'leagues',
+  session_published: 'leagues',
+  session_confirm_reminder: 'leagues',
+  season_closed: 'leagues',
+  league_invitation: 'leagues',
+  league_member_request: 'leagues',
+  league_member_approved: 'leagues',
 };
 
 /**
@@ -680,6 +682,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
   social: 'Social Notifications',
   system: 'System Notifications',
   organization: 'Organization Notifications',
+  leagues: 'Leagues & Tournaments',
 };
 
 /**
@@ -823,6 +826,99 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   league_member_request: { email: false, push: true, sms: false },
   league_member_approved: { email: true, push: true, sms: false },
 };
+
+// ============================================
+// NOTIFICATION ROUTING GROUPS
+// ============================================
+
+/**
+ * Notification-type groupings used to deep-link a tapped notification to the
+ * right screen. Single source of truth shared by the in-app Notifications
+ * screen and the push-notification tap handler so the two can never drift.
+ *
+ * Typed as `readonly ExtendedNotificationTypeEnum[]` so a typo or a stale value
+ * fails to compile, and `.includes(notification.type)` needs no cast.
+ */
+export const MATCH_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'match_invitation',
+  'match_join_request',
+  'match_join_accepted',
+  'match_join_rejected',
+  'match_player_joined',
+  'match_cancelled',
+  'match_updated',
+  'match_starting_soon',
+  'match_check_in_available',
+  'match_new_available',
+  'match_spot_opened',
+  'nearby_match_available',
+  'player_kicked',
+  'player_left',
+  'score_confirmation',
+  'feedback_request',
+  'feedback_reminder',
+  'match_time_suggested',
+  'match_time_suggestion_accepted',
+  'match_time_suggestion_declined',
+];
+
+export const COMMUNITY_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'community_join_request',
+  'community_join_accepted',
+  'community_join_rejected',
+];
+
+/** All reference-request types (target is the request/sport profile). */
+export const REFERENCE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'reference_request_received',
+  'reference_request_accepted',
+  'reference_request_declined',
+];
+
+/** Reference responses that deep-link to the sport profile. */
+export const REFERENCE_RESPONSE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'reference_request_accepted',
+  'reference_request_declined',
+];
+
+/** Tournament notifications — target_id is always the tournament id. */
+export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'tournament_partner_registered',
+  'tournament_partner_withdrew',
+  'tournament_registration_received',
+  'tournament_invitation',
+  'tournament_registration_approved',
+  'tournament_registration_removed',
+  'tournament_bracket_published',
+  'tournament_match_completed',
+  'tournament_match_ready',
+  'tournament_updated',
+  'tournament_cancelled',
+  'tournament_completed',
+];
+
+/** League notifications — league id arrives as payload.leagueId or target_id. */
+export const LEAGUE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'league_invitation',
+  'league_member_request',
+  'league_member_approved',
+  'season_closed',
+];
+
+/** Session notifications — need both payload.sessionId and payload.leagueId. */
+export const SESSION_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'session_published',
+  'session_confirm_reminder',
+];
+
+/** Stripe payout / reimbursement notifications. */
+export const PAYOUTS_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'payouts_setup_required',
+  'payouts_released',
+  'payouts_expired_refunded',
+  'reimbursement_received',
+  'reimbursement_all_received',
+];
 
 // ============================================
 // MATCH CREATION - NEW ENUMS
