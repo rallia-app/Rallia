@@ -7816,6 +7816,80 @@ export type Database = {
           },
         ]
       }
+      season_members: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          enrolled_at: string
+          id: string
+          invited_by: string | null
+          season_id: string
+          status: Database["public"]["Enums"]["season_member_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          enrolled_at?: string
+          id?: string
+          invited_by?: string | null
+          season_id: string
+          status?: Database["public"]["Enums"]["season_member_status"]
+          updated_at?: string
+          user_id: string
+          version?: number
+          withdrawn_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          enrolled_at?: string
+          id?: string
+          invited_by?: string | null
+          season_id?: string
+          status?: Database["public"]["Enums"]["season_member_status"]
+          updated_at?: string
+          user_id?: string
+          version?: number
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_members_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_members_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       season_rankings: {
         Row: {
           created_at: string
@@ -11120,6 +11194,10 @@ export type Database = {
         Args: { conversation_id_param: string; user_id_param: string }
         Returns: boolean
       }
+      is_enrolled_season_member: {
+        Args: { p_season_id: string }
+        Returns: boolean
+      }
       is_league_organizer: { Args: { p_league_id: string }; Returns: boolean }
       is_match_creator: {
         Args: { p_match_id: string; p_player_id: string }
@@ -12090,6 +12168,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      season_enroll: {
+        Args: { p_season_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          enrolled_at: string
+          id: string
+          invited_by: string | null
+          season_id: string
+          status: Database["public"]["Enums"]["season_member_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "season_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       season_open: {
         Args: { p_season_id: string; p_version_was: number }
         Returns: {
@@ -12110,6 +12211,52 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "seasons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      season_remove_member: {
+        Args: { p_season_member_id: string; p_version_was: number }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          enrolled_at: string
+          id: string
+          invited_by: string | null
+          season_id: string
+          status: Database["public"]["Enums"]["season_member_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "season_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      season_withdraw: {
+        Args: { p_season_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          enrolled_at: string
+          id: string
+          invited_by: string | null
+          season_id: string
+          status: Database["public"]["Enums"]["season_member_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "season_members"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -13946,6 +14093,7 @@ export type Database = {
       reputation_tier: "unknown" | "bronze" | "silver" | "gold" | "platinum"
       role_enum: "admin" | "staff" | "player" | "coach" | "owner"
       score_validation_status: "pending_validation" | "validated" | "rejected"
+      season_member_status: "pending" | "enrolled" | "withdrawn"
       season_status: "draft" | "open" | "closed"
       session_match_status:
         | "pending"
@@ -14634,6 +14782,7 @@ export const Constants = {
       reputation_tier: ["unknown", "bronze", "silver", "gold", "platinum"],
       role_enum: ["admin", "staff", "player", "coach", "owner"],
       score_validation_status: ["pending_validation", "validated", "rejected"],
+      season_member_status: ["pending", "enrolled", "withdrawn"],
       season_status: ["draft", "open", "closed"],
       session_match_status: [
         "pending",
