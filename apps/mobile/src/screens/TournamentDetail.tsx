@@ -1126,7 +1126,9 @@ export const TournamentDetail: React.FC = () => {
     lightHaptic();
 
     // Paid registration: confirm with the refund estimate, then withdraw+refund.
-    if (isPaidTournament) {
+    // Only a confirmed (paid) row has a captured payment to refund — an unpaid
+    // pending invite falls through to the plain withdraw below.
+    if (isPaidTournament && myActiveRegistration.status === 'registered') {
       const pastCutoff =
         !!feeQuote?.refundCutoffAt && new Date(feeQuote.refundCutoffAt) < new Date();
       const estimateCents = !feeQuote
@@ -1178,6 +1180,24 @@ export const TournamentDetail: React.FC = () => {
   const onAcceptInvite = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
+    // Paid tournaments: an invited player still pays the entry fee to claim the
+    // slot. Same Stripe flow as self-register — begin_paid_registration reuses
+    // the pending invite row, and the webhook confirms the spot after payment.
+    if (isPaidTournament) {
+      if (isDoubles) {
+        void SheetManager.show('tournament-partner-picker', {
+          payload: {
+            sportId: tournament.sport_id,
+            onPick: partner => {
+              void handlePaidRegister(partner.id);
+            },
+          },
+        });
+        return;
+      }
+      void handlePaidRegister();
+      return;
+    }
     if (isDoubles) {
       void SheetManager.show('tournament-partner-picker', {
         payload: {
@@ -1189,7 +1209,7 @@ export const TournamentDetail: React.FC = () => {
       return;
     }
     acceptInvite.mutate({ tournamentId: tournament.id });
-  }, [tournament, isDoubles, acceptInvite]);
+  }, [tournament, isDoubles, acceptInvite, isPaidTournament, handlePaidRegister]);
 
   const onSetUpBracket = useCallback(() => {
     if (!tournament) return;
@@ -2118,8 +2138,8 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Invite players — prominent CTA */}
-            {isOrganizer && adminActions.canInvite && (
+            {/* Invite players — prominent CTA, only once registration is open */}
+            {isOrganizer && tournament.status === 'registration_open' && (
               <DashboardCtaCard
                 icon="share-social-outline"
                 title={t('tournamentDetail.invitePlayers.ctaTitle')}
@@ -2310,13 +2330,15 @@ export const TournamentDetail: React.FC = () => {
                     : 'tournamentDetail.dashboard.inviteCta.description'
                 )}
                 buttonLabel={
-                  acceptInvite.isPending
+                  acceptInvite.isPending || createRegistrationPayment.isPending
                     ? t('tournamentDetail.actions.accepting')
-                    : t('tournamentDetail.actions.acceptInvite')
+                    : feeTotalLabel
+                      ? `${t('tournamentDetail.actions.acceptInvite')} · ${feeTotalLabel}`
+                      : t('tournamentDetail.actions.acceptInvite')
                 }
                 buttonIcon="checkmark-circle-outline"
                 onPress={onAcceptInvite}
-                disabled={acceptInvite.isPending}
+                disabled={acceptInvite.isPending || createRegistrationPayment.isPending}
                 testID="cta-accept-tournament-invite"
                 colors={colors}
               />
@@ -3371,6 +3393,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     marginBottom: spacingPixels[4],
+    // playersTabContent has no horizontal padding; match the PlayerCards'
+    // 16px side margins so the button aligns with the rows below it.
+    marginHorizontal: spacingPixels[4],
   },
   heroFixed: {
     paddingHorizontal: spacingPixels[4],
