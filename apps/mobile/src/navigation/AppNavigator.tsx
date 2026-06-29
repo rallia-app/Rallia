@@ -298,7 +298,15 @@ function SharedScreenHeader({ navigation, options }: NativeStackHeaderProps) {
           <ThemedBackButton navigation={navigation} />
         </View>
         <RNText
+          numberOfLines={1}
+          ellipsizeMode="tail"
           style={{
+            flex: 1,
+            // Reserve room for the absolutely-positioned back button (left) and
+            // headerRight (right) so a long title truncates instead of
+            // overflowing and colliding with them.
+            marginHorizontal: 48,
+            textAlign: 'center',
             fontSize: fontSizePixels.lg,
             fontWeight: '600',
             color: colors.headerForeground,
