@@ -37,6 +37,7 @@ import {
 
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
+import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useThemeStyles } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
@@ -82,14 +83,23 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
       if (!currentUserId || createdMatchId) return;
       void lightHaptic();
       const voters = votersByOption.get(optionIndex) ?? new Set<string>();
+      const removed = voters.has(currentUserId);
       toggleVote.mutate({
         messageId: message.id,
         playerId: currentUserId,
         optionIndex,
-        hasVoted: voters.has(currentUserId),
+        hasVoted: removed,
+      });
+      Analytics.matchOrganizerVoteCast({
+        sport_id: metadata!.sport_id,
+        format: metadata!.format,
+        participant_count: participants.length,
+        option_index: optionIndex,
+        option_tier: metadata!.options[optionIndex]?.tier ?? 'usually_free',
+        removed,
       });
     },
-    [currentUserId, createdMatchId, votersByOption, toggleVote, message.id]
+    [currentUserId, createdMatchId, votersByOption, toggleVote, message.id, metadata, participants]
   );
 
   const handleCreate = useCallback(
@@ -98,7 +108,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
       void lightHaptic();
       setCreatingIndex(optionIndex);
       try {
-        await createMatch.mutateAsync({
+        const matchId = await createMatch.mutateAsync({
           sportId: metadata!.sport_id,
           slotStart: option.slot_start,
           playerIds: participants,
@@ -109,6 +119,15 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           conversationId: message.conversation_id,
         });
         void successHaptic();
+        Analytics.matchOrganizerMatchCreated({
+          match_id: matchId,
+          sport_id: metadata!.sport_id,
+          format: metadata!.format,
+          participant_count: participants.length,
+          option_index: optionIndex,
+          option_tier: option.tier,
+          price_cents: option.price_cents,
+        });
       } catch (error) {
         console.error('Failed to create game from organizer card:', error);
         void warningHaptic();

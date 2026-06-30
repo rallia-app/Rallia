@@ -220,6 +220,9 @@ declare module 'react-native-actions-sheet' {
         organizerId: string;
         participantIds: string[];
         defaultSportId?: string | null;
+        /** Analytics context, threaded from the chat for card_posted props. */
+        conversationType?: string;
+        isRoundChat?: boolean;
       };
     }>;
     // Group sheets

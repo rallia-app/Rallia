@@ -409,14 +409,23 @@ export default function ChatConversationScreen() {
   const handleOrganizeMatch = useCallback(() => {
     if (!playerId || !conversationId || participantIds.length < 2) return;
     lightHaptic();
+    const conversationType = conversation?.conversation_type ?? 'unknown';
+    const isRoundChat = !!conversation?.tournament_match_id;
+    Analytics.matchOrganizerOpened({
+      conversation_type: conversationType,
+      is_round_chat: isRoundChat,
+      participant_count: participantIds.length,
+    });
     SheetManager.show('match-organizer-setup', {
       payload: {
         conversationId,
         organizerId: playerId,
         participantIds,
+        conversationType,
+        isRoundChat,
       },
     });
-  }, [playerId, conversationId, participantIds]);
+  }, [playerId, conversationId, participantIds, conversation]);
 
   // Get the other user's ID for direct chats (used for blocking)
   const otherUserId = useMemo(() => {
