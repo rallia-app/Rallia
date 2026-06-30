@@ -1012,3 +1012,64 @@ export function tournamentInviteRedeemed(props: {
 }): void {
   capture('lt.tournament.invite_redeemed', props);
 }
+
+// ---- Chat Match Organizer ----
+// Funnel: opened → card_posted → vote_cast (×N) → match_created. The card lives
+// in small DM/group chats and tournament round chats; opened/card_posted carry
+// conversation_type + is_round_chat so the tournament vs casual paths split.
+// match_created is the conversion and is keyed on match_id, joining the regular
+// match-lifecycle events (organizer games use create_casual_match, so the
+// generic match_created does NOT fire — no double counting).
+
+/** Organizer setup opened from a chat (top of funnel / intent). */
+export function matchOrganizerOpened(props: {
+  conversation_type: string;
+  is_round_chat: boolean;
+  participant_count: number;
+}): void {
+  capture('match_organizer_opened', props);
+}
+
+/** A votable organizer card was posted into the conversation. */
+export function matchOrganizerCardPosted(props: {
+  conversation_type: string;
+  is_round_chat: boolean;
+  sport_id: string;
+  format: 'singles' | 'doubles';
+  participant_count: number;
+  /** Options the organizer actually posted (after deselecting some). */
+  options_posted: number;
+  /** Options the engine surfaced in the preview. */
+  options_available: number;
+  /** Posted options backed by a confirmed bookable court (vs usually-free). */
+  bookable_count: number;
+}): void {
+  capture('match_organizer_card_posted', props);
+}
+
+/** A participant thumbs-up'd (or removed a vote on) an option. */
+export function matchOrganizerVoteCast(props: {
+  sport_id: string;
+  format: 'singles' | 'doubles';
+  participant_count: number;
+  option_index: number;
+  option_tier: 'bookable' | 'usually_free';
+  /** True when the tap removed an existing vote rather than adding one. */
+  removed: boolean;
+}): void {
+  capture('match_organizer_vote_cast', props);
+}
+
+/** The conversion: a mutually-agreed option was turned into a real game. */
+export function matchOrganizerMatchCreated(props: {
+  match_id: string;
+  sport_id: string;
+  format: 'singles' | 'doubles';
+  participant_count: number;
+  option_index: number;
+  option_tier: 'bookable' | 'usually_free';
+  /** Court price of the agreed slot in cents (null when not court-confirmed). */
+  price_cents: number | null;
+}): void {
+  capture('match_organizer_match_created', props);
+}

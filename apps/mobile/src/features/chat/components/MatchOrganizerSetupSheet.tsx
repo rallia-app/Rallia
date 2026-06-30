@@ -44,6 +44,7 @@ import {
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { SportIcon } from '#/components/SportIcon';
+import * as Analytics from '#/services/analytics';
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
@@ -160,6 +161,16 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
         options: chosen,
         previewText: t('matchOrganizer.preview'),
       });
+      Analytics.matchOrganizerCardPosted({
+        conversation_type: payload?.conversationType ?? 'unknown',
+        is_round_chat: payload?.isRoundChat ?? false,
+        sport_id: selectedSportId,
+        format,
+        participant_count: participantIds.length,
+        options_posted: chosen.length,
+        options_available: options.length,
+        bookable_count: chosen.filter(o => o.court_confirmed).length,
+      });
       void successHaptic();
       await SheetManager.hide(SHEET_ID);
     } catch (error) {
@@ -182,6 +193,7 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
     participantIds,
     submitting,
     post,
+    payload,
     t,
   ]);
 
