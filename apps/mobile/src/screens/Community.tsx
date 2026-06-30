@@ -95,15 +95,14 @@ const Community = () => {
   const actionButtons: ActionButton[] = useMemo(() => {
     const buttons: ActionButton[] = [];
 
-    // Tournaments are live for everyone; Leagues stay admin-gated while the
-    // feature is in rollout.
-    buttons.push({
-      id: 'tournaments',
-      icon: 'trophy-outline',
-      label: t('community.tournaments'),
-      onPress: handleTournaments,
-    });
+    // Tournaments and Leagues stay admin-gated while the feature is in rollout.
     if (isAdmin) {
+      buttons.push({
+        id: 'tournaments',
+        icon: 'trophy-outline',
+        label: t('community.tournaments'),
+        onPress: handleTournaments,
+      });
       buttons.push({
         id: 'leagues',
         icon: 'ribbon-outline',

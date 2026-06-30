@@ -248,9 +248,8 @@ export const ActionsBottomSheet: React.FC = () => {
   const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Tournaments are live for everyone; Leagues stay admin-gated while the
-  // feature is in rollout.
-  const showCreateTournament = true;
+  // Tournaments and Leagues stay admin-gated while the feature is in rollout.
+  const showCreateTournament = isAdmin;
   const showCreateLeague = isAdmin;
 
   // Wizard state for all sliding panels (local, only for slide animation)

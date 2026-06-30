@@ -1687,11 +1687,13 @@ const Home = () => {
             label={t('home.quickNav.leaderboard')}
             onPress={() => appNavigation.navigate('Leaderboard')}
           />
-          <QuickNavButton
-            icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-            label={t('home.quickNav.tournaments')}
-            onPress={() => appNavigation.navigate('Tournaments')}
-          />
+          {isAdmin ? (
+            <QuickNavButton
+              icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+              label={t('home.quickNav.tournaments')}
+              onPress={() => appNavigation.navigate('Tournaments')}
+            />
+          ) : null}
           {isAdmin ? (
             <QuickNavButton
               icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
