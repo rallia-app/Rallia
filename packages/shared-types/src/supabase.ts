@@ -10633,9 +10633,34 @@ export type Database = {
           last_seen: string
         }[]
       }
+      get_player_played_games: {
+        Args: { p_player_id: string }
+        Returns: {
+          created_by: string
+          custom_duration_minutes: number
+          duration: Database["public"]["Enums"]["match_duration_enum"]
+          match_date: string
+        }[]
+      }
       get_player_referral_stats: {
         Args: { p_player_id: string }
         Returns: Json
+      }
+      get_player_reputation_breakdown: {
+        Args: { p_player_id: string }
+        Returns: {
+          games_completed: number
+          no_shows: number
+          on_time: number
+          late: number
+          left_late: number
+          late_cancellations: number
+          reviews_5: number
+          reviews_4: number
+          reviews_3: number
+          reviews_2: number
+          reviews_1: number
+        }[]
       }
       get_player_reports: {
         Args: {

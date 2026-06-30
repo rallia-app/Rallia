@@ -17,6 +17,8 @@ interface HeroBadgeRowProps {
   isDark: boolean;
   onFoundingInfoPress?: () => void;
   onCovetedInfoPress?: () => void;
+  /** Chips rendered at the front of the row (e.g. rating + reputation). */
+  leading?: React.ReactNode;
 }
 
 /**
@@ -33,14 +35,16 @@ const HeroBadgeRow: React.FC<HeroBadgeRowProps> = ({
   isDark,
   onFoundingInfoPress,
   onCovetedInfoPress,
+  leading,
 }) => {
   const showFounding = isFoundingMember(createdAt, onboardingCompleted);
   const showCoveted = isCoveted(reputationScore, certificationStatus ?? undefined, totalEvents);
 
-  if (!showFounding && !showCoveted) return null;
+  if (!leading && !showFounding && !showCoveted) return null;
 
   return (
     <View style={styles.row}>
+      {leading}
       <FoundingMemberBadge
         createdAt={createdAt}
         onboardingCompleted={onboardingCompleted}

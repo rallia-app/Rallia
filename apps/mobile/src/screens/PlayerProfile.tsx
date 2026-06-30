@@ -17,10 +17,10 @@ import {
   ActivityIndicator,
   Animated,
   FlatList,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -40,7 +40,6 @@ import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import type { Profile, Player } from '@rallia/shared-types';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   spacingPixels,
   radiusPixels,
@@ -72,6 +71,7 @@ import { CertificationBadge, ProofViewer, type BadgeStatus } from '#/features/ra
 import { PlayerMatchHistorySection } from '#/screens/components/PlayerMatchHistorySection';
 import { useVideoThumbnail } from '#/hooks/useVideoThumbnail';
 import { useOgImage } from '#/hooks/useOgImage';
+import { resolveStorageUrl, isPrivateBucketUrl } from '#/services/imageUpload';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -112,9 +112,6 @@ interface RatingProofData {
     mime_type: string;
   } | null;
 }
-
-const PROOF_CARD_WIDTH = 140;
-const PROOF_CARD_HEIGHT = 105;
 
 interface PlayerSportPreferences {
   playerSportId: string | null;
@@ -214,66 +211,101 @@ const calculateWeekStreak = (matchDates: string[]): number => {
   return streak;
 };
 
-/** Small card component so thumbnail hooks can be called per proof. */
-const ProofGalleryCard: React.FC<{
+/** Full-width hero card for the proof carousel. Per-proof thumbnail hooks. */
+const ProofHeroCard: React.FC<{
   item: RatingProofData;
+  width: number;
+  signedUrls: Record<string, string>;
   effectiveType: string;
   typeColor: string;
   iconName: string;
   backgroundColor: string;
   onPress: () => void;
-}> = ({ item, effectiveType, typeColor, iconName, backgroundColor, onPress }) => {
+}> = ({
+  item,
+  width,
+  signedUrls,
+  effectiveType,
+  typeColor,
+  iconName,
+  backgroundColor,
+  onPress,
+}) => {
+  // Proof files live in a private bucket: private URLs must be signed before they
+  // load — use the resolved signed URL (null while it's still resolving).
+  const resolveUri = (raw: string | null | undefined): string | null => {
+    if (!raw) return null;
+    return isPrivateBucketUrl(raw) ? (signedUrls[raw] ?? null) : raw;
+  };
+  const fileThumb = resolveUri(item.file?.thumbnail_url);
+  const fileUrl = resolveUri(item.file?.url);
   const videoThumbnail = useVideoThumbnail(
-    effectiveType === 'video' && !item.file?.thumbnail_url ? item.file?.url : null
+    effectiveType === 'video' && !item.file?.thumbnail_url ? fileUrl : null
   );
   const ogImage = useOgImage(effectiveType === 'external_link' ? item.external_url : null);
   const thumbnail =
-    item.file?.thumbnail_url ||
+    fileThumb ||
     (effectiveType === 'video' ? videoThumbnail : null) ||
-    (effectiveType === 'image' ? item.file?.url : null) ||
+    (effectiveType === 'image' ? fileUrl : null) ||
     (effectiveType === 'external_link' ? ogImage : null);
 
   return (
     <TouchableOpacity
-      style={[styles.proofGalleryCard, { backgroundColor }]}
-      activeOpacity={0.8}
+      style={[styles.proofHeroCard, { width, height: Math.round(width * 0.6), backgroundColor }]}
+      activeOpacity={0.9}
       onPress={onPress}
     >
       {thumbnail ? (
-        <Image
-          source={{ uri: thumbnail }}
-          style={styles.proofGalleryThumbnail}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: thumbnail }} style={styles.proofHeroImage} resizeMode="cover" />
       ) : (
-        <View style={[styles.proofGalleryPlaceholder, { backgroundColor: `${typeColor}20` }]}>
-          <Ionicons name={iconName as any} size={28} color={typeColor} />
+        <View style={[styles.proofHeroPlaceholder, { backgroundColor: `${typeColor}20` }]}>
+          <Ionicons name={iconName as any} size={48} color={typeColor} />
         </View>
       )}
       {/* Type badge overlay */}
-      <View style={[styles.proofTypeBadge, { backgroundColor: typeColor }]}>
-        <Ionicons name={iconName as any} size={10} color="#fff" />
+      <View style={[styles.proofHeroTypeBadge, { backgroundColor: typeColor }]}>
+        <Ionicons name={iconName as any} size={12} color="#fff" />
       </View>
       {/* Play icon for videos */}
       {effectiveType === 'video' && (
-        <View style={styles.proofPlayOverlay}>
-          <View style={[styles.proofPlayButton, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-            <Ionicons name="play" size={16} color="#fff" />
+        <View style={styles.proofHeroPlayOverlay} pointerEvents="none">
+          <View style={styles.proofHeroPlayButton}>
+            <Ionicons name="play" size={26} color="#fff" />
           </View>
         </View>
       )}
-      {/* Title */}
-      <View style={styles.proofGalleryTitleContainer}>
-        <Text style={styles.proofGalleryTitle} numberOfLines={1}>
+      {/* Bottom gradient + title */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.75)']}
+        style={styles.proofHeroFooter}
+        pointerEvents="none"
+      >
+        <Text style={styles.proofHeroTitle} numberOfLines={2}>
           {item.title}
         </Text>
-      </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 };
 
-// Accent-gradient pill matching Home's QuickNavButton: round icon chip on the
-// left, single-line label on the right, inside a 2xl-radius card.
+// Splits a label across two centered lines at the space nearest the middle so
+// multi-word actions wrap evenly. Single-word labels still reserve a second
+// (empty) line so tiles in a row stay the same height.
+const splitLabelTwoLines = (label: string): [string, string] => {
+  const trimmed = label.trim();
+  const mid = trimmed.length / 2;
+  let splitAt = -1;
+  for (let i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] !== ' ') continue;
+    if (splitAt === -1 || Math.abs(i - mid) <= Math.abs(splitAt - mid)) splitAt = i;
+  }
+  if (splitAt === -1) return [trimmed, ' '];
+  return [trimmed.slice(0, splitAt), trimmed.slice(splitAt + 1)];
+};
+
+// Flat accent action tile — matches the redesigned quick-nav buttons on Home and
+// Community: a 2xl-radius card with a bordered accent fill, a round translucent
+// icon chip on top, and a centered two-line label below.
 const HeroActionButton: React.FC<{
   icon: (color: string) => React.ReactNode;
   label: string;
@@ -281,6 +313,7 @@ const HeroActionButton: React.FC<{
   loading?: boolean;
   disabled?: boolean;
 }> = ({ icon, label, onPress, loading = false, disabled = false }) => {
+  const [lineOne, lineTwo] = splitLabelTwoLines(label);
   const handlePress = () => {
     void lightHaptic();
     onPress();
@@ -295,14 +328,9 @@ const HeroActionButton: React.FC<{
       accessibilityLabel={label}
       accessibilityState={{ disabled: loading || disabled, busy: loading }}
     >
-      <LinearGradient
-        colors={[accent[300], accent[400], accent[500]]}
-        locations={[0, 0.55, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[heroActionStyles.gradient, (loading || disabled) && { opacity: 0.6 }]}
+      <View
+        style={[heroActionStyles.inner, (loading || disabled) && heroActionStyles.innerDisabled]}
       >
-        <View style={heroActionStyles.topHighlight} />
         <View style={heroActionStyles.iconCircle}>
           {loading ? <ActivityIndicator size="small" color="#ffffff" /> : icon('#ffffff')}
         </View>
@@ -314,39 +342,47 @@ const HeroActionButton: React.FC<{
             style={heroActionStyles.label}
             numberOfLines={1}
           >
-            {label}
+            {lineOne}
+          </Text>
+          <Text
+            size="sm"
+            weight="semibold"
+            color="#ffffff"
+            style={heroActionStyles.label}
+            numberOfLines={1}
+          >
+            {lineTwo}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 };
 
 const heroActionStyles = StyleSheet.create({
   item: {
+    width: 200,
     borderRadius: radiusPixels['2xl'],
   },
-  gradient: {
+  inner: {
     flexDirection: 'row',
     borderRadius: radiusPixels['2xl'],
+    borderWidth: 1.5,
+    borderColor: accent[500],
+    backgroundColor: accent[400],
     alignItems: 'center',
     gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[4],
     paddingHorizontal: spacingPixels[4],
     overflow: 'hidden',
   },
-  topHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+  innerDisabled: {
+    opacity: 0.6,
   },
   iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.22)',
@@ -355,6 +391,7 @@ const heroActionStyles = StyleSheet.create({
     flexShrink: 0,
   },
   labelBlock: {
+    flex: 1,
     alignItems: 'center',
   },
   label: {
@@ -381,6 +418,19 @@ const PlayerProfile = () => {
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
   const [reputationDisplay, setReputationDisplay] = useState<ReputationDisplay | null>(null);
   const [reputationTotalEvents, setReputationTotalEvents] = useState<number>(0);
+  const [reputationBreakdown, setReputationBreakdown] = useState<{
+    gamesCompleted: number;
+    noShows: number;
+    onTime: number;
+    late: number;
+    leftLate: number;
+    lateCancellations: number;
+    reviews5: number;
+    reviews4: number;
+    reviews3: number;
+    reviews2: number;
+    reviews1: number;
+  } | null>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -406,6 +456,9 @@ const PlayerProfile = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const onlineColor = isDark ? status.success.light : status.success.DEFAULT;
+  const repErrorColor = isDark ? status.error.light : status.error.DEFAULT;
+  const repWarningColor = isDark ? status.warning.light : status.warning.DEFAULT;
+  const repStarColor = '#F59E0B';
   const pulseAnim = useMemo(() => new Animated.Value(1), []);
   useEffect(() => {
     if (!isOnline) {
@@ -431,6 +484,9 @@ const PlayerProfile = () => {
   const [proofsLoading, setProofsLoading] = useState(false);
   const [selectedProof, setSelectedProof] = useState<RatingProofData | null>(null);
   const [showProofViewer, setShowProofViewer] = useState(false);
+  const [activeProofIndex, setActiveProofIndex] = useState(0);
+  const [proofCarouselWidth, setProofCarouselWidth] = useState(0);
+  const [proofSignedUrls, setProofSignedUrls] = useState<Record<string, string>>({});
 
   // Calculate distance from current user to this player
   const distanceText = ((): string => {
@@ -614,6 +670,7 @@ const PlayerProfile = () => {
         sportProfileResult,
         reputationResult,
         statsResult,
+        reputationBreakdownResult,
       ] = await Promise.all([
         // Fetch profile data
         withTimeout(
@@ -712,33 +769,31 @@ const PlayerProfile = () => {
           (async () =>
             supabase
               .from('player_reputation')
-              .select(
-                'reputation_score, reputation_tier, total_events, matches_completed, is_public'
-              )
+              .select('reputation_score, reputation_tier, total_events, is_public')
               .eq('player_id', playerId)
               .maybeSingle())(),
           15000,
           'Failed to load reputation'
         ),
 
-        // Fetch match statistics. A match counts as "actually played" when:
-        //   - participant.status = 'joined' (player committed)
-        //   - participant.showed_up != false (NULL = feedback pending; treat as played)
-        //   - match.closed_at IS NOT NULL (match was finalized 48h after end_time)
-        //   - match.cancelled_at IS NULL (not cancelled)
-        //   - match.mutually_cancelled IS NOT TRUE (not all-mutual no-show)
-        // closed_at being non-null implies the match is in the past, so no extra date check.
+        // Fetch the player's qualifying played games from the canonical
+        // qualifying_played_game definition (same "played" rule as the weekly
+        // streak and leaderboard) via get_player_played_games. The screen only
+        // aggregates the returned set — the predicate lives server-side.
         withTimeout(
-          (async () =>
-            supabase
-              .from('match_participant')
-              .select(
-                'match_id, showed_up, match:match_id (match_date, duration, custom_duration_minutes, created_by, closed_at, cancelled_at, mutually_cancelled)'
-              )
-              .eq('player_id', playerId)
-              .eq('status', 'joined'))(),
+          (async () => supabase.rpc('get_player_played_games', { p_player_id: playerId }))(),
           15000,
           'Failed to load stats'
+        ),
+
+        // Fetch the per-event-type reputation breakdown (no-shows, lateness, star
+        // ratings) via the SECURITY DEFINER RPC — reputation_event RLS hides other
+        // players' rows, and the RPC is gated on is_public for privacy parity.
+        withTimeout(
+          (async () =>
+            supabase.rpc('get_player_reputation_breakdown', { p_player_id: playerId }))(),
+          15000,
+          'Failed to load reputation breakdown'
         ),
       ]);
 
@@ -769,6 +824,43 @@ const PlayerProfile = () => {
       } else {
         setReputationDisplay(null);
         setReputationTotalEvents(0);
+      }
+
+      // Process reputation breakdown (per-event-type counts)
+      if (!reputationBreakdownResult.error && reputationBreakdownResult.data) {
+        const rows = reputationBreakdownResult.data as Array<{
+          games_completed: number;
+          no_shows: number;
+          on_time: number;
+          late: number;
+          left_late: number;
+          late_cancellations: number;
+          reviews_5: number;
+          reviews_4: number;
+          reviews_3: number;
+          reviews_2: number;
+          reviews_1: number;
+        }>;
+        const b = rows[0];
+        setReputationBreakdown(
+          b
+            ? {
+                gamesCompleted: b.games_completed,
+                noShows: b.no_shows,
+                onTime: b.on_time,
+                late: b.late,
+                leftLate: b.left_late,
+                lateCancellations: b.late_cancellations,
+                reviews5: b.reviews_5,
+                reviews4: b.reviews_4,
+                reviews3: b.reviews_3,
+                reviews2: b.reviews_2,
+                reviews1: b.reviews_1,
+              }
+            : null
+        );
+      } else {
+        setReputationBreakdown(null);
       }
 
       // Process sports
@@ -986,44 +1078,22 @@ const PlayerProfile = () => {
 
       setAvailabilities(grid);
 
-      // Process stats
+      // Process stats — aggregate the canonical played-game set returned by the
+      // RPC (predicate already applied server-side).
       if (statsResult.error) {
         Logger.error('Failed to load player stats', statsResult.error, { playerId });
       } else if (statsResult.data) {
-        type MatchRow = {
+        type PlayedGame = {
           match_date: string | null;
           duration: '30' | '60' | '90' | '120' | 'custom' | null;
           custom_duration_minutes: number | null;
           created_by: string;
-          closed_at: string | null;
-          cancelled_at: string | null;
-          mutually_cancelled: boolean | null;
         };
-        type MatchData = {
-          match_id: string;
-          showed_up: boolean | null;
-          match: MatchRow | null;
-        };
-        const matchData = statsResult.data as unknown as MatchData[];
+        const playedGames = statsResult.data as PlayedGame[];
 
-        // Matches that actually happened with this player on the court.
-        const playedMatches = matchData.filter(
-          m =>
-            !!m.match &&
-            m.match.closed_at !== null &&
-            m.match.cancelled_at === null &&
-            m.match.mutually_cancelled !== true &&
-            m.showed_up !== false
-        );
-
-        const totalMinutes = playedMatches.reduce(
-          (sum, m) => sum + matchDurationMinutes(m.match!),
-          0
-        );
-        const hostedMatches = playedMatches.filter(m => m.match!.created_by === playerId).length;
-        const playedDates = playedMatches
-          .map(m => m.match!.match_date)
-          .filter((d): d is string => !!d);
+        const totalMinutes = playedGames.reduce((sum, g) => sum + matchDurationMinutes(g), 0);
+        const hostedMatches = playedGames.filter(g => g.created_by === playerId).length;
+        const playedDates = playedGames.map(g => g.match_date).filter((d): d is string => !!d);
 
         setStats({
           hoursPlayed: Math.round(totalMinutes / 60),
@@ -1047,6 +1117,16 @@ const PlayerProfile = () => {
       other: 'common.gender.other',
     };
     return genderMap[gender] ? t(genderMap[gender]) : gender;
+  };
+
+  // Single-letter gender marker for the hero (M/F/X in EN, H/F/X in FR).
+  const formatGenderShort = (gender: string): string => {
+    const shortMap: { [key: string]: TranslationKey } = {
+      male: 'common.gender.short.male',
+      female: 'common.gender.short.female',
+      other: 'common.gender.short.other',
+    };
+    return shortMap[gender] ? t(shortMap[gender]) : gender.charAt(0).toUpperCase();
   };
 
   const formatPlayingHand = (hand: string | null): string => {
@@ -1474,6 +1554,55 @@ const PlayerProfile = () => {
     return sports.find(s => s.isPrimary) || sports[0];
   }, [sports, sportId]);
 
+  // Derive reliability rates + the star histogram from the raw event counts.
+  // Rates are framed positively (shows-up / on-time %); raw no-show / late counts
+  // are surfaced as supporting detail.
+  const reputationMetrics = useMemo(() => {
+    const bd = reputationBreakdown;
+    if (!bd) return null;
+    const attendanceTotal = bd.gamesCompleted + bd.noShows;
+    const punctualTotal = bd.onTime + bd.late;
+    const totalReviews = bd.reviews5 + bd.reviews4 + bd.reviews3 + bd.reviews2 + bd.reviews1;
+    const avgStars =
+      totalReviews > 0
+        ? (5 * bd.reviews5 +
+            4 * bd.reviews4 +
+            3 * bd.reviews3 +
+            2 * bd.reviews2 +
+            1 * bd.reviews1) /
+          totalReviews
+        : null;
+    return {
+      showsUpRate:
+        attendanceTotal > 0 ? Math.round((bd.gamesCompleted / attendanceTotal) * 100) : null,
+      onTimeRate: punctualTotal > 0 ? Math.round((bd.onTime / punctualTotal) * 100) : null,
+      noShows: bd.noShows,
+      late: bd.late,
+      totalReviews,
+      avgStars,
+    };
+  }, [reputationBreakdown]);
+
+  // In-screen tabs — group the profile sections so the screen reads as a few
+  // coherent panels instead of one long scroll. Mirrors LeagueDetail's pattern.
+  const tabs = useMemo(
+    () => [
+      { key: 'level' as const, label: t('playerProfile.tabs.level') },
+      { key: 'reputation' as const, label: t('playerProfile.tabs.reputation') },
+      { key: 'history' as const, label: t('playerProfile.tabs.history') },
+      { key: 'availability' as const, label: t('playerProfile.tabs.availability') },
+      { key: 'courts' as const, label: t('playerProfile.tabs.courts') },
+      { key: 'preferences' as const, label: t('playerProfile.tabs.preferences') },
+    ],
+    [t]
+  );
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  const currentTabKey = tabs[Math.min(activeTabIdx, tabs.length - 1)].key;
+  const goToTab = useCallback((idx: number) => {
+    lightHaptic();
+    setActiveTabIdx(idx);
+  }, []);
+
   // Fetch approved proofs for the primary sport rating
   useEffect(() => {
     const fetchApprovedProofs = async () => {
@@ -1516,6 +1645,7 @@ const PlayerProfile = () => {
           file: Array.isArray(item.file) && item.file.length > 0 ? item.file[0] : item.file,
         })) as RatingProofData[];
         setApprovedProofs(proofsData);
+        setActiveProofIndex(0);
       } catch (err) {
         Logger.error('Failed to fetch approved proofs', err as Error);
       } finally {
@@ -1524,6 +1654,34 @@ const PlayerProfile = () => {
     };
     fetchApprovedProofs();
   }, [primarySport?.playerRatingScoreId, primarySport?.ratingValue]);
+
+  // Proof files live in a private bucket — resolve signed URLs for their
+  // thumbnails/images so the carousel can actually load them.
+  useEffect(() => {
+    if (approvedProofs.length === 0) return;
+    const toResolve = new Set<string>();
+    for (const proof of approvedProofs) {
+      for (const url of [proof.file?.thumbnail_url, proof.file?.url]) {
+        if (url && isPrivateBucketUrl(url) && !proofSignedUrls[url]) toResolve.add(url);
+      }
+    }
+    if (toResolve.size === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      [...toResolve].map(url => resolveStorageUrl(url, 86400).then(signed => ({ url, signed })))
+    ).then(results => {
+      if (cancelled) return;
+      setProofSignedUrls(prev => {
+        const next = { ...prev };
+        for (const { url, signed } of results) next[url] = signed;
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approvedProofs]);
 
   const getEffectiveProofType = useCallback((proof: RatingProofData): string => {
     if (proof.proof_type === 'external_link') return 'external_link';
@@ -1583,7 +1741,7 @@ const PlayerProfile = () => {
           >
             <View style={styles.profileTopRow}>
               <SkeletonAvatar
-                size={100}
+                size={84}
                 backgroundColor={heroSkeletonBg}
                 highlightColor={heroSkeletonHighlight}
               />
@@ -1644,62 +1802,52 @@ const PlayerProfile = () => {
                     highlightColor={heroSkeletonHighlight}
                   />
                 </View>
-                {/* Badges row */}
-                <View style={styles.profileBadgesRow}>
-                  <Skeleton
-                    width={80}
-                    height={26}
-                    borderRadius={radiusPixels.full}
-                    backgroundColor={heroSkeletonBg}
-                    highlightColor={heroSkeletonHighlight}
-                  />
-                  <Skeleton
-                    width={60}
-                    height={26}
-                    borderRadius={radiusPixels.full}
-                    backgroundColor={heroSkeletonBg}
-                    highlightColor={heroSkeletonHighlight}
-                  />
-                  <Skeleton
-                    width={80}
-                    height={26}
-                    borderRadius={radiusPixels.full}
-                    backgroundColor={heroSkeletonBg}
-                    highlightColor={heroSkeletonHighlight}
-                  />
-                </View>
               </View>
+            </View>
+
+            {/* Badges row skeleton — full width, mirrors HeroBadgeRow */}
+            <View style={styles.heroBadgeSkeletonRow}>
+              <Skeleton
+                width={80}
+                height={26}
+                borderRadius={radiusPixels.full}
+                backgroundColor={heroSkeletonBg}
+                highlightColor={heroSkeletonHighlight}
+              />
+              <Skeleton
+                width={60}
+                height={26}
+                borderRadius={radiusPixels.full}
+                backgroundColor={heroSkeletonBg}
+                highlightColor={heroSkeletonHighlight}
+              />
+              <Skeleton
+                width={80}
+                height={26}
+                borderRadius={radiusPixels.full}
+                backgroundColor={heroSkeletonBg}
+                highlightColor={heroSkeletonHighlight}
+              />
             </View>
           </View>
 
-          {/* Action buttons skeleton (horizontal scroll under the card) */}
+          {/* Action buttons skeleton — flat tiles in a horizontal row */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.actionScrollContent}
             style={styles.actionScroll}
+            contentContainerStyle={styles.actionScrollContent}
           >
-            <Skeleton
-              width={170}
-              height={60}
-              borderRadius={radiusPixels['2xl']}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-            <Skeleton
-              width={110}
-              height={60}
-              borderRadius={radiusPixels['2xl']}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
-            <Skeleton
-              width={200}
-              height={60}
-              borderRadius={radiusPixels['2xl']}
-              backgroundColor={skeletonBg}
-              highlightColor={skeletonHighlight}
-            />
+            {[1, 2, 3].map(i => (
+              <Skeleton
+                key={i}
+                width={200}
+                height={76}
+                borderRadius={radiusPixels['2xl']}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+            ))}
           </ScrollView>
 
           {/* Statistics Section */}
@@ -1840,545 +1988,862 @@ const PlayerProfile = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
       >
-        {/* Profile Header */}
-        <View
-          style={[
-            styles.profileHeader,
-            {
-              backgroundColor: isDark ? primary[950] : primary[50],
-              borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
-            },
-          ]}
-        >
-          <View style={styles.profileTopRow}>
-            <View style={styles.avatarWrapper}>
-              <View
-                style={[
-                  styles.profilePicContainer,
-                  {
-                    borderColor: isDark ? primary[400] : primary[500],
-                    shadowColor: isDark ? primary[400] : primary[500],
-                  },
-                ]}
-              >
-                {profile?.profile_picture_url ? (
-                  <Image
-                    source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
-                    style={styles.profileImage}
-                  />
-                ) : (
-                  <Ionicons name="person-outline" size={40} color={colors.primary} />
-                )}
+        {/* Hero (index 0) — header card + quick actions, scrolls away */}
+        <View style={styles.heroBlock}>
+          {/* Profile Header */}
+          <View
+            style={[
+              styles.profileHeader,
+              {
+                backgroundColor: isDark ? primary[950] : primary[50],
+                borderColor: isDark ? `${primary[400]}40` : `${primary[500]}20`,
+              },
+            ]}
+          >
+            <View style={styles.profileTopRow}>
+              <View style={styles.avatarWrapper}>
+                <View
+                  style={[
+                    styles.profilePicContainer,
+                    {
+                      borderColor: isDark ? primary[400] : primary[500],
+                      shadowColor: isDark ? primary[400] : primary[500],
+                    },
+                  ]}
+                >
+                  {profile?.profile_picture_url ? (
+                    <Image
+                      source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
+                      style={styles.profileImage}
+                    />
+                  ) : (
+                    <Ionicons name="person-outline" size={34} color={colors.primary} />
+                  )}
+                </View>
               </View>
-            </View>
 
-            <View style={styles.profileIdentity}>
-              <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
-                {displayName}
-              </Text>
-              {/* Location + activity — same layout as PlayerCard locationRow */}
-              {(!!distanceText || isOnline || !!lastSeenLabel) && (
-                <View style={styles.locationRow}>
-                  {!!distanceText && (
-                    <>
-                      <Ionicons name="location" size={13} color={colors.textMuted} />
+              <View style={styles.profileIdentity}>
+                <View style={styles.nameRow}>
+                  <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
+                    {displayName}
+                  </Text>
+                  {!!player?.gender && (
+                    <View style={styles.genderInline}>
+                      <MaterialCommunityIcons
+                        name={
+                          player.gender === 'male'
+                            ? 'gender-male'
+                            : player.gender === 'female'
+                              ? 'gender-female'
+                              : 'gender-non-binary'
+                        }
+                        size={14}
+                        color={colors.textMuted}
+                      />
                       <Text
                         size="sm"
                         color={colors.textMuted}
                         numberOfLines={1}
-                        style={styles.locationDistance}
+                        accessibilityLabel={formatGender(player.gender)}
                       >
-                        {distanceText}
-                      </Text>
-                    </>
-                  )}
-                  {!!distanceText && (isOnline || !!lastSeenLabel) && (
-                    <Text size="sm" color={colors.textMuted}>
-                      ·
-                    </Text>
-                  )}
-                  {isOnline ? (
-                    <View style={styles.onlineInline}>
-                      <Animated.View
-                        style={[
-                          styles.onlineDot,
-                          { backgroundColor: onlineColor, opacity: pulseAnim },
-                        ]}
-                      />
-                      <Text size="sm" weight="semibold" color={onlineColor} numberOfLines={1}>
-                        {t('playerDirectory.online')}
+                        {formatGenderShort(player.gender)}
                       </Text>
                     </View>
-                  ) : lastSeenLabel ? (
-                    <Text
-                      size="sm"
-                      color={colors.textMuted}
-                      numberOfLines={1}
-                      style={styles.activityText}
-                    >
-                      {lastSeenLabel}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
-
-              {/* Joined date */}
-              {player?.created_at && (
-                <View style={styles.joinedRow}>
-                  <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
-                  <Text size="sm" color={colors.textMuted} numberOfLines={1}>
-                    {t('playerProfile.joined')} {formatDateMonthYear(player.created_at, locale)}
-                  </Text>
-                </View>
-              )}
-
-              {/* Rating + reputation chips */}
-              <View style={styles.profileBadgesRow}>
-                <RatingBadge
-                  ratingValue={primarySport?.ratingValue}
-                  ratingLabel={primarySport?.ratingLabel}
-                  certificationStatus={primarySport?.badgeStatus}
-                  isDark={isDark}
-                  isLoading={loading}
-                  onInfoPress={() =>
-                    SheetManager.show('rating-explainer', {
-                      payload: {
-                        sportName: (primarySport?.name as 'tennis' | 'pickleball') ?? 'tennis',
-                      },
-                    })
-                  }
-                />
-                <ReputationBadge
-                  reputationDisplay={reputationDisplay ?? undefined}
-                  isDark={isDark}
-                  isLoading={loading}
-                  onInfoPress={() => SheetManager.show('reputation-explainer')}
-                />
-              </View>
-            </View>
-          </View>
-
-          <HeroBadgeRow
-            createdAt={player?.created_at}
-            onboardingCompleted={profile?.onboarding_completed}
-            reputationScore={reputationDisplay?.score}
-            certificationStatus={primarySport?.badgeStatus}
-            totalEvents={reputationTotalEvents}
-            isDark={isDark}
-            onFoundingInfoPress={() => SheetManager.show('founding-member-explainer')}
-            onCovetedInfoPress={() => SheetManager.show('coveted-player-explainer')}
-          />
-        </View>
-
-        {/* Action buttons — horizontal scroll, transparent, sits under the hero card */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.actionScrollContent}
-          style={styles.actionScroll}
-        >
-          <HeroActionButton
-            label={t('playerProfile.inviteToMatch')}
-            onPress={handleInviteToMatch}
-            icon={color => (
-              <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={18} color={color} />
-            )}
-          />
-          <HeroActionButton
-            label={t('playerProfile.chat')}
-            onPress={handleStartChat}
-            loading={chatLoading}
-            disabled={!currentUserId}
-            icon={color => <Ionicons name="chatbubble-outline" size={18} color={color} />}
-          />
-          <HeroActionButton
-            label={t('playerProfile.requestReference')}
-            onPress={handleRequestReference}
-            loading={referenceLoading}
-            icon={color => <Ionicons name="document-text-outline" size={18} color={color} />}
-          />
-        </ScrollView>
-
-        {/* Statistics Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.statistics')}
-            </Text>
-          </View>
-
-          <View style={styles.statsGrid}>
-            <View
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.hoursPlayed}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                {t('playerProfile.stats.hoursPlayed')}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.gamesHosted}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                {t('playerProfile.stats.gamesHosted')}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.weekStreak}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                {t('playerProfile.stats.weekStreak')}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Game History — past games with a verified score (always public per product). */}
-        <PlayerMatchHistorySection
-          playerId={playerId}
-          sportId={sportId}
-          sportName={selectedSport?.name}
-        />
-
-        {/* Rating Section */}
-        {primarySport && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="star-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('playerProfile.sections.rating')}
-              </Text>
-            </View>
-
-            <View
-              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <View style={styles.ratingHeader}>
-                <View>
-                  <Text style={[styles.ratingTitle, { color: colors.text }]}>
-                    {primarySport.ratingLabel
-                      ? getTranslatedRatingTitle(primarySport.ratingValue)
-                      : t('playerProfile.rating.unrated')}
-                  </Text>
-                  <Text style={[styles.ratingCode, { color: colors.primary }]}>
-                    {primarySport.ratingLabel ||
-                      (primarySport.name === 'tennis' ? 'NTRP -' : 'DUPR -')}
-                  </Text>
-                  {(primarySport.referencesCount ?? 0) > 0 && primarySport.playerRatingScoreId && (
-                    <TouchableOpacity
-                      style={[styles.referencesBadge, { backgroundColor: `${colors.primary}15` }]}
-                      onPress={() => {
-                        lightHaptic();
-                        SheetManager.show('references-list', {
-                          payload: {
-                            playerRatingScoreId: primarySport.playerRatingScoreId!,
-                            sportId: primarySport.id,
-                          },
-                        });
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="people-outline" size={14} color={colors.primary} />
-                      <Text style={[styles.referencesBadgeText, { color: colors.primary }]}>
-                        {t('profile.rating.references', {
-                          count: primarySport.referencesCount || 0,
-                        })}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={12} color={colors.primary} />
-                    </TouchableOpacity>
                   )}
                 </View>
-                <CertificationBadge
-                  status={primarySport.badgeStatus || 'self_declared'}
-                  size="md"
-                />
+                {/* Location + activity — same layout as PlayerCard locationRow */}
+                {(!!distanceText || isOnline || !!lastSeenLabel) && (
+                  <View style={styles.locationRow}>
+                    {!!distanceText && (
+                      <>
+                        <Ionicons name="location" size={13} color={colors.textMuted} />
+                        <Text
+                          size="sm"
+                          color={colors.textMuted}
+                          numberOfLines={1}
+                          style={styles.locationDistance}
+                        >
+                          {distanceText}
+                        </Text>
+                      </>
+                    )}
+                    {!!distanceText && (isOnline || !!lastSeenLabel) && (
+                      <Text size="sm" color={colors.textMuted}>
+                        ·
+                      </Text>
+                    )}
+                    {isOnline ? (
+                      <View style={styles.onlineInline}>
+                        <Animated.View
+                          style={[
+                            styles.onlineDot,
+                            { backgroundColor: onlineColor, opacity: pulseAnim },
+                          ]}
+                        />
+                        <Text size="sm" weight="semibold" color={onlineColor} numberOfLines={1}>
+                          {t('playerDirectory.online')}
+                        </Text>
+                      </View>
+                    ) : lastSeenLabel ? (
+                      <Text
+                        size="sm"
+                        color={colors.textMuted}
+                        numberOfLines={1}
+                        style={styles.activityText}
+                      >
+                        {lastSeenLabel}
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+
+                {/* Joined date */}
+                {player?.created_at && (
+                  <View style={styles.joinedRow}>
+                    <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                    <Text size="sm" color={colors.textMuted} numberOfLines={1}>
+                      {t('playerProfile.joined')} {formatDateMonthYear(player.created_at, locale)}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
-                {getTranslatedRatingDescription(primarySport.ratingValue)}
-              </Text>
+            </View>
 
-              {/* Proof Gallery */}
-              {(proofsLoading || approvedProofs.length > 0) && (
-                <Text style={[styles.proofGallerySectionTitle, { color: colors.text }]}>
-                  {t('playerProfile.rating.proofGalleryTitle')}
-                </Text>
-              )}
-              {proofsLoading ? (
-                <View style={styles.proofGalleryLoading}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                </View>
-              ) : approvedProofs.length > 0 ? (
-                <FlatList
-                  data={approvedProofs}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  keyExtractor={item => item.id}
-                  contentContainerStyle={styles.proofGalleryList}
-                  renderItem={({ item }) => {
-                    const effectiveType = getEffectiveProofType(item);
-                    return (
-                      <ProofGalleryCard
-                        item={item}
-                        effectiveType={effectiveType}
-                        typeColor={getProofTypeColor(effectiveType)}
-                        iconName={getProofIcon(effectiveType)}
-                        backgroundColor={colors.inputBackground}
-                        onPress={() => {
-                          setSelectedProof(item);
-                          setShowProofViewer(true);
-                        }}
-                      />
-                    );
-                  }}
-                />
-              ) : null}
-
-              {/* Proof Viewer Modal */}
-              <ProofViewer
-                visible={showProofViewer}
-                onClose={() => {
-                  setShowProofViewer(false);
-                  setSelectedProof(null);
-                }}
-                proof={selectedProof}
-                currentUserId={currentUserId}
-                isOwnProfile={false}
-                onReport={(proofId, proofTitle) => {
-                  setShowProofViewer(false);
-                  setSelectedProof(null);
-                  // Delay to let the Modal unmount before opening the sheet
-                  setTimeout(() => {
-                    if (currentUserId) {
-                      SheetManager.show('report-proof', {
-                        payload: { reporterId: currentUserId, proofId, proofTitle },
-                      });
+            <HeroBadgeRow
+              createdAt={player?.created_at}
+              onboardingCompleted={profile?.onboarding_completed}
+              reputationScore={reputationDisplay?.score}
+              certificationStatus={primarySport?.badgeStatus}
+              totalEvents={reputationTotalEvents}
+              isDark={isDark}
+              onFoundingInfoPress={() => SheetManager.show('founding-member-explainer')}
+              onCovetedInfoPress={() => SheetManager.show('coveted-player-explainer')}
+              leading={
+                <>
+                  <RatingBadge
+                    ratingValue={primarySport?.ratingValue}
+                    ratingLabel={primarySport?.ratingLabel}
+                    certificationStatus={primarySport?.badgeStatus}
+                    isDark={isDark}
+                    isLoading={loading}
+                    onInfoPress={() =>
+                      SheetManager.show('rating-explainer', {
+                        payload: {
+                          sportName: (primarySport?.name as 'tennis' | 'pickleball') ?? 'tennis',
+                        },
+                      })
                     }
-                  }, 350);
-                }}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Player Information Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.playerInformation')}
-            </Text>
+                  />
+                  <ReputationBadge
+                    reputationDisplay={reputationDisplay ?? undefined}
+                    isDark={isDark}
+                    isLoading={loading}
+                    onInfoPress={() => SheetManager.show('reputation-explainer')}
+                  />
+                </>
+              }
+            />
           </View>
 
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.bioText, { color: colors.text }]}>
-              {profile?.bio || t('playerProfile.noBio')}
-            </Text>
-
-            <View style={styles.infoGrid}>
-              <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
-                  {t('playerProfile.fields.gender')}
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {formatGender(player?.gender || null)}
-                </Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
-                  {t('playerProfile.fields.playingHand')}
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {formatPlayingHand(player?.playing_hand || null)}
-                </Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
-                  {t('playerProfile.fields.maxTravelDistance')}
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {player?.max_travel_distance ? `${player.max_travel_distance} km` : '-'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Preferences Section */}
-        {sportPreferences && (
+          {/* About / Bio Section — sits directly under the hero card */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="options-outline" size={18} color={colors.primary} />
+              <Ionicons name="person-outline" size={18} color={colors.primary} />
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('playerProfile.sections.preferences')}
+                {t('playerProfile.sections.about')}
               </Text>
             </View>
 
             <View
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
-              {/* Match Duration */}
-              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.matchDuration')}
-                </Text>
-                <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {formatMatchDuration(sportPreferences.preferred_match_duration)}
-                </Text>
-              </View>
+              <Text style={[styles.bioText, { color: colors.text }]}>
+                {profile?.bio || t('playerProfile.noBio')}
+              </Text>
+            </View>
+          </View>
 
-              {/* Match Type */}
-              <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.matchType')}
-                </Text>
-                <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {formatMatchType(sportPreferences.preferred_match_type)}
-                </Text>
-              </View>
-
-              {/* Playing Style */}
-              <View style={[styles.preferenceRow, { borderBottomWidth: 0 }]}>
-                <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.playingStyle')}
-                </Text>
-                <Text style={[styles.preferenceValue, { color: colors.text }]}>
-                  {formatPlayingStyle(sportPreferences.preferred_play_style)}
-                </Text>
-              </View>
-
-              {/* Play Attributes */}
-              {sportPreferences.playAttributes && sportPreferences.playAttributes.length > 0 && (
-                <View style={[styles.playAttributesContainer, { borderTopColor: colors.border }]}>
-                  <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
-                    {t('profile.fields.playAttributes')}
-                  </Text>
-                  <View style={styles.attributeTags}>
-                    {sportPreferences.playAttributes.map((attr: string, index: number) => (
-                      <View
-                        key={index}
-                        style={[styles.attributeTag, { backgroundColor: colors.primaryForeground }]}
-                      >
-                        <Text style={[styles.attributeTagText, { color: colors.primary }]}>
-                          {formatPlayAttribute(attr)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
+          {/* Action buttons — flat accent tiles in a horizontal row under the hero card */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.actionScroll}
+            contentContainerStyle={styles.actionScrollContent}
+          >
+            <HeroActionButton
+              label={t('playerProfile.inviteToMatch')}
+              onPress={handleInviteToMatch}
+              icon={color => (
+                <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={24} color={color} />
               )}
-            </View>
-          </View>
-        )}
+            />
+            <HeroActionButton
+              label={t('playerProfile.chatAction')}
+              onPress={handleStartChat}
+              loading={chatLoading}
+              disabled={!currentUserId}
+              icon={color => <Ionicons name="chatbubble-outline" size={24} color={color} />}
+            />
+            <HeroActionButton
+              label={t('playerProfile.requestReference')}
+              onPress={handleRequestReference}
+              loading={referenceLoading}
+              icon={color => <Ionicons name="document-text-outline" size={24} color={color} />}
+            />
+          </ScrollView>
+        </View>
 
-        {/* Preferred Courts Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="tennisball-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.preferredCourts')}
-            </Text>
-          </View>
+        {/* Sticky tab bar (index 1) — scrollable underline tabs: each sized to
+            its label and left-aligned, so any number of tabs scrolls cleanly */}
+        <View
+          style={[
+            styles.tabBarSticky,
+            { backgroundColor: colors.background, borderBottomColor: colors.border },
+          ]}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {tabs.map((tab, i) => {
+              const selected = i === Math.min(activeTabIdx, tabs.length - 1);
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => goToTab(i)}
+                  activeOpacity={0.7}
+                  style={styles.tabItem}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  testID={`player-profile-tab-${tab.key}`}
+                >
+                  <Text
+                    size="sm"
+                    weight={selected ? 'semibold' : 'medium'}
+                    color={selected ? colors.primary : colors.textMuted}
+                    numberOfLines={1}
+                  >
+                    {tab.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.tabUnderline,
+                      { backgroundColor: selected ? colors.primary : 'transparent' },
+                    ]}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-          {favoriteFacilitiesLoading ? (
-            <View style={styles.facilitiesSection}>
-              {[1, 2, 3].map(i => (
-                <Skeleton
-                  key={i}
-                  width="100%"
-                  height={70}
-                  borderRadius={radiusPixels.lg}
-                  backgroundColor={skeletonBg}
-                  highlightColor={skeletonHighlight}
-                />
-              ))}
-            </View>
-          ) : favoriteFacilities.length > 0 ? (
-            <View style={styles.facilitiesSection}>
-              {favoriteFacilities.map(fav => (
+        {/* ── Level tab ── */}
+        {currentTabKey === 'level' && (
+          <>
+            {/* Rating Section */}
+            {primarySport && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="star-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    {t('playerProfile.sections.rating')}
+                  </Text>
+                </View>
+
                 <View
-                  key={fav.id}
                   style={[
-                    styles.facilityCard,
+                    styles.card,
+                    styles.ratingCard,
                     { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
                 >
-                  <View style={styles.facilityCardContent}>
-                    {/* Facility Name */}
-                    <View style={styles.facilityNameRow}>
-                      <Text style={[styles.facilityName, { color: colors.text }]} numberOfLines={1}>
-                        {fav.facility.name}
+                  {/* Full-bleed proof hero carousel at the top of the card */}
+                  {proofsLoading ? (
+                    <View style={styles.proofHeroLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : approvedProofs.length > 0 ? (
+                    <View onLayout={e => setProofCarouselWidth(e.nativeEvent.layout.width)}>
+                      {proofCarouselWidth > 0 && (
+                        <>
+                          <FlatList
+                            data={approvedProofs}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            keyExtractor={item => item.id}
+                            snapToInterval={proofCarouselWidth}
+                            snapToAlignment="start"
+                            decelerationRate="fast"
+                            onMomentumScrollEnd={e =>
+                              setActiveProofIndex(
+                                Math.round(e.nativeEvent.contentOffset.x / proofCarouselWidth)
+                              )
+                            }
+                            renderItem={({ item }) => {
+                              const effectiveType = getEffectiveProofType(item);
+                              return (
+                                <ProofHeroCard
+                                  item={item}
+                                  width={proofCarouselWidth}
+                                  signedUrls={proofSignedUrls}
+                                  effectiveType={effectiveType}
+                                  typeColor={getProofTypeColor(effectiveType)}
+                                  iconName={getProofIcon(effectiveType)}
+                                  backgroundColor={colors.inputBackground}
+                                  onPress={() => {
+                                    setSelectedProof(item);
+                                    setShowProofViewer(true);
+                                  }}
+                                />
+                              );
+                            }}
+                          />
+                          {approvedProofs.length > 1 && (
+                            <View style={styles.proofDots}>
+                              {approvedProofs.map((p, i) => (
+                                <View
+                                  key={p.id}
+                                  style={[
+                                    styles.proofDot,
+                                    {
+                                      backgroundColor:
+                                        i === activeProofIndex ? colors.primary : colors.border,
+                                    },
+                                  ]}
+                                />
+                              ))}
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  ) : null}
+
+                  <View style={styles.ratingCardBody}>
+                    <View style={styles.ratingHeader}>
+                      <View>
+                        <Text style={[styles.ratingTitle, { color: colors.text }]}>
+                          {primarySport.ratingLabel
+                            ? getTranslatedRatingTitle(primarySport.ratingValue)
+                            : t('playerProfile.rating.unrated')}
+                        </Text>
+                        <Text style={[styles.ratingCode, { color: colors.primary }]}>
+                          {primarySport.ratingLabel ||
+                            (primarySport.name === 'tennis' ? 'NTRP -' : 'DUPR -')}
+                        </Text>
+                        {(primarySport.referencesCount ?? 0) > 0 &&
+                          primarySport.playerRatingScoreId && (
+                            <TouchableOpacity
+                              style={[
+                                styles.referencesBadge,
+                                { backgroundColor: `${colors.primary}15` },
+                              ]}
+                              onPress={() => {
+                                lightHaptic();
+                                SheetManager.show('references-list', {
+                                  payload: {
+                                    playerRatingScoreId: primarySport.playerRatingScoreId!,
+                                    sportId: primarySport.id,
+                                  },
+                                });
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="people-outline" size={14} color={colors.primary} />
+                              <Text style={[styles.referencesBadgeText, { color: colors.primary }]}>
+                                {t('profile.rating.references', {
+                                  count: primarySport.referencesCount || 0,
+                                })}
+                              </Text>
+                              <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                            </TouchableOpacity>
+                          )}
+                      </View>
+                      <CertificationBadge
+                        status={primarySport.badgeStatus || 'self_declared'}
+                        size="md"
+                      />
+                    </View>
+                    <Text style={[styles.ratingDescription, { color: colors.textMuted }]}>
+                      {getTranslatedRatingDescription(primarySport.ratingValue)}
+                    </Text>
+                  </View>
+
+                  {/* Proof Viewer Modal */}
+                  <ProofViewer
+                    visible={showProofViewer}
+                    onClose={() => {
+                      setShowProofViewer(false);
+                      setSelectedProof(null);
+                    }}
+                    proof={selectedProof}
+                    currentUserId={currentUserId}
+                    isOwnProfile={false}
+                    onReport={(proofId, proofTitle) => {
+                      setShowProofViewer(false);
+                      setSelectedProof(null);
+                      // Delay to let the Modal unmount before opening the sheet
+                      setTimeout(() => {
+                        if (currentUserId) {
+                          SheetManager.show('report-proof', {
+                            payload: { reporterId: currentUserId, proofId, proofTitle },
+                          });
+                        }
+                      }, 350);
+                    }}
+                  />
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* ── Reputation tab ── */}
+        {currentTabKey === 'reputation' && (
+          <>
+            {reputationDisplay?.isVisible ? (
+              <>
+                {/* Reliability — no-show + late counts, with the positive rate as detail */}
+                {reputationMetrics && (
+                  <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={colors.primary} />
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                        {t('playerProfile.reputation.reliability')}
+                      </Text>
+                    </View>
+                    <View style={styles.repMetricGrid}>
+                      <View
+                        style={[
+                          styles.statCard,
+                          styles.repMetricCard,
+                          { backgroundColor: colors.card, borderColor: colors.border },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statValue,
+                            {
+                              color: reputationMetrics.noShows > 0 ? repErrorColor : colors.primary,
+                            },
+                          ]}
+                        >
+                          {reputationMetrics.noShows}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                          {t('playerProfile.reputation.noShows')}
+                        </Text>
+                        {reputationMetrics.showsUpRate != null && (
+                          <Text size="xs" color={colors.textMuted} style={styles.repMetricSub}>
+                            {t('playerProfile.reputation.showsUpRate', {
+                              rate: reputationMetrics.showsUpRate,
+                            })}
+                          </Text>
+                        )}
+                      </View>
+                      <View
+                        style={[
+                          styles.statCard,
+                          styles.repMetricCard,
+                          { backgroundColor: colors.card, borderColor: colors.border },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statValue,
+                            {
+                              color: reputationMetrics.late > 0 ? repWarningColor : colors.primary,
+                            },
+                          ]}
+                        >
+                          {reputationMetrics.late}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                          {t('playerProfile.reputation.lateArrivals')}
+                        </Text>
+                        {reputationMetrics.onTimeRate != null && (
+                          <Text size="xs" color={colors.textMuted} style={styles.repMetricSub}>
+                            {t('playerProfile.reputation.onTimeRate', {
+                              rate: reputationMetrics.onTimeRate,
+                            })}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Player ratings — average star score */}
+                {reputationMetrics && (
+                  <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="star-outline" size={18} color={colors.primary} />
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                        {t('playerProfile.reputation.ratings')}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.card,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                      ]}
+                    >
+                      {reputationMetrics.totalReviews > 0 && reputationMetrics.avgStars != null ? (
+                        <View style={styles.repRatingBlock}>
+                          <Text style={[styles.repRatingAvg, { color: colors.text }]}>
+                            {reputationMetrics.avgStars.toFixed(1)}
+                          </Text>
+                          <View style={styles.repRatingStars}>
+                            {[1, 2, 3, 4, 5].map(i => {
+                              const avg = reputationMetrics.avgStars ?? 0;
+                              const filled = i - 0.5 <= avg;
+                              const name =
+                                i <= Math.floor(avg)
+                                  ? 'star'
+                                  : i - 0.5 <= avg
+                                    ? 'star-half'
+                                    : 'star-outline';
+                              return (
+                                <Ionicons
+                                  key={i}
+                                  name={name}
+                                  size={22}
+                                  color={filled ? repStarColor : colors.textMuted}
+                                />
+                              );
+                            })}
+                          </View>
+                          <Text size="sm" color={colors.textMuted}>
+                            {t('playerProfile.reputation.reviewsCount', {
+                              count: reputationMetrics.totalReviews,
+                            })}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text size="sm" color={colors.textMuted}>
+                          {t('playerProfile.reputation.noReviews')}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </>
+            ) : (
+              /* New-player / not-enough-data state — never show a score */
+              <View style={styles.section}>
+                <View
+                  style={[
+                    styles.card,
+                    styles.repEmptyCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <View style={[styles.repTierCircle, { backgroundColor: `${colors.primary}14` }]}>
+                    <Ionicons name="shield-outline" size={26} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.repEmptyTitle, { color: colors.text }]}>
+                    {t('playerProfile.reputation.empty.title')}
+                  </Text>
+                  <Text size="sm" color={colors.textMuted} style={styles.repEmptyBody}>
+                    {t('playerProfile.reputation.empty.body', {
+                      name: profile?.first_name || t('playerProfile.unknownPlayer'),
+                    })}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* ── History tab ── */}
+        {currentTabKey === 'history' && (
+          <>
+            {/* Statistics Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  {t('playerProfile.sections.statistics')}
+                </Text>
+              </View>
+
+              <View style={styles.statsGrid}>
+                <View
+                  style={[
+                    styles.statCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.statValue, { color: colors.primary }]}>
+                    {stats.hoursPlayed}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                    {t('playerProfile.stats.hoursPlayed')}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.statValue, { color: colors.primary }]}>
+                    {stats.gamesHosted}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                    {t('playerProfile.stats.gamesHosted')}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.statValue, { color: colors.primary }]}>
+                    {stats.weekStreak}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                    {t('playerProfile.stats.weekStreak')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Game History — past games with a verified score (always public per product). */}
+            <PlayerMatchHistorySection
+              playerId={playerId}
+              sportId={sportId}
+              sportName={selectedSport?.name}
+            />
+          </>
+        )}
+
+        {/* ── Preferences tab ── */}
+        {currentTabKey === 'preferences' && (
+          <>
+            {/* Preferences Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="options-outline" size={18} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  {t('playerProfile.sections.preferences')}
+                </Text>
+              </View>
+
+              <View
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
+                {/* Playing Hand — player-level, always shown */}
+                <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                    {t('playerProfile.fields.playingHand')}
+                  </Text>
+                  <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                    {formatPlayingHand(player?.playing_hand || null)}
+                  </Text>
+                </View>
+
+                {/* Max Travel Distance — player-level, always shown */}
+                <View
+                  style={[
+                    styles.preferenceRow,
+                    { borderBottomColor: colors.border },
+                    !sportPreferences && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                    {t('playerProfile.fields.maxTravelDistance')}
+                  </Text>
+                  <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                    {player?.max_travel_distance ? `${player.max_travel_distance} km` : '-'}
+                  </Text>
+                </View>
+
+                {/* Sport-specific preferences */}
+                {sportPreferences && (
+                  <>
+                    {/* Match Duration */}
+                    <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                      <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                        {t('profile.fields.matchDuration')}
+                      </Text>
+                      <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                        {formatMatchDuration(sportPreferences.preferred_match_duration)}
                       </Text>
                     </View>
 
-                    {/* Address */}
-                    {(fav.facility.address || fav.facility.city) && (
-                      <View style={styles.facilityAddressRow}>
-                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                        <Text
-                          style={[styles.facilityAddress, { color: colors.textMuted }]}
-                          numberOfLines={1}
+                    {/* Match Type */}
+                    <View style={[styles.preferenceRow, { borderBottomColor: colors.border }]}>
+                      <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                        {t('profile.fields.matchType')}
+                      </Text>
+                      <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                        {formatMatchType(sportPreferences.preferred_match_type)}
+                      </Text>
+                    </View>
+
+                    {/* Playing Style */}
+                    <View style={[styles.preferenceRow, { borderBottomWidth: 0 }]}>
+                      <Text style={[styles.preferenceLabel, { color: colors.textMuted }]}>
+                        {t('profile.fields.playingStyle')}
+                      </Text>
+                      <Text style={[styles.preferenceValue, { color: colors.text }]}>
+                        {formatPlayingStyle(sportPreferences.preferred_play_style)}
+                      </Text>
+                    </View>
+
+                    {/* Play Attributes */}
+                    {sportPreferences.playAttributes &&
+                      sportPreferences.playAttributes.length > 0 && (
+                        <View
+                          style={[
+                            styles.playAttributesContainer,
+                            { borderTopColor: colors.border },
+                          ]}
                         >
-                          {fav.facility.address || fav.facility.city}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                          <Text style={[styles.playAttributesTitle, { color: colors.textMuted }]}>
+                            {t('profile.fields.playAttributes')}
+                          </Text>
+                          <View style={styles.attributeTags}>
+                            {sportPreferences.playAttributes.map((attr: string, index: number) => (
+                              <View
+                                key={index}
+                                style={[
+                                  styles.attributeTag,
+                                  { backgroundColor: colors.primaryForeground },
+                                ]}
+                              >
+                                <Text style={[styles.attributeTagText, { color: colors.primary }]}>
+                                  {formatPlayAttribute(attr)}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                  </>
+                )}
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* ── Courts tab ── */}
+        {currentTabKey === 'courts' && (
+          <>
+            {/* Preferred Courts Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="tennisball-outline" size={18} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  {t('playerProfile.sections.preferredCourts')}
+                </Text>
+              </View>
+
+              {favoriteFacilitiesLoading ? (
+                <View style={styles.facilitiesSection}>
+                  {[1, 2, 3].map(i => (
+                    <Skeleton
+                      key={i}
+                      width="100%"
+                      height={70}
+                      borderRadius={radiusPixels.lg}
+                      backgroundColor={skeletonBg}
+                      highlightColor={skeletonHighlight}
+                    />
+                  ))}
                 </View>
-              ))}
-            </View>
-          ) : (
-            <View
-              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <Text style={[styles.noFacilitiesText, { color: colors.textMuted }]}>
-                {t('playerProfile.noPreferredCourts')}
-              </Text>
-            </View>
-          )}
-        </View>
+              ) : favoriteFacilities.length > 0 ? (
+                <View style={styles.facilitiesSection}>
+                  {favoriteFacilities.map(fav => (
+                    <View
+                      key={fav.id}
+                      style={[
+                        styles.facilityCard,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                      ]}
+                    >
+                      <View style={styles.facilityCardContent}>
+                        {/* Facility Name */}
+                        <View style={styles.facilityNameRow}>
+                          <Text
+                            style={[styles.facilityName, { color: colors.text }]}
+                            numberOfLines={1}
+                          >
+                            {fav.facility.name}
+                          </Text>
+                        </View>
 
-        {/* Availabilities — always public (per product). */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="time-outline" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('playerProfile.sections.availabilities')}
-            </Text>
-          </View>
+                        {/* Address */}
+                        {(fav.facility.address || fav.facility.city) && (
+                          <View style={styles.facilityAddressRow}>
+                            <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                            <Text
+                              style={[styles.facilityAddress, { color: colors.textMuted }]}
+                              numberOfLines={1}
+                            >
+                              {fav.facility.address || fav.facility.city}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.noFacilitiesText, { color: colors.textMuted }]}>
+                    {t('playerProfile.noPreferredCourts')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
 
-          <View
-            style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-            pointerEvents="none"
-          >
-            <HourlyAvailabilityGrid
-              value={availabilities}
-              onChange={() => {}}
-              colors={{
-                text: colors.text,
-                textSecondary: colors.textSecondary,
-                textMuted: colors.textMuted,
-                border: colors.inputBorder,
-                cellInactive: colors.inputBackground,
-                cellActive: colors.primary,
-              }}
-              t={t}
-              locale={locale}
-            />
-          </View>
-        </View>
+        {/* ── Availability tab ── */}
+        {currentTabKey === 'availability' && (
+          <>
+            {/* Availabilities — always public (per product). */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="time-outline" size={18} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  {t('playerProfile.sections.availabilities')}
+                </Text>
+              </View>
+
+              <View
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+                pointerEvents="none"
+              >
+                <HourlyAvailabilityGrid
+                  value={availabilities}
+                  onChange={() => {}}
+                  colors={{
+                    text: colors.text,
+                    textSecondary: colors.textSecondary,
+                    textMuted: colors.textMuted,
+                    border: colors.inputBorder,
+                    cellInactive: colors.inputBackground,
+                    cellActive: colors.primary,
+                  }}
+                  t={t}
+                  locale={locale}
+                />
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -2404,7 +2869,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[10],
   },
   profileHeader: {
-    marginTop: spacingPixels[6],
+    marginTop: spacingPixels[4],
     marginHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[5],
     paddingHorizontal: spacingPixels[4],
@@ -2426,9 +2891,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   profilePicContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2442,7 +2907,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
   profileName: {
+    flexShrink: 1,
     fontSize: fontSizePixels.xl,
     fontWeight: fontWeightNumeric.bold,
   },
@@ -2476,12 +2947,36 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   actionScroll: {
-    marginTop: spacingPixels[5],
+    marginTop: spacingPixels[4],
   },
   actionScrollContent: {
-    paddingHorizontal: spacingPixels[4],
-    gap: spacingPixels[3],
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+  },
+  heroBlock: {
+    paddingBottom: spacingPixels[2],
+  },
+  tabBarSticky: {
+    paddingTop: spacingPixels[2],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tabBarContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
+  },
+  tabItem: {
+    alignItems: 'center',
+    paddingTop: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  tabUnderline: {
+    alignSelf: 'stretch',
+    height: 2,
+    borderRadius: 1,
   },
   section: {
     marginTop: spacingPixels[4],
@@ -2502,26 +2997,16 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     borderWidth: 1,
   },
+  ratingCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  ratingCardBody: {
+    padding: spacingPixels[4],
+  },
   bioText: {
     fontSize: fontSizePixels.sm,
     lineHeight: 22,
-    marginBottom: spacingPixels[4],
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  infoItem: {
-    width: '50%',
-    marginBottom: spacingPixels[3],
-  },
-  infoLabel: {
-    fontSize: fontSizePixels.xs,
-    marginBottom: spacingPixels[1],
-  },
-  infoValue: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.medium,
   },
   preferencesGrid: {
     flexDirection: 'row',
@@ -2670,77 +3155,82 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.semibold,
   },
-  proofGallerySectionTitle: {
-    fontSize: fontSizePixels.sm,
-    fontWeight: fontWeightNumeric.semibold,
-    marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-  },
-  proofGalleryLoading: {
-    paddingVertical: spacingPixels[3],
+  proofHeroLoading: {
+    paddingVertical: spacingPixels[8],
     alignItems: 'center',
   },
-  proofGalleryList: {
-    gap: spacingPixels[2],
-  },
-  proofGalleryCard: {
-    width: PROOF_CARD_WIDTH,
-    height: PROOF_CARD_HEIGHT,
-    borderRadius: radiusPixels.md,
+  proofHeroCard: {
     overflow: 'hidden',
   },
-  proofGalleryThumbnail: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+  proofHeroImage: {
+    ...StyleSheet.absoluteFillObject,
   },
-  proofGalleryPlaceholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  proofTypeBadge: {
-    position: 'absolute',
-    top: spacingPixels[1],
-    left: spacingPixels[1],
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  proofPlayOverlay: {
+  proofHeroPlaceholder: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  proofPlayButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  proofHeroTypeBadge: {
+    position: 'absolute',
+    top: spacingPixels[2],
+    left: spacingPixels[2],
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  proofGalleryTitleContainer: {
+  proofHeroPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofHeroPlayButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofHeroFooter: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: spacingPixels[1],
-    paddingVertical: spacingPixels[1],
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    bottom: 0,
+    paddingHorizontal: spacingPixels[3],
+    paddingTop: spacingPixels[8],
+    paddingBottom: spacingPixels[3],
+    justifyContent: 'flex-end',
   },
-  proofGalleryTitle: {
-    fontSize: fontSizePixels.xs,
-    fontWeight: fontWeightNumeric.medium,
+  proofHeroTitle: {
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
     color: '#fff',
   },
-  profileBadgesRow: {
+  proofDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[3],
+  },
+  proofDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  genderInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2],
+    gap: spacingPixels[1],
+    flexShrink: 0,
+  },
+  heroBadgeSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
   },
   statsGrid: {
     flexDirection: 'row',
@@ -2765,6 +3255,55 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 10,
     textAlign: 'center',
+  },
+  // Reputation tab
+  repTierCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  repEmptyCard: {
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[6],
+  },
+  repEmptyTitle: {
+    fontSize: fontSizePixels.base,
+    fontWeight: fontWeightNumeric.semibold,
+  },
+  repEmptyBody: {
+    textAlign: 'center',
+  },
+  repMetricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[3],
+  },
+  repMetricCard: {
+    flexGrow: 0,
+    flexShrink: 1,
+    flexBasis: '48%',
+  },
+  repMetricSub: {
+    marginTop: spacingPixels[1],
+    textAlign: 'center',
+  },
+  repRatingBlock: {
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[2],
+  },
+  repRatingAvg: {
+    fontSize: fontSizePixels['4xl'],
+    lineHeight: fontSizePixels['4xl'] * 1.1,
+    fontWeight: fontWeightNumeric.bold,
+  },
+  repRatingStars: {
+    flexDirection: 'row',
+    gap: 3,
   },
   // Availability Grid Styles — kept in sync with AvailabilitiesStep,
   // PlayerAvailabilitiesOverlay, and UserProfile so all four surfaces feel
