@@ -288,24 +288,9 @@ const ProofHeroCard: React.FC<{
   );
 };
 
-// Splits a label across two centered lines at the space nearest the middle so
-// multi-word actions wrap evenly. Single-word labels still reserve a second
-// (empty) line so tiles in a row stay the same height.
-const splitLabelTwoLines = (label: string): [string, string] => {
-  const trimmed = label.trim();
-  const mid = trimmed.length / 2;
-  let splitAt = -1;
-  for (let i = 0; i < trimmed.length; i++) {
-    if (trimmed[i] !== ' ') continue;
-    if (splitAt === -1 || Math.abs(i - mid) <= Math.abs(splitAt - mid)) splitAt = i;
-  }
-  if (splitAt === -1) return [trimmed, ' '];
-  return [trimmed.slice(0, splitAt), trimmed.slice(splitAt + 1)];
-};
-
-// Flat accent action tile — matches the redesigned quick-nav buttons on Home and
-// Community: a 2xl-radius card with a bordered accent fill, a round translucent
-// icon chip on top, and a centered two-line label below.
+// Sleek pill action — a compact, pill-shaped accent button with its icon and a
+// single-line label set inline. Auto-sizes to its label so it stays tidy in the
+// horizontal scroll under the hero card.
 const HeroActionButton: React.FC<{
   icon: (color: string) => React.ReactNode;
   label: string;
@@ -313,7 +298,6 @@ const HeroActionButton: React.FC<{
   loading?: boolean;
   disabled?: boolean;
 }> = ({ icon, label, onPress, loading = false, disabled = false }) => {
-  const [lineOne, lineTwo] = splitLabelTwoLines(label);
   const handlePress = () => {
     void lightHaptic();
     onPress();
@@ -323,79 +307,33 @@ const HeroActionButton: React.FC<{
       onPress={handlePress}
       activeOpacity={0.85}
       disabled={loading || disabled}
-      style={heroActionStyles.item}
+      style={[heroActionStyles.item, (loading || disabled) && heroActionStyles.itemDisabled]}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: loading || disabled, busy: loading }}
     >
-      <View
-        style={[heroActionStyles.inner, (loading || disabled) && heroActionStyles.innerDisabled]}
-      >
-        <View style={heroActionStyles.iconCircle}>
-          {loading ? <ActivityIndicator size="small" color="#ffffff" /> : icon('#ffffff')}
-        </View>
-        <View style={heroActionStyles.labelBlock}>
-          <Text
-            size="sm"
-            weight="semibold"
-            color="#ffffff"
-            style={heroActionStyles.label}
-            numberOfLines={1}
-          >
-            {lineOne}
-          </Text>
-          <Text
-            size="sm"
-            weight="semibold"
-            color="#ffffff"
-            style={heroActionStyles.label}
-            numberOfLines={1}
-          >
-            {lineTwo}
-          </Text>
-        </View>
-      </View>
+      {loading ? <ActivityIndicator size="small" color="#ffffff" /> : icon('#ffffff')}
+      <Text size="sm" weight="semibold" color="#ffffff" numberOfLines={1}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 };
 
 const heroActionStyles = StyleSheet.create({
   item: {
-    width: 200,
-    borderRadius: radiusPixels['2xl'],
-  },
-  inner: {
     flexDirection: 'row',
-    borderRadius: radiusPixels['2xl'],
-    borderWidth: 1.5,
-    borderColor: accent[500],
-    backgroundColor: accent[400],
     alignItems: 'center',
     gap: spacingPixels[2],
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
-    overflow: 'hidden',
-  },
-  innerDisabled: {
-    opacity: 0.6,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: radiusPixels.full,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    flexShrink: 0,
+    borderColor: accent[500],
+    backgroundColor: accent[400],
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[4],
   },
-  labelBlock: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  label: {
-    textAlign: 'center',
+  itemDisabled: {
+    opacity: 0.6,
   },
 });
 
@@ -1831,19 +1769,19 @@ const PlayerProfile = () => {
             </View>
           </View>
 
-          {/* Action buttons skeleton — flat tiles in a horizontal row */}
+          {/* Action buttons skeleton — sleek pills in a horizontal row */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.actionScroll}
             contentContainerStyle={styles.actionScrollContent}
           >
-            {[1, 2, 3].map(i => (
+            {[132, 104, 168].map(w => (
               <Skeleton
-                key={i}
-                width={200}
-                height={76}
-                borderRadius={radiusPixels['2xl']}
+                key={w}
+                width={w}
+                height={40}
+                borderRadius={radiusPixels.full}
                 backgroundColor={skeletonBg}
                 highlightColor={skeletonHighlight}
               />
@@ -2147,7 +2085,36 @@ const PlayerProfile = () => {
             />
           </View>
 
-          {/* About / Bio Section — sits directly under the hero card */}
+          {/* Action buttons — sleek accent pills in a horizontal row under the hero card */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.actionScroll}
+            contentContainerStyle={styles.actionScrollContent}
+          >
+            <HeroActionButton
+              label={t('playerProfile.inviteToMatch')}
+              onPress={handleInviteToMatch}
+              icon={color => (
+                <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={18} color={color} />
+              )}
+            />
+            <HeroActionButton
+              label={t('playerProfile.chatAction')}
+              onPress={handleStartChat}
+              loading={chatLoading}
+              disabled={!currentUserId}
+              icon={color => <Ionicons name="chatbubble-outline" size={18} color={color} />}
+            />
+            <HeroActionButton
+              label={t('playerProfile.requestReference')}
+              onPress={handleRequestReference}
+              loading={referenceLoading}
+              icon={color => <Ionicons name="document-text-outline" size={18} color={color} />}
+            />
+          </ScrollView>
+
+          {/* About / Bio Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="person-outline" size={18} color={colors.primary} />
@@ -2164,35 +2131,6 @@ const PlayerProfile = () => {
               </Text>
             </View>
           </View>
-
-          {/* Action buttons — flat accent tiles in a horizontal row under the hero card */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.actionScroll}
-            contentContainerStyle={styles.actionScrollContent}
-          >
-            <HeroActionButton
-              label={t('playerProfile.inviteToMatch')}
-              onPress={handleInviteToMatch}
-              icon={color => (
-                <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={24} color={color} />
-              )}
-            />
-            <HeroActionButton
-              label={t('playerProfile.chatAction')}
-              onPress={handleStartChat}
-              loading={chatLoading}
-              disabled={!currentUserId}
-              icon={color => <Ionicons name="chatbubble-outline" size={24} color={color} />}
-            />
-            <HeroActionButton
-              label={t('playerProfile.requestReference')}
-              onPress={handleRequestReference}
-              loading={referenceLoading}
-              icon={color => <Ionicons name="document-text-outline" size={24} color={color} />}
-            />
-          </ScrollView>
         </View>
 
         {/* Sticky tab bar (index 1) — scrollable underline tabs: each sized to
