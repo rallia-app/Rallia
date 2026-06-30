@@ -61,7 +61,12 @@
       "label": "Genre",
       "male": "Homme",
       "female": "Femme",
-      "other": "Autre"
+      "other": "Autre",
+      "short": {
+        "male": "H",
+        "female": "F",
+        "other": "X"
+      }
     },
     "playingHand": {
       "label": "Main de jeu",
@@ -1442,8 +1447,10 @@
     "inviteToMatch": "Inviter à une partie",
     "requestReference": "Demander une référence",
     "chat": "Chat",
+    "chatAction": "Envoyer un message",
     "sections": {
       "playerInformation": "Informations du joueur",
+      "about": "À propos",
       "preferences": "Préférences",
       "preferredCourts": "Sites de jeu préférés",
       "rating": "Niveau",
@@ -1451,6 +1458,15 @@
       "statistics": "Statistiques",
       "gameHistory": "Historique des parties",
       "availabilities": "Disponibilités"
+    },
+    "tabs": {
+      "overview": "Aperçu",
+      "level": "Niveau",
+      "reputation": "Réputation",
+      "availability": "Dispos",
+      "preferences": "Préférences",
+      "courts": "Sites",
+      "history": "Historique"
     },
     "fields": {
       "gender": "Genre",
@@ -1461,6 +1477,20 @@
       "hoursPlayed": "Heures jouées",
       "gamesHosted": "Parties organisées",
       "weekStreak": "Série de semaines"
+    },
+    "reputation": {
+      "reliability": "Fiabilité",
+      "showsUpRate": "{rate}% se présente",
+      "onTimeRate": "{rate}% à l'heure",
+      "noShows": "Absences",
+      "lateArrivals": "Retards",
+      "ratings": "Évaluations",
+      "reviewsCount": "{count} évaluations",
+      "noReviews": "Pas encore d'évaluations",
+      "empty": {
+        "title": "Réputation en construction",
+        "body": "La réputation de {name} apparaît après quelques parties jouées pis évaluées."
+      }
     },
     "gameHistory": {
       "empty": "Aucune partie avec un pointage enregistré pour l'instant.",

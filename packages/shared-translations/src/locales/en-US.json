@@ -71,7 +71,12 @@
       "label": "Gender",
       "male": "Male",
       "female": "Female",
-      "other": "Other"
+      "other": "Other",
+      "short": {
+        "male": "M",
+        "female": "F",
+        "other": "X"
+      }
     },
     "playingHand": {
       "label": "Playing Hand",
@@ -1442,8 +1447,10 @@
     "inviteToMatch": "Invite to Match",
     "requestReference": "Request reference",
     "chat": "Chat",
+    "chatAction": "Send a message",
     "sections": {
       "playerInformation": "Player Information",
+      "about": "About",
       "preferences": "Preferences",
       "preferredCourts": "Preferred Courts",
       "rating": "Level",
@@ -1451,6 +1458,15 @@
       "statistics": "Statistics",
       "gameHistory": "Game History",
       "availabilities": "Availabilities"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "level": "Level",
+      "reputation": "Reputation",
+      "availability": "Availability",
+      "preferences": "Preferences",
+      "courts": "Courts",
+      "history": "History"
     },
     "fields": {
       "gender": "Gender",
@@ -1461,6 +1477,20 @@
       "hoursPlayed": "Hours Played",
       "gamesHosted": "Games Hosted",
       "weekStreak": "Week Streak"
+    },
+    "reputation": {
+      "reliability": "Reliability",
+      "showsUpRate": "{rate}% shows up",
+      "onTimeRate": "{rate}% on time",
+      "noShows": "No-shows",
+      "lateArrivals": "Late arrivals",
+      "ratings": "Player ratings",
+      "reviewsCount": "{count} reviews",
+      "noReviews": "No reviews yet",
+      "empty": {
+        "title": "Building reputation",
+        "body": "{name}'s reputation shows up once they've played and been reviewed in a few games."
+      }
     },
     "gameHistory": {
       "empty": "No games with a recorded score yet.",
