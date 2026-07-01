@@ -134,6 +134,15 @@
     "termsMiddle": " et la ",
     "privacyLink": "Politique de confidentialité",
     "termsSuffix": " de Rallia.",
+    "consent": {
+      "privacyPrefix": "J'ai lu la ",
+      "privacyLink": "Politique de confidentialité",
+      "privacySuffix": " de Rallia, et je consens à la collecte, à l'utilisation et à la communication de mes renseignements personnels conformément à celle-ci.",
+      "termsPrefix": "J'ai lu et j'accepte les ",
+      "termsLink": "Conditions générales d'utilisation",
+      "termsSuffix": " de la plateforme et du site web de Rallia.",
+      "required": "Veuillez accepter la Politique de confidentialité et les Conditions générales d'utilisation pour continuer."
+    },
     "orDivider": "OU",
     "step": "Étape {current} de {total}",
     "stepNames": {
