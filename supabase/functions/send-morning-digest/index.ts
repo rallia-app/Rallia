@@ -379,6 +379,20 @@ async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
+/**
+ * Deterministic FNV-1a hash of a user id → shard bucket in [0, shardCount).
+ * Stable across invocations, so a given user always lands in the same shard —
+ * making the staggered per-shard cron runs (and retries) idempotent.
+ */
+function shardOf(userId: string, shardCount: number): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < userId.length; i++) {
+    h ^= userId.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) % shardCount;
+}
+
 // =============================================================================
 // MAIN PROCESSING
 // =============================================================================
@@ -398,13 +412,23 @@ async function processDigests(
   fromEmail: string,
   appUrl: string,
   jwtSecret: string,
-  startTime: number
+  startTime: number,
+  shardIndex: number,
+  shardCount: number
 ): Promise<ProcessSummary> {
-  const users = await getEligibleUsers(supabase);
+  const allUsers = await getEligibleUsers(supabase);
+
+  // Only process this shard's slice. Each Edge invocation runs in its own
+  // isolate with a fresh 2s-CPU / 256MB budget; processing the whole userbase
+  // in one request is what tripped the 546 WORKER_RESOURCE_LIMIT once the
+  // audience grew. Sharding on a stable hash of user_id (rather than an offset)
+  // is drift-proof as users get stamped "sent today" between the staggered
+  // shard runs.
+  const users =
+    shardCount > 1 ? allUsers.filter(u => shardOf(u.userId, shardCount) === shardIndex) : allUsers;
+
   console.log(
-    `[digest] Found ${users.length} eligible user-sport combinations → ${
-      new Set(users.map(u => u.userId)).size
-    } users`
+    `[digest] Shard ${shardIndex}/${shardCount}: processing ${users.length} of ${allUsers.length} eligible users`
   );
 
   let emailsSent = 0;
@@ -562,14 +586,41 @@ Deno.serve(async req => {
   const authError = requireSecretApikey(req);
   if (authError) return authError;
 
-  console.log('[digest] Morning digest job started');
+  // Shard parameters — the pg_cron fan-out posts one staggered call per shard
+  // as { shard_index, shard_count }. Defaults (0/1) process the entire userbase,
+  // preserving manual-invoke behavior.
+  let shardIndex = 0;
+  let shardCount = 1;
+  try {
+    const body = await req.json();
+    if (body && typeof body === 'object') {
+      const c = Number((body as Record<string, unknown>).shard_count);
+      const i = Number((body as Record<string, unknown>).shard_index);
+      if (Number.isInteger(c) && c >= 1) shardCount = c;
+      if (Number.isInteger(i) && i >= 0) shardIndex = i;
+    }
+  } catch {
+    // No/invalid JSON body → full run.
+  }
+  if (shardIndex >= shardCount) shardIndex = 0; // guard against misconfiguration
+
+  console.log(`[digest] Morning digest job started (shard ${shardIndex}/${shardCount})`);
   const startTime = Date.now();
 
   try {
-    const result = await processDigests(supabase, resend, fromEmail, appUrl, jwtSecret, startTime);
+    const result = await processDigests(
+      supabase,
+      resend,
+      fromEmail,
+      appUrl,
+      jwtSecret,
+      startTime,
+      shardIndex,
+      shardCount
+    );
 
     console.log(
-      `[digest] Done: ${result.emailsSent} sent, ${result.emailsSkippedNoContent} skipped (empty feed), ${result.deferredUsers} deferred, ${result.errors.length} errors, ${result.durationMs}ms, p95=${result.p95UserMs}ms`
+      `[digest] Done (shard ${shardIndex}/${shardCount}): ${result.emailsSent} sent, ${result.emailsSkippedNoContent} skipped (empty feed), ${result.deferredUsers} deferred, ${result.errors.length} errors, ${result.durationMs}ms, p95=${result.p95UserMs}ms`
     );
 
     const httpStatus = result.errors.length > 0 && result.emailsSent === 0 ? 500 : 200;
@@ -578,10 +629,13 @@ Deno.serve(async req => {
       await reportHeartbeat(Deno.env.get('BETTERSTACK_HEARTBEAT_MORNING_DIGEST'));
     }
 
-    return new Response(JSON.stringify({ success: httpStatus === 200, ...result }), {
-      status: httpStatus,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ success: httpStatus === 200, shardIndex, shardCount, ...result }),
+      {
+        status: httpStatus,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (err) {
     console.error('[digest] Fatal error:', err);
     return new Response(
