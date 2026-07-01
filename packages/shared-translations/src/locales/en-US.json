@@ -134,6 +134,15 @@
     "termsMiddle": " and ",
     "privacyLink": "Privacy Policy",
     "termsSuffix": ".",
+    "consent": {
+      "privacyPrefix": "I have read Rallia's ",
+      "privacyLink": "Privacy Policy",
+      "privacySuffix": ", and I consent to the collection, use, and disclosure of my personal information in accordance with it.",
+      "termsPrefix": "I have read and accept the ",
+      "termsLink": "Terms of Use",
+      "termsSuffix": " of the Rallia platform and website.",
+      "required": "Please accept the Privacy Policy and the Terms of Use to continue."
+    },
     "orDivider": "OR",
     "step": "Step {current} of {total}",
     "stepNames": {
