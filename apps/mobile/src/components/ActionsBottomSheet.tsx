@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import ActionSheet, { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, ToastOverlay } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -792,6 +792,7 @@ export const ActionsBottomSheet: React.FC = () => {
       gestureEnabled={!disableGestures}
       closeOnTouchBackdrop={!disableGestures}
       onClose={handleSheetDismiss}
+      ExtraOverlayComponent={<ToastOverlay />}
       containerStyle={[
         styles.sheetBackground,
         { backgroundColor: colors.cardBackground },

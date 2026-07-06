@@ -70,70 +70,7 @@ interface EmailStepProps {
   socialAuthLoadingProvider?: SocialProvider | null;
   /** Whether Apple Sign-In is available (iOS 13+ only) */
   isAppleSignInAvailable?: boolean;
-  /**
-   * Consent checkbox state. Both must be accepted before any sign-up method
-   * (email or social) can proceed. Owned by the parent wizard so the same
-   * consent gate applies to the social handlers it passes down.
-   */
-  hasAcceptedPrivacy: boolean;
-  hasAcceptedTerms: boolean;
-  onTogglePrivacy: () => void;
-  onToggleTerms: () => void;
 }
-
-/**
- * A single consent checkbox: a tappable row that toggles the box, with an
- * inline hyperlink (privacy policy or terms) that opens the document instead
- * of toggling. Required by Rallia's privacy counsel: two distinct boxes,
- * unchecked by default, each linking to its document.
- */
-interface ConsentCheckboxProps {
-  checked: boolean;
-  onToggle: () => void;
-  prefix: string;
-  linkLabel: string;
-  suffix: string;
-  url: string;
-  colors: ThemeColors;
-}
-
-const ConsentCheckbox: React.FC<ConsentCheckboxProps> = ({
-  checked,
-  onToggle,
-  prefix,
-  linkLabel,
-  suffix,
-  url,
-  colors,
-}) => (
-  <TouchableOpacity
-    style={styles.consentRow}
-    onPress={onToggle}
-    activeOpacity={0.7}
-    accessibilityRole="checkbox"
-    accessibilityState={{ checked }}
-    accessibilityLabel={`${prefix}${linkLabel}${suffix}`}
-  >
-    <Ionicons
-      name={checked ? 'checkbox' : 'square-outline'}
-      size={22}
-      color={checked ? colors.buttonActive : colors.textMuted}
-      style={styles.consentCheckboxIcon}
-    />
-    <Text size="xs" color={colors.textSecondary} style={styles.consentText}>
-      {prefix}
-      <Text
-        size="xs"
-        color={primary[500]}
-        style={styles.termsLink}
-        onPress={() => Linking.openURL(url)}
-      >
-        {linkLabel}
-      </Text>
-      {suffix}
-    </Text>
-  </TouchableOpacity>
-);
 
 export const EmailStep: React.FC<EmailStepProps> = ({
   inputRef,
@@ -151,18 +88,13 @@ export const EmailStep: React.FC<EmailStepProps> = ({
   socialAuthLoading = false,
   socialAuthLoadingProvider = null,
   isAppleSignInAvailable = Platform.OS === 'ios',
-  hasAcceptedPrivacy,
-  hasAcceptedTerms,
-  onTogglePrivacy,
-  onToggleTerms,
 }) => {
   // Note: don't explicitly blur on !isActive. When advancing to the OTP step,
   // focusing the OTP input will remove focus here automatically, and doing so
   // keeps the keyboard open across the step transition. An explicit blur here
   // would dismiss the keyboard in the gap before OTP focuses.
 
-  const canContinue =
-    isEmailValid && hasAcceptedPrivacy && hasAcceptedTerms && !isLoading && !socialAuthLoading;
+  const canContinue = isEmailValid && !isLoading && !socialAuthLoading;
   const isAnyLoading = isLoading || socialAuthLoading;
 
   return (
@@ -256,29 +188,6 @@ export const EmailStep: React.FC<EmailStepProps> = ({
         textContentType="emailAddress"
       />
 
-      {/* Consent Checkboxes — two distinct boxes, unchecked by default, each
-          linking to its document. Required before email or social sign-up. */}
-      <View style={styles.consentContainer}>
-        <ConsentCheckbox
-          checked={hasAcceptedPrivacy}
-          onToggle={onTogglePrivacy}
-          prefix={t('auth.consent.privacyPrefix')}
-          linkLabel={t('auth.consent.privacyLink')}
-          suffix={t('auth.consent.privacySuffix')}
-          url="https://rallia.ca/privacy"
-          colors={colors}
-        />
-        <ConsentCheckbox
-          checked={hasAcceptedTerms}
-          onToggle={onToggleTerms}
-          prefix={t('auth.consent.termsPrefix')}
-          linkLabel={t('auth.consent.termsLink')}
-          suffix={t('auth.consent.termsSuffix')}
-          url="https://rallia.ca/terms"
-          colors={colors}
-        />
-      </View>
-
       {/* Continue Button */}
       <TouchableOpacity
         style={[
@@ -301,6 +210,29 @@ export const EmailStep: React.FC<EmailStepProps> = ({
           </Text>
         )}
       </TouchableOpacity>
+
+      {/* Terms Text */}
+      <Text size="xs" color={colors.textMuted} style={styles.termsText}>
+        {t('auth.termsPrefix')}
+        <Text
+          size="xs"
+          color={primary[500]}
+          style={styles.termsLink}
+          onPress={() => Linking.openURL('https://rallia.ca/terms')}
+        >
+          {t('auth.termsLink')}
+        </Text>
+        {t('auth.termsMiddle')}
+        <Text
+          size="xs"
+          color={primary[500]}
+          style={styles.termsLink}
+          onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+        >
+          {t('auth.privacyLink')}
+        </Text>
+        {t('auth.termsSuffix')}
+      </Text>
     </SheetScrollView>
   );
 };
@@ -370,21 +302,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  consentContainer: {
-    gap: spacingPixels[3],
-    marginBottom: spacingPixels[5],
-  },
-  consentRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  consentCheckboxIcon: {
-    marginRight: spacingPixels[2],
-    marginTop: 1,
-  },
-  consentText: {
-    flex: 1,
+  termsText: {
+    textAlign: 'center',
     lineHeight: 18,
+    paddingHorizontal: spacingPixels[2],
   },
   termsLink: {
     textDecorationLine: 'underline',

@@ -5356,6 +5356,44 @@ export type Database = {
           },
         ]
       }
+      player_consent: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          id: string
+          player_id: string
+          policy_type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          id?: string
+          player_id: string
+          policy_type: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          id?: string
+          player_id?: string
+          policy_type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_consent_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_favorite: {
         Row: {
           created_at: string | null
@@ -6159,6 +6197,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      policy_versions: {
+        Row: {
+          current_version: number
+          policy_type: string
+          updated_at: string
+        }
+        Insert: {
+          current_version?: number
+          policy_type: string
+          updated_at?: string
+        }
+        Update: {
+          current_version?: number
+          policy_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       pricing_rule: {
         Row: {
@@ -9428,6 +9484,24 @@ export type Database = {
         Args: { p_suggestion_id: string }
         Returns: Json
       }
+      accept_policy_consent: {
+        Args: { p_policy_type: string; p_version: number }
+        Returns: {
+          accepted_at: string
+          created_at: string
+          id: string
+          player_id: string
+          policy_type: string
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_consent"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_rebuttal_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
@@ -10431,6 +10505,13 @@ export type Database = {
           request_type: Database["public"]["Enums"]["network_member_request_type"]
         }[]
       }
+      get_pending_policy_consents: {
+        Args: never
+        Returns: {
+          current_version: number
+          policy_type: string
+        }[]
+      }
       get_pending_reports_count: {
         Args: never
         Returns: {
@@ -10646,22 +10727,6 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: Json
       }
-      get_player_reputation_breakdown: {
-        Args: { p_player_id: string }
-        Returns: {
-          games_completed: number
-          no_shows: number
-          on_time: number
-          late: number
-          left_late: number
-          late_cancellations: number
-          reviews_5: number
-          reviews_4: number
-          reviews_3: number
-          reviews_2: number
-          reviews_1: number
-        }[]
-      }
       get_player_reports: {
         Args: {
           p_limit?: number
@@ -10693,6 +10758,22 @@ export type Database = {
           reviewer_name: string
           status: Database["public"]["Enums"]["report_status_enum"]
           updated_at: string
+        }[]
+      }
+      get_player_reputation_breakdown: {
+        Args: { p_player_id: string }
+        Returns: {
+          games_completed: number
+          late: number
+          late_cancellations: number
+          left_late: number
+          no_shows: number
+          on_time: number
+          reviews_1: number
+          reviews_2: number
+          reviews_3: number
+          reviews_4: number
+          reviews_5: number
         }[]
       }
       get_players_by_play_attributes: {

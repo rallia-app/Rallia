@@ -136,8 +136,10 @@ import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
 import { useAppVersionGate } from './src/hooks/useAppVersionGate';
+import { usePolicyConsentGate } from './src/hooks/usePolicyConsentGate';
 import { useApplyUpdateOnResume } from './src/hooks/useApplyUpdateOnResume';
 import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
+import { PolicyReconsentScreen } from './src/components/PolicyReconsentScreen';
 import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
@@ -844,6 +846,33 @@ function UpdateGate({ children }: PropsWithChildren) {
   return <>{children}</>;
 }
 
+/**
+ * ConsentGate — replaces the entire app surface with a blocking re-consent
+ * screen when the signed-in user hasn't accepted the current version of the
+ * Privacy Policy and/or Terms of Use. Nested inside UpdateGate (a stale
+ * binary is a more urgent block than stale consent, and there's no point
+ * checking consent on a binary that's about to be forced to update anyway).
+ * Existing accounts are grandfathered via a migration backfill, so this only
+ * ever fires going forward, on a real policy_versions bump. Fail-open is
+ * enforced inside usePolicyConsentGate so a Supabase outage can't lock users
+ * out; guests (no session) are never gated.
+ */
+function ConsentGate({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  const gate = usePolicyConsentGate(user?.id);
+
+  useEffect(() => {
+    if (gate.status === 'required') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [gate.status]);
+
+  if (gate.status === 'required') {
+    return <PolicyReconsentScreen pending={gate.pending} onAccepted={gate.recheck} />;
+  }
+  return <>{children}</>;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   // Splash hide is owned by SplashGate (which lives inside AuthenticatedProviders
@@ -1023,7 +1052,9 @@ function App() {
                                               merchantIdentifier="merchant.com.mathisl971.rallia-app"
                                             >
                                               <UpdateGate>
-                                                <AppContent />
+                                                <ConsentGate>
+                                                  <AppContent />
+                                                </ConsentGate>
                                               </UpdateGate>
                                             </StripeProvider>
                                           </FeedbackReportSheetProvider>

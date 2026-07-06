@@ -1,3 +1,4 @@
+export { ConsentStep } from './ConsentStep';
 export { PersonalInfoStep } from './PersonalInfoStep';
 export { RatingStep } from './RatingStep';
 export { PreferencesStep } from './PreferencesStep';

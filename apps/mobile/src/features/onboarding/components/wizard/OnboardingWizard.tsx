@@ -46,6 +46,8 @@ import {
   requestToJoinCommunityByInviteCode,
   syncHomeLocation as syncHomeLocationToPlayer,
   getCheckInMatchOpportunities,
+  acceptPolicyConsent,
+  type PolicyType,
 } from '@rallia/shared-services';
 import { useProfile, usePlayer, facilityKeys } from '@rallia/shared-hooks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -75,6 +77,7 @@ import {
 } from '#/features/onboarding/hooks/useOnboardingWizard';
 
 import {
+  ConsentStep,
   PersonalInfoStep,
   RatingStep,
   PreferencesStep,
@@ -248,6 +251,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 
 const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => string): string => {
   const keys: Record<OnboardingStepId, TranslationKey> = {
+    consent: 'onboarding.stepNames.consent',
     personal: 'onboarding.stepNames.personal',
     'tennis-rating': 'onboarding.stepNames.tennisRating',
     'pickleball-rating': 'onboarding.stepNames.pickleballRating',
@@ -463,6 +467,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     if (isSaving) return true;
 
     switch (currentStepId) {
+      case 'consent':
+        return !(formData.hasAcceptedPrivacy && formData.hasAcceptedTerms);
       case 'personal': {
         if (
           !formData.firstName.trim() ||
@@ -532,6 +538,45 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Validate and save current step data
   const validateAndSaveStep = useCallback(async (): Promise<boolean> => {
     switch (currentStepId) {
+      case 'consent': {
+        if (!(formData.hasAcceptedPrivacy && formData.hasAcceptedTerms)) {
+          Alert.alert(t('alerts.error'), t('auth.consent.required'));
+          warningHaptic();
+          return false;
+        }
+
+        setIsSaving(true);
+        try {
+          // Re-fetch current versions rather than trusting cached form state —
+          // robust to policy_versions being bumped while the user was
+          // mid-onboarding. accept_policy_consent shares the same RPC the
+          // global re-consent gate uses, so onboarding and the gate never
+          // diverge on what "accepted" means.
+          const { data: versions, error: versionsError } = await supabase
+            .from('policy_versions')
+            .select('policy_type, current_version');
+
+          if (versionsError || !versions) {
+            Logger.error('Failed to load policy versions', versionsError as Error);
+            Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+            setIsSaving(false);
+            return false;
+          }
+
+          await Promise.all(
+            versions.map(v => acceptPolicyConsent(v.policy_type as PolicyType, v.current_version))
+          );
+
+          setIsSaving(false);
+          return true;
+        } catch (error) {
+          Logger.error('Unexpected error saving consent', error as Error);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+          setIsSaving(false);
+          return false;
+        }
+      }
+
       case 'personal': {
         // Validate personal info
         if (
@@ -1120,6 +1165,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Render step content
   const renderStep = (stepId: OnboardingStepId, _index: number) => {
     switch (stepId) {
+      case 'consent':
+        return (
+          <ConsentStep
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            colors={colors}
+            t={t}
+            isDark={isDark}
+          />
+        );
       case 'personal':
         return (
           <PersonalInfoStep
