@@ -26,7 +26,7 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
-import { Text } from '../foundation/Text.native';
+import { Text } from '../foundation/Text';
 import { colors, spacing, typography } from '../theme';
 
 export interface InputProps extends Omit<TextInputProps, 'style'> {

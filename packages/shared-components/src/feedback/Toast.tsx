@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { StyleSheet, Animated, TouchableOpacity, Platform, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { status } from '@rallia/design-system';
-import { Text } from '../foundation/Text.native';
+import { Text } from '../foundation/Text';
 import { spacing } from '../theme';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';

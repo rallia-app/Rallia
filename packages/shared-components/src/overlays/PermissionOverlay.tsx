@@ -1,19 +1,57 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Overlay from '../Overlay.native';
+import Overlay from '../Overlay';
 import { COLORS } from '@rallia/design-system';
 
-interface LocationPermissionOverlayProps {
-  visible: boolean;
-  onAccept: () => void;
-  onRefuse: () => void;
+export type PermissionType = 'location' | 'camera' | 'notification';
+
+interface PermissionConfig {
+  title: string;
+  description: string;
+  icon?: string;
 }
 
-const LocationPermissionOverlay: React.FC<LocationPermissionOverlayProps> = ({
+const PERMISSION_CONFIGS: Record<PermissionType, PermissionConfig> = {
+  location: {
+    title: 'Location Access',
+    description:
+      'Allow access to your location to show\nnearby events and improve\nrecommendations.',
+  },
+  camera: {
+    title: 'Camera Access',
+    description: 'Allow access to your camera to take\nprofile pictures and share moments.',
+  },
+  notification: {
+    title: 'Notification Access',
+    description: 'Allow notifications to stay updated\nabout matches, messages, and events.',
+  },
+};
+
+interface PermissionOverlayProps {
+  visible: boolean;
+  type: PermissionType;
+  onAccept: () => void;
+  onRefuse: () => void;
+  customTitle?: string;
+  customDescription?: string;
+}
+
+/**
+ * Generic permission request overlay
+ * Supports different permission types with consistent UI
+ */
+const PermissionOverlay: React.FC<PermissionOverlayProps> = ({
   visible,
+  type,
   onAccept,
   onRefuse,
+  customTitle,
+  customDescription,
 }) => {
+  const config = PERMISSION_CONFIGS[type];
+  const title = customTitle || config.title;
+  const description = customDescription || config.description;
+
   const handleClose = () => {
     // For permission overlay, we don't want to close without action
   };
@@ -31,14 +69,10 @@ const LocationPermissionOverlay: React.FC<LocationPermissionOverlayProps> = ({
     >
       <View style={styles.container}>
         {/* Title */}
-        <Text style={styles.title}>Location Access</Text>
+        <Text style={styles.title}>{title}</Text>
 
         {/* Description */}
-        <Text style={styles.description}>
-          Allow access to your location to show{'\n'}
-          nearby events and improve{'\n'}
-          recommendations.
-        </Text>
+        <Text style={styles.description}>{description}</Text>
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
@@ -112,4 +146,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LocationPermissionOverlay;
+export default PermissionOverlay;

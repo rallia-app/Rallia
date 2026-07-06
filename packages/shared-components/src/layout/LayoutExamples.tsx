@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { neutral } from '@rallia/design-system';
-import { Container } from './Container.native';
-import { Stack, VStack, HStack } from './Stack.native';
-import { Card } from './Card.native';
-import { Divider } from './Divider.native';
-import { Spacer } from './Spacer.native';
-import { Text } from '../foundation/Text.native';
-import { Heading } from '../foundation/Heading.native';
-import { Button } from '../foundation/Button.native';
+import { Container } from './Container';
+import { Stack, VStack, HStack } from './Stack';
+import { Card } from './Card';
+import { Divider } from './Divider';
+import { Spacer } from './Spacer';
+import { Text } from '../foundation/Text';
+import { Heading } from '../foundation/Heading';
+import { Button } from '../foundation/Button';
 
 /**
  * Example 1: Basic Container Usage

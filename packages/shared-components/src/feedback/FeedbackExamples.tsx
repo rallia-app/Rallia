@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { neutral } from '@rallia/design-system';
-import { Container } from '../layout/Container.native';
-import { VStack, HStack } from '../layout/Stack.native';
-import { Card } from '../layout/Card.native';
-import { Spacer } from '../layout/Spacer.native';
-import { Divider } from '../layout/Divider.native';
-import { Spinner } from './Spinner.native';
-import { ErrorMessage } from './ErrorMessage.native';
-import { Badge } from './Badge.native';
-import { Text } from '../foundation/Text.native';
-import { Heading } from '../foundation/Heading.native';
-import { Button } from '../foundation/Button.native';
+import { Container } from '../layout/Container';
+import { VStack, HStack } from '../layout/Stack';
+import { Card } from '../layout/Card';
+import { Spacer } from '../layout/Spacer';
+import { Divider } from '../layout/Divider';
+import { Spinner } from './Spinner';
+import { ErrorMessage } from './ErrorMessage';
+import { Badge } from './Badge';
+import { Text } from '../foundation/Text';
+import { Heading } from '../foundation/Heading';
+import { Button } from '../foundation/Button';
 
 /**
  * Example 1: Spinner Usage

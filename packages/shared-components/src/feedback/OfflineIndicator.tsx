@@ -8,7 +8,7 @@ import { View, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { status } from '@rallia/design-system';
-import { Text } from '../foundation/Text.native';
+import { Text } from '../foundation/Text';
 import { spacing } from '../theme';
 
 export interface OfflineIndicatorProps {

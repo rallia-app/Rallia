@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Text } from '../foundation/Text.native';
-import { Button } from '../foundation/Button.native';
-import { VStack } from '../layout/Stack.native';
+import { Text } from '../foundation/Text';
+import { Button } from '../foundation/Button';
+import { VStack } from '../layout/Stack';
 import { colors, spacing } from '../theme';
 
 export interface ErrorMessageProps {

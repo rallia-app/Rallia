@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Modal, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../foundation/Text.native';
+import { Text } from '../foundation/Text';
 import {
   lightTheme,
   darkTheme,

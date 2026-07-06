@@ -15,8 +15,8 @@ import { supabase } from '@rallia/shared-services';
 import { useProfile } from '@rallia/shared-hooks';
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import { primary, neutral } from '@rallia/design-system';
-import { Text } from './foundation/Text.native';
-import { Heading } from './foundation/Heading.native';
+import { Text } from './foundation/Text';
+import { Heading } from './foundation/Heading';
 
 interface SettingsModalProps {
   visible: boolean;

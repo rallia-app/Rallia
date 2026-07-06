@@ -31,10 +31,10 @@
 import React, { Component, ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { neutral } from '@rallia/design-system';
-import { Text } from './foundation/Text.native';
-import { Heading } from './foundation/Heading.native';
-import { Button } from './foundation/Button.native';
-import { VStack } from './layout/Stack.native';
+import { Text } from './foundation/Text';
+import { Heading } from './foundation/Heading';
+import { Button } from './foundation/Button';
+import { VStack } from './layout/Stack';
 
 export interface ErrorBoundaryTranslations {
   title?: string;
