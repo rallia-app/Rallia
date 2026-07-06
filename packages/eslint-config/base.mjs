@@ -4,6 +4,8 @@ import importPlugin from 'eslint-plugin-import-x';
 import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
+import { designTokens } from './design-tokens.mjs';
+
 export function base({ tsconfigRootDir } = {}) {
   return tseslint.config(
     js.configs.recommended,
@@ -62,6 +64,7 @@ export function base({ tsconfigRootDir } = {}) {
         'import-x/no-duplicates': 'warn',
       },
     },
+    designTokens,
     {
       files: ['**/*.{ts,tsx,mts,cts}'],
       rules: {

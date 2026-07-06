@@ -14,6 +14,7 @@ const AVATAR_PALETTE = [
   '#3B82F6', // blue-500
   '#8B5CF6', // violet-500
   '#EC4899', // pink-500
+  // eslint-disable-next-line no-restricted-syntax -- decorative rainbow palette, not a status color
   '#EF4444', // red-500
 ];
 
