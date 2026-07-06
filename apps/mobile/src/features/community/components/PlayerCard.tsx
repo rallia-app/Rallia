@@ -249,7 +249,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                   <Ionicons
                     name={isFavorite ? 'heart' : 'heart-outline'}
                     size={20}
-                    color={isFavorite ? '#EF4444' : mutedColor}
+                    color={isFavorite ? status.error.DEFAULT : mutedColor}
                   />
                 </TouchableOpacity>
               )}

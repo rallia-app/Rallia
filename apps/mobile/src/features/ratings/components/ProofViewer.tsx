@@ -32,6 +32,7 @@ import {
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
+  status,
 } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -555,7 +556,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
                 { backgroundColor: colors.inputBackground, borderColor: colors.border },
                 userReaction === 'dislike' && {
                   backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                  borderColor: '#EF4444',
+                  borderColor: status.error.DEFAULT,
                 },
               ]}
               onPress={() => handleReact('dislike')}
@@ -566,12 +567,12 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
               <Ionicons
                 name={userReaction === 'dislike' ? 'thumbs-down' : 'thumbs-down-outline'}
                 size={20}
-                color={userReaction === 'dislike' ? '#EF4444' : colors.text}
+                color={userReaction === 'dislike' ? status.error.DEFAULT : colors.text}
               />
               <Text
                 style={[
                   styles.reactionCount,
-                  { color: userReaction === 'dislike' ? '#EF4444' : colors.text },
+                  { color: userReaction === 'dislike' ? status.error.DEFAULT : colors.text },
                 ]}
               >
                 {dislikeCount}

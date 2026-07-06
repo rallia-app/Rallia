@@ -18,6 +18,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
@@ -68,7 +69,7 @@ export function ImagePickerActionSheet({ payload }: SheetProps<'image-picker'>) 
     iconPrimary: primary[500],
     iconSecondary: isDark ? neutral[400] : neutral[500],
     overlay: 'rgba(0, 0, 0, 0.5)',
-    danger: '#EF4444',
+    danger: status.error.DEFAULT,
   };
 
   return (

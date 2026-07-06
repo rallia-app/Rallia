@@ -17,7 +17,7 @@ import { View, Text as RNText, StyleSheet } from 'react-native';
 import { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, base, neutral } from '@rallia/design-system';
+import { spacingPixels, base, neutral, primary, accent } from '@rallia/design-system';
 import { useAuth, usePlayer } from '@rallia/shared-hooks';
 import { lightHaptic, mediumHaptic, successHaptic } from '@rallia/shared-utils';
 
@@ -35,8 +35,8 @@ import { registerSummerLeagueInterest } from './api';
 const SHEET_ID = 'summer-league-announcement';
 
 // Warm "summer sunset" for the announcement; cool brand teal to celebrate.
-const HERO_GRADIENT = ['#fbbf24', '#f59e0b', '#ed6a6d'] as const; // gold → amber → coral
-const SUCCESS_GRADIENT = ['#2dd4bf', '#14b8a6', '#0d9488'] as const; // teal → deep teal
+const HERO_GRADIENT = [accent[400], accent[500], '#ed6a6d'] as const; // gold → amber → coral
+const SUCCESS_GRADIENT = [primary[400], primary[500], primary[600]] as const; // teal → deep teal
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 

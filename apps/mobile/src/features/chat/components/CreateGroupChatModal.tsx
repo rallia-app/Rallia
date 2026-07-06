@@ -28,7 +28,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useGetOrCreateDirectConversation, usePlayerSearch } from '@rallia/shared-hooks';
-import { primary, spacingPixels, fontSizePixels, radiusPixels } from '@rallia/design-system';
+import {
+  primary,
+  spacingPixels,
+  fontSizePixels,
+  radiusPixels,
+  status,
+} from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 
 import { SearchBar } from '#/components/SearchBar';
@@ -522,7 +528,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
               {
                 backgroundColor: isDark ? colors.card : '#F5F5F5',
                 color: colors.text,
-                borderColor: error ? '#EF4444' : 'transparent',
+                borderColor: error ? status.error.DEFAULT : 'transparent',
               },
             ]}
             placeholder={t('chat.enterGroupName')}
@@ -535,7 +541,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             maxLength={50}
           />
           {error && (
-            <Text size="xs" style={{ color: '#EF4444', marginTop: 4 }}>
+            <Text size="xs" style={{ color: status.error.DEFAULT, marginTop: 4 }}>
               {error}
             </Text>
           )}

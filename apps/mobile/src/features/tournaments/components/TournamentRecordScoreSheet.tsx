@@ -28,6 +28,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useOverrideTournamentMatchScore } from '@rallia/shared-hooks';
@@ -496,8 +497,8 @@ export function TournamentRecordScoreActionSheet({
 
           {scoreWarning && !error ? (
             <View style={styles.warningRow}>
-              <Ionicons name="warning-outline" size={18} color="#F59E0B" />
-              <Text size="sm" color="#F59E0B">
+              <Ionicons name="warning-outline" size={18} color={status.warning.DEFAULT} />
+              <Text size="sm" color={status.warning.DEFAULT}>
                 {t(scoreWarning)}
               </Text>
             </View>

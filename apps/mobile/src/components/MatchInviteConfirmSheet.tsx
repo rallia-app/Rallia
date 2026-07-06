@@ -17,7 +17,13 @@ import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-shee
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Text, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  status as dsStatus,
+} from '@rallia/design-system';
 import {
   errorHaptic,
   lightHaptic,
@@ -245,11 +251,14 @@ export function MatchInviteConfirmActionSheet(props: SheetProps<'match-invite-co
           <View
             style={[
               styles.errorBanner,
-              { backgroundColor: isDark ? '#7f1d1d44' : '#fee2e2', borderColor: '#dc2626' },
+              {
+                backgroundColor: isDark ? '#7f1d1d44' : '#fee2e2',
+                borderColor: dsStatus.error.dark,
+              },
             ]}
           >
-            <Ionicons name="alert-circle" size={16} color="#dc2626" />
-            <Text size="sm" color="#dc2626" style={styles.errorText}>
+            <Ionicons name="alert-circle" size={16} color={dsStatus.error.dark} />
+            <Text size="sm" color={dsStatus.error.dark} style={styles.errorText}>
               {errorMsg}
             </Text>
           </View>

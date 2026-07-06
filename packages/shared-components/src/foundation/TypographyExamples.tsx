@@ -8,7 +8,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Heading } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { colors } from '../theme';
 
 export const TypographyExamples: React.FC = () => {

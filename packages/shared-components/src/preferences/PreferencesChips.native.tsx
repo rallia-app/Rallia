@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
-import { COLORS } from '@rallia/shared-constants';
+import { COLORS } from '@rallia/design-system';
 
 export interface PreferencesChipsProps {
   /** Array of options to display as chips */

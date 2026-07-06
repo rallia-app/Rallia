@@ -4,6 +4,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import type { UserFeedbackModule, UserFeedbackStatus } from '@rallia/shared-services';
+import { status } from '@rallia/design-system';
 
 export interface FeedbackModuleOption {
   value: UserFeedbackModule;
@@ -48,7 +49,7 @@ export function getModuleLabelKey(module: UserFeedbackModule): string {
 export const STATUS_COLORS: Record<UserFeedbackStatus, { bg: string; fg: string }> = {
   new: { bg: '#3B82F61F', fg: '#3B82F6' },
   reviewed: { bg: '#8B5CF61F', fg: '#8B5CF6' },
-  in_progress: { bg: '#F59E0B1F', fg: '#F59E0B' },
-  resolved: { bg: '#10B9811F', fg: '#10B981' },
+  in_progress: { bg: '#F59E0B1F', fg: status.warning.DEFAULT },
+  resolved: { bg: '#10B9811F', fg: status.success.light },
   closed: { bg: '#6B72801F', fg: '#6B7280' },
 };

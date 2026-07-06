@@ -396,7 +396,7 @@ const PlayerProfile = () => {
   const onlineColor = isDark ? status.success.light : status.success.DEFAULT;
   const repErrorColor = isDark ? status.error.light : status.error.DEFAULT;
   const repWarningColor = isDark ? status.warning.light : status.warning.DEFAULT;
-  const repStarColor = '#F59E0B';
+  const repStarColor = accent[500];
   const pulseAnim = useMemo(() => new Animated.Value(1), []);
   useEffect(() => {
     if (!isOnline) {
