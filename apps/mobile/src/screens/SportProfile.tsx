@@ -14,6 +14,7 @@ import {
   fontSizePixels,
   fontWeightNumeric,
   primary,
+  neutral,
 } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
@@ -130,8 +131,8 @@ const SportProfile = () => {
   const { userSports } = useSport();
 
   // Theme-aware skeleton colors (aligned with UserProfile for consistency)
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+  const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+  const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
 
   // Fetch play styles and attributes for this sport
   const {

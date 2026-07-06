@@ -9,7 +9,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, status, primary } from '@rallia/design-system';
+import { spacingPixels, status, primary, neutral } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 
@@ -36,7 +36,7 @@ export const BlockedUserModal: React.FC<BlockedUserModalProps> = ({
   if (!visible) return null;
 
   return (
-    <View style={[styles.overlay, { backgroundColor: isDark ? colors.card : '#f5f5f5' }]}>
+    <View style={[styles.overlay, { backgroundColor: isDark ? colors.card : neutral[100] }]}>
       {/* Back button at top left */}
       <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
         <Ionicons name="chevron-back" size={24} color={colors.text} />

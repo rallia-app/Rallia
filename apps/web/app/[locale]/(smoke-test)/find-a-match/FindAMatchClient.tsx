@@ -24,6 +24,7 @@ import {
 import { useTheme } from 'next-themes';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { primary, secondary, darkMode } from '@rallia/design-system';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -139,8 +140,8 @@ function getAppearance(theme: string | undefined): Appearance {
   return {
     theme: isDark ? 'night' : 'stripe',
     variables: {
-      colorPrimary: '#14b8a6',
-      colorDanger: isDark ? '#ff6b6b' : '#ed6a6d',
+      colorPrimary: primary[500],
+      colorDanger: isDark ? darkMode.secondary[500] : secondary[500],
       borderRadius: '8px',
       fontFamily: 'Inter, sans-serif',
       fontSizeBase: '15px',
@@ -152,7 +153,7 @@ function getAppearance(theme: string | undefined): Appearance {
         boxShadow: 'none',
       },
       '.Input:focus': {
-        borderColor: '#14b8a6',
+        borderColor: primary[500],
         boxShadow: '0 0 0 2px rgba(20,184,166,0.2)',
       },
       '.Label': {

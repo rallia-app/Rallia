@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@rallia/shared-services';
 import { useProfile } from '@rallia/shared-hooks';
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
+import { primary, neutral } from '@rallia/design-system';
 import { Text } from './foundation/Text.native';
 import { Heading } from './foundation/Heading.native';
 
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: neutral[100],
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
   },
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   preferenceButtonActive: {
-    backgroundColor: '#0D9488',
+    backgroundColor: primary[600],
   },
   actionButtons: {
     paddingTop: 0,

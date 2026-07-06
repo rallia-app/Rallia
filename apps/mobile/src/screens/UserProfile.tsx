@@ -117,8 +117,8 @@ const UserProfile = () => {
   const profileCompleteness = useProfileCompleteness();
 
   // Theme-aware skeleton colors (aligned with FacilitiesDirectory for consistent, sleek loading UI)
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+  const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+  const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [allSports, setAllSports] = useState<Sport[]>([]);

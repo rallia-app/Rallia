@@ -313,7 +313,7 @@ export default function InfoTab({
                     styles.badge,
                     {
                       backgroundColor: membershipRequired
-                        ? '#f59e0b18'
+                        ? `${status.warning.DEFAULT}18`
                         : status.success.DEFAULT + '15',
                     },
                   ]}

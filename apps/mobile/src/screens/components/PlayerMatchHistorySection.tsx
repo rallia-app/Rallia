@@ -22,6 +22,7 @@ import {
   radiusPixels,
   fontSizePixels,
   primary,
+  neutral,
   status,
 } from '@rallia/design-system';
 
@@ -231,8 +232,8 @@ export const PlayerMatchHistorySection: React.FC<PlayerMatchHistorySectionProps>
 }) => {
   const { t } = useTranslation();
   const { colors, isDark } = useThemeStyles();
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+  const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+  const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
 
   const { matches, isLoading, isError, hasMore, isFetchingMore, fetchMore } = usePlayerMatchHistory(
     {

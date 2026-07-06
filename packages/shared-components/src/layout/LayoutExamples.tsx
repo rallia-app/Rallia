@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
+import { neutral } from '@rallia/design-system';
 import { Container } from './Container.native';
 import { Stack, VStack, HStack } from './Stack.native';
 import { Card } from './Card.native';
@@ -26,7 +27,7 @@ export const ContainerExample: React.FC = () => {
       <Spacer size={32} />
 
       {/* Container with custom padding */}
-      <Container padding={24} backgroundColor="#f5f5f5">
+      <Container padding={24} backgroundColor={neutral[100]}>
         <Heading level={2}>Custom Padding</Heading>
         <Text>This container has 24px padding and a gray background.</Text>
       </Container>
@@ -388,7 +389,7 @@ export const ProfileScreenExample: React.FC = () => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: neutral[100],
   },
   profilePicture: {
     width: 100,

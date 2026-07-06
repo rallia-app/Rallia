@@ -19,7 +19,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@rallia/shared-hooks';
-import { primary, neutral, spacingPixels, radiusPixels } from '@rallia/design-system';
+import { primary, neutral, status, spacingPixels, radiusPixels } from '@rallia/design-system';
 import * as Haptics from 'expo-haptics';
 
 export interface AnalyticsSectionCardProps {
@@ -121,8 +121,8 @@ export const AnalyticsSectionCard: React.FC<AnalyticsSectionCardProps> = ({
     icon: iconColor || (isDark ? primary[400] : primary[600]),
     iconBackground: isDark ? `${primary[500]}20` : `${primary[500]}10`,
     chevron: isDark ? neutral[600] : neutral[400],
-    trendUp: '#10B981',
-    trendDown: '#EF4444',
+    trendUp: status.success.light,
+    trendDown: status.error.DEFAULT,
     trendNeutral: neutral[500],
   };
 

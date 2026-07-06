@@ -30,6 +30,7 @@ import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useGetOrCreateDirectConversation, usePlayerSearch } from '@rallia/shared-hooks';
 import {
   primary,
+  neutral,
   spacingPixels,
   fontSizePixels,
   radiusPixels,
@@ -511,7 +512,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.imagePicker, { backgroundColor: isDark ? colors.card : '#F5F5F5' }]}
+              style={[styles.imagePicker, { backgroundColor: isDark ? colors.card : neutral[100] }]}
               onPress={() => void handlePickImage()}
               activeOpacity={0.7}
             >
@@ -526,7 +527,7 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
             style={[
               styles.nameInput,
               {
-                backgroundColor: isDark ? colors.card : '#F5F5F5',
+                backgroundColor: isDark ? colors.card : neutral[100],
                 color: colors.text,
                 borderColor: error ? status.error.DEFAULT : 'transparent',
               },
@@ -557,7 +558,9 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         >
           {t('chat.members').toUpperCase()} ({selectedMembers.length + 1})
         </Text>
-        <View style={[styles.membersCard, { backgroundColor: isDark ? colors.card : '#F5F5F5' }]}>
+        <View
+          style={[styles.membersCard, { backgroundColor: isDark ? colors.card : neutral[100] }]}
+        >
           {/* Current user (You) */}
           <View style={styles.memberRow}>
             <View style={[styles.memberAvatarLarge, { backgroundColor: primary[500] }]}>

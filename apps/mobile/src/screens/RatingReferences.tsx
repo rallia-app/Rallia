@@ -620,8 +620,8 @@ const RatingReferences: React.FC = () => {
       {loading ? (
         <View style={styles.loadingContent}>
           {[1, 2, 3, 4].map(i => {
-            const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-            const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+            const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+            const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
             return (
               <View
                 key={i}

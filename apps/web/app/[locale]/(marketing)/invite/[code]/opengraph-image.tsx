@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { primary, secondary, accent } from '@rallia/design-system';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const alt = 'Join me on Rallia';
@@ -54,7 +55,7 @@ export default async function Image({ params }: Props) {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'linear-gradient(150deg, #134e4a 0%, #0f766e 50%, #14b8a6 100%)',
+        background: `linear-gradient(150deg, ${primary[900]} 0%, ${primary[700]} 50%, ${primary[500]} 100%)`,
         fontFamily: 'Inter',
         padding: '0 56px',
         position: 'relative',
@@ -69,7 +70,7 @@ export default async function Image({ params }: Props) {
           right: 0,
           height: 5,
           display: 'flex',
-          background: 'linear-gradient(90deg, #5eead4, #fbbf24, #ed6a6d)',
+          background: `linear-gradient(90deg, ${primary[300]}, ${accent[400]}, ${secondary[500]})`,
         }}
       />
 
@@ -119,7 +120,7 @@ export default async function Image({ params }: Props) {
             height="40"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#5eead4"
+            stroke={primary[300]}
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -150,7 +151,7 @@ export default async function Image({ params }: Props) {
           style={{
             fontSize: 26,
             fontWeight: 500,
-            color: '#99f6e4',
+            color: primary[200],
             textAlign: 'center',
           }}
         >

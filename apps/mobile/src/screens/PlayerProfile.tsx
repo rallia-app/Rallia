@@ -344,8 +344,8 @@ const PlayerProfile = () => {
   const { colors, isDark } = useThemeStyles();
 
   // Skeleton loading colors
-  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
-  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+  const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+  const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
   // Tinted skeleton shades for use against the primary-tinted hero card —
   // matches PlayerCardSkeleton so they read as "loading" without clashing.
   const heroSkeletonBg = isDark ? primary[900] : primary[100];

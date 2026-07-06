@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { primary } from '@rallia/design-system';
 
 /** Standard OG image dimensions — 1200×630 (1.91:1) for Twitter / Facebook / LinkedIn. */
 export const OG_SIZE = { width: 1200, height: 630 } as const;
@@ -41,7 +42,7 @@ export async function renderOgImage(opts: OgTemplateOptions): Promise<Response> 
         display: 'flex',
         flexDirection: 'column',
         padding: '72px 88px',
-        background: 'linear-gradient(145deg, #042f2e 0%, #115e59 60%, #0d9488 100%)',
+        background: `linear-gradient(145deg, ${primary[950]} 0%, ${primary[800]} 60%, ${primary[600]} 100%)`,
         fontFamily: 'Inter',
       }}
     >
@@ -70,7 +71,7 @@ export async function renderOgImage(opts: OgTemplateOptions): Promise<Response> 
             style={{
               fontSize: 18,
               fontWeight: 500,
-              color: '#2dd4bf',
+              color: primary[400],
               textTransform: 'uppercase',
               letterSpacing: '0.18em',
               border: '1px solid rgba(45, 212, 191, 0.4)',

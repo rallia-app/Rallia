@@ -12,6 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@rallia/design-system": "*",
     "@rallia/shared-utils": "*",
     "@supabase/supabase-js": "^2.83.0",
     "base64-arraybuffer": "^1.0.2"

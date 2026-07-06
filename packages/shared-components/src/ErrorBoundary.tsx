@@ -30,6 +30,7 @@
 
 import React, { Component, ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { neutral } from '@rallia/design-system';
 import { Text } from './foundation/Text.native';
 import { Heading } from './foundation/Heading.native';
 import { Button } from './foundation/Button.native';
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFB74D',
   },
   errorBox: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: neutral[100],
     padding: 12,
     borderRadius: 4,
     borderLeftWidth: 3,

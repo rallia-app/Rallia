@@ -100,7 +100,7 @@ const DEFAULT_COLORS = [
   '#F97316', // orange
   '#84CC16', // lime
   '#6366F1', // indigo
-  '#14B8A6', // teal
+  primary[500], // teal
 ];
 
 export const PieChart: React.FC<PieChartProps> = ({

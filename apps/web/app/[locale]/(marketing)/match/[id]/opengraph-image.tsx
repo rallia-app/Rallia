@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
 import { getStorageImageUrl } from '@rallia/shared-utils';
+import { primary, neutral, accent, status } from '@rallia/design-system';
 import { getMatch } from './_lib/get-match';
 
 export const alt = 'Rallia Match';
@@ -56,7 +57,7 @@ export default async function Image({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0f766e',
+          background: primary[700],
           fontFamily: 'Poppins',
         }}
       >
@@ -94,9 +95,17 @@ export default async function Image({
   const spotsLeft = Math.max(0, total - joinedCount);
   const isFull = spotsLeft === 0;
 
-  const spotsColor = isFull ? '#dc2626' : spotsLeft === 1 ? '#d97706' : '#059669';
-  const spotsBg = isFull ? '#fef2f2' : spotsLeft === 1 ? '#fffbeb' : '#ecfdf5';
-  const spotsDot = isFull ? '#ef4444' : spotsLeft === 1 ? '#f59e0b' : '#10b981';
+  const spotsColor = isFull
+    ? status.error.dark
+    : spotsLeft === 1
+      ? status.warning.dark
+      : status.success.DEFAULT;
+  const spotsBg = isFull ? '#fef2f2' : spotsLeft === 1 ? accent[50] : '#ecfdf5';
+  const spotsDot = isFull
+    ? status.error.DEFAULT
+    : spotsLeft === 1
+      ? status.warning.DEFAULT
+      : status.success.light;
   const spotsText = isFull ? t('matchFull') : t('spotsLeft', { count: spotsLeft });
 
   // Sort host first
@@ -140,7 +149,7 @@ export default async function Image({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'linear-gradient(150deg, #134e4a 0%, #0f766e 50%, #14b8a6 100%)',
+        background: `linear-gradient(150deg, ${primary[900]} 0%, ${primary[700]} 50%, ${primary[500]} 100%)`,
         fontFamily: 'Inter',
         padding: '0 56px',
         position: 'relative',
@@ -174,7 +183,7 @@ export default async function Image({
             fontFamily: 'Poppins',
             fontSize: 20,
             fontWeight: 600,
-            color: '#99f6e4',
+            color: primary[200],
             textTransform: 'uppercase',
             letterSpacing: '0.12em',
           }}
@@ -212,7 +221,7 @@ export default async function Image({
           >
             {dateStr}
           </span>
-          <span style={{ fontSize: 30, fontWeight: 500, color: '#99f6e4' }}>
+          <span style={{ fontSize: 30, fontWeight: 500, color: primary[200] }}>
             {timeStr}
             {endTimeStr}
           </span>
@@ -226,7 +235,7 @@ export default async function Image({
               height="24"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#ccfbf1"
+              stroke={primary[100]}
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -234,7 +243,7 @@ export default async function Image({
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
-            <span style={{ fontSize: 26, fontWeight: 500, color: '#e5e5e5' }}>{location}</span>
+            <span style={{ fontSize: 26, fontWeight: 500, color: neutral[200] }}>{location}</span>
           </div>
         )}
 
@@ -252,7 +261,7 @@ export default async function Image({
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <span style={{ fontSize: 18, fontWeight: 500, color: '#ccfbf1' }}>{attr}</span>
+              <span style={{ fontSize: 18, fontWeight: 500, color: primary[100] }}>{attr}</span>
             </div>
           ))}
         </div>
@@ -277,8 +286,8 @@ export default async function Image({
                     marginLeft: i === 0 ? 0 : -12,
                     background: slot.filled
                       ? slot.avatarUrl
-                        ? '#0f766e'
-                        : '#14b8a6'
+                        ? primary[700]
+                        : primary[500]
                       : 'rgba(255,255,255,0.06)',
                     border: slot.filled
                       ? '3px solid rgba(15,118,110,0.6)'
@@ -336,7 +345,7 @@ export default async function Image({
               >
                 {joinedCount}/{total}
               </span>
-              <span style={{ fontSize: 16, fontWeight: 500, color: '#ccfbf1' }}>
+              <span style={{ fontSize: 16, fontWeight: 500, color: primary[100] }}>
                 {t('playersJoined')}
               </span>
             </div>

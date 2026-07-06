@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { neutral } from '@rallia/design-system';
 import { Container } from '../layout/Container.native';
 import { VStack, HStack } from '../layout/Stack.native';
 import { Card } from '../layout/Card.native';
@@ -547,7 +548,7 @@ export const CombinedFeedbackExample: React.FC = () => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: neutral[100],
   },
   inputPlaceholder: {
     borderWidth: 1,
