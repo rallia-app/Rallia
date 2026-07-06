@@ -15,4 +15,13 @@ export default [
       'analyze-bundle.js',
     ],
   },
+  {
+    // Asset-generation scripts run under plain node, outside the app's module
+    // graph — they can't import the TS-source design-system tokens, so the
+    // design-token hex rule doesn't apply.
+    files: ['scripts/**'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
 ];

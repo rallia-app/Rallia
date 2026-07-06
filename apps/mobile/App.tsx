@@ -98,6 +98,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
+import { neutral } from '@rallia/design-system';
 
 // Keep the native splash visible until the app is ready, then cross-fade it out.
 SplashScreen.preventAutoHideAsync();
@@ -105,7 +106,7 @@ SplashScreen.setOptions({ fade: true, duration: 400 });
 
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
-SystemUI.setBackgroundColorAsync('#fafafa');
+SystemUI.setBackgroundColorAsync(neutral[50]);
 import { focusManager, QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
@@ -868,7 +869,7 @@ function AppContent() {
       ...base,
       colors: {
         ...base.colors,
-        background: theme === 'dark' ? '#0a0a0a' : '#fafafa',
+        background: theme === 'dark' ? neutral[950] : neutral[50],
       },
     };
   }, [theme]);
@@ -962,7 +963,7 @@ function App() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fafafa' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: neutral[50] }}>
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <PostHogProvider>

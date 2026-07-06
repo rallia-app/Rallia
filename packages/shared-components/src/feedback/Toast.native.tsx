@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { StyleSheet, Animated, TouchableOpacity, Platform, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { status } from '@rallia/design-system';
 import { Text } from '../foundation/Text.native';
 import { spacing } from '../theme';
 
@@ -34,9 +35,9 @@ export interface ToastProps {
 }
 
 const TOAST_COLORS: Record<ToastType, { background: string; text: string; icon: string }> = {
-  success: { background: '#10B981', text: '#FFFFFF', icon: '✓' },
-  error: { background: '#EF4444', text: '#FFFFFF', icon: '✕' },
-  warning: { background: '#F59E0B', text: '#FFFFFF', icon: '!' },
+  success: { background: status.success.light, text: '#FFFFFF', icon: '✓' },
+  error: { background: status.error.DEFAULT, text: '#FFFFFF', icon: '✕' },
+  warning: { background: status.warning.DEFAULT, text: '#FFFFFF', icon: '!' },
   info: { background: '#3B82F6', text: '#FFFFFF', icon: 'ℹ' },
 };
 

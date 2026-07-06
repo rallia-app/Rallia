@@ -3,9 +3,10 @@
 // token import so palette changes propagate (hand-copied values silently drift,
 // which is how shared-components ended up on a stale teal/coral for months).
 // Deliberately scoped to token-valued hex only: one-off colors, iOS system
-// grays, and pure white/black are not flagged. Starts at 'warn' for incremental
-// burn-down (same ratchet convention as the React Compiler rules in
-// react-native.mjs); bump to 'error' once violations reach 0.
+// grays, and pure white/black are not flagged. Burned down to 0 (2026-07-06)
+// and ratcheted to 'error' (same convention as the React Compiler rules in
+// react-native.mjs); intentional exceptions carry inline disables with a
+// rationale (decorative palettes that must not track brand-token changes).
 //
 // Keep in sync with packages/design-system/src/tokens/colors.ts.
 const TOKEN_HEXES = [
@@ -75,7 +76,7 @@ const TOKEN_HEX_PATTERN = `^#(?:${TOKEN_HEXES.join('|')})(?:[0-9a-f]{2})?$`;
 export const designTokens = {
   rules: {
     'no-restricted-syntax': [
-      'warn',
+      'error',
       {
         selector: `Literal[value=/${TOKEN_HEX_PATTERN}/i]`,
         message:
