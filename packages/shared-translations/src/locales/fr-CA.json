@@ -1685,6 +1685,7 @@
     "allSetSubtitle": "Commencez à trouver des parties",
     "step": "Étape {current} de {total}",
     "stepNames": {
+      "consent": "Conditions et confidentialité",
       "personal": "À propos de vous",
       "sports": "Sports",
       "tennisRating": "Classement Tennis",
@@ -1693,6 +1694,10 @@
       "availability": "Disponibilité",
       "location": "Localisation",
       "favoriteSites": "Terrains favoris"
+    },
+    "consentStep": {
+      "title": "Avant de commencer",
+      "subtitle": "Veuillez lire et accepter ce qui suit pour créer votre compte."
     },
     "personalInfoStep": {
       "title": "Parlez-nous de vous",
@@ -11667,6 +11672,16 @@
       "description": "Cette version de Rallia n'est plus prise en charge. Mets à jour vers la dernière version pour continuer à jouer.",
       "versionInfo": "Tu as la version {current} · la version {required} ou plus récente est requise",
       "cta": "Mettre à jour"
+    }
+  },
+  "policyConsent": {
+    "gate": {
+      "title": "Nos politiques ont été mises à jour",
+      "subtitle": "Consulte et accepte la politique mise à jour ci-dessous pour continuer à utiliser Rallia.",
+      "accept": "Accepter et continuer",
+      "acceptError": "On n'a pas pu enregistrer ton acceptation. Vérifie ta connexion et réessaie.",
+      "signOutConfirmTitle": "Se déconnecter?",
+      "signOutConfirmMessage": "Tu devras accepter la politique mise à jour lors de ta prochaine connexion."
     }
   }
 }

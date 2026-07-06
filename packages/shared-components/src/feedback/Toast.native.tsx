@@ -176,6 +176,9 @@ interface ToastContextType {
   error: (message: string, options?: Partial<ToastConfig>) => void;
   warning: (message: string, options?: Partial<ToastConfig>) => void;
   info: (message: string, options?: Partial<ToastConfig>) => void;
+  /** Current toast, if any. Lets ToastOverlay be re-rendered from inside a sheet's own Modal. */
+  toastConfig: ToastConfig | null;
+  visible: boolean;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -222,20 +225,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ToastContext.Provider value={{ showToast, hideToast, success, error, warning, info }}>
+    <ToastContext.Provider
+      value={{ showToast, hideToast, success, error, warning, info, toastConfig, visible }}
+    >
       {children}
-      {toastConfig && (
-        <Toast
-          visible={visible}
-          message={toastConfig.message}
-          type={toastConfig.type}
-          position={toastConfig.position}
-          duration={toastConfig.duration}
-          actionText={toastConfig.actionText}
-          onAction={toastConfig.onAction}
-          onDismiss={hideToast}
-        />
-      )}
+      <ToastOverlay />
     </ToastContext.Provider>
   );
 }
@@ -246,6 +240,33 @@ export function useToast(): ToastContextType {
     throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
+}
+
+/**
+ * Renders the active toast, reading shared state from ToastProvider.
+ *
+ * react-native-actions-sheet opens each sheet inside its own native Modal, which
+ * layers above the whole app window — a toast rendered at the ToastProvider root
+ * ends up stuck behind it. Sheets that need toasts on top should pass this as
+ * their `ExtraOverlayComponent`, which renders it inside that same Modal instead.
+ */
+export function ToastOverlay() {
+  const { toastConfig, visible, hideToast } = useToast();
+
+  if (!toastConfig) return null;
+
+  return (
+    <Toast
+      visible={visible}
+      message={toastConfig.message}
+      type={toastConfig.type}
+      position={toastConfig.position}
+      duration={toastConfig.duration}
+      actionText={toastConfig.actionText}
+      onAction={toastConfig.onAction}
+      onDismiss={hideToast}
+    />
+  );
 }
 
 // ============================================================================

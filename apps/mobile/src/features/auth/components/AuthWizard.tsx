@@ -20,7 +20,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
+import { lightHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import * as Analytics from '#/services/analytics';
@@ -189,11 +189,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   isDark,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  // Consent gate (privacy policy + terms of use). Both must be accepted before
-  // any sign-up method — email or social — can create an account. Required by
-  // Rallia's privacy counsel; unchecked by default and reset when leaving.
-  const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const toast = useToast();
 
   // Refs to the two steps' TextInputs. We focus them imperatively during step
@@ -275,41 +270,22 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     [onSuccess]
   );
 
-  // Block any sign-up method until both consent boxes are checked. Returns
-  // true when consent is complete; otherwise nudges the user and returns false.
-  // Uses the toast ref to avoid re-running on ToastProvider's changing identity.
-  const ensureConsent = useCallback(() => {
-    if (hasAcceptedPrivacy && hasAcceptedTerms) return true;
-    warningHaptic();
-    toastErrorRef.current(t('auth.consent.required'));
-    return false;
-  }, [hasAcceptedPrivacy, hasAcceptedTerms, t]);
-
-  // Social sign-in handlers. Social auth also creates accounts, so the consent
-  // gate must apply here too — not just to the email path.
+  // Social sign-in handlers.
   const handleGoogleSignIn = useCallback(() => {
-    if (!ensureConsent()) return;
     handleSocialAuthResult(signInWithGoogle);
-  }, [ensureConsent, handleSocialAuthResult, signInWithGoogle]);
+  }, [handleSocialAuthResult, signInWithGoogle]);
 
   const handleAppleSignIn = useCallback(() => {
-    if (!ensureConsent()) return;
     handleSocialAuthResult(signInWithApple);
-  }, [ensureConsent, handleSocialAuthResult, signInWithApple]);
+  }, [handleSocialAuthResult, signInWithApple]);
 
   const handleFacebookSignIn = useCallback(() => {
-    if (!ensureConsent()) return;
     handleSocialAuthResult(signInWithFacebook);
-  }, [ensureConsent, handleSocialAuthResult, signInWithFacebook]);
+  }, [handleSocialAuthResult, signInWithFacebook]);
 
   // Navigate to next step
   const goToNextStep = useCallback(async () => {
     if (currentStep === 1) {
-      // Defense-in-depth: the Continue button is already disabled until both
-      // consent boxes are checked, but guard the action too (this also covers
-      // the cooldown re-open path below).
-      if (!ensureConsent()) return;
-
       // If a code was already sent to this same email and the cooldown
       // hasn't elapsed, skip the resend and just re-open the OTP step.
       // The running countdown stays visible and the originally-sent code
@@ -343,7 +319,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     }
   }, [
     currentStep,
-    ensureConsent,
     handleEmailSubmit,
     handleVerifyCode,
     onSuccess,
@@ -370,8 +345,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
   const handleBackToLanding = useCallback(() => {
     Keyboard.dismiss();
     resetState();
-    setHasAcceptedPrivacy(false);
-    setHasAcceptedTerms(false);
     setCurrentStep(1);
     onBackToLanding();
   }, [resetState, onBackToLanding]);
@@ -438,10 +411,6 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
                 socialAuthLoading={socialAuthLoading}
                 socialAuthLoadingProvider={socialAuthLoadingProvider}
                 isAppleSignInAvailable={isAppleSignInAvailable}
-                hasAcceptedPrivacy={hasAcceptedPrivacy}
-                hasAcceptedTerms={hasAcceptedTerms}
-                onTogglePrivacy={() => setHasAcceptedPrivacy(v => !v)}
-                onToggleTerms={() => setHasAcceptedTerms(v => !v)}
               />
             </View>
 

@@ -1685,6 +1685,7 @@
     "allSetSubtitle": "Start finding games",
     "step": "Step {current} of {total}",
     "stepNames": {
+      "consent": "Terms & Privacy",
       "personal": "About You",
       "sports": "Sports",
       "tennisRating": "Tennis Rating",
@@ -1693,6 +1694,10 @@
       "availability": "Availability",
       "location": "Location",
       "favoriteSites": "Favorite Courts"
+    },
+    "consentStep": {
+      "title": "Before you get started",
+      "subtitle": "Please review and accept the following to create your account."
     },
     "personalInfoStep": {
       "title": "Tell us about yourself",
@@ -11667,6 +11672,16 @@
       "description": "This version of Rallia is no longer supported. Update to the latest version to keep playing.",
       "versionInfo": "You have {current} · {required} or newer is required",
       "cta": "Update Now"
+    }
+  },
+  "policyConsent": {
+    "gate": {
+      "title": "Our policies have been updated",
+      "subtitle": "Please review and accept the updated policy below to continue using Rallia.",
+      "accept": "Accept & Continue",
+      "acceptError": "We couldn't save your acceptance. Please check your connection and try again.",
+      "signOutConfirmTitle": "Sign Out?",
+      "signOutConfirmMessage": "You'll need to accept the updated policy the next time you sign in."
     }
   }
 }
