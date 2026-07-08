@@ -17,6 +17,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  ShieldCheck,
   Trophy,
   User,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ import { MatchActionLinks } from './_components/match-action-links';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -42,13 +44,22 @@ import { cn } from '@/lib/utils';
 const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
 
-type WizardStep = 'auth' | 'review' | 'personal' | 'rating' | 'location' | 'success' | 'left';
+type WizardStep =
+  | 'auth'
+  | 'review'
+  | 'consent'
+  | 'personal'
+  | 'rating'
+  | 'location'
+  | 'success'
+  | 'left';
 
 type RatingOption = { id: string; label: string; value: number | null };
 
 type JoinStatus = 'joined' | 'requested' | 'waitlisted';
 
 const PROFILE_STEPS: Array<{ id: WizardStep; labelKey: string }> = [
+  { id: 'consent', labelKey: 'consent' },
   { id: 'personal', labelKey: 'profile' },
   { id: 'rating', labelKey: 'level' },
   { id: 'location', labelKey: 'location' },
@@ -145,8 +156,11 @@ async function loadAuthenticatedWizardState(
     };
   }
 
+  // Brand-new account (onboarding not completed): consent comes first, exactly
+  // like the mobile onboarding wizard's consent step. accept_policy_consent is
+  // idempotent, so returning users who bailed mid-onboarding just re-accept.
   return {
-    step: 'personal',
+    step: 'consent',
     joinStatus: null,
     firstName: profile?.first_name,
     lastName: profile?.last_name,
@@ -175,6 +189,9 @@ function joinErrorMessage(code: string, t: ReturnType<typeof useTranslations<'we
 
 export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps) {
   const t = useTranslations('webJoin');
+  // Same copy as the mobile onboarding consent step — one source of truth.
+  const tConsent = useTranslations('auth.consent');
+  const tConsentStep = useTranslations('onboarding.consentStep');
 
   const supabase = useMemo(() => createClient(), []);
   const { signInWithProvider, signInWithEmail, verifyOtp } = useAuth({ client: supabase });
@@ -197,6 +214,10 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
   const [authPhase, setAuthPhase] = useState<'email' | 'otp'>('email');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Consent
+  const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   // Personal
   const [firstName, setFirstName] = useState('');
@@ -441,7 +462,7 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
           const state = await loadAuthenticatedWizardState(supabase, match.id, user.id);
           applyAuthenticatedWizardState(state);
         } else {
-          setStep('personal');
+          setStep('consent');
         }
       }
     }
@@ -480,6 +501,44 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
 
   const goNext = async () => {
     setErrorMessage(null);
+
+    if (step === 'consent') {
+      if (!hasAcceptedPrivacy || !hasAcceptedTerms) {
+        setErrorMessage(tConsent('required'));
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        // Re-fetch current versions rather than caching them — robust to
+        // policy_versions being bumped mid-onboarding. Same write path as the
+        // mobile consent step (accept_policy_consent RPC).
+        const { data: versions, error: versionsError } = await supabase
+          .from('policy_versions')
+          .select('policy_type, current_version');
+
+        if (versionsError || !versions) {
+          throw new Error(versionsError?.message ?? 'Failed to load policy versions');
+        }
+
+        await Promise.all(
+          versions.map(async v => {
+            const { error: acceptError } = await supabase.rpc('accept_policy_consent', {
+              p_policy_type: v.policy_type,
+              p_version: v.current_version,
+            });
+            if (acceptError) throw new Error(acceptError.message);
+          })
+        );
+
+        setStep('personal');
+      } catch {
+        setErrorMessage(t('errors.submitFailed'));
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
 
     if (step === 'personal') {
       if (!firstName.trim() || !lastName.trim() || !birthDate) {
@@ -722,6 +781,38 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
           </Card>
         )}
 
+        {step === 'consent' && (
+          <Card>
+            <CardContent className="flex flex-col gap-5 pt-6">
+              <StepHeader
+                icon={ShieldCheck}
+                title={tConsentStep('title')}
+                description={tConsentStep('subtitle')}
+              />
+              <div className="flex flex-col gap-3">
+                <ConsentCheckboxRow
+                  id="consent-privacy"
+                  checked={hasAcceptedPrivacy}
+                  onCheckedChange={setHasAcceptedPrivacy}
+                  prefix={tConsent('privacyPrefix')}
+                  linkLabel={tConsent('privacyLink')}
+                  suffix={tConsent('privacySuffix')}
+                  href="/privacy"
+                />
+                <ConsentCheckboxRow
+                  id="consent-terms"
+                  checked={hasAcceptedTerms}
+                  onCheckedChange={setHasAcceptedTerms}
+                  prefix={tConsent('termsPrefix')}
+                  linkLabel={tConsent('termsLink')}
+                  suffix={tConsent('termsSuffix')}
+                  href="/terms"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {step === 'personal' && (
           <Card>
             <CardContent className="flex flex-col gap-5 pt-6">
@@ -887,7 +978,9 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
             size="lg"
             className="flex-1 font-semibold"
             onClick={goNext}
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting || (step === 'consent' && !(hasAcceptedPrivacy && hasAcceptedTerms))
+            }
           >
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
             {step === 'location' ? finishCtaLabel : t('continue')}
@@ -922,6 +1015,53 @@ function StepHeader({
         <p className="text-sm text-muted-foreground leading-snug">{description}</p>
       </div>
     </div>
+  );
+}
+
+function ConsentCheckboxRow({
+  id,
+  checked,
+  onCheckedChange,
+  prefix,
+  linkLabel,
+  suffix,
+  href,
+}: {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  prefix: string;
+  linkLabel: string;
+  suffix: string;
+  href: string;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn(
+        'flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors',
+        checked ? 'border-primary/40 bg-primary/5' : 'border-border hover:border-primary/30'
+      )}
+    >
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={value => onCheckedChange(value === true)}
+        className="mt-0.5"
+      />
+      <span className="text-sm leading-relaxed text-muted-foreground">
+        {prefix}
+        <Link
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary underline underline-offset-2"
+        >
+          {linkLabel}
+        </Link>
+        {suffix}
+      </span>
+    </label>
   );
 }
 

@@ -10653,6 +10653,7 @@
     "stepCounter": "Step {current} of {total}",
     "steps": {
       "account": "Account",
+      "consent": "Consent",
       "profile": "Profile",
       "level": "Level",
       "location": "Location",
