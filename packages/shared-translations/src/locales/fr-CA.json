@@ -10628,6 +10628,7 @@
     "stepCounter": "Étape {current} sur {total}",
     "steps": {
       "account": "Compte",
+      "consent": "Consentement",
       "profile": "Profil",
       "level": "Niveau",
       "location": "Secteur",
