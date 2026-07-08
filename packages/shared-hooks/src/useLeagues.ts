@@ -35,6 +35,7 @@ import {
   listLeagueMembers,
   listLeagueSessions,
   listMyLeagues,
+  listMyUnscheduledSessionMatches,
   listPublicLeagues,
   listSeasonRankings,
   listSeasons,
@@ -59,6 +60,7 @@ import {
   type SessionMatch,
   type SessionPresence,
   type SessionPresenceWithProfile,
+  type UnscheduledSessionMatch,
   type PairingTeam,
   type MatchStatus,
   type LinkableMatch,
@@ -76,6 +78,8 @@ export const leagueKeys = {
     [...leagueKeys.all, 'myMembership', leagueId, userId] as const,
   seasons: (leagueId: string) => [...leagueKeys.all, 'seasons', leagueId] as const,
   sessions: (seasonId: string) => [...leagueKeys.all, 'sessions', seasonId] as const,
+  myUnscheduledSessionMatches: (userId: string, sportId?: string) =>
+    [...leagueKeys.all, 'myUnscheduledSessionMatches', userId, sportId ?? 'all'] as const,
   session: (sessionId: string) => [...leagueKeys.all, 'session', sessionId] as const,
   sessionPresence: (sessionId: string) =>
     [...leagueKeys.all, 'sessionPresence', sessionId] as const,
@@ -306,6 +310,18 @@ export function useSeasonSessions(seasonId: string | undefined) {
     queryKey: leagueKeys.sessions(seasonId ?? ''),
     queryFn: () => listLeagueSessions(seasonId!),
     enabled: !!seasonId,
+  });
+}
+
+/**
+ * The caller's released session matchups awaiting a linked game — feeds the
+ * home competitive action banners.
+ */
+export function useMyUnscheduledSessionMatches(userId: string | undefined, sportId?: string) {
+  return useQuery<UnscheduledSessionMatch[]>({
+    queryKey: leagueKeys.myUnscheduledSessionMatches(userId ?? '', sportId),
+    queryFn: () => listMyUnscheduledSessionMatches(userId!, { sportId }),
+    enabled: !!userId,
   });
 }
 

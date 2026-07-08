@@ -5219,6 +5219,31 @@
       "leagues": "Join a league",
       "leaderboard": "See where you rank"
     },
+    "playGrid": {
+      "title": "Play",
+      "findGame": "Find a game",
+      "bookCourt": "Book a court",
+      "tournaments": "Join a tournament",
+      "leagues": "Leagues"
+    },
+    "leaderboardCard": {
+      "title": "Monthly leaderboard",
+      "subtitle": "See where you rank",
+      "unrankedTitle": "Claim your spot",
+      "unrankedSubtitle": "Play one game this month and you're on the board"
+    },
+    "tournamentActionBanner": {
+      "title": "Tournament game to schedule",
+      "description": "Your round {round} opponent in {name} is set. Pick a time and get it booked.",
+      "descriptionMany": "{count} of your games in {name} are ready to schedule.",
+      "cta": "Schedule"
+    },
+    "leagueActionBanner": {
+      "title": "League matchup released",
+      "description": "Your matchup for {session} in {league} is out.",
+      "descriptionMany": "{count} of your matchups for {session} are out.",
+      "cta": "View"
+    },
     "myMatchesEmpty": {
       "title": "No upcoming games",
       "description": "Create a game or join one to see it here"

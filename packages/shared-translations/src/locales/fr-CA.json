@@ -5219,6 +5219,31 @@
       "leagues": "Rejoindre une ligue",
       "leaderboard": "Vois où tu te classes"
     },
+    "playGrid": {
+      "title": "Jouer",
+      "findGame": "Trouver une partie",
+      "bookCourt": "Réserver un terrain",
+      "tournaments": "Rejoindre un tournoi",
+      "leagues": "Ligues"
+    },
+    "leaderboardCard": {
+      "title": "Classement du mois",
+      "subtitle": "Vois où tu te places",
+      "unrankedTitle": "Prends ta place",
+      "unrankedSubtitle": "Joue une partie ce mois-ci pis t'es au classement"
+    },
+    "tournamentActionBanner": {
+      "title": "Partie de tournoi à planifier",
+      "description": "Ton adversaire de la ronde {round} dans {name} est connu. Choisis un moment et réserve.",
+      "descriptionMany": "{count} de tes parties dans {name} sont prêtes à planifier.",
+      "cta": "Planifier"
+    },
+    "leagueActionBanner": {
+      "title": "Matchup de ligue annoncé",
+      "description": "Ton matchup pour {session} dans {league} est sorti.",
+      "descriptionMany": "{count} de tes matchups pour {session} sont sortis.",
+      "cta": "Voir"
+    },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
       "description": "Créez une partie ou rejoignez-en une pour la voir ici"
