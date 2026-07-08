@@ -48,7 +48,7 @@ export {
   SkeletonPlayerCard,
   SkeletonConversation,
 } from './feedback/Skeleton.native';
-export { Toast, ToastProvider, useToast } from './feedback/Toast.native';
+export { Toast, ToastProvider, ToastOverlay, useToast } from './feedback/Toast.native';
 export {
   OfflineIndicator,
   NetworkProvider,
