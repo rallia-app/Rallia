@@ -33,6 +33,7 @@ import {
   Alert,
 } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -58,6 +59,7 @@ import {
   useCreateTournament,
   useUpdateTournament,
   useRatingScoresForSport,
+  useFacilitySearch,
 } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
@@ -65,8 +67,9 @@ import type { TournamentUpdatePatch } from '@rallia/shared-services';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
 import { uploadImage, deleteImage } from '../../../services/imageUpload';
-import { useSport } from '../../../context';
+import { useSport, useAuth, useUserHomeLocation } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
+import { SearchBar } from '../../../components/SearchBar';
 import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
@@ -179,6 +182,12 @@ export interface TournamentEditData {
   maxParticipants: number;
   matchFormat: MatchFormat;
   sport: { id: string; name: string; display_name: string };
+  // Location (facility OR city) + advertised prize.
+  facilityId: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
+  city: string | null;
+  prizeMoneyCents: number | null;
   // Fee settings (editable only while draft).
   entryFeeCents: number;
   currency: string;
@@ -441,6 +450,220 @@ const DateField: React.FC<{
   );
 };
 
+/** A facility picked as the tournament's exact venue (denormalized on save). */
+type SelectedFacility = { id: string; name: string; address: string | null; city: string | null };
+
+type LocationMode = 'facility' | 'city';
+
+/**
+ * Location capture for step 1 (Basics). The organizer gives EITHER an exact
+ * venue (pick a real facility — reuses the shared facility search) OR just a
+ * city. On save the facility's name/address/city are denormalized onto the
+ * tournament so display stays join-free (card/detail label = venue_name ?? city).
+ */
+const LocationSection: React.FC<{
+  colors: ThemeColors;
+  t: (k: TranslationKey) => string;
+  /** Sport scopes the facility search; coords come from the user's home. */
+  sportId: string | undefined;
+  latitude: number | undefined;
+  longitude: number | undefined;
+  playerId: string | undefined;
+  mode: LocationMode;
+  setMode: (m: LocationMode) => void;
+  selectedFacility: SelectedFacility | null;
+  onSelectFacility: (f: SelectedFacility) => void;
+  onClearFacility: () => void;
+  cityInput: string;
+  setCityInput: (v: string) => void;
+  error?: string;
+}> = ({
+  colors,
+  t,
+  sportId,
+  latitude,
+  longitude,
+  playerId,
+  mode,
+  setMode,
+  selectedFacility,
+  onSelectFacility,
+  onClearFacility,
+  cityInput,
+  setCityInput,
+  error,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const { facilities, isLoading } = useFacilitySearch({
+    sportIds: sportId ? [sportId] : undefined,
+    latitude,
+    longitude,
+    searchQuery,
+    playerId,
+    pageSize: 20,
+    enabled: mode === 'facility' && !selectedFacility,
+  });
+
+  const modeButton = (m: LocationMode, label: string, icon: keyof typeof Ionicons.glyphMap) => {
+    const active = mode === m;
+    return (
+      <TouchableOpacity
+        key={m}
+        onPress={() => {
+          lightHaptic();
+          setMode(m);
+        }}
+        activeOpacity={0.7}
+        style={[
+          styles.locationModeChip,
+          {
+            backgroundColor: active ? `${colors.buttonActive}15` : colors.buttonInactive,
+            borderColor: active ? colors.buttonActive : colors.border,
+          },
+        ]}
+      >
+        <Ionicons name={icon} size={16} color={active ? colors.buttonActive : colors.textMuted} />
+        <Text
+          size="sm"
+          weight={active ? 'semibold' : 'regular'}
+          color={active ? colors.buttonActive : colors.text}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.fields.location' as TranslationKey)}
+      </FieldLabel>
+      <View style={styles.locationModeRow}>
+        {modeButton(
+          'facility',
+          t('tournamentCreation.fields.locationExact' as TranslationKey),
+          'business-outline'
+        )}
+        {modeButton(
+          'city',
+          t('tournamentCreation.fields.locationCity' as TranslationKey),
+          'map-outline'
+        )}
+      </View>
+
+      {mode === 'facility' ? (
+        selectedFacility ? (
+          <View
+            style={[
+              styles.selectedFacilityCard,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+            ]}
+          >
+            <View style={styles.selectedFacilityInfo}>
+              <Text size="sm" weight="semibold" color={colors.text} numberOfLines={1}>
+                {selectedFacility.name}
+              </Text>
+              {(selectedFacility.address || selectedFacility.city) && (
+                <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                  {[selectedFacility.address, selectedFacility.city].filter(Boolean).join(', ')}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                lightHaptic();
+                onClearFacility();
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close' as TranslationKey)}
+            >
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('tournamentCreation.fields.facilityPlaceholder' as TranslationKey)}
+              colors={colors}
+            />
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={colors.buttonActive} />
+              </View>
+            ) : facilities.length > 0 ? (
+              <View style={styles.facilityResults}>
+                {facilities.slice(0, 8).map(f => (
+                  <TouchableOpacity
+                    key={f.id}
+                    onPress={() => {
+                      lightHaptic();
+                      onSelectFacility({
+                        id: f.id,
+                        name: f.name,
+                        address: f.address ?? null,
+                        city: f.city ?? null,
+                      });
+                    }}
+                    activeOpacity={0.7}
+                    style={[styles.facilityResultRow, { borderColor: colors.inputBorder }]}
+                  >
+                    <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+                    <View style={styles.facilityResultInfo}>
+                      <Text size="sm" weight="medium" color={colors.text} numberOfLines={1}>
+                        {f.name}
+                      </Text>
+                      {(f.address || f.city) && (
+                        <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                          {[f.address, f.city].filter(Boolean).join(', ')}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                {t('tournamentCreation.fields.facilityEmpty' as TranslationKey)}
+              </Text>
+            )}
+          </>
+        )
+      ) : (
+        <TextInput
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: error ? colors.error : colors.inputBorder,
+              color: colors.text,
+            },
+          ]}
+          placeholder={t('tournamentCreation.fields.cityPlaceholder' as TranslationKey)}
+          placeholderTextColor={colors.textMuted}
+          value={cityInput}
+          onChangeText={setCityInput}
+          maxLength={80}
+          autoCapitalize="words"
+          testID="tournament-city-input"
+        />
+      )}
+
+      <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+        {t('tournamentCreation.fields.locationHint' as TranslationKey)}
+      </Text>
+      {error && (
+        <Text size="xs" color={colors.error} style={styles.errorText}>
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+};
+
 const DetailsStep: React.FC<{
   /** Which form step to render: 1 Basics, 2 Format, 3 Schedule. */
   step: number;
@@ -451,7 +674,16 @@ const DetailsStep: React.FC<{
   /** Minimum required level; ratingOptions are the sport's tiers. */
   minRating: number | null;
   setMinRating: (v: number | null) => void;
-  ratingOptions: { value: number; label: string }[];
+  ratingOptions: {
+    value: number;
+    label: string;
+    skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
+    id: string;
+  }[];
+  /** The caller's own rating score id — badges their tier in the picker. */
+  playerRatingScoreId: string | null;
+  /** Location capture, rendered on step 1 only. */
+  location: React.ComponentProps<typeof LocationSection>;
   /** Poster/logo is edit-only too (uploaded to the tournament-logos bucket). */
   logoUrl: string | null;
   posterUploading: boolean;
@@ -488,6 +720,8 @@ const DetailsStep: React.FC<{
   minRating,
   setMinRating,
   ratingOptions,
+  playerRatingScoreId,
+  location,
   logoUrl,
   posterUploading,
   onPickPoster,
@@ -704,6 +938,8 @@ const DetailsStep: React.FC<{
               </TouchableOpacity>
             )}
           </View>
+
+          <LocationSection {...location} />
         </>
       )}
 
@@ -939,7 +1175,12 @@ const DetailsStep: React.FC<{
               <FieldLabel colors={colors}>
                 {t('tournamentCreation.fields.minLevel' as TranslationKey)}
               </FieldLabel>
-              <View style={styles.minLevelRow}>
+              <GestureScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.ratingScrollContent}
+                nestedScrollEnabled
+              >
                 <TouchableOpacity
                   onPress={() => {
                     lightHaptic();
@@ -947,7 +1188,7 @@ const DetailsStep: React.FC<{
                   }}
                   activeOpacity={0.7}
                   style={[
-                    styles.minLevelChip,
+                    styles.ratingCard,
                     {
                       backgroundColor:
                         minRating === null ? `${colors.buttonActive}15` : colors.buttonInactive,
@@ -957,7 +1198,7 @@ const DetailsStep: React.FC<{
                 >
                   <Text
                     size="sm"
-                    weight={minRating === null ? 'semibold' : 'regular'}
+                    weight={minRating === null ? 'bold' : 'regular'}
                     color={minRating === null ? colors.buttonActive : colors.text}
                   >
                     {t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
@@ -965,16 +1206,17 @@ const DetailsStep: React.FC<{
                 </TouchableOpacity>
                 {ratingOptions.map(opt => {
                   const selected = minRating === opt.value;
+                  const isPlayerRating = opt.id === playerRatingScoreId;
                   return (
                     <TouchableOpacity
-                      key={opt.value}
+                      key={opt.id}
                       onPress={() => {
                         lightHaptic();
                         setMinRating(opt.value);
                       }}
                       activeOpacity={0.7}
                       style={[
-                        styles.minLevelChip,
+                        styles.ratingCard,
                         {
                           backgroundColor: selected
                             ? `${colors.buttonActive}15`
@@ -983,17 +1225,45 @@ const DetailsStep: React.FC<{
                         },
                       ]}
                     >
+                      {isPlayerRating && (
+                        <View
+                          style={[
+                            styles.yourRatingBadge,
+                            {
+                              backgroundColor: colors.buttonActive,
+                              borderColor: colors.cardBackground,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="person-outline"
+                            size={10}
+                            color={colors.buttonTextActive}
+                          />
+                        </View>
+                      )}
                       <Text
-                        size="sm"
-                        weight={selected ? 'semibold' : 'regular'}
+                        size="base"
+                        weight={selected ? 'bold' : 'semibold'}
                         color={selected ? colors.buttonActive : colors.text}
                       >
                         {opt.label}
                       </Text>
+                      {opt.skillLevel && (
+                        <Text
+                          size="xs"
+                          color={selected ? colors.buttonActive : colors.textMuted}
+                          style={styles.ratingSkillLevel}
+                        >
+                          {t(
+                            `matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey
+                          )}
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </GestureScrollView>
               <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
                 {t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
               </Text>
@@ -1107,6 +1377,8 @@ const PaymentsStep: React.FC<{
   setRefundPctInput: (v: string) => void;
   refundCutoff: Date | null;
   setRefundCutoff: (d: Date | null) => void;
+  prizeMoneyInput: string;
+  setPrizeMoneyInput: (v: string) => void;
   startDate: Date | null;
   feeLocked: boolean;
   errors: Record<string, string | undefined>;
@@ -1126,6 +1398,8 @@ const PaymentsStep: React.FC<{
   setRefundPctInput,
   refundCutoff,
   setRefundCutoff,
+  prizeMoneyInput,
+  setPrizeMoneyInput,
   startDate,
   feeLocked,
   errors,
@@ -1139,6 +1413,43 @@ const PaymentsStep: React.FC<{
   const quote = quoteRegistration(entryFeeCents, feePayer);
   const fmt = (cents: number) => formatPrice(cents, FEE_CURRENCY, { locale });
   const effectiveCutoff = refundCutoff ?? startDate ?? null;
+
+  // Prize money is advertising, not a fee obligation, so it renders even when
+  // fee controls are locked (registration open+). Shared between both branches.
+  const prizeField = (
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('tournamentCreation.payments.prizeMoneyLabel' as TranslationKey)}
+      </FieldLabel>
+      <View
+        style={[
+          styles.textInput,
+          styles.feeInputRow,
+          { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+        ]}
+      >
+        <Text size="base" weight="semibold" color={colors.textMuted}>
+          $
+        </Text>
+        <TextInput
+          style={[styles.feeInputField, { color: colors.text }]}
+          placeholder="0"
+          placeholderTextColor={colors.textMuted}
+          value={prizeMoneyInput}
+          onChangeText={setPrizeMoneyInput}
+          keyboardType="decimal-pad"
+          maxLength={9}
+          testID="tournament-prize-input"
+        />
+        <Text size="sm" color={colors.textMuted}>
+          {FEE_CURRENCY}
+        </Text>
+      </View>
+      <Text size="xs" color={colors.textMuted} style={styles.helperText}>
+        {t('tournamentCreation.payments.prizeMoneyHint' as TranslationKey)}
+      </Text>
+    </View>
+  );
 
   // Fees lock once registration opens — show a read-only summary instead of
   // editable controls that wouldn't persist.
@@ -1197,6 +1508,8 @@ const PaymentsStep: React.FC<{
             </Text>
           )}
         </View>
+
+        {prizeField}
       </SheetScrollView>
     );
   }
@@ -1253,6 +1566,8 @@ const PaymentsStep: React.FC<{
             : t('tournamentCreation.payments.entryFeeHintFree' as TranslationKey)}
         </Text>
       </View>
+
+      {prizeField}
 
       {!isPaid && (
         <View
@@ -1517,6 +1832,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  const { homeLocation } = useUserHomeLocation();
   const toast = useToast();
   const isDark = theme === 'dark';
   const isEditMode = !!editTournament;
@@ -1557,12 +1875,16 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [logoUrl, setLogoUrl] = useState<string | null>(editTournament?.logoUrl ?? null);
   const [posterUploading, setPosterUploading] = useState(false);
   const [minRating, setMinRating] = useState<number | null>(editTournament?.minRating ?? null);
-  const { ratingScores } = useRatingScoresForSport(
-    sportName,
-    editTournament?.sport.id ?? selectedSport?.id
-  );
+  const sportId = editTournament?.sport.id ?? selectedSport?.id;
+  const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(sportName, sportId, userId);
   const ratingOptions = useMemo(
-    () => ratingScores.map(r => ({ value: r.value, label: r.label })),
+    () =>
+      ratingScores.map(r => ({
+        value: r.value,
+        label: r.label,
+        skillLevel: r.skillLevel,
+        id: r.id,
+      })),
     [ratingScores]
   );
   const [bracketSize, setBracketSize] = useState<BracketSize>(
@@ -1610,6 +1932,30 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   );
   const [refundCutoff, setRefundCutoff] = useState<Date | null>(
     editTournament?.refundCutoffAt ? new Date(editTournament.refundCutoffAt) : null
+  );
+  // Location (step 1): an exact facility OR a city. Edit mode seeds the mode
+  // from whichever was set (facility wins).
+  const [locationMode, setLocationMode] = useState<LocationMode>(
+    editTournament?.facilityId ? 'facility' : 'city'
+  );
+  const [selectedFacility, setSelectedFacility] = useState<SelectedFacility | null>(
+    editTournament?.facilityId
+      ? {
+          id: editTournament.facilityId,
+          name: editTournament.venueName ?? '',
+          address: editTournament.venueAddress,
+          city: editTournament.city,
+        }
+      : null
+  );
+  const [cityInput, setCityInput] = useState<string>(
+    editTournament && !editTournament.facilityId ? (editTournament.city ?? '') : ''
+  );
+  // Advertised prize (step 5). Dollar string; '' / 0 ⇒ no prize.
+  const [prizeMoneyInput, setPrizeMoneyInput] = useState(
+    editTournament?.prizeMoneyCents != null && editTournament.prizeMoneyCents > 0
+      ? (editTournament.prizeMoneyCents / 100).toString()
+      : ''
   );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
@@ -1688,6 +2034,15 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (!trimmed) next.name = t('tournamentCreation.validation.nameRequired' as TranslationKey);
         else if (trimmed.length > 100)
           next.name = t('tournamentCreation.validation.nameTooLong' as TranslationKey);
+        // Location required at creation only (an exact facility OR a city).
+        // Existing tournaments predating this field aren't forced to add one.
+        if (!isEditMode) {
+          const hasLocation =
+            (locationMode === 'facility' && !!selectedFacility) ||
+            (locationMode === 'city' && cityInput.trim().length > 0);
+          if (!hasLocation)
+            next.location = t('tournamentCreation.validation.locationRequired' as TranslationKey);
+        }
       }
       if (step === 3) {
         if (!startDate || !endDate) {
@@ -1721,7 +2076,19 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       setErrors(next);
       return Object.values(next).every(v => !v);
     },
-    [name, startDate, endDate, isEditMode, entryFeeInput, refundKind, refundPctInput, t]
+    [
+      name,
+      startDate,
+      endDate,
+      isEditMode,
+      locationMode,
+      selectedFacility,
+      cityInput,
+      entryFeeInput,
+      refundKind,
+      refundPctInput,
+      t,
+    ]
   );
 
   const goNext = useCallback(() => {
@@ -1787,6 +2154,23 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         ? ((refundCutoff ?? startDate)?.toISOString() ?? null)
         : null;
 
+    // ---- Location (step 1) + prize (step 5) → snapshot for create/patch ----
+    // Facility mode denormalizes the facility's name/address/city so display
+    // stays join-free. City mode stores only the city string.
+    const locationPayload =
+      locationMode === 'facility' && selectedFacility
+        ? {
+            facilityId: selectedFacility.id,
+            venueName: selectedFacility.name || null,
+            venueAddress: selectedFacility.address,
+            city: selectedFacility.city,
+          }
+        : locationMode === 'city' && cityInput.trim()
+          ? { facilityId: null, venueName: null, venueAddress: null, city: cityInput.trim() }
+          : null;
+    const prizeCents = dollarsToCents(prizeMoneyInput);
+    const prizeMoneyCents = prizeCents > 0 ? prizeCents : null;
+
     // Upload a freshly-picked poster now (on submit) rather than at selection,
     // so abandoning the form never orphans an uploaded file. logoUrl is a local
     // URI for a new pick, or an existing remote URL (https) when unchanged.
@@ -1819,6 +2203,18 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         patch.rules = trimmedRules.length ? trimmedRules : null;
       if (resolvedLogoUrl !== (editTournament.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
       if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
+      if (locationPayload) {
+        if ((locationPayload.facilityId ?? null) !== (editTournament.facilityId ?? null))
+          patch.facilityId = locationPayload.facilityId;
+        if ((locationPayload.venueName ?? null) !== (editTournament.venueName ?? null))
+          patch.venueName = locationPayload.venueName;
+        if ((locationPayload.venueAddress ?? null) !== (editTournament.venueAddress ?? null))
+          patch.venueAddress = locationPayload.venueAddress;
+        if ((locationPayload.city ?? null) !== (editTournament.city ?? null))
+          patch.city = locationPayload.city;
+      }
+      if (prizeMoneyCents !== (editTournament.prizeMoneyCents ?? null))
+        patch.prizeMoneyCents = prizeMoneyCents;
       if (visibility !== editTournament.visibility) patch.visibility = visibility;
       if (startDate.toISOString() !== new Date(editTournament.startDate).toISOString())
         patch.startDate = startDate.toISOString();
@@ -1879,6 +2275,11 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         rules: rules.trim() || undefined,
         logoUrl: resolvedLogoUrl ?? undefined,
         minRating: minRating ?? undefined,
+        facilityId: locationPayload?.facilityId ?? undefined,
+        venueName: locationPayload?.venueName ?? undefined,
+        venueAddress: locationPayload?.venueAddress ?? undefined,
+        city: locationPayload?.city ?? undefined,
+        prizeMoneyCents: prizeMoneyCents ?? undefined,
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
         startDate: startDate.toISOString(),
@@ -1931,6 +2332,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     refundKind,
     refundPctInput,
     refundCutoff,
+    locationMode,
+    selectedFacility,
+    cityInput,
+    prizeMoneyInput,
     createTournamentAsync,
     updateTournamentAsync,
     onClose,
@@ -1945,6 +2350,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setRules('');
     setLogoUrl(null);
     setMinRating(null);
+    setLocationMode('city');
+    setSelectedFacility(null);
+    setCityInput('');
+    setPrizeMoneyInput('');
     setPosterUploading(false);
     setBracketSize(8);
     setMatchFormat(defaultFormatForSport(sportName));
@@ -2078,6 +2487,23 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             minRating={minRating}
             setMinRating={setMinRating}
             ratingOptions={ratingOptions}
+            playerRatingScoreId={playerRatingScoreId ?? null}
+            location={{
+              colors,
+              t,
+              sportId,
+              latitude: homeLocation?.latitude,
+              longitude: homeLocation?.longitude,
+              playerId: userId,
+              mode: locationMode,
+              setMode: setLocationMode,
+              selectedFacility,
+              onSelectFacility: setSelectedFacility,
+              onClearFacility: () => setSelectedFacility(null),
+              cityInput,
+              setCityInput,
+              error: errors.location,
+            }}
             logoUrl={logoUrl}
             posterUploading={posterUploading}
             onPickPoster={handlePickPoster}
@@ -2127,6 +2553,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
             setRefundPctInput={setRefundPctInput}
             refundCutoff={refundCutoff}
             setRefundCutoff={setRefundCutoff}
+            prizeMoneyInput={prizeMoneyInput}
+            setPrizeMoneyInput={setPrizeMoneyInput}
             startDate={startDate}
             feeLocked={isEditMode && editTournament?.status !== 'draft'}
             errors={errors}
@@ -2369,18 +2797,81 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
   },
-  minLevelRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  ratingScrollContent: {
     gap: spacingPixels[2],
+    paddingRight: spacingPixels[2],
+    paddingTop: spacingPixels[3],
   },
-  minLevelChip: {
+  ratingCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
+    minWidth: 60,
+  },
+  ratingSkillLevel: {
+    marginTop: spacingPixels[0.5],
+  },
+  yourRatingBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  loadingContainer: {
+    padding: spacingPixels[4],
+    alignItems: 'center',
+  },
+  locationModeRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[3],
+  },
+  locationModeChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  selectedFacilityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[3],
+    padding: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  selectedFacilityInfo: {
+    flex: 1,
+    gap: spacingPixels[0.5],
+  },
+  facilityResults: {
+    marginTop: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  facilityResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  facilityResultInfo: {
+    flex: 1,
+    gap: spacingPixels[0.5],
   },
   footer: {
     padding: spacingPixels[4],

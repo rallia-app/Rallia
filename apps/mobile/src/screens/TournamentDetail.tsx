@@ -1708,6 +1708,11 @@ export const TournamentDetail: React.FC = () => {
         name: sport?.name ?? '',
         display_name: sport?.display_name ?? '',
       },
+      facilityId: tournament.facility_id,
+      venueName: tournament.venue_name,
+      venueAddress: tournament.venue_address,
+      city: tournament.city,
+      prizeMoneyCents: tournament.prize_money_cents,
       entryFeeCents: tournament.entry_fee_cents,
       currency: tournament.currency,
       feePayer: tournament.fee_payer,
@@ -1946,7 +1951,7 @@ export const TournamentDetail: React.FC = () => {
                   {formatDate(tournament.start_date)} – {formatDate(tournament.end_date)}
                 </Text>
               </View>
-              {tournament.venue_name ? (
+              {tournament.venue_name || tournament.city ? (
                 <View style={styles.heroMetaRow}>
                   <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
                     <Ionicons name="location-outline" size={14} color={colors.textMuted} />
@@ -1957,7 +1962,26 @@ export const TournamentDetail: React.FC = () => {
                     numberOfLines={1}
                     style={styles.heroMetaText}
                   >
-                    {tournament.venue_name}
+                    {tournament.venue_name || tournament.city}
+                  </Text>
+                </View>
+              ) : null}
+              {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
+                <View style={styles.heroMetaRow}>
+                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
+                    <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
+                  </View>
+                  <Text
+                    size="sm"
+                    color={colors.textMuted}
+                    numberOfLines={1}
+                    style={styles.heroMetaText}
+                  >
+                    {`${t('tournamentDetail.dashboard.prizePool')} ${formatPrice(
+                      tournament.prize_money_cents,
+                      tournament.currency,
+                      { locale, trimZeroCents: true }
+                    )}`}
                   </Text>
                 </View>
               ) : null}

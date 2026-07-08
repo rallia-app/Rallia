@@ -89,6 +89,11 @@ export interface CreateTournamentInput {
   entryFormat?: Enums<'entry_format'>;
   facilityId?: string;
   venueName?: string;
+  venueAddress?: string;
+  /** City label — the facility's city (denormalized) or a city-only entry. */
+  city?: string;
+  /** Advertised prize, in the tournament currency. */
+  prizeMoneyCents?: number;
   networkId?: string;
   registrationOpensAt?: string;
   registrationClosesAt?: string;
@@ -229,6 +234,9 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_logo_url: input.logoUrl,
     p_min_rating: input.minRating,
     p_fee: buildFeePayload(input),
+    p_venue_address: input.venueAddress,
+    p_city: input.city,
+    p_prize_money_cents: input.prizeMoneyCents,
   });
 
   if (error) {
@@ -256,6 +264,8 @@ export interface TournamentUpdatePatch {
   facilityId?: string | null;
   venueName?: string | null;
   venueAddress?: string | null;
+  city?: string | null;
+  prizeMoneyCents?: number | null;
   // Fee settings — server gates these to 'draft' only.
   entryFeeCents?: number;
   currency?: string;
@@ -284,6 +294,8 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   facilityId: 'facility_id',
   venueName: 'venue_name',
   venueAddress: 'venue_address',
+  city: 'city',
+  prizeMoneyCents: 'prize_money_cents',
   entryFeeCents: 'entry_fee_cents',
   currency: 'currency',
   feePayer: 'fee_payer',

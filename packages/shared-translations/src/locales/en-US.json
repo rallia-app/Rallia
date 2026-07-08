@@ -4715,6 +4715,7 @@
       "details": "Details",
       "rulesTitle": "Tournament rules",
       "organizedBy": "Organized by {name}",
+      "prizePool": "Prize pool",
       "champion": "Champion",
       "steps": {
         "draft": "Draft",
@@ -5090,7 +5091,9 @@
       "refundPctLabel": "Refund percentage",
       "refundCutoffLabel": "Refund cutoff",
       "refundCutoffPlaceholder": "Select a date",
-      "refundCutoffHint": "Refunds aren't allowed after this date. Defaults to the start date."
+      "refundCutoffHint": "Refunds aren't allowed after this date. Defaults to the start date.",
+      "prizeMoneyLabel": "Prize money",
+      "prizeMoneyHint": "Optional. Shown on the tournament so players know what's at stake."
     },
     "step1Title": "Basics",
     "step1Description": "Name your tournament and add a poster",
@@ -5119,6 +5122,13 @@
       "minLevel": "Minimum level",
       "minLevelNone": "No minimum",
       "minLevelHint": "Players below this level can still apply. You approve or decline them.",
+      "location": "Location",
+      "locationExact": "Exact venue",
+      "locationCity": "City only",
+      "facilityPlaceholder": "Search for a facility",
+      "facilityEmpty": "No facilities found. Try another search or use “City only”.",
+      "cityPlaceholder": "e.g., Montréal",
+      "locationHint": "Give the exact venue, or just the city if it's not set yet.",
       "poster": "Poster",
       "posterAdd": "Add a poster",
       "posterChange": "Change poster",
@@ -5164,6 +5174,7 @@
     "validation": {
       "nameRequired": "Tournament name is required",
       "nameTooLong": "Name must be 100 characters or fewer",
+      "locationRequired": "Add a venue or a city",
       "datesRequired": "Both start and end dates are required",
       "endBeforeStart": "End date must be on or after the start date",
       "startInPast": "Start date must be in the future",

@@ -13,7 +13,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { getProfilePictureUrl, getTournamentLogoUrl } from '@rallia/shared-utils';
+import { getProfilePictureUrl, getTournamentLogoUrl, formatPrice } from '@rallia/shared-utils';
 import {
   lightTheme,
   darkTheme,
@@ -272,6 +272,13 @@ export const TournamentCard: React.FC<{
       : null;
 
   const ratingRange = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const prizeLabel =
+    tournament.prize_money_cents && tournament.prize_money_cents > 0
+      ? formatPrice(tournament.prize_money_cents, tournament.currency, {
+          locale,
+          trimZeroCents: true,
+        })
+      : null;
   const hasRegistrants = tournament.registrant_preview.length > 0;
 
   return (
@@ -329,11 +336,11 @@ export const TournamentCard: React.FC<{
         )}
       </View>
 
-      {tournament.venue_name && (
+      {(tournament.venue_name || tournament.city) && (
         <View style={styles.cardMetaLine}>
           <Ionicons name="location" size={14} color={colors.textMuted} />
           <Text size="xs" color={colors.textMuted} numberOfLines={1} style={styles.venueText}>
-            {tournament.venue_name}
+            {tournament.venue_name || tournament.city}
           </Text>
         </View>
       )}
@@ -357,6 +364,9 @@ export const TournamentCard: React.FC<{
         )}
         {ratingRange && (
           <MetaChip label={ratingRange} icon="analytics" colors={colors} tone="secondary" />
+        )}
+        {prizeLabel && (
+          <MetaChip label={prizeLabel} icon="trophy-outline" colors={colors} tone="accent" />
         )}
         <MetaChip
           label={t(ENTRY_FORMAT_KEYS[tournament.entry_format] as TranslationKey)}

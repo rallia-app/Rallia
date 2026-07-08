@@ -4715,6 +4715,7 @@
       "details": "Détails",
       "rulesTitle": "Règles du tournoi",
       "organizedBy": "Organisé par {name}",
+      "prizePool": "Bourse",
       "champion": "Champion",
       "steps": {
         "draft": "Brouillon",
@@ -5090,7 +5091,9 @@
       "refundPctLabel": "Pourcentage remboursé",
       "refundCutoffLabel": "Date limite de remboursement",
       "refundCutoffPlaceholder": "Choisis une date",
-      "refundCutoffHint": "Aucun remboursement après cette date. Par défaut, la date de début."
+      "refundCutoffHint": "Aucun remboursement après cette date. Par défaut, la date de début.",
+      "prizeMoneyLabel": "Bourse",
+      "prizeMoneyHint": "Optionnel. Affichée sur le tournoi pour que les joueurs sachent ce qu'il y a à gagner."
     },
     "step1Title": "Infos de base",
     "step1Description": "Nomme ton tournoi et ajoute une affiche",
@@ -5119,6 +5122,13 @@
       "minLevel": "Niveau minimum",
       "minLevelNone": "Aucun minimum",
       "minLevelHint": "Les joueurs sous ce niveau peuvent quand même postuler. Tu acceptes ou refuses.",
+      "location": "Lieu",
+      "locationExact": "Lieu exact",
+      "locationCity": "Ville seulement",
+      "facilityPlaceholder": "Chercher une installation",
+      "facilityEmpty": "Aucune installation trouvée. Essaie une autre recherche ou choisis « Ville seulement ».",
+      "cityPlaceholder": "ex. : Montréal",
+      "locationHint": "Indique le lieu exact, ou juste la ville s'il n'est pas encore fixé.",
       "poster": "Affiche",
       "posterAdd": "Ajouter une affiche",
       "posterChange": "Changer l'affiche",
@@ -5164,6 +5174,7 @@
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",
       "nameTooLong": "Le nom doit contenir au plus 100 caractères",
+      "locationRequired": "Ajoute un lieu ou une ville",
       "datesRequired": "Les dates de début et de fin sont requises",
       "endBeforeStart": "La date de fin doit être après ou égale à la date de début",
       "startInPast": "La date de début doit être dans le futur",
