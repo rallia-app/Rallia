@@ -353,9 +353,9 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
             DatabaseService.PlayerSport.getPlayerSports(userId),
             DatabaseService.Rating.getPlayerRatings(userId),
             DatabaseService.Availability.getPlayerAvailability(userId),
-            getPendingPolicyConsents().catch(consentError => {
+            getPendingPolicyConsents().catch((consentError): PendingPolicyConsent[] | null => {
               Logger.warn('Failed to load pending policy consents', { error: consentError });
-              return [] as PendingPolicyConsent[];
+              return null;
             }),
           ]);
 
@@ -363,10 +363,14 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
 
         // Seed consent checkboxes from already-accepted policy versions, so a
         // user re-entering onboarding after already accepting isn't stuck
-        // re-checking boxes that are already satisfied server-side.
-        const pendingTypes = new Set(pendingConsents.map(p => p.policy_type));
-        updates.hasAcceptedPrivacy = !pendingTypes.has('privacy');
-        updates.hasAcceptedTerms = !pendingTypes.has('terms');
+        // re-checking boxes that are already satisfied server-side. If the
+        // lookup failed we leave both unchecked — consent must never be
+        // pre-checked unless it's recorded server-side.
+        if (pendingConsents) {
+          const pendingTypes = new Set(pendingConsents.map(p => p.policy_type));
+          updates.hasAcceptedPrivacy = !pendingTypes.has('privacy');
+          updates.hasAcceptedTerms = !pendingTypes.has('terms');
+        }
 
         // Seed sports from the guest selection up front so a query that returns
         // no player_sport rows (or one that throws) still leaves the wizard with

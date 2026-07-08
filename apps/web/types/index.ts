@@ -4332,6 +4332,44 @@ export type Database = {
           },
         ];
       };
+      player_consent: {
+        Row: {
+          accepted_at: string;
+          created_at: string;
+          id: string;
+          player_id: string;
+          policy_type: string;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          accepted_at?: string;
+          created_at?: string;
+          id?: string;
+          player_id: string;
+          policy_type: string;
+          updated_at?: string;
+          version: number;
+        };
+        Update: {
+          accepted_at?: string;
+          created_at?: string;
+          id?: string;
+          player_id?: string;
+          policy_type?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_consent_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_favorite: {
         Row: {
           created_at: string | null;
@@ -5016,6 +5054,24 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      policy_versions: {
+        Row: {
+          current_version: number;
+          policy_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          current_version?: number;
+          policy_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          current_version?: number;
+          policy_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       pricing_rule: {
         Row: {
@@ -6934,6 +6990,18 @@ export type Database = {
       };
     };
     Functions: {
+      accept_policy_consent: {
+        Args: { p_policy_type: string; p_version: number };
+        Returns: {
+          accepted_at: string;
+          created_at: string;
+          id: string;
+          player_id: string;
+          policy_type: string;
+          updated_at: string;
+          version: number;
+        };
+      };
       accept_rebuttal_score: {
         Args: { p_match_result_id: string; p_player_id: string };
         Returns: boolean;
@@ -7715,6 +7783,13 @@ export type Database = {
           reputation_tier: string;
           reputation_total_events: number;
           request_type: Database['public']['Enums']['network_member_request_type'];
+        }[];
+      };
+      get_pending_policy_consents: {
+        Args: never;
+        Returns: {
+          current_version: number;
+          policy_type: string;
         }[];
       };
       get_pending_reports_count: {
