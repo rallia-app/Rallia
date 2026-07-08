@@ -40,6 +40,7 @@ export type { ErrorBoundaryTranslations } from './ErrorBoundary';
 export {
   Skeleton,
   SkeletonText,
+  SkeletonTextLine,
   SkeletonAvatar,
   SkeletonCard,
   SkeletonList,

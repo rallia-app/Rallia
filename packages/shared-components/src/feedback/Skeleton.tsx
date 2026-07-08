@@ -6,6 +6,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle, Easing, DimensionValue } from 'react-native';
 
+import { typography } from '../theme';
+
 export interface SkeletonProps {
   /**
    * Width of the skeleton
@@ -175,6 +177,53 @@ export function SkeletonText({
           style={index < lines - 1 ? { marginBottom: spacing } : undefined}
         />
       ))}
+    </View>
+  );
+}
+
+export interface SkeletonTextLineProps {
+  /** Text size this line stands in for — same values as Text's `size` prop */
+  size?: keyof typeof typography.fontSize;
+  /** Line-height variant — same values as Text's `lineHeight` prop */
+  lineHeight?: keyof typeof typography.lineHeight;
+  /** Bar width within the line box */
+  width?: number | string;
+  /** Custom style (applied to the line box) */
+  style?: ViewStyle;
+  /** Theme colors */
+  backgroundColor?: string;
+  highlightColor?: string;
+}
+
+/**
+ * A placeholder for exactly one `Text` line. The outer box takes the same
+ * height the real Text would occupy (fontSize × line-height multiplier), with
+ * a slightly thinner shimmer bar centered inside — the way glyphs sit within
+ * their line box. Using this instead of a bare `Skeleton` bar keeps skeleton
+ * layouts pixel-identical to the loaded content.
+ *
+ * Pair it 1:1 with the Text it replaces:
+ * `<Text size="sm">` → `<SkeletonTextLine size="sm" width="45%" />`
+ */
+export function SkeletonTextLine({
+  size = 'base',
+  lineHeight = 'normal',
+  width = '100%',
+  style,
+  backgroundColor,
+  highlightColor,
+}: SkeletonTextLineProps) {
+  const fontSize = typography.fontSize[size];
+  const boxHeight = Math.round(fontSize * typography.lineHeight[lineHeight]);
+  const barHeight = Math.round(fontSize * 0.9);
+  return (
+    <View style={[{ height: boxHeight, justifyContent: 'center' }, style]}>
+      <Skeleton
+        width={width}
+        height={barHeight}
+        backgroundColor={backgroundColor}
+        highlightColor={highlightColor}
+      />
     </View>
   );
 }
