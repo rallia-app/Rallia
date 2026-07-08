@@ -27,6 +27,9 @@
 -- =============================================================================
 
 DROP FUNCTION IF EXISTS public.record_weekly_checkin(smallint, boolean, boolean, text);
+-- Also drop the 5-arg form so this migration is re-runnable on a database where
+-- the new signature was already applied out-of-band (e.g. local psql testing).
+DROP FUNCTION IF EXISTS public.record_weekly_checkin(smallint, boolean, boolean, text, jsonb);
 
 CREATE FUNCTION public.record_weekly_checkin(
   p_frequency_goal SMALLINT,
