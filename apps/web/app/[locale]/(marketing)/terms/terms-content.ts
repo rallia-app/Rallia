@@ -19,7 +19,7 @@ export const termsOfUse: Record<Locale, string> = {
 
 **Rallia inc.**
 
-Last updated May 25, 2026
+Last updated July 3, 2026
 
 ## CONTRACTUAL FRAMEWORK
 
@@ -29,7 +29,7 @@ Rallia inc. (hereinafter “**Rallia**”, “**we**” or “**our**”) is a b
 
 These terms of use (hereinafter the “**Terms**”) constitute a legally binding agreement between you (hereinafter the “**User**” or “**you**”) and Rallia. They govern all of your access to, and use of, the Platform.
 
-By accessing or using the Platform in any manner whatsoever, including by creating an Account, downloading the Application or using any of its features, you acknowledge that you have read, understood and agreed to be bound by these Terms as well as by Rallia's Privacy Policy, available at <https://www.rallia.ca/fr-CA/privacy>, which is incorporated herein by reference.
+By accessing or using the Platform in any manner whatsoever, including by creating an Account, downloading the Application or using any of its features, you acknowledge that you have read, understood and agreed to be bound by these Terms as well as by Rallia's Privacy Policy, available at <https://www.rallia.ca/en-US/privacy>, which is incorporated herein by reference.
 
 If you do not accept these Terms in their entirety, you must immediately stop accessing and using the Platform.
 
@@ -455,7 +455,7 @@ Termination of the Account, whether at your initiative or Rallia's, results in t
 
 ### 20. Protection of Personal Information
 
-The collection, use, retention and disclosure of your personal information in connection with your use of the Platform are governed by Rallia's Privacy Policy, available at <https://www.rallia.ca/fr-CA/privacy>, which is incorporated into these Terms by reference.
+The collection, use, retention and disclosure of your personal information in connection with your use of the Platform are governed by Rallia's Privacy Policy, available at <https://www.rallia.ca/en-US/privacy>, which is incorporated into these Terms by reference.
 
 Rallia's Privacy Policy complies with the requirements of the *Act respecting the protection of personal information in the private sector* (Québec), as well as the requirements of the *Act respecting the protection of personal information and electronic documents*. By accepting these Terms, you also acknowledge that you have reviewed the Privacy Policy and accept its terms.
 
@@ -554,7 +554,7 @@ Website : rallia.ca
 
 **Rallia inc.**
 
-Dernière mise à jour : 25 mai 2026
+Dernière mise à jour : 3 juillet 2026
 
 ## CADRE CONTRACTUEL
 
