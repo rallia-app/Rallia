@@ -9555,6 +9555,25 @@ export type Database = {
         Args: { p_description?: string; p_display_name: string; p_slug: string }
         Returns: string
       }
+      create_weekly_match: {
+        Args: {
+          p_court_status: string
+          p_duration: Database["public"]["Enums"]["match_duration_enum"]
+          p_end: string
+          p_facility_address: string
+          p_facility_id: string
+          p_facility_name: string
+          p_location_type: string
+          p_match_date: string
+          p_match_type: Database["public"]["Enums"]["match_type_enum"]
+          p_min_rating_score_id: string
+          p_player_id: string
+          p_sport_id: string
+          p_start: string
+          p_tz: string
+        }
+        Returns: string
+      }
       debug_check_conversation_participant: {
         Args: { p_conversation_id: string; p_player_id: string }
         Returns: {
@@ -9741,6 +9760,28 @@ export type Database = {
           player_id: string
         }[]
       }
+      get_auto_invite_candidates_for_slot: {
+        Args: {
+          p_end_time: string
+          p_expectation?: Database["public"]["Enums"]["match_type_enum"]
+          p_facility_id: string
+          p_gender?: Database["public"]["Enums"]["gender_enum"]
+          p_host_id: string
+          p_match_date: string
+          p_max?: number
+          p_sport_id: string
+          p_start_time: string
+        }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          last_name: string
+          player_id: string
+          rating_label: string
+          reputation_score: number
+          reputation_tier: Database["public"]["Enums"]["reputation_tier"]
+        }[]
+      }
       get_auto_invite_funnel: {
         Args: {
           p_bucket?: string
@@ -9866,6 +9907,15 @@ export type Database = {
           distance_meters: number
           match_id: string
         }[]
+      }
+      get_checkin_match_plan: {
+        Args: {
+          p_frequency_goal?: number
+          p_max_invitees?: number
+          p_slots: Json
+          p_timezone?: string
+        }
+        Returns: Json
       }
       get_compat_supply_snapshot: {
         Args: never
@@ -11763,6 +11813,25 @@ export type Database = {
         Args: { p_duration: string }
         Returns: number
       }
+      plan_weekly_matches_for_player: {
+        Args: { p_goal_override?: number; p_player_id: string; p_slots: Json }
+        Returns: {
+          court_status: string
+          duration: Database["public"]["Enums"]["match_duration_enum"]
+          end_time: string
+          facility_address: string
+          facility_id: string
+          facility_name: string
+          location_type: string
+          match_date: string
+          match_type: Database["public"]["Enums"]["match_type_enum"]
+          min_rating_label: string
+          min_rating_score_id: string
+          sport_id: string
+          sport_name: string
+          start_time: string
+        }[]
+      }
       player_activity_score: { Args: { p_player_id: string }; Returns: number }
       player_current_week_start: {
         Args: { p_player_id: string }
@@ -11838,9 +11907,11 @@ export type Database = {
           p_auto_create: boolean
           p_auto_invite: boolean
           p_frequency_goal: number
+          p_match_plan?: Json
           p_timezone?: string
         }
         Returns: {
+          created_matches: Json
           freeze_earned: boolean
           freezes: number
           longest_streak: number

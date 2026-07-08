@@ -34,11 +34,13 @@ import { accent, primary, spacingPixels } from '@rallia/design-system';
 import * as Analytics from '#/services/analytics';
 import { useTranslation } from '#/hooks';
 
+import { useNavigateToPlayerProfile } from '#/hooks';
+
 import { WizardHeader } from './components/WizardHeader';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
 import { MatchOpportunitiesStep } from './steps/MatchOpportunitiesStep';
-import { AutoMatchStep } from './steps/AutoMatchStep';
+import { MatchPlanStep } from './steps/MatchPlanStep';
 import { AllSetStep } from './steps/AllSetStep';
 import { useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
 import { useJoinOpportunity } from './useJoinOpportunity';
@@ -60,6 +62,8 @@ export function WeeklyCheckInScreen() {
   const { session } = useAuth();
   const playerId = session?.user?.id ?? null;
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
+
   // One-click join state for the "Games for you" step — lifted to the screen so
   // the All-Set recap can report what was joined / asked to join there.
   const { join, outcomes, pendingId } = useJoinOpportunity(playerId);
@@ -71,6 +75,14 @@ export function WeeklyCheckInScreen() {
     () => Object.values(outcomes).filter(o => o === 'requested').length,
     [outcomes]
   );
+
+  // A join here changes the goal cap, so the plan preview (fetched behind this
+  // step) is stale. Flag it so goNext refetches before the plan step renders.
+  const outcomesCount = Object.keys(outcomes).length;
+  const { markPlanStale } = wizard;
+  useEffect(() => {
+    if (outcomesCount > 0) markPlanStale();
+  }, [outcomesCount, markPlanStale]);
 
   // Analytics: which entry point opened the wizard (set by the navigator param).
   const route = useRoute();
@@ -103,6 +115,27 @@ export function WeeklyCheckInScreen() {
       sports_count: sportsCount,
     });
   }, [wizard.currentStep, wizard.opportunitiesLoading, wizard.opportunities]);
+
+  // Fire `weekly_checkin_plan_viewed` once, when the match-plan step first
+  // renders with a settled preview (the top of the confirm funnel).
+  const planViewedFiredRef = useRef(false);
+  useEffect(() => {
+    if (planViewedFiredRef.current) return;
+    if (wizard.currentStep !== 4 || wizard.planLoading || !wizard.plan) return;
+    planViewedFiredRef.current = true;
+    const inviteesTotal = wizard.plan.proposals.reduce((sum, p) => sum + p.invitees.length, 0);
+    Analytics.weeklyCheckinPlanViewed({
+      proposals_count: wizard.plan.proposals.length,
+      invitees_total: inviteesTotal,
+      goal: wizard.plan.goal,
+      committed_count: wizard.plan.committedCount,
+    });
+  }, [wizard.currentStep, wizard.planLoading, wizard.plan]);
+
+  // "Today"/"Tomorrow" anchors for the plan cards' day labels — the window's
+  // first two dates, server-computed in the player's timezone.
+  const todayDate = wizard.context?.window?.[0]?.date ?? null;
+  const tomorrowDate = wizard.context?.window?.[1]?.date ?? null;
 
   // Warm light surface in day mode (accent-50 → primary-50, both from the
   // design-system palette); soft dark theme background in night mode.
@@ -149,7 +182,7 @@ export function WeeklyCheckInScreen() {
   const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset;
   const displayedTotalSteps = 4 - (wizard.skipRecapStep ? 1 : 0);
 
-  // CTA → submit transition from the auto-match step to the All-Set step.
+  // CTA → submit transition from the match-plan step to the All-Set step.
   // Fire mediumHaptic immediately on press so the tap feels responsive — the
   // submit() call ultimately fires successHaptic on success or errorHaptic on
   // failure, but those land ~1-2s later after the RPC roundtrip.
@@ -161,7 +194,7 @@ export function WeeklyCheckInScreen() {
       // runs from the useEffect above via the currentStep dependency change.
     } catch {
       // Errors are logged + errorHaptic'd inside submit(); ignore here so the
-      // wizard stays on the auto-match step for the user to retry.
+      // wizard stays on the match-plan step for the user to retry.
     }
   }, [wizard]);
 
@@ -266,13 +299,21 @@ export function WeeklyCheckInScreen() {
         </StepSlot>
 
         <StepSlot>
-          <AutoMatchStep
-            autoCreate={wizard.autoCreate}
-            setAutoCreate={wizard.setAutoCreate}
-            autoInvite={wizard.autoInvite}
-            setAutoInvite={wizard.setAutoInvite}
+          <MatchPlanStep
+            plan={wizard.plan}
+            isLoading={wizard.planLoading}
+            error={wizard.planError}
+            excludedProposalKeys={wizard.excludedProposalKeys}
+            toggleProposal={wizard.toggleProposal}
+            excludedInviteesByProposal={wizard.excludedInviteesByProposal}
+            toggleInvitee={wizard.toggleInvitee}
+            optOut={wizard.optOut}
+            setOptOut={wizard.setOptOut}
             isSubmitting={wizard.isSubmitting}
             onSubmit={handleSubmit}
+            onPlayerPress={navigateToPlayerProfile}
+            todayDate={todayDate}
+            tomorrowDate={tomorrowDate}
           />
         </StepSlot>
 
@@ -281,8 +322,7 @@ export function WeeklyCheckInScreen() {
             <AllSetStep
               frequencyGoal={wizard.frequencyGoal}
               hoursConfirmed={wizard.windowCellCount}
-              autoCreate={wizard.autoCreate}
-              autoInvite={wizard.autoInvite}
+              createdMatches={wizard.result.createdMatches}
               joinedCount={joinedCount}
               requestedCount={requestedCount}
               onDone={handleDone}

@@ -1,24 +1,30 @@
 /**
  * Weekly Check-In Wizard — Supabase API layer
  *
- * Two thin wrappers around the wizard's RPCs plus a query-key registry for
+ * Thin wrappers around the wizard's RPCs plus a query-key registry for
  * TanStack cache management:
  *
- *   • useCheckInContext()  — cold-start: get_check_in_context()
- *   • useRecordCheckIn()   — submit: saveAvailability + record_weekly_checkin
+ *   • useCheckInContext()       — cold-start: get_check_in_context()
+ *   • useCheckInMatchPlan()     — plan preview: get_checkin_match_plan()
+ *   • useRecordCheckIn()        — submit: saveAvailability + record_weekly_checkin
  *
  * Migrations: supabase/migrations/20260521120000_weekly_checkin_schema.sql
- *             supabase/migrations/20260521120100_weekly_checkin_rpcs.sql
+ *             supabase/migrations/20260708120000_checkin_match_plan_preview.sql
+ *             supabase/migrations/20260708120100_record_checkin_match_plan.sql
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { matchKeys } from '@rallia/shared-hooks';
 import {
   OnboardingService,
   getCheckInMatchOpportunities,
+  getCheckInMatchPlan,
   supabase,
   Logger,
+  type CheckInMatchPlan,
+  type PlanInvitee,
+  type PlanProposal,
 } from '@rallia/shared-services';
-import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
+import type { OnboardingAvailability, DayEnum, Json } from '@rallia/shared-types';
 
 import { cellKey, type HourGrid } from '#/features/onboarding/components/HourlyAvailabilityGrid';
 
@@ -32,6 +38,9 @@ export const checkInKeys = {
   availability: () => [...checkInKeys.all, 'availability'] as const,
   opportunities: (slots: CheckInMatchSlot[], timezone: string | null) =>
     [...checkInKeys.all, 'opportunities', { slots, timezone }] as const,
+  plans: () => [...checkInKeys.all, 'plan'] as const,
+  plan: (slots: CheckInMatchSlot[], goal: number, timezone: string | null) =>
+    [...checkInKeys.plans(), { slots, goal, timezone }] as const,
 };
 
 /** A declared availability cell: one selected (weekday, hour). */
@@ -122,6 +131,18 @@ function mapHistoryWeeks(raw: unknown): HistoryWeek[] {
     }));
 }
 
+/** A game record_weekly_checkin created from the confirmed plan. */
+export interface CreatedMatch {
+  matchId: string;
+  sportId: string;
+  sportName: string;
+  matchDate: string; // YYYY-MM-DD
+  startTime: string; // HH:MM:SS
+  endTime: string;
+  facilityName: string | null;
+  locationType: 'facility' | 'tbd';
+}
+
 export interface CheckInResult {
   newStreak: number;
   freezes: number;
@@ -130,12 +151,29 @@ export interface CheckInResult {
   milestoneReached: boolean;
   /** True iff freezes incremented this call. False when capped at freeze_cap. */
   freezeEarned: boolean;
+  /** Games created synchronously from the confirmed plan ([] on the legacy path). */
+  createdMatches: CreatedMatch[];
+}
+
+/** One confirmed proposal, in the shape record_weekly_checkin's plan expects. */
+export interface PlanProposalSubmit {
+  sport_id: string;
+  match_date: string;
+  start_hour: number;
+  facility_id: string | null;
+  invite_excluded_player_ids: string[];
 }
 
 export interface RecordCheckInInput {
   frequencyGoal: number;
-  autoCreate: boolean;
-  autoInvite: boolean;
+  /** "Don't propose games for me" — persists auto_create_matches = false. */
+  optOut: boolean;
+  /**
+   * The confirmed plan selection. `null` = the preview failed and the wizard
+   * degrades to the legacy autonomous path (server generates from saved
+   * availability). An empty proposals array means "create nothing".
+   */
+  plan: { proposals: PlanProposalSubmit[] } | null;
   /** New HourGrid to persist. Cells outside `windowDays` are ignored on save. */
   availability: HourGrid;
   /** The window's weekdays — the save is scoped to these (others preserved). */
@@ -295,6 +333,34 @@ export function useCheckInMatchOpportunities(params: {
 }
 
 // =============================================================================
+// MATCH PLAN PREVIEW — get_checkin_match_plan()
+// =============================================================================
+
+/**
+ * The games the auto-generator would create from the just-declared (in-memory)
+ * slots and chosen goal, each with the named opponents that would be invited.
+ * Rendered by the plan step for confirm/edit; the confirmed selection goes back
+ * through recordCheckIn's `plan`.
+ *
+ * Callers pass `enabled` keyed to the step being reachable so the preview
+ * prefetches while the player is still on "Games for you".
+ */
+export function useCheckInMatchPlan(params: {
+  slots: CheckInMatchSlot[];
+  frequencyGoal: number;
+  timezone?: string | null;
+  enabled?: boolean;
+}) {
+  const { slots, frequencyGoal, timezone = null, enabled = true } = params;
+  return useQuery({
+    queryKey: checkInKeys.plan(slots, frequencyGoal, timezone),
+    queryFn: () => getCheckInMatchPlan({ slots, frequencyGoal, timezone }),
+    staleTime: 60_000,
+    enabled: enabled && slots.length > 0,
+  });
+}
+
+// =============================================================================
 // SUBMIT MUTATION — saveAvailability + record_weekly_checkin
 // =============================================================================
 
@@ -340,9 +406,12 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
 
   const { data, error } = await supabase.rpc('record_weekly_checkin', {
     p_frequency_goal: input.frequencyGoal,
-    p_auto_create: input.autoCreate,
-    p_auto_invite: input.autoInvite,
+    p_auto_create: !input.optOut,
+    p_auto_invite: true,
     p_timezone: deviceTimezone,
+    p_match_plan: input.plan
+      ? ({ version: 1, proposals: input.plan.proposals } as unknown as Json)
+      : null,
   });
   if (error) throw error;
 
@@ -355,29 +424,51 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
     longestStreak: row.longest_streak,
     milestoneReached: row.milestone_reached,
     freezeEarned: row.freeze_earned,
+    createdMatches: mapCreatedMatches(row.created_matches),
   };
+}
+
+/** Parse the JSONB `created_matches` the RPC returns into typed entries. */
+function mapCreatedMatches(raw: unknown): CreatedMatch[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (m): m is Record<string, unknown> =>
+        !!m && typeof (m as Record<string, unknown>).match_id === 'string'
+    )
+    .map(m => ({
+      matchId: m.match_id as string,
+      sportId: (m.sport_id as string) ?? '',
+      sportName: (m.sport_name as string) ?? '',
+      matchDate: (m.match_date as string) ?? '',
+      startTime: (m.start_time as string) ?? '',
+      endTime: (m.end_time as string) ?? '',
+      facilityName: (m.facility_name as string | null) ?? null,
+      locationType: m.location_type === 'facility' ? 'facility' : 'tbd',
+    }));
 }
 
 export function useRecordCheckIn() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: recordCheckIn,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       // Banner + auto-opener now need to refetch — is_pending_check_in flipped.
       qc.invalidateQueries({ queryKey: checkInKeys.context() });
       qc.invalidateQueries({ queryKey: checkInKeys.availability() });
 
-      // Auto-create (+ auto-invite) generate matches ASYNCHRONOUSLY: the check-in
-      // write fires a DB trigger → generate-weekly-matches edge function, which
-      // inserts the matches a few seconds after commit. Refresh the player's
-      // match lists now and again shortly after so Home's "My games" updates on
-      // its own — no manual pull-to-refresh. Home's usePlayerMatches stays
-      // mounted behind the wizard modal, so these invalidations refetch it in
-      // the background and it's current by the time the wizard dismisses.
       const refreshMatchLists = () => qc.invalidateQueries({ queryKey: matchKeys.lists() });
       refreshMatchLists();
-      setTimeout(refreshMatchLists, 4000);
-      setTimeout(refreshMatchLists, 10000);
+
+      // Legacy path only (plan preview failed → p_match_plan NULL): matches are
+      // generated ASYNCHRONOUSLY by the generate-weekly-matches edge function a
+      // few seconds after commit, so refresh again shortly after. On the plan
+      // path the matches were created inside the RPC — already committed by the
+      // time onSuccess runs, so the immediate invalidation above is enough.
+      if (variables.plan == null) {
+        setTimeout(refreshMatchLists, 4000);
+        setTimeout(refreshMatchLists, 10000);
+      }
     },
   });
 }
@@ -385,3 +476,4 @@ export function useRecordCheckIn() {
 // Helper for callers (the wizard's submit handler in particular).
 export { cellKey };
 export type { HourGrid };
+export type { CheckInMatchPlan, PlanInvitee, PlanProposal };

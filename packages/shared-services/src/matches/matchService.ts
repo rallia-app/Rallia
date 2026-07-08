@@ -3812,6 +3812,134 @@ export async function getCheckInMatchOpportunities(params: {
   return hydrateMatchDetailsByIds(matchIds, distanceMap);
 }
 
+/** A candidate the check-in plan would auto-invite to one proposed game. */
+export interface PlanInvitee {
+  playerId: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  ratingLabel: string | null;
+  /** Withheld (null) unless the candidate's reputation is public with enough events. */
+  reputationScore: number | null;
+  reputationTier: string | null;
+}
+
+/** One game the check-in plan proposes to create, with its invite preview. */
+export interface PlanProposal {
+  /** Stable identity for selection state: `${sportId}:${matchDate}`. */
+  key: string;
+  sportId: string;
+  sportName: string;
+  matchDate: string; // YYYY-MM-DD
+  startTime: string; // HH:MM:SS
+  endTime: string;
+  startHour: number;
+  duration: string;
+  locationType: 'facility' | 'tbd';
+  facilityId: string | null;
+  facilityName: string | null;
+  facilityAddress: string | null;
+  minRatingLabel: string | null;
+  invitees: PlanInvitee[];
+}
+
+export interface CheckInMatchPlan {
+  goal: number;
+  committedCount: number;
+  optedOut: boolean;
+  proposals: PlanProposal[];
+}
+
+interface RawPlanInvitee {
+  player_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  rating_label: string | null;
+  reputation_score: number | null;
+  reputation_tier: string | null;
+}
+
+interface RawPlanProposal {
+  key: string;
+  sport_id: string;
+  sport_name: string;
+  match_date: string;
+  start_time: string;
+  end_time: string;
+  start_hour: number;
+  duration: string;
+  location_type: 'facility' | 'tbd';
+  facility_id: string | null;
+  facility_name: string | null;
+  facility_address: string | null;
+  min_rating_label: string | null;
+  invitees: RawPlanInvitee[];
+}
+
+/**
+ * Weekly check-in plan PREVIEW: the games the auto-generator would create from
+ * the availability the player just declared in the wizard (not yet persisted)
+ * and their chosen goal, each with the named opponents that would be invited.
+ * The player confirms/edits this and the selection goes back through
+ * recordWeeklyCheckin's p_match_plan. Plain objects/arrays only (react-query
+ * structural sharing).
+ */
+export async function getCheckInMatchPlan(params: {
+  slots: { day: DayEnum; hour: number }[];
+  frequencyGoal: number;
+  timezone?: string | null;
+}): Promise<CheckInMatchPlan> {
+  const { slots, frequencyGoal, timezone } = params;
+
+  const { data, error } = await supabase.rpc('get_checkin_match_plan', {
+    p_slots: (slots ?? []) as unknown as Json,
+    p_frequency_goal: frequencyGoal,
+    p_timezone: timezone ?? null,
+  });
+
+  if (error) {
+    throw new Error(`Failed to fetch check-in match plan: ${error.message}`);
+  }
+
+  const raw = (data ?? {}) as {
+    goal?: number;
+    committed_count?: number;
+    opted_out?: boolean;
+    proposals?: RawPlanProposal[];
+  };
+
+  return {
+    goal: raw.goal ?? frequencyGoal,
+    committedCount: raw.committed_count ?? 0,
+    optedOut: raw.opted_out ?? false,
+    proposals: (raw.proposals ?? []).map(p => ({
+      key: p.key,
+      sportId: p.sport_id,
+      sportName: p.sport_name,
+      matchDate: p.match_date,
+      startTime: p.start_time,
+      endTime: p.end_time,
+      startHour: p.start_hour,
+      duration: p.duration,
+      locationType: p.location_type,
+      facilityId: p.facility_id,
+      facilityName: p.facility_name,
+      facilityAddress: p.facility_address,
+      minRatingLabel: p.min_rating_label,
+      invitees: (p.invitees ?? []).map(i => ({
+        playerId: i.player_id,
+        firstName: i.first_name ?? '',
+        lastName: i.last_name ?? '',
+        avatarUrl: i.avatar_url,
+        ratingLabel: i.rating_label,
+        reputationScore: i.reputation_score,
+        reputationTier: i.reputation_tier,
+      })),
+    })),
+  };
+}
+
 // =============================================================================
 // PLAYER INVITATION
 // =============================================================================

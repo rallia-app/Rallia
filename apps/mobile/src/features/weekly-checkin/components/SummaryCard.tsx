@@ -1,11 +1,12 @@
 /**
- * SummaryCard — Step 4 success recap.
+ * SummaryCard — Step 5 success recap.
  *
  * A clean recap of what the check-in just locked in: weekly goal, hours
- * confirmed, and the auto-create / auto-invite toggles. No streak hero — the
- * streak is driven by hitting your weekly GAME goal (evaluated at week-end),
- * not by completing the check-in, so the success screen no longer claims to
- * have moved it. The current streak lives on step 1's StreakCard.
+ * confirmed, the real games it created, and games joined on the way in. No
+ * streak hero — the streak is driven by hitting your weekly GAME goal
+ * (evaluated at week-end), not by completing the check-in, so the success
+ * screen no longer claims to have moved it. The current streak lives on step
+ * 1's StreakCard.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,16 +16,15 @@ import { useThemeStyles } from '@rallia/shared-hooks';
 import { primary, radiusPixels, spacingPixels, shadowsSemanticNative } from '@rallia/design-system';
 
 import { useTranslation } from '#/hooks';
-import {
-  WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED,
-  WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED,
-} from '#/features/weekly-checkin/featureFlag';
+import { useLocale } from '#/context';
+import type { CreatedMatch } from '#/features/weekly-checkin/api';
+import { formatWeekdayName } from '#/features/weekly-checkin/window';
 
 interface SummaryCardProps {
   frequencyGoal: number;
   hoursConfirmed: number;
-  autoCreate: boolean;
-  autoInvite: boolean;
+  /** Games the check-in created from the confirmed plan. */
+  createdMatches: CreatedMatch[];
   /** Games joined directly on the "Games for you" step. */
   joinedCount: number;
   /** Games the player asked to join (request-mode) on that step. */
@@ -34,12 +34,12 @@ interface SummaryCardProps {
 export function SummaryCard({
   frequencyGoal,
   hoursConfirmed,
-  autoCreate,
-  autoInvite,
+  createdMatches,
   joinedCount,
   requestedCount,
 }: SummaryCardProps) {
   const { t } = useTranslation();
+  const { locale } = useLocale();
   const { colors, isDark } = useThemeStyles();
   const iconBubbleBg = isDark ? `${primary[700]}33` : primary[100];
   // Bright primary tint in dark mode so the icon doesn't blend into the
@@ -61,6 +61,22 @@ export function SummaryCard({
     { key: 'goal', icon: 'trophy', text: freqText },
     { key: 'slots', icon: 'calendar', text: slotsText },
   ];
+  // One row per real game the check-in created (sport · when · place).
+  createdMatches.forEach(m => {
+    const sportLabel = m.sportName
+      ? m.sportName.charAt(0).toUpperCase() + m.sportName.slice(1)
+      : '';
+    const when = `${formatWeekdayName(m.matchDate, locale)} ${m.startTime.slice(0, 5)}`;
+    const place =
+      m.locationType === 'facility' && m.facilityName
+        ? m.facilityName
+        : t('weeklyCheckIn.plan.locationTbd');
+    rows.push({
+      key: `created-${m.matchId}`,
+      icon: 'add-circle',
+      text: t('weeklyCheckIn.step4.summaryCreated', { sport: sportLabel, when, place }),
+    });
+  });
   if (joinedCount > 0) {
     rows.push({
       key: 'joined',
@@ -79,20 +95,6 @@ export function SummaryCard({
         requestedCount === 1
           ? t('weeklyCheckIn.step4.summaryRequestedOne')
           : t('weeklyCheckIn.step4.summaryRequested', { count: requestedCount }),
-    });
-  }
-  if (WEEKLY_CHECKIN_AUTO_CREATE_TOGGLE_ENABLED && autoCreate) {
-    rows.push({
-      key: 'autoCreate',
-      icon: 'add-circle',
-      text: t('weeklyCheckIn.step4.summaryAutoCreate'),
-    });
-  }
-  if (WEEKLY_CHECKIN_AUTO_INVITE_TOGGLE_ENABLED && autoInvite) {
-    rows.push({
-      key: 'autoInvite',
-      icon: 'people',
-      text: t('weeklyCheckIn.step4.summaryAutoInvite'),
     });
   }
 
