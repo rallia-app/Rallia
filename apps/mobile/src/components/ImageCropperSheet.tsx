@@ -33,6 +33,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 
@@ -95,7 +96,7 @@ export function ImageCropperSheet({ payload }: SheetProps<'image-cropper'>) {
     primary: primary[500],
     primaryDark: primary[600],
     buttonBg: isDark ? neutral[800] : neutral[100],
-    danger: '#EF4444',
+    danger: status.error.DEFAULT,
     overlay: 'rgba(0, 0, 0, 0.95)',
   };
 

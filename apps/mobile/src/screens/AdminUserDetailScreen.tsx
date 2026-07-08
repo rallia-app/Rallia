@@ -480,9 +480,9 @@ const AdminUserDetailScreen: React.FC = () => {
       case 'self_declared':
       default:
         return {
-          background: '#f0fdfa',
-          border: '#14b8a6',
-          text: '#0d9488',
+          background: primary[50],
+          border: primary[500],
+          text: primary[600],
           icon: 'help-circle' as const,
         };
     }

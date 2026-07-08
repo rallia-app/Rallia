@@ -43,6 +43,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -1536,7 +1537,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       inputBorder: isDark ? neutral[700] : neutral[200],
-      error: '#dc2626',
+      error: status.error.dark,
       success: '#16a34a',
     }),
     [themeColors, isDark]

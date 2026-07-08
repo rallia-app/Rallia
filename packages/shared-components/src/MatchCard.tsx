@@ -16,7 +16,7 @@ import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from './foundation/Text.native';
+import { Text } from './foundation/Text';
 import {
   lightTheme,
   darkTheme,

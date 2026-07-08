@@ -7,7 +7,7 @@ import React, { memo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
+import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 
@@ -26,7 +26,7 @@ function ReplyBannerComponent({ senderName, messageContent, onCancel }: ReplyBan
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? colors.card : '#F5F5F5',
+          backgroundColor: isDark ? colors.card : neutral[100],
           borderLeftColor: primary[500],
         },
       ]}

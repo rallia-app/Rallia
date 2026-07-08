@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Overlay from '../Overlay.native';
-import { COLORS } from '@rallia/shared-constants';
+import Overlay from '../Overlay';
+import { COLORS } from '@rallia/design-system';
 
 interface LocationPermissionOverlayProps {
   visible: boolean;

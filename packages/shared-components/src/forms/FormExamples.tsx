@@ -8,7 +8,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Input, Select, Button, Heading, Text, SelectOption } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
 import { colors, spacing } from '../theme';
 
 // Example 1: Simple Contact Form

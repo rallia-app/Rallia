@@ -10,7 +10,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../foundation/Text.native';
+import { Text } from '../foundation/Text';
 import {
   lightTheme,
   darkTheme,

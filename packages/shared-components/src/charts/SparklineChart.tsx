@@ -18,6 +18,7 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
+import { status } from '@rallia/design-system';
 
 export interface SparklineDataPoint {
   value: number;
@@ -78,8 +79,8 @@ export interface SparklineChartProps {
 }
 
 const TREND_COLORS = {
-  positive: '#10B981', // Green
-  negative: '#EF4444', // Red
+  positive: status.success.light,
+  negative: status.error.DEFAULT,
   neutral: '#6B7280', // Gray
 };
 

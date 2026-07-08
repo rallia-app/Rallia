@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Container } from './Container.native';
-import { Stack, VStack, HStack } from './Stack.native';
-import { Card } from './Card.native';
-import { Divider } from './Divider.native';
-import { Spacer } from './Spacer.native';
-import { Text } from '../foundation/Text.native';
-import { Heading } from '../foundation/Heading.native';
-import { Button } from '../foundation/Button.native';
+import { neutral } from '@rallia/design-system';
+import { Container } from './Container';
+import { Stack, VStack, HStack } from './Stack';
+import { Card } from './Card';
+import { Divider } from './Divider';
+import { Spacer } from './Spacer';
+import { Text } from '../foundation/Text';
+import { Heading } from '../foundation/Heading';
+import { Button } from '../foundation/Button';
 
 /**
  * Example 1: Basic Container Usage
@@ -26,7 +27,7 @@ export const ContainerExample: React.FC = () => {
       <Spacer size={32} />
 
       {/* Container with custom padding */}
-      <Container padding={24} backgroundColor="#f5f5f5">
+      <Container padding={24} backgroundColor={neutral[100]}>
         <Heading level={2}>Custom Padding</Heading>
         <Text>This container has 24px padding and a gray background.</Text>
       </Container>
@@ -388,7 +389,7 @@ export const ProfileScreenExample: React.FC = () => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: neutral[100],
   },
   profilePicture: {
     width: 100,

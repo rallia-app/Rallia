@@ -42,6 +42,7 @@ import {
   accent,
   neutral,
   secondary,
+  status,
   duration,
 } from '@rallia/design-system';
 import { useStripe } from '@stripe/stripe-react-native';
@@ -1604,9 +1605,9 @@ export const TournamentDetail: React.FC = () => {
       statusActiveText: isDark ? primary[300] : primary[700],
       statusMutedBg: isDark ? neutral[800] : neutral[100],
       statusMutedText: isDark ? neutral[400] : neutral[500],
-      cancelledBg: isDark ? '#7c2d1230' : '#fef3c7',
-      cancelledBorder: isDark ? '#f59e0b' : '#fbbf24',
-      cancelledText: isDark ? '#fbbf24' : '#92400e',
+      cancelledBg: isDark ? '#7c2d1230' : accent[100],
+      cancelledBorder: isDark ? status.warning.DEFAULT : status.warning.light,
+      cancelledText: isDark ? status.warning.light : accent[800],
       highlightBg: isDark ? primary[950] : primary[50],
       highlightBorder: isDark ? `${primary[400]}40` : `${primary[500]}20`,
       secondaryHighlightBg: isDark ? secondary[950] : secondary[50],

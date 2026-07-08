@@ -7,7 +7,8 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../foundation/Text.native';
+import { status } from '@rallia/design-system';
+import { Text } from '../foundation/Text';
 import { spacing } from '../theme';
 
 export interface OfflineIndicatorProps {
@@ -30,7 +31,7 @@ export function OfflineIndicator({
   message = 'No internet connection',
   showRetry = true,
   onRetry,
-  backgroundColor = '#EF4444',
+  backgroundColor = status.error.DEFAULT,
   textColor = '#FFFFFF',
 }: OfflineIndicatorProps) {
   const insets = useSafeAreaInsets();

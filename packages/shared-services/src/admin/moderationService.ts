@@ -5,6 +5,7 @@
  */
 
 import { getProfilePictureUrl } from '@rallia/shared-utils';
+import { status as dsStatus } from '@rallia/design-system';
 
 import { supabase } from '../supabase';
 import { Logger } from '../logger';
@@ -494,11 +495,11 @@ export function getReportTypeIcon(type: ReportType): string {
  */
 export function getReportStatusColor(status: ReportStatus): string {
   const colors: Record<ReportStatus, string> = {
-    pending: '#f59e0b', // warning/amber
+    pending: dsStatus.warning.DEFAULT,
     under_review: '#3b82f6', // blue
     dismissed: '#6b7280', // gray
     action_taken: '#22c55e', // green
-    escalated: '#ef4444', // red
+    escalated: dsStatus.error.DEFAULT,
   };
   return colors[status] || '#6b7280';
 }
@@ -510,8 +511,8 @@ export function getPriorityColor(priority: ReportPriority): string {
   const colors: Record<ReportPriority, string> = {
     low: '#6b7280',
     normal: '#3b82f6',
-    high: '#f59e0b',
-    urgent: '#ef4444',
+    high: dsStatus.warning.DEFAULT,
+    urgent: dsStatus.error.DEFAULT,
   };
   return colors[priority] || '#6b7280';
 }

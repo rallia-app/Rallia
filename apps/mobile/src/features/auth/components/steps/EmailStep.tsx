@@ -305,6 +305,7 @@ const styles = StyleSheet.create({
   termsText: {
     textAlign: 'center',
     lineHeight: 18,
+    paddingHorizontal: spacingPixels[2],
   },
   termsLink: {
     textDecorationLine: 'underline',

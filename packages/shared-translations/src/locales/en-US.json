@@ -134,6 +134,15 @@
     "termsMiddle": " and ",
     "privacyLink": "Privacy Policy",
     "termsSuffix": ".",
+    "consent": {
+      "privacyPrefix": "I have read Rallia's ",
+      "privacyLink": "Privacy Policy",
+      "privacySuffix": ", and I consent to the collection, use, and disclosure of my personal information in accordance with it.",
+      "termsPrefix": "I have read and accept the ",
+      "termsLink": "Terms of Use",
+      "termsSuffix": " of the Rallia platform and website.",
+      "required": "Please accept the Privacy Policy and the Terms of Use to continue."
+    },
     "orDivider": "OR",
     "step": "Step {current} of {total}",
     "stepNames": {
@@ -1676,6 +1685,7 @@
     "allSetSubtitle": "Start finding games",
     "step": "Step {current} of {total}",
     "stepNames": {
+      "consent": "Terms & Privacy",
       "personal": "About You",
       "sports": "Sports",
       "tennisRating": "Tennis Rating",
@@ -1684,6 +1694,10 @@
       "availability": "Availability",
       "location": "Location",
       "favoriteSites": "Favorite Courts"
+    },
+    "consentStep": {
+      "title": "Before you get started",
+      "subtitle": "Please review and accept the following to create your account."
     },
     "personalInfoStep": {
       "title": "Tell us about yourself",
@@ -5204,6 +5218,31 @@
       "tournaments": "Join a tournament",
       "leagues": "Join a league",
       "leaderboard": "See where you rank"
+    },
+    "playGrid": {
+      "title": "Play",
+      "findGame": "Find a game",
+      "bookCourt": "Book a court",
+      "tournaments": "Join a tournament",
+      "leagues": "Leagues"
+    },
+    "leaderboardCard": {
+      "title": "Monthly leaderboard",
+      "subtitle": "See where you rank",
+      "unrankedTitle": "Claim your spot",
+      "unrankedSubtitle": "Play one game this month and you're on the board"
+    },
+    "tournamentActionBanner": {
+      "title": "Tournament game to schedule",
+      "description": "Your round {round} opponent in {name} is set. Pick a time and get it booked.",
+      "descriptionMany": "{count} of your games in {name} are ready to schedule.",
+      "cta": "Schedule"
+    },
+    "leagueActionBanner": {
+      "title": "League matchup released",
+      "description": "Your matchup for {session} in {league} is out.",
+      "descriptionMany": "{count} of your matchups for {session} are out.",
+      "cta": "View"
     },
     "myMatchesEmpty": {
       "title": "No upcoming games",
@@ -10614,6 +10653,7 @@
     "stepCounter": "Step {current} of {total}",
     "steps": {
       "account": "Account",
+      "consent": "Consent",
       "profile": "Profile",
       "level": "Level",
       "location": "Location",
@@ -11664,6 +11704,16 @@
       "description": "This version of Rallia is no longer supported. Update to the latest version to keep playing.",
       "versionInfo": "You have {current} · {required} or newer is required",
       "cta": "Update Now"
+    }
+  },
+  "policyConsent": {
+    "gate": {
+      "title": "Our policies have been updated",
+      "subtitle": "Please review and accept the updated policy below to continue using Rallia.",
+      "accept": "Accept & Continue",
+      "acceptError": "We couldn't save your acceptance. Please check your connection and try again.",
+      "signOutConfirmTitle": "Sign Out?",
+      "signOutConfirmMessage": "You'll need to accept the updated policy the next time you sign in."
     }
   }
 }

@@ -10,7 +10,7 @@ import { Text, Button } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, status } from '@rallia/design-system';
 import type { BookingWithDetails, PlayerBookingsPage } from '@rallia/shared-services';
 import { calculateRefundAmount } from '@rallia/shared-services';
 import { useCancelBooking, useCancellationPolicy, bookingKeys } from '@rallia/shared-hooks';
@@ -177,11 +177,15 @@ export default function CancelBookingModal({
                 },
               ]}
             >
-              <Ionicons name="wallet-outline" size={18} color={isDark ? '#fbbf24' : '#d97706'} />
+              <Ionicons
+                name="wallet-outline"
+                size={18}
+                color={isDark ? status.warning.light : status.warning.dark}
+              />
               <Text
                 size="sm"
                 weight="medium"
-                color={isDark ? '#fbbf24' : '#d97706'}
+                color={isDark ? status.warning.light : status.warning.dark}
                 style={styles.refundText}
               >
                 {getRefundMessage()}

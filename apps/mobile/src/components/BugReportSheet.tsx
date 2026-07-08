@@ -138,9 +138,9 @@ const QUICK_MODULES: QuickModuleOption[] = [
 
 // Severity options for bug reports
 const SEVERITY_OPTIONS: { value: BugSeverity; labelKey: string; color: string }[] = [
-  { value: 'minor', labelKey: 'feedback.bug.severityMinor', color: '#F59E0B' },
+  { value: 'minor', labelKey: 'feedback.bug.severityMinor', color: status.warning.DEFAULT },
   { value: 'major', labelKey: 'feedback.bug.severityMajor', color: '#F97316' },
-  { value: 'critical', labelKey: 'feedback.bug.severityCritical', color: '#EF4444' },
+  { value: 'critical', labelKey: 'feedback.bug.severityCritical', color: status.error.DEFAULT },
 ];
 
 // Disappointment options for PMF

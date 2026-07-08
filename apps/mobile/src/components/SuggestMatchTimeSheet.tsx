@@ -26,7 +26,14 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Text, VStack, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, base, neutral, primary } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  base,
+  neutral,
+  primary,
+  status as dsStatus,
+} from '@rallia/design-system';
 import { errorHaptic, lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger, suggestMatchTime, withdrawTimeSuggestion } from '@rallia/shared-services';
 
@@ -246,9 +253,9 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
               isDark={isDark}
               themeColors={{
                 ...buttonThemeColors,
-                primary: '#dc2626',
-                buttonActive: '#dc2626',
-                text: '#dc2626',
+                primary: dsStatus.error.dark,
+                buttonActive: dsStatus.error.dark,
+                text: dsStatus.error.dark,
               }}
             >
               {t('matchDetail.timeSuggestion.withdraw')}
@@ -338,11 +345,14 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
           <View
             style={[
               styles.errorBanner,
-              { backgroundColor: isDark ? '#7f1d1d44' : '#fee2e2', borderColor: '#dc2626' },
+              {
+                backgroundColor: isDark ? '#7f1d1d44' : '#fee2e2',
+                borderColor: dsStatus.error.dark,
+              },
             ]}
           >
-            <Ionicons name="alert-circle" size={16} color="#dc2626" />
-            <Text size="sm" color="#dc2626" style={styles.errorText}>
+            <Ionicons name="alert-circle" size={16} color={dsStatus.error.dark} />
+            <Text size="sm" color={dsStatus.error.dark} style={styles.errorText}>
               {errorMsg}
             </Text>
           </View>

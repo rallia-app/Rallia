@@ -5,7 +5,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useProfile, usePlayerSports } from '@rallia/shared-hooks';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
-import { Text } from './foundation/Text.native';
+import { Text } from './foundation/Text';
 import { primary, lightTheme, darkTheme } from '@rallia/design-system';
 
 interface Sport {

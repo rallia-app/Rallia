@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import ActionSheet, { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, ToastOverlay } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -248,8 +248,9 @@ export const ActionsBottomSheet: React.FC = () => {
   const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Tournaments and Leagues stay admin-gated while the feature is in rollout.
-  const showCreateTournament = isAdmin;
+  // Leagues stay admin-gated while the feature is in rollout; tournaments are
+  // un-gated for everyone.
+  const showCreateTournament = true;
   const showCreateLeague = isAdmin;
 
   // Wizard state for all sliding panels (local, only for slide animation)
@@ -792,6 +793,7 @@ export const ActionsBottomSheet: React.FC = () => {
       gestureEnabled={!disableGestures}
       closeOnTouchBackdrop={!disableGestures}
       onClose={handleSheetDismiss}
+      ExtraOverlayComponent={<ToastOverlay />}
       containerStyle={[
         styles.sheetBackground,
         { backgroundColor: colors.cardBackground },

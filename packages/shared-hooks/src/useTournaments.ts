@@ -50,6 +50,8 @@ import {
   getTournamentByInviteToken,
   joinTournamentViaInvite,
   listRecentDoublesPartners,
+  listMyUnscheduledTournamentMatches,
+  type UnscheduledTournamentMatch,
   type CreateTournamentInput,
   type TournamentUpdatePatch,
   type TournamentInviteLink,
@@ -84,6 +86,8 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
   myActiveRegistrations: (userId: string) =>
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
+  myUnscheduledMatches: (userId: string, sportId?: string) =>
+    [...tournamentKeys.all, 'myUnscheduledMatches', userId, sportId ?? 'all'] as const,
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
   bracketPreview: (tournamentId: string) =>
     [...tournamentKeys.all, 'bracketPreview', tournamentId] as const,
@@ -129,6 +133,18 @@ export function useMyActiveRegistrations(userId: string | undefined) {
   return useQuery<TournamentRegistration[]>({
     queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
     queryFn: () => listMyActiveRegistrations(userId!),
+    enabled: !!userId,
+  });
+}
+
+/**
+ * The caller's released bracket matches awaiting a linked game — feeds the
+ * home competitive action banners.
+ */
+export function useMyUnscheduledTournamentMatches(userId: string | undefined, sportId?: string) {
+  return useQuery<UnscheduledTournamentMatch[]>({
+    queryKey: tournamentKeys.myUnscheduledMatches(userId ?? '', sportId),
+    queryFn: () => listMyUnscheduledTournamentMatches(userId!, { sportId }),
     enabled: !!userId,
   });
 }

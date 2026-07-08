@@ -8,7 +8,12 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DatabaseService, { Logger, supabase } from '@rallia/shared-services';
+import DatabaseService, {
+  Logger,
+  supabase,
+  getPendingPolicyConsents,
+  type PendingPolicyConsent,
+} from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import {
@@ -30,6 +35,7 @@ interface GuestSportEntry {
 }
 
 export type OnboardingStepId =
+  | 'consent'
   | 'personal'
   | 'tennis-rating'
   | 'pickleball-rating'
@@ -40,6 +46,10 @@ export type OnboardingStepId =
   | 'suggestions';
 
 export interface OnboardingFormData {
+  // Consent (signup only — existing users signing in never see this step)
+  hasAcceptedPrivacy: boolean;
+  hasAcceptedTerms: boolean;
+
   // Personal Info
   firstName: string;
   lastName: string;
@@ -117,6 +127,8 @@ interface UseOnboardingWizardReturn {
 const DEFAULT_AVAILABILITIES: HourGrid = emptyGrid();
 
 const INITIAL_FORM_DATA: OnboardingFormData = {
+  hasAcceptedPrivacy: false,
+  hasAcceptedTerms: false,
   firstName: '',
   lastName: '',
   dateOfBirth: null,
@@ -189,6 +201,9 @@ export function computeFavoriteSportCounts(formData: OnboardingFormData): {
  */
 function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData): boolean {
   switch (stepId) {
+    case 'consent':
+      return formData.hasAcceptedPrivacy && formData.hasAcceptedTerms;
+
     case 'personal':
       return !!(
         formData.firstName.trim() &&
@@ -331,15 +346,31 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
         }
 
         // Fetch all user data in parallel
-        const [profileRes, playerRes, sportsRes, ratingsRes, availRes] = await Promise.all([
-          DatabaseService.Profile.getProfile(userId),
-          DatabaseService.Player.getPlayer(userId),
-          DatabaseService.PlayerSport.getPlayerSports(userId),
-          DatabaseService.Rating.getPlayerRatings(userId),
-          DatabaseService.Availability.getPlayerAvailability(userId),
-        ]);
+        const [profileRes, playerRes, sportsRes, ratingsRes, availRes, pendingConsents] =
+          await Promise.all([
+            DatabaseService.Profile.getProfile(userId),
+            DatabaseService.Player.getPlayer(userId),
+            DatabaseService.PlayerSport.getPlayerSports(userId),
+            DatabaseService.Rating.getPlayerRatings(userId),
+            DatabaseService.Availability.getPlayerAvailability(userId),
+            getPendingPolicyConsents().catch((consentError): PendingPolicyConsent[] | null => {
+              Logger.warn('Failed to load pending policy consents', { error: consentError });
+              return null;
+            }),
+          ]);
 
         const updates: Partial<OnboardingFormData> = {};
+
+        // Seed consent checkboxes from already-accepted policy versions, so a
+        // user re-entering onboarding after already accepting isn't stuck
+        // re-checking boxes that are already satisfied server-side. If the
+        // lookup failed we leave both unchecked — consent must never be
+        // pre-checked unless it's recorded server-side.
+        if (pendingConsents) {
+          const pendingTypes = new Set(pendingConsents.map(p => p.policy_type));
+          updates.hasAcceptedPrivacy = !pendingTypes.has('privacy');
+          updates.hasAcceptedTerms = !pendingTypes.has('terms');
+        }
 
         // Seed sports from the guest selection up front so a query that returns
         // no player_sport rows (or one that throws) still leaves the wizard with
@@ -576,7 +607,7 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
   // Calculate steps dynamically based on selected sports (resolved from
   // pre-onboarding's saved player_sport rows in the load-existing-data effect)
   const steps = useMemo<OnboardingStepId[]>(() => {
-    const baseSteps: OnboardingStepId[] = ['personal'];
+    const baseSteps: OnboardingStepId[] = ['consent', 'personal'];
 
     // Add rating steps based on selected sports
     if (hasTennis) baseSteps.push('tennis-rating');

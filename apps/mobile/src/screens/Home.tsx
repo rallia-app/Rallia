@@ -29,6 +29,7 @@ import {
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   useProfile,
   useTheme,
@@ -44,10 +45,13 @@ import {
   useProfileCompleteness,
   useReferral,
   useAdminStatus,
+  useMySportRank,
+  useMyUnscheduledTournamentMatches,
+  useMyUnscheduledSessionMatches,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { MatchScoringPreferences } from '@rallia/shared-hooks';
-import type { MatchWithDetails, FacilitySearchResult } from '@rallia/shared-types';
+import type { MatchScoringPreferences, MySportRank } from '@rallia/shared-hooks';
+import type { FacilitySearchResult, MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
   supabase,
@@ -172,8 +176,7 @@ const QuickNavButton: React.FC<{
   icon: (color: string) => React.ReactNode;
   label: string;
   onPress: () => void;
-  fullWidth?: boolean;
-}> = ({ icon, label, onPress, fullWidth = false }) => {
+}> = ({ icon, label, onPress }) => {
   const [lineOne, lineTwo] = splitLabelTwoLines(label);
   const handlePress = () => {
     void lightHaptic();
@@ -183,7 +186,7 @@ const QuickNavButton: React.FC<{
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.85}
-      style={[quickNavStyles.item, fullWidth && quickNavStyles.itemFullWidth]}
+      style={quickNavStyles.item}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
@@ -215,22 +218,24 @@ const QuickNavButton: React.FC<{
 };
 
 const quickNavStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: spacingPixels[3],
+  sectionHeader: {
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
+  },
+  // Fixed two-column grid: an odd trailing tile stretches the full row via
+  // flexGrow, so the grid never leaves a stranded half-width gap.
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[2],
   },
   item: {
-    // Wide enough to fit the longest two-line label without clipping — e.g.
-    // FR "Explorer les parties publiques" → "parties publiques" on line two.
-    width: 230,
+    flexGrow: 1,
+    flexBasis: '40%',
     borderRadius: radiusPixels['2xl'],
-  },
-  itemFullWidth: {
-    width: undefined,
-    flex: 1,
   },
   inner: {
     flexDirection: 'row',
@@ -241,13 +246,13 @@ const quickNavStyles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[1],
     paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
     overflow: 'hidden',
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.22)',
@@ -261,6 +266,148 @@ const quickNavStyles = StyleSheet.create({
   },
   label: {
     textAlign: 'center',
+  },
+});
+
+// Medal accents for podium ranks on the home leaderboard card.
+const LEADERBOARD_MEDALS: Record<number, string> = { 1: '#FFD700', 2: '#C0C0C0', 3: '#CD7F32' };
+
+/**
+ * Rich leaderboard entry point: shows the player's live monthly rank (or a
+ * claim-your-spot nudge when unranked) and routes to the full leaderboard.
+ */
+const LeaderboardCard: React.FC<{
+  myRank: MySportRank | null | undefined;
+  loading: boolean;
+  onPress: () => void;
+  t: (key: string, options?: Record<string, string | number | boolean>) => string;
+}> = ({ myRank, loading, onPress, t }) => {
+  const medal = myRank ? LEADERBOARD_MEDALS[myRank.rank] : undefined;
+  const handlePress = () => {
+    void lightHaptic();
+    onPress();
+  };
+
+  let mainLine: string;
+  // Space, not empty — reserves the line so the card doesn't grow when data
+  // lands (same trick as splitLabelTwoLines above).
+  let subLine = ' ';
+  if (myRank) {
+    mainLine = t('leaderboard.yourRank', { rank: myRank.rank });
+    subLine = t('leaderboard.gamesWins', { games: myRank.games, wins: myRank.wins });
+  } else if (loading) {
+    mainLine = t('home.leaderboardCard.subtitle');
+  } else {
+    mainLine = t('home.leaderboardCard.unrankedTitle');
+    subLine = t('home.leaderboardCard.unrankedSubtitle');
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.85}
+      style={leaderboardCardStyles.wrap}
+      accessibilityRole="button"
+      accessibilityLabel={`${t('home.leaderboardCard.title')}. ${mainLine}`}
+    >
+      <LinearGradient
+        colors={[accent[400], accent[600]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={leaderboardCardStyles.inner}
+      >
+        <Ionicons
+          name="podium"
+          size={96}
+          color="rgba(255,255,255,0.12)"
+          style={leaderboardCardStyles.watermark}
+        />
+        <View
+          style={[
+            leaderboardCardStyles.badge,
+            medal ? { backgroundColor: medal, borderColor: 'transparent' } : null,
+          ]}
+        >
+          {myRank ? (
+            <Text
+              size="sm"
+              weight="bold"
+              color={medal && myRank.rank !== 3 ? '#1a1a1a' : '#ffffff'}
+              numberOfLines={1}
+            >
+              {`#${myRank.rank}`}
+            </Text>
+          ) : (
+            <Ionicons name="podium-outline" size={22} color="#ffffff" />
+          )}
+        </View>
+        <View style={leaderboardCardStyles.textCol}>
+          <Text size="xs" weight="semibold" color="rgba(255,255,255,0.85)">
+            {t('home.leaderboardCard.title')}
+          </Text>
+          <Text size="base" weight="bold" color="#ffffff" numberOfLines={1}>
+            {mainLine}
+          </Text>
+          <Text size="xs" color="rgba(255,255,255,0.85)" numberOfLines={1}>
+            {subLine}
+          </Text>
+        </View>
+        {myRank ? (
+          <View style={leaderboardCardStyles.pointsCol}>
+            <Text size="xl" weight="bold" color="#ffffff">
+              {myRank.points}
+            </Text>
+            <Text size="xs" color="rgba(255,255,255,0.85)">
+              {t('leaderboard.pts')}
+            </Text>
+          </View>
+        ) : null}
+        <Ionicons name="chevron-forward" size={20} color="#ffffff" />
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+const leaderboardCardStyles = StyleSheet.create({
+  wrap: {
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[4],
+    marginBottom: spacingPixels[2],
+    borderRadius: radiusPixels['2xl'],
+  },
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    borderRadius: radiusPixels['2xl'],
+    borderWidth: 1.5,
+    borderColor: accent[500],
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    overflow: 'hidden',
+  },
+  watermark: {
+    position: 'absolute',
+    right: spacingPixels[8],
+    bottom: -spacingPixels[4],
+  },
+  badge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    flexShrink: 0,
+  },
+  textCol: {
+    flex: 1,
+  },
+  pointsCol: {
+    alignItems: 'center',
+    flexShrink: 0,
   },
 });
 
@@ -935,6 +1082,12 @@ const Home = () => {
     if (!playerRatingScoreId) return null;
     return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
   }, [ratingScores, playerRatingScoreId]);
+  // Live monthly rank for the home leaderboard card — signed-in only (the
+  // hook no-ops on undefined sportId).
+  const { data: myLeaderboardRank, isLoading: myLeaderboardRankLoading } = useMySportRank(
+    session ? selectedSport?.id : undefined
+  );
+
   const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
   const favoriteFacilityIds = useMemo(() => favorites.map(f => f.facilityId), [favorites]);
 
@@ -1064,6 +1217,16 @@ const Home = () => {
     limit: 5,
     enabled: !!session?.user?.id,
   });
+
+  // Competitive calls-to-action: released bracket/matchup slots with no game
+  // linked yet. Once a game is linked they become real `match` rows and flow
+  // through usePlayerMatches into the My Games carousel like any other game.
+  // Leagues stay admin-gated during rollout, so the session query only fires
+  // for admins (passing an undefined userId disables the hook's query).
+  const { data: tournamentActionMatches = [], refetch: refetchTournamentActions } =
+    useMyUnscheduledTournamentMatches(session?.user?.id, selectedSport?.id);
+  const { data: sessionActionMatches = [], refetch: refetchLeagueActions } =
+    useMyUnscheduledSessionMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
 
   const scrollRef = useRef<ScrollView>(null);
   const isManualRefresh = useRef(false);
@@ -1238,7 +1401,13 @@ const Home = () => {
     );
   };
 
-  // Render "My Matches" section with horizontal scroll
+  // Render the "Up next" agenda section — games, tournament matches, and
+  // league sessions in one chronological rail. Keeps the tour step that
+  // previously anchored on the My Games carousel.
+  // Render "My Games" with the full MyMatchCard carousel. Every playable
+  // match — casual, tournament bracket, league matchup — is the same `match`
+  // primitive, so one card type covers them all with its status pills,
+  // avatars, and urgency treatments intact.
   const renderMyMatchesSection = useCallback(() => {
     // Only show for fully onboarded users
     if (!isOnboarded) return null;
@@ -1502,9 +1671,11 @@ const Home = () => {
   const renderListHeader = useCallback(() => {
     const headerComponents = [];
 
-    // Banners go first so they sit above everything else on the home screen,
-    // including the quick-nav FAB row. Only signed-in + onboarded users see
-    // them; the bucket is built up below and only flushed if non-empty.
+    // Banners go first so they sit above everything else on the home screen.
+    // Only signed-in + onboarded users see them. Bucket order IS priority
+    // order (billing > competitive actions > weekly check-in > references >
+    // profile completion > cross-sport > second sport) — only the first card
+    // renders.
     const bannerCards: React.ReactNode[] = [];
 
     if (session && isOnboarded) {
@@ -1519,50 +1690,114 @@ const Home = () => {
         );
       }
 
-      // Pending incoming reference requests
-      if (pendingReferenceRequestsCount > 0) {
+      // Competitive action banners — a released bracket/matchup slot with no
+      // linked game yet is a call to action. One banner per tournament or
+      // session; no onDismiss because they clear themselves once a game is
+      // linked.
+      const tournamentActionGroups = new Map<
+        string,
+        { name: string; count: number; round: number }
+      >();
+      for (const m of tournamentActionMatches) {
+        const group = tournamentActionGroups.get(m.tournament_id);
+        if (group) {
+          group.count += 1;
+          group.round = Math.min(group.round, m.round_number);
+        } else {
+          tournamentActionGroups.set(m.tournament_id, {
+            name: m.tournament.name,
+            count: 1,
+            round: m.round_number,
+          });
+        }
+      }
+      tournamentActionGroups.forEach((group, tournamentId) => {
         bannerCards.push(
-          <ReferenceRequestsBanner
-            key="reference-requests"
-            count={pendingReferenceRequestsCount}
-            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          <HomeBanner
+            key={`tournament-action-${tournamentId}`}
+            variant="action"
+            leading={accentColor => (
+              <Ionicons name="trophy-outline" size={20} color={accentColor} />
+            )}
+            title={t('home.tournamentActionBanner.title')}
+            description={
+              group.count === 1
+                ? t('home.tournamentActionBanner.description', {
+                    round: group.round,
+                    name: group.name,
+                  })
+                : t('home.tournamentActionBanner.descriptionMany', {
+                    count: group.count,
+                    name: group.name,
+                  })
+            }
+            primaryAction={{
+              label: t('home.tournamentActionBanner.cta'),
+              onPress: () =>
+                appNavigation.navigate('TournamentDetail', {
+                  tournamentId,
+                  tournamentName: group.name,
+                }),
+            }}
           />
         );
-      }
+      });
 
-      // Cross-sport banners for unread notifications in other sports
-      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
-        if (count > 0 && !dismissedBannerSports.has(sportName)) {
-          const sport = userSports.find(s => s.name === sportName);
-          if (sport) {
-            bannerCards.push(
-              <CrossSportBanner
-                key={`cross-sport-${sportName}`}
-                sportName={sportName}
-                displayName={sport.display_name.toLowerCase()}
-                count={count}
-                onSwitch={() => setSelectedSport(sport)}
-                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
-                t={
-                  t as (key: string, options?: Record<string, string | number | boolean>) => string
-                }
-              />
-            );
-          }
+      const sessionActionGroups = new Map<
+        string,
+        { sessionName: string; leagueId: string; leagueName: string; count: number }
+      >();
+      for (const m of sessionActionMatches) {
+        const group = sessionActionGroups.get(m.session_id);
+        if (group) {
+          group.count += 1;
+        } else {
+          sessionActionGroups.set(m.session_id, {
+            sessionName: m.session.name,
+            leagueId: m.session.season.league_id,
+            leagueName: m.session.season.league.name,
+            count: 1,
+          });
         }
+      }
+      sessionActionGroups.forEach((group, sessionId) => {
+        bannerCards.push(
+          <HomeBanner
+            key={`session-action-${sessionId}`}
+            variant="action"
+            leading={accentColor => (
+              <Ionicons name="ribbon-outline" size={20} color={accentColor} />
+            )}
+            title={t('home.leagueActionBanner.title')}
+            description={
+              group.count === 1
+                ? t('home.leagueActionBanner.description', {
+                    session: group.sessionName,
+                    league: group.leagueName,
+                  })
+                : t('home.leagueActionBanner.descriptionMany', {
+                    count: group.count,
+                    session: group.sessionName,
+                  })
+            }
+            primaryAction={{
+              label: t('home.leagueActionBanner.cta'),
+              onPress: () =>
+                appNavigation.navigate('SessionDetail', {
+                  sessionId,
+                  leagueId: group.leagueId,
+                  sessionName: group.sessionName,
+                }),
+            }}
+          />
+        );
       });
 
       // Weekly check-in banner — shown when the player hasn't checked in
-      // for the current ISO week (proxy: availability staleness ≥ 7 days,
-      // since the check-in RPC refreshes last_confirmed_at). Tapping the
-      // CTA opens the full-screen weekly-checkin wizard.
-      //
-      // The wizard's discrete × dismissal and this banner's onDismiss share
-      // the AVAILABILITY_BANNER_COOLDOWN_KEY, so dismissing either one
-      // suppresses both for 24h.
-      // Banner CTA navigates into the weekly check-in wizard, so keep it
-      // hidden while the wizard is shipped dark.
+      // for the current ISO week. The wizard's discrete × dismissal and this
+      // banner's onDismiss share the AVAILABILITY_BANNER_COOLDOWN_KEY, so
+      // dismissing either one suppresses both for 24h. Kept hidden while the
+      // wizard is shipped dark.
       if (
         WEEKLY_CHECKIN_ENABLED &&
         checkInContext?.isPendingCheckIn === true &&
@@ -1593,25 +1828,20 @@ const Home = () => {
         );
       }
 
-      // Second sport activation banner (for users with only 1 sport)
-      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
-        const sportToActivate = inactiveSports[0];
+      // Pending incoming reference requests
+      if (pendingReferenceRequestsCount > 0) {
         bannerCards.push(
-          <SecondSportBanner
-            key="second-sport-banner"
-            sportName={sportToActivate.name}
-            displayName={sportToActivate.display_name.toLowerCase()}
-            onActivate={handleActivateSecondSport}
-            onDismiss={handleDismissSecondSportBanner}
-            fadeAnim={secondSportFadeAnim}
+          <ReferenceRequestsBanner
+            key="reference-requests"
+            count={pendingReferenceRequestsCount}
+            onPress={() => appNavigation.navigate('IncomingReferenceRequests')}
             t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
           />
         );
       }
 
-      // Profile completion banner — gated on the hook's visibility/ready state
-      // so an internally-hidden banner doesn't inflate bannerCards.length and
-      // accidentally flip the layout into carousel mode.
+      // Profile completion banner — gated on the hook's visibility/ready
+      // state so an internally-hidden banner doesn't claim the priority slot.
       if (
         !profileCompleteness.isComplete &&
         !profileCompleteness.loading &&
@@ -1630,84 +1860,74 @@ const Home = () => {
           />
         );
       }
+
+      // Cross-sport banners for unread notifications in other sports
+      Object.entries(otherSportsUnreadCount).forEach(([sportName, count]) => {
+        if (count > 0 && !dismissedBannerSports.has(sportName)) {
+          const sport = userSports.find(s => s.name === sportName);
+          if (sport) {
+            bannerCards.push(
+              <CrossSportBanner
+                key={`cross-sport-${sportName}`}
+                sportName={sportName}
+                displayName={sport.display_name.toLowerCase()}
+                count={count}
+                onSwitch={() => setSelectedSport(sport)}
+                onDismiss={() => setDismissedBannerSports(prev => new Set(prev).add(sportName))}
+                t={
+                  t as (key: string, options?: Record<string, string | number | boolean>) => string
+                }
+              />
+            );
+          }
+        }
+      });
+
+      // Second sport activation banner (for users with only 1 sport)
+      if (shouldShowSecondSportBanner && inactiveSports.length > 0) {
+        const sportToActivate = inactiveSports[0];
+        bannerCards.push(
+          <SecondSportBanner
+            key="second-sport-banner"
+            sportName={sportToActivate.name}
+            displayName={sportToActivate.display_name.toLowerCase()}
+            onActivate={handleActivateSecondSport}
+            onDismiss={handleDismissSecondSportBanner}
+            fadeAnim={secondSportFadeAnim}
+            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          />
+        );
+      }
     }
 
-    // Single banner gets the full row; multiple banners scroll horizontally
-    // as a carousel (matching My Matches / Just for you below).
-    if (bannerCards.length === 1) {
+    // Single priority slot: only the highest-priority banner renders.
+    // Dismissing it reveals the next one on re-render.
+    if (bannerCards.length > 0) {
       headerComponents.push(
         <HomeBannerLayoutProvider key="banner-single" layout="fullWidth">
           <View style={styles.bannerSingleWrap}>{bannerCards[0]}</View>
         </HomeBannerLayoutProvider>
       );
-    } else if (bannerCards.length > 1) {
-      headerComponents.push(
-        <HomeBannerLayoutProvider key="banner-carousel" layout="card">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.bannerCarouselContent}
-          >
-            {bannerCards}
-          </ScrollView>
-        </HomeBannerLayoutProvider>
-      );
     }
 
-    // Quick-nav row: 3 card buttons (community / book a court / find a game).
-    // Shown for everyone — signed-out users land on the same destinations,
-    // which gate themselves where needed.
-    const SportIconComponent =
-      selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
-    // Tournaments & Leagues are admin-gated while the features are in rollout.
-    // When they're hidden the lone "find a game" button stretches full-width so
-    // it doesn't look stranded next to empty space.
-    const findGameButton = (
-      <QuickNavButton
-        icon={color => <SportIconComponent width={24} height={24} fill={color} />}
-        label={t('home.quickNav.findGame')}
-        fullWidth={!session}
-        onPress={() => {
-          Analytics.publicMatchesOpened({ cta: 'find_game' });
-          navigation.navigate('PublicMatches');
-        }}
-      />
-    );
-    headerComponents.push(
-      session ? (
-        <ScrollView
-          key="quick-nav"
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={quickNavStyles.row}
-        >
-          {findGameButton}
-          <QuickNavButton
-            icon={color => <Ionicons name="podium-outline" size={24} color={color} />}
-            label={t('home.quickNav.leaderboard')}
-            onPress={() => appNavigation.navigate('Leaderboard')}
-          />
-          {isAdmin ? (
-            <QuickNavButton
-              icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-              label={t('home.quickNav.tournaments')}
-              onPress={() => appNavigation.navigate('Tournaments')}
-            />
-          ) : null}
-          {isAdmin ? (
-            <QuickNavButton
-              icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-              label={t('home.quickNav.leagues')}
-              onPress={() => appNavigation.navigate('Leagues')}
-            />
-          ) : null}
-        </ScrollView>
-      ) : (
-        <View key="quick-nav" style={quickNavStyles.row}>
-          {findGameButton}
-        </View>
-      )
-    );
+    // Leaderboard card sits right under the action banners: the player's live
+    // monthly rank is the first thing an onboarded player sees.
+    if (session && isOnboarded) {
+      headerComponents.push(
+        <LeaderboardCard
+          key="leaderboard-card"
+          myRank={myLeaderboardRank}
+          loading={myLeaderboardRankLoading}
+          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          onPress={() => {
+            Logger.logUserAction('home_leaderboard_card_pressed', {
+              ranked: !!myLeaderboardRank,
+            });
+            appNavigation.navigate('Leaderboard');
+          }}
+        />
+      );
+    }
 
     if (!session) {
       // Not signed in: show sign-in prompt
@@ -1777,9 +1997,68 @@ const Home = () => {
         </View>
       );
     } else {
-      // Add "My Matches" section for fully onboarded users
+      // Add "My Games" for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
+
+    // Play grid: fixed two-column dispatch tiles — same layout every launch,
+    // nothing hidden behind a horizontal scroll. Signed-out users get the two
+    // public destinations, which gate themselves where needed.
+    const SportIconComponent =
+      selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
+    const playTiles: React.ReactNode[] = [
+      <QuickNavButton
+        key="find-game"
+        icon={color => <SportIconComponent width={24} height={24} fill={color} />}
+        label={t('home.playGrid.findGame')}
+        onPress={() => {
+          Analytics.publicMatchesOpened({ cta: 'find_game' });
+          navigation.navigate('PublicMatches');
+        }}
+      />,
+      <QuickNavButton
+        key="book-court"
+        icon={color => <Ionicons name="calendar-outline" size={24} color={color} />}
+        label={t('home.playGrid.bookCourt')}
+        onPress={() => {
+          appNavigation.navigate('Main', {
+            screen: 'Courts',
+            params: { screen: 'FacilitiesDirectory' },
+          } as never);
+        }}
+      />,
+    ];
+    if (session) {
+      playTiles.push(
+        <QuickNavButton
+          key="tournaments"
+          icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+          label={t('home.playGrid.tournaments')}
+          onPress={() => appNavigation.navigate('Tournaments')}
+        />
+      );
+    }
+    if (session && isAdmin) {
+      // Leagues stay admin-gated until the rollout un-gates them.
+      playTiles.push(
+        <QuickNavButton
+          key="leagues"
+          icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+          label={t('home.playGrid.leagues')}
+          onPress={() => appNavigation.navigate('Leagues')}
+        />
+      );
+    }
+    headerComponents.push(
+      <View key="play-grid">
+        <View style={quickNavStyles.sectionHeader}>
+          <Text size="xl" weight="bold" color={colors.text}>
+            {t('home.playGrid.title')}
+          </Text>
+        </View>
+        <View style={quickNavStyles.grid}>{playTiles}</View>
+      </View>
+    );
 
     // Only show "Soon & Nearby" section header if we have location.
     // The favorite-availability section renders below the Just-for-you carousel
@@ -1835,6 +2114,10 @@ const Home = () => {
     handleDismissAvailabilityBanner,
     isAdmin,
     navigation,
+    myLeaderboardRank,
+    myLeaderboardRankLoading,
+    tournamentActionMatches,
+    sessionActionMatches,
   ]);
 
   // No more full-page skeleton. Each section (My Matches, Just for you) owns
@@ -1898,6 +2181,8 @@ const Home = () => {
               refetchFavoriteAvailability();
               if (session?.user?.id) {
                 refetchMyMatches();
+                refetchTournamentActions();
+                refetchLeagueActions();
               }
             }}
             tintColor={colors.primary}
@@ -2179,11 +2464,6 @@ const styles = StyleSheet.create({
   myMatchesSection: {
     overflow: 'visible', // Allow corner badges to extend outside cards
   },
-  myMatchesLoading: {
-    padding: spacingPixels[8],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   // Full-width empty-state card — replaces the carousel entirely when there
   // are no upcoming games, so the message reads as a section instead of a
   // single scrollable card.
@@ -2224,12 +2504,6 @@ const styles = StyleSheet.create({
   favAvailSingleWrap: {
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
-  },
-  bannerCarouselContent: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[2],
-    gap: spacingPixels[3],
   },
   bannerSingleWrap: {
     paddingHorizontal: spacingPixels[4],

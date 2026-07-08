@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import type { GroupMatch } from '@rallia/shared-hooks';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, status } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { SportIcon } from '#/components/SportIcon';
@@ -101,13 +101,13 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
               style={[
                 styles.teamCard,
                 winningTeam === 1 && styles.winnerCard,
-                winningTeam === 1 && { borderColor: '#F59E0B' },
+                winningTeam === 1 && { borderColor: status.warning.DEFAULT },
                 { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' },
               ]}
             >
               {winningTeam === 1 && (
                 <View style={styles.winnerBadge}>
-                  <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
+                  <Ionicons name="trophy-outline" size={12} color={status.warning.DEFAULT} />
                 </View>
               )}
               <View style={styles.teamAvatarsContainer}>
@@ -156,7 +156,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
                   size="sm"
                   weight="bold"
                   style={{
-                    color: winningTeam === 1 ? '#F59E0B' : colors.textMuted,
+                    color: winningTeam === 1 ? status.warning.DEFAULT : colors.textMuted,
                     marginTop: 4,
                   }}
                 >
@@ -180,13 +180,13 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
               style={[
                 styles.teamCard,
                 winningTeam === 2 && styles.winnerCard,
-                winningTeam === 2 && { borderColor: '#F59E0B' },
+                winningTeam === 2 && { borderColor: status.warning.DEFAULT },
                 { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' },
               ]}
             >
               {winningTeam === 2 && (
                 <View style={styles.winnerBadge}>
-                  <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
+                  <Ionicons name="trophy-outline" size={12} color={status.warning.DEFAULT} />
                 </View>
               )}
               <View style={styles.teamAvatarsContainer}>
@@ -235,7 +235,7 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
                   size="sm"
                   weight="bold"
                   style={{
-                    color: winningTeam === 2 ? '#F59E0B' : colors.textMuted,
+                    color: winningTeam === 2 ? status.warning.DEFAULT : colors.textMuted,
                     marginTop: 4,
                   }}
                 >

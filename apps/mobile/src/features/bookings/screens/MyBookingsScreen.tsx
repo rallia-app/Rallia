@@ -19,7 +19,7 @@ import { Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, usePlayerBookingsByTab, usePlayerBookingFilters } from '@rallia/shared-hooks';
 import type { BookingWithDetails, BookingTab } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { spacingPixels } from '@rallia/design-system';
+import { spacingPixels, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
 import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
@@ -320,7 +320,7 @@ export default function MyBookingsScreen() {
                 key={i}
                 style={[
                   styles.skeletonBookingCard,
-                  { backgroundColor: isDark ? '#1C1C1E' : '#FAFAFA', borderColor: colors.border },
+                  { backgroundColor: isDark ? '#1C1C1E' : neutral[50], borderColor: colors.border },
                 ]}
               >
                 {/* Facility name + status badge row */}

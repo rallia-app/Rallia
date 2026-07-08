@@ -270,7 +270,7 @@ export const AuthWizard: React.FC<AuthWizardProps> = ({
     [onSuccess]
   );
 
-  // Social sign-in handlers
+  // Social sign-in handlers.
   const handleGoogleSignIn = useCallback(() => {
     handleSocialAuthResult(signInWithGoogle);
   }, [handleSocialAuthResult, signInWithGoogle]);

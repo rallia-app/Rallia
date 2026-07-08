@@ -18,6 +18,7 @@ import {
   fontSizePixels,
   fontWeightNumeric,
   shadowsNative,
+  status as dsStatus,
 } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -144,9 +145,9 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       case 'approved':
         return '#22C55E';
       case 'pending':
-        return '#F59E0B';
+        return dsStatus.warning.DEFAULT;
       case 'rejected':
-        return '#EF4444';
+        return dsStatus.error.DEFAULT;
       default:
         return colors.textMuted;
     }

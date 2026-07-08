@@ -27,6 +27,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useTheme, useCreateLeague } from '@rallia/shared-hooks';
@@ -409,7 +410,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       inputBorder: isDark ? neutral[700] : neutral[200],
-      error: '#dc2626',
+      error: status.error.dark,
       success: '#16a34a',
     }),
     [themeColors, isDark]

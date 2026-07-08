@@ -9,7 +9,7 @@ import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { getCoverImageUrl, getProfilePictureUrl } from '@rallia/shared-utils';
-import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia/design-system';
 import type { ConversationPreview } from '@rallia/shared-services';
 import { getConversationDisplayName } from '@rallia/shared-services';
 
@@ -260,7 +260,11 @@ function ConversationItemComponent({
             style={[
               styles.preview,
               {
-                color: isBlockedPreview ? '#EF4444' : hasUnread ? colors.text : colors.textMuted,
+                color: isBlockedPreview
+                  ? status.error.DEFAULT
+                  : hasUnread
+                    ? colors.text
+                    : colors.textMuted,
                 fontWeight: hasUnread ? '500' : undefined,
                 fontStyle: isBlockedPreview ? 'italic' : 'normal',
               },
@@ -277,7 +281,7 @@ function ConversationItemComponent({
 
           {/* Unread badge */}
           {hasUnread && (
-            <View style={[styles.unreadBadge, { backgroundColor: '#EF4444' }]}>
+            <View style={[styles.unreadBadge, { backgroundColor: status.error.DEFAULT }]}>
               <Text style={styles.unreadText}>
                 {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
               </Text>

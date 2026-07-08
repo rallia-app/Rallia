@@ -23,6 +23,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 
 import { useLocale } from '#/context';
@@ -171,7 +172,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       inputBackground: customColors?.inputBackground || themeColors.muted,
       inputBorder: customColors?.inputBorder || themeColors.border,
       primary: customColors?.primary || primary[500],
-      error: customColors?.error || '#EF4444',
+      error: customColors?.error || status.error.DEFAULT,
       card: customColors?.card || themeColors.card,
     }),
     [customColors, themeColors, isDark]

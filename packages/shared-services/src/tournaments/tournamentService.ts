@@ -849,6 +849,47 @@ export async function refundTournamentRegistration(
   return { withdrawn: !!data?.withdrawn, refundedCents: data?.refundedCents ?? 0 };
 }
 
+/** A released bracket slot with no linked game yet — a home call-to-action. */
+export type UnscheduledTournamentMatch = TournamentMatch & {
+  tournament: Pick<Tournament, 'id' | 'name' | 'sport_id'>;
+};
+
+/**
+ * List the caller's playable bracket matches that are waiting for a game to
+ * be linked (match_id IS NULL) in tournaments that are underway. Both
+ * participants must be resolved — slots still waiting on a previous round
+ * don't qualify. These are calls to action, not agenda items: once a game is
+ * linked, the slot flows through the regular match rails as a `match` row.
+ */
+export async function listMyUnscheduledTournamentMatches(
+  userId: string,
+  opts: { sportId?: string; limit?: number } = {}
+): Promise<UnscheduledTournamentMatch[]> {
+  const regs = await listMyActiveRegistrations(userId);
+  const regIds = regs.map(r => r.id);
+  if (regIds.length === 0) return [];
+
+  const regList = regIds.join(',');
+  let query = supabase
+    .from('tournament_matches')
+    .select('*, tournament:tournaments!inner(id, name, sport_id)')
+    .eq('status', 'pending')
+    .is('match_id', null)
+    .not('player1_registration_id', 'is', null)
+    .not('player2_registration_id', 'is', null)
+    .eq('player1_is_bye', false)
+    .eq('player2_is_bye', false)
+    .eq('tournament.status', 'in_progress')
+    .or(`player1_registration_id.in.(${regList}),player2_registration_id.in.(${regList})`)
+    .order('round_number', { ascending: true })
+    .limit(opts.limit ?? 10);
+  if (opts.sportId) query = query.eq('tournament.sport_id', opts.sportId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as UnscheduledTournamentMatch[];
+}
+
 /**
  * List all matches for a tournament, ordered by round + position.
  */

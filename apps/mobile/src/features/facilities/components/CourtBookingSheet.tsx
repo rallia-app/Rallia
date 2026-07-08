@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, neutral, status } from '@rallia/design-system';
 import {
   courtAvailabilityKeys,
   useCreateBooking,
@@ -549,7 +549,11 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
                 <Ionicons name="wallet" size={18} color={themeColors.iconMuted} />
               </View>
               <View style={styles.infoContent}>
-                <Text size="sm" weight="semibold" color={isFree ? '#10b981' : themeColors.text}>
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={isFree ? status.success.light : themeColors.text}
+                >
                   {formatPrice(displayPrice)}
                 </Text>
               </View>
@@ -611,7 +615,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
                         <Text
                           size="sm"
                           weight="bold"
-                          color={isCourtFree ? '#10b981' : themeColors.text}
+                          color={isCourtFree ? status.success.light : themeColors.text}
                         >
                           {isCourtFree ? t('facilityDetail.free') : `$${courtPrice.toFixed(0)}`}
                         </Text>

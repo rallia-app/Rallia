@@ -98,6 +98,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
+import { neutral } from '@rallia/design-system';
 
 // Keep the native splash visible until the app is ready, then cross-fade it out.
 SplashScreen.preventAutoHideAsync();
@@ -105,7 +106,7 @@ SplashScreen.setOptions({ fade: true, duration: 400 });
 
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
-SystemUI.setBackgroundColorAsync('#fafafa');
+SystemUI.setBackgroundColorAsync(neutral[50]);
 import { focusManager, QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
@@ -135,8 +136,10 @@ import { Sheets } from './src/context/sheets';
 import { getMatchWithDetails, supabase } from '@rallia/shared-services';
 import { usePushNotifications, useTranslation, type TranslationKey } from './src/hooks';
 import { useAppVersionGate } from './src/hooks/useAppVersionGate';
+import { usePolicyConsentGate } from './src/hooks/usePolicyConsentGate';
 import { useApplyUpdateOnResume } from './src/hooks/useApplyUpdateOnResume';
 import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
+import { PolicyReconsentScreen } from './src/components/PolicyReconsentScreen';
 import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
@@ -843,6 +846,33 @@ function UpdateGate({ children }: PropsWithChildren) {
   return <>{children}</>;
 }
 
+/**
+ * ConsentGate — replaces the entire app surface with a blocking re-consent
+ * screen when the signed-in user hasn't accepted the current version of the
+ * Privacy Policy and/or Terms of Use. Nested inside UpdateGate (a stale
+ * binary is a more urgent block than stale consent, and there's no point
+ * checking consent on a binary that's about to be forced to update anyway).
+ * Existing accounts are grandfathered via a migration backfill, so this only
+ * ever fires going forward, on a real policy_versions bump. Fail-open is
+ * enforced inside usePolicyConsentGate so a Supabase outage can't lock users
+ * out; guests (no session) are never gated.
+ */
+function ConsentGate({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  const gate = usePolicyConsentGate(user?.id);
+
+  useEffect(() => {
+    if (gate.status === 'required') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [gate.status]);
+
+  if (gate.status === 'required') {
+    return <PolicyReconsentScreen pending={gate.pending} onAccepted={gate.recheck} />;
+  }
+  return <>{children}</>;
+}
+
 function AppContent() {
   const { theme } = useTheme();
   // Splash hide is owned by SplashGate (which lives inside AuthenticatedProviders
@@ -868,7 +898,7 @@ function AppContent() {
       ...base,
       colors: {
         ...base.colors,
-        background: theme === 'dark' ? '#0a0a0a' : '#fafafa',
+        background: theme === 'dark' ? neutral[950] : neutral[50],
       },
     };
   }, [theme]);
@@ -962,7 +992,7 @@ function App() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fafafa' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: neutral[50] }}>
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
           <PostHogProvider>
@@ -1022,7 +1052,9 @@ function App() {
                                               merchantIdentifier="merchant.com.mathisl971.rallia-app"
                                             >
                                               <UpdateGate>
-                                                <AppContent />
+                                                <ConsentGate>
+                                                  <AppContent />
+                                                </ConsentGate>
                                               </UpdateGate>
                                             </StripeProvider>
                                           </FeedbackReportSheetProvider>

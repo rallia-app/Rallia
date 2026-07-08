@@ -493,7 +493,7 @@ const CERTIFICATION_BADGE_COLORS: Record<
   'self_declared' | 'certified' | 'disputed',
   { bg: string; icon: string }
 > = {
-  self_declared: { bg: '#14b8a6', icon: 'help-circle' },
+  self_declared: { bg: primary[500], icon: 'help-circle' },
   certified: { bg: '#4CAF50', icon: 'checkmark-circle' },
   disputed: { bg: '#F44336', icon: 'alert-circle' },
 };

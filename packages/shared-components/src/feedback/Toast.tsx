@@ -6,7 +6,8 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { StyleSheet, Animated, TouchableOpacity, Platform, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text } from '../foundation/Text.native';
+import { status } from '@rallia/design-system';
+import { Text } from '../foundation/Text';
 import { spacing } from '../theme';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -34,9 +35,9 @@ export interface ToastProps {
 }
 
 const TOAST_COLORS: Record<ToastType, { background: string; text: string; icon: string }> = {
-  success: { background: '#10B981', text: '#FFFFFF', icon: '✓' },
-  error: { background: '#EF4444', text: '#FFFFFF', icon: '✕' },
-  warning: { background: '#F59E0B', text: '#FFFFFF', icon: '!' },
+  success: { background: status.success.light, text: '#FFFFFF', icon: '✓' },
+  error: { background: status.error.DEFAULT, text: '#FFFFFF', icon: '✕' },
+  warning: { background: status.warning.DEFAULT, text: '#FFFFFF', icon: '!' },
   info: { background: '#3B82F6', text: '#FFFFFF', icon: 'ℹ' },
 };
 
@@ -176,6 +177,9 @@ interface ToastContextType {
   error: (message: string, options?: Partial<ToastConfig>) => void;
   warning: (message: string, options?: Partial<ToastConfig>) => void;
   info: (message: string, options?: Partial<ToastConfig>) => void;
+  /** Current toast, if any. Lets ToastOverlay be re-rendered from inside a sheet's own Modal. */
+  toastConfig: ToastConfig | null;
+  visible: boolean;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -222,20 +226,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ToastContext.Provider value={{ showToast, hideToast, success, error, warning, info }}>
+    <ToastContext.Provider
+      value={{ showToast, hideToast, success, error, warning, info, toastConfig, visible }}
+    >
       {children}
-      {toastConfig && (
-        <Toast
-          visible={visible}
-          message={toastConfig.message}
-          type={toastConfig.type}
-          position={toastConfig.position}
-          duration={toastConfig.duration}
-          actionText={toastConfig.actionText}
-          onAction={toastConfig.onAction}
-          onDismiss={hideToast}
-        />
-      )}
+      <ToastOverlay />
     </ToastContext.Provider>
   );
 }
@@ -246,6 +241,33 @@ export function useToast(): ToastContextType {
     throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
+}
+
+/**
+ * Renders the active toast, reading shared state from ToastProvider.
+ *
+ * react-native-actions-sheet opens each sheet inside its own native Modal, which
+ * layers above the whole app window — a toast rendered at the ToastProvider root
+ * ends up stuck behind it. Sheets that need toasts on top should pass this as
+ * their `ExtraOverlayComponent`, which renders it inside that same Modal instead.
+ */
+export function ToastOverlay() {
+  const { toastConfig, visible, hideToast } = useToast();
+
+  if (!toastConfig) return null;
+
+  return (
+    <Toast
+      visible={visible}
+      message={toastConfig.message}
+      type={toastConfig.type}
+      position={toastConfig.position}
+      duration={toastConfig.duration}
+      actionText={toastConfig.actionText}
+      onAction={toastConfig.onAction}
+      onDismiss={hideToast}
+    />
+  );
 }
 
 // ============================================================================

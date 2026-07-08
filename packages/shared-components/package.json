@@ -17,6 +17,7 @@
     "react-native-svg": "*"
   },
   "dependencies": {
+    "@rallia/design-system": "*",
     "@rallia/shared-constants": "*",
     "@rallia/shared-hooks": "*",
     "@rallia/shared-types": "*"
