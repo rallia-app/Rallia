@@ -5,17 +5,19 @@
  *   * Background: cream → pale-teal vertical gradient (no decorative blobs)
  *   * Pager: 4 steps side-by-side in a row that's SCREEN_WIDTH × 4 wide,
  *     translateX driven by a single Animated.timing (280ms cubic-out, native driver)
- *   * Header: back chevron (steps 2-3) + progress dots
+ *   * Header: back chevron (steps 2-3) + progress dots + close (X)
  *   * Footer: each step manages its own CTA
  *
- * The weekly check-in is mandatory: there is no exit affordance and swipe-to-
- * dismiss is disabled at the navigator (gestureEnabled: false). The wizard only
- * leaves the screen once the user completes it (Done on the final step).
+ * The close (X) in the header lets the player bail out; it confirms first
+ * (progress isn't saved) and fires `weekly_checkin_abandoned`. Swipe-to-dismiss
+ * stays disabled at the navigator so leaving is always a deliberate tap.
  */
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
+  BackHandler,
   Dimensions,
   Easing,
   Platform,
@@ -23,7 +25,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
@@ -46,6 +48,14 @@ import { useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
 import { useJoinOpportunity } from './useJoinOpportunity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Stable funnel names per step index, for the abandon event.
+const STEP_NAMES: Record<number, string> = {
+  1: 'recap_goal',
+  2: 'availability',
+  3: 'opportunities',
+  4: 'plan',
+};
 
 export function WeeklyCheckInScreen() {
   const navigation = useNavigation();
@@ -207,6 +217,47 @@ export function WeeklyCheckInScreen() {
     dismissModal();
   }, [dismissModal, wizard.startedAt, wizard.result, wizard.context]);
 
+  // Close (X): confirm before bailing since nothing is saved mid-flow, then
+  // record the abandon and dismiss. Step index maps to a stable funnel name.
+  const currentStepForClose = wizard.currentStep;
+  const startedAt = wizard.startedAt;
+  const handleClose = useCallback(() => {
+    Alert.alert(
+      t('weeklyCheckIn.exit.title'),
+      t('weeklyCheckIn.exit.description'),
+      [
+        { text: t('weeklyCheckIn.exit.cancel'), style: 'cancel' },
+        {
+          text: t('weeklyCheckIn.exit.confirm'),
+          style: 'destructive',
+          onPress: () => {
+            Analytics.weeklyCheckinAbandoned({
+              last_step: STEP_NAMES[currentStepForClose] ?? 'unknown',
+              step_index: currentStepForClose,
+              duration_seconds: Math.round((Date.now() - startedAt) / 1000),
+            });
+            dismissModal();
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [t, currentStepForClose, startedAt, dismissModal]);
+
+  // Android hardware back mirrors the X: confirm-to-exit on the flow steps,
+  // finish on the final recap. Scoped to focus so it doesn't hijack back while
+  // a pushed PlayerProfile is on top of the wizard.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (wizard.currentStep >= 5) handleDone();
+        else handleClose();
+        return true;
+      });
+      return () => sub.remove();
+    }, [wizard.currentStep, handleClose, handleDone])
+  );
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Gradient extends edge-to-edge underneath the safe-area padding. */}
@@ -228,6 +279,9 @@ export function WeeklyCheckInScreen() {
         showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 5}
         showDots={!!wizard.context}
         onBack={wizard.goBack}
+        // Dismissible on every step except the final recap, which has its own Done.
+        onClose={wizard.currentStep < 5 ? handleClose : undefined}
+        closeLabel={t('common.close')}
       />
 
       <Animated.View

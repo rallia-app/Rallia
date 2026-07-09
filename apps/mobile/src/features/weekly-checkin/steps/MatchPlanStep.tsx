@@ -9,22 +9,28 @@
  * check-in, creating exactly the games they kept.
  *
  * Persuasion is structural: defaults maximize confirmation, removal is always
- * reversible, and a goal-progress line reminds the player how many games they
- * still need. A quiet "don't propose games for me" opt-out persists
- * auto_create_matches = false for future check-ins.
+ * reversible, and a goal-progress header (count + segmented bar) reminds the
+ * player how many games they still need. A quiet "don't propose games for me"
+ * opt-out persists auto_create_matches = false for future check-ins.
  */
 import React, { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Button, Text } from '@rallia/shared-components';
+import { LayoutAnimation, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Button, Skeleton, Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { primary, spacingPixels } from '@rallia/design-system';
+import { primary, radiusPixels, spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
-import { PlanProposalCard } from '#/features/weekly-checkin/components/PlanProposalCard';
+import {
+  PlanProposalCard,
+  PlanProposalCardSkeleton,
+} from '#/features/weekly-checkin/components/PlanProposalCard';
 import type { CheckInMatchPlan } from '#/features/weekly-checkin/api';
 import { formatWeekdayName } from '#/features/weekly-checkin/window';
 import { useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
+
+const animateNext = () => LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
 interface MatchPlanStepProps {
   plan: CheckInMatchPlan | null;
@@ -64,8 +70,9 @@ export function MatchPlanStep({
   const { locale } = useLocale();
   const { colors, isDark } = useThemeStyles();
   const linkColor = isDark ? primary[400] : primary[600];
+  const accentSoft = isDark ? `${primary[400]}1F` : `${primary[600]}14`;
 
-  const proposals = plan?.proposals ?? [];
+  const proposals = useMemo(() => plan?.proposals ?? [], [plan]);
   const includedCount = useMemo(
     () => (optOut ? 0 : proposals.filter(p => !excludedProposalKeys.includes(p.key)).length),
     [proposals, excludedProposalKeys, optOut]
@@ -74,7 +81,32 @@ export function MatchPlanStep({
   const goal = plan?.goal ?? 0;
   const committed = plan?.committedCount ?? 0;
   const projected = committed + includedCount;
-  const belowGoal = projected < goal;
+  const goalMet = goal > 0 && projected >= goal;
+
+  // Headline names exactly what's on screen: the NEW games this check-in will
+  // create. "New" separates them from games already on the player's calendar,
+  // which the progress bar + caption below fold in.
+  const readyCountLabel =
+    includedCount === 0
+      ? t('weeklyCheckIn.plan.readyCountNone')
+      : includedCount === 1
+        ? t('weeklyCheckIn.plan.readyCountOne')
+        : t('weeklyCheckIn.plan.readyCountMany', { count: includedCount });
+
+  // Progress caption ties the bar to the weekly goal, counting new + already-
+  // scheduled games together so "X of Y" matches the filled segments.
+  const goalCaption = goalMet
+    ? t('weeklyCheckIn.plan.weeklyGoalMet')
+    : t('weeklyCheckIn.plan.goalProgress', { projected, goal });
+
+  // Shown only when the player already has games this week — reconciles the bar
+  // (which counts them) with the new-game headline (which doesn't).
+  const committedNote =
+    committed > 0
+      ? committed === 1
+        ? t('weeklyCheckIn.plan.committedNoteOne')
+        : t('weeklyCheckIn.plan.committedNoteMany', { count: committed })
+      : null;
 
   // Relative day label: "Today"/"Tomorrow" for the first two window dates,
   // otherwise the localized weekday name.
@@ -100,19 +132,35 @@ export function MatchPlanStep({
         </View>
 
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <>
+            <View style={styles.progressHeader}>
+              <Skeleton
+                width={180}
+                height={13}
+                borderRadius={4}
+                backgroundColor={colors.skeletonBackground}
+                highlightColor={colors.skeletonHighlight}
+              />
+            </View>
+            <PlanProposalCardSkeleton />
+            <PlanProposalCardSkeleton />
+          </>
         ) : error ? (
           // Preview failed → the wizard submits plan:null (legacy autonomous
           // generation), so reassure rather than dead-end.
           <View style={styles.center}>
+            <View style={[styles.stateIcon, { backgroundColor: accentSoft }]}>
+              <Ionicons name="construct-outline" size={26} color={linkColor} />
+            </View>
             <Text style={[styles.fallbackText, { color: colors.textMuted }]}>
               {t('weeklyCheckIn.plan.errorFallback')}
             </Text>
           </View>
         ) : !hasProposals ? (
           <View style={styles.center}>
+            <View style={[styles.stateIcon, { backgroundColor: accentSoft }]}>
+              <Ionicons name="checkmark-done-outline" size={26} color={linkColor} />
+            </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
               {t('weeklyCheckIn.plan.emptyTitle')}
             </Text>
@@ -124,9 +172,29 @@ export function MatchPlanStep({
           </View>
         ) : (
           <>
-            <Text style={[styles.progress, { color: colors.textMuted }]}>
-              {t('weeklyCheckIn.plan.goalProgress', { count: includedCount, goal })}
-            </Text>
+            <View style={styles.progressHeader}>
+              <Text style={[styles.readyCount, { color: colors.text }]}>{readyCountLabel}</Text>
+              {goal > 0 && (
+                <>
+                  <GoalSegments
+                    filled={Math.min(projected, goal)}
+                    total={goal}
+                    accent={linkColor}
+                    track={colors.divider}
+                  />
+                  <Text
+                    style={[styles.goalCaption, { color: goalMet ? linkColor : colors.textMuted }]}
+                  >
+                    {goalCaption}
+                  </Text>
+                  {committedNote && (
+                    <Text style={[styles.committedNote, { color: colors.textMuted }]}>
+                      {committedNote}
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
 
             {proposals.map(proposal => (
               <PlanProposalCard
@@ -141,18 +209,15 @@ export function MatchPlanStep({
               />
             ))}
 
-            {belowGoal && !optOut && (
-              <Text style={[styles.warning, { color: colors.textMuted }]}>
-                {t('weeklyCheckIn.plan.goalWarning', { count: projected, goal })}
-              </Text>
-            )}
-
             <TouchableOpacity
               style={styles.optOut}
-              onPress={() => setOptOut(!optOut)}
+              onPress={() => {
+                animateNext();
+                setOptOut(!optOut);
+              }}
               accessibilityRole="button"
             >
-              <Text style={[styles.optOutText, { color: linkColor }]}>
+              <Text style={[styles.optOutText, { color: colors.textMuted }]}>
                 {optOut
                   ? t('weeklyCheckIn.plan.optOutActiveLink')
                   : t('weeklyCheckIn.plan.optOutLink')}
@@ -184,6 +249,30 @@ export function MatchPlanStep({
   );
 }
 
+/**
+ * Segmented goal bar — one segment per goal game, the first `filled` in accent.
+ * Reads as simple progress toward the weekly goal.
+ */
+function GoalSegments({
+  filled,
+  total,
+  accent,
+  track,
+}: {
+  filled: number;
+  total: number;
+  accent: string;
+  track: string;
+}) {
+  return (
+    <View style={styles.segmentsRow}>
+      {Array.from({ length: total }, (_, i) => (
+        <View key={i} style={[styles.segment, { backgroundColor: i < filled ? accent : track }]} />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -206,6 +295,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacingPixels[2],
   },
+  stateIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[1],
+  },
   fallbackText: {
     fontSize: 14,
     textAlign: 'center',
@@ -221,17 +318,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  progress: {
-    fontSize: 13,
-    fontWeight: '600',
+  progressHeader: {
     paddingHorizontal: spacingPixels[5],
     marginBottom: spacingPixels[3],
+    gap: spacingPixels[2],
   },
-  warning: {
+  readyCount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  segmentsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[1],
+  },
+  segment: {
+    flex: 1,
+    height: 5,
+    borderRadius: radiusPixels.full,
+    maxWidth: 48,
+  },
+  goalCaption: {
     fontSize: 12.5,
-    lineHeight: 17,
-    paddingHorizontal: spacingPixels[5],
-    marginTop: spacingPixels[1],
+    fontWeight: '500',
+  },
+  committedNote: {
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   optOut: {
     alignItems: 'center',
@@ -241,8 +353,8 @@ const styles = StyleSheet.create({
   },
   optOutText: {
     fontSize: 13,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   optOutNote: {
     fontSize: 11.5,

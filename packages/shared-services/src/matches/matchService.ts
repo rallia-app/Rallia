@@ -3835,11 +3835,15 @@ export interface PlanProposal {
   endTime: string;
   startHour: number;
   duration: string;
+  /** Match type the game gets created with: 'competitive' | 'casual' | 'both'. */
+  matchType: string;
   locationType: 'facility' | 'tbd';
   facilityId: string | null;
   facilityName: string | null;
   facilityAddress: string | null;
   minRatingLabel: string | null;
+  /** Live open-court count for the chosen facility/slot; 0 for TBD proposals. */
+  availableCourts: number;
   invitees: PlanInvitee[];
 }
 
@@ -3869,11 +3873,13 @@ interface RawPlanProposal {
   end_time: string;
   start_hour: number;
   duration: string;
+  match_type: string | null;
   location_type: 'facility' | 'tbd';
   facility_id: string | null;
   facility_name: string | null;
   facility_address: string | null;
   min_rating_label: string | null;
+  available_courts: number | null;
   invitees: RawPlanInvitee[];
 }
 
@@ -3922,11 +3928,13 @@ export async function getCheckInMatchPlan(params: {
       endTime: p.end_time,
       startHour: p.start_hour,
       duration: p.duration,
+      matchType: p.match_type ?? 'both',
       locationType: p.location_type,
       facilityId: p.facility_id,
       facilityName: p.facility_name,
       facilityAddress: p.facility_address,
       minRatingLabel: p.min_rating_label,
+      availableCourts: p.available_courts ?? 0,
       invitees: (p.invitees ?? []).map(i => ({
         playerId: i.player_id,
         firstName: i.first_name ?? '',

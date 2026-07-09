@@ -33,6 +33,7 @@ import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 import RatingBadge from './RatingBadge';
 import ReputationBadge from './ReputationBadge';
+import { RotatedCourtIcon } from './RotatedCourtIcon';
 
 export type InviteState = 'idle' | 'sending' | 'sent';
 
@@ -235,7 +236,8 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   const defaultChips: Array<{
     key: string;
     label: string;
-    icon: keyof typeof Ionicons.glyphMap;
+    icon?: keyof typeof Ionicons.glyphMap;
+    courtIcon?: boolean;
   }> = [{ key: 'format', label: labels.singles, icon: 'person-outline' }];
   if (defaultMatchType === 'competitive') {
     defaultChips.push({ key: 'matchType', label: labels.competitive, icon: 'trophy' });
@@ -247,7 +249,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     defaultChips.push({
       key: 'courts',
       label: labels.courtsAvailable.replace('{count}', String(availableCourts)),
-      icon: 'tennisball-outline',
+      courtIcon: true,
     });
   }
 
@@ -347,7 +349,11 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
           >
             {defaultChips.map(chip => (
               <View key={chip.key} style={[styles.chip, { backgroundColor: chipBg }]}>
-                <Ionicons name={chip.icon} size={10} color={chipFg} style={styles.chipIcon} />
+                {chip.courtIcon ? (
+                  <RotatedCourtIcon size={12} color={chipFg} style={styles.chipIcon} />
+                ) : (
+                  <Ionicons name={chip.icon!} size={10} color={chipFg} style={styles.chipIcon} />
+                )}
                 <Text size="xs" weight="semibold" color={chipFg}>
                   {chip.label}
                 </Text>
