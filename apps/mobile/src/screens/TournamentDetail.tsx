@@ -511,6 +511,41 @@ function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | u
   };
 }
 
+/** One-line, player-facing summary of a tournament's refund policy. Shared by
+ *  the register CTA and the pre-payment confirmation so the wording can't drift. */
+function refundPolicyLine(
+  feeQuote:
+    | {
+        refundPolicyKind: string;
+        refundPartialBps: number | null;
+        refundCutoffAt: string | null;
+      }
+    | null
+    | undefined,
+  t: (k: TranslationKey) => string,
+  locale: string
+): string | null {
+  if (!feeQuote) return null;
+  const cutoff = feeQuote.refundCutoffAt
+    ? new Date(feeQuote.refundCutoffAt).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null;
+  if (feeQuote.refundPolicyKind === 'none') return t('tournamentDetail.payments.refundNone');
+  if (feeQuote.refundPolicyKind === 'full')
+    return cutoff
+      ? t('tournamentDetail.payments.refundFullUntil').replace('{date}', cutoff)
+      : t('tournamentDetail.payments.refundFull');
+  const pct = String(Math.round((feeQuote.refundPartialBps ?? 0) / 100));
+  return cutoff
+    ? t('tournamentDetail.payments.refundPartialUntil')
+        .replace('{pct}', pct)
+        .replace('{date}', cutoff)
+    : t('tournamentDetail.payments.refundPartial').replace('{pct}', pct);
+}
+
 /** Registered players rendered with the shared community PlayerCard.
  *  onRemovePress is set only when the caller may remove registrants
  *  (organizer, pre-bracket); the organizer's own row never shows it. */
@@ -861,53 +896,86 @@ export const TournamentDetail: React.FC = () => {
   const handlePaidRegister = useCallback(
     async (partnerId?: string) => {
       if (!tournament) return;
-      try {
-        const intent = await createRegistrationPayment.mutateAsync({
-          tournamentId: tournament.id,
-          partnerId,
-        });
-        const { error: initError } = await initPaymentSheet({
-          paymentIntentClientSecret: intent.clientSecret,
-          merchantDisplayName: 'Rallia',
-          applePay: { merchantCountryCode: 'CA' },
-          googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
-        });
-        if (initError) throw new Error(initError.message);
-        const { error: paymentError } = await presentPaymentSheet();
-        if (paymentError) {
-          if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
-          throw new Error(paymentError.message);
+
+      // The actual charge — only runs after the player accepts the disclosure.
+      const runPayment = async () => {
+        try {
+          const intent = await createRegistrationPayment.mutateAsync({
+            tournamentId: tournament.id,
+            partnerId,
+          });
+          const { error: initError } = await initPaymentSheet({
+            paymentIntentClientSecret: intent.clientSecret,
+            merchantDisplayName: 'Rallia',
+            applePay: { merchantCountryCode: 'CA' },
+            googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+          });
+          if (initError) throw new Error(initError.message);
+          const { error: paymentError } = await presentPaymentSheet();
+          if (paymentError) {
+            if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
+            throw new Error(paymentError.message);
+          }
+          successHaptic();
+          toast.success(t('tournamentDetail.payments.successToast'));
+          // The webhook flips payment_pending → registered; refetch now and again
+          // shortly after to catch the async finalize.
+          const invalidate = () => {
+            void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) });
+            void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.registrations(tournament.id),
+            });
+            void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
+            });
+          };
+          invalidate();
+          setTimeout(invalidate, 2500);
+        } catch (e) {
+          warningHaptic();
+          const code = e instanceof TournamentPaymentError ? e.code : undefined;
+          const key =
+            code === 'tournament_full'
+              ? 'tournamentDetail.payments.errors.full'
+              : code === 'already_registered'
+                ? 'tournamentDetail.payments.errors.alreadyRegistered'
+                : code === 'organizer_not_ready'
+                  ? 'tournamentDetail.payments.errors.organizerNotReady'
+                  : code === 'tournament_reg_closed'
+                    ? 'tournamentDetail.payments.errors.closed'
+                    : 'tournamentDetail.payments.errors.generic';
+          toast.error(t(key as TranslationKey));
         }
-        successHaptic();
-        toast.success(t('tournamentDetail.payments.successToast'));
-        // The webhook flips payment_pending → registered; refetch now and again
-        // shortly after to catch the async finalize.
-        const invalidate = () => {
-          void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) });
-          void queryClient.invalidateQueries({
-            queryKey: tournamentKeys.registrations(tournament.id),
-          });
-          void queryClient.invalidateQueries({
-            queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
-          });
-        };
-        invalidate();
-        setTimeout(invalidate, 2500);
-      } catch (e) {
-        warningHaptic();
-        const code = e instanceof TournamentPaymentError ? e.code : undefined;
-        const key =
-          code === 'tournament_full'
-            ? 'tournamentDetail.payments.errors.full'
-            : code === 'already_registered'
-              ? 'tournamentDetail.payments.errors.alreadyRegistered'
-              : code === 'organizer_not_ready'
-                ? 'tournamentDetail.payments.errors.organizerNotReady'
-                : code === 'tournament_reg_closed'
-                  ? 'tournamentDetail.payments.errors.closed'
-                  : 'tournamentDetail.payments.errors.generic';
-        toast.error(t(key as TranslationKey));
-      }
+      };
+
+      // Point-of-sale disclosure before any charge: what they pay, the refund
+      // policy, that the service fee isn't refundable, and that Rallia only
+      // facilitates (the organizer, not Rallia, owns the event).
+      const totalLabel = feeQuote
+        ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
+        : null;
+      const message = [
+        totalLabel
+          ? t('tournamentDetail.payments.confirmAmount').replace('{amount}', totalLabel)
+          : null,
+        refundPolicyLine(feeQuote, t, locale),
+        t('tournamentDetail.payments.confirmFeeNonRefundable'),
+        t('tournamentDetail.payments.liabilityNotice'),
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      Alert.alert(t('tournamentDetail.payments.confirmTitle'), message, [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: totalLabel
+            ? `${t('tournamentDetail.payments.confirmPay')} · ${totalLabel}`
+            : t('tournamentDetail.payments.confirmPay'),
+          onPress: () => {
+            void runPayment();
+          },
+        },
+      ]);
     },
     [
       tournament,
@@ -918,6 +986,8 @@ export const TournamentDetail: React.FC = () => {
       queryClient,
       toast,
       t,
+      locale,
+      feeQuote,
     ]
   );
 
@@ -1857,21 +1927,7 @@ export const TournamentDetail: React.FC = () => {
     isPaidTournament && feeQuote
       ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
       : null;
-  const refundSummary = (() => {
-    if (!isPaidTournament || !feeQuote) return null;
-    const cutoff = feeQuote.refundCutoffAt ? formatDate(feeQuote.refundCutoffAt) : null;
-    if (feeQuote.refundPolicyKind === 'none') return t('tournamentDetail.payments.refundNone');
-    if (feeQuote.refundPolicyKind === 'full')
-      return cutoff
-        ? t('tournamentDetail.payments.refundFullUntil').replace('{date}', cutoff)
-        : t('tournamentDetail.payments.refundFull');
-    const pct = String(Math.round((feeQuote.refundPartialBps ?? 0) / 100));
-    return cutoff
-      ? t('tournamentDetail.payments.refundPartialUntil')
-          .replace('{pct}', pct)
-          .replace('{date}', cutoff)
-      : t('tournamentDetail.payments.refundPartial').replace('{pct}', pct);
-  })();
+  const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
 
   const showBracketTab = shouldFetchBracket && matches.length > 0;
