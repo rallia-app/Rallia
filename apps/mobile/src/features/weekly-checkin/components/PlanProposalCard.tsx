@@ -196,8 +196,8 @@ export function PlanProposalCard({
         </View>
 
         {/* Attribute chips mirroring MatchCard/the suggestion card: what the
-            game becomes once created — singles + the caller's match type
-            (always set) then required level and open courts (when known).
+            game becomes once created — required level and open courts (when
+            known) lead, then singles + the caller's match type.
             Scrolls horizontally rather than wrapping to a second row. */}
         <ScrollView
           horizontal
@@ -206,6 +206,22 @@ export function PlanProposalCard({
           style={[styles.badgesScroll, excluded && styles.dim]}
           contentContainerStyle={styles.badgesContent}
         >
+          {proposal.minRatingLabel ? (
+            <View style={[styles.badge, { backgroundColor: ratingBg }]}>
+              <Ionicons name="analytics" size={10} color={ratingColor} style={styles.badgeIcon} />
+              <Text style={[styles.badgeText, { color: ratingColor }]}>
+                {proposal.minRatingLabel}
+              </Text>
+            </View>
+          ) : null}
+          {showCourts && (
+            <View style={[styles.badge, { backgroundColor: primaryBg }]}>
+              <RotatedCourtIcon size={12} color={accentColor} style={styles.badgeIcon} />
+              <Text style={[styles.badgeText, { color: accentColor }]}>
+                {t('match.courtStatus.courtsAvailable', { count: proposal.availableCourts })}
+              </Text>
+            </View>
+          )}
           <View style={[styles.badge, { backgroundColor: primaryBg }]}>
             <Ionicons
               name="person-outline"
@@ -226,22 +242,6 @@ export function PlanProposalCard({
                 style={styles.badgeIcon}
               />
               <Text style={[styles.badgeText, { color: accentColor }]}>{matchTypeChip.label}</Text>
-            </View>
-          )}
-          {proposal.minRatingLabel ? (
-            <View style={[styles.badge, { backgroundColor: ratingBg }]}>
-              <Ionicons name="analytics" size={10} color={ratingColor} style={styles.badgeIcon} />
-              <Text style={[styles.badgeText, { color: ratingColor }]}>
-                {proposal.minRatingLabel}
-              </Text>
-            </View>
-          ) : null}
-          {showCourts && (
-            <View style={[styles.badge, { backgroundColor: primaryBg }]}>
-              <RotatedCourtIcon size={12} color={accentColor} style={styles.badgeIcon} />
-              <Text style={[styles.badgeText, { color: accentColor }]}>
-                {t('match.courtStatus.courtsAvailable', { count: proposal.availableCourts })}
-              </Text>
             </View>
           )}
         </ScrollView>

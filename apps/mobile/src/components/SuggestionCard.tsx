@@ -229,8 +229,8 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   const courtGreen = isDark ? '#4ADE80' : '#16A34A';
 
   // Default match-attribute chips, mirroring MatchCard's badge row. These
-  // reflect what the match becomes when the invite is accepted (singles,
-  // caller's match-type pref, court not booked → free).
+  // reflect what the match becomes when the invite is accepted — open courts
+  // lead, then singles + the caller's match-type pref.
   const chipBg = isDark ? `${primary[400]}30` : `${primary[500]}15`;
   const chipFg = tierAccent;
   const defaultChips: Array<{
@@ -238,12 +238,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     label: string;
     icon?: keyof typeof Ionicons.glyphMap;
     courtIcon?: boolean;
-  }> = [{ key: 'format', label: labels.singles, icon: 'person-outline' }];
-  if (defaultMatchType === 'competitive') {
-    defaultChips.push({ key: 'matchType', label: labels.competitive, icon: 'trophy' });
-  } else if (defaultMatchType === 'casual') {
-    defaultChips.push({ key: 'matchType', label: labels.casual, icon: 'happy' });
-  }
+  }> = [];
   const availableCourts = suggestion.slot.availableCourts;
   if (availableCourts !== undefined && availableCourts > 0) {
     defaultChips.push({
@@ -251,6 +246,12 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
       label: labels.courtsAvailable.replace('{count}', String(availableCourts)),
       courtIcon: true,
     });
+  }
+  defaultChips.push({ key: 'format', label: labels.singles, icon: 'person-outline' });
+  if (defaultMatchType === 'competitive') {
+    defaultChips.push({ key: 'matchType', label: labels.competitive, icon: 'trophy' });
+  } else if (defaultMatchType === 'casual') {
+    defaultChips.push({ key: 'matchType', label: labels.casual, icon: 'happy' });
   }
 
   const canSend = inviteState === 'idle' && !disabled;
