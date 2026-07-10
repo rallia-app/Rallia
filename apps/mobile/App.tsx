@@ -89,7 +89,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 });
 
 import { useEffect, useMemo, useState, useCallback, useRef, type PropsWithChildren } from 'react';
-import { AppState, Linking, Platform } from 'react-native';
+import { AppState, Linking, Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
@@ -847,6 +847,26 @@ function UpdateGate({ children }: PropsWithChildren) {
 }
 
 /**
+ * ThemedRoot — theme-aware background layer sitting just inside ThemeProvider.
+ * The GestureHandlerRootView above it is hardcoded light (it renders before
+ * ThemeProvider exists), so without this, any frame where the tree below is
+ * swapped out — e.g. the gates replacing the app surface, or the navigation
+ * tree mounting after re-consent — flashes white in dark mode.
+ */
+function ThemedRoot({ children }: PropsWithChildren) {
+  const { theme } = useTheme();
+  const background = theme === 'dark' ? neutral[950] : neutral[50];
+
+  // Keep the native root view (set to light at module init, before the theme
+  // is known) in sync too — it's what shows through during native transitions.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(background).catch(() => {});
+  }, [background]);
+
+  return <View style={{ flex: 1, backgroundColor: background }}>{children}</View>;
+}
+
+/**
  * ConsentGate — replaces the entire app surface with a blocking re-consent
  * screen when the signed-in user hasn't accepted the current version of the
  * Privacy Policy and/or Terms of Use. Nested inside UpdateGate (a stale
@@ -1032,44 +1052,47 @@ function App() {
             >
               <LocaleProvider>
                 <ThemeProvider>
-                  <TourProvider>
-                    <NetworkProvider>
-                      <ToastProvider>
-                        <DeepLinkProvider>
-                          <OverlayProvider>
-                            <AuthProvider>
-                              <AuthenticatedProviders>
-                                <ActionsSheetProvider>
-                                  <MatchDetailSheetProvider>
-                                    <PendingExternalBookingProvider>
-                                      <PlayerInviteSheetProvider>
-                                        <FeedbackSheetProvider>
-                                          <FeedbackReportSheetProvider>
-                                            <StripeProvider
-                                              publishableKey={
-                                                process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-                                              }
-                                              merchantIdentifier="merchant.com.mathisl971.rallia-app"
-                                            >
-                                              <UpdateGate>
-                                                <ConsentGate>
-                                                  <AppContent />
-                                                </ConsentGate>
-                                              </UpdateGate>
-                                            </StripeProvider>
-                                          </FeedbackReportSheetProvider>
-                                        </FeedbackSheetProvider>
-                                      </PlayerInviteSheetProvider>
-                                    </PendingExternalBookingProvider>
-                                  </MatchDetailSheetProvider>
-                                </ActionsSheetProvider>
-                              </AuthenticatedProviders>
-                            </AuthProvider>
-                          </OverlayProvider>
-                        </DeepLinkProvider>
-                      </ToastProvider>
-                    </NetworkProvider>
-                  </TourProvider>
+                  <ThemedRoot>
+                    <TourProvider>
+                      <NetworkProvider>
+                        <ToastProvider>
+                          <DeepLinkProvider>
+                            <OverlayProvider>
+                              <AuthProvider>
+                                <AuthenticatedProviders>
+                                  <ActionsSheetProvider>
+                                    <MatchDetailSheetProvider>
+                                      <PendingExternalBookingProvider>
+                                        <PlayerInviteSheetProvider>
+                                          <FeedbackSheetProvider>
+                                            <FeedbackReportSheetProvider>
+                                              <StripeProvider
+                                                publishableKey={
+                                                  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
+                                                  ''
+                                                }
+                                                merchantIdentifier="merchant.com.mathisl971.rallia-app"
+                                              >
+                                                <UpdateGate>
+                                                  <ConsentGate>
+                                                    <AppContent />
+                                                  </ConsentGate>
+                                                </UpdateGate>
+                                              </StripeProvider>
+                                            </FeedbackReportSheetProvider>
+                                          </FeedbackSheetProvider>
+                                        </PlayerInviteSheetProvider>
+                                      </PendingExternalBookingProvider>
+                                    </MatchDetailSheetProvider>
+                                  </ActionsSheetProvider>
+                                </AuthenticatedProviders>
+                              </AuthProvider>
+                            </OverlayProvider>
+                          </DeepLinkProvider>
+                        </ToastProvider>
+                      </NetworkProvider>
+                    </TourProvider>
+                  </ThemedRoot>
                 </ThemeProvider>
               </LocaleProvider>
             </PersistQueryClientProvider>

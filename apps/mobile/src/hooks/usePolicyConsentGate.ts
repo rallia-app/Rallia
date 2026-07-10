@@ -61,8 +61,12 @@ export function usePolicyConsentGate(userId: string | null | undefined): PolicyC
       return;
     }
 
+    // On recheck (post-accept), keep the current screen mounted and skip the
+    // stale cache — it still lists the just-accepted policies, and repainting
+    // from it would flash the gate (and the app tree behind it) needlessly.
+    const isRecheck = nonce > 0;
     settledRef.current = false;
-    setState({ status: 'loading', pending: [] });
+    if (!isRecheck) setState({ status: 'loading', pending: [] });
 
     let cancelled = false;
     const cacheKey = `${CACHE_KEY_PREFIX}${userId}`;
@@ -83,7 +87,7 @@ export function usePolicyConsentGate(userId: string | null | undefined): PolicyC
     // fresh fetch below override it (whichever it decides) once it lands.
     AsyncStorage.getItem(cacheKey)
       .then(raw => {
-        if (cancelled || settledRef.current || !raw) return;
+        if (cancelled || settledRef.current || !raw || isRecheck) return;
         try {
           const cached = JSON.parse(raw) as PendingPolicyConsent[];
           settle({ status: cached.length > 0 ? 'required' : 'ok', pending: cached });
