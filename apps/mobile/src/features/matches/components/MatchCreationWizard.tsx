@@ -763,8 +763,10 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
 
     if (currentStep < TOTAL_STEPS) {
       const nextStep = currentStep + 1;
-      setCurrentStep(nextStep);
-      setHighestStepVisited(prev => Math.max(prev, nextStep));
+      requestAnimationFrame(() => {
+        setCurrentStep(nextStep);
+        setHighestStepVisited(prev => Math.max(prev, nextStep));
+      });
     }
   }, [currentStep, validateStep, values, sportId, saveDraft, isEditMode, t, toast]);
 
@@ -773,7 +775,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     Keyboard.dismiss();
     lightHaptic();
     if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
+      requestAnimationFrame(() => {
+        setCurrentStep(prev => prev - 1);
+      });
     }
   }, [currentStep]);
 

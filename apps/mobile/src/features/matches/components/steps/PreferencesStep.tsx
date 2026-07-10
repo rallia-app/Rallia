@@ -407,7 +407,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Step title */}
       <View style={styles.stepHeader}>

@@ -105,7 +105,7 @@ export const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Title */}
       <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>

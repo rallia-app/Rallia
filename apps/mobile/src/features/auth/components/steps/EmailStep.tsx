@@ -103,7 +103,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Social Sign In Buttons - Compact row with icon + brand name */}
       <View style={styles.socialButtons}>

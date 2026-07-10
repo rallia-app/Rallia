@@ -43,7 +43,6 @@ export function SearchBar({
   const handleClear = () => {
     onChangeText('');
     onClear?.();
-    inputRef.current?.focus();
   };
 
   const showClearButton = value.length > 0 && !isLoading;

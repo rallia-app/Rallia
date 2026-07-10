@@ -233,7 +233,7 @@ const DetailsStep: React.FC<{
     contentContainerStyle={styles.stepContent}
     showsVerticalScrollIndicator={false}
     keyboardShouldPersistTaps="handled"
-    keyboardDismissMode="interactive"
+    keyboardDismissMode="on-drag"
   >
     <View style={styles.stepHeader}>
       <Text size="lg" weight="bold" color={colors.text}>
@@ -462,11 +462,17 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       return;
     }
     lightHaptic();
-    setCurrentStep(s => Math.min(TOTAL_STEPS, s + 1));
+    Keyboard.dismiss();
+    requestAnimationFrame(() => {
+      setCurrentStep(s => Math.min(TOTAL_STEPS, s + 1));
+    });
   }, [currentStep, validateStep]);
 
   const goBack = useCallback(() => {
-    setCurrentStep(s => Math.max(1, s - 1));
+    Keyboard.dismiss();
+    requestAnimationFrame(() => {
+      setCurrentStep(s => Math.max(1, s - 1));
+    });
   }, []);
 
   const handleClose = useCallback(() => {

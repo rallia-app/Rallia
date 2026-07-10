@@ -1404,7 +1404,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       onScroll={handleScroll}
       scrollEventThrottle={400}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Step title */}
       <View style={styles.stepHeader}>

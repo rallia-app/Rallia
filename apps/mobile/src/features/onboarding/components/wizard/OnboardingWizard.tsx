@@ -1134,7 +1134,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const isValid = await validateAndSaveStep();
     if (isValid) {
       mediumHaptic();
-      goToNextStep();
+      requestAnimationFrame(() => {
+        goToNextStep();
+      });
     }
   }, [validateAndSaveStep, goToNextStep]);
 
@@ -1142,7 +1144,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const handleBack = useCallback(() => {
     Keyboard.dismiss();
     lightHaptic();
-    goToPrevStep();
+    requestAnimationFrame(() => {
+      goToPrevStep();
+    });
   }, [goToPrevStep]);
 
   // Handle back to landing

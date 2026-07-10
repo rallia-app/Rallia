@@ -208,7 +208,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Sport Icon */}
       <View style={styles.sportIconContainer}>
