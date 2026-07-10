@@ -42,7 +42,7 @@ import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
 import { MatchOpportunitiesStep } from './steps/MatchOpportunitiesStep';
 import { MatchPlanStep } from './steps/MatchPlanStep';
 import { AllSetStep } from './steps/AllSetStep';
-import { useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
+import { PLAN_STEP_ENABLED, useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
 import { useJoinOpportunity } from './useJoinOpportunity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -180,13 +180,15 @@ export function WeeklyCheckInScreen() {
   }, [wizard.currentStep, slideAnim]);
 
   // Progress dots count the core steps only: Goal (skipped when the goal is
-  // already set this week), Availability, Plan, Done. The optional "Games for
-  // you" interstitial (step 3) shares Availability's dot — its eligibility
-  // resolves async, so letting it add/drop a dot made the count jump mid-flow.
+  // already set this week), Availability, Plan (while enabled), Done. The
+  // optional "Games for you" interstitial (step 3) shares Availability's dot —
+  // its eligibility resolves async, so letting it add/drop a dot made the
+  // count jump mid-flow.
   const recapOffset = wizard.skipRecapStep && wizard.currentStep > 1 ? 1 : 0;
   const opportunitiesOffset = wizard.currentStep >= 3 ? 1 : 0;
-  const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset;
-  const displayedTotalSteps = 4 - (wizard.skipRecapStep ? 1 : 0);
+  const planOffset = !PLAN_STEP_ENABLED && wizard.currentStep >= 5 ? 1 : 0;
+  const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset - planOffset;
+  const displayedTotalSteps = (PLAN_STEP_ENABLED ? 4 : 3) - (wizard.skipRecapStep ? 1 : 0);
 
   // CTA → submit transition from the match-plan step to the All-Set step.
   // Fire mediumHaptic immediately on press so the tap feels responsive — the
@@ -333,6 +335,7 @@ export function WeeklyCheckInScreen() {
             onChange={wizard.setAvailability}
             onContinue={wizard.goNext}
             window={wizard.context?.window ?? []}
+            isSubmitting={wizard.isSubmitting}
           />
         </StepSlot>
 
@@ -345,6 +348,7 @@ export function WeeklyCheckInScreen() {
             outcomes={outcomes}
             pendingId={pendingId}
             onContinue={wizard.goNext}
+            isSubmitting={wizard.isSubmitting}
           />
         </StepSlot>
 

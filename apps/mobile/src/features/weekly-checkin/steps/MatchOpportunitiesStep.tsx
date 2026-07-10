@@ -35,6 +35,8 @@ interface MatchOpportunitiesStepProps {
   outcomes: Record<string, JoinOutcome>;
   pendingId: string | null;
   onContinue: () => void;
+  /** Continue submits the check-in while the match-plan step is hidden. */
+  isSubmitting?: boolean;
 }
 
 const NOOP = () => {};
@@ -47,6 +49,7 @@ export function MatchOpportunitiesStep({
   outcomes,
   pendingId,
   onContinue,
+  isSubmitting,
 }: MatchOpportunitiesStepProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
@@ -110,7 +113,15 @@ export function MatchOpportunitiesStep({
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button variant="primary" size="lg" fullWidth rounded onPress={onContinue}>
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          rounded
+          loading={isSubmitting}
+          disabled={isSubmitting}
+          onPress={onContinue}
+        >
           {t('weeklyCheckIn.opportunities.cta')}
         </Button>
       </View>
