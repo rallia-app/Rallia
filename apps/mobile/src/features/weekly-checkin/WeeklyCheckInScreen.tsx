@@ -36,8 +36,6 @@ import { accent, primary, spacingPixels } from '@rallia/design-system';
 import * as Analytics from '#/services/analytics';
 import { useTranslation } from '#/hooks';
 
-import { useNavigateToPlayerProfile } from '#/hooks';
-
 import { WizardHeader } from './components/WizardHeader';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
@@ -71,8 +69,6 @@ export function WeeklyCheckInScreen() {
 
   const { session } = useAuth();
   const playerId = session?.user?.id ?? null;
-
-  const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   // One-click join state for the "Games for you" step — lifted to the screen so
   // the All-Set recap can report what was joined / asked to join there.
@@ -359,13 +355,10 @@ export function WeeklyCheckInScreen() {
             error={wizard.planError}
             excludedProposalKeys={wizard.excludedProposalKeys}
             toggleProposal={wizard.toggleProposal}
-            excludedInviteesByProposal={wizard.excludedInviteesByProposal}
-            toggleInvitee={wizard.toggleInvitee}
             optOut={wizard.optOut}
             setOptOut={wizard.setOptOut}
             isSubmitting={wizard.isSubmitting}
             onSubmit={handleSubmit}
-            onPlayerPress={navigateToPlayerProfile}
             todayDate={todayDate}
             tomorrowDate={tomorrowDate}
           />

@@ -11509,7 +11509,7 @@
       "frequencyContextFirstTime": "Choisis ce qui te convient — tu peux ajuster à chaque semaine. ✨"
     },
     "plan": {
-      "bubble": "Voici mon plan pour toi — chaque partie pis chaque joueur, à toi de les ajuster. 👇",
+      "bubble": "Voici ce que je te propose — passe en revue chaque partie et garde celles que tu veux. 👇",
       "readyCountOne": "1 nouvelle partie prête",
       "readyCountMany": "{count} nouvelles parties prêtes",
       "readyCountNone": "Aucune nouvelle partie",
@@ -11518,7 +11518,10 @@
       "committedNoteOne": "Inclut 1 partie que t'as déjà de prévue",
       "committedNoteMany": "Inclut {count} parties que t'as déjà de prévues",
       "locationTbd": "Lieu à confirmer",
-      "tbdNoInvites": "Ouverte à tous. Choisis un terrain pour inviter des joueurs.",
+      "tbdNote": "Ouverte à tous — ajoute un terrain quand tu sais où tu joues.",
+      "compatibleCountOne": "1 joueur compatible à cette heure",
+      "compatibleCountMany": "{count} joueurs compatibles à cette heure",
+      "compatibleCountNone": "Aucun joueur compatible à cette heure pour l'instant",
       "inviteesLabel": "{count} joueurs invités",
       "inviteesLabelOne": "1 joueur invité",
       "showInvitees": "Voir qui est invité",
@@ -11534,9 +11537,19 @@
       "errorFallback": "J'ai pas pu bâtir ton aperçu. Je vais quand même organiser tes parties en arrière-plan. 💪",
       "cta": "Créer mes parties",
       "ctaNone": "Terminer",
-      "optOutLink": "Ne me propose pas de parties",
-      "optOutActiveLink": "Propose-moi des parties",
-      "optOutNote": "Je créerai pas de parties à tes check-ins. Tu peux réactiver ça quand tu veux."
+      "optOutTitle": "Créer des parties automatiquement",
+      "optOutTitleOff": "Création auto désactivée",
+      "optOutDescription": "Les parties ci-dessous sont incluses par défaut selon tes disponibilités.",
+      "optOutDescriptionOff": "Aucune partie ne sera créée. Active l'option pour inclure automatiquement des parties de la liste ci-dessous.",
+      "pausedLabel": "Création auto désactivée — active l'option ci-dessus pour inclure cette partie.",
+      "autoInviteTitle": "Inviter des joueurs compatibles",
+      "autoInviteTitleOff": "Invitations auto désactivées",
+      "autoInviteDescription": "Rallia invite des joueurs qui correspondent à ton niveau et à ton lieu pour chaque partie.",
+      "autoInviteDescriptionOff": "Les parties seront créées ouvertes — personne ne sera invité automatiquement.",
+      "autoInviteOffLabel": "Invitations auto désactivées — cette partie reste ouverte à tous.",
+      "optOutLink": "Ne crée pas de parties automatiquement",
+      "optOutActiveLink": "Créer des parties automatiquement",
+      "optOutNote": "Je ne créerai pas de parties automatiquement à tes check-ins. Tu peux réactiver ça quand tu veux."
     },
     "opportunities": {
       "bubble": "Des parties à tes heures sont déjà ouvertes proche de toi. Embarque! 🙌",

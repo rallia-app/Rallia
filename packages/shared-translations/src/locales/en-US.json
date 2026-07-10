@@ -11509,7 +11509,7 @@
       "frequencyContextFirstTime": "Pick what feels right — you can adjust this any week. ✨"
     },
     "plan": {
-      "bubble": "Here's my game plan for you — every game and every player, all yours to tweak. 👇",
+      "bubble": "Here's what I'd line up for you — review each game and keep the ones you want. 👇",
       "readyCountOne": "1 new game ready to go",
       "readyCountMany": "{count} new games ready to go",
       "readyCountNone": "No new games selected",
@@ -11518,7 +11518,10 @@
       "committedNoteOne": "Includes 1 game you've already got scheduled",
       "committedNoteMany": "Includes {count} games you've already got scheduled",
       "locationTbd": "Location TBD",
-      "tbdNoInvites": "Open to anyone. Set a court to auto-invite players.",
+      "tbdNote": "Open to anyone — add a court when you know where you're playing.",
+      "compatibleCountOne": "1 compatible player at this time",
+      "compatibleCountMany": "{count} compatible players at this time",
+      "compatibleCountNone": "No compatible players at this time yet",
       "inviteesLabel": "{count} players invited",
       "inviteesLabelOne": "1 player invited",
       "showInvitees": "Show who's invited",
@@ -11534,9 +11537,19 @@
       "errorFallback": "I couldn't build your preview. I'll still set up your games in the background. 💪",
       "cta": "Create my games",
       "ctaNone": "Finish check-in",
-      "optOutLink": "Don't propose games for me",
-      "optOutActiveLink": "Propose games again",
-      "optOutNote": "I won't create games on your check-ins. You can switch this back on anytime."
+      "optOutTitle": "Auto-create games",
+      "optOutTitleOff": "Auto-create off",
+      "optOutDescription": "Games below are included by default from your availability.",
+      "optOutDescriptionOff": "No games will be created. Turn this on to auto-include games from the list below.",
+      "pausedLabel": "Auto-create is off — turn on the switch above to include this game.",
+      "autoInviteTitle": "Invite compatible players",
+      "autoInviteTitleOff": "Auto-invites off",
+      "autoInviteDescription": "Rallia invites players who match your level and location to each game.",
+      "autoInviteDescriptionOff": "Games will be created open — no one will be invited automatically.",
+      "autoInviteOffLabel": "Auto-invites off — this game stays open to anyone.",
+      "optOutLink": "Don't auto-create games for me",
+      "optOutActiveLink": "Auto-create games again",
+      "optOutNote": "I won't auto-create games on your check-ins. You can switch this back on anytime."
     },
     "opportunities": {
       "bubble": "Some games are already lined up near you that fit your times — jump in! 🙌",

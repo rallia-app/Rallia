@@ -830,6 +830,7 @@ export function weeklyCheckinStepCompleted(props: {
   proposals_excluded?: number;
   invitees_excluded?: number;
   opted_out?: boolean;
+  auto_invite?: boolean;
 }): void {
   capture('weekly_checkin_step_completed', props);
 }
@@ -882,12 +883,18 @@ export function weeklyCheckinPlanOptOutToggled(props: { enabled: boolean }): voi
   capture('weekly_checkin_plan_opt_out_toggled', props);
 }
 
+/** The auto-invite preference was toggled on the plan step. */
+export function weeklyCheckinPlanAutoInviteToggled(props: { enabled: boolean }): void {
+  capture('weekly_checkin_plan_auto_invite_toggled', props);
+}
+
 export function weeklyCheckinSubmitted(props: {
   frequency_goal: number;
   availability_cells: number;
   plan_proposals_included: number;
   plan_invitees_excluded: number;
   opted_out: boolean;
+  auto_invite: boolean;
   matches_created: number;
   new_streak: number;
   milestone_reached: boolean;

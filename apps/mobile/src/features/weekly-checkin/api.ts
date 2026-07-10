@@ -166,8 +166,10 @@ export interface PlanProposalSubmit {
 
 export interface RecordCheckInInput {
   frequencyGoal: number;
-  /** "Don't propose games for me" — persists auto_create_matches = false. */
+  /** Disables auto_create_matches — no games are auto-included or created. */
   optOut: boolean;
+  /** Persist auto_invite_players — deactivated in the wizard UI for now. */
+  autoInvite: boolean;
   /**
    * The confirmed plan selection. `null` = the preview failed and the wizard
    * degrades to the legacy autonomous path (server generates from saved
@@ -407,7 +409,7 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
   const { data, error } = await supabase.rpc('record_weekly_checkin', {
     p_frequency_goal: input.frequencyGoal,
     p_auto_create: !input.optOut,
-    p_auto_invite: true,
+    p_auto_invite: input.autoInvite,
     p_timezone: deviceTimezone,
     p_match_plan: input.plan
       ? ({ version: 1, proposals: input.plan.proposals } as unknown as Json)

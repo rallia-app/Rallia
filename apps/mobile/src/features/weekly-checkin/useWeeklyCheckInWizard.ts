@@ -91,10 +91,7 @@ export interface UseWeeklyCheckInWizard {
   /** Proposal keys the player removed (arrays, not Sets — Hermes/TanStack). */
   excludedProposalKeys: string[];
   toggleProposal: (key: string) => void;
-  /** Per-proposal invitees the player removed, keyed by proposal key. */
-  excludedInviteesByProposal: Record<string, string[]>;
-  toggleInvitee: (proposalKey: string, playerId: string) => void;
-  /** "Don't propose games for me" — persists auto_create_matches = false. */
+  /** Disables auto_create_matches — no games are auto-included or created. */
   optOut: boolean;
   setOptOut: (b: boolean) => void;
   /**
@@ -163,9 +160,6 @@ export function useWeeklyCheckInWizard(
   // Plan selection — everything is INCLUDED by default; these track removals.
   // Arrays (not Sets): Hermes iterator quirk + React state ergonomics.
   const [excludedProposalKeys, setExcludedProposalKeys] = useState<string[]>([]);
-  const [excludedInviteesByProposal, setExcludedInviteesByProposal] = useState<
-    Record<string, string[]>
-  >({});
   const [optOut, setOptOutState] = useState<boolean>(false);
 
   // When the wizard opened — drives duration_seconds on completed/abandoned.
@@ -259,12 +253,11 @@ export function useWeeklyCheckInWizard(
   const planLoading = planIsLoading && opportunitySlots.length > 0;
   const planError = planErrored;
 
-  // Seed the opt-out toggle from the saved preference once the plan lands, so
-  // a previously opted-out player sees their choice reflected (and can undo it).
-  const seededOptOut = useRef(false);
+  // Seed the proposals opt-out from the saved preference once the plan lands.
+  const seededPlanPrefs = useRef(false);
   useEffect(() => {
-    if (seededOptOut.current || !plan) return;
-    seededOptOut.current = true;
+    if (seededPlanPrefs.current || !plan) return;
+    seededPlanPrefs.current = true;
     if (plan.optedOut) setOptOutState(true);
   }, [plan]);
 
@@ -316,23 +309,6 @@ export function useWeeklyCheckInWizard(
           remaining_included: (plan?.proposals.length ?? 0) - next.length,
         });
         return next;
-      });
-    },
-    [plan]
-  );
-  const toggleInvitee = useCallback(
-    (proposalKey: string, playerId: string) => {
-      selectionHaptic();
-      setExcludedInviteesByProposal(prev => {
-        const current = prev[proposalKey] ?? [];
-        const removing = !current.includes(playerId);
-        const next = removing ? [...current, playerId] : current.filter(id => id !== playerId);
-        const proposal = plan?.proposals.find(p => p.key === proposalKey);
-        Analytics.weeklyCheckinPlanInviteeToggled({
-          action: removing ? 'exclude' : 'restore',
-          sport: proposal?.sportName ?? 'unknown',
-        });
-        return { ...prev, [proposalKey]: next };
       });
     },
     [plan]
@@ -441,17 +417,15 @@ export function useWeeklyCheckInWizard(
               match_date: p.matchDate,
               start_hour: p.startHour,
               facility_id: p.facilityId,
-              invite_excluded_player_ids: excludedInviteesByProposal[p.key] ?? [],
+              invite_excluded_player_ids: [],
             }));
-    const inviteesExcluded = Object.values(excludedInviteesByProposal).reduce(
-      (sum, ids) => sum + ids.length,
-      0
-    );
+    const inviteesExcluded = 0;
 
     try {
       const res = await recordCheckIn({
         frequencyGoal,
         optOut,
+        autoInvite: false,
         plan: planError ? null : { proposals: confirmedProposals },
         availability,
         windowDays,
@@ -464,6 +438,7 @@ export function useWeeklyCheckInWizard(
         proposals_excluded: excludedProposalKeys.length,
         invitees_excluded: inviteesExcluded,
         opted_out: optOut,
+        auto_invite: false,
       });
       Analytics.weeklyCheckinSubmitted({
         frequency_goal: frequencyGoal,
@@ -471,6 +446,7 @@ export function useWeeklyCheckInWizard(
         plan_proposals_included: confirmedProposals.length,
         plan_invitees_excluded: inviteesExcluded,
         opted_out: optOut,
+        auto_invite: false,
         matches_created: res.createdMatches.length,
         new_streak: res.newStreak,
         milestone_reached: res.milestoneReached,
@@ -493,7 +469,6 @@ export function useWeeklyCheckInWizard(
     planError,
     optOut,
     excludedProposalKeys,
-    excludedInviteesByProposal,
     availability,
     windowDays,
     onComplete,
@@ -522,8 +497,6 @@ export function useWeeklyCheckInWizard(
     planError,
     excludedProposalKeys,
     toggleProposal,
-    excludedInviteesByProposal,
-    toggleInvitee,
     optOut,
     setOptOut,
     markPlanStale,

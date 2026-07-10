@@ -3836,6 +3836,8 @@ export interface PlanProposal {
   minRatingLabel: string | null;
   /** Live open-court count for the chosen facility/slot; 0 for TBD proposals. */
   availableCourts: number;
+  /** Players who pass the auto-invite compatibility gates for this slot. */
+  compatibleCount: number;
   invitees: PlanInvitee[];
 }
 
@@ -3843,6 +3845,7 @@ export interface CheckInMatchPlan {
   goal: number;
   committedCount: number;
   optedOut: boolean;
+  autoInviteEnabled: boolean;
   proposals: PlanProposal[];
 }
 
@@ -3872,6 +3875,7 @@ interface RawPlanProposal {
   facility_address: string | null;
   min_rating_label: string | null;
   available_courts: number | null;
+  compatible_count: number | null;
   invitees: RawPlanInvitee[];
 }
 
@@ -3904,6 +3908,7 @@ export async function getCheckInMatchPlan(params: {
     goal?: number;
     committed_count?: number;
     opted_out?: boolean;
+    auto_invite_enabled?: boolean;
     proposals?: RawPlanProposal[];
   };
 
@@ -3911,6 +3916,7 @@ export async function getCheckInMatchPlan(params: {
     goal: raw.goal ?? frequencyGoal,
     committedCount: raw.committed_count ?? 0,
     optedOut: raw.opted_out ?? false,
+    autoInviteEnabled: raw.auto_invite_enabled ?? true,
     proposals: (raw.proposals ?? []).map(p => ({
       key: p.key,
       sportId: p.sport_id,
@@ -3927,6 +3933,7 @@ export async function getCheckInMatchPlan(params: {
       facilityAddress: p.facility_address,
       minRatingLabel: p.min_rating_label,
       availableCourts: p.available_courts ?? 0,
+      compatibleCount: p.compatible_count ?? 0,
       invitees: (p.invitees ?? []).map(i => ({
         playerId: i.player_id,
         firstName: i.first_name ?? '',
