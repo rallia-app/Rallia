@@ -2047,6 +2047,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [cityInput, setCityInput] = useState<string>(
     editTournament && !editTournament.facilityId ? (editTournament.city ?? '') : ''
   );
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const locationModeRef = useRef(locationMode);
   locationModeRef.current = locationMode;
   const handleLocationModeChange = useCallback((nextMode: LocationMode) => {
@@ -2073,7 +2074,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       ? (editTournament.prizeMoneyCents / 100).toString()
       : ''
   );
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
