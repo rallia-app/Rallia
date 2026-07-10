@@ -1221,10 +1221,10 @@ const Home = () => {
   // Competitive calls-to-action: released bracket/matchup slots with no game
   // linked yet. Once a game is linked they become real `match` rows and flow
   // through usePlayerMatches into the My Games carousel like any other game.
-  // Leagues stay admin-gated during rollout, so the session query only fires
-  // for admins (passing an undefined userId disables the hook's query).
+  // Tournaments and leagues stay admin-gated during rollout, so these queries
+  // only fire for admins (passing an undefined userId disables the hook's query).
   const { data: tournamentActionMatches = [], refetch: refetchTournamentActions } =
-    useMyUnscheduledTournamentMatches(session?.user?.id, selectedSport?.id);
+    useMyUnscheduledTournamentMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
   const { data: sessionActionMatches = [], refetch: refetchLeagueActions } =
     useMyUnscheduledSessionMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
 
@@ -2028,7 +2028,8 @@ const Home = () => {
         }}
       />,
     ];
-    if (session) {
+    if (session && isAdmin) {
+      // Tournaments and leagues stay admin-gated until the rollout un-gates them.
       playTiles.push(
         <QuickNavButton
           key="tournaments"
@@ -2037,9 +2038,6 @@ const Home = () => {
           onPress={() => appNavigation.navigate('Tournaments')}
         />
       );
-    }
-    if (session && isAdmin) {
-      // Leagues stay admin-gated until the rollout un-gates them.
       playTiles.push(
         <QuickNavButton
           key="leagues"
