@@ -1,6 +1,6 @@
 /**
  * Leaderboard Service
- * Monthly GMA per-sport leaderboard — participation-weighted rankings over the
+ * Monthly GMA per-sport challenge — ranked by games played over the
  * canonical qualifying_played_game definition (get_sport_leaderboard RPC).
  */
 
@@ -14,8 +14,6 @@ export interface SportLeaderboardEntry {
   displayName: string;
   avatarUrl: string | null;
   games: number;
-  wins: number;
-  points: number;
 }
 
 export interface SportLeaderboardPage {
@@ -27,8 +25,6 @@ export interface SportLeaderboardPage {
 export interface MySportRank {
   rank: number;
   games: number;
-  wins: number;
-  points: number;
 }
 
 /**
@@ -61,8 +57,6 @@ export async function getSportLeaderboardPage(params: {
     displayName: row.display_name,
     avatarUrl: getProfilePictureUrl(row.avatar_url) ?? null,
     games: Number(row.games),
-    wins: Number(row.wins),
-    points: Number(row.points),
   }));
 
   return { items, nextOffset: items.length === limit ? offset + items.length : null };
@@ -93,7 +87,5 @@ export async function getMySportRank(params: {
   return {
     rank: Number(row.rank),
     games: Number(row.games),
-    wins: Number(row.wins),
-    points: Number(row.points),
   };
 }

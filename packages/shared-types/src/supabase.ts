@@ -10304,9 +10304,7 @@ export type Database = {
         Args: { p_month?: string; p_sport_id: string }
         Returns: {
           games: number
-          points: number
           rank: number
-          wins: number
         }[]
       }
       get_nearby_public_matches: {
@@ -11057,9 +11055,7 @@ export type Database = {
           display_name: string
           games: number
           player_id: string
-          points: number
           rank: number
-          wins: number
         }[]
       }
       get_sport_popularity: {
@@ -12768,9 +12764,7 @@ export type Database = {
         Returns: {
           games: number
           player_id: string
-          points: number
           rank: number
-          wins: number
         }[]
       }
       submit_match_result_for_match: {

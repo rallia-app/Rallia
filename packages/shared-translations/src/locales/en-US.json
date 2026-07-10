@@ -4148,17 +4148,18 @@
     }
   },
   "leaderboard": {
-    "title": "Leaderboard",
-    "subtitle": "{month} · Greater Montreal · {sport}",
-    "pointsNote": "Earn 10 points for every game you play, +5 for a win. Show up, climb the board.",
-    "yourRank": "You're #{rank} this month",
-    "gamesWins": "{games} games · {wins} wins",
-    "pts": "pts",
+    "title": "Monthly Challenge",
+    "subtitle": "{month} challenge · Greater Montreal · {sport}",
+    "pointsNote": "Ranked by games played. Play more to climb the challenge.",
+    "yourRank": "You're #{rank} in the challenge",
+    "gamesPlayed": "{count} games played",
+    "gamesPlayed_one": "{count} game played",
+    "games": "games",
     "youSuffix": "(you)",
-    "error": "Couldn't load the leaderboard. Pull to retry.",
+    "error": "Couldn't load the challenge. Pull to retry.",
     "empty": {
-      "title": "No games yet this month",
-      "description": "Be the first on the board: play a game and check back."
+      "title": "The challenge is on",
+      "description": "Play a game to join and start climbing. Every match counts."
     }
   },
   "leagueList": {
@@ -5167,7 +5168,7 @@
       "browseSuggestions": "Discover suggestions",
       "tournaments": "Join a tournament",
       "leagues": "Join a league",
-      "leaderboard": "See where you rank"
+      "leaderboard": "Take the challenge"
     },
     "playGrid": {
       "title": "Play",
@@ -5177,10 +5178,11 @@
       "leagues": "Leagues"
     },
     "leaderboardCard": {
-      "title": "Monthly leaderboard",
-      "subtitle": "See where you rank",
-      "unrankedTitle": "Claim your spot",
-      "unrankedSubtitle": "Play one game this month and you're on the board"
+      "title": "Monthly Challenge",
+      "subtitle": "Play more, climb higher",
+      "rankedSubtitle": "Play more to move up",
+      "unrankedTitle": "Join the challenge",
+      "unrankedSubtitle": "One game this month and you're in"
     },
     "tournamentActionBanner": {
       "title": "Tournament game to schedule",

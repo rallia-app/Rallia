@@ -4148,17 +4148,18 @@
     }
   },
   "leaderboard": {
-    "title": "Classement",
-    "subtitle": "{month} · Grand Montréal · {sport}",
-    "pointsNote": "Gagne 10 points par partie jouée, +5 pour une victoire. Joue, pis monte dans le classement.",
-    "yourRank": "Tu es #{rank} ce mois-ci",
-    "gamesWins": "{games} parties · {wins} victoires",
-    "pts": "pts",
+    "title": "Défi du mois",
+    "subtitle": "Défi de {month} · Grand Montréal · {sport}",
+    "pointsNote": "Classé par parties jouées. Joue plus pour monter dans le défi.",
+    "yourRank": "Tu es #{rank} dans le défi",
+    "gamesPlayed": "{count} parties jouées",
+    "gamesPlayed_one": "{count} partie jouée",
+    "games": "parties",
     "youSuffix": "(toi)",
-    "error": "Impossible de charger le classement. Tire pour réessayer.",
+    "error": "Impossible de charger le défi. Tire pour réessayer.",
     "empty": {
-      "title": "Aucune partie ce mois-ci",
-      "description": "Sois le premier au classement. Joue une partie et reviens voir."
+      "title": "Le défi est lancé",
+      "description": "Joue une partie pour te joindre au défi. Chaque match compte."
     }
   },
   "leagueList": {
@@ -5167,7 +5168,7 @@
       "browseSuggestions": "Découvrir mes suggestions",
       "tournaments": "Rejoindre un tournoi",
       "leagues": "Rejoindre une ligue",
-      "leaderboard": "Vois où tu te classes"
+      "leaderboard": "Relever le défi"
     },
     "playGrid": {
       "title": "Jouer",
@@ -5177,10 +5178,11 @@
       "leagues": "Ligues"
     },
     "leaderboardCard": {
-      "title": "Classement du mois",
-      "subtitle": "Vois où tu te places",
-      "unrankedTitle": "Prends ta place",
-      "unrankedSubtitle": "Joue une partie ce mois-ci pis t'es au classement"
+      "title": "Défi du mois",
+      "subtitle": "Joue plus, monte plus haut",
+      "rankedSubtitle": "Joue plus pour monter",
+      "unrankedTitle": "Rejoins le défi",
+      "unrankedSubtitle": "Une partie ce mois-ci et t'es dans le coup"
     },
     "tournamentActionBanner": {
       "title": "Partie de tournoi à planifier",

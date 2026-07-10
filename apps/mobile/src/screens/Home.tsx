@@ -269,12 +269,9 @@ const quickNavStyles = StyleSheet.create({
   },
 });
 
-// Medal accents for podium ranks on the home leaderboard card.
-const LEADERBOARD_MEDALS: Record<number, string> = { 1: '#FFD700', 2: '#C0C0C0', 3: '#CD7F32' };
-
 /**
- * Rich leaderboard entry point: shows the player's live monthly rank (or a
- * claim-your-spot nudge when unranked) and routes to the full leaderboard.
+ * Monthly challenge entry point: shows the player's live rank (or a join-the-
+ * challenge nudge when unranked) and routes to the full challenge screen.
  */
 const LeaderboardCard: React.FC<{
   myRank: MySportRank | null | undefined;
@@ -282,7 +279,6 @@ const LeaderboardCard: React.FC<{
   onPress: () => void;
   t: (key: string, options?: Record<string, string | number | boolean>) => string;
 }> = ({ myRank, loading, onPress, t }) => {
-  const medal = myRank ? LEADERBOARD_MEDALS[myRank.rank] : undefined;
   const handlePress = () => {
     void lightHaptic();
     onPress();
@@ -294,7 +290,7 @@ const LeaderboardCard: React.FC<{
   let subLine = ' ';
   if (myRank) {
     mainLine = t('leaderboard.yourRank', { rank: myRank.rank });
-    subLine = t('leaderboard.gamesWins', { games: myRank.games, wins: myRank.wins });
+    subLine = t('home.leaderboardCard.rankedSubtitle');
   } else if (loading) {
     mainLine = t('home.leaderboardCard.subtitle');
   } else {
@@ -322,23 +318,13 @@ const LeaderboardCard: React.FC<{
           color="rgba(255,255,255,0.12)"
           style={leaderboardCardStyles.watermark}
         />
-        <View
-          style={[
-            leaderboardCardStyles.badge,
-            medal ? { backgroundColor: medal, borderColor: 'transparent' } : null,
-          ]}
-        >
+        <View style={leaderboardCardStyles.badge}>
           {myRank ? (
-            <Text
-              size="sm"
-              weight="bold"
-              color={medal && myRank.rank !== 3 ? '#1a1a1a' : '#ffffff'}
-              numberOfLines={1}
-            >
+            <Text size="sm" weight="bold" color="#ffffff" numberOfLines={1}>
               {`#${myRank.rank}`}
             </Text>
           ) : (
-            <Ionicons name="podium-outline" size={22} color="#ffffff" />
+            <Ionicons name="trophy-outline" size={22} color="#ffffff" />
           )}
         </View>
         <View style={leaderboardCardStyles.textCol}>
@@ -353,12 +339,12 @@ const LeaderboardCard: React.FC<{
           </Text>
         </View>
         {myRank ? (
-          <View style={leaderboardCardStyles.pointsCol}>
+          <View style={leaderboardCardStyles.gamesCol}>
             <Text size="xl" weight="bold" color="#ffffff">
-              {myRank.points}
+              {myRank.games}
             </Text>
             <Text size="xs" color="rgba(255,255,255,0.85)">
-              {t('leaderboard.pts')}
+              {t('leaderboard.games')}
             </Text>
           </View>
         ) : null}
@@ -405,7 +391,7 @@ const leaderboardCardStyles = StyleSheet.create({
   textCol: {
     flex: 1,
   },
-  pointsCol: {
+  gamesCol: {
     alignItems: 'center',
     flexShrink: 0,
   },
