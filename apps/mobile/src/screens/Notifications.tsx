@@ -24,7 +24,6 @@ import {
   TOURNAMENT_NOTIFICATION_TYPES,
   LEAGUE_NOTIFICATION_TYPES,
   SESSION_NOTIFICATION_TYPES,
-  PAYOUTS_NOTIFICATION_TYPES,
 } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
 import {
@@ -415,21 +414,6 @@ const Notifications: React.FC = () => {
         successHaptic();
         markAsRead(notification.id);
         Analytics.notificationMarkedRead({ type: notification.type, source: 'tap' });
-      }
-
-      // Payout/reimbursement notifications have no target_id. Only
-      // payouts_setup_required is actionable — send the host to their profile
-      // where the Stripe Connect onboarding CTA lives. The rest are
-      // informational (marking them read above is the whole interaction).
-      if (notification.type && PAYOUTS_NOTIFICATION_TYPES.includes(notification.type)) {
-        Logger.logUserAction('notification_payouts_tapped', {
-          notificationId: notification.id,
-          type: notification.type,
-        });
-        if (notification.type === 'payouts_setup_required') {
-          appNavigation.navigate('UserProfile', {});
-        }
-        return;
       }
 
       // Navigate to target based on notification type and target_id

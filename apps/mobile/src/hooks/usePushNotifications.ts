@@ -7,13 +7,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { Linking, Platform } from 'react-native';
-import { registerPushToken, supabase, unregisterPushToken, Logger } from '@rallia/shared-services';
+import { Platform } from 'react-native';
+import { registerPushToken, unregisterPushToken, Logger } from '@rallia/shared-services';
 import {
   MATCH_NOTIFICATION_TYPES,
   COMMUNITY_NOTIFICATION_TYPES,
   REFERENCE_NOTIFICATION_TYPES,
-  PAYOUTS_NOTIFICATION_TYPES,
   TOURNAMENT_NOTIFICATION_TYPES,
   LEAGUE_NOTIFICATION_TYPES,
   SESSION_NOTIFICATION_TYPES,
@@ -30,7 +29,6 @@ import {
   navigateToSessionDetailFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
-  navigateToUserProfileFromOutside,
 } from '#/navigation/navigationRef';
 import * as Analytics from '#/services/analytics';
 
@@ -53,26 +51,7 @@ interface NotificationPayload {
 
 // Notification-type routing groups live in @rallia/shared-types so the in-app
 // Notifications screen and this push handler share one source of truth and
-// cannot drift. `payouts_setup_required` is the only payout type with a
-// deep-link action (Stripe onboarding); the rest just open the app.
-
-/**
- * Open the Stripe Connect Express hosted onboarding URL for the current user.
- * Invokes the player-stripe-onboard edge function and opens the returned URL
- * in the system browser. Stripe redirects back via Universal Link to
- * https://rallia.app/stripe-connect-return when the host finishes.
- */
-async function openStripeOnboarding(): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
-    if (error || !data?.url) throw error ?? new Error('no url');
-    await Linking.openURL(data.url as string);
-    return true;
-  } catch (error) {
-    Logger.error('Failed to open Stripe onboarding from push', error as Error);
-    return false;
-  }
-}
+// cannot drift.
 
 /**
  * Check if we're running on a physical device (vs simulator/emulator)
@@ -426,32 +405,6 @@ export function usePushNotifications(
           requestId: data.requestId,
           type: notificationType,
         });
-      }
-    }
-
-    // Handle Stripe JIT payouts notifications
-    if (notificationType) {
-      const isPayoutsNotification = PAYOUTS_NOTIFICATION_TYPES.includes(
-        notificationType as (typeof PAYOUTS_NOTIFICATION_TYPES)[number]
-      );
-
-      if (isPayoutsNotification) {
-        Logger.logUserAction('push_notification_deep_link', {
-          type: notificationType,
-        });
-
-        // Only `payouts_setup_required` has an actionable deep-link: open
-        // hosted onboarding so the host can finish setup. The rest are
-        // informational; tapping them just opens the app (no navigation).
-        if (notificationType === 'payouts_setup_required') {
-          // Fire-and-forget; if onboarding fails, fall back to the user
-          // profile screen so the host can retry from settings.
-          void openStripeOnboarding().then(success => {
-            if (!success) {
-              navigateToUserProfileFromOutside();
-            }
-          });
-        }
       }
     }
 

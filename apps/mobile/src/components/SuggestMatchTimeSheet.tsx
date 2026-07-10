@@ -98,8 +98,7 @@ export function SuggestMatchTimeActionSheet(props: SheetProps<'suggest-match-tim
   const currentTimeHHMM = (payload?.currentStartTime ?? '').slice(0, 5);
   const sameAsCurrent = selectedTime === currentTimeHHMM;
 
-  // Theme tokens for the Button shared-component's themeColors prop. Matches
-  // the convention used in ChoosePayoutsSheet.tsx.
+  // Theme tokens for the Button shared-component's themeColors prop.
   const buttonThemeColors = useMemo(
     () => ({
       primary: colors.primary,

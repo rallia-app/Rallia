@@ -426,7 +426,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
 
           if (data?.onboarding_completed) {
             successHaptic();
-            toast.success(t('profile.payments.connectedToast'));
+            toast.success(t('tournamentDetail.payments.payoutsConnectedToast'));
           } else if (attempts < 5) {
             setTimeout(() => checkOnboarding(attempts + 1), 2000);
           }

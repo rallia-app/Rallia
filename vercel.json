@@ -3,11 +3,5 @@
   "installCommand": "npm install && npm rebuild lightningcss",
   "buildCommand": "npm run build --workspace=@rallia/web",
   "outputDirectory": "apps/web/.next",
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/crons/pending-transfer-reconciler",
-      "schedule": "0 2 * * *"
-    }
-  ]
+  "framework": "nextjs"
 }

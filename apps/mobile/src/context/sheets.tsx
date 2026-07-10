@@ -108,8 +108,6 @@ import {
   CovetedPlayerExplainerActionSheet,
   FoundingMemberExplainerActionSheet,
 } from '#/components/explainers';
-// Reimbursement sheets
-import { ChoosePayoutsActionSheet } from '#/components/ChoosePayoutsSheet';
 // Summer League announcement
 import { SummerLeagueAnnouncementActionSheet } from '#/features/summer-league/SummerLeagueAnnouncementSheet';
 // Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
@@ -857,12 +855,6 @@ declare module 'react-native-actions-sheet' {
     'founding-member-explainer': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
-    'choose-payouts': SheetDefinition<{
-      payload: {
-        onChoose?: (choice: 'auto' | 'manual_only') => void;
-        onLater?: () => void;
-      };
-    }>;
     'match-suggestions': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
@@ -1001,8 +993,6 @@ export const Sheets = () => {
         'reputation-explainer': ReputationExplainerActionSheet,
         'coveted-player-explainer': CovetedPlayerExplainerActionSheet,
         'founding-member-explainer': FoundingMemberExplainerActionSheet,
-        // Reimbursement sheets
-        'choose-payouts': ChoosePayoutsActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
         'suggest-match-time': SuggestMatchTimeActionSheet,

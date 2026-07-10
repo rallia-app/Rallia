@@ -4895,75 +4895,6 @@ export type Database = {
           },
         ]
       }
-      pending_host_transfer: {
-        Row: {
-          amount_cents: number
-          created_at: string
-          currency: string
-          expires_at: string
-          host_player_id: string
-          id: string
-          match_participant_id: string
-          refunded_at: string | null
-          refunded_refund_id: string | null
-          released_at: string | null
-          released_transfer_id: string | null
-          status: string
-          stripe_charge_id: string
-          stripe_payment_intent_id: string
-          updated_at: string
-        }
-        Insert: {
-          amount_cents: number
-          created_at?: string
-          currency?: string
-          expires_at: string
-          host_player_id: string
-          id?: string
-          match_participant_id: string
-          refunded_at?: string | null
-          refunded_refund_id?: string | null
-          released_at?: string | null
-          released_transfer_id?: string | null
-          status?: string
-          stripe_charge_id: string
-          stripe_payment_intent_id: string
-          updated_at?: string
-        }
-        Update: {
-          amount_cents?: number
-          created_at?: string
-          currency?: string
-          expires_at?: string
-          host_player_id?: string
-          id?: string
-          match_participant_id?: string
-          refunded_at?: string | null
-          refunded_refund_id?: string | null
-          released_at?: string | null
-          released_transfer_id?: string | null
-          status?: string
-          stripe_charge_id?: string
-          stripe_payment_intent_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pending_host_transfer_host_player_id_fkey"
-            columns: ["host_player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pending_host_transfer_match_participant_id_fkey"
-            columns: ["match_participant_id"]
-            isOneToOne: true
-            referencedRelation: "match_participant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_service_fee_default: {
         Row: {
           cap_cents: number
@@ -5086,7 +5017,6 @@ export type Database = {
           notification_messages: boolean | null
           notification_reminders: boolean | null
           notifications_seen_at: string
-          payouts_mode: string
           playing_hand: Database["public"]["Enums"]["playing_hand"] | null
           postal_code: string | null
           privacy_show_age: boolean | null
@@ -5117,7 +5047,6 @@ export type Database = {
           notification_messages?: boolean | null
           notification_reminders?: boolean | null
           notifications_seen_at?: string
-          payouts_mode?: string
           playing_hand?: Database["public"]["Enums"]["playing_hand"] | null
           postal_code?: string | null
           privacy_show_age?: boolean | null
@@ -5148,7 +5077,6 @@ export type Database = {
           notification_messages?: boolean | null
           notification_reminders?: boolean | null
           notifications_seen_at?: string
-          payouts_mode?: string
           playing_hand?: Database["public"]["Enums"]["playing_hand"] | null
           postal_code?: string | null
           privacy_show_age?: boolean | null
