@@ -106,6 +106,8 @@ The `cancelled` state was missing from the V1 spec; it is now a first-class stat
 
 Tightening `min_rating`/`max_rating` after registrations exist requires the organizer to either grandfather affected registrations or disqualify them with notice.
 
+**App-side freeze once out of draft (co-founder direction):** the mobile edit wizard treats `name`, `description` and `min_rating` as the tournament's identity — the terms registrants signed up under — and locks them (read-only) the moment the tournament leaves `draft`. Logo, rules, visibility, dates, location and prize stay editable per the matrix above. The `tournament_update` RPC still technically permits `name`/`description` edits in later states (kept for admin/support), so this is currently a client-side rule, not a server gate.
+
 ## Registration
 
 ### Modes
@@ -123,6 +125,7 @@ In addition to the modes above, the organizer can mint **tokenized invite links*
 - Is a single row in `tournament_invite_links` with a 32-char URL-safe `token`.
 - Has an optional `max_uses` and `expires_at`.
 - Bypasses `registration_mode` — anyone with a valid link is treated as if they were invited (status `registered` immediately on use, even when the tournament's registration mode is `approval`).
+- **Stays active until the bracket is published** (co-founder direction): the link admits new players through both `registration_open` and `registration_closed`, and only stops once the bracket is generated (`bracket_locked_at IS NOT NULL` → status `in_progress`). Closing registration ends public self-registration but not link-based late entry, so an organizer can hand-pick stragglers by link right up to bracket publication. `tournament_join_via_invite` enforces this window; the free/self-serve `tournament_register` still closes with the registration window.
 - Can be revoked at any time by setting `revoked_at`.
 - Has a label so the organizer can rotate links per audience ("Friends list", "Tennis Canada members", etc.) and revoke selectively.
 

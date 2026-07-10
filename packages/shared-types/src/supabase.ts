@@ -2645,6 +2645,7 @@ export type Database = {
           entry_cents: number
           expires_at: string | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_tax_cents: number
           id: string
           organizer_amount_cents: number
           organizer_id: string
@@ -2661,6 +2662,7 @@ export type Database = {
           stripe_charge_id: string | null
           stripe_customer_id: string | null
           stripe_payment_intent_id: string | null
+          stripe_payout_id: string | null
           tournament_registration_id: string | null
           updated_at: string
           version: number
@@ -2672,6 +2674,7 @@ export type Database = {
           entry_cents: number
           expires_at?: string | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_tax_cents?: number
           id?: string
           organizer_amount_cents: number
           organizer_id: string
@@ -2688,6 +2691,7 @@ export type Database = {
           stripe_charge_id?: string | null
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
+          stripe_payout_id?: string | null
           tournament_registration_id?: string | null
           updated_at?: string
           version?: number
@@ -2699,6 +2703,7 @@ export type Database = {
           entry_cents?: number
           expires_at?: string | null
           fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_tax_cents?: number
           id?: string
           organizer_amount_cents?: number
           organizer_id?: string
@@ -2715,6 +2720,7 @@ export type Database = {
           stripe_charge_id?: string | null
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
+          stripe_payout_id?: string | null
           tournament_registration_id?: string | null
           updated_at?: string
           version?: number
@@ -9518,6 +9524,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      compute_fee_tax_cents: { Args: { p_fee_cents: number }; Returns: number }
       compute_service_fee_cents: {
         Args: {
           p_cap_cents: number
@@ -9530,6 +9537,23 @@ export type Database = {
       confirm_match_score: {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
+      }
+      count_auto_invite_candidates_for_slot: {
+        Args: {
+          p_end_time: string
+          p_expectation?: Database["public"]["Enums"]["match_type_enum"]
+          p_facility_id: string
+          p_gender?: Database["public"]["Enums"]["gender_enum"]
+          p_host_id: string
+          p_match_date: string
+          p_sport_id: string
+          p_start_time: string
+        }
+        Returns: number
+      }
+      count_checkin_window_committed_matches: {
+        Args: { p_player_id: string; p_today: string }
+        Returns: number
       }
       count_current_level_proofs: {
         Args: { p_player_rating_score_id: string }
@@ -11827,6 +11851,7 @@ export type Database = {
       plan_weekly_matches_for_player: {
         Args: { p_goal_override?: number; p_player_id: string; p_slots: Json }
         Returns: {
+          compatible_count: number
           court_status: string
           duration: Database["public"]["Enums"]["match_duration_enum"]
           end_time: string
@@ -12956,6 +12981,7 @@ export type Database = {
           currency: string
           entry_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_tax_cents: number
           organizer_amount_cents: number
           organizer_id: string
           organizer_onboarded: boolean
@@ -13186,6 +13212,7 @@ export type Database = {
           currency: string
           entry_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_tax_cents: number
           organizer_receives_cents: number
           refund_cutoff_at: string
           refund_partial_bps: number
@@ -13281,35 +13308,65 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
-      tournament_join_via_invite: {
-        Args: { p_partner_id?: string; p_token: string }
-        Returns: {
-          approved_at: string | null
-          approved_by: string | null
-          bracket_position: number | null
-          created_at: string
-          id: string
-          invited_by: string | null
-          notes: string | null
-          partner_user_id: string | null
-          partnership_id: string | null
-          registered_at: string
-          seed_rank: number | null
-          self_declared_rank: number | null
-          status: Database["public"]["Enums"]["registration_status"]
-          tournament_id: string
-          updated_at: string
-          user_id: string
-          version: number
-          withdrawn_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "tournament_registrations"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      tournament_join_via_invite:
+        | {
+            Args: { p_token: string }
+            Returns: {
+              approved_at: string | null
+              approved_by: string | null
+              bracket_position: number | null
+              created_at: string
+              id: string
+              invited_by: string | null
+              notes: string | null
+              partner_user_id: string | null
+              partnership_id: string | null
+              registered_at: string
+              seed_rank: number | null
+              self_declared_rank: number | null
+              status: Database["public"]["Enums"]["registration_status"]
+              tournament_id: string
+              updated_at: string
+              user_id: string
+              version: number
+              withdrawn_at: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "tournament_registrations"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { p_partner_id?: string; p_token: string }
+            Returns: {
+              approved_at: string | null
+              approved_by: string | null
+              bracket_position: number | null
+              created_at: string
+              id: string
+              invited_by: string | null
+              notes: string | null
+              partner_user_id: string | null
+              partnership_id: string | null
+              registered_at: string
+              seed_rank: number | null
+              self_declared_rank: number | null
+              status: Database["public"]["Enums"]["registration_status"]
+              tournament_id: string
+              updated_at: string
+              user_id: string
+              version: number
+              withdrawn_at: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "tournament_registrations"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       tournament_open_registration: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {

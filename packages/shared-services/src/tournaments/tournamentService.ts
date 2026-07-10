@@ -727,6 +727,8 @@ export async function registerForTournament(
 export interface TournamentFeeQuote {
   entryCents: number;
   serviceFeeCents: number;
+  /** GST/QST on the service fee (Rallia remits). */
+  feeTaxCents: number;
   /** What the player is charged. */
   totalCents: number;
   organizerReceivesCents: number;
@@ -754,6 +756,7 @@ export async function getTournamentFeeQuote(
   return {
     entryCents: row.entry_cents,
     serviceFeeCents: row.service_fee_cents,
+    feeTaxCents: row.fee_tax_cents,
     totalCents: row.total_cents,
     organizerReceivesCents: row.organizer_receives_cents,
     feePayer: row.fee_payer,
@@ -778,6 +781,7 @@ export interface RegistrationPaymentIntent {
   paymentId: string;
   entryCents: number;
   serviceFeeCents: number;
+  feeTaxCents: number;
   amountChargedCents: number;
   currency: string;
 }
@@ -819,6 +823,7 @@ export async function createTournamentRegistrationPayment(
     paymentId: data.paymentId,
     entryCents: data.entryCents,
     serviceFeeCents: data.serviceFeeCents,
+    feeTaxCents: data.feeTaxCents,
     amountChargedCents: data.amountChargedCents,
     currency: data.currency,
   };

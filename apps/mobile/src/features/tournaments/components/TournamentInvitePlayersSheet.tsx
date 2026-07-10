@@ -52,14 +52,15 @@ export function TournamentInvitePlayersActionSheet({
   const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState<Map<string, PickerRow>>(new Map());
 
-  const showingSearch = searchQuery.length >= 2;
+  // Browse-first (mirrors the games invite flow): the search runs with an empty
+  // query too, so an initial list of players is shown before the organizer types.
   const { players, isLoading: isSearching } = usePlayerSearch({
     sportId,
     currentUserId,
     searchQuery,
     excludePlayerIds: excludeUserIds,
     pageSize: 20,
-    enabled: !!sportId && !!currentUserId && showingSearch,
+    enabled: !!sportId && !!currentUserId,
   });
 
   const invite = useInviteTournamentPlayers({
@@ -167,14 +168,7 @@ export function TournamentInvitePlayersActionSheet({
           testID="invite-search-input"
         />
 
-        {!showingSearch ? (
-          <View style={styles.stateContainer}>
-            <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-              {t('tournamentDetail.invitePlayers.searchHint')}
-            </Text>
-          </View>
-        ) : isSearching ? (
+        {isSearching ? (
           <View style={styles.stateContainer}>
             <ActivityIndicator color={colors.primary} />
           </View>

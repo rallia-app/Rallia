@@ -2,6 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 
 import {
   computeServiceFeeCents,
+  computeFeeTaxCents,
   quoteRegistration,
   DEFAULT_SERVICE_FEE_PARAMS,
 } from './serviceFee';
@@ -42,31 +43,57 @@ describe('computeServiceFeeCents (defaults 6% + $1.50, $20 cap)', () => {
   });
 });
 
+describe('computeFeeTaxCents (GST+QST 14.975%)', () => {
+  it.each([
+    ['no fee', 0, 0],
+    ['$1.53 fee', 153, 23],
+    ['$4.50 fee', 450, 67],
+    ['$7.50 fee', 750, 112],
+    ['$20 cap fee', 2000, 300],
+  ])('%s → %i¢ fee yields %i¢ tax', (_label, fee, expected) => {
+    expect(computeFeeTaxCents(fee)).toBe(expected);
+  });
+
+  it('half-up rounding matches SQL ROUND (fee where tax lands on .5)', () => {
+    // 1002 × 0.14975 = 150.0495 → 150; 1005 × 0.14975 = 150.499875 → 150; 1006 → 150.6485 → 151.
+    expect(computeFeeTaxCents(1002)).toBe(150);
+    expect(computeFeeTaxCents(1006)).toBe(151);
+  });
+
+  it('treats negative / garbage fee as zero', () => {
+    expect(computeFeeTaxCents(-100)).toBe(0);
+    expect(computeFeeTaxCents(NaN)).toBe(0);
+  });
+});
+
 describe('quoteRegistration', () => {
-  it('player_pays: fee on top, organizer gets full entry ($50 → $54.50 / $50)', () => {
+  it('player_pays: fee + tax on top, organizer gets full entry ($50 → $55.17 / $50)', () => {
     expect(quoteRegistration(5000, 'player_pays')).toEqual({
       entryCents: 5000,
       serviceFeeCents: 450,
-      totalCents: 5450,
+      feeTaxCents: 67,
+      totalCents: 5517,
       organizerReceivesCents: 5000,
       feePayer: 'player_pays',
     });
   });
 
-  it('organizer_absorbs: player pays entry, fee netted out ($50 → $50 / $45.50)', () => {
+  it('organizer_absorbs: player pays entry, fee + tax netted out ($50 → $50 / $44.83)', () => {
     expect(quoteRegistration(5000, 'organizer_absorbs')).toEqual({
       entryCents: 5000,
       serviceFeeCents: 450,
+      feeTaxCents: 67,
       totalCents: 5000,
-      organizerReceivesCents: 4550,
+      organizerReceivesCents: 4483,
       feePayer: 'organizer_absorbs',
     });
   });
 
-  it('free event: no fee, no charge, in either mode', () => {
+  it('free event: no fee, no tax, no charge, in either mode', () => {
     for (const payer of ['player_pays', 'organizer_absorbs'] as const) {
       expect(quoteRegistration(0, payer)).toMatchObject({
         serviceFeeCents: 0,
+        feeTaxCents: 0,
         totalCents: 0,
         organizerReceivesCents: 0,
       });

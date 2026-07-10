@@ -31,7 +31,14 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -73,16 +80,39 @@ import { SearchBar } from '../../../components/SearchBar';
 import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
-const TOTAL_STEPS = 5;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TOTAL_STEPS = 4;
 const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number];
+
+function startOfLocalDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function todayAtLocalMidnight(): Date {
+  return startOfLocalDay(new Date());
+}
+
+/** Avoid iOS clamping to one day when max precedes min (timezone drift on ISO dates). */
+function coerceDateRange(
+  minimumDate?: Date,
+  maximumDate?: Date
+): { minimumDate?: Date; maximumDate?: Date } {
+  const min = minimumDate ? startOfLocalDay(minimumDate) : undefined;
+  const max = maximumDate ? startOfLocalDay(maximumDate) : undefined;
+  if (min && max && max < min) {
+    return { minimumDate: min, maximumDate: undefined };
+  }
+  return { minimumDate: min, maximumDate: max };
+}
 
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>; // V1: private/public only
 type RegistrationMode = Enums<'tournament_registration_mode'>;
 type MatchFormat = Enums<'match_format'>;
 type EntryFormat = Enums<'entry_format'>;
 type FeePayer = Enums<'fee_payer_enum'>;
-type PayoutTiming = Enums<'payout_timing_enum'>;
 type RefundKind = Enums<'refund_policy_kind_enum'>;
 
 const FEE_CURRENCY = 'CAD';
@@ -134,13 +164,7 @@ const MATCH_FORMAT_KEYS: Record<MatchFormat, { label: string; hint: string }> = 
 const formatOptionsForSport = (sportName: string | undefined): readonly MatchFormat[] =>
   sportName === 'pickleball' ? PICKLEBALL_FORMATS : TENNIS_FORMATS;
 
-const STEP_ANALYTICS_NAMES = [
-  'basics',
-  'format',
-  'schedule',
-  'rules_visibility',
-  'payments',
-] as const;
+const STEP_ANALYTICS_NAMES = ['basics', 'format', 'rules_visibility', 'payments'] as const;
 
 const defaultFormatForSport = (sportName: string | undefined): MatchFormat =>
   sportName === 'pickleball' ? 'pickleball_to_11' : 'two_of_three';
@@ -192,7 +216,6 @@ export interface TournamentEditData {
   entryFeeCents: number;
   currency: string;
   feePayer: FeePayer;
-  payoutTiming: PayoutTiming;
   refundPolicyKind: RefundKind;
   refundPartialBps: number | null;
   refundCutoffAt: string | null;
@@ -284,14 +307,23 @@ const ProgressBar: React.FC<{
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
 }> = ({ currentStep, colors, t }) => {
-  const pct = (currentStep / TOTAL_STEPS) * 100;
+  const progress = useSharedValue((currentStep / TOTAL_STEPS) * 100);
   const stepNames = [
     t('tournamentCreation.stepNames.basics' as TranslationKey),
     t('tournamentCreation.stepNames.format' as TranslationKey),
-    t('tournamentCreation.stepNames.schedule' as TranslationKey),
     t('tournamentCreation.stepNames.rulesVisibility' as TranslationKey),
     t('tournamentCreation.stepNames.payments' as TranslationKey),
   ];
+
+  useEffect(() => {
+    progress.value = withTiming((currentStep / TOTAL_STEPS) * 100, { duration: 300 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep]);
+
+  const animatedProgressStyle = useAnimatedStyle(() => ({
+    width: `${progress.value}%`,
+  }));
+
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
@@ -305,10 +337,11 @@ const ProgressBar: React.FC<{
         </Text>
       </View>
       <View style={[styles.progressBarBg, { backgroundColor: colors.progressInactive }]}>
-        <View
+        <Animated.View
           style={[
             styles.progressBarFill,
-            { backgroundColor: colors.progressActive, width: `${pct}%` },
+            { backgroundColor: colors.progressActive },
+            animatedProgressStyle,
           ]}
         />
       </View>
@@ -413,21 +446,47 @@ const DateField: React.FC<{
   onPress: () => void;
   placeholder: string;
   error?: string;
+  hint?: string;
+  nested?: boolean;
+  compact?: boolean;
   colors: ThemeColors;
   locale: string;
   testID?: string;
-}> = ({ label, date, onPress, placeholder, error, colors, locale, testID }) => {
+}> = ({
+  label,
+  date,
+  onPress,
+  placeholder,
+  error,
+  hint,
+  nested,
+  compact,
+  colors,
+  locale,
+  testID,
+}) => {
   const formatted = date
-    ? date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })
+    ? date.toLocaleDateString(
+        locale,
+        compact
+          ? { month: 'short', day: 'numeric', year: '2-digit' }
+          : { year: 'numeric', month: 'short', day: 'numeric' }
+      )
     : placeholder;
+  const containerStyle = compact
+    ? styles.dateRowField
+    : nested
+      ? styles.fieldSubGroup
+      : styles.fieldGroup;
   return (
-    <View style={styles.fieldGroup}>
+    <View style={containerStyle}>
       <FieldLabel colors={colors}>{label}</FieldLabel>
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
         style={[
           styles.dateButton,
+          compact && styles.dateButtonCompact,
           {
             backgroundColor: colors.inputBackground,
             borderColor: error ? colors.error : colors.inputBorder,
@@ -436,17 +495,114 @@ const DateField: React.FC<{
         accessibilityRole="button"
         testID={testID}
       >
-        <Text size="base" color={date ? colors.text : colors.textMuted}>
+        <Text
+          size={compact ? 'sm' : 'base'}
+          color={date ? colors.text : colors.textMuted}
+          numberOfLines={1}
+        >
           {formatted}
         </Text>
-        <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
+        <Ionicons name="calendar-outline" size={compact ? 18 : 20} color={colors.textMuted} />
       </TouchableOpacity>
+      {hint && (
+        <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+          {hint}
+        </Text>
+      )}
       {error && (
         <Text size="xs" color={colors.error} style={styles.errorText}>
           {error}
         </Text>
       )}
     </View>
+  );
+};
+
+const TournamentDatePickerSheet: React.FC<{
+  visible: boolean;
+  value: Date;
+  onChangeValue: (date: Date) => void;
+  onCommit: (date: Date) => void;
+  onDismiss: () => void;
+  minimumDate?: Date;
+  maximumDate?: Date;
+  isDark: boolean;
+  colors: ThemeColors;
+  t: (k: TranslationKey) => string;
+  doneTestID?: string;
+}> = ({
+  visible,
+  value,
+  onChangeValue,
+  onCommit,
+  onDismiss,
+  minimumDate,
+  maximumDate,
+  isDark,
+  colors,
+  t,
+  doneTestID,
+}) => {
+  const range = coerceDateRange(minimumDate, maximumDate);
+
+  const handleChange = useCallback(
+    (_event: unknown, selected?: Date) => {
+      if (Platform.OS === 'android') {
+        onDismiss();
+        if (selected) onCommit(startOfLocalDay(selected));
+        return;
+      }
+      if (selected) onChangeValue(startOfLocalDay(selected));
+    },
+    [onChangeValue, onCommit, onDismiss]
+  );
+
+  if (Platform.OS === 'ios') {
+    return (
+      <Modal visible={visible} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}>
+            {visible && (
+              <DateTimePicker
+                value={value}
+                mode="date"
+                display="spinner"
+                minimumDate={range.minimumDate}
+                maximumDate={range.maximumDate}
+                onChange={handleChange}
+                themeVariant={isDark ? 'dark' : 'light'}
+              />
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                onCommit(value);
+                onDismiss();
+              }}
+              style={[styles.modalDoneButton, { backgroundColor: colors.buttonActive }]}
+              accessibilityRole="button"
+              testID={doneTestID}
+            >
+              <Text size="base" weight="semibold" color={colors.buttonTextActive}>
+                {t('common.done' as TranslationKey)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  if (!visible) return null;
+
+  return (
+    <DateTimePicker
+      value={value}
+      mode="date"
+      display="default"
+      minimumDate={range.minimumDate}
+      maximumDate={range.maximumDate}
+      onChange={handleChange}
+    />
   );
 };
 
@@ -494,6 +650,9 @@ const LocationSection: React.FC<{
   error,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    setSearchQuery('');
+  }, [mode]);
   const { facilities, isLoading } = useFacilitySearch({
     sportIds: sportId ? [sportId] : undefined,
     latitude,
@@ -665,7 +824,7 @@ const LocationSection: React.FC<{
 };
 
 const DetailsStep: React.FC<{
-  /** Which form step to render: 1 Basics, 2 Format, 3 Schedule. */
+  /** Which form step to render: 1 Basics, 2 Format. */
   step: number;
   name: string;
   setName: (v: string) => void;
@@ -680,8 +839,6 @@ const DetailsStep: React.FC<{
     skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
     id: string;
   }[];
-  /** The caller's own rating score id — badges their tier in the picker. */
-  playerRatingScoreId: string | null;
   /** Location capture, rendered on step 1 only. */
   location: React.ComponentProps<typeof LocationSection>;
   /** Poster/logo is edit-only too (uploaded to the tournament-logos bucket). */
@@ -720,7 +877,6 @@ const DetailsStep: React.FC<{
   minRating,
   setMinRating,
   ratingOptions,
-  playerRatingScoreId,
   location,
   logoUrl,
   posterUploading,
@@ -749,60 +905,50 @@ const DetailsStep: React.FC<{
   const [pickerOpen, setPickerOpen] = useState<'start' | 'end' | null>(null);
   // Tracks the value the spinner currently shows, so "Done" commits it even
   // when the user never scrolls (iOS onChange only fires on an actual change).
-  const [pickerValue, setPickerValue] = useState<Date>(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-  const minimumDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+  const [pickerValue, setPickerValue] = useState<Date>(() => todayAtLocalMidnight());
 
   const openPicker = useCallback(
     (which: 'start' | 'end') => {
+      const today = todayAtLocalMidnight();
       const seed =
-        which === 'start' ? (startDate ?? minimumDate) : (endDate ?? startDate ?? minimumDate);
+        which === 'start'
+          ? startDate
+            ? startOfLocalDay(startDate)
+            : today
+          : endDate
+            ? startOfLocalDay(endDate)
+            : startDate
+              ? startOfLocalDay(startDate)
+              : today;
       setPickerValue(seed);
       setPickerOpen(which);
     },
-    [startDate, endDate, minimumDate]
+    [startDate, endDate]
   );
 
   const commitDate = useCallback(
     (which: 'start' | 'end', value: Date) => {
-      if (which === 'start') setStartDate(value);
-      else setEndDate(value);
+      const normalized = startOfLocalDay(value);
+      if (which === 'start') setStartDate(normalized);
+      else setEndDate(normalized);
     },
     [setStartDate, setEndDate]
   );
 
-  const onChange = useCallback(
-    (_event: unknown, selected?: Date) => {
-      // Android's default picker has no "Done" — commit and close on change.
-      if (Platform.OS === 'android') {
-        setPickerOpen(null);
-        if (selected && pickerOpen) commitDate(pickerOpen, selected);
-        return;
-      }
-      if (selected) setPickerValue(selected);
-    },
-    [pickerOpen, commitDate]
-  );
+  const pickerMinimumDate = useMemo(() => {
+    if (pickerOpen === 'end' && startDate) return startOfLocalDay(startDate);
+    if (isEditMode) return undefined;
+    return todayAtLocalMidnight();
+  }, [pickerOpen, startDate, isEditMode]);
 
   const stepTitle =
     step === 2
       ? t('tournamentCreation.step2Title' as TranslationKey)
-      : step === 3
-        ? t('tournamentCreation.step3Title' as TranslationKey)
-        : t('tournamentCreation.step1Title' as TranslationKey);
+      : t('tournamentCreation.step1Title' as TranslationKey);
   const stepDescription =
     step === 2
       ? t('tournamentCreation.step2Description' as TranslationKey)
-      : step === 3
-        ? t('tournamentCreation.step3Description' as TranslationKey)
-        : t('tournamentCreation.step1Description' as TranslationKey);
+      : t('tournamentCreation.step1Description' as TranslationKey);
 
   return (
     <SheetScrollView
@@ -823,60 +969,6 @@ const DetailsStep: React.FC<{
 
       {step === 1 && (
         <>
-          <View style={styles.fieldGroup}>
-            <FieldLabel colors={colors}>
-              {t('tournamentCreation.fields.name' as TranslationKey)}
-            </FieldLabel>
-            <TextInput
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: errors.name ? colors.error : colors.inputBorder,
-                  color: colors.text,
-                },
-              ]}
-              placeholder={t('tournamentCreation.fields.namePlaceholder' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
-              value={name}
-              onChangeText={setName}
-              maxLength={100}
-              autoCapitalize="sentences"
-              autoCorrect={false}
-              returnKeyType="done"
-              testID="tournament-name-input"
-            />
-            {errors.name && (
-              <Text size="xs" color={colors.error} style={styles.errorText}>
-                {errors.name}
-              </Text>
-            )}
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <FieldLabel colors={colors}>
-              {t('tournamentCreation.fields.description' as TranslationKey)}
-            </FieldLabel>
-            <TextInput
-              style={[
-                styles.textInput,
-                styles.textArea,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                },
-              ]}
-              placeholder={t('tournamentCreation.fields.descriptionPlaceholder' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
-              value={description}
-              onChangeText={setDescription}
-              maxLength={500}
-              multiline
-              autoCapitalize="sentences"
-            />
-          </View>
-
           <View style={styles.fieldGroup}>
             <FieldLabel colors={colors}>
               {t('tournamentCreation.fields.poster' as TranslationKey)}
@@ -939,236 +1031,259 @@ const DetailsStep: React.FC<{
             )}
           </View>
 
+          <View style={styles.fieldGroup}>
+            <FieldLabel colors={colors}>
+              {t('tournamentCreation.fields.name' as TranslationKey)}
+            </FieldLabel>
+            <TextInput
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: errors.name ? colors.error : colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
+              placeholder={t('tournamentCreation.fields.namePlaceholder' as TranslationKey)}
+              placeholderTextColor={colors.textMuted}
+              value={name}
+              onChangeText={setName}
+              maxLength={100}
+              autoCapitalize="sentences"
+              autoCorrect={false}
+              returnKeyType="done"
+              testID="tournament-name-input"
+            />
+            {errors.name && (
+              <Text size="xs" color={colors.error} style={styles.errorText}>
+                {errors.name}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <FieldLabel colors={colors}>
+              {t('tournamentCreation.fields.description' as TranslationKey)}
+            </FieldLabel>
+            <TextInput
+              style={[
+                styles.textInput,
+                styles.textArea,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
+              placeholder={t('tournamentCreation.fields.descriptionPlaceholder' as TranslationKey)}
+              placeholderTextColor={colors.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              maxLength={500}
+              multiline
+              autoCapitalize="sentences"
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <View style={styles.dateRow}>
+              <DateField
+                compact
+                label={t('tournamentCreation.fields.startDate' as TranslationKey)}
+                date={startDate}
+                onPress={() => openPicker('start')}
+                placeholder={t('tournamentCreation.fields.startDatePlaceholder' as TranslationKey)}
+                error={errors.startDate}
+                colors={colors}
+                locale={locale}
+                testID="tournament-start-date"
+              />
+              <DateField
+                compact
+                label={t('tournamentCreation.fields.endDate' as TranslationKey)}
+                date={endDate}
+                onPress={() => openPicker('end')}
+                placeholder={t('tournamentCreation.fields.endDatePlaceholder' as TranslationKey)}
+                error={errors.endDate}
+                colors={colors}
+                locale={locale}
+                testID="tournament-end-date"
+              />
+            </View>
+          </View>
+
+          <TournamentDatePickerSheet
+            visible={pickerOpen !== null}
+            value={pickerValue}
+            onChangeValue={setPickerValue}
+            onCommit={date => {
+              if (pickerOpen) commitDate(pickerOpen, date);
+            }}
+            onDismiss={() => setPickerOpen(null)}
+            minimumDate={pickerMinimumDate}
+            isDark={isDark}
+            colors={colors}
+            t={t}
+            doneTestID="tournament-date-done"
+          />
+
           <LocationSection {...location} />
         </>
       )}
 
-      {step === 2 && canEditStructure && (
+      {step === 2 && (
         <>
-          {canPickEntryFormat && (
-            <View style={styles.fieldGroup}>
-              <FieldLabel colors={colors}>
-                {t('tournamentCreation.fields.entryFormat' as TranslationKey)}
-              </FieldLabel>
-              <View style={styles.optionsRow}>
-                {ENTRY_FORMATS.map(format => {
-                  const selected = format === entryFormat;
-                  return (
-                    <TouchableOpacity
-                      key={format}
-                      testID={`entry-format-${format}`}
-                      onPress={() => {
-                        lightHaptic();
-                        setEntryFormat(format);
-                      }}
-                      activeOpacity={0.7}
-                      style={[
-                        styles.bracketChip,
-                        {
-                          backgroundColor: selected
-                            ? `${colors.buttonActive}15`
-                            : colors.buttonInactive,
-                          borderColor: selected ? colors.buttonActive : colors.border,
-                        },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                    >
-                      <Text
-                        size="base"
-                        weight={selected ? 'semibold' : 'regular'}
-                        color={selected ? colors.buttonActive : colors.text}
-                      >
-                        {t(ENTRY_FORMAT_KEYS[format] as TranslationKey)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {entryFormat !== 'singles' && (
-                <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-                  {t('tournamentCreation.fields.entryFormatDoublesHint' as TranslationKey)}
-                </Text>
+          {canEditStructure ? (
+            <>
+              {canPickEntryFormat && (
+                <View style={styles.fieldGroup}>
+                  <FieldLabel colors={colors}>
+                    {t('tournamentCreation.fields.entryFormat' as TranslationKey)}
+                  </FieldLabel>
+                  <View style={styles.optionsRow}>
+                    {ENTRY_FORMATS.map(format => {
+                      const selected = format === entryFormat;
+                      return (
+                        <TouchableOpacity
+                          key={format}
+                          testID={`entry-format-${format}`}
+                          onPress={() => {
+                            lightHaptic();
+                            setEntryFormat(format);
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.bracketChip,
+                            {
+                              backgroundColor: selected
+                                ? `${colors.buttonActive}15`
+                                : colors.buttonInactive,
+                              borderColor: selected ? colors.buttonActive : colors.border,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text
+                            size="base"
+                            weight={selected ? 'semibold' : 'regular'}
+                            color={selected ? colors.buttonActive : colors.text}
+                          >
+                            {t(ENTRY_FORMAT_KEYS[format] as TranslationKey)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  {entryFormat !== 'singles' && (
+                    <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                      {t('tournamentCreation.fields.entryFormatDoublesHint' as TranslationKey)}
+                    </Text>
+                  )}
+                </View>
               )}
+
+              <View style={styles.fieldGroup}>
+                <FieldLabel colors={colors}>
+                  {t(
+                    (entryFormat === 'singles'
+                      ? 'tournamentCreation.fields.maxParticipants'
+                      : 'tournamentCreation.fields.maxTeams') as TranslationKey
+                  )}
+                </FieldLabel>
+                <View style={styles.optionsRow}>
+                  {BRACKET_SIZES.map(n => {
+                    const selected = n === bracketSize;
+                    return (
+                      <TouchableOpacity
+                        key={n}
+                        onPress={() => {
+                          lightHaptic();
+                          setBracketSize(n);
+                        }}
+                        activeOpacity={0.7}
+                        style={[
+                          styles.bracketChip,
+                          {
+                            backgroundColor: selected
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: selected ? colors.buttonActive : colors.border,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text
+                          size="base"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.buttonActive : colors.text}
+                        >
+                          {n}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                  {t(
+                    (entryFormat === 'singles'
+                      ? 'tournamentCreation.fields.maxParticipantsHint'
+                      : 'tournamentCreation.fields.maxTeamsHint') as TranslationKey
+                  )}
+                </Text>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <FieldLabel colors={colors}>
+                  {t('tournamentCreation.fields.matchFormat' as TranslationKey)}
+                </FieldLabel>
+                <View style={styles.optionsRow}>
+                  {formatOptions.map(format => {
+                    const selected = format === matchFormat;
+                    return (
+                      <TouchableOpacity
+                        key={format}
+                        onPress={() => {
+                          lightHaptic();
+                          setMatchFormat(format);
+                        }}
+                        activeOpacity={0.7}
+                        style={[
+                          styles.bracketChip,
+                          {
+                            backgroundColor: selected
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: selected ? colors.buttonActive : colors.border,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text
+                          size="base"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.buttonActive : colors.text}
+                        >
+                          {t(MATCH_FORMAT_KEYS[format].label as TranslationKey)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                  {t(MATCH_FORMAT_KEYS[matchFormat].hint as TranslationKey)}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.fieldGroup}>
+              <Text size="xs" color={colors.textMuted}>
+                {t('tournamentDetail.editModal.draftOnlyHint' as TranslationKey)}
+              </Text>
             </View>
           )}
-
-          <View style={styles.fieldGroup}>
-            <FieldLabel colors={colors}>
-              {t(
-                (entryFormat === 'singles'
-                  ? 'tournamentCreation.fields.maxParticipants'
-                  : 'tournamentCreation.fields.maxTeams') as TranslationKey
-              )}
-            </FieldLabel>
-            <View style={styles.optionsRow}>
-              {BRACKET_SIZES.map(n => {
-                const selected = n === bracketSize;
-                return (
-                  <TouchableOpacity
-                    key={n}
-                    onPress={() => {
-                      lightHaptic();
-                      setBracketSize(n);
-                    }}
-                    activeOpacity={0.7}
-                    style={[
-                      styles.bracketChip,
-                      {
-                        backgroundColor: selected
-                          ? `${colors.buttonActive}15`
-                          : colors.buttonInactive,
-                        borderColor: selected ? colors.buttonActive : colors.border,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                  >
-                    <Text
-                      size="base"
-                      weight={selected ? 'semibold' : 'regular'}
-                      color={selected ? colors.buttonActive : colors.text}
-                    >
-                      {n}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-              {t(
-                (entryFormat === 'singles'
-                  ? 'tournamentCreation.fields.maxParticipantsHint'
-                  : 'tournamentCreation.fields.maxTeamsHint') as TranslationKey
-              )}
-            </Text>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <FieldLabel colors={colors}>
-              {t('tournamentCreation.fields.matchFormat' as TranslationKey)}
-            </FieldLabel>
-            <View style={styles.optionsRow}>
-              {formatOptions.map(format => {
-                const selected = format === matchFormat;
-                return (
-                  <TouchableOpacity
-                    key={format}
-                    onPress={() => {
-                      lightHaptic();
-                      setMatchFormat(format);
-                    }}
-                    activeOpacity={0.7}
-                    style={[
-                      styles.bracketChip,
-                      {
-                        backgroundColor: selected
-                          ? `${colors.buttonActive}15`
-                          : colors.buttonInactive,
-                        borderColor: selected ? colors.buttonActive : colors.border,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                  >
-                    <Text
-                      size="base"
-                      weight={selected ? 'semibold' : 'regular'}
-                      color={selected ? colors.buttonActive : colors.text}
-                    >
-                      {t(MATCH_FORMAT_KEYS[format].label as TranslationKey)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-              {t(MATCH_FORMAT_KEYS[matchFormat].hint as TranslationKey)}
-            </Text>
-          </View>
-        </>
-      )}
-
-      {step === 2 && !canEditStructure && (
-        <View style={styles.fieldGroup}>
-          <Text size="xs" color={colors.textMuted}>
-            {t('tournamentDetail.editModal.draftOnlyHint' as TranslationKey)}
-          </Text>
-        </View>
-      )}
-
-      {step === 3 && (
-        <>
-          <DateField
-            label={t('tournamentCreation.fields.startDate' as TranslationKey)}
-            date={startDate}
-            onPress={() => openPicker('start')}
-            placeholder={t('tournamentCreation.fields.startDatePlaceholder' as TranslationKey)}
-            error={errors.startDate}
-            colors={colors}
-            locale={locale}
-            testID="tournament-start-date"
-          />
-
-          <DateField
-            label={t('tournamentCreation.fields.endDate' as TranslationKey)}
-            date={endDate}
-            onPress={() => openPicker('end')}
-            placeholder={t('tournamentCreation.fields.endDatePlaceholder' as TranslationKey)}
-            error={errors.endDate}
-            colors={colors}
-            locale={locale}
-            testID="tournament-end-date"
-          />
-
-          {Platform.OS === 'ios' ? (
-            <Modal visible={pickerOpen !== null} transparent animationType="slide">
-              <View style={styles.modalBackdrop}>
-                <View style={[styles.modalSheet, { backgroundColor: colors.cardBackground }]}>
-                  {/* Mount the native picker only when a field is tapped. RN renders
-                  Modal children even while hidden, so an always-mounted
-                  DateTimePicker would stall every wizard open. */}
-                  {pickerOpen !== null && (
-                    <DateTimePicker
-                      value={pickerValue}
-                      mode="date"
-                      display="spinner"
-                      minimumDate={
-                        pickerOpen === 'end' && startDate
-                          ? startDate
-                          : isEditMode
-                            ? undefined
-                            : minimumDate
-                      }
-                      onChange={onChange}
-                      themeVariant={isDark ? 'dark' : 'light'}
-                    />
-                  )}
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (pickerOpen) commitDate(pickerOpen, pickerValue);
-                      setPickerOpen(null);
-                    }}
-                    style={[styles.modalDoneButton, { backgroundColor: colors.buttonActive }]}
-                    accessibilityRole="button"
-                    testID="tournament-date-done"
-                  >
-                    <Text size="base" weight="semibold" color={colors.buttonTextActive}>
-                      {t('common.done' as TranslationKey)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
-          ) : pickerOpen !== null ? (
-            <DateTimePicker
-              value={pickerValue}
-              mode="date"
-              display="default"
-              minimumDate={pickerOpen === 'end' && startDate ? startDate : minimumDate}
-              onChange={onChange}
-            />
-          ) : null}
 
           {ratingOptions.length > 0 && (
             <View style={styles.fieldGroup}>
@@ -1206,7 +1321,6 @@ const DetailsStep: React.FC<{
                 </TouchableOpacity>
                 {ratingOptions.map(opt => {
                   const selected = minRating === opt.value;
-                  const isPlayerRating = opt.id === playerRatingScoreId;
                   return (
                     <TouchableOpacity
                       key={opt.id}
@@ -1225,23 +1339,6 @@ const DetailsStep: React.FC<{
                         },
                       ]}
                     >
-                      {isPlayerRating && (
-                        <View
-                          style={[
-                            styles.yourRatingBadge,
-                            {
-                              backgroundColor: colors.buttonActive,
-                              borderColor: colors.cardBackground,
-                            },
-                          ]}
-                        >
-                          <Ionicons
-                            name="person-outline"
-                            size={10}
-                            color={colors.buttonTextActive}
-                          />
-                        </View>
-                      )}
                       <Text
                         size="base"
                         weight={selected ? 'bold' : 'semibold'}
@@ -1361,7 +1458,7 @@ const VisibilityStep: React.FC<{
 );
 
 // =============================================================================
-// PAYMENTS STEP (entry fee, who pays the service fee, payout timing, refunds)
+// PAYMENTS STEP (entry fee, who pays the service fee, refunds)
 // =============================================================================
 
 const PaymentsStep: React.FC<{
@@ -1369,8 +1466,6 @@ const PaymentsStep: React.FC<{
   setEntryFeeInput: (v: string) => void;
   feePayer: FeePayer;
   setFeePayer: (v: FeePayer) => void;
-  payoutTiming: PayoutTiming;
-  setPayoutTiming: (v: PayoutTiming) => void;
   refundKind: RefundKind;
   setRefundKind: (v: RefundKind) => void;
   refundPctInput: string;
@@ -1385,13 +1480,13 @@ const PaymentsStep: React.FC<{
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
   locale: string;
+  isDark: boolean;
+  isEditMode: boolean;
 }> = ({
   entryFeeInput,
   setEntryFeeInput,
   feePayer,
   setFeePayer,
-  payoutTiming,
-  setPayoutTiming,
   refundKind,
   setRefundKind,
   refundPctInput,
@@ -1406,13 +1501,37 @@ const PaymentsStep: React.FC<{
   colors,
   t,
   locale,
+  isDark,
+  isEditMode,
 }) => {
-  const [showCutoffPicker, setShowCutoffPicker] = useState(false);
+  const [cutoffPickerOpen, setCutoffPickerOpen] = useState(false);
+  const [cutoffPickerValue, setCutoffPickerValue] = useState<Date>(() => todayAtLocalMidnight());
+
+  const openCutoffPicker = useCallback(() => {
+    const today = todayAtLocalMidnight();
+    const seed = refundCutoff
+      ? startOfLocalDay(refundCutoff)
+      : startDate
+        ? startOfLocalDay(startDate)
+        : today;
+    setCutoffPickerValue(seed);
+    setCutoffPickerOpen(true);
+  }, [refundCutoff, startDate]);
+
+  const commitCutoff = useCallback(
+    (value: Date) => {
+      setRefundCutoff(startOfLocalDay(value));
+    },
+    [setRefundCutoff]
+  );
+
+  const cutoffMinimumDate = isEditMode ? undefined : todayAtLocalMidnight();
+  const cutoffMaximumDate = startDate ? startOfLocalDay(startDate) : undefined;
+
   const entryFeeCents = dollarsToCents(entryFeeInput);
   const isPaid = entryFeeCents > 0;
   const quote = quoteRegistration(entryFeeCents, feePayer);
   const fmt = (cents: number) => formatPrice(cents, FEE_CURRENCY, { locale });
-  const effectiveCutoff = refundCutoff ?? startDate ?? null;
 
   // Prize money is advertising, not a fee obligation, so it renders even when
   // fee controls are locked (registration open+). Shared between both branches.
@@ -1616,6 +1735,14 @@ const PaymentsStep: React.FC<{
             </View>
             <View style={styles.previewRow}>
               <Text size="sm" color={colors.textMuted}>
+                {t('tournamentCreation.payments.previewFeeTax' as TranslationKey)}
+              </Text>
+              <Text size="sm" color={colors.text}>
+                {fmt(quote.feeTaxCents)}
+              </Text>
+            </View>
+            <View style={styles.previewRow}>
+              <Text size="sm" color={colors.textMuted}>
                 {t('tournamentCreation.payments.previewYouReceive' as TranslationKey)}
               </Text>
               <Text
@@ -1660,33 +1787,14 @@ const PaymentsStep: React.FC<{
             </View>
           </View>
 
-          {/* Payout timing */}
+          {/* Payout timing is fixed in v0: funds are held until the event ends. */}
           <View style={styles.fieldGroup}>
             <FieldLabel colors={colors}>
               {t('tournamentCreation.payments.payoutLabel' as TranslationKey)}
             </FieldLabel>
-            <View style={styles.optionsColumn}>
-              <OptionCard
-                icon="shield-checkmark-outline"
-                title={t('tournamentCreation.payments.holdTitle' as TranslationKey)}
-                description={t('tournamentCreation.payments.holdDescription' as TranslationKey)}
-                selected={payoutTiming === 'hold_until_event_end'}
-                onPress={() => setPayoutTiming('hold_until_event_end')}
-                colors={colors}
-                testID="payout-hold_until_event_end"
-              />
-              <OptionCard
-                icon="cash-outline"
-                title={t('tournamentCreation.payments.payAsYouGoTitle' as TranslationKey)}
-                description={t(
-                  'tournamentCreation.payments.payAsYouGoDescription' as TranslationKey
-                )}
-                selected={payoutTiming === 'pay_as_you_go'}
-                onPress={() => setPayoutTiming('pay_as_you_go')}
-                colors={colors}
-                testID="payout-pay_as_you_go"
-              />
-            </View>
+            <Text size="xs" color={colors.textMuted} style={styles.fieldDescription}>
+              {t('tournamentCreation.payments.payoutNote' as TranslationKey)}
+            </Text>
           </View>
 
           {/* Refund policy */}
@@ -1694,7 +1802,7 @@ const PaymentsStep: React.FC<{
             <FieldLabel colors={colors}>
               {t('tournamentCreation.payments.refundLabel' as TranslationKey)}
             </FieldLabel>
-            <Text size="xs" color={colors.textMuted} style={styles.helperText}>
+            <Text size="xs" color={colors.textMuted} style={styles.fieldDescription}>
               {t('tournamentCreation.payments.refundFeeNote' as TranslationKey)}
             </Text>
             <View style={styles.optionsColumn}>
@@ -1734,7 +1842,7 @@ const PaymentsStep: React.FC<{
             </View>
 
             {refundKind === 'partial' && (
-              <View style={styles.fieldGroup}>
+              <View style={styles.fieldSubGroup}>
                 <FieldLabel colors={colors}>
                   {t('tournamentCreation.payments.refundPctLabel' as TranslationKey)}
                 </FieldLabel>
@@ -1771,45 +1879,34 @@ const PaymentsStep: React.FC<{
             )}
 
             {refundKind !== 'none' && (
-              <View style={styles.fieldGroup}>
-                <FieldLabel colors={colors}>
-                  {t('tournamentCreation.payments.refundCutoffLabel' as TranslationKey)}
-                </FieldLabel>
-                <TouchableOpacity
-                  onPress={() => setShowCutoffPicker(v => !v)}
-                  style={[
-                    styles.textInput,
-                    styles.feeInputRow,
-                    { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
-                  ]}
+              <>
+                <DateField
+                  nested
+                  label={t('tournamentCreation.payments.refundCutoffLabel' as TranslationKey)}
+                  date={refundCutoff}
+                  onPress={openCutoffPicker}
+                  placeholder={t(
+                    'tournamentCreation.payments.refundCutoffPlaceholder' as TranslationKey
+                  )}
+                  hint={t('tournamentCreation.payments.refundCutoffHint' as TranslationKey)}
+                  colors={colors}
+                  locale={locale}
                   testID="tournament-refund-cutoff"
-                >
-                  <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
-                  <Text size="base" color={colors.text} style={styles.feeInputField}>
-                    {effectiveCutoff
-                      ? effectiveCutoff.toLocaleDateString(locale, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                      : t('tournamentCreation.payments.refundCutoffPlaceholder' as TranslationKey)}
-                  </Text>
-                </TouchableOpacity>
-                <Text size="xs" color={colors.textMuted} style={styles.helperText}>
-                  {t('tournamentCreation.payments.refundCutoffHint' as TranslationKey)}
-                </Text>
-                {showCutoffPicker && (
-                  <DateTimePicker
-                    value={effectiveCutoff ?? new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    onChange={(_e, d) => {
-                      if (Platform.OS !== 'ios') setShowCutoffPicker(false);
-                      if (d) setRefundCutoff(d);
-                    }}
-                  />
-                )}
-              </View>
+                />
+                <TournamentDatePickerSheet
+                  visible={cutoffPickerOpen}
+                  value={cutoffPickerValue}
+                  onChangeValue={setCutoffPickerValue}
+                  onCommit={commitCutoff}
+                  onDismiss={() => setCutoffPickerOpen(false)}
+                  minimumDate={cutoffMinimumDate}
+                  maximumDate={cutoffMaximumDate}
+                  isDark={isDark}
+                  colors={colors}
+                  t={t}
+                  doneTestID="tournament-refund-cutoff-done"
+                />
+              </>
             )}
           </View>
         </>
@@ -1869,14 +1966,16 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const canEditStructure = !isEditMode || editTournament?.status === 'draft';
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [highestStepVisited, setHighestStepVisited] = useState(1);
+  const translateX = useSharedValue(0);
   const [name, setName] = useState(editTournament?.name ?? '');
   const [description, setDescription] = useState(editTournament?.description ?? '');
   const [rules, setRules] = useState(editTournament?.rules ?? '');
   const [logoUrl, setLogoUrl] = useState<string | null>(editTournament?.logoUrl ?? null);
-  const [posterUploading, setPosterUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [minRating, setMinRating] = useState<number | null>(editTournament?.minRating ?? null);
   const sportId = editTournament?.sport.id ?? selectedSport?.id;
-  const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(sportName, sportId, userId);
+  const { ratingScores } = useRatingScoresForSport(sportName, sportId, userId);
   const ratingOptions = useMemo(
     () =>
       ratingScores.map(r => ({
@@ -1897,10 +1996,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   // accept it), so edit mode never surfaces the picker.
   const [entryFormat, setEntryFormat] = useState<EntryFormat>('singles');
   const [startDate, setStartDate] = useState<Date | null>(
-    editTournament ? new Date(editTournament.startDate) : null
+    editTournament ? startOfLocalDay(new Date(editTournament.startDate)) : null
   );
   const [endDate, setEndDate] = useState<Date | null>(
-    editTournament ? new Date(editTournament.endDate) : null
+    editTournament ? startOfLocalDay(new Date(editTournament.endDate)) : null
   );
   // Holds the full enum (incl. 'community') so an untouched non-private/public
   // tournament isn't silently flipped on save; the create path only ever sets
@@ -1919,9 +2018,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       : ''
   );
   const [feePayer, setFeePayer] = useState<FeePayer>(editTournament?.feePayer ?? 'player_pays');
-  const [payoutTiming, setPayoutTiming] = useState<PayoutTiming>(
-    editTournament?.payoutTiming ?? 'hold_until_event_end'
-  );
   const [refundKind, setRefundKind] = useState<RefundKind>(
     editTournament?.refundPolicyKind ?? 'none'
   );
@@ -1931,7 +2027,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       : ''
   );
   const [refundCutoff, setRefundCutoff] = useState<Date | null>(
-    editTournament?.refundCutoffAt ? new Date(editTournament.refundCutoffAt) : null
+    editTournament?.refundCutoffAt ? startOfLocalDay(new Date(editTournament.refundCutoffAt)) : null
   );
   // Location (step 1): an exact facility OR a city. Edit mode seeds the mode
   // from whichever was set (facility wins).
@@ -1951,6 +2047,26 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [cityInput, setCityInput] = useState<string>(
     editTournament && !editTournament.facilityId ? (editTournament.city ?? '') : ''
   );
+  const locationModeRef = useRef(locationMode);
+  locationModeRef.current = locationMode;
+  const handleLocationModeChange = useCallback((nextMode: LocationMode) => {
+    const currentMode = locationModeRef.current;
+    if (currentMode === nextMode) return;
+
+    if (nextMode === 'city') {
+      setSelectedFacility(facility => {
+        if (facility?.city) {
+          setCityInput(ci => (ci.trim() ? ci : (facility.city ?? '')));
+        }
+        return null;
+      });
+    } else {
+      setCityInput('');
+    }
+
+    setLocationMode(nextMode);
+    setErrors(prev => (prev.location ? { ...prev, location: undefined } : prev));
+  }, []);
   // Advertised prize (step 5). Dollar string; '' / 0 ⇒ no prize.
   const [prizeMoneyInput, setPrizeMoneyInput] = useState(
     editTournament?.prizeMoneyCents != null && editTournament.prizeMoneyCents > 0
@@ -1978,6 +2094,19 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setLogoUrl(null);
   }, []);
 
+  useEffect(() => {
+    translateX.value = withSpring(-((currentStep - 1) * SCREEN_WIDTH), {
+      damping: 80,
+      stiffness: 600,
+      overshootClamping: false,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep]);
+
+  const animatedStepStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
   const startTimeRef = useRef(Date.now());
   const startedTrackedRef = useRef(false);
   useEffect(() => {
@@ -1990,7 +2119,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     }
   }, [selectedSport, isEditMode]);
 
-  const { createTournamentAsync, isCreating } = useCreateTournament({
+  const { createTournamentAsync } = useCreateTournament({
     onError: err => {
       const msg = err.message || '';
       const key = msg.includes('SPORT_MISMATCH')
@@ -2003,7 +2132,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     },
   });
 
-  const { mutateAsync: updateTournamentAsync, isPending: isUpdating } = useUpdateTournament({
+  const { mutateAsync: updateTournamentAsync } = useUpdateTournament({
     onError: e => {
       const msg = e.message || '';
       const key = msg.includes('OPTIMISTIC_LOCK_CONFLICT')
@@ -2043,8 +2172,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           if (!hasLocation)
             next.location = t('tournamentCreation.validation.locationRequired' as TranslationKey);
         }
-      }
-      if (step === 3) {
         if (!startDate || !endDate) {
           next.startDate = !startDate
             ? t('tournamentCreation.validation.datesRequired' as TranslationKey)
@@ -2065,7 +2192,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           }
         }
       }
-      if (step === 5) {
+      if (step === 4) {
         const cents = dollarsToCents(entryFeeInput);
         if (cents > 0 && refundKind === 'partial') {
           const pct = Number(refundPctInput);
@@ -2104,11 +2231,14 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     lightHaptic();
     Keyboard.dismiss();
     requestAnimationFrame(() => {
-      setCurrentStep(s => Math.min(TOTAL_STEPS, s + 1));
+      const nextStep = Math.min(TOTAL_STEPS, currentStep + 1);
+      setCurrentStep(nextStep);
+      setHighestStepVisited(prev => Math.max(prev, nextStep));
     });
   }, [currentStep, validateStep, sportName]);
 
   const goBack = useCallback(() => {
+    lightHaptic();
     Keyboard.dismiss();
     requestAnimationFrame(() => {
       setCurrentStep(s => Math.max(1, s - 1));
@@ -2135,123 +2265,124 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   }, [trackAbandoned, onBackToLanding]);
 
   const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+
     if (!validateStep(1)) {
       setCurrentStep(1);
       return;
     }
-    if (!validateStep(3)) {
-      setCurrentStep(3);
-      return;
-    }
-    if (!validateStep(5)) {
-      setCurrentStep(5);
+    if (!validateStep(4)) {
+      setCurrentStep(4);
       return;
     }
     if (!startDate || !endDate) return;
 
-    // ---- Fee settings (step 5) → snapshot the values for create/patch ----
-    const entryFeeCents = dollarsToCents(entryFeeInput);
-    const isPaid = entryFeeCents > 0;
-    const refundKindFinal: RefundKind = isPaid ? refundKind : 'none';
-    const refundPartialBps =
-      isPaid && refundKindFinal === 'partial' ? Math.round(Number(refundPctInput) * 100) : null;
-    const refundCutoffIso =
-      isPaid && refundKindFinal !== 'none'
-        ? ((refundCutoff ?? startDate)?.toISOString() ?? null)
-        : null;
+    Keyboard.dismiss();
+    setIsSubmitting(true);
+    // Yield one frame so the loading state paints before poster upload / API work.
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 
-    // ---- Location (step 1) + prize (step 5) → snapshot for create/patch ----
-    // Facility mode denormalizes the facility's name/address/city so display
-    // stays join-free. City mode stores only the city string.
-    const locationPayload =
-      locationMode === 'facility' && selectedFacility
-        ? {
-            facilityId: selectedFacility.id,
-            venueName: selectedFacility.name || null,
-            venueAddress: selectedFacility.address,
-            city: selectedFacility.city,
-          }
-        : locationMode === 'city' && cityInput.trim()
-          ? { facilityId: null, venueName: null, venueAddress: null, city: cityInput.trim() }
+    try {
+      // ---- Fee settings (step 5) → snapshot the values for create/patch ----
+      const entryFeeCents = dollarsToCents(entryFeeInput);
+      const isPaid = entryFeeCents > 0;
+      const refundKindFinal: RefundKind = isPaid ? refundKind : 'none';
+      const refundPartialBps =
+        isPaid && refundKindFinal === 'partial' ? Math.round(Number(refundPctInput) * 100) : null;
+      const refundCutoffIso =
+        isPaid && refundKindFinal !== 'none'
+          ? ((refundCutoff ?? startDate)?.toISOString() ?? null)
           : null;
-    const prizeCents = dollarsToCents(prizeMoneyInput);
-    const prizeMoneyCents = prizeCents > 0 ? prizeCents : null;
 
-    // Upload a freshly-picked poster now (on submit) rather than at selection,
-    // so abandoning the form never orphans an uploaded file. logoUrl is a local
-    // URI for a new pick, or an existing remote URL (https) when unchanged.
-    let resolvedLogoUrl = logoUrl;
-    if (logoUrl && !/^https?:\/\//.test(logoUrl)) {
-      setPosterUploading(true);
-      const { url } = await uploadImage(logoUrl, 'tournament-logos');
-      setPosterUploading(false);
-      if (!url) {
-        warningHaptic();
-        Alert.alert(
-          t('tournamentCreation.errors.posterUploadFailedTitle' as TranslationKey),
-          t('tournamentCreation.errors.posterUploadFailed' as TranslationKey)
-        );
-        return;
-      }
-      resolvedLogoUrl = url;
-    }
+      // ---- Location (step 1) + prize (step 5) → snapshot for create/patch ----
+      // Facility mode denormalizes the facility's name/address/city so display
+      // stays join-free. City mode stores only the city string.
+      const locationPayload =
+        locationMode === 'facility' && selectedFacility
+          ? {
+              facilityId: selectedFacility.id,
+              venueName: selectedFacility.name || null,
+              venueAddress: selectedFacility.address,
+              city: selectedFacility.city,
+            }
+          : locationMode === 'city' && cityInput.trim()
+            ? { facilityId: null, venueName: null, venueAddress: null, city: cityInput.trim() }
+            : null;
+      const prizeCents = dollarsToCents(prizeMoneyInput);
+      const prizeMoneyCents = prizeCents > 0 ? prizeCents : null;
 
-    // ---- Edit mode: diff against the original and PATCH only what changed ----
-    if (isEditMode && editTournament) {
-      const patch: TournamentUpdatePatch = {};
-      const trimmedName = name.trim();
-      if (trimmedName !== editTournament.name) patch.name = trimmedName;
-      const desc = description.trim();
-      if (desc !== (editTournament.description ?? ''))
-        patch.description = desc.length ? desc : null;
-      const trimmedRules = rules.trim();
-      if (trimmedRules !== (editTournament.rules ?? ''))
-        patch.rules = trimmedRules.length ? trimmedRules : null;
-      if (resolvedLogoUrl !== (editTournament.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
-      if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
-      if (locationPayload) {
-        if ((locationPayload.facilityId ?? null) !== (editTournament.facilityId ?? null))
-          patch.facilityId = locationPayload.facilityId;
-        if ((locationPayload.venueName ?? null) !== (editTournament.venueName ?? null))
-          patch.venueName = locationPayload.venueName;
-        if ((locationPayload.venueAddress ?? null) !== (editTournament.venueAddress ?? null))
-          patch.venueAddress = locationPayload.venueAddress;
-        if ((locationPayload.city ?? null) !== (editTournament.city ?? null))
-          patch.city = locationPayload.city;
-      }
-      if (prizeMoneyCents !== (editTournament.prizeMoneyCents ?? null))
-        patch.prizeMoneyCents = prizeMoneyCents;
-      if (visibility !== editTournament.visibility) patch.visibility = visibility;
-      if (startDate.toISOString() !== new Date(editTournament.startDate).toISOString())
-        patch.startDate = startDate.toISOString();
-      if (endDate.toISOString() !== new Date(editTournament.endDate).toISOString())
-        patch.endDate = endDate.toISOString();
-      if (canEditStructure) {
-        if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
-        if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
-      }
-      // Fee settings are server-gated to 'draft'. Send the refund trio together
-      // so the partial/bps CHECK stays consistent.
-      if (editTournament.status === 'draft') {
-        if (entryFeeCents !== editTournament.entryFeeCents) patch.entryFeeCents = entryFeeCents;
-        if (feePayer !== editTournament.feePayer) patch.feePayer = feePayer;
-        if (payoutTiming !== editTournament.payoutTiming) patch.payoutTiming = payoutTiming;
-        const refundChanged =
-          refundKindFinal !== editTournament.refundPolicyKind ||
-          (refundPartialBps ?? null) !== (editTournament.refundPartialBps ?? null) ||
-          (refundCutoffIso ?? null) !== (editTournament.refundCutoffAt ?? null);
-        if (refundChanged) {
-          patch.refundPolicyKind = refundKindFinal;
-          patch.refundPartialBps = refundKindFinal === 'partial' ? refundPartialBps : null;
-          patch.refundCutoffAt = refundKindFinal !== 'none' ? refundCutoffIso : null;
+      // Upload a freshly-picked poster now (on submit) rather than at selection,
+      // so abandoning the form never orphans an uploaded file. logoUrl is a local
+      // URI for a new pick, or an existing remote URL (https) when unchanged.
+      let resolvedLogoUrl = logoUrl;
+      if (logoUrl && !/^https?:\/\//.test(logoUrl)) {
+        const { url } = await uploadImage(logoUrl, 'tournament-logos');
+        if (!url) {
+          warningHaptic();
+          Alert.alert(
+            t('tournamentCreation.errors.posterUploadFailedTitle' as TranslationKey),
+            t('tournamentCreation.errors.posterUploadFailed' as TranslationKey)
+          );
+          return;
         }
+        resolvedLogoUrl = url;
       }
 
-      if (Object.keys(patch).length === 0) {
-        onClose();
-        return;
-      }
-      try {
+      // ---- Edit mode: diff against the original and PATCH only what changed ----
+      if (isEditMode && editTournament) {
+        const patch: TournamentUpdatePatch = {};
+        const trimmedName = name.trim();
+        if (trimmedName !== editTournament.name) patch.name = trimmedName;
+        const desc = description.trim();
+        if (desc !== (editTournament.description ?? ''))
+          patch.description = desc.length ? desc : null;
+        const trimmedRules = rules.trim();
+        if (trimmedRules !== (editTournament.rules ?? ''))
+          patch.rules = trimmedRules.length ? trimmedRules : null;
+        if (resolvedLogoUrl !== (editTournament.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
+        if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
+        if (locationPayload) {
+          if ((locationPayload.facilityId ?? null) !== (editTournament.facilityId ?? null))
+            patch.facilityId = locationPayload.facilityId;
+          if ((locationPayload.venueName ?? null) !== (editTournament.venueName ?? null))
+            patch.venueName = locationPayload.venueName;
+          if ((locationPayload.venueAddress ?? null) !== (editTournament.venueAddress ?? null))
+            patch.venueAddress = locationPayload.venueAddress;
+          if ((locationPayload.city ?? null) !== (editTournament.city ?? null))
+            patch.city = locationPayload.city;
+        }
+        if (prizeMoneyCents !== (editTournament.prizeMoneyCents ?? null))
+          patch.prizeMoneyCents = prizeMoneyCents;
+        if (visibility !== editTournament.visibility) patch.visibility = visibility;
+        if (startDate.toISOString() !== new Date(editTournament.startDate).toISOString())
+          patch.startDate = startDate.toISOString();
+        if (endDate.toISOString() !== new Date(editTournament.endDate).toISOString())
+          patch.endDate = endDate.toISOString();
+        if (canEditStructure) {
+          if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
+          if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
+        }
+        // Fee settings are server-gated to 'draft'. Send the refund trio together
+        // so the partial/bps CHECK stays consistent.
+        if (editTournament.status === 'draft') {
+          if (entryFeeCents !== editTournament.entryFeeCents) patch.entryFeeCents = entryFeeCents;
+          if (feePayer !== editTournament.feePayer) patch.feePayer = feePayer;
+          const refundChanged =
+            refundKindFinal !== editTournament.refundPolicyKind ||
+            (refundPartialBps ?? null) !== (editTournament.refundPartialBps ?? null) ||
+            (refundCutoffIso ?? null) !== (editTournament.refundCutoffAt ?? null);
+          if (refundChanged) {
+            patch.refundPolicyKind = refundKindFinal;
+            patch.refundPartialBps = refundKindFinal === 'partial' ? refundPartialBps : null;
+            patch.refundCutoffAt = refundKindFinal !== 'none' ? refundCutoffIso : null;
+          }
+        }
+
+        if (Object.keys(patch).length === 0) {
+          onClose();
+          return;
+        }
+
         await updateTournamentAsync({
           tournamentId: editTournament.id,
           versionWas: editTournament.version,
@@ -2266,15 +2397,12 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           void deleteImage(oldPoster, 'tournament-logos');
         }
         onSuccess(editTournament.id);
-      } catch {
-        // Error toast handled by hook's onError.
+        return;
       }
-      return;
-    }
 
-    // ---- Create mode ----
-    if (!selectedSport?.id) return;
-    try {
+      // ---- Create mode ----
+      if (!selectedSport?.id) return;
+
       const tournament = await createTournamentAsync({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -2297,7 +2425,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         entryFeeCents: isPaid ? entryFeeCents : 0,
         currency: FEE_CURRENCY,
         feePayer,
-        payoutTiming,
         refundPolicyKind: refundKindFinal,
         refundPartialBps,
         refundCutoffAt: refundCutoffIso,
@@ -2314,9 +2441,12 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       setCreatedId(tournament.id);
       setShowSuccess(true);
     } catch {
-      // Error toast handled by hook's onError.
+      // Error toast handled by mutation hooks' onError.
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
+    isSubmitting,
     isEditMode,
     editTournament,
     canEditStructure,
@@ -2334,7 +2464,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     registrationMode,
     entryFeeInput,
     feePayer,
-    payoutTiming,
     refundKind,
     refundPctInput,
     refundCutoff,
@@ -2356,11 +2485,11 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setRules('');
     setLogoUrl(null);
     setMinRating(null);
+    setIsSubmitting(false);
     setLocationMode('city');
     setSelectedFacility(null);
     setCityInput('');
     setPrizeMoneyInput('');
-    setPosterUploading(false);
     setBracketSize(8);
     setMatchFormat(defaultFormatForSport(sportName));
     setEntryFormat('singles');
@@ -2370,7 +2499,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setRegistrationMode('open');
     setEntryFeeInput('');
     setFeePayer('player_pays');
-    setPayoutTiming('hold_until_event_end');
     setRefundKind('none');
     setRefundPctInput('');
     setRefundCutoff(null);
@@ -2378,7 +2506,93 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setShowSuccess(false);
     setCreatedId(null);
     setCurrentStep(1);
+    setHighestStepVisited(1);
   }, [sportName]);
+
+  // Shared props for DetailsStep (steps 1–2); kept outside JSX to avoid duplication.
+  const detailsStepSharedProps = useMemo(
+    () => ({
+      name,
+      setName,
+      description,
+      setDescription,
+      minRating,
+      setMinRating,
+      ratingOptions,
+      location: {
+        colors,
+        t,
+        sportId,
+        latitude: homeLocation?.latitude,
+        longitude: homeLocation?.longitude,
+        playerId: userId,
+        mode: locationMode,
+        setMode: handleLocationModeChange,
+        selectedFacility,
+        onSelectFacility: setSelectedFacility,
+        onClearFacility: () => setSelectedFacility(null),
+        cityInput,
+        setCityInput,
+        error: errors.location,
+      },
+      logoUrl,
+      posterUploading: isSubmitting,
+      onPickPoster: handlePickPoster,
+      onRemovePoster: handleRemovePoster,
+      bracketSize,
+      setBracketSize,
+      matchFormat,
+      setMatchFormat,
+      formatOptions,
+      entryFormat,
+      setEntryFormat,
+      canPickEntryFormat: !isEditMode,
+      canEditStructure,
+      startDate,
+      endDate,
+      setStartDate: handleSetStartDate,
+      setEndDate,
+      errors,
+      colors,
+      t,
+      locale,
+      isDark,
+      isEditMode,
+    }),
+    [
+      name,
+      description,
+      minRating,
+      ratingOptions,
+      colors,
+      t,
+      sportId,
+      homeLocation?.latitude,
+      homeLocation?.longitude,
+      userId,
+      locationMode,
+      handleLocationModeChange,
+      selectedFacility,
+      cityInput,
+      errors.location,
+      logoUrl,
+      isSubmitting,
+      handlePickPoster,
+      handleRemovePoster,
+      bracketSize,
+      matchFormat,
+      formatOptions,
+      entryFormat,
+      isEditMode,
+      canEditStructure,
+      startDate,
+      endDate,
+      handleSetStartDate,
+      errors,
+      locale,
+      isDark,
+    ]
+  );
 
   // Success view
   if (showSuccess) {
@@ -2482,120 +2696,87 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       />
       <ProgressBar currentStep={currentStep} colors={colors} t={t} />
 
-      <View style={styles.body}>
-        {currentStep <= 3 && (
-          <DetailsStep
-            step={currentStep}
-            name={name}
-            setName={setName}
-            description={description}
-            setDescription={setDescription}
-            minRating={minRating}
-            setMinRating={setMinRating}
-            ratingOptions={ratingOptions}
-            playerRatingScoreId={playerRatingScoreId ?? null}
-            location={{
-              colors,
-              t,
-              sportId,
-              latitude: homeLocation?.latitude,
-              longitude: homeLocation?.longitude,
-              playerId: userId,
-              mode: locationMode,
-              setMode: setLocationMode,
-              selectedFacility,
-              onSelectFacility: setSelectedFacility,
-              onClearFacility: () => setSelectedFacility(null),
-              cityInput,
-              setCityInput,
-              error: errors.location,
-            }}
-            logoUrl={logoUrl}
-            posterUploading={posterUploading}
-            onPickPoster={handlePickPoster}
-            onRemovePoster={handleRemovePoster}
-            bracketSize={bracketSize}
-            setBracketSize={setBracketSize}
-            matchFormat={matchFormat}
-            setMatchFormat={setMatchFormat}
-            formatOptions={formatOptions}
-            entryFormat={entryFormat}
-            setEntryFormat={setEntryFormat}
-            canPickEntryFormat={!isEditMode}
-            canEditStructure={canEditStructure}
-            startDate={startDate}
-            endDate={endDate}
-            setStartDate={handleSetStartDate}
-            setEndDate={setEndDate}
-            errors={errors}
-            colors={colors}
-            t={t}
-            locale={locale}
-            isDark={isDark}
-            isEditMode={isEditMode}
-          />
-        )}
-        {currentStep === 4 && (
-          <VisibilityStep
-            rules={rules}
-            setRules={setRules}
-            visibility={visibility}
-            setVisibility={setVisibility}
-            colors={colors}
-            t={t}
-          />
-        )}
-        {currentStep === 5 && (
-          <PaymentsStep
-            entryFeeInput={entryFeeInput}
-            setEntryFeeInput={setEntryFeeInput}
-            feePayer={feePayer}
-            setFeePayer={setFeePayer}
-            payoutTiming={payoutTiming}
-            setPayoutTiming={setPayoutTiming}
-            refundKind={refundKind}
-            setRefundKind={setRefundKind}
-            refundPctInput={refundPctInput}
-            setRefundPctInput={setRefundPctInput}
-            refundCutoff={refundCutoff}
-            setRefundCutoff={setRefundCutoff}
-            prizeMoneyInput={prizeMoneyInput}
-            setPrizeMoneyInput={setPrizeMoneyInput}
-            startDate={startDate}
-            feeLocked={isEditMode && editTournament?.status !== 'draft'}
-            errors={errors}
-            colors={colors}
-            t={t}
-            locale={locale}
-          />
-        )}
+      <View style={styles.stepsViewport}>
+        <Animated.View
+          style={[styles.stepsContainer, { width: SCREEN_WIDTH * TOTAL_STEPS }, animatedStepStyle]}
+        >
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            <DetailsStep step={1} {...detailsStepSharedProps} />
+          </View>
+
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            {highestStepVisited >= 2 && <DetailsStep step={2} {...detailsStepSharedProps} />}
+          </View>
+
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            {highestStepVisited >= 3 && (
+              <VisibilityStep
+                rules={rules}
+                setRules={setRules}
+                visibility={visibility}
+                setVisibility={setVisibility}
+                colors={colors}
+                t={t}
+              />
+            )}
+          </View>
+
+          <View style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}>
+            {highestStepVisited >= 4 && (
+              <PaymentsStep
+                entryFeeInput={entryFeeInput}
+                setEntryFeeInput={setEntryFeeInput}
+                feePayer={feePayer}
+                setFeePayer={setFeePayer}
+                refundKind={refundKind}
+                setRefundKind={setRefundKind}
+                refundPctInput={refundPctInput}
+                setRefundPctInput={setRefundPctInput}
+                refundCutoff={refundCutoff}
+                setRefundCutoff={setRefundCutoff}
+                prizeMoneyInput={prizeMoneyInput}
+                setPrizeMoneyInput={setPrizeMoneyInput}
+                startDate={startDate}
+                feeLocked={isEditMode && editTournament?.status !== 'draft'}
+                errors={errors}
+                colors={colors}
+                t={t}
+                locale={locale}
+                isDark={isDark}
+                isEditMode={isEditMode}
+              />
+            )}
+          </View>
+        </Animated.View>
       </View>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity
           onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
-          disabled={isCreating || isUpdating}
+          disabled={isSubmitting}
           style={[
             styles.nextButton,
             { backgroundColor: colors.buttonActive },
-            (isCreating || isUpdating) && styles.buttonDisabled,
+            isSubmitting && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
           testID="tournament-wizard-submit"
         >
-          <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-            {currentStep === TOTAL_STEPS
-              ? isEditMode
-                ? isUpdating
-                  ? t('tournamentDetail.editModal.saving' as TranslationKey)
-                  : t('tournamentDetail.editModal.save' as TranslationKey)
-                : isCreating
-                  ? t('tournamentCreation.creating' as TranslationKey)
-                  : t('tournamentCreation.createTournament' as TranslationKey)
-              : t('tournamentCreation.next' as TranslationKey)}
-          </Text>
-          {currentStep !== TOTAL_STEPS && (
-            <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
+          {isSubmitting && currentStep === TOTAL_STEPS ? (
+            <ActivityIndicator color={colors.buttonTextActive} />
+          ) : (
+            <>
+              <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
+                {currentStep === TOTAL_STEPS
+                  ? isEditMode
+                    ? t('tournamentDetail.editModal.save' as TranslationKey)
+                    : t('tournamentCreation.createTournament' as TranslationKey)
+                  : t('tournamentCreation.next' as TranslationKey)}
+              </Text>
+              {currentStep !== TOTAL_STEPS && (
+                <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
+              )}
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -2657,8 +2838,17 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: radiusPixels.full,
   },
-  body: {
+  stepsViewport: {
     flex: 1,
+    overflow: 'hidden',
+  },
+  stepsContainer: {
+    flexDirection: 'row',
+    flex: 1,
+    height: '100%',
+  },
+  stepWrapper: {
+    height: '100%',
   },
   stepContainer: {
     flex: 1,
@@ -2672,6 +2862,12 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     marginBottom: spacingPixels[5],
+  },
+  fieldSubGroup: {
+    marginTop: spacingPixels[4],
+  },
+  fieldDescription: {
+    marginBottom: spacingPixels[3],
   },
   label: {
     marginBottom: spacingPixels[2],
@@ -2754,6 +2950,19 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
   },
+  dateButtonCompact: {
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    gap: spacingPixels[1],
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  dateRowField: {
+    flex: 1,
+    minWidth: 0,
+  },
   optionsColumn: {
     gap: spacingPixels[2],
   },
@@ -2806,7 +3015,6 @@ const styles = StyleSheet.create({
   ratingScrollContent: {
     gap: spacingPixels[2],
     paddingRight: spacingPixels[2],
-    paddingTop: spacingPixels[3],
   },
   ratingCard: {
     alignItems: 'center',
@@ -2819,17 +3027,6 @@ const styles = StyleSheet.create({
   },
   ratingSkillLevel: {
     marginTop: spacingPixels[0.5],
-  },
-  yourRatingBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
   },
   loadingContainer: {
     padding: spacingPixels[4],
