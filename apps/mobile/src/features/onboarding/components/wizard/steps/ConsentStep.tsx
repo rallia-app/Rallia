@@ -17,6 +17,8 @@ import { spacingPixels } from '@rallia/design-system';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
+import { useTranslation } from '#/hooks';
+import { getPolicyUrl } from '#/utils/policyUrls';
 import {
   PolicyConsentCheckbox,
   PolicyConsentIconBadge,
@@ -40,6 +42,7 @@ export const ConsentStep: React.FC<ConsentStepProps> = ({
   isDark,
 }) => {
   const { checkedTint } = getPolicyConsentTint(isDark);
+  const { locale } = useTranslation();
 
   return (
     <SheetScrollView
@@ -63,7 +66,7 @@ export const ConsentStep: React.FC<ConsentStepProps> = ({
           prefix={t('auth.consent.privacyPrefix')}
           linkLabel={t('auth.consent.privacyLink')}
           suffix={t('auth.consent.privacySuffix')}
-          url="https://rallia.ca/privacy"
+          url={getPolicyUrl('privacy', locale)}
           colors={colors}
           checkedTint={checkedTint}
         />
@@ -73,7 +76,7 @@ export const ConsentStep: React.FC<ConsentStepProps> = ({
           prefix={t('auth.consent.termsPrefix')}
           linkLabel={t('auth.consent.termsLink')}
           suffix={t('auth.consent.termsSuffix')}
-          url="https://rallia.ca/terms"
+          url={getPolicyUrl('terms', locale)}
           colors={colors}
           checkedTint={checkedTint}
         />

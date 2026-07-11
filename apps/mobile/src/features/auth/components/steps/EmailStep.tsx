@@ -24,6 +24,8 @@ import { Text } from '@rallia/shared-components';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import type { SocialProvider } from '#/features/auth/hooks/useSocialAuth';
+import { useTranslation } from '#/hooks';
+import { getPolicyUrl } from '#/utils/policyUrls';
 
 interface ThemeColors {
   background: string;
@@ -96,6 +98,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
 
   const canContinue = isEmailValid && !isLoading && !socialAuthLoading;
   const isAnyLoading = isLoading || socialAuthLoading;
+  const { locale } = useTranslation();
 
   return (
     <SheetScrollView
@@ -218,7 +221,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
           size="xs"
           color={primary[500]}
           style={styles.termsLink}
-          onPress={() => Linking.openURL('https://rallia.ca/terms')}
+          onPress={() => Linking.openURL(getPolicyUrl('terms', locale))}
         >
           {t('auth.termsLink')}
         </Text>
@@ -227,7 +230,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
           size="xs"
           color={primary[500]}
           style={styles.termsLink}
-          onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+          onPress={() => Linking.openURL(getPolicyUrl('privacy', locale))}
         >
           {t('auth.privacyLink')}
         </Text>

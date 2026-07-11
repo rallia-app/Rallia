@@ -25,6 +25,7 @@ import {
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { useAuth } from '#/context';
+import { getPolicyUrl } from '#/utils/policyUrls';
 import {
   PolicyConsentCheckbox,
   PolicyConsentIconBadge,
@@ -36,14 +37,9 @@ interface PolicyReconsentScreenProps {
   onAccepted: () => void;
 }
 
-const POLICY_URLS: Record<PolicyType, string> = {
-  privacy: 'https://rallia.ca/privacy',
-  terms: 'https://rallia.ca/terms',
-};
-
 export function PolicyReconsentScreen({ pending, onAccepted }: PolicyReconsentScreenProps) {
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { signOut } = useAuth();
   const { checkedTint } = getPolicyConsentTint(isDark);
 
@@ -95,7 +91,7 @@ export function PolicyReconsentScreen({ pending, onAccepted }: PolicyReconsentSc
               prefix={t('auth.consent.privacyPrefix')}
               linkLabel={t('auth.consent.privacyLink')}
               suffix={t('auth.consent.privacySuffix')}
-              url={POLICY_URLS.privacy}
+              url={getPolicyUrl('privacy', locale)}
               colors={colors}
               checkedTint={checkedTint}
             />
@@ -107,7 +103,7 @@ export function PolicyReconsentScreen({ pending, onAccepted }: PolicyReconsentSc
               prefix={t('auth.consent.termsPrefix')}
               linkLabel={t('auth.consent.termsLink')}
               suffix={t('auth.consent.termsSuffix')}
-              url={POLICY_URLS.terms}
+              url={getPolicyUrl('terms', locale)}
               colors={colors}
               checkedTint={checkedTint}
             />
