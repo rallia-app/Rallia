@@ -1,45 +1,66 @@
 /**
- * Step 4 — Match plan (transparent preview → confirm).
+ * Step 4 — Match plan (one suggestion at a time).
  *
- * The player sees the exact games the check-in would create from the
- * availability they just declared — sport, day, time, place, required level.
- * Everything is included by default; they can remove whole games, then confirm.
- * The CTA submits the check-in, creating exactly the games they kept.
+ * The best game configurations the check-in can create from the availability
+ * the player just declared are presented as a deck, ONE card at a time: the
+ * game's setting (sport, day, time, place) plus the top opponents who'd get
+ * invited. The player either skips the suggestion or trims its invite list and
+ * confirms it — a deliberate approve/pass rhythm instead of a long checklist.
+ * The header's back button rewinds one card (wizard.goBack handles that).
  *
- * A prominent opt-out switch above the proposal cards persists
- * auto_create_matches = false for future check-ins.
+ * When the last card is decided the step submits automatically: exactly the
+ * approved games get created, and only the invitees left selected get invited.
+ * Skipping everything submits an empty plan (create nothing).
+ *
+ * A discreet link under the deck persists auto_create_matches = false for
+ * future check-ins; the paused state offers the mirror link to re-enable.
  */
-import React, { useMemo } from 'react';
-import { LayoutAnimation, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Skeleton, Text } from '@rallia/shared-components';
+import { Button, Text } from '@rallia/shared-components';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { neutral, primary, radiusPixels, spacingPixels } from '@rallia/design-system';
+import { primary, spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
 import {
-  PlanProposalCard,
-  PlanProposalCardSkeleton,
-} from '#/features/weekly-checkin/components/PlanProposalCard';
+  PlanProposalDetail,
+  PlanProposalDetailSkeleton,
+} from '#/features/weekly-checkin/components/PlanProposalDetail';
 import type { CheckInMatchPlan } from '#/features/weekly-checkin/api';
+import type {
+  PlanDecision,
+  PlanDecisionEntry,
+} from '#/features/weekly-checkin/useWeeklyCheckInWizard';
 import { formatWeekdayName } from '#/features/weekly-checkin/window';
 import { useTranslation } from '#/hooks';
-import { useLocale, useSport } from '#/context';
-import { selectionHaptic } from '#/utils/haptics';
-import { SportIcon } from '#/components/SportIcon';
+import { useLocale } from '#/context';
+import { lightHaptic, mediumHaptic, selectionHaptic } from '#/utils/haptics';
 
-const animateNext = () => LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface MatchPlanStepProps {
   plan: CheckInMatchPlan | null;
   isLoading: boolean;
   error: boolean;
-  excludedProposalKeys: string[];
-  toggleProposal: (key: string) => void;
+  planDecisions: PlanDecisionEntry[];
+  decideProposal: (key: string, decision: PlanDecision) => void;
+  inviteSelections: Record<string, string[]>;
+  toggleInvitee: (proposalKey: string, playerId: string) => void;
   optOut: boolean;
   setOptOut: (b: boolean) => void;
   isSubmitting: boolean;
-  onSubmit: () => void;
+  /** Runs the check-in submit; resolves false when it failed (retry stays here). */
+  onSubmit: () => Promise<boolean>;
   /** ISO date of the window's first day — anchors "Today"/"Tomorrow" labels. */
   todayDate: string | null;
   tomorrowDate: string | null;
@@ -49,8 +70,10 @@ export function MatchPlanStep({
   plan,
   isLoading,
   error,
-  excludedProposalKeys,
-  toggleProposal,
+  planDecisions,
+  decideProposal,
+  inviteSelections,
+  toggleInvitee,
   optOut,
   setOptOut,
   isSubmitting,
@@ -60,50 +83,31 @@ export function MatchPlanStep({
 }: MatchPlanStepProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
-  const { selectedSport } = useSport();
   const { colors, isDark } = useThemeStyles();
   const linkColor = isDark ? primary[400] : primary[600];
   const accentSoft = isDark ? `${primary[400]}1F` : `${primary[600]}14`;
 
   const proposals = useMemo(() => plan?.proposals ?? [], [plan]);
-  const optOutSportName = useMemo(
-    () => proposals[0]?.sportName ?? selectedSport?.name ?? 'tennis',
-    [proposals, selectedSport?.name]
+  const decisionByKey = useMemo(() => {
+    const map: Record<string, PlanDecision> = {};
+    for (const d of planDecisions) map[d.key] = d.decision;
+    return map;
+  }, [planDecisions]);
+
+  // The deck cursor is DERIVED: the first proposal without a verdict. Undo
+  // (header back) pops a verdict in the wizard and the cursor falls back here.
+  const currentIndex = useMemo(
+    () => proposals.findIndex(p => !decisionByKey[p.key]),
+    [proposals, decisionByKey]
   );
-  const includedCount = useMemo(
-    () => (optOut ? 0 : proposals.filter(p => !excludedProposalKeys.includes(p.key)).length),
-    [proposals, excludedProposalKeys, optOut]
+  const currentProposal = currentIndex >= 0 ? proposals[currentIndex] : null;
+  const allDecided = proposals.length > 0 && currentIndex === -1;
+  const createdCount = useMemo(
+    () => proposals.filter(p => decisionByKey[p.key] === 'create').length,
+    [proposals, decisionByKey]
   );
 
-  const goal = plan?.goal ?? 0;
   const committed = plan?.committedCount ?? 0;
-  const projected = committed + includedCount;
-  const goalMet = goal > 0 && projected >= goal;
-
-  // Headline names exactly what's on screen: the NEW games this check-in will
-  // create. "New" separates them from games already on the player's calendar,
-  // which the progress bar + caption below fold in.
-  const readyCountLabel =
-    includedCount === 0
-      ? t('weeklyCheckIn.plan.readyCountNone')
-      : includedCount === 1
-        ? t('weeklyCheckIn.plan.readyCountOne')
-        : t('weeklyCheckIn.plan.readyCountMany', { count: includedCount });
-
-  // Progress caption ties the bar to the weekly goal, counting new + already-
-  // scheduled games together so "X of Y" matches the filled segments.
-  const goalCaption = goalMet
-    ? t('weeklyCheckIn.plan.weeklyGoalMet')
-    : t('weeklyCheckIn.plan.goalProgress', { projected, goal });
-
-  // Shown only when the player already has games this week — reconciles the bar
-  // (which counts them) with the new-game headline (which doesn't).
-  const committedNote =
-    committed > 0
-      ? committed === 1
-        ? t('weeklyCheckIn.plan.committedNoteOne')
-        : t('weeklyCheckIn.plan.committedNoteMany', { count: committed })
-      : null;
 
   // Relative day label: "Today"/"Tomorrow" for the first two window dates,
   // otherwise the localized weekday name.
@@ -113,23 +117,138 @@ export function MatchPlanStep({
     return formatWeekdayName(matchDate, locale);
   };
 
+  // ---------------------------------------------------------------------------
+  // Deck transitions — a single translateX drives the leaving/entering
+  // proposal. Skip exits left, create exits right (approve/pass reads
+  // directionally); the next proposal always enters from the right. Always
+  // driven through Animated.timing (a bare setValue can be dropped by the
+  // native driver — see WeeklyCheckInScreen's pager comment), so the "jump"
+  // legs use duration 0.
+  // ---------------------------------------------------------------------------
+  const slideAnim = useMemo(() => new Animated.Value(0), []);
+  const [animating, setAnimating] = useState(false);
+
+  const handleDecision = useCallback(
+    (decision: PlanDecision) => {
+      if (animating || isSubmitting || !currentProposal) return;
+      if (decision === 'create') void mediumHaptic();
+      else void lightHaptic();
+      setAnimating(true);
+      const exitX = decision === 'create' ? SCREEN_WIDTH : -SCREEN_WIDTH;
+      Animated.timing(slideAnim, {
+        toValue: exitX,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        decideProposal(currentProposal.key, decision);
+        Animated.sequence([
+          Animated.timing(slideAnim, {
+            toValue: SCREEN_WIDTH,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 240,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start(() => setAnimating(false));
+      });
+    },
+    [animating, isSubmitting, currentProposal, decideProposal, slideAnim]
+  );
+
+  // Backward (header back → the wizard pops the last verdict): the restored
+  // card slides in from the LEFT, mirroring the forward direction of travel.
+  // The forward path animates itself in handleDecision, so this only reacts
+  // to the decision count shrinking.
+  const prevDecisionCountRef = useRef(planDecisions.length);
+  useLayoutEffect(() => {
+    const prev = prevDecisionCountRef.current;
+    prevDecisionCountRef.current = planDecisions.length;
+    if (planDecisions.length >= prev) return;
+    setAnimating(true);
+    Animated.sequence([
+      Animated.timing(slideAnim, {
+        toValue: -SCREEN_WIDTH,
+        duration: 0,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => setAnimating(false));
+  }, [planDecisions.length, slideAnim]);
+
+  const deckOpacity = slideAnim.interpolate({
+    inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+    outputRange: [0, 1, 0],
+  });
+
+  // ---------------------------------------------------------------------------
+  // Auto-submit once every card is decided. One attempt per completion — undo
+  // after a failure resets the guard so re-completing retries naturally.
+  // ---------------------------------------------------------------------------
+  const [submitFailed, setSubmitFailed] = useState(false);
+  const attemptedRef = useRef(false);
+  useEffect(() => {
+    if (!allDecided) {
+      attemptedRef.current = false;
+      setSubmitFailed(false);
+    }
+  }, [allDecided]);
+  useEffect(() => {
+    if (!allDecided || optOut || animating || isSubmitting || attemptedRef.current) return;
+    attemptedRef.current = true;
+    void onSubmit().then(ok => {
+      if (!ok) setSubmitFailed(true);
+    });
+  }, [allDecided, optOut, animating, isSubmitting, onSubmit]);
+
+  const handleRetry = useCallback(() => {
+    setSubmitFailed(false);
+    void onSubmit().then(ok => {
+      if (!ok) setSubmitFailed(true);
+    });
+  }, [onSubmit]);
+
+  const handleOptOutLink = useCallback(
+    (next: boolean) => {
+      void selectionHaptic();
+      setOptOut(next);
+    },
+    [setOptOut]
+  );
+
+  // The empty / error / paused paths finish through an explicit CTA instead of
+  // the deck's auto-submit.
+  const handleFinish = useCallback(() => {
+    void onSubmit().then(ok => {
+      if (!ok) setSubmitFailed(true);
+    });
+  }, [onSubmit]);
+
   const hasProposals = proposals.length > 0;
-  const ctaLabel =
-    includedCount === 0 ? t('weeklyCheckIn.plan.ctaNone') : t('weeklyCheckIn.plan.cta');
-
-  const handleOptOutChange = (enabled: boolean) => {
-    void selectionHaptic();
-    animateNext();
-    setOptOut(!enabled);
-  };
-
-  const planContentReady = !isLoading && !error && plan != null;
+  const showDeck = !isLoading && !error && !optOut && hasProposals && !allDecided;
+  // Deck exhausted and heading into (or retrying) the auto-submit.
+  const inSubmitPanel = !isLoading && !error && !optOut && allDecided;
+  // Every terminal state that finishes through an explicit CTA instead:
+  // preview error (legacy fallback), opted out, or nothing to propose.
+  const showFinishFooter = !isLoading && !showDeck && !inSubmitPanel;
 
   return (
     <View style={styles.root}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scroll}
+        // The deck (and its skeleton) stretches to the full remaining height —
+        // one suggestion owns the screen; scrolling only kicks in when the
+        // invite list genuinely overflows a small display.
+        contentContainerStyle={[styles.scroll, (showDeck || isLoading) && styles.scrollFill]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.bubbleWrap}>
@@ -137,19 +256,7 @@ export function MatchPlanStep({
         </View>
 
         {isLoading ? (
-          <>
-            <View style={styles.progressHeader}>
-              <Skeleton
-                width={180}
-                height={13}
-                borderRadius={4}
-                backgroundColor={colors.skeletonBackground}
-                highlightColor={colors.skeletonHighlight}
-              />
-            </View>
-            <PlanProposalCardSkeleton />
-            <PlanProposalCardSkeleton />
-          </>
+          <PlanProposalDetailSkeleton />
         ) : error ? (
           // Preview failed → the wizard submits plan:null (legacy autonomous
           // generation), so reassure rather than dead-end.
@@ -161,186 +268,159 @@ export function MatchPlanStep({
               {t('weeklyCheckIn.plan.errorFallback')}
             </Text>
           </View>
-        ) : !hasProposals ? (
-          <>
-            {planContentReady && (
-              <PlanOptOutToggle
-                enabled={!optOut}
-                onChange={handleOptOutChange}
-                accentColor={linkColor}
-                sportName={optOutSportName}
-              />
-            )}
-            <View style={styles.center}>
-              <View style={[styles.stateIcon, { backgroundColor: accentSoft }]}>
-                <Ionicons name="checkmark-done-outline" size={26} color={linkColor} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                {t('weeklyCheckIn.plan.emptyTitle')}
-              </Text>
-              <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
-                {committed === 1
-                  ? t('weeklyCheckIn.plan.emptyBodyOne')
-                  : t('weeklyCheckIn.plan.emptyBody', { count: committed })}
-              </Text>
+        ) : optOut ? (
+          <View style={styles.center}>
+            <View style={[styles.stateIcon, { backgroundColor: accentSoft }]}>
+              <Ionicons name="hand-left-outline" size={26} color={linkColor} />
             </View>
-          </>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {t('weeklyCheckIn.plan.optOutTitleOff')}
+            </Text>
+            <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+              {t('weeklyCheckIn.plan.optOutNote')}
+            </Text>
+            <Pressable onPress={() => handleOptOutLink(false)} hitSlop={8}>
+              <Text style={[styles.optOutLink, { color: linkColor }]}>
+                {t('weeklyCheckIn.plan.optOutActiveLink')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : !hasProposals ? (
+          <View style={styles.center}>
+            <View style={[styles.stateIcon, { backgroundColor: accentSoft }]}>
+              <Ionicons name="checkmark-done-outline" size={26} color={linkColor} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {t('weeklyCheckIn.plan.emptyTitle')}
+            </Text>
+            <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+              {committed === 1
+                ? t('weeklyCheckIn.plan.emptyBodyOne')
+                : t('weeklyCheckIn.plan.emptyBody', { count: committed })}
+            </Text>
+          </View>
+        ) : allDecided ? (
+          // Deck exhausted → the submit effect is running (or failed).
+          <View style={styles.center}>
+            {submitFailed ? (
+              <>
+                <View style={[styles.stateIcon, { backgroundColor: accentSoft }]}>
+                  <Ionicons name="cloud-offline-outline" size={26} color={linkColor} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                  {t('weeklyCheckIn.plan.submitFailedTitle')}
+                </Text>
+                <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+                  {t('weeklyCheckIn.plan.submitFailedBody')}
+                </Text>
+              </>
+            ) : (
+              <>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+                  {createdCount > 0
+                    ? t('weeklyCheckIn.plan.submitting')
+                    : t('weeklyCheckIn.plan.submittingNone')}
+                </Text>
+              </>
+            )}
+          </View>
         ) : (
           <>
-            <View style={styles.progressHeader}>
-              <Text style={[styles.readyCount, { color: colors.text }]}>{readyCountLabel}</Text>
-              {goal > 0 && (
-                <>
-                  <GoalSegments
-                    filled={Math.min(projected, goal)}
-                    total={goal}
-                    accent={linkColor}
-                    track={colors.divider}
-                  />
-                  <Text
-                    style={[styles.goalCaption, { color: goalMet ? linkColor : colors.textMuted }]}
-                  >
-                    {goalCaption}
-                  </Text>
-                  {committedNote && (
-                    <Text style={[styles.committedNote, { color: colors.textMuted }]}>
-                      {committedNote}
-                    </Text>
-                  )}
-                </>
-              )}
-            </View>
-
-            <PlanOptOutToggle
-              enabled={!optOut}
-              onChange={handleOptOutChange}
-              accentColor={linkColor}
-              sportName={optOutSportName}
-            />
-
-            {proposals.map(proposal => (
-              <PlanProposalCard
-                key={proposal.key}
-                proposal={proposal}
-                dayLabel={dayLabelFor(proposal.matchDate)}
-                excluded={excludedProposalKeys.includes(proposal.key)}
-                proposalsPaused={optOut}
-                onToggle={() => toggleProposal(proposal.key)}
-              />
-            ))}
+            {currentProposal && (
+              <Animated.View
+                style={[
+                  styles.deckBody,
+                  { opacity: deckOpacity, transform: [{ translateX: slideAnim }] },
+                ]}
+              >
+                <PlanProposalDetail
+                  proposal={currentProposal}
+                  dayLabel={dayLabelFor(currentProposal.matchDate)}
+                  selectedInviteeIds={inviteSelections[currentProposal.key] ?? []}
+                  onToggleInvitee={playerId => toggleInvitee(currentProposal.key, playerId)}
+                />
+              </Animated.View>
+            )}
           </>
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          rounded
-          loading={isSubmitting}
-          disabled={isSubmitting}
-          onPress={onSubmit}
-        >
-          {ctaLabel}
-        </Button>
-      </View>
-    </View>
-  );
-}
-
-/**
- * Segmented goal bar — one segment per goal game, the first `filled` in accent.
- * Reads as simple progress toward the weekly goal.
- */
-function GoalSegments({
-  filled,
-  total,
-  accent,
-  track,
-}: {
-  filled: number;
-  total: number;
-  accent: string;
-  track: string;
-}) {
-  return (
-    <View style={styles.segmentsRow}>
-      {Array.from({ length: total }, (_, i) => (
-        <View key={i} style={[styles.segment, { backgroundColor: i < filled ? accent : track }]} />
-      ))}
-    </View>
-  );
-}
-
-/**
- * Master toggle for auto-creating games — sits above the proposal cards so
- * players see why per-game switches are disabled when auto-create is off.
- */
-function PlanOptOutToggle({
-  enabled,
-  onChange,
-  accentColor,
-  sportName,
-}: {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  accentColor: string;
-  sportName: string;
-}) {
-  const { t } = useTranslation();
-  const { colors, isDark } = useThemeStyles();
-
-  const cardBg = enabled
-    ? isDark
-      ? `${primary[400]}14`
-      : `${primary[600]}0D`
-    : isDark
-      ? neutral[900]
-      : neutral[100];
-  const cardBorder = enabled
-    ? isDark
-      ? `${primary[400]}55`
-      : `${primary[600]}33`
-    : isDark
-      ? `${neutral[500]}55`
-      : `${neutral[400]}66`;
-  const iconBg = enabled ? `${accentColor}22` : `${colors.textMuted}22`;
-
-  return (
-    <View
-      style={[styles.optOutCard, { backgroundColor: cardBg, borderColor: cardBorder }]}
-      accessibilityRole="summary"
-    >
-      <View style={styles.optOutHeader}>
-        <View style={[styles.optOutIconWrap, { backgroundColor: iconBg }]}>
-          {enabled ? (
-            <SportIcon sportName={sportName} size={18} color={accentColor} />
-          ) : (
-            <Ionicons name="hand-left-outline" size={18} color={colors.textMuted} />
-          )}
+      {showDeck && (
+        <View style={styles.footer}>
+          <View style={styles.actionsRow}>
+            <View style={styles.actionSlot}>
+              <Button
+                variant="outline"
+                size="lg"
+                fullWidth
+                rounded
+                isDark={isDark}
+                disabled={animating || isSubmitting}
+                onPress={() => handleDecision('skip')}
+              >
+                {t('weeklyCheckIn.plan.skipCta')}
+              </Button>
+            </View>
+            <View style={styles.actionSlotWide}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                rounded
+                isDark={isDark}
+                disabled={animating || isSubmitting}
+                onPress={() => handleDecision('create')}
+              >
+                {t('weeklyCheckIn.plan.createCta')}
+              </Button>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => handleOptOutLink(true)}
+            hitSlop={8}
+            style={styles.optOutLinkWrap}
+          >
+            <Text style={[styles.optOutLinkSmall, { color: colors.textMuted }]}>
+              {t('weeklyCheckIn.plan.optOutLink')}
+            </Text>
+          </Pressable>
         </View>
-        <View style={styles.optOutCopy}>
-          <Text style={[styles.optOutTitle, { color: colors.text }]}>
-            {enabled ? t('weeklyCheckIn.plan.optOutTitle') : t('weeklyCheckIn.plan.optOutTitleOff')}
-          </Text>
-          <Text style={[styles.optOutDescription, { color: colors.textMuted }]}>
-            {enabled
-              ? t('weeklyCheckIn.plan.optOutDescription')
-              : t('weeklyCheckIn.plan.optOutDescriptionOff')}
-          </Text>
+      )}
+
+      {showFinishFooter && (
+        <View style={styles.footer}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            rounded
+            isDark={isDark}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            onPress={handleFinish}
+          >
+            {t('weeklyCheckIn.plan.ctaNone')}
+          </Button>
         </View>
-        <Switch
-          value={enabled}
-          onValueChange={onChange}
-          trackColor={{ false: colors.border, true: accentColor }}
-          thumbColor="#FFFFFF"
-          ios_backgroundColor={colors.border}
-          accessibilityLabel={
-            enabled ? t('weeklyCheckIn.plan.optOutTitle') : t('weeklyCheckIn.plan.optOutTitleOff')
-          }
-        />
-      </View>
+      )}
+
+      {inSubmitPanel && submitFailed && (
+        <View style={styles.footer}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            rounded
+            isDark={isDark}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            onPress={handleRetry}
+          >
+            {t('weeklyCheckIn.plan.retryCta')}
+          </Button>
+        </View>
+      )}
     </View>
   );
 }
@@ -355,6 +435,12 @@ const styles = StyleSheet.create({
   scroll: {
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[3],
+  },
+  scrollFill: {
+    flexGrow: 1,
+  },
+  deckBody: {
+    flex: 1,
   },
   bubbleWrap: {
     paddingHorizontal: spacingPixels[5],
@@ -390,67 +476,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  progressHeader: {
-    paddingHorizontal: spacingPixels[5],
-    marginBottom: spacingPixels[3],
-    gap: spacingPixels[2],
-  },
-  readyCount: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  segmentsRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[1],
-  },
-  segment: {
-    flex: 1,
-    height: 5,
-    borderRadius: radiusPixels.full,
-    maxWidth: 48,
-  },
-  goalCaption: {
-    fontSize: 12.5,
-    fontWeight: '500',
-  },
-  committedNote: {
-    fontSize: 11.5,
-    lineHeight: 16,
-  },
-  optOutCard: {
-    marginHorizontal: spacingPixels[5],
-    marginBottom: spacingPixels[3],
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  optOutHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-  },
-  optOutIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optOutCopy: {
-    flex: 1,
-    gap: spacingPixels[1],
-  },
-  optOutTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  optOutDescription: {
-    fontSize: 12.5,
-    lineHeight: 17,
+  optOutLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: spacingPixels[2],
   },
   footer: {
     paddingHorizontal: spacingPixels[5],
     paddingBottom: spacingPixels[6],
     paddingTop: spacingPixels[2],
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+  },
+  actionSlot: {
+    flex: 1,
+  },
+  actionSlotWide: {
+    flex: 1.6,
+  },
+  optOutLinkWrap: {
+    alignSelf: 'center',
+    marginTop: spacingPixels[3],
+  },
+  optOutLinkSmall: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
   },
 });

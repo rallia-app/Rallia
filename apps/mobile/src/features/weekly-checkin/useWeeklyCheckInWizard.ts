@@ -28,6 +28,7 @@ import {
   useCheckInMatchPlan,
   useRecordCheckIn,
   checkInKeys,
+  MAX_PLAN_INVITEES_SHOWN,
   type CheckInContext,
   type CheckInMatchPlan,
   type CheckInResult,
@@ -58,13 +59,22 @@ export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-
 // match-creation logic to have something to work with.
 export const MIN_AVAILABILITY_CELLS = 3;
 
-// Match-plan step (step 4) is hidden for now: the wizard submits an empty plan
-// (create nothing) straight from "Games for you" — or from availability when
-// that step is skipped — and lands on the All-Set recap. Flip to restore.
-export const PLAN_STEP_ENABLED: boolean = false;
+// Match-plan step (step 4): one proposal at a time — the player skips a
+// suggested game or confirms it after trimming its invite list. Flipping this
+// off reverts to submitting an empty plan (create nothing) straight from
+// "Games for you" — or from availability when that step is skipped.
+export const PLAN_STEP_ENABLED: boolean = true;
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 const TOTAL_STEPS: WizardStep = 5;
+
+/** The player's verdict on one proposed game (the plan step's deck). */
+export type PlanDecision = 'create' | 'skip';
+/** One decided card, in decision order (order enables undo via back). */
+export interface PlanDecisionEntry {
+  key: string;
+  decision: PlanDecision;
+}
 
 export interface UseWeeklyCheckInWizard {
   // Step navigation
@@ -93,9 +103,15 @@ export interface UseWeeklyCheckInWizard {
   planLoading: boolean;
   /** Preview fetch failed — the step falls back to legacy autonomous copy. */
   planError: boolean;
-  /** Proposal keys the player removed (arrays, not Sets — Hermes/TanStack). */
-  excludedProposalKeys: string[];
-  toggleProposal: (key: string) => void;
+  /** Deck verdicts so far, in decision order (undo pops the last one). */
+  planDecisions: PlanDecisionEntry[];
+  /** Records the verdict on one card (replaces any prior verdict for it). */
+  decideProposal: (key: string, decision: PlanDecision) => void;
+  /** Pops the most recent verdict. Returns false when there was none. */
+  undoLastPlanDecision: () => boolean;
+  /** Selected invitee ids per proposal key (seeded to the top candidates). */
+  inviteSelections: Record<string, string[]>;
+  toggleInvitee: (proposalKey: string, playerId: string) => void;
   /** Disables auto_create_matches — no games are auto-included or created. */
   optOut: boolean;
   setOptOut: (b: boolean) => void;
@@ -162,9 +178,13 @@ export function useWeeklyCheckInWizard(
   const [availability, setAvailability] = useState<HourGrid>(() => new Set());
   const [frequencyGoal, setFrequencyGoalState] = useState<number>(3);
 
-  // Plan selection — everything is INCLUDED by default; these track removals.
-  // Arrays (not Sets): Hermes iterator quirk + React state ergonomics.
-  const [excludedProposalKeys, setExcludedProposalKeys] = useState<string[]>([]);
+  // Plan deck — the player reviews proposals ONE AT A TIME: each card is either
+  // confirmed ('create') or skipped, and the verdicts accumulate here in order
+  // so back can undo the latest one. Invitee selections are per-proposal and
+  // seeded to the top candidates when the preview lands.
+  // Arrays/records (not Sets): Hermes iterator quirk + React state ergonomics.
+  const [planDecisions, setPlanDecisions] = useState<PlanDecisionEntry[]>([]);
+  const [inviteSelections, setInviteSelections] = useState<Record<string, string[]>>({});
   const [optOut, setOptOutState] = useState<boolean>(false);
 
   // When the wizard opened — drives duration_seconds on completed/abandoned.
@@ -268,6 +288,24 @@ export function useWeeklyCheckInWizard(
     if (plan.optedOut) setOptOutState(true);
   }, [plan]);
 
+  // Seed each proposal's invite selection to its top candidates. Runs on every
+  // plan change (a "Games for you" join invalidates + refetches the preview)
+  // but only fills keys the player hasn't touched yet, so their edits survive.
+  useEffect(() => {
+    if (!plan) return;
+    setInviteSelections(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const p of plan.proposals) {
+        if (!(p.key in next)) {
+          next[p.key] = p.invitees.slice(0, MAX_PLAN_INVITEES_SHOWN).map(i => i.playerId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [plan]);
+
   // "Games for you" joins move the goal cap, so the cached preview is stale.
   const planStaleRef = useRef(false);
   const markPlanStale = useCallback(() => {
@@ -294,20 +332,59 @@ export function useWeeklyCheckInWizard(
     selectionHaptic();
     setFrequencyGoalState(Math.max(1, Math.min(5, n)));
   }, []);
-  const toggleProposal = useCallback(
-    (key: string) => {
-      selectionHaptic();
-      setExcludedProposalKeys(prev => {
-        const removing = !prev.includes(key);
-        const next = removing ? [...prev, key] : prev.filter(k => k !== key);
+  const decideProposal = useCallback(
+    (key: string, decision: PlanDecision) => {
+      setPlanDecisions(prev => [...prev.filter(d => d.key !== key), { key, decision }]);
+      // Only skips fire the toggle event — confirmed cards are counted by the
+      // submitted event's proposals_included.
+      if (decision === 'skip') {
         const proposal = plan?.proposals.find(p => p.key === key);
+        const skipped =
+          planDecisions.filter(d => d.decision === 'skip' && d.key !== key).length + 1;
         Analytics.weeklyCheckinPlanProposalToggled({
-          action: removing ? 'exclude' : 'restore',
+          action: 'exclude',
           sport: proposal?.sportName ?? 'unknown',
           match_date: proposal?.matchDate ?? '',
-          remaining_included: (plan?.proposals.length ?? 0) - next.length,
+          remaining_included: (plan?.proposals.length ?? 0) - skipped,
         });
-        return next;
+      }
+    },
+    [plan, planDecisions]
+  );
+
+  const undoLastPlanDecision = useCallback((): boolean => {
+    if (isSubmitting) return false;
+    const last = planDecisions[planDecisions.length - 1];
+    if (!last) return false;
+    setPlanDecisions(prev => prev.slice(0, -1));
+    if (last.decision === 'skip') {
+      const proposal = plan?.proposals.find(p => p.key === last.key);
+      const skipped = planDecisions.filter(d => d.decision === 'skip').length - 1;
+      Analytics.weeklyCheckinPlanProposalToggled({
+        action: 'restore',
+        sport: proposal?.sportName ?? 'unknown',
+        match_date: proposal?.matchDate ?? '',
+        remaining_included: (plan?.proposals.length ?? 0) - skipped,
+      });
+    }
+    return true;
+  }, [plan, planDecisions, isSubmitting]);
+
+  const toggleInvitee = useCallback(
+    (proposalKey: string, playerId: string) => {
+      selectionHaptic();
+      const proposal = plan?.proposals.find(p => p.key === proposalKey);
+      setInviteSelections(prev => {
+        const current = prev[proposalKey] ?? [];
+        const removing = current.includes(playerId);
+        Analytics.weeklyCheckinPlanInviteeToggled({
+          action: removing ? 'exclude' : 'restore',
+          sport: proposal?.sportName ?? 'unknown',
+        });
+        return {
+          ...prev,
+          [proposalKey]: removing ? current.filter(id => id !== playerId) : [...current, playerId],
+        };
       });
     },
     [plan]
@@ -343,30 +420,53 @@ export function useWeeklyCheckInWizard(
   // otherwise from goNext when leaving the last visible step. Runs the
   // availability save + RPC, then advances to the All-Set step.
   const submit = useCallback(async () => {
-    // The confirmed selection: every proposal the player didn't remove, minus
-    // their removed invitees. Opt-out (or no proposals) submits an empty plan —
-    // "create nothing" — which is NOT the same as plan:null (legacy autonomous
-    // generation), used only when the preview itself failed. With the plan step
-    // hidden, the query above never runs, so this is always the empty plan.
-    const confirmedProposals: PlanProposalSubmit[] =
+    // The confirmed selection: every proposal the player approved on the deck,
+    // minus their unselected invitees. Undecided or skipped cards are dropped.
+    // Opt-out (or no proposals) submits an empty plan — "create nothing" —
+    // which is NOT the same as plan:null (legacy autonomous generation), used
+    // only when the preview itself failed.
+    const confirmed =
       !plan || optOut
         ? []
-        : plan.proposals
-            .filter(p => !excludedProposalKeys.includes(p.key))
-            .map(p => ({
-              sport_id: p.sportId,
-              match_date: p.matchDate,
-              start_hour: p.startHour,
-              facility_id: p.facilityId,
-              invite_excluded_player_ids: [],
-            }));
-    const inviteesExcluded = 0;
+        : plan.proposals.filter(
+            p => planDecisions.find(d => d.key === p.key)?.decision === 'create'
+          );
+    const confirmedProposals: PlanProposalSubmit[] = confirmed.map(p => {
+      const selected = inviteSelections[p.key] ?? [];
+      return {
+        sport_id: p.sportId,
+        match_date: p.matchDate,
+        start_hour: p.startHour,
+        facility_id: p.facilityId,
+        // Exclusion list = the full previewed candidate pool minus the kept
+        // players. The invite pass draws from that same ranked pool (same cap),
+        // so this makes exactly the selected players receive an invite.
+        invite_excluded_player_ids: p.invitees
+          .filter(i => !selected.includes(i.playerId))
+          .map(i => i.playerId),
+      };
+    });
+    const inviteesExcluded = confirmedProposals.reduce(
+      (sum, p) => sum + p.invite_excluded_player_ids.length,
+      0
+    );
+    const inviteesSelected = confirmed.reduce((sum, p) => {
+      const selected = inviteSelections[p.key] ?? [];
+      return sum + p.invitees.filter(i => selected.includes(i.playerId)).length;
+    }, 0);
+    const skippedCount = plan
+      ? plan.proposals.filter(p => planDecisions.find(d => d.key === p.key)?.decision === 'skip')
+          .length
+      : 0;
+    // The invite dispatch is gated on the persisted auto_invite preference, so
+    // it must be ON whenever the player kept at least one invitee.
+    const autoInvite = inviteesSelected > 0;
 
     try {
       const res = await recordCheckIn({
         frequencyGoal,
         optOut,
-        autoInvite: false,
+        autoInvite,
         plan: planError ? null : { proposals: confirmedProposals },
         availability,
         windowDays,
@@ -378,10 +478,10 @@ export function useWeeklyCheckInWizard(
           step_name: STEP_NAMES[4],
           step_index: 4,
           proposals_included: confirmedProposals.length,
-          proposals_excluded: excludedProposalKeys.length,
+          proposals_excluded: skippedCount,
           invitees_excluded: inviteesExcluded,
           opted_out: optOut,
-          auto_invite: false,
+          auto_invite: autoInvite,
         });
       }
       Analytics.weeklyCheckinSubmitted({
@@ -390,7 +490,7 @@ export function useWeeklyCheckInWizard(
         plan_proposals_included: confirmedProposals.length,
         plan_invitees_excluded: inviteesExcluded,
         opted_out: optOut,
-        auto_invite: false,
+        auto_invite: autoInvite,
         matches_created: res.createdMatches.length,
         new_streak: res.newStreak,
         milestone_reached: res.milestoneReached,
@@ -412,7 +512,8 @@ export function useWeeklyCheckInWizard(
     plan,
     planError,
     optOut,
-    excludedProposalKeys,
+    planDecisions,
+    inviteSelections,
     availability,
     windowDays,
     onComplete,
@@ -482,6 +583,11 @@ export function useWeeklyCheckInWizard(
     submit,
   ]);
   const goBack = useCallback(() => {
+    // On the plan deck, back first rewinds the previous card; it only leaves
+    // the step once there's nothing left to undo. Frozen entirely while the
+    // submit is in flight — leaving mid-submit would race the jump to All-Set.
+    if (currentStep === 4 && isSubmitting) return;
+    if (currentStep === 4 && undoLastPlanDecision()) return;
     // When the recap step is skipped, availability (step 2) is the floor.
     const minStep = skipRecapStep ? 2 : 1;
     setCurrentStep(prev => {
@@ -491,7 +597,7 @@ export function useWeeklyCheckInWizard(
       if (prev === 4 && skipOpportunitiesStep) return 2;
       return (prev - 1) as WizardStep;
     });
-  }, [skipRecapStep, skipOpportunitiesStep]);
+  }, [skipRecapStep, skipOpportunitiesStep, currentStep, isSubmitting, undoLastPlanDecision]);
 
   // Auto-advance past "Games for you" when nothing fits — covers the case where
   // the query settles empty only after the user already landed on the step.
@@ -530,8 +636,11 @@ export function useWeeklyCheckInWizard(
     plan,
     planLoading,
     planError,
-    excludedProposalKeys,
-    toggleProposal,
+    planDecisions,
+    decideProposal,
+    undoLastPlanDecision,
+    inviteSelections,
+    toggleInvitee,
     optOut,
     setOptOut,
     markPlanStale,

@@ -50,6 +50,15 @@ export interface CheckInMatchSlot {
 }
 
 /**
+ * How many invite candidates the plan step surfaces per proposed game. The
+ * preview RPC returns the full ranked pool (up to 50 — the same pool the
+ * invite pass draws from); the UI shows and pre-selects only this many, and
+ * everyone not selected lands in invite_excluded_player_ids, so exactly the
+ * kept players get invited.
+ */
+export const MAX_PLAN_INVITEES_SHOWN = 2;
+
+/**
  * Device IANA timezone (e.g. 'America/Toronto'), or null if it can't resolve.
  * Sent to both RPCs so the server's date math stays anchored to the player's
  * actual local frame and `player.timezone` stays current across travel.

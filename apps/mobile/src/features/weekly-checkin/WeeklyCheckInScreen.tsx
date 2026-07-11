@@ -30,7 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '@rallia/shared-hooks';
-import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { lightHaptic } from '@rallia/shared-utils';
 import { accent, primary, spacingPixels } from '@rallia/design-system';
 
 import * as Analytics from '#/services/analytics';
@@ -190,19 +190,21 @@ export function WeeklyCheckInScreen() {
   const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset - planOffset;
   const displayedTotalSteps = (PLAN_STEP_ENABLED ? 4 : 3) - (wizard.skipRecapStep ? 1 : 0);
 
-  // CTA → submit transition from the match-plan step to the All-Set step.
-  // Fire mediumHaptic immediately on press so the tap feels responsive — the
-  // submit() call ultimately fires successHaptic on success or errorHaptic on
-  // failure, but those land ~1-2s later after the RPC roundtrip.
-  const handleSubmit = useCallback(async () => {
-    mediumHaptic();
+  // Submit transition from the match-plan step to the All-Set step. The deck
+  // calls this automatically once every card is decided (per-card haptics
+  // already fired on the buttons); submit() itself fires successHaptic on
+  // success or errorHaptic on failure after the RPC roundtrip. Resolves false
+  // on failure so the step can surface its retry state.
+  const handleSubmit = useCallback(async (): Promise<boolean> => {
     try {
       await wizard.submit();
       // submit() advances to the final step internally; the slide animation
       // runs from the useEffect above via the currentStep dependency change.
+      return true;
     } catch {
-      // Errors are logged + errorHaptic'd inside submit(); ignore here so the
-      // wizard stays on the match-plan step for the user to retry.
+      // Errors are logged + errorHaptic'd inside submit(); the wizard stays on
+      // the match-plan step and the deck shows a retry CTA.
+      return false;
     }
   }, [wizard]);
 
@@ -357,8 +359,10 @@ export function WeeklyCheckInScreen() {
             plan={wizard.plan}
             isLoading={wizard.planLoading}
             error={wizard.planError}
-            excludedProposalKeys={wizard.excludedProposalKeys}
-            toggleProposal={wizard.toggleProposal}
+            planDecisions={wizard.planDecisions}
+            decideProposal={wizard.decideProposal}
+            inviteSelections={wizard.inviteSelections}
+            toggleInvitee={wizard.toggleInvitee}
             optOut={wizard.optOut}
             setOptOut={wizard.setOptOut}
             isSubmitting={wizard.isSubmitting}
