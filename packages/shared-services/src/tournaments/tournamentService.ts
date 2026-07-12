@@ -163,6 +163,8 @@ export async function listMyTournaments(
   userId: string,
   opts: { sportId?: string } = {}
 ): Promise<TournamentListItem[]> {
+  // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
+  if (!userId) return [];
   const { data: regs, error: regsError } = await supabase
     .from('tournament_registrations')
     .select('tournament_id')
@@ -574,6 +576,8 @@ export async function listActiveRegistrations(
  * already registered in.
  */
 export async function listMyActiveRegistrations(userId: string): Promise<TournamentRegistration[]> {
+  // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
+  if (!userId) return [];
   const { data, error } = await supabase
     .from('tournament_registrations')
     .select('*')
@@ -594,6 +598,7 @@ export async function getMyRegistration(
   tournamentId: string,
   userId: string
 ): Promise<TournamentRegistration | null> {
+  if (!userId) return null;
   const { data, error } = await supabase
     .from('tournament_registrations')
     .select('*')

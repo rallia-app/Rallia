@@ -226,6 +226,11 @@ describe('listMyTournaments', () => {
     mockFrom.mockReturnValueOnce(regChain.p);
     await expect(listMyTournaments('u1')).rejects.toThrow('boom');
   });
+
+  it('returns [] without querying when userId is unresolved', async () => {
+    expect(await listMyTournaments(undefined as unknown as string)).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -393,6 +398,16 @@ describe('registration listing helpers', () => {
     const { p } = chain({ data: null, error: { message: 'rls' } });
     mockFrom.mockReturnValue(p);
     await expect(listMyActiveRegistrations('u1')).rejects.toThrow('rls');
+  });
+
+  it('listMyActiveRegistrations returns [] without querying when userId is unresolved', async () => {
+    expect(await listMyActiveRegistrations(undefined as unknown as string)).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('getMyRegistration returns null without querying when userId is unresolved', async () => {
+    expect(await getMyRegistration('t1', undefined as unknown as string)).toBeNull();
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('getMyRegistration returns null when no row exists', async () => {

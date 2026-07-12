@@ -330,6 +330,8 @@ export async function listMyUnscheduledSessionMatches(
   userId: string,
   opts: { sportId?: string; limit?: number } = {}
 ): Promise<UnscheduledSessionMatch[]> {
+  // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
+  if (!userId) return [];
   let query = supabase
     .from('session_matches')
     .select(
