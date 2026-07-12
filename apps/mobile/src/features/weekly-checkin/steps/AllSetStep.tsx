@@ -12,7 +12,7 @@ import { Button } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
-import { SummaryCard } from '#/features/weekly-checkin/components/SummaryCard';
+import { SummaryCard, type RecapGame } from '#/features/weekly-checkin/components/SummaryCard';
 import type { CreatedMatch } from '#/features/weekly-checkin/api';
 import { useTranslation } from '#/hooks';
 
@@ -22,8 +22,8 @@ interface AllSetStepProps {
   /** Games record_weekly_checkin created from the confirmed plan. */
   createdMatches: CreatedMatch[];
   /** Games joined / asked to join on the "Games for you" step. */
-  joinedCount: number;
-  requestedCount: number;
+  joinedGames: RecapGame[];
+  requestedGames: RecapGame[];
   onDone: () => void;
 }
 
@@ -31,8 +31,8 @@ export function AllSetStep({
   frequencyGoal,
   hoursConfirmed,
   createdMatches,
-  joinedCount,
-  requestedCount,
+  joinedGames,
+  requestedGames,
   onDone,
 }: AllSetStepProps) {
   const { t } = useTranslation();
@@ -51,8 +51,8 @@ export function AllSetStep({
             frequencyGoal={frequencyGoal}
             hoursConfirmed={hoursConfirmed}
             createdMatches={createdMatches}
-            joinedCount={joinedCount}
-            requestedCount={requestedCount}
+            joinedGames={joinedGames}
+            requestedGames={requestedGames}
           />
         </View>
       </ScrollView>

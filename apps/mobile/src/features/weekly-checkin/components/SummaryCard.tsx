@@ -20,23 +20,32 @@ import { useLocale } from '#/context';
 import type { CreatedMatch } from '#/features/weekly-checkin/api';
 import { formatWeekdayName } from '#/features/weekly-checkin/window';
 
+/** One game recapped on the success step (joined/requested on "Games for you"). */
+export interface RecapGame {
+  id: string;
+  sportName: string;
+  matchDate: string; // YYYY-MM-DD
+  startTime: string; // HH:MM[:SS]
+  place: string | null;
+}
+
 interface SummaryCardProps {
   frequencyGoal: number;
   hoursConfirmed: number;
   /** Games the check-in created from the confirmed plan. */
   createdMatches: CreatedMatch[];
   /** Games joined directly on the "Games for you" step. */
-  joinedCount: number;
+  joinedGames: RecapGame[];
   /** Games the player asked to join (request-mode) on that step. */
-  requestedCount: number;
+  requestedGames: RecapGame[];
 }
 
 export function SummaryCard({
   frequencyGoal,
   hoursConfirmed,
   createdMatches,
-  joinedCount,
-  requestedCount,
+  joinedGames,
+  requestedGames,
 }: SummaryCardProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
@@ -54,49 +63,58 @@ export function SummaryCard({
       ? t('weeklyCheckIn.step4.summarySlotsOne')
       : t('weeklyCheckIn.step4.summarySlots', { count: hoursConfirmed });
 
+  // "{Sport}" + "Sunday 20:00" pieces shared by every game row.
+  const gameLine = (sportName: string, matchDate: string, startTime: string) => ({
+    sport: sportName ? sportName.charAt(0).toUpperCase() + sportName.slice(1) : '',
+    when: `${formatWeekdayName(matchDate, locale)} ${startTime.slice(0, 5)}`,
+  });
+
   // Build the recap rows in order, then flag the last so only it drops its
   // divider. The "games joined / asked to join" rows recap what happened on the
   // "Games for you" step and only show when the player acted there.
-  const rows: Array<{ key: string; icon: keyof typeof Ionicons.glyphMap; text: string }> = [
+  const rows: Array<{
+    key: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    text: string;
+    subtext?: string;
+  }> = [
     { key: 'goal', icon: 'trophy', text: freqText },
     { key: 'slots', icon: 'calendar', text: slotsText },
   ];
-  // One row per real game the check-in created (sport · when · place).
+  // One row per game: status · sport · when on top, place below.
   createdMatches.forEach(m => {
-    const sportLabel = m.sportName
-      ? m.sportName.charAt(0).toUpperCase() + m.sportName.slice(1)
-      : '';
-    const when = `${formatWeekdayName(m.matchDate, locale)} ${m.startTime.slice(0, 5)}`;
-    const place =
-      m.locationType === 'facility' && m.facilityName
-        ? m.facilityName
-        : t('weeklyCheckIn.plan.locationTbd');
     rows.push({
       key: `created-${m.matchId}`,
       icon: 'add-circle',
-      text: t('weeklyCheckIn.step4.summaryCreated', { sport: sportLabel, when, place }),
+      text: t('weeklyCheckIn.step4.summaryCreated', {
+        ...gameLine(m.sportName, m.matchDate, m.startTime),
+      }),
+      subtext:
+        m.locationType === 'facility' && m.facilityName
+          ? m.facilityName
+          : t('weeklyCheckIn.plan.locationTbd'),
     });
   });
-  if (joinedCount > 0) {
+  joinedGames.forEach(g => {
     rows.push({
-      key: 'joined',
+      key: `joined-${g.id}`,
       icon: 'checkmark-circle',
-      text:
-        joinedCount === 1
-          ? t('weeklyCheckIn.step4.summaryJoinedOne')
-          : t('weeklyCheckIn.step4.summaryJoined', { count: joinedCount }),
+      text: t('weeklyCheckIn.step4.summaryJoinedGame', {
+        ...gameLine(g.sportName, g.matchDate, g.startTime),
+      }),
+      subtext: g.place ?? t('weeklyCheckIn.plan.locationTbd'),
     });
-  }
-  if (requestedCount > 0) {
+  });
+  requestedGames.forEach(g => {
     rows.push({
-      key: 'requested',
+      key: `requested-${g.id}`,
       icon: 'hand-left',
-      text:
-        requestedCount === 1
-          ? t('weeklyCheckIn.step4.summaryRequestedOne')
-          : t('weeklyCheckIn.step4.summaryRequested', { count: requestedCount }),
+      text: t('weeklyCheckIn.step4.summaryRequestedGame', {
+        ...gameLine(g.sportName, g.matchDate, g.startTime),
+      }),
+      subtext: g.place ?? t('weeklyCheckIn.plan.locationTbd'),
     });
-  }
+  });
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -105,6 +123,7 @@ export function SummaryCard({
           key={row.key}
           icon={row.icon}
           text={row.text}
+          subtext={row.subtext}
           colors={colors}
           iconBubbleBg={iconBubbleBg}
           iconColor={iconColor}
@@ -118,6 +137,7 @@ export function SummaryCard({
 function SummaryRow({
   icon,
   text,
+  subtext,
   colors,
   iconBubbleBg,
   iconColor,
@@ -125,6 +145,8 @@ function SummaryRow({
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   text: string;
+  /** Muted second line (e.g. a created game's place). */
+  subtext?: string;
   colors: ReturnType<typeof useThemeStyles>['colors'];
   iconBubbleBg: string;
   iconColor: string;
@@ -137,7 +159,17 @@ function SummaryRow({
       <View style={[styles.iconBubble, { backgroundColor: iconBubbleBg }]}>
         <Ionicons name={icon} size={16} color={iconColor} />
       </View>
-      <Text style={[styles.rowText, { color: colors.text }]}>{text}</Text>
+      <View style={styles.rowTextCol}>
+        <Text style={[styles.rowText, { color: colors.text }]}>{text}</Text>
+        {subtext ? (
+          <View style={styles.rowSubRow}>
+            <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+            <Text style={[styles.rowSubtext, { color: colors.textMuted }]} numberOfLines={1}>
+              {subtext}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -164,9 +196,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowText: {
+  rowTextCol: {
     flex: 1,
+  },
+  rowText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  rowSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginTop: 2,
+  },
+  rowSubtext: {
+    fontSize: 12.5,
+    flexShrink: 1,
   },
 });

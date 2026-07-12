@@ -71,16 +71,23 @@ export function WeeklyCheckInScreen() {
   const playerId = session?.user?.id ?? null;
 
   // One-click join state for the "Games for you" step — lifted to the screen so
-  // the All-Set recap can report what was joined / asked to join there.
+  // the All-Set recap can detail what was joined / asked to join there.
   const { join, outcomes, pendingId } = useJoinOpportunity(playerId);
-  const joinedCount = useMemo(
-    () => Object.values(outcomes).filter(o => o === 'joined').length,
-    [outcomes]
+  const recapGamesFor = useCallback(
+    (outcome: 'joined' | 'requested') =>
+      wizard.opportunities
+        .filter(m => outcomes[m.id] === outcome)
+        .map(m => ({
+          id: m.id,
+          sportName: m.sport?.name ?? '',
+          matchDate: m.match_date,
+          startTime: m.start_time,
+          place: m.facility?.name ?? m.location_name ?? null,
+        })),
+    [wizard.opportunities, outcomes]
   );
-  const requestedCount = useMemo(
-    () => Object.values(outcomes).filter(o => o === 'requested').length,
-    [outcomes]
-  );
+  const joinedGames = useMemo(() => recapGamesFor('joined'), [recapGamesFor]);
+  const requestedGames = useMemo(() => recapGamesFor('requested'), [recapGamesFor]);
 
   // A join here changes the goal cap, so the plan preview (fetched behind this
   // step) is stale. Flag it so goNext refetches before the plan step renders.
@@ -378,8 +385,8 @@ export function WeeklyCheckInScreen() {
               frequencyGoal={wizard.frequencyGoal}
               hoursConfirmed={wizard.windowCellCount}
               createdMatches={wizard.result.createdMatches}
-              joinedCount={joinedCount}
-              requestedCount={requestedCount}
+              joinedGames={joinedGames}
+              requestedGames={requestedGames}
               onDone={handleDone}
             />
           )}

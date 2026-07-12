@@ -44,7 +44,7 @@ import type {
 import { formatWeekdayName } from '#/features/weekly-checkin/window';
 import { useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
-import { lightHaptic, mediumHaptic, selectionHaptic } from '#/utils/haptics';
+import { lightHaptic, selectionHaptic, successHaptic } from '#/utils/haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -126,23 +126,52 @@ export function MatchPlanStep({
   // legs use duration 0.
   // ---------------------------------------------------------------------------
   const slideAnim = useMemo(() => new Animated.Value(0), []);
+  // Success beat on approve: a check badge pops over the card and holds a
+  // moment before the slide-out, so "this game is happening" lands before the
+  // next suggestion appears. Skips exit immediately.
+  const successAnim = useMemo(() => new Animated.Value(0), []);
   const [animating, setAnimating] = useState(false);
+  // The LAST card settles in place: no slide-out and no interstitial spinner
+  // panel — the pressed button carries the loading state until the submit
+  // resolves and the wizard slides to All-Set. Holds which button spins.
+  const [finalizing, setFinalizing] = useState<PlanDecision | null>(null);
+
+  const undecidedCount = useMemo(
+    () => proposals.filter(p => !decisionByKey[p.key]).length,
+    [proposals, decisionByKey]
+  );
 
   const handleDecision = useCallback(
     (decision: PlanDecision) => {
-      if (animating || isSubmitting || !currentProposal) return;
-      if (decision === 'create') void mediumHaptic();
-      else void lightHaptic();
+      if (animating || isSubmitting || finalizing || !currentProposal) return;
+      if (undecidedCount === 1) {
+        // Last suggestion: record the verdict without sliding away — the deck
+        // stays visible (success overlay on create) while the auto-submit
+        // effect runs and the pressed button shows the spinner.
+        setFinalizing(decision);
+        if (decision === 'create') {
+          void successHaptic();
+          setAnimating(true);
+          Animated.timing(successAnim, {
+            toValue: 1,
+            duration: 200,
+            easing: Easing.out(Easing.back(1.5)),
+            useNativeDriver: true,
+          }).start(() => {
+            setAnimating(false);
+            decideProposal(currentProposal.key, decision);
+          });
+        } else {
+          void lightHaptic();
+          decideProposal(currentProposal.key, decision);
+        }
+        return;
+      }
       setAnimating(true);
-      const exitX = decision === 'create' ? SCREEN_WIDTH : -SCREEN_WIDTH;
-      Animated.timing(slideAnim, {
-        toValue: exitX,
-        duration: 200,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start(() => {
+      const advance = () => {
         decideProposal(currentProposal.key, decision);
         Animated.sequence([
+          Animated.timing(successAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
           Animated.timing(slideAnim, {
             toValue: SCREEN_WIDTH,
             duration: 0,
@@ -155,10 +184,54 @@ export function MatchPlanStep({
             useNativeDriver: true,
           }),
         ]).start(() => setAnimating(false));
-      });
+      };
+      if (decision === 'create') {
+        void successHaptic();
+        Animated.sequence([
+          Animated.timing(successAnim, {
+            toValue: 1,
+            duration: 200,
+            easing: Easing.out(Easing.back(1.5)),
+            useNativeDriver: true,
+          }),
+          Animated.delay(450),
+          Animated.timing(slideAnim, {
+            toValue: SCREEN_WIDTH,
+            duration: 220,
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start(advance);
+      } else {
+        void lightHaptic();
+        Animated.timing(slideAnim, {
+          toValue: -SCREEN_WIDTH,
+          duration: 200,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }).start(advance);
+      }
     },
-    [animating, isSubmitting, currentProposal, decideProposal, slideAnim]
+    [
+      animating,
+      isSubmitting,
+      finalizing,
+      undecidedCount,
+      currentProposal,
+      decideProposal,
+      slideAnim,
+      successAnim,
+    ]
   );
+
+  // While the last verdict settles, the cursor is already past the end — keep
+  // showing the proposal that was just decided.
+  const finalizedProposal = useMemo(() => {
+    if (!finalizing) return null;
+    const lastKey = planDecisions[planDecisions.length - 1]?.key;
+    return proposals.find(p => p.key === lastKey) ?? null;
+  }, [finalizing, planDecisions, proposals]);
+  const displayProposal = currentProposal ?? finalizedProposal;
 
   // Backward (header back → the wizard pops the last verdict): the restored
   // card slides in from the LEFT, mirroring the forward direction of travel.
@@ -189,6 +262,10 @@ export function MatchPlanStep({
     inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
     outputRange: [0, 1, 0],
   });
+  const successScale = successAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 1],
+  });
 
   // ---------------------------------------------------------------------------
   // Auto-submit once every card is decided. One attempt per completion — undo
@@ -200,15 +277,21 @@ export function MatchPlanStep({
     if (!allDecided) {
       attemptedRef.current = false;
       setSubmitFailed(false);
+      setFinalizing(null);
     }
   }, [allDecided]);
   useEffect(() => {
     if (!allDecided || optOut || animating || isSubmitting || attemptedRef.current) return;
     attemptedRef.current = true;
     void onSubmit().then(ok => {
-      if (!ok) setSubmitFailed(true);
+      if (!ok) {
+        // Fall out of the settled card into the failed panel (retry CTA).
+        setSubmitFailed(true);
+        setFinalizing(null);
+        Animated.timing(successAnim, { toValue: 0, duration: 0, useNativeDriver: true }).start();
+      }
     });
-  }, [allDecided, optOut, animating, isSubmitting, onSubmit]);
+  }, [allDecided, optOut, animating, isSubmitting, onSubmit, successAnim]);
 
   const handleRetry = useCallback(() => {
     setSubmitFailed(false);
@@ -234,9 +317,13 @@ export function MatchPlanStep({
   }, [onSubmit]);
 
   const hasProposals = proposals.length > 0;
-  const showDeck = !isLoading && !error && !optOut && hasProposals && !allDecided;
-  // Deck exhausted and heading into (or retrying) the auto-submit.
-  const inSubmitPanel = !isLoading && !error && !optOut && allDecided;
+  // Last verdict settling in place — the deck stays up, a button spins.
+  const settlingOnDeck = allDecided && !!finalizing && !submitFailed;
+  const showDeck =
+    !isLoading && !error && !optOut && hasProposals && (!allDecided || settlingOnDeck);
+  // Deck exhausted outside the in-place settle: only the retry-after-failure
+  // path (and its spinner while retrying) lands here now.
+  const inSubmitPanel = !isLoading && !error && !optOut && allDecided && !settlingOnDeck;
   // Every terminal state that finishes through an explicit CTA instead:
   // preview error (legacy fallback), opted out, or nothing to propose.
   const showFinishFooter = !isLoading && !showDeck && !inSubmitPanel;
@@ -299,8 +386,8 @@ export function MatchPlanStep({
                 : t('weeklyCheckIn.plan.emptyBody', { count: committed })}
             </Text>
           </View>
-        ) : allDecided ? (
-          // Deck exhausted → the submit effect is running (or failed).
+        ) : allDecided && !settlingOnDeck ? (
+          // Retry-after-failure fallback (the normal finish settles on the deck).
           <View style={styles.center}>
             {submitFailed ? (
               <>
@@ -327,19 +414,43 @@ export function MatchPlanStep({
           </View>
         ) : (
           <>
-            {currentProposal && (
+            {displayProposal && (
               <Animated.View
+                // Freeze interactions while the last verdict settles — the
+                // submit already carries the selections as they were.
+                pointerEvents={finalizing ? 'none' : 'auto'}
                 style={[
                   styles.deckBody,
                   { opacity: deckOpacity, transform: [{ translateX: slideAnim }] },
                 ]}
               >
                 <PlanProposalDetail
-                  proposal={currentProposal}
-                  dayLabel={dayLabelFor(currentProposal.matchDate)}
-                  selectedInviteeIds={inviteSelections[currentProposal.key] ?? []}
-                  onToggleInvitee={playerId => toggleInvitee(currentProposal.key, playerId)}
+                  proposal={displayProposal}
+                  dayLabel={dayLabelFor(displayProposal.matchDate)}
+                  selectedInviteeIds={inviteSelections[displayProposal.key] ?? []}
+                  onToggleInvitee={playerId => toggleInvitee(displayProposal.key, playerId)}
                 />
+                {/* Approve confirmation — pops in over the card, slides out with it. */}
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    styles.successOverlay,
+                    { backgroundColor: `${colors.background}D9`, opacity: successAnim },
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      styles.successBadge,
+                      { backgroundColor: linkColor, transform: [{ scale: successScale }] },
+                    ]}
+                  >
+                    <Ionicons name="checkmark" size={40} color="#FFFFFF" />
+                  </Animated.View>
+                  <Text style={[styles.successLabel, { color: colors.text }]}>
+                    {t('weeklyCheckIn.plan.createdOverlay')}
+                  </Text>
+                </Animated.View>
               </Animated.View>
             )}
           </>
@@ -356,7 +467,8 @@ export function MatchPlanStep({
                 fullWidth
                 rounded
                 isDark={isDark}
-                disabled={animating || isSubmitting}
+                loading={finalizing === 'skip'}
+                disabled={animating || isSubmitting || !!finalizing}
                 onPress={() => handleDecision('skip')}
               >
                 {t('weeklyCheckIn.plan.skipCta')}
@@ -369,7 +481,8 @@ export function MatchPlanStep({
                 fullWidth
                 rounded
                 isDark={isDark}
-                disabled={animating || isSubmitting}
+                loading={finalizing === 'create'}
+                disabled={animating || isSubmitting || !!finalizing}
                 onPress={() => handleDecision('create')}
               >
                 {t('weeklyCheckIn.plan.createCta')}
@@ -379,6 +492,7 @@ export function MatchPlanStep({
           <Pressable
             onPress={() => handleOptOutLink(true)}
             hitSlop={8}
+            disabled={animating || isSubmitting || !!finalizing}
             style={styles.optOutLinkWrap}
           >
             <Text style={[styles.optOutLinkSmall, { color: colors.textMuted }]}>
@@ -441,6 +555,27 @@ const styles = StyleSheet.create({
   },
   deckBody: {
     flex: 1,
+  },
+  successOverlay: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[3],
+  },
+  successBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  successLabel: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   bubbleWrap: {
     paddingHorizontal: spacingPixels[5],

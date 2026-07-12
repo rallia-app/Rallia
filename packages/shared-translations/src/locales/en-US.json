@@ -11531,6 +11531,7 @@
       "inviteNote": "Only the players you keep selected get an invite.",
       "skipCta": "Skip",
       "createCta": "Create this game",
+      "createdOverlay": "Added to your week!",
       "submitting": "Setting up your games…",
       "submittingNone": "Wrapping up your check-in…",
       "submitFailedTitle": "That didn't go through",
@@ -11559,11 +11560,9 @@
       "summaryGoal": "Goal: {freq}",
       "summarySlots": "{count} hours confirmed",
       "summarySlotsOne": "1 hour confirmed",
-      "summaryCreated": "{sport} · {when} · {place}",
-      "summaryJoined": "{count} games joined",
-      "summaryJoinedOne": "1 game joined",
-      "summaryRequested": "Asked to join {count} games",
-      "summaryRequestedOne": "Asked to join 1 game",
+      "summaryCreated": "Created · {sport} · {when}",
+      "summaryJoinedGame": "Joined · {sport} · {when}",
+      "summaryRequestedGame": "Requested · {sport} · {when}",
       "cta": "Back to home"
     }
   },

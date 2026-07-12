@@ -11531,6 +11531,7 @@
       "inviteNote": "Seuls les joueurs que tu gardes sélectionnés recevront une invitation.",
       "skipCta": "Passer",
       "createCta": "Créer cette partie",
+      "createdOverlay": "Ajoutée à ta semaine!",
       "submitting": "On prépare tes parties…",
       "submittingNone": "On termine ton check-in…",
       "submitFailedTitle": "Ça n'a pas passé",
@@ -11559,11 +11560,9 @@
       "summaryGoal": "Objectif: {freq}",
       "summarySlots": "{count} heures confirmées",
       "summarySlotsOne": "1 heure confirmée",
-      "summaryCreated": "{sport} · {when} · {place}",
-      "summaryJoined": "{count} parties rejointes",
-      "summaryJoinedOne": "1 partie rejointe",
-      "summaryRequested": "Demandes envoyées pour {count} parties",
-      "summaryRequestedOne": "Demande envoyée pour 1 partie",
+      "summaryCreated": "Créée · {sport} · {when}",
+      "summaryJoinedGame": "Rejointe · {sport} · {when}",
+      "summaryRequestedGame": "Demande envoyée · {sport} · {when}",
       "cta": "Retour à l'accueil"
     }
   },
