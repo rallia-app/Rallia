@@ -24,7 +24,7 @@ import { SheetManager } from 'react-native-actions-sheet';
 import { Logger } from '@rallia/shared-services';
 import { useAuth, useProfile } from '@rallia/shared-hooks';
 
-import { useActionsSheet, useOverlay } from '#/context';
+import { useActionsSheet, useOverlay, useSport } from '#/context';
 import { navigationRef } from '#/navigation';
 import { IS_E2E } from '#/utils/e2e';
 
@@ -60,13 +60,24 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
 
   // Don't fetch the context until splash is done AND the user is authenticated
   // (the RPC throws auth.uid()-null otherwise, which retries 3× and spams logs).
-  const { data: context } = useCheckInContext({ enabled: isSplashComplete && isAuthed });
+  // Keyed to the sport mode (streak/goal are per sport) so it shares the cache
+  // entry with the Home banner and the wizard; the pending flag it gates on is
+  // player-wide either way.
+  const { selectedSport } = useSport();
+  const { data: context } = useCheckInContext({
+    enabled: isSplashComplete && isAuthed,
+    sportId: selectedSport?.id ?? null,
+  });
 
-  const autoOpenedRef = useRef(false);
+  // Fire at most once PER SPORT per session: goal + streak are per sport, so
+  // switching to a sport that still owes a check-in this week should present the
+  // wizard for it, but only once (the cooldown key handles cross-session nagging).
+  const autoOpenedSportsRef = useRef<Set<string>>(new Set());
+  const sportKey = selectedSport?.id ?? 'default';
 
   useEffect(() => {
     if (IS_E2E) return;
-    if (autoOpenedRef.current) return;
+    if (autoOpenedSportsRef.current.has(sportKey)) return;
     if (!isSplashComplete) return;
     if (!isAuthed) return;
     // Never auto-open the check-in wizard while the user is still onboarding —
@@ -106,7 +117,7 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
           return;
         }
         if (cancelled) return;
-        autoOpenedRef.current = true;
+        autoOpenedSportsRef.current.add(sportKey);
         // Dismiss any presenting bottom sheet BEFORE navigating, so the wizard
         // isn't presented behind a sheet (actions-sheets render in native
         // modals above the nav stack). The wizard also calls hideAll() on mount
@@ -127,6 +138,7 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     isOnboardingSheetOpen,
     isSportSelectionComplete,
     context,
+    sportKey,
   ]);
 
   return null;

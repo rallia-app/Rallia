@@ -5960,6 +5960,7 @@ export type Database = {
           last_evaluated_week_start: string | null
           longest_streak: number
           player_id: string
+          sport_id: string
           updated_at: string
         }
         Insert: {
@@ -5971,6 +5972,7 @@ export type Database = {
           last_evaluated_week_start?: string | null
           longest_streak?: number
           player_id: string
+          sport_id: string
           updated_at?: string
         }
         Update: {
@@ -5982,14 +5984,22 @@ export type Database = {
           last_evaluated_week_start?: string | null
           longest_streak?: number
           player_id?: string
+          sport_id?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "player_streak_player_id_fkey"
             columns: ["player_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_streak_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
             referencedColumns: ["id"]
           },
         ]
@@ -6102,6 +6112,7 @@ export type Database = {
           frequency_goal: number | null
           player_id: string
           sessions_played: number | null
+          sport_id: string
           week_start_date: string
         }
         Insert: {
@@ -6111,6 +6122,7 @@ export type Database = {
           frequency_goal?: number | null
           player_id: string
           sessions_played?: number | null
+          sport_id: string
           week_start_date: string
         }
         Update: {
@@ -6120,6 +6132,7 @@ export type Database = {
           frequency_goal?: number | null
           player_id?: string
           sessions_played?: number | null
+          sport_id?: string
           week_start_date?: string
         }
         Relationships: [
@@ -6128,6 +6141,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_weekly_checkin_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
             referencedColumns: ["id"]
           },
         ]
@@ -9552,7 +9572,7 @@ export type Database = {
         Returns: number
       }
       count_checkin_window_committed_matches: {
-        Args: { p_player_id: string; p_today: string }
+        Args: { p_player_id: string; p_sport_id?: string; p_today: string }
         Returns: number
       }
       count_current_level_proofs: {
@@ -9560,7 +9580,7 @@ export type Database = {
         Returns: number
       }
       count_player_sessions_for_week: {
-        Args: { p_player_id: string; p_week_start: string }
+        Args: { p_player_id: string; p_sport_id?: string; p_week_start: string }
         Returns: number
       }
       count_valid_proofs_for_level: {
@@ -9916,9 +9936,10 @@ export type Database = {
         }[]
       }
       get_check_in_context: {
-        Args: { p_timezone?: string }
+        Args: { p_sport_id?: string; p_timezone?: string }
         Returns: {
           availability_covered_through: string
+          availability_refresh_needed: boolean
           checkin_window: Json
           current_streak: number
           freeze_cap: number
@@ -9934,7 +9955,12 @@ export type Database = {
         }[]
       }
       get_checkin_match_opportunities: {
-        Args: { p_limit?: number; p_slots: Json; p_timezone?: string }
+        Args: {
+          p_limit?: number
+          p_slots: Json
+          p_sport_id?: string
+          p_timezone?: string
+        }
         Returns: {
           distance_meters: number
           match_id: string
@@ -9945,6 +9971,7 @@ export type Database = {
           p_frequency_goal?: number
           p_max_invitees?: number
           p_slots: Json
+          p_sport_id?: string
           p_timezone?: string
         }
         Returns: Json
@@ -11849,7 +11876,12 @@ export type Database = {
         Returns: number
       }
       plan_weekly_matches_for_player: {
-        Args: { p_goal_override?: number; p_player_id: string; p_slots: Json }
+        Args: {
+          p_goal_override?: number
+          p_player_id: string
+          p_slots: Json
+          p_sport_id?: string
+        }
         Returns: {
           compatible_count: number
           court_status: string
@@ -11944,6 +11976,7 @@ export type Database = {
           p_auto_invite: boolean
           p_frequency_goal: number
           p_match_plan?: Json
+          p_sport_id?: string
           p_timezone?: string
         }
         Returns: {
