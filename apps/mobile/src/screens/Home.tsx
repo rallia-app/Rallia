@@ -871,6 +871,13 @@ const Home = () => {
   // switch in sync with the number of *visible* banners.
   const [billingBannerDismissed, setBillingBannerDismissed] = useState(false);
 
+  // Tournament action banners are dismissible per tournament (in-session). They
+  // still clear themselves once a game is linked; this just lets the player mute
+  // the nudge until the next app launch or a new round releases another slot.
+  const [dismissedTournamentActionBanners, setDismissedTournamentActionBanners] = useState<
+    Set<string>
+  >(new Set());
+
   // Pending incoming reference requests
   const { count: pendingReferenceRequestsCount } = usePendingReferenceRequestsCount();
 
@@ -1684,8 +1691,8 @@ const Home = () => {
 
       // Competitive action banners — a released bracket/matchup slot with no
       // linked game yet is a call to action. One banner per tournament or
-      // session; no onDismiss because they clear themselves once a game is
-      // linked.
+      // session; they clear themselves once a game is linked, and the tournament
+      // variant is also dismissible in-session.
       const tournamentActionGroups = new Map<
         string,
         { name: string; count: number; round: number }
@@ -1704,6 +1711,9 @@ const Home = () => {
         }
       }
       tournamentActionGroups.forEach((group, tournamentId) => {
+        if (dismissedTournamentActionBanners.has(tournamentId)) {
+          return;
+        }
         bannerCards.push(
           <HomeBanner
             key={`tournament-action-${tournamentId}`}
@@ -1731,6 +1741,9 @@ const Home = () => {
                   tournamentName: group.name,
                 }),
             }}
+            onDismiss={() =>
+              setDismissedTournamentActionBanners(prev => new Set(prev).add(tournamentId))
+            }
           />
         );
       });
@@ -2093,6 +2106,7 @@ const Home = () => {
     appNavigation,
     pendingReferenceRequestsCount,
     billingBannerDismissed,
+    dismissedTournamentActionBanners,
     profileCompletionBanner.ready,
     profileCompletionBanner.visible,
     profileCompletionBanner.handleDismiss,
