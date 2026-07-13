@@ -205,8 +205,9 @@ const queryClient = new QueryClient({
       // Refetch stale queries when app comes back from background
       // or when navigating back to a screen (via focusManager integration)
       refetchOnWindowFocus: true,
-      // Don't refetch on mount if data is fresh
-      refetchOnMount: 'always',
+      // Don't refetch on mount if data is fresh (within staleTime); refetch only
+      // when stale. Hooks needing unconditional mount refetch set their own 'always'.
+      refetchOnMount: true,
       // Keep persisted entries usable for 24h. The persister itself also
       // enforces a maxAge, but TanStack only restores a query into cache
       // when gcTime hasn't elapsed, so gcTime must be ≥ the persister's
