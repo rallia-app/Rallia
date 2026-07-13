@@ -71,15 +71,14 @@ export async function getMatchOrganizerOptions(
     throw error;
   }
 
-  // Only suggest slots with a real court open (drop the "usually free" tier).
-  // Bookable options always outrank usually-free ones in the engine's score, so
-  // the top-N already surfaces every bookable option before any are cut.
+  // Graceful degradation: keep both tiers. Confirmed-court slots lead (each tier
+  // chronological), with usually-free favorite-facility slots as the fallback so
+  // shared times still get suggested when no court feed reaches that far out.
   const mapped: MatchOrganizerOption[] = (data ?? []).map(toOption);
-  const bookable = mapped.filter(o => o.court_confirmed);
-  // Display chronologically (the engine ranked by score to pick the best N).
-  return bookable.sort(
-    (a, b) => new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime()
-  );
+  return mapped.sort((a, b) => {
+    if (a.court_confirmed !== b.court_confirmed) return a.court_confirmed ? -1 : 1;
+    return new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime();
+  });
 }
 
 // ============================================================================
@@ -144,6 +143,34 @@ export async function getSharedSports(playerIds: string[]): Promise<OrganizerSpo
   }
 
   return shared.length > 0 ? shared : all;
+}
+
+/**
+ * The sport of the tournament behind a round chat (via its tournament_match_id),
+ * so the organizer flow can force the tournament's sport instead of guessing a
+ * shared one. Returns null when it can't be resolved.
+ */
+export async function getTournamentMatchSportId(tournamentMatchId: string): Promise<string | null> {
+  const { data: tm, error: tmError } = await supabase
+    .from('tournament_matches')
+    .select('tournament_id')
+    .eq('id', tournamentMatchId)
+    .single();
+  if (tmError || !tm?.tournament_id) {
+    if (tmError) console.error('Error resolving tournament match:', tmError);
+    return null;
+  }
+
+  const { data: tournament, error: tError } = await supabase
+    .from('tournaments')
+    .select('sport_id')
+    .eq('id', tm.tournament_id)
+    .single();
+  if (tError) {
+    console.error('Error resolving tournament sport:', tError);
+    return null;
+  }
+  return tournament?.sport_id ?? null;
 }
 
 // ============================================================================
