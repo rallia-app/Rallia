@@ -43,7 +43,6 @@ import {
   TournamentCardSkeleton,
   useTournamentListColors,
 } from '../features/tournaments/components/TournamentListScaffold';
-import { SportIcon } from '../components/SportIcon';
 import { useTranslation, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
 import { lightHaptic } from '../utils/haptics';
@@ -350,13 +349,6 @@ export const MyTournaments: React.FC = () => {
               locale={locale}
               t={t}
               isOrganizer={item.organizer_id === userId}
-              watermark={
-                <SportIcon
-                  sportName={selectedSport?.name ?? 'tennis'}
-                  size={96}
-                  color={colors.textMuted}
-                />
-              }
               onPress={() => handlePress(item)}
             />
           )}

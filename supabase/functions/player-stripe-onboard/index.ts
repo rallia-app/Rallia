@@ -1,20 +1,27 @@
 /**
  * player-stripe-onboard
  *
- * Creates (or retrieves) the player's Stripe Express connected account and
- * returns a hosted onboarding URL.  The mobile app opens the URL in the
- * system browser (Linking.openURL); Stripe redirects back via Universal Link
- * to https://rallia.app/stripe-connect-return when the user finishes.
+ * Sets up a tournament ORGANIZER's payout account: creates (or retrieves) their
+ * Stripe Express connected account and returns a hosted onboarding URL. The
+ * mobile app opens the URL in the system browser; Stripe redirects back via
+ * Universal Link to https://rallia.app/stripe-connect-return when finished, and
+ * stripe-connect-webhook flips player_stripe_account.onboarding_completed once
+ * charges are enabled.
  *
- * Key design decisions for minimal onboarding friction:
- *   - business_type: 'individual'  → skips "What type of business?" screen
- *   - Only 'transfers' capability  → host accounts receive money, they don't
- *     process cards (the platform does), so lighter KYC requirements
- *   - Pre-fill name, email, DOB, address from Rallia profile/player tables
- *     so Stripe won't re-ask for information we already have
- *   - MCC 7941 (Sports Clubs/Fields) for accurate risk classification
+ * This account is the settlement merchant for paid registrations (on_behalf_of
+ * destination charges), so it needs the card_payments capability. It is put on
+ * a MANUAL payout schedule so Rallia releases each event's funds only after it
+ * ends — the entry is held in the ORGANIZER's Stripe balance, never Rallia's.
+ *
+ * Onboarding tuning:
+ *   - business_type from the caller ('individual' default, 'company' for clubs)
+ *   - card_payments + transfers capabilities
+ *   - manual payouts (Rallia schedules each release)
+ *   - individual fields pre-filled from the Rallia profile to shorten the flow
+ *   - MCC 7941 (Sports Clubs/Fields)
  *
  * POST /player-stripe-onboard  (authenticated — JWT validated internally)
+ * Body:     { businessType?: 'individual' | 'company' }
  * Response: { url: string }
  */
 
@@ -92,6 +99,15 @@ Deno.serve(async req => {
 
     const playerId = user.id;
 
+    // Individuals get the pre-filled, lighter flow; clubs onboard as a company.
+    let businessType: 'individual' | 'company' = 'individual';
+    try {
+      const body = await req.json();
+      if (body?.businessType === 'company') businessType = 'company';
+    } catch {
+      // No/invalid body — default to individual.
+    }
+
     // Service-role client — used for privileged writes
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
@@ -110,12 +126,12 @@ Deno.serve(async req => {
         // Already fully onboarded — just reuse it
         stripeAccountId = existing.stripe_account_id;
       } else {
-        // Account exists but onboarding isn't done yet — check if it was
-        // created by an older version of this function (missing business_type,
-        // wrong capabilities). If so, delete it and start fresh so the user
-        // gets the streamlined individual onboarding flow.
+        // Account exists but onboarding isn't done. Legacy accounts were created
+        // transfers-only (no card_payments) and can't be the settlement merchant
+        // for the on_behalf_of charge — delete and recreate them card-capable.
+        // Otherwise resume the existing account's onboarding.
         const acct = await stripe.accounts.retrieve(existing.stripe_account_id);
-        if (acct.business_type !== 'individual') {
+        if (acct.capabilities?.card_payments == null) {
           await stripe.accounts.del(existing.stripe_account_id).catch(() => {});
           await admin.from('player_stripe_account').delete().eq('player_id', playerId);
           // stripeAccountId stays undefined → falls through to create below
@@ -169,14 +185,22 @@ Deno.serve(async req => {
       const account = await stripe.accounts.create({
         type: 'express',
         country: 'CA',
-        business_type: 'individual',
-        individual,
+        business_type: businessType,
+        // Individual fields only pre-fill the individual flow; a company
+        // collects its own details in Stripe's hosted onboarding.
+        ...(businessType === 'individual' ? { individual } : {}),
         capabilities: {
+          card_payments: { requested: true },
           transfers: { requested: true },
         },
         business_profile: {
           mcc: '7941', // Sports Clubs/Fields
-          product_description: 'Receiving court cost reimbursements from co-players',
+          product_description: 'Receiving tournament entry fee payouts as an organizer',
+        },
+        // Manual payouts: Rallia releases each event's funds after it ends, so
+        // the entry stays in the organizer's Stripe balance until then.
+        settings: {
+          payouts: { schedule: { interval: 'manual' } },
         },
         metadata: {
           player_id: playerId,

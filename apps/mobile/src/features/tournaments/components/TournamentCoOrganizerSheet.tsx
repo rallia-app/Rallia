@@ -65,14 +65,15 @@ export function TournamentCoOrganizerActionSheet({
     [organizerId, coOrgUserIds]
   );
 
-  const showingSearch = searchQuery.length >= 2;
+  // Browse-first: search runs with an empty query too, so a list of addable
+  // players shows before the organizer types (mirrors the games invite flow).
   const { players, isLoading: isSearching } = usePlayerSearch({
     sportId,
     currentUserId,
     searchQuery,
     excludePlayerIds: excludeIds,
     pageSize: 20,
-    enabled: !!sportId && !!currentUserId && showingSearch,
+    enabled: !!sportId && !!currentUserId,
   });
 
   const addCoOrg = useAddTournamentCoOrganizer({
@@ -122,7 +123,10 @@ export function TournamentCoOrganizerActionSheet({
           onPress={() => handleAdd(item)}
           activeOpacity={0.7}
           accessibilityRole="button"
-          style={[styles.row, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+          style={[
+            styles.row,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
         >
           <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
             {url ? (
@@ -142,7 +146,11 @@ export function TournamentCoOrganizerActionSheet({
   );
 
   return (
-    <BaseActionSheet title={t('tournamentDetail.coOrganizers.title')} onClose={handleClose} flex={false}>
+    <BaseActionSheet
+      title={t('tournamentDetail.coOrganizers.title')}
+      onClose={handleClose}
+      flex={false}
+    >
       <View style={styles.body}>
         <Text size="sm" color={colors.textMuted}>
           {t('tournamentDetail.coOrganizers.hint')}
@@ -157,9 +165,14 @@ export function TournamentCoOrganizerActionSheet({
               return (
                 <View
                   key={c.user_id}
-                  style={[styles.row, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                  style={[
+                    styles.row,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
                 >
-                  <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                  <View
+                    style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                  >
                     {url ? (
                       <Image source={{ uri: url }} style={styles.avatarImage} />
                     ) : (
@@ -193,14 +206,7 @@ export function TournamentCoOrganizerActionSheet({
           colors={colors}
         />
 
-        {!showingSearch ? (
-          <View style={styles.stateContainer}>
-            <Ionicons name="search-outline" size={32} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-              {t('tournamentDetail.coOrganizers.searchHint')}
-            </Text>
-          </View>
-        ) : isSearching ? (
+        {isSearching ? (
           <View style={styles.stateContainer}>
             <ActivityIndicator color={colors.primary} />
           </View>
@@ -256,6 +262,11 @@ const styles = StyleSheet.create({
   },
   avatarImage: { width: 44, height: 44 },
   name: { flex: 1 },
-  stateContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacingPixels[6], gap: spacingPixels[2] },
+  stateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[6],
+    gap: spacingPixels[2],
+  },
   emptyText: { textAlign: 'center' },
 });

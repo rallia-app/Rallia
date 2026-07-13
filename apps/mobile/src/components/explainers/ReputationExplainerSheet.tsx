@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { TIER_COLORS } from '@rallia/shared-services';
 
@@ -71,9 +71,9 @@ export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-ex
   const tealBg = isDark ? `${primary[400]}20` : `${primary[600]}15`;
   const greenIcon = isDark ? '#4ADE80' : '#16A34A';
   const greenBg = isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(22, 163, 74, 0.10)';
-  const amberIcon = isDark ? '#FBBF24' : '#D97706';
+  const amberIcon = isDark ? status.warning.light : status.warning.dark;
   const amberBg = isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(217, 119, 6, 0.10)';
-  const goldIcon = isDark ? '#FBBF24' : '#B45309';
+  const goldIcon = isDark ? status.warning.light : accent[700];
   const goldBg = isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(180, 83, 9, 0.10)';
 
   return (
@@ -188,22 +188,22 @@ export function ReputationExplainerActionSheet(_props: SheetProps<'reputation-ex
           </Text>
           <EventBullet
             label={t('explainers.reputation.impacts.noShow')}
-            color={isDark ? '#F87171' : '#DC2626'}
+            color={isDark ? status.error.light : status.error.dark}
             mutedColor={mutedColor}
           />
           <EventBullet
             label={t('explainers.reputation.impacts.lateCancellation')}
-            color={isDark ? '#F87171' : '#DC2626'}
+            color={isDark ? status.error.light : status.error.dark}
             mutedColor={mutedColor}
           />
           <EventBullet
             label={t('explainers.reputation.impacts.lateArrival')}
-            color={isDark ? '#F87171' : '#DC2626'}
+            color={isDark ? status.error.light : status.error.dark}
             mutedColor={mutedColor}
           />
           <EventBullet
             label={t('explainers.reputation.impacts.oneStarReview')}
-            color={isDark ? '#F87171' : '#DC2626'}
+            color={isDark ? status.error.light : status.error.dark}
             mutedColor={mutedColor}
           />
         </ExplainerSection>

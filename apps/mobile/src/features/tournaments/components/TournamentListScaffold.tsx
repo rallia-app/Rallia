@@ -13,7 +13,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { getProfilePictureUrl, getTournamentLogoUrl } from '@rallia/shared-utils';
+import { getProfilePictureUrl, getTournamentLogoUrl, formatPrice } from '@rallia/shared-utils';
 import {
   lightTheme,
   darkTheme,
@@ -23,13 +23,13 @@ import {
   secondary,
   accent,
   neutral,
-  base,
 } from '@rallia/design-system';
 import { useTheme } from '@rallia/shared-hooks';
 import type { TournamentListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
+import { DEFAULT_TOURNAMENT_BANNER } from '../defaultBanner';
 
 type Status = Enums<'tournament_status'>;
 
@@ -191,54 +191,72 @@ function formatRatingRange(min: number | null, max: number | null): string | nul
   return null;
 }
 
-const AVATARS_SHOWN = 4;
+const AVATARS_SHOWN = 5;
+const AVATAR_SIZE = 24;
+/** Matches avatar outer size (24px + 1.5px border each side). */
+const ROW_ITEM_HEIGHT = AVATAR_SIZE + 3;
 
-/** Stacked faces of the earliest registrants, mirroring the game card. */
-const RegistrantAvatars: React.FC<{
+/** Stacked registrant faces with a compact fill count beside the stack. */
+const RegistrationStrip: React.FC<{
   preview: TournamentListItem['registrant_preview'];
   total: number;
+  maxParticipants: number;
   colors: TournamentListColors;
-}> = ({ preview, total, colors }) => {
-  if (preview.length === 0) return null;
+}> = ({ preview, total, maxParticipants, colors }) => {
   const shown = preview.slice(0, AVATARS_SHOWN);
-  const extra = total - shown.length;
+  const isFull = total >= maxParticipants;
+
   return (
-    <View style={styles.avatarsRow}>
-      {shown.map((r, i) => {
-        const uri = getProfilePictureUrl(r.avatarUrl);
-        return (
-          <View
-            key={r.id}
-            style={[
-              styles.avatarSlot,
-              i > 0 && styles.avatarSlotOverlap,
-              {
-                backgroundColor: uri ? colors.cardBackground : colors.avatarPlaceholder,
-                borderColor: colors.primary,
-              },
-            ]}
-          >
-            {uri ? (
-              <Image source={{ uri }} style={styles.avatarImg} />
-            ) : (
-              <Ionicons name="person-outline" size={14} color={colors.avatarPlaceholderIcon} />
-            )}
-          </View>
-        );
-      })}
-      {extra > 0 && (
-        <View
-          style={[
-            styles.avatarSlot,
-            styles.avatarSlotOverlap,
-            { backgroundColor: colors.primary, borderColor: colors.primary },
-          ]}
-        >
-          <Text size="xs" weight="semibold" color={base.white} style={styles.avatarExtraText}>
-            +{extra}
-          </Text>
+    <View style={styles.registrationStrip}>
+      {shown.length > 0 && (
+        <View style={styles.avatarsRow}>
+          {shown.map((r, i) => {
+            const uri = getProfilePictureUrl(r.avatarUrl);
+            return (
+              <View
+                key={r.id}
+                style={[
+                  styles.avatarSlot,
+                  i > 0 && styles.avatarSlotOverlap,
+                  {
+                    backgroundColor: uri ? colors.cardBackground : colors.avatarPlaceholder,
+                    borderColor: colors.primary,
+                  },
+                ]}
+              >
+                {uri ? (
+                  <Image source={{ uri }} style={styles.avatarImg} />
+                ) : (
+                  <Ionicons name="person-outline" size={14} color={colors.avatarPlaceholderIcon} />
+                )}
+              </View>
+            );
+          })}
         </View>
       )}
+      <View
+        style={[
+          styles.fillChip,
+          {
+            backgroundColor: isFull ? colors.mutedBg : colors.chipPrimaryBg,
+            borderColor: isFull ? colors.mutedBg : colors.chipPrimaryBg,
+          },
+        ]}
+      >
+        <Ionicons
+          name="people-outline"
+          size={12}
+          color={isFull ? colors.mutedText : colors.chipPrimaryText}
+        />
+        <Text
+          size="xs"
+          weight="semibold"
+          color={isFull ? colors.mutedText : colors.chipPrimaryText}
+          style={styles.fillChipText}
+        >
+          {total}/{maxParticipants}
+        </Text>
+      </View>
     </View>
   );
 };
@@ -250,9 +268,7 @@ export const TournamentCard: React.FC<{
   t: (k: TranslationKey) => string;
   onPress: () => void;
   isOrganizer?: boolean;
-  /** Decorative sport icon rendered as a faint card watermark. */
-  watermark?: React.ReactNode;
-}> = ({ tournament, colors, locale, t, onPress, isOrganizer, watermark }) => {
+}> = ({ tournament, colors, locale, t, onPress, isOrganizer }) => {
   const fmtDate = useCallback(
     (iso: string) => new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
     [locale]
@@ -272,8 +288,13 @@ export const TournamentCard: React.FC<{
       : null;
 
   const ratingRange = formatRatingRange(tournament.min_rating, tournament.max_rating);
-  const hasRegistrants = tournament.registrant_preview.length > 0;
-
+  const prizeLabel =
+    tournament.prize_money_cents && tournament.prize_money_cents > 0
+      ? formatPrice(tournament.prize_money_cents, tournament.currency, {
+          locale,
+          trimZeroCents: true,
+        })
+      : null;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -284,29 +305,24 @@ export const TournamentCard: React.FC<{
         { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
       ]}
     >
-      {watermark && (
-        <View style={styles.watermark} pointerEvents="none">
-          {watermark}
-        </View>
-      )}
-
-      {tournament.logo_url ? (
-        <Image
-          source={{ uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }}
-          style={styles.cardBanner}
-          resizeMode="cover"
-        />
-      ) : null}
+      <Image
+        source={
+          tournament.logo_url
+            ? { uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }
+            : DEFAULT_TOURNAMENT_BANNER
+        }
+        style={styles.cardBanner}
+        resizeMode="cover"
+      />
 
       <View style={styles.cardTopRow}>
-        <RegistrantAvatars
+        <RegistrationStrip
           preview={tournament.registrant_preview}
           total={tournament.registration_count}
+          maxParticipants={tournament.max_participants}
           colors={colors}
         />
-        <View style={hasRegistrants ? styles.cardStatusSlot : undefined}>
-          <StatusPill status={tournament.status} colors={colors} t={t} />
-        </View>
+        <StatusPill status={tournament.status} colors={colors} t={t} />
       </View>
 
       <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
@@ -329,11 +345,11 @@ export const TournamentCard: React.FC<{
         )}
       </View>
 
-      {tournament.venue_name && (
+      {(tournament.venue_name || tournament.city) && (
         <View style={styles.cardMetaLine}>
           <Ionicons name="location" size={14} color={colors.textMuted} />
           <Text size="xs" color={colors.textMuted} numberOfLines={1} style={styles.venueText}>
-            {tournament.venue_name}
+            {tournament.venue_name || tournament.city}
           </Text>
         </View>
       )}
@@ -358,13 +374,11 @@ export const TournamentCard: React.FC<{
         {ratingRange && (
           <MetaChip label={ratingRange} icon="analytics" colors={colors} tone="secondary" />
         )}
+        {prizeLabel && (
+          <MetaChip label={prizeLabel} icon="trophy-outline" colors={colors} tone="accent" />
+        )}
         <MetaChip
           label={t(ENTRY_FORMAT_KEYS[tournament.entry_format] as TranslationKey)}
-          colors={colors}
-        />
-        <MetaChip
-          label={`${tournament.registration_count}/${tournament.max_participants}`}
-          icon="people-outline"
           colors={colors}
         />
         <MetaChip
@@ -441,8 +455,6 @@ interface TournamentListScaffoldProps {
   header?: React.ReactNode;
   /** Marks cards the caller organizes with an accent chip. */
   currentUserId?: string;
-  /** Decorative sport icon rendered as a faint watermark on every card. */
-  cardWatermark?: React.ReactNode;
   onPressTournament: (tournament: TournamentListItem) => void;
 }
 
@@ -456,7 +468,6 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
   emptyDescriptionKey,
   header,
   currentUserId,
-  cardWatermark,
   onPressTournament,
 }) => {
   const { t, locale } = useTranslation();
@@ -472,9 +483,22 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
     }
   }, [refetch]);
 
-  let body: React.ReactNode;
+  type Item =
+    | { kind: 'header'; title: string; key: string }
+    | { kind: 'row'; tournament: TournamentListItem; key: string };
+  const data = useMemo<Item[]>(() => {
+    if (isLoading || isError) return [];
+    const out: Item[] = [];
+    for (const s of sections) {
+      out.push({ kind: 'header', title: t(s.titleKey), key: `h-${s.titleKey}` });
+      for (const tn of s.items) out.push({ kind: 'row', tournament: tn, key: `r-${tn.id}` });
+    }
+    return out;
+  }, [isLoading, isError, sections, t]);
+
+  let emptyComponent: React.ReactNode;
   if (isLoading) {
-    body = (
+    emptyComponent = (
       <View style={styles.skeletonList}>
         {[1, 2, 3, 4, 5].map(i => (
           <TournamentCardSkeleton key={i} />
@@ -482,7 +506,7 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
       </View>
     );
   } else if (isError) {
-    body = (
+    emptyComponent = (
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
         <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
@@ -498,8 +522,8 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
         </TouchableOpacity>
       </View>
     );
-  } else if (sections.length === 0) {
-    body = (
+  } else {
+    emptyComponent = (
       <View style={styles.centered}>
         <Ionicons name={emptyIcon} size={48} color={colors.textMuted} />
         <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
@@ -510,22 +534,20 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
         </Text>
       </View>
     );
-  } else {
-    type Item =
-      | { kind: 'header'; title: string; key: string }
-      | { kind: 'row'; tournament: TournamentListItem; key: string };
-    const data: Item[] = [];
-    for (const s of sections) {
-      data.push({ kind: 'header', title: t(s.titleKey), key: `h-${s.titleKey}` });
-      for (const tn of s.items) data.push({ kind: 'row', tournament: tn, key: `r-${tn.id}` });
-    }
+  }
 
-    body = (
+  return (
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={data}
         keyExtractor={item => item.key}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          data.length === 0 && !isLoading && styles.emptyListContent,
+        ]}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={header ? <>{header}</> : null}
+        ListEmptyComponent={emptyComponent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -550,19 +572,11 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
               locale={locale}
               t={t}
               isOrganizer={!!currentUserId && item.tournament.organizer_id === currentUserId}
-              watermark={cardWatermark}
               onPress={() => onPressTournament(item.tournament)}
             />
           );
         }}
       />
-    );
-  }
-
-  return (
-    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-      {header}
-      {body}
     </SafeAreaView>
   );
 };
@@ -586,6 +600,11 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[5],
+    flexGrow: 1,
+  },
+  emptyListContent: {
+    justifyContent: 'center',
+    minHeight: '100%',
   },
   sectionHeader: {
     paddingHorizontal: spacingPixels[4],
@@ -593,9 +612,9 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[1],
   },
   cardBanner: {
+    width: '100%',
     height: 120,
-    marginTop: -spacingPixels[4],
-    marginHorizontal: -spacingPixels[4],
+    borderRadius: radiusPixels.lg,
   },
   card: {
     marginHorizontal: spacingPixels[4],
@@ -612,16 +631,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   skeletonList: {
-    flex: 1,
     paddingTop: spacingPixels[2],
-  },
-  watermark: {
-    position: 'absolute',
-    right: spacingPixels[3],
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    opacity: 0.12,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -632,9 +642,14 @@ const styles = StyleSheet.create({
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
   },
-  cardStatusSlot: {
-    marginLeft: 'auto',
+  registrationStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    flexShrink: 1,
   },
   cardMetaLine: {
     flexDirection: 'row',
@@ -679,9 +694,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarSlot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -691,15 +706,22 @@ const styles = StyleSheet.create({
     marginLeft: -6,
   },
   avatarImg: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
   },
-  avatarExtraText: {
-    lineHeight: 15,
+  fillChip: {
+    height: ROW_ITEM_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    borderRadius: ROW_ITEM_HEIGHT / 2,
+    borderWidth: 1.5,
+  },
+  fillChipText: {
+    lineHeight: 16,
     includeFontPadding: false,
-    textAlign: 'center',
-    textAlignVertical: 'center',
   },
   statusPill: {
     paddingHorizontal: spacingPixels[2],

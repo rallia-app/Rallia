@@ -89,6 +89,11 @@ export interface CreateTournamentInput {
   entryFormat?: Enums<'entry_format'>;
   facilityId?: string;
   venueName?: string;
+  venueAddress?: string;
+  /** City label — the facility's city (denormalized) or a city-only entry. */
+  city?: string;
+  /** Advertised prize, in the tournament currency. */
+  prizeMoneyCents?: number;
   networkId?: string;
   registrationOpensAt?: string;
   registrationClosesAt?: string;
@@ -158,6 +163,8 @@ export async function listMyTournaments(
   userId: string,
   opts: { sportId?: string } = {}
 ): Promise<TournamentListItem[]> {
+  // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
+  if (!userId) return [];
   const { data: regs, error: regsError } = await supabase
     .from('tournament_registrations')
     .select('tournament_id')
@@ -229,6 +236,9 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_logo_url: input.logoUrl,
     p_min_rating: input.minRating,
     p_fee: buildFeePayload(input),
+    p_venue_address: input.venueAddress,
+    p_city: input.city,
+    p_prize_money_cents: input.prizeMoneyCents,
   });
 
   if (error) {
@@ -256,6 +266,8 @@ export interface TournamentUpdatePatch {
   facilityId?: string | null;
   venueName?: string | null;
   venueAddress?: string | null;
+  city?: string | null;
+  prizeMoneyCents?: number | null;
   // Fee settings — server gates these to 'draft' only.
   entryFeeCents?: number;
   currency?: string;
@@ -284,6 +296,8 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   facilityId: 'facility_id',
   venueName: 'venue_name',
   venueAddress: 'venue_address',
+  city: 'city',
+  prizeMoneyCents: 'prize_money_cents',
   entryFeeCents: 'entry_fee_cents',
   currency: 'currency',
   feePayer: 'fee_payer',
@@ -562,6 +576,8 @@ export async function listActiveRegistrations(
  * already registered in.
  */
 export async function listMyActiveRegistrations(userId: string): Promise<TournamentRegistration[]> {
+  // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
+  if (!userId) return [];
   const { data, error } = await supabase
     .from('tournament_registrations')
     .select('*')
@@ -582,6 +598,7 @@ export async function getMyRegistration(
   tournamentId: string,
   userId: string
 ): Promise<TournamentRegistration | null> {
+  if (!userId) return null;
   const { data, error } = await supabase
     .from('tournament_registrations')
     .select('*')
@@ -715,6 +732,8 @@ export async function registerForTournament(
 export interface TournamentFeeQuote {
   entryCents: number;
   serviceFeeCents: number;
+  /** GST/QST on the service fee (Rallia remits). */
+  feeTaxCents: number;
   /** What the player is charged. */
   totalCents: number;
   organizerReceivesCents: number;
@@ -742,6 +761,7 @@ export async function getTournamentFeeQuote(
   return {
     entryCents: row.entry_cents,
     serviceFeeCents: row.service_fee_cents,
+    feeTaxCents: row.fee_tax_cents,
     totalCents: row.total_cents,
     organizerReceivesCents: row.organizer_receives_cents,
     feePayer: row.fee_payer,
@@ -766,6 +786,7 @@ export interface RegistrationPaymentIntent {
   paymentId: string;
   entryCents: number;
   serviceFeeCents: number;
+  feeTaxCents: number;
   amountChargedCents: number;
   currency: string;
 }
@@ -807,6 +828,7 @@ export async function createTournamentRegistrationPayment(
     paymentId: data.paymentId,
     entryCents: data.entryCents,
     serviceFeeCents: data.serviceFeeCents,
+    feeTaxCents: data.feeTaxCents,
     amountChargedCents: data.amountChargedCents,
     currency: data.currency,
   };
@@ -847,6 +869,47 @@ export async function refundTournamentRegistration(
   if (error) throw new Error(error.message);
 
   return { withdrawn: !!data?.withdrawn, refundedCents: data?.refundedCents ?? 0 };
+}
+
+/** A released bracket slot with no linked game yet — a home call-to-action. */
+export type UnscheduledTournamentMatch = TournamentMatch & {
+  tournament: Pick<Tournament, 'id' | 'name' | 'sport_id'>;
+};
+
+/**
+ * List the caller's playable bracket matches that are waiting for a game to
+ * be linked (match_id IS NULL) in tournaments that are underway. Both
+ * participants must be resolved — slots still waiting on a previous round
+ * don't qualify. These are calls to action, not agenda items: once a game is
+ * linked, the slot flows through the regular match rails as a `match` row.
+ */
+export async function listMyUnscheduledTournamentMatches(
+  userId: string,
+  opts: { sportId?: string; limit?: number } = {}
+): Promise<UnscheduledTournamentMatch[]> {
+  const regs = await listMyActiveRegistrations(userId);
+  const regIds = regs.map(r => r.id);
+  if (regIds.length === 0) return [];
+
+  const regList = regIds.join(',');
+  let query = supabase
+    .from('tournament_matches')
+    .select('*, tournament:tournaments!inner(id, name, sport_id)')
+    .eq('status', 'pending')
+    .is('match_id', null)
+    .not('player1_registration_id', 'is', null)
+    .not('player2_registration_id', 'is', null)
+    .eq('player1_is_bye', false)
+    .eq('player2_is_bye', false)
+    .eq('tournament.status', 'in_progress')
+    .or(`player1_registration_id.in.(${regList}),player2_registration_id.in.(${regList})`)
+    .order('round_number', { ascending: true })
+    .limit(opts.limit ?? 10);
+  if (opts.sportId) query = query.eq('tournament.sport_id', opts.sportId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as UnscheduledTournamentMatch[];
 }
 
 /**

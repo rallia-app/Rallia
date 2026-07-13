@@ -311,6 +311,46 @@ export async function listLeagueSessions(seasonId: string): Promise<Session[]> {
   return (data ?? []) as Session[];
 }
 
+/** A released session matchup with no linked game yet — a home call-to-action. */
+export type UnscheduledSessionMatch = SessionMatch & {
+  session: Pick<Session, 'id' | 'name' | 'scheduled_at' | 'season_id'> & {
+    season: Pick<Season, 'id' | 'league_id'> & {
+      league: Pick<League, 'id' | 'name' | 'sport_id'>;
+    };
+  };
+};
+
+/**
+ * List the caller's released session matchups that are waiting for a game to
+ * be linked (match_id IS NULL) in live sessions. Calls to action, not agenda
+ * items — once linked, the matchup flows through the regular match rails as
+ * a `match` row.
+ */
+export async function listMyUnscheduledSessionMatches(
+  userId: string,
+  opts: { sportId?: string; limit?: number } = {}
+): Promise<UnscheduledSessionMatch[]> {
+  // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
+  if (!userId) return [];
+  let query = supabase
+    .from('session_matches')
+    .select(
+      '*, session:sessions!inner(id, name, scheduled_at, season_id, season:seasons!inner(id, league_id, league:leagues!inner(id, name, sport_id)))'
+    )
+    .eq('status', 'pending')
+    .is('match_id', null)
+    .eq('is_drill', false)
+    .or(`team_a_user_ids.cs.{${userId}},team_b_user_ids.cs.{${userId}}`)
+    .in('session.status', ['published', 'in_progress'])
+    .order('created_at', { ascending: true })
+    .limit(opts.limit ?? 10);
+  if (opts.sportId) query = query.eq('session.season.league.sport_id', opts.sportId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as UnscheduledSessionMatch[];
+}
+
 export async function getLeagueSession(sessionId: string): Promise<Session | null> {
   const { data, error } = await supabase
     .from('sessions')

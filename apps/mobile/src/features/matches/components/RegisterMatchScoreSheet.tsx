@@ -30,6 +30,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  status,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { usePlayer, useProposeRebuttalScore } from '@rallia/shared-hooks';
@@ -596,8 +597,8 @@ export function RegisterMatchScoreActionSheet({ payload }: SheetProps<'register-
 
             {scoreWarning && !error ? (
               <View style={styles.warningRow}>
-                <Ionicons name="warning-outline" size={18} color="#F59E0B" />
-                <Text size="sm" color="#F59E0B">
+                <Ionicons name="warning-outline" size={18} color={status.warning.DEFAULT} />
+                <Text size="sm" color={status.warning.DEFAULT}>
                   {t(scoreWarning as Parameters<typeof t>[0])}
                 </Text>
               </View>

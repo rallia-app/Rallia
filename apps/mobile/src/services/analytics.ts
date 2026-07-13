@@ -820,13 +820,17 @@ export function weeklyCheckinOpened(props: {
 }
 
 export function weeklyCheckinStepCompleted(props: {
-  step_name: string; // 'recap_goal' | 'availability' | 'match_opportunities' | 'auto_match'
+  step_name: string; // 'recap_goal' | 'availability' | 'match_opportunities' | 'match_plan'
   step_index: number;
   availability_cells?: number;
   frequency_goal?: number;
-  auto_create?: boolean;
-  auto_invite?: boolean;
   opportunities_count?: number;
+  // match_plan step
+  proposals_included?: number;
+  proposals_excluded?: number;
+  invitees_excluded?: number;
+  opted_out?: boolean;
+  auto_invite?: boolean;
 }): void {
   capture('weekly_checkin_step_completed', props);
 }
@@ -843,11 +847,55 @@ export function weeklyCheckinOpportunitiesViewed(props: {
   capture('weekly_checkin_opportunities_viewed', props);
 }
 
+/**
+ * Fired once when the match-plan step first renders with a settled preview —
+ * the top of the confirm funnel for auto-created games + invites.
+ */
+export function weeklyCheckinPlanViewed(props: {
+  proposals_count: number;
+  invitees_total: number;
+  goal: number;
+  committed_count: number;
+}): void {
+  capture('weekly_checkin_plan_viewed', props);
+}
+
+/** A whole proposed game was removed or restored on the plan step. */
+export function weeklyCheckinPlanProposalToggled(props: {
+  action: 'exclude' | 'restore';
+  sport: string;
+  match_date: string;
+  remaining_included: number;
+}): void {
+  capture('weekly_checkin_plan_proposal_toggled', props);
+}
+
+/** A single invitee was removed or restored on the plan step. */
+export function weeklyCheckinPlanInviteeToggled(props: {
+  action: 'exclude' | 'restore';
+  sport: string;
+}): void {
+  capture('weekly_checkin_plan_invitee_toggled', props);
+}
+
+/** The "don't propose games for me" opt-out was toggled on the plan step. */
+export function weeklyCheckinPlanOptOutToggled(props: { enabled: boolean }): void {
+  capture('weekly_checkin_plan_opt_out_toggled', props);
+}
+
+/** The auto-invite preference was toggled on the plan step. */
+export function weeklyCheckinPlanAutoInviteToggled(props: { enabled: boolean }): void {
+  capture('weekly_checkin_plan_auto_invite_toggled', props);
+}
+
 export function weeklyCheckinSubmitted(props: {
   frequency_goal: number;
   availability_cells: number;
-  auto_create: boolean;
+  plan_proposals_included: number;
+  plan_invitees_excluded: number;
+  opted_out: boolean;
   auto_invite: boolean;
+  matches_created: number;
   new_streak: number;
   milestone_reached: boolean;
   freeze_earned: boolean;

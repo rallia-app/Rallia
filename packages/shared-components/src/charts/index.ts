@@ -9,23 +9,16 @@ export {
   SparklineChart,
   type SparklineChartProps,
   type SparklineDataPoint,
-} from './SparklineChart.native';
+} from './SparklineChart';
 export {
   TimeRangeSelector,
   type TimeRangeSelectorProps,
   type TimeRange,
-} from './TimeRangeSelector.native';
-export {
-  AnalyticsSectionCard,
-  type AnalyticsSectionCardProps,
-} from './AnalyticsSectionCard.native';
+} from './TimeRangeSelector';
+export { AnalyticsSectionCard, type AnalyticsSectionCardProps } from './AnalyticsSectionCard';
 
 // Phase 1 - Foundation
-export { BarChart, type BarChartProps, type BarChartDataPoint } from './BarChart.native';
-export { LineChart, type LineChartProps, type LineChartDataPoint } from './LineChart.native';
-export { PieChart, type PieChartProps, type PieChartDataPoint } from './PieChart.native';
-export {
-  FunnelChart,
-  type FunnelChartProps,
-  type FunnelChartDataPoint,
-} from './FunnelChart.native';
+export { BarChart, type BarChartProps, type BarChartDataPoint } from './BarChart';
+export { LineChart, type LineChartProps, type LineChartDataPoint } from './LineChart';
+export { PieChart, type PieChartProps, type PieChartDataPoint } from './PieChart';
+export { FunnelChart, type FunnelChartProps, type FunnelChartDataPoint } from './FunnelChart';

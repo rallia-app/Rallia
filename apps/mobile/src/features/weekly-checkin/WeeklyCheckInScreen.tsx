@@ -5,17 +5,19 @@
  *   * Background: cream → pale-teal vertical gradient (no decorative blobs)
  *   * Pager: 4 steps side-by-side in a row that's SCREEN_WIDTH × 4 wide,
  *     translateX driven by a single Animated.timing (280ms cubic-out, native driver)
- *   * Header: back chevron (steps 2-3) + progress dots
+ *   * Header: back chevron (steps 2-3) + progress dots + close (X)
  *   * Footer: each step manages its own CTA
  *
- * The weekly check-in is mandatory: there is no exit affordance and swipe-to-
- * dismiss is disabled at the navigator (gestureEnabled: false). The wizard only
- * leaves the screen once the user completes it (Done on the final step).
+ * The close (X) in the header lets the player bail out; it confirms first
+ * (progress isn't saved) and fires `weekly_checkin_abandoned`. Swipe-to-dismiss
+ * stays disabled at the navigator so leaving is always a deliberate tap.
  */
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
+  BackHandler,
   Dimensions,
   Easing,
   Platform,
@@ -23,12 +25,12 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useAuth } from '@rallia/shared-hooks';
-import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { lightHaptic } from '@rallia/shared-utils';
 import { accent, primary, spacingPixels } from '@rallia/design-system';
 
 import * as Analytics from '#/services/analytics';
@@ -38,12 +40,20 @@ import { WizardHeader } from './components/WizardHeader';
 import { AvailabilityStep } from './steps/AvailabilityStep';
 import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
 import { MatchOpportunitiesStep } from './steps/MatchOpportunitiesStep';
-import { AutoMatchStep } from './steps/AutoMatchStep';
+import { MatchPlanStep } from './steps/MatchPlanStep';
 import { AllSetStep } from './steps/AllSetStep';
-import { useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
+import { PLAN_STEP_ENABLED, useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
 import { useJoinOpportunity } from './useJoinOpportunity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Stable funnel names per step index, for the abandon event.
+const STEP_NAMES: Record<number, string> = {
+  1: 'recap_goal',
+  2: 'availability',
+  3: 'opportunities',
+  4: 'plan',
+};
 
 export function WeeklyCheckInScreen() {
   const navigation = useNavigation();
@@ -61,16 +71,31 @@ export function WeeklyCheckInScreen() {
   const playerId = session?.user?.id ?? null;
 
   // One-click join state for the "Games for you" step — lifted to the screen so
-  // the All-Set recap can report what was joined / asked to join there.
+  // the All-Set recap can detail what was joined / asked to join there.
   const { join, outcomes, pendingId } = useJoinOpportunity(playerId);
-  const joinedCount = useMemo(
-    () => Object.values(outcomes).filter(o => o === 'joined').length,
-    [outcomes]
+  const recapGamesFor = useCallback(
+    (outcome: 'joined' | 'requested') =>
+      wizard.opportunities
+        .filter(m => outcomes[m.id] === outcome)
+        .map(m => ({
+          id: m.id,
+          sportName: m.sport?.name ?? '',
+          matchDate: m.match_date,
+          startTime: m.start_time,
+          place: m.facility?.name ?? m.location_name ?? null,
+        })),
+    [wizard.opportunities, outcomes]
   );
-  const requestedCount = useMemo(
-    () => Object.values(outcomes).filter(o => o === 'requested').length,
-    [outcomes]
-  );
+  const joinedGames = useMemo(() => recapGamesFor('joined'), [recapGamesFor]);
+  const requestedGames = useMemo(() => recapGamesFor('requested'), [recapGamesFor]);
+
+  // A join here changes the goal cap, so the plan preview (fetched behind this
+  // step) is stale. Flag it so goNext refetches before the plan step renders.
+  const outcomesCount = Object.keys(outcomes).length;
+  const { markPlanStale } = wizard;
+  useEffect(() => {
+    if (outcomesCount > 0) markPlanStale();
+  }, [outcomesCount, markPlanStale]);
 
   // Analytics: which entry point opened the wizard (set by the navigator param).
   const route = useRoute();
@@ -103,6 +128,27 @@ export function WeeklyCheckInScreen() {
       sports_count: sportsCount,
     });
   }, [wizard.currentStep, wizard.opportunitiesLoading, wizard.opportunities]);
+
+  // Fire `weekly_checkin_plan_viewed` once, when the match-plan step first
+  // renders with a settled preview (the top of the confirm funnel).
+  const planViewedFiredRef = useRef(false);
+  useEffect(() => {
+    if (planViewedFiredRef.current) return;
+    if (wizard.currentStep !== 4 || wizard.planLoading || !wizard.plan) return;
+    planViewedFiredRef.current = true;
+    const inviteesTotal = wizard.plan.proposals.reduce((sum, p) => sum + p.invitees.length, 0);
+    Analytics.weeklyCheckinPlanViewed({
+      proposals_count: wizard.plan.proposals.length,
+      invitees_total: inviteesTotal,
+      goal: wizard.plan.goal,
+      committed_count: wizard.plan.committedCount,
+    });
+  }, [wizard.currentStep, wizard.planLoading, wizard.plan]);
+
+  // "Today"/"Tomorrow" anchors for the plan cards' day labels — the window's
+  // first two dates, server-computed in the player's timezone.
+  const todayDate = wizard.context?.window?.[0]?.date ?? null;
+  const tomorrowDate = wizard.context?.window?.[1]?.date ?? null;
 
   // Warm light surface in day mode (accent-50 → primary-50, both from the
   // design-system palette); soft dark theme background in night mode.
@@ -141,27 +187,31 @@ export function WeeklyCheckInScreen() {
   }, [wizard.currentStep, slideAnim]);
 
   // Progress dots count the core steps only: Goal (skipped when the goal is
-  // already set this week), Availability, Plan, Done. The optional "Games for
-  // you" interstitial (step 3) shares Availability's dot — its eligibility
-  // resolves async, so letting it add/drop a dot made the count jump mid-flow.
+  // already set this week), Availability, Plan (while enabled), Done. The
+  // optional "Games for you" interstitial (step 3) shares Availability's dot —
+  // its eligibility resolves async, so letting it add/drop a dot made the
+  // count jump mid-flow.
   const recapOffset = wizard.skipRecapStep && wizard.currentStep > 1 ? 1 : 0;
   const opportunitiesOffset = wizard.currentStep >= 3 ? 1 : 0;
-  const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset;
-  const displayedTotalSteps = 4 - (wizard.skipRecapStep ? 1 : 0);
+  const planOffset = !PLAN_STEP_ENABLED && wizard.currentStep >= 5 ? 1 : 0;
+  const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset - planOffset;
+  const displayedTotalSteps = (PLAN_STEP_ENABLED ? 4 : 3) - (wizard.skipRecapStep ? 1 : 0);
 
-  // CTA → submit transition from the auto-match step to the All-Set step.
-  // Fire mediumHaptic immediately on press so the tap feels responsive — the
-  // submit() call ultimately fires successHaptic on success or errorHaptic on
-  // failure, but those land ~1-2s later after the RPC roundtrip.
-  const handleSubmit = useCallback(async () => {
-    mediumHaptic();
+  // Submit transition from the match-plan step to the All-Set step. The deck
+  // calls this automatically once every card is decided (per-card haptics
+  // already fired on the buttons); submit() itself fires successHaptic on
+  // success or errorHaptic on failure after the RPC roundtrip. Resolves false
+  // on failure so the step can surface its retry state.
+  const handleSubmit = useCallback(async (): Promise<boolean> => {
     try {
       await wizard.submit();
       // submit() advances to the final step internally; the slide animation
       // runs from the useEffect above via the currentStep dependency change.
+      return true;
     } catch {
-      // Errors are logged + errorHaptic'd inside submit(); ignore here so the
-      // wizard stays on the auto-match step for the user to retry.
+      // Errors are logged + errorHaptic'd inside submit(); the wizard stays on
+      // the match-plan step and the deck shows a retry CTA.
+      return false;
     }
   }, [wizard]);
 
@@ -173,6 +223,47 @@ export function WeeklyCheckInScreen() {
     });
     dismissModal();
   }, [dismissModal, wizard.startedAt, wizard.result, wizard.context]);
+
+  // Close (X): confirm before bailing since nothing is saved mid-flow, then
+  // record the abandon and dismiss. Step index maps to a stable funnel name.
+  const currentStepForClose = wizard.currentStep;
+  const startedAt = wizard.startedAt;
+  const handleClose = useCallback(() => {
+    Alert.alert(
+      t('weeklyCheckIn.exit.title'),
+      t('weeklyCheckIn.exit.description'),
+      [
+        { text: t('weeklyCheckIn.exit.cancel'), style: 'cancel' },
+        {
+          text: t('weeklyCheckIn.exit.confirm'),
+          style: 'destructive',
+          onPress: () => {
+            Analytics.weeklyCheckinAbandoned({
+              last_step: STEP_NAMES[currentStepForClose] ?? 'unknown',
+              step_index: currentStepForClose,
+              duration_seconds: Math.round((Date.now() - startedAt) / 1000),
+            });
+            dismissModal();
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [t, currentStepForClose, startedAt, dismissModal]);
+
+  // Android hardware back mirrors the X: confirm-to-exit on the flow steps,
+  // finish on the final recap. Scoped to focus so it doesn't hijack back while
+  // a pushed PlayerProfile is on top of the wizard.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (wizard.currentStep >= 5) handleDone();
+        else handleClose();
+        return true;
+      });
+      return () => sub.remove();
+    }, [wizard.currentStep, handleClose, handleDone])
+  );
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -195,6 +286,9 @@ export function WeeklyCheckInScreen() {
         showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 5}
         showDots={!!wizard.context}
         onBack={wizard.goBack}
+        // Dismissible on every step except the final recap, which has its own Done.
+        onClose={wizard.currentStep < 5 ? handleClose : undefined}
+        closeLabel={t('common.close')}
       />
 
       <Animated.View
@@ -250,6 +344,7 @@ export function WeeklyCheckInScreen() {
             onChange={wizard.setAvailability}
             onContinue={wizard.goNext}
             window={wizard.context?.window ?? []}
+            isSubmitting={wizard.isSubmitting}
           />
         </StepSlot>
 
@@ -262,17 +357,25 @@ export function WeeklyCheckInScreen() {
             outcomes={outcomes}
             pendingId={pendingId}
             onContinue={wizard.goNext}
+            isSubmitting={wizard.isSubmitting}
           />
         </StepSlot>
 
         <StepSlot>
-          <AutoMatchStep
-            autoCreate={wizard.autoCreate}
-            setAutoCreate={wizard.setAutoCreate}
-            autoInvite={wizard.autoInvite}
-            setAutoInvite={wizard.setAutoInvite}
+          <MatchPlanStep
+            plan={wizard.plan}
+            isLoading={wizard.planLoading}
+            error={wizard.planError}
+            planDecisions={wizard.planDecisions}
+            decideProposal={wizard.decideProposal}
+            inviteSelections={wizard.inviteSelections}
+            toggleInvitee={wizard.toggleInvitee}
+            optOut={wizard.optOut}
+            setOptOut={wizard.setOptOut}
             isSubmitting={wizard.isSubmitting}
             onSubmit={handleSubmit}
+            todayDate={todayDate}
+            tomorrowDate={tomorrowDate}
           />
         </StepSlot>
 
@@ -281,10 +384,9 @@ export function WeeklyCheckInScreen() {
             <AllSetStep
               frequencyGoal={wizard.frequencyGoal}
               hoursConfirmed={wizard.windowCellCount}
-              autoCreate={wizard.autoCreate}
-              autoInvite={wizard.autoInvite}
-              joinedCount={joinedCount}
-              requestedCount={requestedCount}
+              createdMatches={wizard.result.createdMatches}
+              joinedGames={joinedGames}
+              requestedGames={requestedGames}
               onDone={handleDone}
             />
           )}

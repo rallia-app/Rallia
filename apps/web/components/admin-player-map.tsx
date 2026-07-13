@@ -27,6 +27,7 @@ import {
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { primary, accent, status } from '@rallia/design-system';
 
 const AdminPlayerMapInner = dynamic(() => import('./admin-player-map-inner'), {
   ssr: false,
@@ -548,17 +549,25 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
             </span>
             <span className="text-border">|</span>
             <span className="flex items-center gap-1">
-              <span className="inline-block size-2 rounded-sm" style={{ background: '#14b8a6' }} />
+              <span
+                className="inline-block size-2 rounded-sm"
+                style={{ background: primary[500] }}
+              />
               {t('legend.tennis')}
             </span>
             <span className="flex items-center gap-1">
-              <span className="inline-block size-2 rounded-sm" style={{ background: '#f59e0b' }} />
+              <span
+                className="inline-block size-2 rounded-sm"
+                style={{ background: accent[500] }}
+              />
               {t('legend.pickleball')}
             </span>
             <span className="flex items-center gap-1">
               <span
                 className="inline-block size-2 rounded-sm overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #14b8a6 50%, #f59e0b 50%)' }}
+                style={{
+                  background: `linear-gradient(135deg, ${primary[500]} 50%, ${accent[500]} 50%)`,
+                }}
               />
               {t('legend.tennis')} + {t('legend.pickleball')}
             </span>
@@ -566,8 +575,8 @@ export function AdminPlayerMap({ points, facilities }: AdminPlayerMapProps) {
               <span
                 className="inline-block size-2 rounded-sm"
                 style={{
-                  background: '#0ea5e9',
-                  boxShadow: '0 0 0 1.5px #059669, 0 0 4px 1px #05966966',
+                  background: status.info.DEFAULT,
+                  boxShadow: `0 0 0 1.5px ${status.success.DEFAULT}, 0 0 4px 1px ${status.success.DEFAULT}66`,
                 }}
               />
               {t('legend.bookable')}

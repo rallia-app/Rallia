@@ -8,6 +8,7 @@ import { useTheme } from 'next-themes';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
+import { primary, secondary, accent, neutral, status } from '@rallia/design-system';
 import type { FacilityMapPoint, MapViewMode, PlayerMapPoint } from './admin-player-map';
 
 const TILE_LIGHT = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -17,15 +18,15 @@ const ATTR_LIGHT =
 const ATTR_DARK =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
 
-// Design system colors (from @rallia/design-system tokens)
+// Design system colors, keyed the way this map consumes them
 const ds = {
-  primary: { 300: '#5eead4', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e' },
-  secondary: { 300: '#f4a6a7', 500: '#ed6a6d' },
-  accent: { 300: '#fcd34d', 500: '#f59e0b' },
-  info: { 300: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
-  success: { DEFAULT: '#059669' },
-  error: { DEFAULT: '#ef4444' },
-  neutral: { 300: '#d4d4d4', 400: '#a3a3a3' },
+  primary: { 300: primary[300], 500: primary[500], 600: primary[600], 700: primary[700] },
+  secondary: { 300: secondary[300], 500: secondary[500] },
+  accent: { 300: accent[300], 500: accent[500] },
+  info: { 300: status.info.light, 500: status.info.DEFAULT, 600: status.info.dark },
+  success: { DEFAULT: status.success.DEFAULT },
+  error: { DEFAULT: status.error.DEFAULT },
+  neutral: { 300: neutral[300], 400: neutral[400] },
 } as const;
 
 // User SVG (lucide User icon path)

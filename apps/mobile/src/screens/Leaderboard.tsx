@@ -1,10 +1,8 @@
 /**
- * Leaderboard — monthly GMA per-sport rankings
+ * Monthly Challenge — GMA per-sport participation rankings
  *
- * Follows the globally selected sport (tennis / pickleball). Participation-
- * weighted points (games×10 + wins×5) over the canonical qualifying_played_game
- * definition. Infinite-scroll paginated; the pinned "your rank" card is fetched
- * separately so it's correct at any scroll depth.
+ * Participation-based rankings (games played) over the canonical
+ * qualifying_played_game definition.
  */
 
 import React, { useMemo } from 'react';
@@ -33,9 +31,6 @@ import { useTranslation, useThemeStyles } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
 
-const MEDALS: Record<number, string> = { 1: '#FFD700', 2: '#C0C0C0', 3: '#CD7F32' };
-const medalTextColor = (rank: number) => (rank === 3 ? '#ffffff' : '#1a1a1a');
-
 function RankBadge({
   rank,
   isDark,
@@ -45,15 +40,6 @@ function RankBadge({
   isDark: boolean;
   mutedColor: string;
 }) {
-  if (rank <= 3) {
-    return (
-      <View style={[styles.rankBadge, { backgroundColor: MEDALS[rank] }]}>
-        <Text size="sm" weight="bold" color={medalTextColor(rank)}>
-          {rank}
-        </Text>
-      </View>
-    );
-  }
   if (rank <= 10) {
     return (
       <View
@@ -98,7 +84,6 @@ export const Leaderboard: React.FC = () => {
 
   const renderItem = ({ item }: { item: SportLeaderboardEntry }) => {
     const isMe = item.playerId === userId;
-    const top3 = item.rank <= 3;
     return (
       <TouchableOpacity
         activeOpacity={0.7}
@@ -114,22 +99,16 @@ export const Leaderboard: React.FC = () => {
             : null,
         ]}
       >
-        {top3 ? <View style={[styles.rankStrip, { backgroundColor: MEDALS[item.rank] }]} /> : null}
-
         <RankBadge rank={item.rank} isDark={isDark} mutedColor={colors.textMuted} />
 
         {item.avatarUrl ? (
-          <Image
-            source={{ uri: item.avatarUrl }}
-            style={[styles.avatar, item.rank === 1 ? styles.avatarTop1 : null]}
-          />
+          <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
         ) : (
           <View
             style={[
               styles.avatar,
               styles.avatarFallback,
               { backgroundColor: isDark ? colors.input : colors.border },
-              item.rank === 1 ? styles.avatarTop1 : null,
             ]}
           >
             <Ionicons name="person" size={18} color={colors.textMuted} />
@@ -141,17 +120,14 @@ export const Leaderboard: React.FC = () => {
             {item.displayName}
             {isMe ? ` ${t('leaderboard.youSuffix')}` : ''}
           </Text>
-          <Text size="xs" color={colors.textMuted}>
-            {t('leaderboard.gamesWins', { games: item.games, wins: item.wins })}
-          </Text>
         </View>
 
-        <View style={styles.pointsCol}>
+        <View style={styles.gamesCol}>
           <Text size="xl" weight="bold" color={accentColor}>
-            {item.points}
+            {item.games}
           </Text>
-          <Text size="xs" color={colors.textMuted} style={styles.ptsLabel}>
-            {t('leaderboard.pts')}
+          <Text size="xs" color={colors.textMuted} style={styles.gamesLabel}>
+            {t('leaderboard.games')}
           </Text>
         </View>
       </TouchableOpacity>
@@ -187,15 +163,15 @@ export const Leaderboard: React.FC = () => {
               {t('leaderboard.yourRank', { rank: myRank.rank })}
             </Text>
             <Text size="sm" color={colors.textMuted}>
-              {t('leaderboard.gamesWins', { games: myRank.games, wins: myRank.wins })}
+              {t('leaderboard.gamesPlayed', { count: myRank.games })}
             </Text>
           </View>
-          <View style={styles.pointsCol}>
+          <View style={styles.gamesCol}>
             <Text size="xl" weight="bold" color={accentColor}>
-              {myRank.points}
+              {myRank.games}
             </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.ptsLabel}>
-              {t('leaderboard.pts')}
+            <Text size="xs" color={colors.textMuted} style={styles.gamesLabel}>
+              {t('leaderboard.games')}
             </Text>
           </View>
         </View>
@@ -242,7 +218,7 @@ export const Leaderboard: React.FC = () => {
       }
       ListEmptyComponent={
         <View style={styles.center}>
-          <Ionicons name="podium-outline" size={40} color={colors.textMuted} />
+          <Ionicons name="trophy-outline" size={40} color={colors.textMuted} />
           <Text size="base" weight="semibold" color={colors.text}>
             {t('leaderboard.empty.title')}
           </Text>
@@ -300,20 +276,10 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[3],
-    paddingLeft: spacingPixels[3] + 2,
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     marginBottom: spacingPixels[2],
     ...shadowsNative.sm,
-  },
-  rankStrip: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: radiusPixels.lg,
-    borderBottomLeftRadius: radiusPixels.lg,
   },
   rankBadge: {
     width: 30,
@@ -331,19 +297,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarTop1: {
-    borderWidth: 2,
-    borderColor: '#FFD700',
-  },
   nameCol: {
     flex: 1,
     gap: 2,
   },
-  pointsCol: {
+  gamesCol: {
     alignItems: 'flex-end',
     minWidth: 46,
   },
-  ptsLabel: {
+  gamesLabel: {
     marginTop: -2,
   },
   footer: {

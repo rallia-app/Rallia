@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { primary } from '@rallia/design-system';
 
 export const alt = 'Rallia - Where Rallies Live On';
 export const size = { width: 1200, height: 630 };
@@ -26,7 +27,7 @@ export default async function Image() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(145deg, #042f2e 0%, #115e59 60%, #0d9488 100%)',
+        background: `linear-gradient(145deg, ${primary[950]} 0%, ${primary[800]} 60%, ${primary[600]} 100%)`,
         fontFamily: 'Inter',
         gap: 24,
       }}
@@ -46,7 +47,7 @@ export default async function Image() {
         style={{
           fontSize: 32,
           fontWeight: 500,
-          color: '#2dd4bf',
+          color: primary[400],
         }}
       >
         Where Rallies Live On

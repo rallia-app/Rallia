@@ -911,15 +911,6 @@ export const SESSION_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[]
   'session_confirm_reminder',
 ];
 
-/** Stripe payout / reimbursement notifications. */
-export const PAYOUTS_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
-  'payouts_setup_required',
-  'payouts_released',
-  'payouts_expired_refunded',
-  'reimbursement_received',
-  'reimbursement_all_received',
-];
-
 // ============================================
 // MATCH CREATION - NEW ENUMS
 // ============================================

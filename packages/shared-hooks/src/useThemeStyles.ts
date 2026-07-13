@@ -42,6 +42,10 @@ export interface ThemeColors {
   progressInactive: string;
   inputBackground: string;
   divider: string;
+  skeletonBackground: string;
+  skeletonHighlight: string;
+  skeletonTintedBackground: string;
+  skeletonTintedHighlight: string;
 }
 
 interface ThemeStylesResult {

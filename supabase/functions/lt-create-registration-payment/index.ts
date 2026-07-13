@@ -6,19 +6,16 @@
  * The slot reservation + fee snapshot is done atomically in SQL by
  * `tournament_begin_paid_registration` (reserves a 'payment_pending'
  * registration and writes a 'pending' lt_registration_payment row). This
- * function then creates the PaymentIntent that matches that snapshot, using one
- * of two Stripe models depending on the event's payout_timing:
+ * function then creates the PaymentIntent that matches that snapshot.
  *
- *   pay_as_you_go        → DESTINATION charge: transfer_data.destination = the
- *                          organizer's connected account, application_fee_amount
- *                          = the service fee. Stripe routes entry to the
- *                          organizer and the fee to Rallia, then pays out on a
- *                          rolling basis.
- *
- *   hold_until_event_end → SEPARATE charge (no transfer_data): funds land in
- *                          Rallia's platform balance and are transferred to the
- *                          organizer when the event finishes (Phase 3). Protects
- *                          against cancellation clawback.
+ * v0 payment model (one shape for every event): a DESTINATION charge with
+ * on_behalf_of = the organizer's connected account and application_fee_amount =
+ * the service fee. The entry settles into the ORGANIZER's connected balance
+ * (held there via their manual payout schedule until the event ends, then paid
+ * out by lt-settle-event-payments); the fee settles to Rallia. Rallia never
+ * holds the entry. Refunds reverse the entry back from the organizer's balance
+ * (reverse_transfer) and keep the fee. Requires the organizer's connected
+ * account to carry the card_payments capability.
  *
  * The webhook (lt-payment-webhook) finalizes the registration to 'registered'
  * on payment_intent.succeeded. Abandoned reservations are freed by the
@@ -27,7 +24,7 @@
  * POST /lt-create-registration-payment   (authenticated — JWT validated internally)
  * Body:    { tournamentId: string; partnerId?: string }
  * Success: { clientSecret, paymentId, entryCents, serviceFeeCents,
- *            amountChargedCents, currency }
+ *            feeTaxCents, amountChargedCents, currency }
  * Errors:  { error: ErrorCode }
  *
  * Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY
@@ -90,6 +87,7 @@ interface BeginRow {
   registration_id: string;
   entry_cents: number;
   service_fee_cents: number;
+  fee_tax_cents: number;
   amount_charged_cents: number;
   organizer_amount_cents: number;
   fee_payer: string;
@@ -161,39 +159,43 @@ Deno.serve(async req => {
       organizerId: reg.organizer_id,
       entryCents: String(reg.entry_cents),
       serviceFeeCents: String(reg.service_fee_cents),
+      feeTaxCents: String(reg.fee_tax_cents),
       organizerAmountCents: String(reg.organizer_amount_cents),
       feePayer: reg.fee_payer,
       payoutTiming: reg.payout_timing,
     };
+
+    // v0: always a destination charge on behalf of the organizer. The entry
+    // settles into the organizer's connected balance (held there by their manual
+    // payout schedule until the event ends), the service fee into Rallia's —
+    // Rallia never holds the entry. The organizer must be fully onboarded: the
+    // publish gate guarantees it, but guard defensively in case they
+    // deauthorized between opening registration and this charge.
+    if (!reg.organizer_onboarded || !reg.organizer_stripe_account_id) {
+      // Roll back the reservation we just made so the slot frees immediately.
+      await admin
+        .from('lt_registration_payment')
+        .update({ status: 'cancelled' })
+        .eq('id', reg.payment_id);
+      await admin
+        .from('tournament_registrations')
+        .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
+        .eq('id', reg.registration_id)
+        .eq('status', 'payment_pending');
+      return err('organizer_not_ready', 409);
+    }
 
     const params: Stripe.PaymentIntentCreateParams = {
       amount: reg.amount_charged_cents,
       currency,
       automatic_payment_methods: { enabled: true },
       description: 'Rallia — tournament registration',
+      on_behalf_of: reg.organizer_stripe_account_id,
+      transfer_data: { destination: reg.organizer_stripe_account_id },
+      // Rallia's cut = service fee + GST/QST on it (Rallia remits the tax).
+      application_fee_amount: reg.service_fee_cents + reg.fee_tax_cents,
       metadata,
     };
-
-    if (reg.payout_timing === 'pay_as_you_go') {
-      // Destination charge: organizer must be ready to receive (publish gate
-      // guarantees this, but guard defensively in case they deauthorized).
-      if (!reg.organizer_onboarded || !reg.organizer_stripe_account_id) {
-        // Roll back the reservation we just made so the slot frees immediately.
-        await admin
-          .from('lt_registration_payment')
-          .update({ status: 'cancelled' })
-          .eq('id', reg.payment_id);
-        await admin
-          .from('tournament_registrations')
-          .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
-          .eq('id', reg.registration_id)
-          .eq('status', 'payment_pending');
-        return err('organizer_not_ready', 409);
-      }
-      params.transfer_data = { destination: reg.organizer_stripe_account_id };
-      params.application_fee_amount = reg.service_fee_cents;
-    }
-    // hold_until_event_end: plain platform charge; transfer happens at event end.
 
     const paymentIntent = await stripe.paymentIntents.create(params, {
       idempotencyKey: `lt-reg-${reg.payment_id}`,
@@ -209,6 +211,7 @@ Deno.serve(async req => {
       paymentId: reg.payment_id,
       entryCents: reg.entry_cents,
       serviceFeeCents: reg.service_fee_cents,
+      feeTaxCents: reg.fee_tax_cents,
       amountChargedCents: reg.amount_charged_cents,
       currency: reg.currency,
     });

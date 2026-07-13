@@ -66,6 +66,13 @@ export interface ThemeColors {
   progressInactive: string;
   inputBackground: string;
   divider: string;
+
+  // Skeleton shimmer palette — `skeleton*` for neutral surfaces (colors.card),
+  // `skeletonTinted*` for primary-tinted card surfaces (MatchCard-style).
+  skeletonBackground: string;
+  skeletonHighlight: string;
+  skeletonTintedBackground: string;
+  skeletonTintedHighlight: string;
 }
 
 /**
@@ -138,6 +145,14 @@ export function useThemeStyles() {
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       divider: isDark ? neutral[700] : neutral[200],
+
+      // Skeleton shimmer palette. Neutral pair matches the Skeleton
+      // primitive's historical defaults (kept verbatim so existing screens
+      // don't shift); tinted pair matches the primary-tinted card surfaces.
+      skeletonBackground: isDark ? '#2C2C2E' : '#E1E9EE',
+      skeletonHighlight: isDark ? '#3C3C3E' : '#F2F8FC',
+      skeletonTintedBackground: isDark ? primary[900] : primary[100],
+      skeletonTintedHighlight: isDark ? primary[800] : primary[50],
     };
   }, [isDark]);
 

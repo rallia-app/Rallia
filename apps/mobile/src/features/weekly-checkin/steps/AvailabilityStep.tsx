@@ -34,6 +34,8 @@ interface AvailabilityStepProps {
   onContinue: () => void;
   /** Server-computed rolling window (today + next 3 days) to render as columns. */
   window: CheckInWindowDay[];
+  /** Continue submits the check-in when the later steps are skipped/hidden. */
+  isSubmitting?: boolean;
 }
 
 export function AvailabilityStep({
@@ -41,6 +43,7 @@ export function AvailabilityStep({
   onChange,
   onContinue,
   window,
+  isSubmitting,
 }: AvailabilityStepProps) {
   const { t } = useTranslation();
   const { locale } = useLocale();
@@ -106,7 +109,8 @@ export function AvailabilityStep({
           size="lg"
           fullWidth
           rounded
-          disabled={!canContinue}
+          loading={isSubmitting}
+          disabled={!canContinue || isSubmitting}
           onPress={onContinue}
         >
           {t('weeklyCheckIn.step2.cta')}

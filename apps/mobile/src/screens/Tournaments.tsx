@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import {
   useAuth,
   useDebounce,
@@ -41,9 +41,8 @@ import {
   type TournamentFormatFilter,
 } from '../features/tournaments/components/TournamentFiltersBar';
 import { SearchBar } from '../features/matches/components';
-import { SportIcon } from '../components/SportIcon';
-import { useTranslation } from '../hooks';
-import { useSport } from '../context';
+import { useTranslation, useRequireOnboarding } from '../hooks';
+import { useSport, useActionsSheet } from '../context';
 import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
 
@@ -55,6 +54,14 @@ export const Tournaments: React.FC = () => {
   const { session } = useAuth();
   const colors = useTournamentListColors();
   const userId = session?.user?.id;
+  const { guardAction } = useRequireOnboarding();
+  const { openSheetForTournamentCreation } = useActionsSheet();
+
+  const handleCreate = useCallback(() => {
+    void lightHaptic();
+    if (!guardAction()) return;
+    openSheetForTournamentCreation();
+  }, [guardAction, openSheetForTournamentCreation]);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
@@ -168,19 +175,44 @@ export const Tournaments: React.FC = () => {
   const header = (
     <View style={styles.headerContainer}>
       <TouchableOpacity
+        onPress={handleCreate}
+        activeOpacity={0.85}
+        style={styles.createButton}
+        accessibilityRole="button"
+        accessibilityLabel={t('tournamentList.create')}
+      >
+        <View style={styles.createIcon}>
+          <Ionicons name="add" size={26} color="#ffffff" />
+        </View>
+        <View style={styles.createTextWrap}>
+          <Text size="base" weight="semibold" color="#ffffff">
+            {t('tournamentList.create')}
+          </Text>
+          <Text size="xs" color="rgba(255,255,255,0.85)">
+            {t('tournamentList.createSubtitle')}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
         onPress={() => {
           void lightHaptic();
           navigation.navigate('MyTournaments');
         }}
         activeOpacity={0.85}
-        style={styles.myTournamentsButton}
+        style={[
+          styles.myTournamentsButton,
+          { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+        ]}
       >
-        <View style={styles.myTournamentsIcon}>
-          <Ionicons name="ribbon-outline" size={24} color="#ffffff" />
+        <View style={[styles.myTournamentsIcon, { backgroundColor: colors.chipPrimaryBg }]}>
+          <Ionicons name="ribbon" size={18} color={colors.primary} />
         </View>
-        <Text size="base" weight="semibold" color="#ffffff" style={styles.myTournamentsLabel}>
+        <Text size="sm" weight="semibold" color={colors.text} style={styles.myTournamentsLabel}>
           {t('tournamentList.myTournaments')}
         </Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </TouchableOpacity>
 
       <View style={styles.searchRow}>
@@ -227,9 +259,6 @@ export const Tournaments: React.FC = () => {
           : 'tournamentList.emptyDescription'
       }
       header={header}
-      cardWatermark={
-        <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={96} color={colors.textMuted} />
-      }
       onPressTournament={handlePress}
     />
   );
@@ -237,23 +266,29 @@ export const Tournaments: React.FC = () => {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingTop: spacingPixels[5],
+    // List's own paddingTop (spacingPixels[2]) sits above this header, so keep
+    // this smaller to match the ~20px top spacing on sibling screens.
+    paddingTop: spacingPixels[3],
   },
-  myTournamentsButton: {
+  createButton: {
     flexDirection: 'row',
     marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[3],
     borderRadius: radiusPixels.xl,
     borderWidth: 1.5,
-    borderColor: accent[500],
-    backgroundColor: accent[400],
+    borderColor: primary[600],
+    backgroundColor: primary[500],
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacingPixels[3],
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[3],
+    shadowColor: primary[900],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  myTournamentsIcon: {
+  createIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -263,8 +298,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  createTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  myTournamentsButton: {
+    flexDirection: 'row',
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[3],
+  },
+  myTournamentsIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   myTournamentsLabel: {
-    textAlign: 'center',
+    flex: 1,
   },
   searchRow: {
     flexDirection: 'row',

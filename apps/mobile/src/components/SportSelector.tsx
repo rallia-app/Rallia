@@ -24,6 +24,7 @@ import {
   primary,
   neutral,
   duration,
+  status,
 } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#ef4444',
+    backgroundColor: status.error.DEFAULT,
     borderWidth: 1.5,
     borderColor: '#ffffff',
   },
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#ef4444',
+    backgroundColor: status.error.DEFAULT,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,

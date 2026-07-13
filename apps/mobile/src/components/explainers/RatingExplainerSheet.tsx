@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Text, Button } from '@rallia/shared-components';
-import { spacingPixels, primary } from '@rallia/design-system';
+import { spacingPixels, primary, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -49,7 +49,7 @@ export function RatingExplainerActionSheet({ payload }: SheetProps<'rating-expla
   const tealBg = isDark ? `${primary[400]}20` : `${primary[600]}15`;
   const greenIcon = isDark ? '#4ADE80' : '#16A34A';
   const greenBg = isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(22, 163, 74, 0.10)';
-  const amberIcon = isDark ? '#FBBF24' : '#D97706';
+  const amberIcon = isDark ? status.warning.light : status.warning.dark;
   const amberBg = isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(217, 119, 6, 0.10)';
 
   return (

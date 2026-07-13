@@ -28,6 +28,7 @@ import {
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
+  status as dsStatus,
 } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -467,9 +468,9 @@ const PlayerPortfolioSection: React.FC<PlayerPortfolioSectionProps> = ({
       case 'approved':
         return '#22C55E';
       case 'pending':
-        return '#F59E0B';
+        return dsStatus.warning.DEFAULT;
       case 'rejected':
-        return '#EF4444';
+        return dsStatus.error.DEFAULT;
       default:
         return colors.textMuted;
     }
@@ -555,7 +556,7 @@ const PlayerPortfolioSection: React.FC<PlayerPortfolioSectionProps> = ({
               )}
               {declines > 0 && (
                 <View style={styles.endorsementCount}>
-                  <Ionicons name="close-circle" size={12} color="#EF4444" />
+                  <Ionicons name="close-circle" size={12} color={dsStatus.error.DEFAULT} />
                   <Text style={styles.endorsementText}>{declines}</Text>
                 </View>
               )}
@@ -624,7 +625,7 @@ const PlayerPortfolioSection: React.FC<PlayerPortfolioSectionProps> = ({
             <Ionicons
               name={userApproved ? 'checkmark-circle' : 'close-circle'}
               size={14}
-              color={userApproved ? '#22C55E' : '#EF4444'}
+              color={userApproved ? '#22C55E' : dsStatus.error.DEFAULT}
             />
             <Text style={[styles.userEndorsedText, { color: colors.textMuted }]}>
               {userApproved
@@ -821,7 +822,9 @@ const PlayerPortfolioSection: React.FC<PlayerPortfolioSectionProps> = ({
               </View>
               {pendingCount > 0 && (
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: '#F59E0B' }]}>{pendingCount}</Text>
+                  <Text style={[styles.statValue, { color: dsStatus.warning.DEFAULT }]}>
+                    {pendingCount}
+                  </Text>
                   <Text style={[styles.statLabel, { color: colors.textMuted }]}>
                     {t('profile.ratingProofs.status.pending')}
                   </Text>
@@ -1145,7 +1148,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#22C55E',
   },
   declineButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: dsStatus.error.DEFAULT,
   },
   // User endorsed indicator
   userEndorsedIndicator: {

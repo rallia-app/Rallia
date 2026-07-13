@@ -28,7 +28,7 @@ import {
 } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, secondary } from '@rallia/design-system';
+import { spacingPixels, secondary, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 
@@ -361,7 +361,7 @@ export default function FacilitiesDirectory() {
         />
         {queryError && (
           <View style={[styles.errorContainer, { backgroundColor: colors.card }]}>
-            <Text size="sm" color={colors.error || '#ef4444'}>
+            <Text size="sm" color={colors.error || status.error.DEFAULT}>
               {t('common.error')}: {queryError.message}
             </Text>
           </View>

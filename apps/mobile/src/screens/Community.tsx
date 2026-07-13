@@ -95,20 +95,22 @@ const Community = () => {
   const actionButtons: ActionButton[] = useMemo(() => {
     const buttons: ActionButton[] = [];
 
-    // Tournaments and Leagues stay admin-gated while the feature is in rollout.
+    // Tournaments and leagues stay admin-gated while the features are in rollout.
     if (isAdmin) {
-      buttons.push({
-        id: 'tournaments',
-        icon: 'trophy-outline',
-        label: t('community.tournaments'),
-        onPress: handleTournaments,
-      });
-      buttons.push({
-        id: 'leagues',
-        icon: 'ribbon-outline',
-        label: t('community.leagues'),
-        onPress: handleLeagues,
-      });
+      buttons.push(
+        {
+          id: 'tournaments',
+          icon: 'trophy-outline',
+          label: t('community.tournaments'),
+          onPress: handleTournaments,
+        },
+        {
+          id: 'leagues',
+          icon: 'ribbon-outline',
+          label: t('community.leagues'),
+          onPress: handleLeagues,
+        }
+      );
     }
 
     buttons.push(

@@ -7,7 +7,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '@rallia/shared-components';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { radiusPixels, spacingPixels, status as dsStatus } from '@rallia/design-system';
 import type { BookingStatus } from '@rallia/shared-services';
 
 import { useTranslation, useThemeStyles } from '#/hooks';
@@ -31,12 +31,12 @@ function getStatusColors(status: BookingStatus, isDark: boolean): { bg: string; 
     case 'awaiting_approval':
       return {
         bg: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
-        text: isDark ? '#fbbf24' : '#d97706',
+        text: isDark ? dsStatus.warning.light : dsStatus.warning.dark,
       };
     case 'cancelled':
       return {
         bg: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-        text: isDark ? '#f87171' : '#dc2626',
+        text: isDark ? dsStatus.error.light : dsStatus.error.dark,
       };
     case 'completed':
       return {
@@ -46,7 +46,7 @@ function getStatusColors(status: BookingStatus, isDark: boolean): { bg: string; 
     case 'no_show':
       return {
         bg: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-        text: isDark ? '#f87171' : '#dc2626',
+        text: isDark ? dsStatus.error.light : dsStatus.error.dark,
       };
     default:
       return {

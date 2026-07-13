@@ -247,8 +247,6 @@ export async function getMatchWithDetails(matchId: string) {
         score,
         team_number,
         feedback_completed,
-        has_paid,
-        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -2696,8 +2694,6 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         score,
         team_number,
         feedback_completed,
-        has_paid,
-        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -3048,8 +3044,6 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         score,
         team_number,
         feedback_completed,
-        has_paid,
-        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -3550,8 +3544,6 @@ async function hydrateMatchDetailsByIds(
         score,
         team_number,
         feedback_completed,
-        has_paid,
-        payment_intent_id,
         checked_in_at,
         joined_at,
         created_at,
@@ -3810,6 +3802,149 @@ export async function getCheckInMatchOpportunities(params: {
   // single-sport ratings enrichment is skipped (the rating badge still renders
   // from the match's own min_rating_score).
   return hydrateMatchDetailsByIds(matchIds, distanceMap);
+}
+
+/** A candidate the check-in plan would auto-invite to one proposed game. */
+export interface PlanInvitee {
+  playerId: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  ratingLabel: string | null;
+  /** Withheld (null) unless the candidate's reputation is public with enough events. */
+  reputationScore: number | null;
+  reputationTier: string | null;
+}
+
+/** One game the check-in plan proposes to create, with its invite preview. */
+export interface PlanProposal {
+  /** Stable identity for selection state: `${sportId}:${matchDate}`. */
+  key: string;
+  sportId: string;
+  sportName: string;
+  matchDate: string; // YYYY-MM-DD
+  startTime: string; // HH:MM:SS
+  endTime: string;
+  startHour: number;
+  duration: string;
+  /** Match type the game gets created with: 'competitive' | 'casual' | 'both'. */
+  matchType: string;
+  locationType: 'facility' | 'tbd';
+  facilityId: string | null;
+  facilityName: string | null;
+  facilityAddress: string | null;
+  minRatingLabel: string | null;
+  /** Live open-court count for the chosen facility/slot; 0 for TBD proposals. */
+  availableCourts: number;
+  /** Players who pass the auto-invite compatibility gates for this slot. */
+  compatibleCount: number;
+  invitees: PlanInvitee[];
+}
+
+export interface CheckInMatchPlan {
+  goal: number;
+  committedCount: number;
+  optedOut: boolean;
+  autoInviteEnabled: boolean;
+  proposals: PlanProposal[];
+}
+
+interface RawPlanInvitee {
+  player_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  rating_label: string | null;
+  reputation_score: number | null;
+  reputation_tier: string | null;
+}
+
+interface RawPlanProposal {
+  key: string;
+  sport_id: string;
+  sport_name: string;
+  match_date: string;
+  start_time: string;
+  end_time: string;
+  start_hour: number;
+  duration: string;
+  match_type: string | null;
+  location_type: 'facility' | 'tbd';
+  facility_id: string | null;
+  facility_name: string | null;
+  facility_address: string | null;
+  min_rating_label: string | null;
+  available_courts: number | null;
+  compatible_count: number | null;
+  invitees: RawPlanInvitee[];
+}
+
+/**
+ * Weekly check-in plan PREVIEW: the games the auto-generator would create from
+ * the availability the player just declared in the wizard (not yet persisted)
+ * and their chosen goal, each with the named opponents that would be invited.
+ * The player confirms/edits this and the selection goes back through
+ * recordWeeklyCheckin's p_match_plan. Plain objects/arrays only (react-query
+ * structural sharing).
+ */
+export async function getCheckInMatchPlan(params: {
+  slots: { day: DayEnum; hour: number }[];
+  frequencyGoal: number;
+  timezone?: string | null;
+}): Promise<CheckInMatchPlan> {
+  const { slots, frequencyGoal, timezone } = params;
+
+  const { data, error } = await supabase.rpc('get_checkin_match_plan', {
+    p_slots: (slots ?? []) as unknown as Json,
+    p_frequency_goal: frequencyGoal,
+    p_timezone: timezone ?? null,
+  });
+
+  if (error) {
+    throw new Error(`Failed to fetch check-in match plan: ${error.message}`);
+  }
+
+  const raw = (data ?? {}) as {
+    goal?: number;
+    committed_count?: number;
+    opted_out?: boolean;
+    auto_invite_enabled?: boolean;
+    proposals?: RawPlanProposal[];
+  };
+
+  return {
+    goal: raw.goal ?? frequencyGoal,
+    committedCount: raw.committed_count ?? 0,
+    optedOut: raw.opted_out ?? false,
+    autoInviteEnabled: raw.auto_invite_enabled ?? true,
+    proposals: (raw.proposals ?? []).map(p => ({
+      key: p.key,
+      sportId: p.sport_id,
+      sportName: p.sport_name,
+      matchDate: p.match_date,
+      startTime: p.start_time,
+      endTime: p.end_time,
+      startHour: p.start_hour,
+      duration: p.duration,
+      matchType: p.match_type ?? 'both',
+      locationType: p.location_type,
+      facilityId: p.facility_id,
+      facilityName: p.facility_name,
+      facilityAddress: p.facility_address,
+      minRatingLabel: p.min_rating_label,
+      availableCourts: p.available_courts ?? 0,
+      compatibleCount: p.compatible_count ?? 0,
+      invitees: (p.invitees ?? []).map(i => ({
+        playerId: i.player_id,
+        firstName: i.first_name ?? '',
+        lastName: i.last_name ?? '',
+        avatarUrl: i.avatar_url,
+        ratingLabel: i.rating_label,
+        reputationScore: i.reputation_score,
+        reputationTier: i.reputation_tier,
+      })),
+    })),
+  };
 }
 
 // =============================================================================

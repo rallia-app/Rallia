@@ -313,7 +313,7 @@ export default function InfoTab({
                     styles.badge,
                     {
                       backgroundColor: membershipRequired
-                        ? '#f59e0b18'
+                        ? `${status.warning.DEFAULT}18`
                         : status.success.DEFAULT + '15',
                     },
                   ]}
@@ -321,12 +321,12 @@ export default function InfoTab({
                   <Ionicons
                     name={membershipRequired ? 'lock-closed' : 'lock-open'}
                     size={12}
-                    color={membershipRequired ? '#d97706' : status.success.DEFAULT}
+                    color={membershipRequired ? status.warning.dark : status.success.DEFAULT}
                   />
                   <Text
                     size="xs"
                     weight="medium"
-                    color={membershipRequired ? '#d97706' : status.success.DEFAULT}
+                    color={membershipRequired ? status.warning.dark : status.success.DEFAULT}
                   >
                     {membershipRequired
                       ? t('facilityDetail.membersOnly')

@@ -1,6 +1,7 @@
 'use client';
 
 import { useAutoInviteFunnel, type AutoInviteFunnelPoint } from '@rallia/shared-hooks';
+import { status } from '@rallia/design-system';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
@@ -435,7 +436,12 @@ function TrendInviteFunnels({
           volumeLabel={t('autoInvite.stageEligible')}
           series={[
             { key: 'response', label: t('autoInvite.stageResponded'), color: '#2563eb' },
-            { key: 'accept', label: t('autoInvite.catOui'), color: '#10b981', dash: '5 3' },
+            {
+              key: 'accept',
+              label: t('autoInvite.catOui'),
+              color: status.success.light,
+              dash: '5 3',
+            },
           ]}
         />
       </div>
@@ -447,9 +453,13 @@ function TrendInviteFunnels({
           data={points}
           xKey="bucket"
           segments={[
-            { key: 'accepted', label: t('autoInvite.catOui'), color: '#10b981' },
+            { key: 'accepted', label: t('autoInvite.catOui'), color: status.success.light },
             { key: 'declined', label: t('autoInvite.catNon'), color: '#f43f5e' },
-            { key: 'timeSuggested', label: t('autoInvite.catNouvelHoraire'), color: '#f59e0b' },
+            {
+              key: 'timeSuggested',
+              label: t('autoInvite.catNouvelHoraire'),
+              color: status.warning.DEFAULT,
+            },
             {
               key: 'noResponse',
               label: t('autoInvite.noResponse'),

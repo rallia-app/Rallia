@@ -1,9 +1,8 @@
 /**
- * WizardHeader — back chevron (intermediate steps) + progress dots.
+ * WizardHeader — back chevron (intermediate steps) + progress dots + close (X).
  *
- * The weekly check-in is mandatory: there is no exit affordance. The empty
- * right-hand slot is kept so the progress dots stay centered against the back
- * chevron on the left.
+ * The close affordance sits in the right-hand slot; when it's absent the empty
+ * slot is kept so the progress dots stay centered against the back chevron.
  */
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -22,6 +21,10 @@ interface WizardHeaderProps {
   showBack: boolean;
   /** Hold the dots until the count is final (context loaded) so it never jumps. */
   showDots?: boolean;
+  /** When provided, renders a close (X) in the top-right that dismisses the wizard. */
+  onClose?: () => void;
+  /** Accessible label for the close button. */
+  closeLabel?: string;
 }
 
 export function WizardHeader({
@@ -30,6 +33,8 @@ export function WizardHeader({
   onBack,
   showBack,
   showDots = true,
+  onClose,
+  closeLabel = 'Close',
 }: WizardHeaderProps) {
   const { colors } = useThemeStyles();
 
@@ -54,8 +59,22 @@ export function WizardHeader({
 
       {showDots ? <ProgressDots current={currentStep} total={totalSteps} /> : <View />}
 
-      {/* Empty slot balances the back chevron so the dots stay centered. */}
-      <View style={styles.sideSlot} />
+      <View style={styles.sideSlot}>
+        {onClose && (
+          <TouchableOpacity
+            onPress={() => {
+              lightHaptic();
+              onClose();
+            }}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }

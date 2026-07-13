@@ -23,7 +23,7 @@ import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent, secondary } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, secondary, status } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
   getOrCreateCourt,
@@ -1404,7 +1404,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       onScroll={handleScroll}
       scrollEventThrottle={400}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Step title */}
       <View style={styles.stepHeader}>
@@ -1555,11 +1555,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   colors={colors}
                   InputComponent={TextInput}
                   onFocus={() => setFocusedField('place')}
-                  borderColor={errors.locationName ? '#ef4444' : undefined}
+                  borderColor={errors.locationName ? status.error.DEFAULT : undefined}
                 />
               </View>
               {errors.locationName && (
-                <Text size="xs" color="#ef4444" style={styles.errorText}>
+                <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
                   {errors.locationName.message}
                 </Text>
               )}

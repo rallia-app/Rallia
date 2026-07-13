@@ -79,8 +79,10 @@ export interface ReferenceRequestNotificationPayload {
 }
 
 /**
- * Payment / reimbursement notifications fired by the Stripe JIT flow.
- * See supabase/functions/stripe-match-webhook + match-payment-mark-manual.
+ * Payment / reimbursement notifications from the retired court-fee reimbursement
+ * flow. The emitters were removed, but the notification_type_enum values can't be
+ * dropped from Postgres, so these payload/template entries stay as dormant config
+ * (also renders any historical notifications still in the table).
  */
 export interface ReimbursementNotificationPayload {
   matchId?: string;

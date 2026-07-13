@@ -3,43 +3,44 @@
  */
 
 // Foundation Components
-export { Button } from './foundation/Button.native';
-export { Text } from './foundation/Text.native';
-export { Heading } from './foundation/Heading.native';
+export { Button } from './foundation/Button';
+export { Text } from './foundation/Text';
+export { Heading } from './foundation/Heading';
 
-export type { ButtonProps } from './foundation/Button.native';
-export type { TextProps } from './foundation/Text.native';
-export type { HeadingProps } from './foundation/Heading.native';
+export type { ButtonProps } from './foundation/Button';
+export type { TextProps } from './foundation/Text';
+export type { HeadingProps } from './foundation/Heading';
 
 // Form Components
-export { Input } from './forms/Input.native';
-export { Select } from './forms/Select.native';
+export { Input } from './forms/Input';
+export { Select } from './forms/Select';
 
-export type { InputProps } from './forms/Input.native';
-export type { SelectProps, SelectOption } from './forms/Select.native';
+export type { InputProps } from './forms/Input';
+export type { SelectProps, SelectOption } from './forms/Select';
 
 // Layout Components
-export { Container } from './layout/Container.native';
-export { Stack, VStack, HStack } from './layout/Stack.native';
-export { Card } from './layout/Card.native';
-export { Divider } from './layout/Divider.native';
-export { Spacer } from './layout/Spacer.native';
+export { Container } from './layout/Container';
+export { Stack, VStack, HStack } from './layout/Stack';
+export { Card } from './layout/Card';
+export { Divider } from './layout/Divider';
+export { Spacer } from './layout/Spacer';
 
-export type { ContainerProps } from './layout/Container.native';
-export type { StackProps } from './layout/Stack.native';
-export type { CardProps } from './layout/Card.native';
-export type { DividerProps } from './layout/Divider.native';
-export type { SpacerProps } from './layout/Spacer.native';
+export type { ContainerProps } from './layout/Container';
+export type { StackProps } from './layout/Stack';
+export type { CardProps } from './layout/Card';
+export type { DividerProps } from './layout/Divider';
+export type { SpacerProps } from './layout/Spacer';
 
 // Feedback Components
-export { Spinner } from './feedback/Spinner.native';
-export { ErrorMessage } from './feedback/ErrorMessage.native';
-export { Badge } from './feedback/Badge.native';
+export { Spinner } from './feedback/Spinner';
+export { ErrorMessage } from './feedback/ErrorMessage';
+export { Badge } from './feedback/Badge';
 export { ErrorBoundary } from './ErrorBoundary';
 export type { ErrorBoundaryTranslations } from './ErrorBoundary';
 export {
   Skeleton,
   SkeletonText,
+  SkeletonTextLine,
   SkeletonAvatar,
   SkeletonCard,
   SkeletonList,
@@ -47,18 +48,18 @@ export {
   SkeletonMyMatchCard,
   SkeletonPlayerCard,
   SkeletonConversation,
-} from './feedback/Skeleton.native';
-export { Toast, ToastProvider, ToastOverlay, useToast } from './feedback/Toast.native';
+} from './feedback/Skeleton';
+export { Toast, ToastProvider, ToastOverlay, useToast } from './feedback/Toast';
 export {
   OfflineIndicator,
   NetworkProvider,
   useNetwork,
   useNetworkStatus,
-} from './feedback/OfflineIndicator.native';
+} from './feedback/OfflineIndicator';
 
-export type { SpinnerProps } from './feedback/Spinner.native';
-export type { ErrorMessageProps } from './feedback/ErrorMessage.native';
-export type { BadgeProps } from './feedback/Badge.native';
+export type { SpinnerProps } from './feedback/Spinner';
+export type { ErrorMessageProps } from './feedback/ErrorMessage';
+export type { BadgeProps } from './feedback/Badge';
 export type {
   SkeletonProps,
   SkeletonTextProps,
@@ -69,19 +70,19 @@ export type {
   SkeletonMyMatchCardProps,
   SkeletonPlayerCardProps,
   SkeletonConversationProps,
-} from './feedback/Skeleton.native';
-export type { ToastProps, ToastType, ToastPosition } from './feedback/Toast.native';
-export type { OfflineIndicatorProps, NetworkStatus } from './feedback/OfflineIndicator.native';
+} from './feedback/Skeleton';
+export type { ToastProps, ToastType, ToastPosition } from './feedback/Toast';
+export type { OfflineIndicatorProps, NetworkStatus } from './feedback/OfflineIndicator';
 
 // Base Components
-export { default as Overlay } from './Overlay.native';
-export { default as MatchCard } from './MatchCard.native';
-export { default as MyMatchCard } from './MyMatchCard.native';
-export { default as AppHeader } from './AppHeader.native';
-export { default as SettingsModal } from './SettingsModal.native';
+export { default as Overlay } from './Overlay';
+export { default as MatchCard } from './MatchCard';
+export { default as MyMatchCard } from './MyMatchCard';
+export { default as AppHeader } from './AppHeader';
+export { default as SettingsModal } from './SettingsModal';
 
-export type { MatchCardProps } from './MatchCard.native';
-export type { MyMatchCardProps } from './MyMatchCard.native';
+export type { MatchCardProps } from './MatchCard';
+export type { MyMatchCardProps } from './MyMatchCard';
 
 // Header Components
 export {

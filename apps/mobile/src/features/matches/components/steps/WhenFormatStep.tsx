@@ -23,7 +23,7 @@ import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 
@@ -336,7 +336,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
     >
       {/* Step title */}
       <View style={styles.stepHeader}>
@@ -401,7 +401,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           {isLocked && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
         </TouchableOpacity>
         {errors.matchDate && (
-          <Text size="xs" color="#ef4444" style={styles.errorText}>
+          <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
             {errors.matchDate.message}
           </Text>
         )}
@@ -448,7 +448,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           {isLocked && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
         </TouchableOpacity>
         {errors.startTime && (
-          <Text size="xs" color="#ef4444" style={styles.errorText}>
+          <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
             {errors.startTime.message}
           </Text>
         )}
@@ -505,7 +505,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           )}
         </TouchableOpacity>
         {errors.timezone && (
-          <Text size="xs" color="#ef4444" style={styles.errorText}>
+          <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
             {errors.timezone.message}
           </Text>
         )}
@@ -698,7 +698,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               style={[
                 styles.customDurationInputContainer,
                 {
-                  borderColor: errors.customDurationMinutes ? '#ef4444' : colors.border,
+                  borderColor: errors.customDurationMinutes ? status.error.DEFAULT : colors.border,
                   backgroundColor: colors.cardBackground,
                 },
               ]}
@@ -731,7 +731,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               </Text>
             </View>
             {errors.customDurationMinutes && (
-              <Text size="xs" color="#ef4444" style={styles.errorText}>
+              <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
                 {errors.customDurationMinutes.message}
               </Text>
             )}

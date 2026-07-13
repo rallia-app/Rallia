@@ -28,6 +28,7 @@ import { useAppNavigation } from '#/navigation/hooks';
 import { paywallViewed, paywallDismissed, subscriptionStarted } from '#/services/analytics';
 import { useTranslation } from '#/hooks';
 import { getPaywallOffering } from '#/lib/revenuecat';
+import { getPolicyUrl } from '#/utils/policyUrls';
 import { ThemeLogo } from '#/components/ThemeLogo';
 
 type PackageMeta = {
@@ -99,7 +100,7 @@ const FEATURES: Feature[] = [
 const Paywall: React.FC = () => {
   const navigation = useAppNavigation();
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const toast = useToast();
 
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
@@ -404,7 +405,7 @@ const Paywall: React.FC = () => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => Linking.openURL('https://rallia.ca/privacy')}>
+          <TouchableOpacity onPress={() => Linking.openURL(getPolicyUrl('privacy', locale))}>
             <Text size="xs" color={colors.textMuted}>
               {t('subscription.privacy_policy')}
             </Text>
@@ -412,7 +413,7 @@ const Paywall: React.FC = () => {
           <Text size="xs" color={colors.textMuted}>
             {' · '}
           </Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://rallia.ca/terms')}>
+          <TouchableOpacity onPress={() => Linking.openURL(getPolicyUrl('terms', locale))}>
             <Text size="xs" color={colors.textMuted}>
               {t('subscription.terms_of_service')}
             </Text>

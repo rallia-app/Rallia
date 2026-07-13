@@ -1,9 +1,10 @@
 /**
- * Step 4 — Success / All Set.
+ * Step 5 — Success / All Set.
  *
- * Celebratory bubble + a recap of what the check-in locked in (goal, hours,
- * auto-create/invite). No streak hero — the streak is driven by hitting your
- * weekly game goal at week-end, not by checking in. CTA dismisses the modal.
+ * Celebratory bubble + a recap of what the check-in locked in (goal, hours, the
+ * real games it just created, games joined). No streak hero — the streak is
+ * driven by hitting your weekly game goal at week-end, not by checking in. CTA
+ * dismisses the modal.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -11,27 +12,27 @@ import { Button } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 
 import { MascotBubble } from '#/features/weekly-checkin/components/MascotBubble';
-import { SummaryCard } from '#/features/weekly-checkin/components/SummaryCard';
+import { SummaryCard, type RecapGame } from '#/features/weekly-checkin/components/SummaryCard';
+import type { CreatedMatch } from '#/features/weekly-checkin/api';
 import { useTranslation } from '#/hooks';
 
 interface AllSetStepProps {
   frequencyGoal: number;
   hoursConfirmed: number;
-  autoCreate: boolean;
-  autoInvite: boolean;
+  /** Games record_weekly_checkin created from the confirmed plan. */
+  createdMatches: CreatedMatch[];
   /** Games joined / asked to join on the "Games for you" step. */
-  joinedCount: number;
-  requestedCount: number;
+  joinedGames: RecapGame[];
+  requestedGames: RecapGame[];
   onDone: () => void;
 }
 
 export function AllSetStep({
   frequencyGoal,
   hoursConfirmed,
-  autoCreate,
-  autoInvite,
-  joinedCount,
-  requestedCount,
+  createdMatches,
+  joinedGames,
+  requestedGames,
   onDone,
 }: AllSetStepProps) {
   const { t } = useTranslation();
@@ -49,10 +50,9 @@ export function AllSetStep({
           <SummaryCard
             frequencyGoal={frequencyGoal}
             hoursConfirmed={hoursConfirmed}
-            autoCreate={autoCreate}
-            autoInvite={autoInvite}
-            joinedCount={joinedCount}
-            requestedCount={requestedCount}
+            createdMatches={createdMatches}
+            joinedGames={joinedGames}
+            requestedGames={requestedGames}
           />
         </View>
       </ScrollView>

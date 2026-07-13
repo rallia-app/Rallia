@@ -6,6 +6,8 @@
  * or as fallbacks during development.
  */
 
+import { primary } from '@rallia/design-system';
+
 import type { ReputationEventType, ReputationTier, TierConfig } from './reputationTypes';
 
 // =============================================================================
@@ -61,6 +63,7 @@ export const TIER_COLORS = {
   bronze: {
     primary: '#CD7F32', // bronze copper
     background: '#FEF0DF', // warm orange-cream
+    // eslint-disable-next-line no-restricted-syntax -- decorative bronze-metal palette, not brand amber
     text: '#92400E', // amber-800
   },
   silver: {
@@ -74,9 +77,9 @@ export const TIER_COLORS = {
     text: '#713F12', // yellow-900
   },
   platinum: {
-    primary: '#2DD4BF', // teal-400 — premium, distinct from all other tiers
-    background: '#CCFBF1', // teal-100 — matches saturation of other tier backgrounds
-    text: '#134E4A', // teal-900
+    primary: primary[400], // brand teal — premium, distinct from all other tiers
+    background: primary[100], // matches saturation of other tier backgrounds
+    text: primary[900],
   },
 } as const;
 

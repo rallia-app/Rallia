@@ -566,7 +566,7 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
+      keyboardDismissMode="on-drag"
       onScroll={handleScroll}
       scrollEventThrottle={400}
     >

@@ -7,13 +7,10 @@
  * refundable ENTRY amount per the organizer's policy + cutoff. The service fee
  * is never refunded.
  *
- * This function executes the Stripe refund matching the event's payout model:
- *   hold_until_event_end : funds are still in Rallia's balance (unless already
- *     released at event end) → refund the entry from the charge; if it was
- *     already released, reverse that exact amount from the organizer first.
- *   pay_as_you_go        : the entry already landed on the organizer's account
- *     (destination charge) → reverse the exact entry amount from that transfer,
- *     then refund the player. `refund_application_fee:false` keeps Rallia's fee.
+ * v0 model: the entry sits in the organizer's connected balance (destination
+ * charge). This function refunds the player with `reverse_transfer:true`, which
+ * claws the exact refundable entry back from the organizer's balance to fund
+ * the refund, and `refund_application_fee:false`, which keeps Rallia's fee.
  *
  * POST /lt-refund-registration   (authenticated — JWT validated internally)
  * Body:    { registrationId: string, versionWas: number }
@@ -73,12 +70,8 @@ function mapRpcError(message: string | undefined): ErrorCode {
 interface RefundPlan {
   payment_id: string;
   stripe_payment_intent_id: string | null;
-  stripe_charge_id: string | null;
-  payout_timing: string;
   entry_cents: number;
   refundable_entry_cents: number;
-  released_transfer_id: string | null;
-  currency: string;
 }
 
 Deno.serve(async req => {
@@ -135,38 +128,14 @@ Deno.serve(async req => {
     const pi = plan.stripe_payment_intent_id;
     if (!pi) return err('refund_failed');
 
-    // Reverse the organizer's share (exact amount) where the money already left
-    // Rallia's balance, then refund the player.
-    if (plan.payout_timing === 'pay_as_you_go') {
-      const chargeId = plan.stripe_charge_id;
-      if (chargeId) {
-        const charge = await stripe.charges.retrieve(chargeId);
-        const transferId =
-          typeof charge.transfer === 'string' ? charge.transfer : charge.transfer?.id;
-        if (transferId) {
-          await stripe.transfers.createReversal(
-            transferId,
-            {
-              amount: refundable,
-              metadata: { reason: 'withdraw_refund', paymentId: plan.payment_id },
-            },
-            { idempotencyKey: `lt-refund-reverse-${plan.payment_id}` }
-          );
-        }
-      }
-    } else if (plan.released_transfer_id) {
-      // hold mode but already released at event end — claw back the entry portion.
-      await stripe.transfers.createReversal(
-        plan.released_transfer_id,
-        { amount: refundable, metadata: { reason: 'withdraw_refund', paymentId: plan.payment_id } },
-        { idempotencyKey: `lt-refund-reverse-${plan.payment_id}` }
-      );
-    }
-
+    // The entry sits in the organizer's connected balance; reverse_transfer
+    // claws the exact refundable amount back to fund the refund, and
+    // refund_application_fee:false keeps Rallia's service fee.
     await stripe.refunds.create(
       {
         payment_intent: pi,
         amount: refundable,
+        reverse_transfer: true,
         refund_application_fee: false,
         metadata: {
           rallia_flow: 'lt_registration',

@@ -8,7 +8,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, status } from '@rallia/design-system';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -65,7 +65,7 @@ export function ChatAgreementActionSheet({ payload }: SheetProps<'chat-agreement
 
         {rules.map((rule, index) => (
           <View key={index} style={styles.ruleItem}>
-            <Ionicons name="close-circle" size={20} color="#EF4444" />
+            <Ionicons name="close-circle" size={20} color={status.error.DEFAULT} />
             <Text size="sm" color={colors.text} style={styles.ruleText}>
               {rule}
             </Text>

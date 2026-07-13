@@ -1,9 +1,10 @@
 /**
  * stripe-connect-webhook
  *
- * Receives Stripe webhook events for Connect account updates and marks
- * the player's Stripe account as onboarding-complete once Stripe confirms
- * the account can receive transfers.
+ * Receives Stripe webhook events for Connect account updates and mirrors the
+ * organizer's onboarding state onto player_stripe_account. The account is the
+ * settlement merchant for paid tournament registrations, so "ready" means it
+ * can take card payments (charges_enabled), not merely receive transfers.
  *
  * Configure in Stripe Dashboard:
  *   Endpoint URL: https://<project>.supabase.co/functions/v1/stripe-connect-webhook
@@ -48,34 +49,30 @@ Deno.serve(async req => {
     const account = event.data.object;
     const stripeAccountId = account.id;
 
-    // For transfers-only accounts, payouts_enabled indicates the account
-    // has completed onboarding and can receive funds. We also accept
-    // charges_enabled for accounts that were created with card_payments
-    // capability before the migration to transfers-only.
-    const isReady = account.payouts_enabled || account.charges_enabled;
+    // The organizer account is the settlement merchant for on_behalf_of charges,
+    // so it must be able to take card payments — charges_enabled reflects that.
+    // Mirror both directions so a deauthorized account flips back to incomplete.
+    const isReady = account.charges_enabled === true;
 
-    if (isReady) {
-      const admin = createClient(supabaseUrl, serviceRoleKey);
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const { error } = await admin
+      .from('player_stripe_account')
+      .update({
+        onboarding_completed: isReady,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_account_id', stripeAccountId)
+      .neq('onboarding_completed', isReady); // no-op when unchanged
 
-      const { error } = await admin
-        .from('player_stripe_account')
-        .update({
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_account_id', stripeAccountId)
-        .eq('onboarding_completed', false); // Only update if not already true
-
-      if (error) {
-        console.error('[stripe-connect-webhook] Failed to mark onboarding complete:', error);
-        // Return 500 so Stripe retries
-        return new Response('DB update failed', { status: 500 });
-      }
-
-      console.log(
-        `[stripe-connect-webhook] Marked account ${stripeAccountId} as onboarding_completed`
-      );
+    if (error) {
+      console.error('[stripe-connect-webhook] Failed to update onboarding state:', error);
+      // Return 500 so Stripe retries
+      return new Response('DB update failed', { status: 500 });
     }
+
+    console.log(
+      `[stripe-connect-webhook] account ${stripeAccountId} onboarding_completed=${isReady}`
+    );
   }
 
   // Always return 200 for events we don't handle — Stripe retries non-200s

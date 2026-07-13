@@ -1,19 +1,19 @@
 /**
  * lt-settle-event-payments  (cron)
  *
- * Settles paid tournaments once they reach a terminal state:
+ * v0 model: the entry always settles into the organizer's connected Stripe
+ * balance at charge time (destination charge). This cron drives the two
+ * terminal transitions:
  *
- *   COMPLETED + hold_until_event_end  → transfer the organizer's share
- *     (organizer_amount_cents, snapshotted) to their connected account. This is
- *     the payout for the default hold mode; pay_as_you_go already paid out at
- *     charge time.
+ *   COMPLETED (end_date + 24h)  → PAYOUT the organizer's share
+ *     (organizer_amount_cents) from their connected balance to their bank.
+ *     Rallia only decides the timing — it never held the money.
  *
- *   CANCELLED  → full ENTRY refund to every paid player (the service fee is
- *     still retained). Reverses the organizer's transfer first where the money
- *     already left Rallia's balance (pay_as_you_go, or a hold payment that was
- *     somehow already released).
+ *   CANCELLED  → full ENTRY refund to every paid player (service fee retained).
+ *     reverse_transfer claws the entry back from the organizer's balance to
+ *     fund the refund.
  *
- * Idempotent: candidate RPCs only return un-released / un-refunded rows, and
+ * Idempotent: candidate RPCs only return un-paid-out / un-refunded rows, and
  * every Stripe call is keyed by payment id.
  *
  * Invoked by pg_cron (see the companion migration). Env: STRIPE_SECRET_KEY,
@@ -28,7 +28,6 @@ type Admin = SupabaseClient<any, any, any>;
 
 interface ReleaseRow {
   payment_id: string;
-  stripe_charge_id: string;
   organizer_id: string;
   organizer_amount_cents: number;
   currency: string;
@@ -39,11 +38,7 @@ interface ReleaseRow {
 interface CancelRow {
   payment_id: string;
   stripe_payment_intent_id: string | null;
-  stripe_charge_id: string | null;
   entry_cents: number;
-  currency: string;
-  payout_timing: string;
-  released_transfer_id: string | null;
 }
 
 async function releaseCompleted(admin: Admin, stripe: Stripe): Promise<number> {
@@ -55,25 +50,31 @@ async function releaseCompleted(admin: Admin, stripe: Stripe): Promise<number> {
     // Organizer not (yet) ready — leave it; a later run retries.
     if (!row.organizer_onboarded || !row.organizer_stripe_account_id) continue;
     try {
-      const transfer = await stripe.transfers.create(
+      // The entry already sits in the organizer's connected balance (it settled
+      // there at charge time). "Release" = a payout of their share from that
+      // balance to their bank; Rallia only decides the timing, never holds it.
+      // If the charge funds haven't cleared to available yet the payout throws
+      // insufficient_funds — harmless, a later run retries once cleared.
+      const payout = await stripe.payouts.create(
         {
           amount: row.organizer_amount_cents,
           currency: row.currency.toLowerCase(),
-          destination: row.organizer_stripe_account_id,
-          source_transaction: row.stripe_charge_id,
           metadata: { rallia_flow: 'lt_release', paymentId: row.payment_id },
         },
-        { idempotencyKey: `lt-release-${row.payment_id}` }
+        {
+          idempotencyKey: `lt-release-${row.payment_id}`,
+          stripeAccount: row.organizer_stripe_account_id,
+        }
       );
       await admin
         .from('lt_registration_payment')
         .update({
-          released_transfer_id: transfer.id,
+          stripe_payout_id: payout.id,
           released_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', row.payment_id)
-        .is('released_transfer_id', null);
+        .is('stripe_payout_id', null);
       released += 1;
     } catch (e) {
       console.error('[lt-settle] release failed', row.payment_id, e);
@@ -90,36 +91,14 @@ async function refundCancelled(admin: Admin, stripe: Stripe): Promise<number> {
   for (const row of candidates) {
     if (!row.stripe_payment_intent_id || row.entry_cents <= 0) continue;
     try {
-      // Claw back the entry from the organizer where it already left Rallia.
-      if (row.payout_timing === 'pay_as_you_go' && row.stripe_charge_id) {
-        const charge = await stripe.charges.retrieve(row.stripe_charge_id);
-        const transferId =
-          typeof charge.transfer === 'string' ? charge.transfer : charge.transfer?.id;
-        if (transferId) {
-          await stripe.transfers.createReversal(
-            transferId,
-            {
-              amount: row.entry_cents,
-              metadata: { reason: 'event_cancelled', paymentId: row.payment_id },
-            },
-            { idempotencyKey: `lt-cancel-reverse-${row.payment_id}` }
-          );
-        }
-      } else if (row.released_transfer_id) {
-        await stripe.transfers.createReversal(
-          row.released_transfer_id,
-          {
-            amount: row.entry_cents,
-            metadata: { reason: 'event_cancelled', paymentId: row.payment_id },
-          },
-          { idempotencyKey: `lt-cancel-reverse-${row.payment_id}` }
-        );
-      }
-
+      // The entry sits in the organizer's connected balance; reverse_transfer
+      // claws it back to fund the player's refund, and refund_application_fee:
+      // false keeps Rallia's service fee.
       await stripe.refunds.create(
         {
           payment_intent: row.stripe_payment_intent_id,
           amount: row.entry_cents,
+          reverse_transfer: true,
           refund_application_fee: false,
           metadata: {
             rallia_flow: 'lt_registration',

@@ -14,6 +14,7 @@
  * opener, which use it independently.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { errorHaptic, mediumHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
 import type { DayEnum, MatchWithDetails } from '@rallia/shared-types';
@@ -24,22 +25,27 @@ import {
   useAvailabilityKeys,
   useCheckInContext,
   useCheckInMatchOpportunities,
+  useCheckInMatchPlan,
   useRecordCheckIn,
+  checkInKeys,
+  MAX_PLAN_INVITEES_SHOWN,
   type CheckInContext,
+  type CheckInMatchPlan,
   type CheckInResult,
   type HourGrid,
+  type PlanProposalSubmit,
 } from './api';
 import { countCellsForDays, slotsForDays } from './window';
 
 // Analytics step labels, keyed by step index. The streak recap leads as the
-// motivational hook, then the schedule, then the auto-match planning step —
-// which gets its own step so players actually see (and consciously opt into)
-// the auto-create/auto-invite behaviour.
+// motivational hook, then the schedule, then the match plan — a transparent
+// preview of exactly which games get created and who gets invited, which the
+// player confirms (or trims) before anything happens under their name.
 const STEP_NAMES: Record<WizardStep, string> = {
   1: 'recap_goal',
   2: 'availability',
   3: 'match_opportunities',
-  4: 'auto_match',
+  4: 'match_plan',
   5: 'all_set',
 };
 
@@ -53,8 +59,22 @@ export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-
 // match-creation logic to have something to work with.
 export const MIN_AVAILABILITY_CELLS = 3;
 
+// Match-plan step (step 4): one proposal at a time — the player skips a
+// suggested game or confirms it after trimming its invite list. Flipping this
+// off reverts to submitting an empty plan (create nothing) straight from
+// "Games for you" — or from availability when that step is skipped.
+export const PLAN_STEP_ENABLED: boolean = true;
+
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 const TOTAL_STEPS: WizardStep = 5;
+
+/** The player's verdict on one proposed game (the plan step's deck). */
+export type PlanDecision = 'create' | 'skip';
+/** One decided card, in decision order (order enables undo via back). */
+export interface PlanDecisionEntry {
+  key: string;
+  decision: PlanDecision;
+}
 
 export interface UseWeeklyCheckInWizard {
   // Step navigation
@@ -77,11 +97,29 @@ export interface UseWeeklyCheckInWizard {
   availability: HourGrid;
   setAvailability: (next: HourGrid) => void;
   availabilityLoading: boolean;
-  // Form state — Step 3 auto-match opt-ins
-  autoCreate: boolean;
-  setAutoCreate: (b: boolean) => void;
-  autoInvite: boolean;
-  setAutoInvite: (b: boolean) => void;
+
+  // Step 4 — the match plan preview + the player's selection on it.
+  plan: CheckInMatchPlan | null;
+  planLoading: boolean;
+  /** Preview fetch failed — the step falls back to legacy autonomous copy. */
+  planError: boolean;
+  /** Deck verdicts so far, in decision order (undo pops the last one). */
+  planDecisions: PlanDecisionEntry[];
+  /** Records the verdict on one card (replaces any prior verdict for it). */
+  decideProposal: (key: string, decision: PlanDecision) => void;
+  /** Pops the most recent verdict. Returns false when there was none. */
+  undoLastPlanDecision: () => boolean;
+  /** Selected invitee ids per proposal key (seeded to the top candidates). */
+  inviteSelections: Record<string, string[]>;
+  toggleInvitee: (proposalKey: string, playerId: string) => void;
+  /** Disables auto_create_matches — no games are auto-included or created. */
+  optOut: boolean;
+  setOptOut: (b: boolean) => void;
+  /**
+   * Screen calls this when a join happens on "Games for you" — the goal cap
+   * moved, so the cached plan preview is stale and refetches on the plan step.
+   */
+  markPlanStale: () => void;
 
   // Submission
   submit: () => Promise<void>;
@@ -139,8 +177,15 @@ export function useWeeklyCheckInWizard(
   // Form state — seeded from loaded data once available
   const [availability, setAvailability] = useState<HourGrid>(() => new Set());
   const [frequencyGoal, setFrequencyGoalState] = useState<number>(3);
-  const [autoCreate, setAutoCreateState] = useState<boolean>(true);
-  const [autoInvite, setAutoInviteState] = useState<boolean>(true);
+
+  // Plan deck — the player reviews proposals ONE AT A TIME: each card is either
+  // confirmed ('create') or skipped, and the verdicts accumulate here in order
+  // so back can undo the latest one. Invitee selections are per-proposal and
+  // seeded to the top candidates when the preview lands.
+  // Arrays/records (not Sets): Hermes iterator quirk + React state ergonomics.
+  const [planDecisions, setPlanDecisions] = useState<PlanDecisionEntry[]>([]);
+  const [inviteSelections, setInviteSelections] = useState<Record<string, string[]>>({});
+  const [optOut, setOptOutState] = useState<boolean>(false);
 
   // When the wizard opened — drives duration_seconds on completed/abandoned.
   const startedAtRef = useRef(Date.now());
@@ -216,6 +261,57 @@ export function useWeeklyCheckInWizard(
   // actually run for the current slots (isFetched guards the not-yet-run state).
   const skipOpportunitiesStep = opportunitiesFetched && opportunities.length === 0;
 
+  // Match plan preview — enabled from step 3 so it prefetches behind "Games for
+  // you" and is warm when the player lands on the plan step. Not enabled on
+  // step 2: the query key includes the slots, so grid taps would churn fetches.
+  const queryClient = useQueryClient();
+  const {
+    data: plan = null,
+    isLoading: planIsLoading,
+    isError: planErrored,
+  } = useCheckInMatchPlan({
+    slots: opportunitySlots,
+    frequencyGoal,
+    timezone: context?.timezone,
+    // Never fetch while the plan step is hidden — a warm plan would otherwise
+    // be silently submitted (games created sight unseen) by submit() below.
+    enabled: PLAN_STEP_ENABLED && currentStep >= 3 && currentStep <= 4,
+  });
+  const planLoading = planIsLoading && opportunitySlots.length > 0;
+  const planError = planErrored;
+
+  // Seed the proposals opt-out from the saved preference once the plan lands.
+  const seededPlanPrefs = useRef(false);
+  useEffect(() => {
+    if (seededPlanPrefs.current || !plan) return;
+    seededPlanPrefs.current = true;
+    if (plan.optedOut) setOptOutState(true);
+  }, [plan]);
+
+  // Seed each proposal's invite selection to its top candidates. Runs on every
+  // plan change (a "Games for you" join invalidates + refetches the preview)
+  // but only fills keys the player hasn't touched yet, so their edits survive.
+  useEffect(() => {
+    if (!plan) return;
+    setInviteSelections(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const p of plan.proposals) {
+        if (!(p.key in next)) {
+          next[p.key] = p.invitees.slice(0, MAX_PLAN_INVITEES_SHOWN).map(i => i.playerId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [plan]);
+
+  // "Games for you" joins move the goal cap, so the cached preview is stale.
+  const planStaleRef = useRef(false);
+  const markPlanStale = useCallback(() => {
+    planStaleRef.current = true;
+  }, []);
+
   // Jump past the recap step once the context lands (only if the user is still
   // sitting on step 1, which they are — step 1 shows a loader until context).
   const skipDecidedRef = useRef(false);
@@ -227,14 +323,6 @@ export function useWeeklyCheckInWizard(
     }
   }, [context]);
 
-  // Auto-advance past "Games for you" when nothing fits — covers the case where
-  // the query settles empty only after the user already landed on the step.
-  useEffect(() => {
-    if (currentStep === 3 && skipOpportunitiesStep) {
-      setCurrentStep(4);
-    }
-  }, [currentStep, skipOpportunitiesStep]);
-
   // Submission
   const { mutateAsync: recordCheckIn, isPending: isSubmitting } = useRecordCheckIn();
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -244,66 +332,73 @@ export function useWeeklyCheckInWizard(
     selectionHaptic();
     setFrequencyGoalState(Math.max(1, Math.min(5, n)));
   }, []);
-  const setAutoCreate = useCallback((b: boolean) => {
-    selectionHaptic();
-    setAutoCreateState(b);
-  }, []);
-  const setAutoInvite = useCallback((b: boolean) => {
-    selectionHaptic();
-    setAutoInviteState(b);
-  }, []);
+  const decideProposal = useCallback(
+    (key: string, decision: PlanDecision) => {
+      setPlanDecisions(prev => [...prev.filter(d => d.key !== key), { key, decision }]);
+      // Only skips fire the toggle event — confirmed cards are counted by the
+      // submitted event's proposals_included.
+      if (decision === 'skip') {
+        const proposal = plan?.proposals.find(p => p.key === key);
+        const skipped =
+          planDecisions.filter(d => d.decision === 'skip' && d.key !== key).length + 1;
+        Analytics.weeklyCheckinPlanProposalToggled({
+          action: 'exclude',
+          sport: proposal?.sportName ?? 'unknown',
+          match_date: proposal?.matchDate ?? '',
+          remaining_included: (plan?.proposals.length ?? 0) - skipped,
+        });
+      }
+    },
+    [plan, planDecisions]
+  );
 
-  // Navigation
-  const goToStep = useCallback((step: WizardStep) => {
-    setCurrentStep(step);
-  }, []);
-  const goNext = useCallback(() => {
-    // Funnel step_completed for the step being left. Steps 1 (recap_goal),
-    // 2 (availability) and 3 (match_opportunities) advance via goNext; step 4
-    // (auto_match) completes via submit().
-    if (currentStep === 1) {
-      Analytics.weeklyCheckinStepCompleted({
-        step_name: STEP_NAMES[1],
-        step_index: 1,
-        frequency_goal: frequencyGoal,
+  const undoLastPlanDecision = useCallback((): boolean => {
+    if (isSubmitting) return false;
+    const last = planDecisions[planDecisions.length - 1];
+    if (!last) return false;
+    setPlanDecisions(prev => prev.slice(0, -1));
+    if (last.decision === 'skip') {
+      const proposal = plan?.proposals.find(p => p.key === last.key);
+      const skipped = planDecisions.filter(d => d.decision === 'skip').length - 1;
+      Analytics.weeklyCheckinPlanProposalToggled({
+        action: 'restore',
+        sport: proposal?.sportName ?? 'unknown',
+        match_date: proposal?.matchDate ?? '',
+        remaining_included: (plan?.proposals.length ?? 0) - skipped,
       });
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      Analytics.weeklyCheckinStepCompleted({
-        step_name: STEP_NAMES[2],
-        step_index: 2,
-        availability_cells: availability.size,
-      });
-      // Skip "Games for you" when nothing fits.
-      setCurrentStep(skipOpportunitiesStep ? 4 : 3);
-    } else if (currentStep === 3) {
-      Analytics.weeklyCheckinStepCompleted({
-        step_name: STEP_NAMES[3],
-        step_index: 3,
-        opportunities_count: opportunities.length,
-      });
-      setCurrentStep(4);
-    } else {
-      setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
     }
-    mediumHaptic();
-  }, [currentStep, availability, frequencyGoal, skipOpportunitiesStep, opportunities.length]);
-  const goBack = useCallback(() => {
-    // When the recap step is skipped, availability (step 2) is the floor.
-    const minStep = skipRecapStep ? 2 : 1;
-    setCurrentStep(prev => {
-      if (prev <= minStep) return prev;
-      // Mirror the forward skip: jump straight from auto_match back to
-      // availability when "Games for you" was skipped.
-      if (prev === 4 && skipOpportunitiesStep) return 2;
-      return (prev - 1) as WizardStep;
-    });
-  }, [skipRecapStep, skipOpportunitiesStep]);
+    return true;
+  }, [plan, planDecisions, isSubmitting]);
+
+  const toggleInvitee = useCallback(
+    (proposalKey: string, playerId: string) => {
+      selectionHaptic();
+      const proposal = plan?.proposals.find(p => p.key === proposalKey);
+      setInviteSelections(prev => {
+        const current = prev[proposalKey] ?? [];
+        const removing = current.includes(playerId);
+        Analytics.weeklyCheckinPlanInviteeToggled({
+          action: removing ? 'exclude' : 'restore',
+          sport: proposal?.sportName ?? 'unknown',
+        });
+        return {
+          ...prev,
+          [proposalKey]: removing ? current.filter(id => id !== playerId) : [...current, playerId],
+        };
+      });
+    },
+    [plan]
+  );
+  const setOptOut = useCallback((b: boolean) => {
+    selectionHaptic();
+    setOptOutState(b);
+    Analytics.weeklyCheckinPlanOptOutToggled({ enabled: b });
+  }, []);
 
   // Validation — step 1 (recap + goal) gates on a valid frequency (defaults are
   // valid). Step 2 (availability) gates on ≥ MIN_AVAILABILITY_CELLS.
-  // Step 3 (auto-match) is always valid — both opt-in states are submittable.
-  // Step 4 has no CTA — it's the success state.
+  // Steps 3/4 are always submittable (joining and trimming are both optional).
+  // Step 5 has no CTA — it's the success state.
   const canAdvance = useMemo(() => {
     switch (currentStep) {
       case 1:
@@ -313,7 +408,7 @@ export function useWeeklyCheckInWizard(
       case 3:
         return true; // match_opportunities — joining is optional, always continue
       case 4:
-        return true; // auto_match — both opt-in states are submittable
+        return true; // match_plan — every selection (incl. none) is submittable
       case 5:
         return false; // no advance from the success step
       default:
@@ -321,29 +416,82 @@ export function useWeeklyCheckInWizard(
     }
   }, [currentStep, windowCellCount, frequencyGoal]);
 
-  // Submit handler — called when the user taps the CTA on the auto-match step.
-  // Runs the availability save + RPC, then advances to the All-Set step.
+  // Submit handler — called from the match-plan CTA when that step is enabled,
+  // otherwise from goNext when leaving the last visible step. Runs the
+  // availability save + RPC, then advances to the All-Set step.
   const submit = useCallback(async () => {
+    // The confirmed selection: every proposal the player approved on the deck,
+    // minus their unselected invitees. Undecided or skipped cards are dropped.
+    // Opt-out (or no proposals) submits an empty plan — "create nothing" —
+    // which is NOT the same as plan:null (legacy autonomous generation), used
+    // only when the preview itself failed.
+    const confirmed =
+      !plan || optOut
+        ? []
+        : plan.proposals.filter(
+            p => planDecisions.find(d => d.key === p.key)?.decision === 'create'
+          );
+    const confirmedProposals: PlanProposalSubmit[] = confirmed.map(p => {
+      const selected = inviteSelections[p.key] ?? [];
+      return {
+        sport_id: p.sportId,
+        match_date: p.matchDate,
+        start_hour: p.startHour,
+        facility_id: p.facilityId,
+        // Exclusion list = the full previewed candidate pool minus the kept
+        // players. The invite pass draws from that same ranked pool (same cap),
+        // so this makes exactly the selected players receive an invite.
+        invite_excluded_player_ids: p.invitees
+          .filter(i => !selected.includes(i.playerId))
+          .map(i => i.playerId),
+      };
+    });
+    const inviteesExcluded = confirmedProposals.reduce(
+      (sum, p) => sum + p.invite_excluded_player_ids.length,
+      0
+    );
+    const inviteesSelected = confirmed.reduce((sum, p) => {
+      const selected = inviteSelections[p.key] ?? [];
+      return sum + p.invitees.filter(i => selected.includes(i.playerId)).length;
+    }, 0);
+    const skippedCount = plan
+      ? plan.proposals.filter(p => planDecisions.find(d => d.key === p.key)?.decision === 'skip')
+          .length
+      : 0;
+    // The invite dispatch is gated on the persisted auto_invite preference, so
+    // it must be ON whenever the player kept at least one invitee.
+    const autoInvite = inviteesSelected > 0;
+
     try {
       const res = await recordCheckIn({
         frequencyGoal,
-        autoCreate,
+        optOut,
         autoInvite,
+        plan: planError ? null : { proposals: confirmedProposals },
         availability,
         windowDays,
       });
-      // The auto-match step (step 4) completes on a successful submit.
-      Analytics.weeklyCheckinStepCompleted({
-        step_name: STEP_NAMES[4],
-        step_index: 4,
-        auto_create: autoCreate,
-        auto_invite: autoInvite,
-      });
+      // The match-plan step (step 4) completes on a successful submit — only a
+      // real funnel step while it's actually shown.
+      if (PLAN_STEP_ENABLED) {
+        Analytics.weeklyCheckinStepCompleted({
+          step_name: STEP_NAMES[4],
+          step_index: 4,
+          proposals_included: confirmedProposals.length,
+          proposals_excluded: skippedCount,
+          invitees_excluded: inviteesExcluded,
+          opted_out: optOut,
+          auto_invite: autoInvite,
+        });
+      }
       Analytics.weeklyCheckinSubmitted({
         frequency_goal: frequencyGoal,
         availability_cells: availability.size,
-        auto_create: autoCreate,
+        plan_proposals_included: confirmedProposals.length,
+        plan_invitees_excluded: inviteesExcluded,
+        opted_out: optOut,
         auto_invite: autoInvite,
+        matches_created: res.createdMatches.length,
         new_streak: res.newStreak,
         milestone_reached: res.milestoneReached,
         freeze_earned: res.freezeEarned,
@@ -358,7 +506,114 @@ export function useWeeklyCheckInWizard(
       Logger.error('Weekly check-in submit failed', err as Error);
       throw err;
     }
-  }, [recordCheckIn, frequencyGoal, autoCreate, autoInvite, availability, windowDays, onComplete]);
+  }, [
+    recordCheckIn,
+    frequencyGoal,
+    plan,
+    planError,
+    optOut,
+    planDecisions,
+    inviteSelections,
+    availability,
+    windowDays,
+    onComplete,
+  ]);
+
+  // Navigation
+  const goToStep = useCallback((step: WizardStep) => {
+    setCurrentStep(step);
+  }, []);
+  const goNext = useCallback(() => {
+    if (isSubmitting) return;
+    // Funnel step_completed for the step being left. Steps 1 (recap_goal),
+    // 2 (availability) and 3 (match_opportunities) advance via goNext; the
+    // match-plan step (when enabled) completes via submit().
+    if (currentStep === 1) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[1],
+        step_index: 1,
+        frequency_goal: frequencyGoal,
+      });
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[2],
+        step_index: 2,
+        availability_cells: availability.size,
+      });
+      // Skip "Games for you" when nothing fits.
+      if (!skipOpportunitiesStep) {
+        setCurrentStep(3);
+      } else if (PLAN_STEP_ENABLED) {
+        setCurrentStep(4);
+      } else {
+        // Plan step hidden: this was the last visible step — finish here.
+        submit().catch(() => {});
+      }
+    } else if (currentStep === 3) {
+      Analytics.weeklyCheckinStepCompleted({
+        step_name: STEP_NAMES[3],
+        step_index: 3,
+        opportunities_count: opportunities.length,
+      });
+      // A join here changed the committed count, which caps the plan — refetch
+      // the preview so the plan step never proposes games past the goal.
+      if (planStaleRef.current) {
+        planStaleRef.current = false;
+        queryClient.invalidateQueries({ queryKey: checkInKeys.plans() });
+      }
+      if (PLAN_STEP_ENABLED) {
+        setCurrentStep(4);
+      } else {
+        // Plan step hidden: submit lands directly on the All-Set recap.
+        submit().catch(() => {});
+      }
+    } else {
+      setCurrentStep(prev => (prev < TOTAL_STEPS ? ((prev + 1) as WizardStep) : prev));
+    }
+    mediumHaptic();
+  }, [
+    currentStep,
+    availability,
+    frequencyGoal,
+    skipOpportunitiesStep,
+    opportunities.length,
+    queryClient,
+    isSubmitting,
+    submit,
+  ]);
+  const goBack = useCallback(() => {
+    // On the plan deck, back first rewinds the previous card; it only leaves
+    // the step once there's nothing left to undo. Frozen entirely while the
+    // submit is in flight — leaving mid-submit would race the jump to All-Set.
+    if (currentStep === 4 && isSubmitting) return;
+    if (currentStep === 4 && undoLastPlanDecision()) return;
+    // When the recap step is skipped, availability (step 2) is the floor.
+    const minStep = skipRecapStep ? 2 : 1;
+    setCurrentStep(prev => {
+      if (prev <= minStep) return prev;
+      // Mirror the forward skip: jump straight from auto_match back to
+      // availability when "Games for you" was skipped.
+      if (prev === 4 && skipOpportunitiesStep) return 2;
+      return (prev - 1) as WizardStep;
+    });
+  }, [skipRecapStep, skipOpportunitiesStep, currentStep, isSubmitting, undoLastPlanDecision]);
+
+  // Auto-advance past "Games for you" when nothing fits — covers the case where
+  // the query settles empty only after the user already landed on the step.
+  // With the plan step hidden there is nowhere left to advance to, so this
+  // submits instead (once — the ref stops a failure from retrying in a loop;
+  // the step's CTA remains as the manual retry path).
+  const autoSubmittedRef = useRef(false);
+  useEffect(() => {
+    if (currentStep !== 3 || !skipOpportunitiesStep) return;
+    if (PLAN_STEP_ENABLED) {
+      setCurrentStep(4);
+    } else if (!autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      submit().catch(() => {});
+    }
+  }, [currentStep, skipOpportunitiesStep, submit]);
 
   return {
     currentStep,
@@ -377,10 +632,18 @@ export function useWeeklyCheckInWizard(
 
     frequencyGoal,
     setFrequencyGoal,
-    autoCreate,
-    setAutoCreate,
-    autoInvite,
-    setAutoInvite,
+
+    plan,
+    planLoading,
+    planError,
+    planDecisions,
+    decideProposal,
+    undoLastPlanDecision,
+    inviteSelections,
+    toggleInvitee,
+    optOut,
+    setOptOut,
+    markPlanStale,
 
     submit,
     isSubmitting,

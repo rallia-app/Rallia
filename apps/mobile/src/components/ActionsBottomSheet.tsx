@@ -248,7 +248,7 @@ export const ActionsBottomSheet: React.FC = () => {
   const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Tournaments and Leagues stay admin-gated while the feature is in rollout.
+  // Tournaments and leagues stay admin-gated while the features are in rollout.
   const showCreateTournament = isAdmin;
   const showCreateLeague = isAdmin;
 
@@ -313,6 +313,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Effect to automatically open tournament creation wizard when flag is set
   useEffect(() => {
     if (
+      showCreateTournament &&
       shouldOpenTournamentCreation &&
       contentMode === 'actions' &&
       !showTournamentWizard &&
@@ -325,6 +326,7 @@ export const ActionsBottomSheet: React.FC = () => {
       }, 100);
     }
   }, [
+    showCreateTournament,
     shouldOpenTournamentCreation,
     contentMode,
     showTournamentWizard,

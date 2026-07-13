@@ -46,9 +46,22 @@ export const computeServiceFeeCents = (
   return Math.min(params.capCents, pctPart + params.flatCents);
 };
 
+/** GST 5% + QST 9.975%, in hundredths of a bp (matches the SQL constant). */
+export const FEE_TAX_RATE_NUM = 14975;
+export const FEE_TAX_RATE_DEN = 100000;
+
+/**
+ * GST/QST (cents) on the service fee. Mirrors `compute_fee_tax_cents`:
+ * QC-only 14.975% constant in v0, half-up.
+ */
+export const computeFeeTaxCents = (feeCents: number): number =>
+  Math.round((Math.max(0, feeCents || 0) * FEE_TAX_RATE_NUM) / FEE_TAX_RATE_DEN);
+
 export interface RegistrationQuote {
   entryCents: number;
   serviceFeeCents: number;
+  /** GST/QST on the service fee (Rallia remits). */
+  feeTaxCents: number;
   /** What the player is charged. */
   totalCents: number;
   /** What the organizer ultimately receives. */
@@ -58,8 +71,8 @@ export interface RegistrationQuote {
 
 /**
  * All-in breakdown for a registration. Mirrors `tournament_fee_quote`:
- * - player_pays      → player charged entry + fee, organizer gets entry.
- * - organizer_absorbs → player charged entry, organizer gets entry − fee.
+ * - player_pays      → player charged entry + fee + fee tax, organizer gets entry.
+ * - organizer_absorbs → player charged entry, organizer gets entry − fee − fee tax.
  */
 export const quoteRegistration = (
   entryCents: number,
@@ -68,12 +81,14 @@ export const quoteRegistration = (
 ): RegistrationQuote => {
   const entry = Math.max(0, Math.trunc(entryCents || 0));
   const serviceFeeCents = computeServiceFeeCents(entry, params);
+  const feeTaxCents = computeFeeTaxCents(serviceFeeCents);
 
   if (feePayer === 'player_pays') {
     return {
       entryCents: entry,
       serviceFeeCents,
-      totalCents: entry + serviceFeeCents,
+      feeTaxCents,
+      totalCents: entry + serviceFeeCents + feeTaxCents,
       organizerReceivesCents: entry,
       feePayer,
     };
@@ -82,8 +97,9 @@ export const quoteRegistration = (
   return {
     entryCents: entry,
     serviceFeeCents,
+    feeTaxCents,
     totalCents: entry,
-    organizerReceivesCents: Math.max(entry - serviceFeeCents, 0),
+    organizerReceivesCents: Math.max(entry - serviceFeeCents - feeTaxCents, 0),
     feePayer,
   };
 };

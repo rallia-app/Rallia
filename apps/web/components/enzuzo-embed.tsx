@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { neutral } from '@rallia/design-system';
 
 interface EnzuzoEmbedProps {
   scriptUrl: string;
@@ -44,9 +45,9 @@ function applyThemeOverrides(container: HTMLElement) {
   const controls = container.querySelectorAll<HTMLElement>('select, input, button');
   controls.forEach(el => {
     if (dark) {
-      el.style.setProperty('background-color', '#262626', 'important');
-      el.style.setProperty('color', '#e5e5e5', 'important');
-      el.style.setProperty('border-color', '#404040', 'important');
+      el.style.setProperty('background-color', neutral[800], 'important');
+      el.style.setProperty('color', neutral[200], 'important');
+      el.style.setProperty('border-color', neutral[700], 'important');
     } else {
       el.style.removeProperty('background-color');
       el.style.removeProperty('color');

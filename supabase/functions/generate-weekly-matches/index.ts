@@ -2,23 +2,28 @@
  * generate-weekly-matches Edge Function
  *
  * Creates the open, auto-generated matches that back the weekly check-in's
- * "auto-create" preference. Two entry points:
+ * "auto-create" preference. Three entry points:
  *
- *   • Per-player (common path): the AFTER INSERT trigger on
- *     player_weekly_checkin POSTs `{ player_id }` right after a player's first
- *     check-in of the week → generate_weekly_matches_for_player.
+ *   • Planned (new common path): record_weekly_checkin already created the
+ *     matches the player CONFIRMED on the wizard's plan step and POSTs
+ *     `{ player_id, matches: [...] }` — this function runs INVITE-ONLY,
+ *     honoring each match's excluded_player_ids (people the player removed
+ *     from the invite preview).
+ *   • Legacy per-player: `{ player_id }` from clients that don't send a plan →
+ *     generate_weekly_matches_for_player creates from saved availability.
  *   • All-players (manual/admin/backfill): an empty body sweeps everyone who
  *     checked in this week with auto_create on →
  *     generate_weekly_matches_for_all_players.
  *
  * Match-creation rules (opt-in gate, one-per-available-day, idempotency,
- * court-optimized facility) live in the SQL RPCs. For the per-player path, this
- * function then layers AUTO-INVITE (best-effort): if the host opted into
+ * court-optimized facility) live in the SQL RPCs. For both per-player paths,
+ * this function then layers AUTO-INVITE (best-effort): if the host opted into
  * auto_invite_players, it invites ALL eligible opponents
- * (get_auto_invite_candidates) to each created match, then sends each candidate
- * ONE localized invite push for their EARLIEST invited match (suppressed if they
- * already got an auto check-in invite within the cooldown; suppressed candidates
- * keep their invites, silently). Invite failures never fail generation.
+ * (get_auto_invite_candidates, minus any per-match exclusions) to each created
+ * match, then sends each candidate ONE localized invite push for their EARLIEST
+ * invited match (suppressed if they already got an auto check-in invite within
+ * the cooldown; suppressed candidates keep their invites, silently). Invite
+ * failures never fail generation.
  *
  * Auth: server-to-server only. Callers (DB trigger / pg_cron) must send the
  * secret key in the `apikey` header — validated by requireSecretApikey, which
@@ -68,6 +73,15 @@ interface GeneratedMatch {
   start_time: string; // HH:MM:SS
   end_time: string;
   facility_name: string | null;
+}
+
+/**
+ * Match entry in a planned-checkin dispatch ({ player_id, matches }): the match
+ * already exists (created by record_weekly_checkin) and carries the invitees
+ * the player removed on the plan preview.
+ */
+interface PlannedMatchDispatch extends GeneratedMatch {
+  excluded_player_ids?: string[];
 }
 
 // =============================================================================
@@ -149,7 +163,11 @@ async function shouldSendCheckinInvite(playerId: string): Promise<boolean> {
 }
 
 /** Returns the number of invite rows created. Gated on the host's auto_invite_players. */
-async function autoInviteForMatches(hostId: string, matches: GeneratedMatch[]): Promise<number> {
+async function autoInviteForMatches(
+  hostId: string,
+  matches: GeneratedMatch[],
+  exclusionsByMatch?: Map<string, Set<string>>
+): Promise<number> {
   if (matches.length === 0) return 0;
 
   const { data: pref } = await supabase
@@ -183,7 +201,10 @@ async function autoInviteForMatches(hostId: string, matches: GeneratedMatch[]): 
       console.warn(`[auto-invite] candidates failed for ${m.match_id}: ${candErr.message}`);
       continue;
     }
-    const ids: string[] = (candidates ?? []).map((c: { player_id: string }) => c.player_id);
+    const excluded = exclusionsByMatch?.get(m.match_id);
+    const ids: string[] = (candidates ?? [])
+      .map((c: { player_id: string }) => c.player_id)
+      .filter((id: string) => !excluded?.has(id));
     if (ids.length === 0) continue;
     if (ids.length >= MAX_INVITES_PER_MATCH) {
       console.warn(
@@ -219,7 +240,7 @@ async function autoInviteForMatches(hostId: string, matches: GeneratedMatch[]): 
           match_id: m.match_id,
           host_id: hostId,
           sport: m.sport_name,
-          invite_mode: 'broadcast',
+          invite_mode: exclusionsByMatch ? 'planned' : 'broadcast',
         },
       });
       invited += 1;
@@ -310,13 +331,19 @@ Deno.serve(async req => {
 
   const startTime = Date.now();
 
-  // Optional body: { player_id?: string }. Absent/non-JSON body → all-players
-  // sweep. A present-but-malformed player_id is rejected up front.
+  // Optional body: { player_id?, matches? }. Absent/non-JSON body → all-players
+  // sweep. player_id alone → legacy generation. player_id + matches (the
+  // planned-checkin dispatch from record_weekly_checkin) → invite-only mode:
+  // the matches already exist. Malformed ids are rejected up front.
   let specificPlayerId: string | null = null;
+  let plannedMatches: PlannedMatchDispatch[] | null = null;
   try {
     const body = await req.json();
     if (body && typeof body.player_id === 'string') {
       specificPlayerId = body.player_id;
+    }
+    if (body && Array.isArray(body.matches)) {
+      plannedMatches = body.matches as PlannedMatchDispatch[];
     }
   } catch {
     // No body / not JSON → treat as the all-players sweep.
@@ -328,6 +355,14 @@ Deno.serve(async req => {
       headers: JSON_HEADERS,
     });
   }
+  if (plannedMatches !== null) {
+    if (specificPlayerId === null || plannedMatches.some(m => !UUID_RE.test(m?.match_id ?? ''))) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid matches payload' }), {
+        status: 400,
+        headers: JSON_HEADERS,
+      });
+    }
+  }
 
   try {
     let playersProcessed = 0;
@@ -335,21 +370,38 @@ Deno.serve(async req => {
     let autoInvitesSent = 0;
 
     if (specificPlayerId) {
-      console.log(`[generate-weekly-matches] player ${specificPlayerId}`);
+      const mode = plannedMatches ? 'planned' : 'generated';
+      console.log(`[generate-weekly-matches] player ${specificPlayerId} (${mode})`);
 
-      const { data: matches, error } = await supabase.rpc('generate_weekly_matches_for_player', {
-        p_player_id: specificPlayerId,
-      });
-      if (error) throw error;
+      let generated: GeneratedMatch[];
+      let exclusionsByMatch: Map<string, Set<string>> | undefined;
+
+      if (plannedMatches) {
+        // Invite-only: record_weekly_checkin already created these matches.
+        generated = plannedMatches;
+        exclusionsByMatch = new Map(
+          plannedMatches.map(m => [
+            m.match_id,
+            new Set((m.excluded_player_ids ?? []).filter(id => UUID_RE.test(id))),
+          ])
+        );
+      } else {
+        const { data: matches, error } = await supabase.rpc('generate_weekly_matches_for_player', {
+          p_player_id: specificPlayerId,
+        });
+        if (error) throw error;
+        generated = (matches ?? []) as GeneratedMatch[];
+      }
 
       playersProcessed = 1;
-      totalMatchesCreated = matches?.length ?? 0;
+      totalMatchesCreated = generated.length;
 
       // Best-effort auto-invite — never fail generation if inviting hiccups.
       try {
         autoInvitesSent = await autoInviteForMatches(
           specificPlayerId,
-          (matches ?? []) as GeneratedMatch[]
+          generated,
+          exclusionsByMatch
         );
       } catch (inviteErr) {
         console.warn('[auto-invite] skipped due to error:', inviteErr);
@@ -357,7 +409,8 @@ Deno.serve(async req => {
 
       // Analytics (host): per-match creation detail + a run summary that pairs
       // with the client's weekly_checkin_submitted to complete the host funnel.
-      const generated = (matches ?? []) as GeneratedMatch[];
+      // Planned matches were created in the RPC, but this stays the single
+      // emission point so the funnel sees every auto match either way.
       for (const m of generated) {
         void captureEvent({
           distinctId: specificPlayerId,
@@ -370,6 +423,7 @@ Deno.serve(async req => {
             location_type: m.facility_name ? 'facility' : 'tbd',
             facility_name: m.facility_name,
             has_facility: !!m.facility_name,
+            mode,
           },
         });
       }
@@ -380,6 +434,7 @@ Deno.serve(async req => {
           matches_created: totalMatchesCreated,
           auto_invites_sent: autoInvitesSent,
           sports: [...new Set(generated.map(m => m.sport_name))],
+          mode,
         },
       });
     } else {
@@ -433,10 +488,20 @@ Deno.serve(async req => {
     --header 'Content-Type: application/json' \
     --data '{}'
 
-  A specific player (what the player_weekly_checkin INSERT trigger sends):
+  A specific player, legacy autonomous path (clients that send no plan):
   curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/generate-weekly-matches' \
     --header 'apikey: <SUPABASE_SECRET_KEYS.default>' \
     --header 'Content-Type: application/json' \
     --data '{"player_id": "your-player-uuid"}'
+
+  Planned check-in, invite-only (what record_weekly_checkin dispatches for a
+  confirmed plan — the matches already exist):
+  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/generate-weekly-matches' \
+    --header 'apikey: <SUPABASE_SECRET_KEYS.default>' \
+    --header 'Content-Type: application/json' \
+    --data '{"player_id": "your-player-uuid", "matches": [{"match_id": "existing-match-uuid",
+      "sport_name": "tennis", "match_date": "2026-07-09", "start_time": "18:00:00",
+      "end_time": "19:00:00", "facility_name": "Parc Jarry",
+      "excluded_player_ids": ["excluded-player-uuid"]}]}'
 
 */

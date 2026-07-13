@@ -42,6 +42,7 @@ import {
   accent,
   neutral,
   secondary,
+  status,
   duration,
 } from '@rallia/design-system';
 import { useStripe } from '@stripe/stripe-react-native';
@@ -50,6 +51,7 @@ import {
   successHaptic,
   warningHaptic,
   getHumanName,
+  getProfilePictureUrl,
   getTournamentLogoUrl,
   formatPrice,
 } from '@rallia/shared-utils';
@@ -104,6 +106,7 @@ import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import PlayerCard from '../features/community/components/PlayerCard';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
+import { DEFAULT_TOURNAMENT_BANNER } from '../features/tournaments/defaultBanner';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
@@ -193,14 +196,69 @@ const InfoRow: React.FC<{ label: string; value: string; colors: ScreenColors }> 
   colors,
 }) => (
   <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
-    <Text size="sm" color={colors.textMuted}>
+    <Text size="sm" color={colors.textMuted} style={styles.infoRowLabel}>
       {label}
     </Text>
-    <Text size="base" weight="semibold" color={colors.text}>
+    <Text size="base" weight="semibold" color={colors.text} style={styles.infoRowValue}>
       {value}
     </Text>
   </View>
 );
+
+/** Full-width label-over-value row, for values too long to sit in the right
+ *  column of an InfoRow (e.g. the refund-policy sentence). */
+const StackedRow: React.FC<{ label: string; value: string; colors: ScreenColors }> = ({
+  label,
+  value,
+  colors,
+}) => (
+  <View style={[styles.stackedRow, { borderBottomColor: colors.border }]}>
+    <Text size="sm" color={colors.textMuted}>
+      {label}
+    </Text>
+    <Text size="base" weight="semibold" color={colors.text} style={styles.stackedValue}>
+      {value}
+    </Text>
+  </View>
+);
+
+/** Standalone card holding a single soft "label over full-width value" block,
+ *  the same treatment as the refund StackedRow — for the free-text fields
+ *  (description, venue, rules) that shouldn't sit in a cramped right column. */
+const LabeledBlock: React.FC<{
+  label: string;
+  value?: string;
+  colors: ScreenColors;
+  children?: React.ReactNode;
+}> = ({ label, value, colors, children }) => (
+  <View style={styles.section}>
+    <View
+      style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+    >
+      <View style={styles.stackedBlock}>
+        <Text size="sm" color={colors.textMuted}>
+          {label}
+        </Text>
+        {value ? (
+          <Text size="sm" color={colors.text} style={styles.stackedValue}>
+            {value}
+          </Text>
+        ) : null}
+        {children}
+      </View>
+    </View>
+  </View>
+);
+
+/** Player-facing level requirement, e.g. "3.0+", "≤ 4.5", "3.0–4.5".
+ *  Mirrors the tournament-card formatting so display stays consistent. */
+function formatRatingRange(min: number | null, max: number | null): string | null {
+  const fmt = (v: number) => Number(v).toFixed(1);
+  if (min != null && max != null) return min === max ? fmt(min) : `${fmt(min)}–${fmt(max)}`;
+  if (min != null) return `${fmt(min)}+`;
+  if (max != null) return `≤ ${fmt(max)}`;
+  return null;
+}
 
 const Section: React.FC<{ title: string; children: React.ReactNode; colors: ScreenColors }> = ({
   title,
@@ -510,6 +568,41 @@ function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | u
   };
 }
 
+/** One-line, player-facing summary of a tournament's refund policy. Shared by
+ *  the register CTA and the pre-payment confirmation so the wording can't drift. */
+function refundPolicyLine(
+  feeQuote:
+    | {
+        refundPolicyKind: string;
+        refundPartialBps: number | null;
+        refundCutoffAt: string | null;
+      }
+    | null
+    | undefined,
+  t: (k: TranslationKey) => string,
+  locale: string
+): string | null {
+  if (!feeQuote) return null;
+  const cutoff = feeQuote.refundCutoffAt
+    ? new Date(feeQuote.refundCutoffAt).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null;
+  if (feeQuote.refundPolicyKind === 'none') return t('tournamentDetail.payments.refundNone');
+  if (feeQuote.refundPolicyKind === 'full')
+    return cutoff
+      ? t('tournamentDetail.payments.refundFullUntil').replace('{date}', cutoff)
+      : t('tournamentDetail.payments.refundFull');
+  const pct = String(Math.round((feeQuote.refundPartialBps ?? 0) / 100));
+  return cutoff
+    ? t('tournamentDetail.payments.refundPartialUntil')
+        .replace('{pct}', pct)
+        .replace('{date}', cutoff)
+    : t('tournamentDetail.payments.refundPartial').replace('{pct}', pct);
+}
+
 /** Registered players rendered with the shared community PlayerCard.
  *  onRemovePress is set only when the caller may remove registrants
  *  (organizer, pre-bracket); the organizer's own row never shows it. */
@@ -781,18 +874,24 @@ export const TournamentDetail: React.FC = () => {
     [t, toast]
   );
 
-  // Reuse the player-level Stripe Connect onboarding (same flow as match
-  // reimbursements). Organizers must finish this before a paid event can open.
-  const handleStripeOnboard = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('player-stripe-onboard');
-      if (error || !data?.url) throw new Error(error?.message);
-      await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
-    } catch {
-      warningHaptic();
-      toast.error(t('tournamentDetail.payments.onboardingError'));
-    }
-  }, [toast, t]);
+  // Organizer payout onboarding: a card-capable Stripe Express account (manual
+  // payouts) that becomes the settlement merchant for paid registrations.
+  // Organizers must finish this before a paid event can open.
+  const handleStripeOnboard = useCallback(
+    async (businessType: 'individual' | 'company') => {
+      try {
+        const { data, error } = await supabase.functions.invoke('player-stripe-onboard', {
+          body: { businessType },
+        });
+        if (error || !data?.url) throw new Error(error?.message);
+        await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
+      } catch {
+        warningHaptic();
+        toast.error(t('tournamentDetail.payments.onboardingError'));
+      }
+    },
+    [toast, t]
+  );
 
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
@@ -807,8 +906,12 @@ export const TournamentDetail: React.FC = () => {
           [
             { text: t('common.cancel'), style: 'cancel' },
             {
-              text: t('tournamentDetail.payments.payoutsSetupCta'),
-              onPress: () => void handleStripeOnboard(),
+              text: t('tournamentDetail.payments.onboardTypeIndividual'),
+              onPress: () => void handleStripeOnboard('individual'),
+            },
+            {
+              text: t('tournamentDetail.payments.onboardTypeBusiness'),
+              onPress: () => void handleStripeOnboard('company'),
             },
           ]
         );
@@ -860,53 +963,95 @@ export const TournamentDetail: React.FC = () => {
   const handlePaidRegister = useCallback(
     async (partnerId?: string) => {
       if (!tournament) return;
-      try {
-        const intent = await createRegistrationPayment.mutateAsync({
-          tournamentId: tournament.id,
-          partnerId,
-        });
-        const { error: initError } = await initPaymentSheet({
-          paymentIntentClientSecret: intent.clientSecret,
-          merchantDisplayName: 'Rallia',
-          applePay: { merchantCountryCode: 'CA' },
-          googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
-        });
-        if (initError) throw new Error(initError.message);
-        const { error: paymentError } = await presentPaymentSheet();
-        if (paymentError) {
-          if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
-          throw new Error(paymentError.message);
+
+      // The actual charge — only runs after the player accepts the disclosure.
+      const runPayment = async () => {
+        try {
+          const intent = await createRegistrationPayment.mutateAsync({
+            tournamentId: tournament.id,
+            partnerId,
+          });
+          const { error: initError } = await initPaymentSheet({
+            paymentIntentClientSecret: intent.clientSecret,
+            merchantDisplayName: 'Rallia',
+            applePay: { merchantCountryCode: 'CA' },
+            googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+          });
+          if (initError) throw new Error(initError.message);
+          const { error: paymentError } = await presentPaymentSheet();
+          if (paymentError) {
+            if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
+            throw new Error(paymentError.message);
+          }
+          successHaptic();
+          toast.success(t('tournamentDetail.payments.successToast'));
+          // The webhook flips payment_pending → registered; refetch now and again
+          // shortly after to catch the async finalize.
+          const invalidate = () => {
+            void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) });
+            void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.registrations(tournament.id),
+            });
+            void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
+            });
+          };
+          invalidate();
+          setTimeout(invalidate, 2500);
+        } catch (e) {
+          warningHaptic();
+          const code = e instanceof TournamentPaymentError ? e.code : undefined;
+          const key =
+            code === 'tournament_full'
+              ? 'tournamentDetail.payments.errors.full'
+              : code === 'already_registered'
+                ? 'tournamentDetail.payments.errors.alreadyRegistered'
+                : code === 'organizer_not_ready'
+                  ? 'tournamentDetail.payments.errors.organizerNotReady'
+                  : code === 'tournament_reg_closed'
+                    ? 'tournamentDetail.payments.errors.closed'
+                    : 'tournamentDetail.payments.errors.generic';
+          toast.error(t(key as TranslationKey));
         }
-        successHaptic();
-        toast.success(t('tournamentDetail.payments.successToast'));
-        // The webhook flips payment_pending → registered; refetch now and again
-        // shortly after to catch the async finalize.
-        const invalidate = () => {
-          void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) });
-          void queryClient.invalidateQueries({
-            queryKey: tournamentKeys.registrations(tournament.id),
-          });
-          void queryClient.invalidateQueries({
-            queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
-          });
-        };
-        invalidate();
-        setTimeout(invalidate, 2500);
-      } catch (e) {
-        warningHaptic();
-        const code = e instanceof TournamentPaymentError ? e.code : undefined;
-        const key =
-          code === 'tournament_full'
-            ? 'tournamentDetail.payments.errors.full'
-            : code === 'already_registered'
-              ? 'tournamentDetail.payments.errors.alreadyRegistered'
-              : code === 'organizer_not_ready'
-                ? 'tournamentDetail.payments.errors.organizerNotReady'
-                : code === 'tournament_reg_closed'
-                  ? 'tournamentDetail.payments.errors.closed'
-                  : 'tournamentDetail.payments.errors.generic';
-        toast.error(t(key as TranslationKey));
-      }
+      };
+
+      // Point-of-sale disclosure before any charge: what they pay, the refund
+      // policy, that the service fee isn't refundable, and that Rallia only
+      // facilitates (the organizer, not Rallia, owns the event).
+      const totalLabel = feeQuote
+        ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
+        : null;
+      // GST/QST rides on Rallia's service fee; the player only pays it in
+      // player_pays mode (organizer_absorbs nets it from the organizer's take).
+      const taxLabel =
+        feeQuote && feeQuote.feePayer === 'player_pays' && feeQuote.feeTaxCents > 0
+          ? formatPrice(feeQuote.feeTaxCents, feeQuote.currency, { locale })
+          : null;
+      const message = [
+        totalLabel
+          ? t('tournamentDetail.payments.confirmAmount').replace('{amount}', totalLabel)
+          : null,
+        taxLabel
+          ? t('tournamentDetail.payments.confirmFeeTax').replace('{amount}', taxLabel)
+          : null,
+        refundPolicyLine(feeQuote, t, locale),
+        t('tournamentDetail.payments.confirmFeeNonRefundable'),
+        t('tournamentDetail.payments.liabilityNotice'),
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      Alert.alert(t('tournamentDetail.payments.confirmTitle'), message, [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: totalLabel
+            ? `${t('tournamentDetail.payments.confirmPay')} · ${totalLabel}`
+            : t('tournamentDetail.payments.confirmPay'),
+          onPress: () => {
+            void runPayment();
+          },
+        },
+      ]);
     },
     [
       tournament,
@@ -917,6 +1062,8 @@ export const TournamentDetail: React.FC = () => {
       queryClient,
       toast,
       t,
+      locale,
+      feeQuote,
     ]
   );
 
@@ -1286,6 +1433,24 @@ export const TournamentDetail: React.FC = () => {
     return map;
   }, [registrations, profiles]);
 
+  // Members of each registration as clickable avatar descriptors (captain first,
+  // partner second for doubles), so bracket slots can show avatars that link to
+  // each player's profile.
+  const slotPlayersByRegId = useMemo(() => {
+    const map = new Map<string, Array<{ id: string; avatarUrl: string | null }>>();
+    for (const r of registrations) {
+      const ids = r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id];
+      map.set(
+        r.id,
+        ids.map(id => ({
+          id,
+          avatarUrl: getProfilePictureUrl(profiles?.[id]?.profile_picture_url),
+        }))
+      );
+    }
+    return map;
+  }, [registrations, profiles]);
+
   // Seed-ordered participants enriched with rating/reputation/online, fetched
   // server-side so the Players tab renders full community PlayerCards.
   const { data: participantPlayers = [] } = useTournamentParticipants(params.tournamentId);
@@ -1423,6 +1588,19 @@ export const TournamentDetail: React.FC = () => {
       lightHaptic();
       navigation.navigate('PlayerProfile', {
         playerId: player.id,
+        sportId: tournament.sport_id,
+      });
+    },
+    [navigation, tournament]
+  );
+
+  // Tapping a bracket-slot avatar opens that player's profile (by user id).
+  const handleBracketPlayerPress = useCallback(
+    (playerId: string) => {
+      if (!tournament) return;
+      lightHaptic();
+      navigation.navigate('PlayerProfile', {
+        playerId,
         sportId: tournament.sport_id,
       });
     },
@@ -1604,9 +1782,9 @@ export const TournamentDetail: React.FC = () => {
       statusActiveText: isDark ? primary[300] : primary[700],
       statusMutedBg: isDark ? neutral[800] : neutral[100],
       statusMutedText: isDark ? neutral[400] : neutral[500],
-      cancelledBg: isDark ? '#7c2d1230' : '#fef3c7',
-      cancelledBorder: isDark ? '#f59e0b' : '#fbbf24',
-      cancelledText: isDark ? '#fbbf24' : '#92400e',
+      cancelledBg: isDark ? '#7c2d1230' : accent[100],
+      cancelledBorder: isDark ? status.warning.DEFAULT : status.warning.light,
+      cancelledText: isDark ? status.warning.light : accent[800],
       highlightBg: isDark ? primary[950] : primary[50],
       highlightBorder: isDark ? `${primary[400]}40` : `${primary[500]}20`,
       secondaryHighlightBg: isDark ? secondary[950] : secondary[50],
@@ -1636,8 +1814,13 @@ export const TournamentDetail: React.FC = () => {
     const canArchive = s === 'completed' || s === 'cancelled';
     // Reopen a closed window for late entrants, while the bracket isn't generated.
     const canReopen = s === 'registration_closed' && !tournament?.bracket_locked_at;
-    const enabled = isOrganizer && (canEdit || canInvite || canReopen || canCancel || canArchive);
-    return { canEdit, canInvite, canReopen, canCancel, canArchive, enabled };
+    // The shareable invite link stays active until the bracket is published: even
+    // after registration closes, the organizer can still admit late entrants by
+    // link (draft/open already reach the link through the "Invite players" sheet).
+    const canShareLink = s === 'registration_closed' && !tournament?.bracket_locked_at;
+    const enabled =
+      isOrganizer && (canEdit || canInvite || canReopen || canShareLink || canCancel || canArchive);
+    return { canEdit, canInvite, canReopen, canShareLink, canCancel, canArchive, enabled };
   }, [isOrganizer, tournament?.status, tournament?.bracket_locked_at]);
 
   // Creation-success handoff: land here with openInviteSheet=true and the
@@ -1707,10 +1890,14 @@ export const TournamentDetail: React.FC = () => {
         name: sport?.name ?? '',
         display_name: sport?.display_name ?? '',
       },
+      facilityId: tournament.facility_id,
+      venueName: tournament.venue_name,
+      venueAddress: tournament.venue_address,
+      city: tournament.city,
+      prizeMoneyCents: tournament.prize_money_cents,
       entryFeeCents: tournament.entry_fee_cents,
       currency: tournament.currency,
       feePayer: tournament.fee_payer,
-      payoutTiming: tournament.payout_timing,
       refundPolicyKind: tournament.refund_policy_kind,
       refundPartialBps: tournament.refund_partial_bps,
       refundCutoffAt: tournament.refund_cutoff_at,
@@ -1747,6 +1934,17 @@ export const TournamentDetail: React.FC = () => {
         sportId: tournament.sport_id,
         organizerId: tournament.organizer_id,
       },
+    });
+  }, [tournament]);
+
+  // Post-close, pre-bracket: hand the organizer the still-active share link so
+  // they can admit late entrants (the in-app invite picker closes with the
+  // registration window, but the link stays live until the bracket publishes).
+  const handleShareInviteLink = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    void SheetManager.show('tournament-invite', {
+      payload: { tournamentId: tournament.id, tournamentName: tournament.name },
     });
   }, [tournament]);
 
@@ -1851,22 +2049,36 @@ export const TournamentDetail: React.FC = () => {
     isPaidTournament && feeQuote
       ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
       : null;
-  const refundSummary = (() => {
-    if (!isPaidTournament || !feeQuote) return null;
-    const cutoff = feeQuote.refundCutoffAt ? formatDate(feeQuote.refundCutoffAt) : null;
-    if (feeQuote.refundPolicyKind === 'none') return t('tournamentDetail.payments.refundNone');
-    if (feeQuote.refundPolicyKind === 'full')
-      return cutoff
-        ? t('tournamentDetail.payments.refundFullUntil').replace('{date}', cutoff)
-        : t('tournamentDetail.payments.refundFull');
-    const pct = String(Math.round((feeQuote.refundPartialBps ?? 0) / 100));
-    return cutoff
-      ? t('tournamentDetail.payments.refundPartialUntil')
-          .replace('{pct}', pct)
-          .replace('{date}', cutoff)
-      : t('tournamentDetail.payments.refundPartial').replace('{pct}', pct);
-  })();
+  const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
+
+  // Details-tab spec-sheet values: level requirement, venue, and the money
+  // (entry fee / what the player pays / prize) so every attribute set at
+  // creation has a persistent home beyond the glanceable hero.
+  const ratingRangeLabel = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const entryFeeLabel = isPaidTournament
+    ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
+    : null;
+  const prizePoolLabel =
+    tournament.prize_money_cents && tournament.prize_money_cents > 0
+      ? formatPrice(tournament.prize_money_cents, tournament.currency, {
+          locale,
+          trimZeroCents: true,
+        })
+      : null;
+  const hasVenueDetails = !!(tournament.venue_name || tournament.venue_address || tournament.city);
+  // Address line under the venue name; when only a city is known it's the primary
+  // line instead, so it isn't repeated here.
+  const venueSecondaryLine = [
+    tournament.venue_address,
+    tournament.venue_name ? tournament.city : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const showFeesSection = isPaidTournament || !!prizePoolLabel;
+  // Only surface "You pay" when a service fee is added on top of the entry fee
+  // (player-absorbs mode); organizer-absorbs makes the two amounts equal.
+  const playerPaysServiceFee = !!feeQuote && feeQuote.totalCents > feeQuote.entryCents;
 
   const showBracketTab = shouldFetchBracket && matches.length > 0;
   const showPlayersTab = tournament.status !== 'draft';
@@ -1905,13 +2117,15 @@ export const TournamentDetail: React.FC = () => {
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
           >
-            {tournament.logo_url ? (
-              <Image
-                source={{ uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }}
-                style={styles.heroPoster}
-                resizeMode="cover"
-              />
-            ) : null}
+            <Image
+              source={
+                tournament.logo_url
+                  ? { uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }
+                  : DEFAULT_TOURNAMENT_BANNER
+              }
+              style={styles.heroPoster}
+              resizeMode="cover"
+            />
             <View style={styles.heroTopRow}>
               {isLive ? (
                 <LiveBadge label={t('tournamentDetail.status.in_progress')} isDark={isDark} />
@@ -1945,7 +2159,7 @@ export const TournamentDetail: React.FC = () => {
                   {formatDate(tournament.start_date)} – {formatDate(tournament.end_date)}
                 </Text>
               </View>
-              {tournament.venue_name ? (
+              {tournament.venue_name || tournament.city ? (
                 <View style={styles.heroMetaRow}>
                   <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
                     <Ionicons name="location-outline" size={14} color={colors.textMuted} />
@@ -1956,7 +2170,26 @@ export const TournamentDetail: React.FC = () => {
                     numberOfLines={1}
                     style={styles.heroMetaText}
                   >
-                    {tournament.venue_name}
+                    {tournament.venue_name || tournament.city}
+                  </Text>
+                </View>
+              ) : null}
+              {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
+                <View style={styles.heroMetaRow}>
+                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
+                    <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
+                  </View>
+                  <Text
+                    size="sm"
+                    color={colors.textMuted}
+                    numberOfLines={1}
+                    style={styles.heroMetaText}
+                  >
+                    {`${t('tournamentDetail.dashboard.prizePool')} ${formatPrice(
+                      tournament.prize_money_cents,
+                      tournament.currency,
+                      { locale, trimZeroCents: true }
+                    )}`}
                   </Text>
                 </View>
               ) : null}
@@ -2274,6 +2507,34 @@ export const TournamentDetail: React.FC = () => {
               />
             )}
 
+            {/* Late entry via shareable link: registration has closed but the
+                bracket isn't published yet, so a visitor who followed a still-active
+                invite link can still join. Free tournaments only (the paid flow
+                closes with registration). */}
+            {!isOrganizer &&
+              tournament.status === 'registration_closed' &&
+              !tournament.bracket_locked_at &&
+              !!params.inviteToken &&
+              !isPaidTournament &&
+              !myActiveRegistration &&
+              spotsLeft > 0 && (
+                <DashboardCtaCard
+                  icon="person-add-outline"
+                  title={t('tournamentDetail.dashboard.registerCta.title')}
+                  description={t('tournamentDetail.dashboard.registerCta.inviteLateDescription')}
+                  buttonLabel={
+                    registerBusy
+                      ? t('tournamentDetail.actions.registering')
+                      : t('tournamentDetail.actions.register')
+                  }
+                  buttonIcon="person-add-outline"
+                  onPress={onRegister}
+                  disabled={registerBusy}
+                  colors={colors}
+                  testID="cta-register-invite-late"
+                />
+              )}
+
             {/* Organizer: add myself as a player */}
             {isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
               <DashboardCtaCard
@@ -2507,10 +2768,12 @@ export const TournamentDetail: React.FC = () => {
               seedByRegId={seedByRegId}
               nameByRegId={nameByRegId}
               membersByRegId={membersByRegId}
+              slotPlayersByRegId={slotPlayersByRegId}
               currentUserId={userId}
               isOrganizer={isOrganizer}
               onMatchPress={handleBracketMatchTap}
               onOrganizerOverride={handleOrganizerOverride}
+              onPlayerPress={handleBracketPlayerPress}
               colors={colors}
               t={t}
               showTitle={false}
@@ -2565,6 +2828,14 @@ export const TournamentDetail: React.FC = () => {
         {/* ============================ DETAILS ============================= */}
         {currentTabKey === 'details' && (
           <View style={styles.tabContent}>
+            {tournament.description?.trim() ? (
+              <LabeledBlock
+                label={t('tournamentDetail.labels.description')}
+                value={tournament.description}
+                colors={colors}
+              />
+            ) : null}
+
             <Section title={t('tournamentDetail.dashboard.details')} colors={colors}>
               <InfoRow
                 label={t('tournamentDetail.labels.startDate')}
@@ -2604,6 +2875,13 @@ export const TournamentDetail: React.FC = () => {
                 value={t(MATCH_FORMAT_LABEL_KEY[tournament.match_format] as TranslationKey)}
                 colors={colors}
               />
+              {ratingRangeLabel ? (
+                <InfoRow
+                  label={t('tournamentDetail.labels.ratingRange')}
+                  value={ratingRangeLabel}
+                  colors={colors}
+                />
+              ) : null}
               <InfoRow
                 label={t('tournamentDetail.labels.visibility')}
                 value={t(VISIBILITY_LABEL_KEY[tournament.visibility] as TranslationKey)}
@@ -2615,12 +2893,57 @@ export const TournamentDetail: React.FC = () => {
                 colors={colors}
               />
             </Section>
-            {tournament.rules?.trim() ? (
-              <Section title={t('tournamentDetail.dashboard.rulesTitle')} colors={colors}>
-                <Text size="sm" color={colors.text} style={styles.rulesText}>
-                  {tournament.rules}
+
+            {hasVenueDetails ? (
+              <LabeledBlock label={t('tournamentDetail.labels.location')} colors={colors}>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {tournament.venue_name || tournament.city}
                 </Text>
+                {venueSecondaryLine ? (
+                  <Text size="sm" color={colors.textMuted} style={styles.venueAddress}>
+                    {venueSecondaryLine}
+                  </Text>
+                ) : null}
+              </LabeledBlock>
+            ) : null}
+
+            {showFeesSection ? (
+              <Section title={t('tournamentDetail.dashboard.feesTitle')} colors={colors}>
+                <InfoRow
+                  label={t('tournamentDetail.labels.entryFee')}
+                  value={entryFeeLabel ?? t('tournamentCreation.payments.freeNote')}
+                  colors={colors}
+                />
+                {playerPaysServiceFee && feeTotalLabel ? (
+                  <InfoRow
+                    label={t('tournamentDetail.labels.youPay')}
+                    value={feeTotalLabel}
+                    colors={colors}
+                  />
+                ) : null}
+                {refundSummary ? (
+                  <StackedRow
+                    label={t('tournamentDetail.labels.refundPolicy')}
+                    value={refundSummary}
+                    colors={colors}
+                  />
+                ) : null}
+                {prizePoolLabel ? (
+                  <InfoRow
+                    label={t('tournamentDetail.dashboard.prizePool')}
+                    value={prizePoolLabel}
+                    colors={colors}
+                  />
+                ) : null}
               </Section>
+            ) : null}
+
+            {tournament.rules?.trim() ? (
+              <LabeledBlock
+                label={t('tournamentDetail.dashboard.rulesTitle')}
+                value={tournament.rules}
+                colors={colors}
+              />
             ) : null}
           </View>
         )}
@@ -2669,12 +2992,27 @@ export const TournamentDetail: React.FC = () => {
                 colors={colors}
               />
             )}
+            {adminActions.canShareLink && (
+              <MenuItem
+                icon="link-outline"
+                label={t('tournamentDetail.actions.shareInviteLink')}
+                testID="menu-share-invite-link"
+                showDivider={adminActions.canEdit || adminActions.canInvite}
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  handleShareInviteLink();
+                }}
+                colors={colors}
+              />
+            )}
             {adminActions.canReopen && (
               <MenuItem
                 icon="lock-open-outline"
                 label={t('tournamentDetail.actions.reopenRegistration')}
                 testID="menu-reopen-registration"
-                showDivider={adminActions.canEdit || adminActions.canInvite}
+                showDivider={
+                  adminActions.canEdit || adminActions.canInvite || adminActions.canShareLink
+                }
                 onPress={() => {
                   setShowActionsMenu(false);
                   onReopen();
@@ -2823,7 +3161,6 @@ const slotLabel = (
   isPhantom: boolean,
   seedByRegId: Map<string, number>,
   nameByRegId: Map<string, string>,
-  showSeed: boolean,
   t: (k: TranslationKey) => string
 ): string => {
   if (isPhantom) return t('tournamentDetail.bracket.phantom');
@@ -2831,10 +3168,9 @@ const slotLabel = (
   if (!regId) return t('tournamentDetail.bracket.tbd');
   const name = nameByRegId.get(regId);
   if (name) return name;
-  // Seed-rank labels are organizer-only; participants see TBD for slots whose
-  // player isn't determined yet (no leaking of the seeding to competitors).
+  // Fall back to the seed rank for a determined-but-unnamed slot.
   const seed = seedByRegId.get(regId);
-  return showSeed && seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
+  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
 };
 
 type SlotKind = 'player' | 'bye' | 'tbd' | 'phantom';
@@ -2865,10 +3201,12 @@ const BracketSection: React.FC<{
   seedByRegId: Map<string, number>;
   nameByRegId: Map<string, string>;
   membersByRegId: Map<string, string[]>;
+  slotPlayersByRegId: Map<string, Array<{ id: string; avatarUrl: string | null }>>;
   currentUserId: string | undefined;
   isOrganizer: boolean;
   onMatchPress: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   onOrganizerOverride: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
+  onPlayerPress: (playerId: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
   showTitle?: boolean;
@@ -2877,10 +3215,12 @@ const BracketSection: React.FC<{
   seedByRegId,
   nameByRegId,
   membersByRegId,
+  slotPlayersByRegId,
   currentUserId,
   isOrganizer,
   onMatchPress,
   onOrganizerOverride,
+  onPlayerPress,
   colors,
   t,
   showTitle = true,
@@ -2958,6 +3298,15 @@ const BracketSection: React.FC<{
     const p2Members = m.player2_registration_id
       ? (membersByRegId.get(m.player2_registration_id) ?? [])
       : [];
+    // Avatars only for real, named slots (never bye/tbd/phantom).
+    const p1SlotPlayers =
+      m.player1_registration_id && !m.player1_is_bye && !isPhantom
+        ? (slotPlayersByRegId.get(m.player1_registration_id) ?? [])
+        : [];
+    const p2SlotPlayers =
+      m.player2_registration_id && !m.player2_is_bye && !isPhantom
+        ? (slotPlayersByRegId.get(m.player2_registration_id) ?? [])
+        : [];
     const callerIsParticipant =
       !!currentUserId && (p1Members.includes(currentUserId) || p2Members.includes(currentUserId));
     const slotsReady =
@@ -3025,20 +3374,17 @@ const BracketSection: React.FC<{
             isPhantom,
             seedByRegId,
             nameByRegId,
-            isOrganizer,
             t
           )}
-          seed={
-            isOrganizer && m.player1_registration_id
-              ? seedByRegId.get(m.player1_registration_id)
-              : undefined
-          }
+          seed={m.player1_registration_id ? seedByRegId.get(m.player1_registration_id) : undefined}
           kind={slotKind(m.player1_registration_id, m.player1_is_bye, isPhantom)}
           isWinner={winnerSlot === 1}
           isFinalWinner={winnerSlot === 1 && isFinalRound}
           decided={winnerSlot !== 0}
           cells={cells1}
           showCheck={winnerSlot === 1 && sets.length === 0}
+          players={p1SlotPlayers}
+          onPlayerPress={onPlayerPress}
           colors={colors}
         />
         <View style={[styles.bmRowDivider, { backgroundColor: colors.border }]} />
@@ -3049,20 +3395,17 @@ const BracketSection: React.FC<{
             isPhantom,
             seedByRegId,
             nameByRegId,
-            isOrganizer,
             t
           )}
-          seed={
-            isOrganizer && m.player2_registration_id
-              ? seedByRegId.get(m.player2_registration_id)
-              : undefined
-          }
+          seed={m.player2_registration_id ? seedByRegId.get(m.player2_registration_id) : undefined}
           kind={slotKind(m.player2_registration_id, m.player2_is_bye, isPhantom)}
           isWinner={winnerSlot === 2}
           isFinalWinner={winnerSlot === 2 && isFinalRound}
           decided={winnerSlot !== 0}
           cells={cells2}
           showCheck={winnerSlot === 2 && sets.length === 0}
+          players={p2SlotPlayers}
+          onPlayerPress={onPlayerPress}
           colors={colors}
         />
       </>
@@ -3270,8 +3613,22 @@ const BracketPlayerRow: React.FC<{
   decided: boolean;
   cells: Array<{ value: number; won: boolean }>;
   showCheck: boolean;
+  players: Array<{ id: string; avatarUrl: string | null }>;
+  onPlayerPress: (playerId: string) => void;
   colors: ScreenColors;
-}> = ({ label, seed, kind, isWinner, isFinalWinner, decided, cells, showCheck, colors }) => {
+}> = ({
+  label,
+  seed,
+  kind,
+  isWinner,
+  isFinalWinner,
+  decided,
+  cells,
+  showCheck,
+  players,
+  onPlayerPress,
+  colors,
+}) => {
   const isPlayer = kind === 'player';
   const isLoser = decided && isPlayer && !isWinner;
   const winnerColor = isFinalWinner ? colors.championText : colors.primary;
@@ -3284,6 +3641,30 @@ const BracketPlayerRow: React.FC<{
     <View style={styles.bmRow}>
       {isFinalWinner && (
         <Ionicons name="trophy" size={14} color={colors.championText} style={styles.bmRowCrown} />
+      )}
+      {isPlayer && players.length > 0 && (
+        <View style={[styles.bmAvatarCluster, isLoser && styles.bmAvatarClusterDim]}>
+          {players.map((p, i) => (
+            <TouchableOpacity
+              key={p.id}
+              onPress={() => onPlayerPress(p.id)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              style={[
+                styles.bmAvatar,
+                { backgroundColor: colors.highlightBg },
+                i > 0 && [styles.bmAvatarStacked, { borderColor: colors.cardBackground }],
+              ]}
+            >
+              {p.avatarUrl ? (
+                <Image source={{ uri: p.avatarUrl }} style={styles.bmAvatarImg} />
+              ) : (
+                <Ionicons name="person" size={13} color={colors.textMuted} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
       <View style={styles.bmNameWrap}>
         <Text
@@ -3507,7 +3888,27 @@ const styles = StyleSheet.create({
   heroDescription: {
     lineHeight: 20,
   },
-  rulesText: {
+  stackedBlock: {
+    padding: spacingPixels[4],
+    gap: spacingPixels[1],
+  },
+  venueAddress: {
+    lineHeight: 18,
+  },
+  infoRowLabel: {
+    marginRight: spacingPixels[3],
+  },
+  infoRowValue: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  stackedRow: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: spacingPixels[1],
+  },
+  stackedValue: {
     lineHeight: 20,
   },
   heroDivider: {
@@ -3827,6 +4228,29 @@ const styles = StyleSheet.create({
   },
   bmRowCrown: {
     marginRight: -spacingPixels[1],
+  },
+  bmAvatarCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bmAvatarClusterDim: {
+    opacity: 0.6,
+  },
+  bmAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  bmAvatarStacked: {
+    marginLeft: -8,
+    borderWidth: 1.5,
+  },
+  bmAvatarImg: {
+    width: '100%',
+    height: '100%',
   },
   bmRowDivider: {
     height: StyleSheet.hairlineWidth,

@@ -33,6 +33,7 @@ import { useAppNavigation } from '#/navigation/hooks';
 import { useLocale, useFeedbackReportSheet, useSubscription } from '#/context';
 import { useTour } from '#/context/TourContext';
 import { useAuth, useTranslation } from '#/hooks';
+import { getPolicyUrl } from '#/utils/policyUrls';
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
@@ -347,13 +348,13 @@ const SettingsScreen: React.FC = () => {
             colors={colors}
             icon="document-text-outline"
             title={t('settings.termsOfService')}
-            onPress={() => Linking.openURL('https://rallia.ca/terms')}
+            onPress={() => Linking.openURL(getPolicyUrl('terms', locale))}
           />
           <SettingsItem
             colors={colors}
             icon="lock-closed-outline"
             title={t('settings.privacyPolicy')}
-            onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+            onPress={() => Linking.openURL(getPolicyUrl('privacy', locale))}
           />
           <SettingsItem
             colors={colors}
