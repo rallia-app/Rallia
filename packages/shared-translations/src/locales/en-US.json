@@ -3333,7 +3333,7 @@
       "previewTitle": "Top suggestions",
       "previewHint": "Tap to choose which times to suggest",
       "previewLoading": "Finding times that work…",
-      "previewEmpty": "No open courts at your shared times yet. You can still pick a time in the chat.",
+      "previewEmpty": "No times to suggest just yet. You can still pick one in the chat.",
       "submit": "Suggest these times",
       "submitting": "Posting…",
       "entryLabel": "Organize a game",

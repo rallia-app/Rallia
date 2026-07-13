@@ -131,6 +131,7 @@ export {
   removeMatchTimeVote,
   toggleMatchTimeVote,
   createCasualMatch,
+  getTournamentMatchSportId,
   type OrganizerSport,
   type MatchTimeVote,
 } from './matchOrganizerService';

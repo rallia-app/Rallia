@@ -40,6 +40,7 @@ import {
   useSharedSports,
   useMatchOrganizerOptions,
   usePostMatchOrganizerCard,
+  useTournamentMatchSport,
 } from '@rallia/shared-hooks';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
@@ -70,17 +71,33 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
   const accent = isDark ? primary[500] : primary[600];
 
   const { data: sharedSports = [], isLoading: sportsLoading } = useSharedSports(participantIds);
+
+  // In a tournament round chat the sport is fixed to the tournament's sport.
+  const tournamentMatchId = payload?.tournamentMatchId ?? null;
+  const isTournamentChat = !!tournamentMatchId;
+  const { data: tournamentSportId, isLoading: tournamentSportLoading } =
+    useTournamentMatchSport(tournamentMatchId);
+  const lockSport = isTournamentChat && !!tournamentSportId;
+
   const [selectedSportId, setSelectedSportId] = useState<string | null>(
     payload?.defaultSportId ?? null
   );
   const [submitting, setSubmitting] = useState(false);
 
-  // Default to the first shared sport once resolved.
+  // Resolve the sport: force the tournament sport in a round chat, otherwise
+  // default to the first shared sport. Wait for the tournament sport before
+  // falling back so a round chat never briefly previews the wrong sport.
   useEffect(() => {
-    if (!selectedSportId && sharedSports.length > 0) {
-      setSelectedSportId(sharedSports[0].id);
+    if (selectedSportId) return;
+    if (isTournamentChat) {
+      if (tournamentSportId) {
+        setSelectedSportId(tournamentSportId);
+        return;
+      }
+      if (tournamentSportLoading) return;
     }
-  }, [sharedSports, selectedSportId]);
+    if (sharedSports.length > 0) setSelectedSportId(sharedSports[0].id);
+  }, [selectedSportId, isTournamentChat, tournamentSportId, tournamentSportLoading, sharedSports]);
 
   const format: 'singles' | 'doubles' = participantIds.length === 4 ? 'doubles' : 'singles';
 
@@ -197,7 +214,11 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
     t,
   ]);
 
-  const isLoadingPreview = optionsLoading || optionsFetching || (sportsLoading && !selectedSportId);
+  const isLoadingPreview =
+    optionsLoading ||
+    optionsFetching ||
+    (sportsLoading && !selectedSportId) ||
+    (isTournamentChat && tournamentSportLoading && !selectedSportId);
   const showEmpty = !!selectedSportId && !isLoadingPreview && options.length === 0;
   const submitDisabled = submitting || selectedKeys.size === 0 || !selectedSportId;
 
@@ -231,8 +252,9 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
       }
     >
       {/* Sport picker — only when there's an actual choice (2+ shared sports).
-          A single shared sport is auto-selected, so the picker is hidden. */}
-      {sharedSports.length > 1 ? (
+          A single shared sport is auto-selected, so the picker is hidden. In a
+          tournament round chat the sport is locked to the tournament's sport. */}
+      {!lockSport && sharedSports.length > 1 ? (
         <View style={styles.section}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
             {t('matchOrganizer.setup.sportLabel')}

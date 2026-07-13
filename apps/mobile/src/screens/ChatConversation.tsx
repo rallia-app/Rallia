@@ -421,6 +421,8 @@ export default function ChatConversationScreen() {
         conversationId,
         organizerId: playerId,
         participantIds,
+        // Round chats force the tournament's sport; the sheet resolves it.
+        tournamentMatchId: conversation?.tournament_match_id ?? null,
         conversationType,
         isRoundChat,
       },

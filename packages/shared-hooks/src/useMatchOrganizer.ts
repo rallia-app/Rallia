@@ -14,6 +14,7 @@ import {
   toggleMatchTimeVote,
   createCasualMatch,
   getOrCreateTournamentRoundChat,
+  getTournamentMatchSportId,
   subscribeToMatchVotes,
   unsubscribeFromChannel,
 } from '@rallia/shared-services';
@@ -33,6 +34,8 @@ export const matchOrganizerKeys = {
   options: (playerIds: string[], sportId: string) =>
     [...matchOrganizerKeys.all, 'options', sortedKey(playerIds), sportId] as const,
   votes: (messageId: string) => [...matchOrganizerKeys.all, 'votes', messageId] as const,
+  tournamentSport: (tournamentMatchId: string) =>
+    [...matchOrganizerKeys.all, 'tournamentSport', tournamentMatchId] as const,
 };
 
 // ============================================================================
@@ -46,6 +49,20 @@ export function useSharedSports(playerIds: string[] | undefined) {
     queryFn: () => getSharedSports(playerIds ?? []),
     enabled: !!playerIds && playerIds.length > 0,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * The tournament's sport behind a round chat. Used to force the organizer flow
+ * onto the tournament sport instead of a guessed shared one. Enabled only when
+ * a tournament_match_id is present (i.e. the chat is a tournament round chat).
+ */
+export function useTournamentMatchSport(tournamentMatchId: string | null | undefined) {
+  return useQuery({
+    queryKey: matchOrganizerKeys.tournamentSport(tournamentMatchId ?? ''),
+    queryFn: () => getTournamentMatchSportId(tournamentMatchId ?? ''),
+    enabled: !!tournamentMatchId,
+    staleTime: 10 * 60 * 1000,
   });
 }
 
