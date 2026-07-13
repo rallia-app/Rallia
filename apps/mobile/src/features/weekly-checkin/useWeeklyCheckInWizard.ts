@@ -139,6 +139,14 @@ export interface UseWeeklyCheckInWizard {
    * the header's step numbering (3 dots instead of 4).
    */
   skipRecapStep: boolean;
+  /**
+   * Availability was refreshed recently (coverage still covers the window), so
+   * the availability step is skipped — a sport-switch check-in goes straight to
+   * the goal or the games/plan steps. Drives navigation + the header dot count.
+   */
+  skipAvailabilityStep: boolean;
+  /** First non-skipped step — the wizard's landing step and back floor. */
+  firstStep: WizardStep;
 
   /** "Games for you": public matches fitting the just-declared availability. */
   opportunities: MatchWithDetails[];
@@ -156,12 +164,20 @@ export interface UseWeeklyCheckInWizard {
 interface UseWeeklyCheckInWizardOptions {
   /** Called when the user successfully completes the wizard. */
   onComplete?: (result: CheckInResult) => void;
+  /**
+   * The wizard's sport scope — the app's selected sport mode. Opportunities,
+   * plan proposals, the weekly goal and the streak are all scoped to this
+   * sport; null (context still loading) falls back server-side to the primary
+   * sport for goal/streak and to all active sports for match content. Only
+   * availability stays player-wide.
+   */
+  sportId?: string | null;
 }
 
 export function useWeeklyCheckInWizard(
   options: UseWeeklyCheckInWizardOptions = {}
 ): UseWeeklyCheckInWizard {
-  const { onComplete } = options;
+  const { onComplete, sportId = null } = options;
 
   // Step navigation
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
@@ -171,7 +187,7 @@ export function useWeeklyCheckInWizard(
     data: context = null,
     isLoading: isContextLoading,
     error: contextError,
-  } = useCheckInContext();
+  } = useCheckInContext({ sportId });
   const { data: initialKeys, isLoading: availabilityLoading } = useAvailabilityKeys();
 
   // Form state — seeded from loaded data once available
@@ -238,6 +254,11 @@ export function useWeeklyCheckInWizard(
   // coverage ran out mid-week) goes straight to the availability step instead
   // of replaying a recap with nothing to decide.
   const skipRecapStep = !!context?.frequencyAlreadySetThisWeek;
+  // Availability was refreshed recently (coverage still covers the window), so
+  // there's nothing to re-declare — skip the availability step. Drives the
+  // sport-switch flow: with the goal unset but the schedule fresh, the wizard
+  // opens straight on the goal step. Only ever true once context has loaded.
+  const skipAvailabilityStep = !!context && !context.availabilityRefreshNeeded;
 
   // "Games for you" — prefetched from the availability step so results are ready
   // by the time the user continues. Slots are the just-declared (in-memory) cells
@@ -253,6 +274,7 @@ export function useWeeklyCheckInWizard(
     isFetched: opportunitiesFetched,
   } = useCheckInMatchOpportunities({
     slots: opportunitySlots,
+    sportId,
     timezone: context?.timezone,
     enabled: currentStep >= 2 && currentStep <= 3,
   });
@@ -260,6 +282,34 @@ export function useWeeklyCheckInWizard(
   // Settled with nothing that fits → skip the step. Only true once the query has
   // actually run for the current slots (isFetched guards the not-yet-run state).
   const skipOpportunitiesStep = opportunitiesFetched && opportunities.length === 0;
+
+  // Step visibility given the three skip conditions. Steps: 1 recap+goal,
+  // 2 availability, 3 opportunities, 4 plan, 5 all-set. The wizard only lands on
+  // and navigates between visible steps — a single source of truth so goNext,
+  // goBack, the landing step and the header dots all agree.
+  const isStepVisible = useCallback(
+    (step: WizardStep): boolean => {
+      switch (step) {
+        case 1:
+          return !skipRecapStep;
+        case 2:
+          return !skipAvailabilityStep;
+        case 3:
+          return !skipOpportunitiesStep;
+        case 4:
+          return PLAN_STEP_ENABLED;
+        case 5:
+          return true;
+        default:
+          return false;
+      }
+    },
+    [skipRecapStep, skipAvailabilityStep, skipOpportunitiesStep]
+  );
+  // Landing step + back floor: the first non-skipped step. skipOpportunities
+  // resolves async, so when both recap and availability are skipped the worst
+  // case lands on step 3 and the autoSubmit effect bounces to the plan step.
+  const firstStep: WizardStep = !skipRecapStep ? 1 : !skipAvailabilityStep ? 2 : 3;
 
   // Match plan preview — enabled from step 3 so it prefetches behind "Games for
   // you" and is warm when the player lands on the plan step. Not enabled on
@@ -272,6 +322,7 @@ export function useWeeklyCheckInWizard(
   } = useCheckInMatchPlan({
     slots: opportunitySlots,
     frequencyGoal,
+    sportId,
     timezone: context?.timezone,
     // Never fetch while the plan step is hidden — a warm plan would otherwise
     // be silently submitted (games created sight unseen) by submit() below.
@@ -312,16 +363,18 @@ export function useWeeklyCheckInWizard(
     planStaleRef.current = true;
   }, []);
 
-  // Jump past the recap step once the context lands (only if the user is still
-  // sitting on step 1, which they are — step 1 shows a loader until context).
+  // Jump to the first non-skipped step once the context lands (only if the user
+  // is still sitting on step 1, which they are — step 1 shows a loader until
+  // context). Covers recap-skip (goal already set) and availability-skip
+  // (schedule refreshed recently) together.
   const skipDecidedRef = useRef(false);
   useEffect(() => {
     if (skipDecidedRef.current || !context) return;
     skipDecidedRef.current = true;
-    if (context.frequencyAlreadySetThisWeek) {
-      setCurrentStep(prev => (prev === 1 ? 2 : prev));
+    if (firstStep !== 1) {
+      setCurrentStep(prev => (prev === 1 ? firstStep : prev));
     }
-  }, [context]);
+  }, [context, firstStep]);
 
   // Submission
   const { mutateAsync: recordCheckIn, isPending: isSubmitting } = useRecordCheckIn();
@@ -465,6 +518,7 @@ export function useWeeklyCheckInWizard(
     try {
       const res = await recordCheckIn({
         frequencyGoal,
+        sportId,
         optOut,
         autoInvite,
         plan: planError ? null : { proposals: confirmedProposals },
@@ -509,6 +563,7 @@ export function useWeeklyCheckInWizard(
   }, [
     recordCheckIn,
     frequencyGoal,
+    sportId,
     plan,
     planError,
     optOut,
@@ -525,31 +580,21 @@ export function useWeeklyCheckInWizard(
   }, []);
   const goNext = useCallback(() => {
     if (isSubmitting) return;
-    // Funnel step_completed for the step being left. Steps 1 (recap_goal),
-    // 2 (availability) and 3 (match_opportunities) advance via goNext; the
-    // match-plan step (when enabled) completes via submit().
+    // Funnel step_completed for the step being LEFT (only steps actually shown
+    // reach goNext — a skipped step never fires its event). The match-plan step
+    // (when enabled) completes via submit(), not goNext.
     if (currentStep === 1) {
       Analytics.weeklyCheckinStepCompleted({
         step_name: STEP_NAMES[1],
         step_index: 1,
         frequency_goal: frequencyGoal,
       });
-      setCurrentStep(2);
     } else if (currentStep === 2) {
       Analytics.weeklyCheckinStepCompleted({
         step_name: STEP_NAMES[2],
         step_index: 2,
         availability_cells: availability.size,
       });
-      // Skip "Games for you" when nothing fits.
-      if (!skipOpportunitiesStep) {
-        setCurrentStep(3);
-      } else if (PLAN_STEP_ENABLED) {
-        setCurrentStep(4);
-      } else {
-        // Plan step hidden: this was the last visible step — finish here.
-        submit().catch(() => {});
-      }
     } else if (currentStep === 3) {
       Analytics.weeklyCheckinStepCompleted({
         step_name: STEP_NAMES[3],
@@ -562,10 +607,22 @@ export function useWeeklyCheckInWizard(
         planStaleRef.current = false;
         queryClient.invalidateQueries({ queryKey: checkInKeys.plans() });
       }
-      if (PLAN_STEP_ENABLED) {
-        setCurrentStep(4);
+    }
+
+    if (currentStep >= 1 && currentStep <= 3) {
+      // Advance to the next visible pre-submit step (2..4, skipping any hidden
+      // ones). If none remains, the step just left was the last one shown, so
+      // this completes the wizard.
+      let target: WizardStep | null = null;
+      for (let s = (currentStep + 1) as WizardStep; s <= 4; s = (s + 1) as WizardStep) {
+        if (isStepVisible(s)) {
+          target = s;
+          break;
+        }
+      }
+      if (target !== null) {
+        setCurrentStep(target);
       } else {
-        // Plan step hidden: submit lands directly on the All-Set recap.
         submit().catch(() => {});
       }
     } else {
@@ -576,11 +633,11 @@ export function useWeeklyCheckInWizard(
     currentStep,
     availability,
     frequencyGoal,
-    skipOpportunitiesStep,
     opportunities.length,
     queryClient,
     isSubmitting,
     submit,
+    isStepVisible,
   ]);
   const goBack = useCallback(() => {
     // On the plan deck, back first rewinds the previous card; it only leaves
@@ -588,16 +645,15 @@ export function useWeeklyCheckInWizard(
     // submit is in flight — leaving mid-submit would race the jump to All-Set.
     if (currentStep === 4 && isSubmitting) return;
     if (currentStep === 4 && undoLastPlanDecision()) return;
-    // When the recap step is skipped, availability (step 2) is the floor.
-    const minStep = skipRecapStep ? 2 : 1;
+    // Step to the nearest visible step below the current one, skipping any
+    // hidden steps (recap / availability / opportunities). Stops at the floor.
     setCurrentStep(prev => {
-      if (prev <= minStep) return prev;
-      // Mirror the forward skip: jump straight from auto_match back to
-      // availability when "Games for you" was skipped.
-      if (prev === 4 && skipOpportunitiesStep) return 2;
-      return (prev - 1) as WizardStep;
+      for (let s = (prev - 1) as WizardStep; s >= 1; s = (s - 1) as WizardStep) {
+        if (isStepVisible(s)) return s;
+      }
+      return prev;
     });
-  }, [skipRecapStep, skipOpportunitiesStep, currentStep, isSubmitting, undoLastPlanDecision]);
+  }, [currentStep, isSubmitting, undoLastPlanDecision, isStepVisible]);
 
   // Auto-advance past "Games for you" when nothing fits — covers the case where
   // the query settles empty only after the user already landed on the step.
@@ -654,6 +710,8 @@ export function useWeeklyCheckInWizard(
     windowDays,
     windowCellCount,
     skipRecapStep,
+    skipAvailabilityStep,
+    firstStep,
 
     opportunities,
     opportunitiesLoading,

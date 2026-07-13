@@ -815,6 +815,7 @@ export function weeklyCheckinOpened(props: {
   source: string; // 'auto_opener' | 'banner' | 'manual' | 'unknown'
   current_streak: number;
   recap_variant: string; // 'hit' | 'met' | 'miss' | 'frozen' | 'back' | 'first'
+  sport: string; // sport mode the wizard is scoped to; 'unknown' if unresolved
 }): void {
   capture('weekly_checkin_opened', props);
 }

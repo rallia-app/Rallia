@@ -609,7 +609,13 @@ const Home = () => {
   // the streak-aware subtitle. WeeklyCheckInAutoOpener also reads it; TanStack
   // de-dupes so this is a single RPC round-trip on home mount. Gated on the
   // feature flag so we don't fire the RPC while the wizard is shipped dark.
-  const { data: checkInContext } = useCheckInContext({ enabled: WEEKLY_CHECKIN_ENABLED });
+  // Streak + goal are per sport, so the query is keyed to the sport mode (same
+  // key as the wizard/auto-opener → still one shared cache entry).
+  const { selectedSport: checkInSport } = useSport();
+  const { data: checkInContext } = useCheckInContext({
+    enabled: WEEKLY_CHECKIN_ENABLED,
+    sportId: checkInSport?.id ?? null,
+  });
 
   // Keep a ref so the stable processDeepLink callback always reads the latest player
   const playerRef = useRef(player);

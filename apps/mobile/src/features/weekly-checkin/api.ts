@@ -34,13 +34,18 @@ import { cellKey, type HourGrid } from '#/features/onboarding/components/HourlyA
 
 export const checkInKeys = {
   all: ['weekly-checkin'] as const,
-  context: () => [...checkInKeys.all, 'context'] as const,
+  contexts: () => [...checkInKeys.all, 'context'] as const,
+  context: (sportId: string | null) => [...checkInKeys.contexts(), { sportId }] as const,
   availability: () => [...checkInKeys.all, 'availability'] as const,
-  opportunities: (slots: CheckInMatchSlot[], timezone: string | null) =>
-    [...checkInKeys.all, 'opportunities', { slots, timezone }] as const,
+  opportunities: (slots: CheckInMatchSlot[], sportId: string | null, timezone: string | null) =>
+    [...checkInKeys.all, 'opportunities', { slots, sportId, timezone }] as const,
   plans: () => [...checkInKeys.all, 'plan'] as const,
-  plan: (slots: CheckInMatchSlot[], goal: number, timezone: string | null) =>
-    [...checkInKeys.plans(), { slots, goal, timezone }] as const,
+  plan: (
+    slots: CheckInMatchSlot[],
+    goal: number,
+    sportId: string | null,
+    timezone: string | null
+  ) => [...checkInKeys.plans(), { slots, goal, sportId, timezone }] as const,
 };
 
 /** A declared availability cell: one selected (weekday, hour). */
@@ -102,14 +107,23 @@ export interface CheckInContext {
   /** Last 4 completed weeks, newest-first, each with its real date + status. */
   historyWeeks: HistoryWeek[];
   lastFrequencyGoal: number | null;
-  /** Coverage-based: the player is past the last date they declared for. */
+  /**
+   * Per-sport pending trigger for the banner + auto-opener: availability
+   * coverage lapsed OR this sport's goal isn't set this ISO week.
+   */
   isPendingCheckIn: boolean;
   /** Resolved player timezone (IANA). Used to format the window labels. */
   timezone: string;
   /** Last local date the player declared availability for (= last today+3). */
   availabilityCoveredThrough: string | null;
-  /** True once a real (non-rescue) check-in exists for the current ISO week. */
+  /** True once a real (non-rescue) check-in exists this ISO week for the sport. */
   frequencyAlreadySetThisWeek: boolean;
+  /**
+   * Player-wide: the rolling window rolled past the last declared coverage, so
+   * availability needs refreshing. When false, the wizard skips the
+   * availability step (it was refreshed recently).
+   */
+  availabilityRefreshNeeded: boolean;
   /** Rolling window: today + next 3 days, computed server-side in player tz. */
   window: CheckInWindowDay[];
 }
@@ -175,6 +189,11 @@ export interface PlanProposalSubmit {
 
 export interface RecordCheckInInput {
   frequencyGoal: number;
+  /**
+   * Sport the check-in's goal + streak apply to (the wizard's sport mode).
+   * Null lets the server fall back to the player's primary sport.
+   */
+  sportId: string | null;
   /** Disables auto_create_matches — no games are auto-included or created. */
   optOut: boolean;
   /** Persist auto_invite_players — deactivated in the wizard UI for now. */
@@ -195,7 +214,7 @@ export interface RecordCheckInInput {
 // COLD-START QUERY — get_check_in_context()
 // =============================================================================
 
-async function fetchCheckInContext(): Promise<CheckInContext> {
+async function fetchCheckInContext(sportId: string | null): Promise<CheckInContext> {
   // Guard: the RPC is SECURITY DEFINER with an `auth.uid() IS NULL` check.
   // If no session exists yet (splash race, signed-out user, expired token)
   // bail with safe defaults so TanStack doesn't retry 3× and spam the logs.
@@ -218,12 +237,16 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       timezone: deviceTimezone ?? 'UTC',
       availabilityCoveredThrough: null,
       frequencyAlreadySetThisWeek: false,
+      availabilityRefreshNeeded: false,
       window: [],
     };
   }
 
   const { data, error } = await supabase.rpc('get_check_in_context', {
     p_timezone: deviceTimezone,
+    // Streak/goal/history are per sport. Null (sport mode still resolving)
+    // lets the server fall back to the player's primary sport.
+    p_sport_id: sportId,
   });
   if (error) {
     Logger.error('[weekly-checkin] get_check_in_context failed', error);
@@ -248,6 +271,7 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
       timezone: deviceTimezone ?? 'UTC',
       availabilityCoveredThrough: null,
       frequencyAlreadySetThisWeek: false,
+      availabilityRefreshNeeded: true,
       window: [],
     };
   }
@@ -265,14 +289,16 @@ async function fetchCheckInContext(): Promise<CheckInContext> {
     timezone: row.timezone ?? deviceTimezone ?? 'UTC',
     availabilityCoveredThrough: row.availability_covered_through ?? null,
     frequencyAlreadySetThisWeek: row.frequency_already_set_this_week ?? false,
+    availabilityRefreshNeeded: row.availability_refresh_needed ?? true,
     window: mapWindow(row.checkin_window),
   };
 }
 
-export function useCheckInContext(options?: { enabled?: boolean }) {
+export function useCheckInContext(options?: { enabled?: boolean; sportId?: string | null }) {
+  const sportId = options?.sportId ?? null;
   return useQuery({
-    queryKey: checkInKeys.context(),
-    queryFn: fetchCheckInContext,
+    queryKey: checkInKeys.context(sportId),
+    queryFn: () => fetchCheckInContext(sportId),
     staleTime: 60_000, // 1 min — banner and auto-opener both read this; avoid refetch storms
     enabled: options?.enabled ?? true,
   });
@@ -323,7 +349,8 @@ export function useAvailabilityKeys(options?: { enabled?: boolean }) {
  * Public matches with open spots that fit the availability the player just
  * declared (in-memory `slots`, not yet persisted). The RPC enforces all four
  * criteria server-side (favorite/distance, exact rating, declared day+hour,
- * gender) across the player's active sports, windowed to today…today+3.
+ * gender), scoped to `sportId` (the wizard's sport mode; null falls back to
+ * all active sports), windowed to today…today+3.
  *
  * Gated on having ≥ 1 declared slot; callers should pass `enabled` keyed to the
  * step being reachable so it can prefetch while the player is still on
@@ -331,13 +358,14 @@ export function useAvailabilityKeys(options?: { enabled?: boolean }) {
  */
 export function useCheckInMatchOpportunities(params: {
   slots: CheckInMatchSlot[];
+  sportId?: string | null;
   timezone?: string | null;
   enabled?: boolean;
 }) {
-  const { slots, timezone = null, enabled = true } = params;
+  const { slots, sportId = null, timezone = null, enabled = true } = params;
   return useQuery({
-    queryKey: checkInKeys.opportunities(slots, timezone),
-    queryFn: () => getCheckInMatchOpportunities({ slots, timezone, limit: 20 }),
+    queryKey: checkInKeys.opportunities(slots, sportId, timezone),
+    queryFn: () => getCheckInMatchOpportunities({ slots, sportId, timezone, limit: 20 }),
     staleTime: 60_000,
     enabled: enabled && slots.length > 0,
   });
@@ -359,13 +387,14 @@ export function useCheckInMatchOpportunities(params: {
 export function useCheckInMatchPlan(params: {
   slots: CheckInMatchSlot[];
   frequencyGoal: number;
+  sportId?: string | null;
   timezone?: string | null;
   enabled?: boolean;
 }) {
-  const { slots, frequencyGoal, timezone = null, enabled = true } = params;
+  const { slots, frequencyGoal, sportId = null, timezone = null, enabled = true } = params;
   return useQuery({
-    queryKey: checkInKeys.plan(slots, frequencyGoal, timezone),
-    queryFn: () => getCheckInMatchPlan({ slots, frequencyGoal, timezone }),
+    queryKey: checkInKeys.plan(slots, frequencyGoal, sportId, timezone),
+    queryFn: () => getCheckInMatchPlan({ slots, frequencyGoal, sportId, timezone }),
     staleTime: 60_000,
     enabled: enabled && slots.length > 0,
   });
@@ -423,6 +452,7 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
     p_match_plan: input.plan
       ? ({ version: 1, proposals: input.plan.proposals } as unknown as Json)
       : null,
+    p_sport_id: input.sportId,
   });
   if (error) throw error;
 
@@ -465,7 +495,8 @@ export function useRecordCheckIn() {
     mutationFn: recordCheckIn,
     onSuccess: (_data, variables) => {
       // Banner + auto-opener now need to refetch — is_pending_check_in flipped.
-      qc.invalidateQueries({ queryKey: checkInKeys.context() });
+      // Prefix invalidation: every sport's context (coverage is player-wide).
+      qc.invalidateQueries({ queryKey: checkInKeys.contexts() });
       qc.invalidateQueries({ queryKey: checkInKeys.availability() });
 
       const refreshMatchLists = () => qc.invalidateQueries({ queryKey: matchKeys.lists() });

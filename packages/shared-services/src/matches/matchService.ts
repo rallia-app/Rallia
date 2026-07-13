@@ -3767,24 +3767,28 @@ async function hydrateMatchDetailsByIds(
  * Weekly check-in "Games for you": existing PUBLIC matches with open spots that
  * fit the availability the player just declared in the wizard. Delegates all
  * filtering (favorite/distance, exact rating, declared day+hour slot, gender,
- * open spot, today…today+3 window, multi-sport) to get_checkin_match_opportunities,
+ * open spot, today…today+3 window) to get_checkin_match_opportunities,
  * then hydrates the matching IDs into MatchWithDetails for MatchCard.
  *
  * `slots` are the in-memory (not-yet-persisted) availability cells: one entry per
- * selected (weekday, hour). Returns soonest-first in the RPC's order.
+ * selected (weekday, hour). `sportId` scopes results to the wizard's sport mode;
+ * null falls back to all the player's active sports. Returns soonest-first in
+ * the RPC's order.
  */
 export async function getCheckInMatchOpportunities(params: {
   slots: { day: DayEnum; hour: number }[];
+  sportId?: string | null;
   timezone?: string | null;
   limit?: number;
 }): Promise<MatchWithDetailsAndDistance[]> {
-  const { slots, timezone, limit = 20 } = params;
+  const { slots, sportId, timezone, limit = 20 } = params;
   if (!slots || slots.length === 0) return [];
 
   const { data, error } = await supabase.rpc('get_checkin_match_opportunities', {
     p_slots: slots as unknown as Json,
     p_timezone: timezone ?? null,
     p_limit: limit,
+    p_sport_id: sportId ?? null,
   });
 
   if (error) {
@@ -3798,10 +3802,10 @@ export async function getCheckInMatchOpportunities(params: {
   const distanceMap = new Map<string, number | null>(
     results.map(r => [r.match_id, r.distance_meters])
   );
-  // sportId omitted on purpose: opportunities can span multiple sports, so the
-  // single-sport ratings enrichment is skipped (the rating badge still renders
+  // With a sport scope every result is that sport, so the per-sport ratings
+  // enrichment applies; agnostic calls skip it (the rating badge still renders
   // from the match's own min_rating_score).
-  return hydrateMatchDetailsByIds(matchIds, distanceMap);
+  return hydrateMatchDetailsByIds(matchIds, distanceMap, sportId);
 }
 
 /** A candidate the check-in plan would auto-invite to one proposed game. */
@@ -3883,21 +3887,24 @@ interface RawPlanProposal {
  * Weekly check-in plan PREVIEW: the games the auto-generator would create from
  * the availability the player just declared in the wizard (not yet persisted)
  * and their chosen goal, each with the named opponents that would be invited.
- * The player confirms/edits this and the selection goes back through
- * recordWeeklyCheckin's p_match_plan. Plain objects/arrays only (react-query
- * structural sharing).
+ * `sportId` scopes proposals to the wizard's sport mode; null falls back to all
+ * the player's active sports. The player confirms/edits this and the selection
+ * goes back through recordWeeklyCheckin's p_match_plan. Plain objects/arrays
+ * only (react-query structural sharing).
  */
 export async function getCheckInMatchPlan(params: {
   slots: { day: DayEnum; hour: number }[];
   frequencyGoal: number;
+  sportId?: string | null;
   timezone?: string | null;
 }): Promise<CheckInMatchPlan> {
-  const { slots, frequencyGoal, timezone } = params;
+  const { slots, frequencyGoal, sportId, timezone } = params;
 
   const { data, error } = await supabase.rpc('get_checkin_match_plan', {
     p_slots: (slots ?? []) as unknown as Json,
     p_frequency_goal: frequencyGoal,
     p_timezone: timezone ?? null,
+    p_sport_id: sportId ?? null,
   });
 
   if (error) {

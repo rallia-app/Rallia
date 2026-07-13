@@ -34,6 +34,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 import { accent, primary, spacingPixels } from '@rallia/design-system';
 
 import * as Analytics from '#/services/analytics';
+import { useSport } from '#/context';
 import { useTranslation } from '#/hooks';
 
 import { WizardHeader } from './components/WizardHeader';
@@ -65,7 +66,11 @@ export function WeeklyCheckInScreen() {
     navigation.goBack();
   }, [navigation]);
 
-  const wizard = useWeeklyCheckInWizard();
+  // The wizard is sport-specific: opportunities, plan proposals, the weekly
+  // goal and the streak are all scoped to the app's selected sport mode. Only
+  // availability stays player-wide (the schedule is the schedule).
+  const { selectedSport } = useSport();
+  const wizard = useWeeklyCheckInWizard({ sportId: selectedSport?.id ?? null });
 
   const { session } = useAuth();
   const playerId = session?.user?.id ?? null;
@@ -111,8 +116,9 @@ export function WeeklyCheckInScreen() {
       source,
       current_streak: wizard.context.currentStreak,
       recap_variant: deriveVariant(wizard.context),
+      sport: selectedSport?.name ?? 'unknown',
     });
-  }, [wizard.context, source]);
+  }, [wizard.context, source, selectedSport?.name]);
 
   // Fire `weekly_checkin_opportunities_viewed` once, the first time the step is
   // reached with at least one real match (the top of the join funnel).
@@ -186,16 +192,25 @@ export function WeeklyCheckInScreen() {
     }).start();
   }, [wizard.currentStep, slideAnim]);
 
-  // Progress dots count the core steps only: Goal (skipped when the goal is
-  // already set this week), Availability, Plan (while enabled), Done. The
-  // optional "Games for you" interstitial (step 3) shares Availability's dot —
-  // its eligibility resolves async, so letting it add/drop a dot made the
-  // count jump mid-flow.
-  const recapOffset = wizard.skipRecapStep && wizard.currentStep > 1 ? 1 : 0;
-  const opportunitiesOffset = wizard.currentStep >= 3 ? 1 : 0;
-  const planOffset = !PLAN_STEP_ENABLED && wizard.currentStep >= 5 ? 1 : 0;
-  const displayedStep = wizard.currentStep - opportunitiesOffset - recapOffset - planOffset;
-  const displayedTotalSteps = (PLAN_STEP_ENABLED ? 4 : 3) - (wizard.skipRecapStep ? 1 : 0);
+  // Progress dots count core STAGES, not raw steps: Goal, Schedule, Plan, Done.
+  // The "Schedule" dot covers both the availability step and the optional
+  // "Games for you" interstitial (they share one dot). A stage's dot shows
+  // unless its step(s) are skipped: Goal drops when the goal is already set this
+  // week, Schedule drops only when availability was refreshed recently AND no
+  // games fit, Plan tracks the feature flag.
+  const stageForStep = (s: number): 'goal' | 'schedule' | 'plan' | 'done' =>
+    s === 1 ? 'goal' : s === 2 || s === 3 ? 'schedule' : s === 4 ? 'plan' : 'done';
+  const stageVisibility: Record<'goal' | 'schedule' | 'plan' | 'done', boolean> = {
+    goal: !wizard.skipRecapStep,
+    schedule: !wizard.skipAvailabilityStep || !wizard.skipOpportunitiesStep,
+    plan: PLAN_STEP_ENABLED,
+    done: true,
+  };
+  const visibleStages = (['goal', 'schedule', 'plan', 'done'] as const).filter(
+    k => stageVisibility[k]
+  );
+  const displayedTotalSteps = visibleStages.length;
+  const displayedStep = Math.max(1, visibleStages.indexOf(stageForStep(wizard.currentStep)) + 1);
 
   // Submit transition from the match-plan step to the All-Set step. The deck
   // calls this automatically once every card is decided (per-card haptics
@@ -283,7 +298,7 @@ export function WeeklyCheckInScreen() {
       <WizardHeader
         currentStep={displayedStep}
         totalSteps={displayedTotalSteps}
-        showBack={wizard.currentStep > (wizard.skipRecapStep ? 2 : 1) && wizard.currentStep < 5}
+        showBack={wizard.currentStep > wizard.firstStep && wizard.currentStep < 5}
         showDots={!!wizard.context}
         onBack={wizard.goBack}
         // Dismissible on every step except the final recap, which has its own Done.
