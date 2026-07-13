@@ -23,6 +23,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
+import { requireSecretApikey } from '../_shared/auth.ts';
+
 // deno-lint-ignore no-explicit-any
 type Admin = SupabaseClient<any, any, any>;
 
@@ -127,7 +129,13 @@ async function refundCancelled(admin: Admin, stripe: Stripe): Promise<number> {
   return refunded;
 }
 
-Deno.serve(async () => {
+Deno.serve(async req => {
+  // Server-to-server only (pg_cron). The companion cron sends the secret key in
+  // the `apikey:` header; reject anything else so this money-moving job can't be
+  // triggered by arbitrary callers.
+  const authError = requireSecretApikey(req);
+  if (authError) return authError;
+
   try {
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')!;
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
