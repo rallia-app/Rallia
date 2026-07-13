@@ -106,7 +106,7 @@ SplashScreen.setOptions({ fade: true, duration: 400 });
 
 // Set the native root view background color immediately so it's visible
 // behind the React tree (e.g. area above the Dynamic Island).
-SystemUI.setBackgroundColorAsync(neutral[50]);
+SystemUI.setBackgroundColorAsync(neutral[50]).catch(() => {}); // rejects if the Android activity is already gone
 import { focusManager, QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
