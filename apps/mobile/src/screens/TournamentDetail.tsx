@@ -2210,8 +2210,7 @@ export const TournamentDetail: React.FC = () => {
               ) : null}
             </View>
 
-            {!isOrganizer &&
-              myActiveRegistration &&
+            {myActiveRegistration &&
               tournament.status !== 'cancelled' &&
               tournament.status !== 'archived' && (
                 <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
@@ -2640,8 +2639,8 @@ export const TournamentDetail: React.FC = () => {
               />
             )}
 
-            {/* Participant: my next game */}
-            {!isOrganizer && myBracketState && (
+            {/* Participant: my next game (also shown to organizers who play) */}
+            {myBracketState && (
               <View style={styles.section}>
                 <Text
                   size="xs"
@@ -3317,12 +3316,15 @@ const BracketSection: React.FC<{
     const isPlayable = m.status === 'pending' && slotsReady;
     // Organizers record results (override) and may also CORRECT a completed
     // match; the RPC rejects (NEXT_MATCH_ALREADY_PLAYED) once the downstream
-    // match has its own result. Non-organizer participants link their own
-    // played match.
+    // match has its own result. Participants link their own played match.
     const canOrganizerOverride =
       isOrganizer && slotsReady && (m.status === 'pending' || m.status === 'completed');
-    const canParticipantAttach = isPlayable && callerIsParticipant && !isOrganizer;
+    const canParticipantAttach = isPlayable && callerIsParticipant;
     const isTappable = canOrganizerOverride || canParticipantAttach;
+    // An organizer who is playing in this match acts as a participant on it
+    // (link your own played game); the override sheet stays for matches they're
+    // not in and for correcting a completed result they can no longer attach.
+    const useOrganizerOverride = canOrganizerOverride && !canParticipantAttach;
 
     const isLive = m.status === 'in_progress';
     const isDisputed = m.status === 'disputed';
@@ -3414,13 +3416,13 @@ const BracketSection: React.FC<{
     if (isTappable && m.player1_registration_id && m.player2_registration_id) {
       const p1RegId = m.player1_registration_id;
       const p2RegId = m.player2_registration_id;
-      const handlePress = canOrganizerOverride
+      const handlePress = useOrganizerOverride
         ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
         : () => onMatchPress(m.id, p1RegId, p2RegId);
-      const a11yLabel = canOrganizerOverride
+      const a11yLabel = useOrganizerOverride
         ? t('tournamentDetail.bracket.overrideMatch')
         : t('tournamentDetail.bracket.linkMatch');
-      const ctaLabel = canOrganizerOverride
+      const ctaLabel = useOrganizerOverride
         ? t('tournamentDetail.bracket.recordResult')
         : t('tournamentDetail.bracket.addResult');
       return (
@@ -3445,7 +3447,7 @@ const BracketSection: React.FC<{
             ]}
           >
             <Ionicons
-              name={canOrganizerOverride ? 'create-outline' : 'add-circle-outline'}
+              name={useOrganizerOverride ? 'create-outline' : 'add-circle-outline'}
               size={16}
               color={colors.primary}
             />
