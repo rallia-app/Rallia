@@ -80,7 +80,7 @@ const TIER_PALETTES = {
 // CONSTANTS
 // =============================================================================
 
-const CARD_WIDTH = 200;
+const CARD_WIDTH = 240;
 const AVATAR_SIZE = 24;
 const MAX_VISIBLE_AVATARS = 4;
 
