@@ -208,7 +208,9 @@ export const MyTournaments: React.FC = () => {
       if (!inTab) return false;
       switch (currentFilter) {
         case 'registered':
-          return !isMine(tn) && registeredIds.has(tn.id);
+          // An organizer who also plays their own event belongs here too, so
+          // this is keyed on the caller's own registration, not on !isMine.
+          return registeredIds.has(tn.id);
         case 'organizing':
           return isMine(tn) && tn.status !== 'draft';
         case 'drafts':
