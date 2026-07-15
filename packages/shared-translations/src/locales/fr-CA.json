@@ -11206,245 +11206,147 @@
     }
   },
   "findAMatch": {
-    "hero": {
-      "badge": "Aperçu anticipé",
-      "headline": "Trouvez un joueur à votre niveau, près de chez vous, quand vous voulez.",
-      "subheadline": "Indiquez votre niveau, où et quand — notre IA coordonne les joueurs compatibles et confirme votre partie."
-    },
     "wizard": {
-      "stepOf": "Question {current} sur {total}",
       "back": "Retour",
-      "continue": "Continuer",
-      "submit": "Trouver mon match",
-      "intro": {
-        "headline": "Besoin de quelqu'un pour jouer?",
-        "subheadline": "Répondez à {count} questions rapides — puis notre agent IA gère les échanges avec les joueurs du réseau pour trouver le meilleur match.",
-        "cta": "Commencer"
+      "stepOf": "Étape {current} sur {total}"
+    },
+    "valueProp": {
+      "A": {
+        "badge": "Trouve un partenaire",
+        "headline": "Trouve un joueur de ton calibre, proche de toi, quand tu veux.",
+        "subheadline": "Dis-nous ton niveau, ton coin pis tes disponibilités. On aligne des joueurs compatibles et on fait matcher vos horaires.",
+        "cta": "Trouver un partenaire"
       },
-      "rating": {
-        "question": "Quel est votre niveau?",
-        "hint": "Choisissez la cote la plus proche de la vôtre — nous vous jumelerons avec quelqu'un de similaire."
-      },
-      "matchType": {
-        "question": "Quel genre de partie?",
-        "hint": "Choisissez votre format pis votre style."
-      },
-      "format": {
-        "question": "Simple ou double?",
-        "hint": "On trouve des joueurs qui cherchent le même format."
-      },
-      "nature": {
-        "question": "Récréatif ou compétitif?",
-        "hint": "Pour que notre IA contacte des joueurs avec le même état d'esprit."
-      },
-      "day": {
-        "question": "Quel jour vous convient?",
-        "hint": "Choisissez aujourd'hui ou demain. Les totaux indiquent les plages horaires réservables à l'installation.",
-        "hintNoFacility": "Choisissez aujourd'hui ou demain.",
-        "loading": "Chargement des disponibilités…",
-        "openSlots": "{count} plages horaires ouvertes",
-        "noOpenSlots": "Aucune plage horaire"
-      },
-      "time": {
-        "question": "Quelle heure vous convient?",
-        "hint": "Pour {day} — choisissez une heure. Les couleurs indiquent les terrains disponibles à l'installation, pas encore les joueurs.",
-        "hintNoFacility": "Pour {day}, choisissez une heure.",
-        "startLabel": "Début",
-        "endLabel": "Fin",
-        "rangeHintStart": "Appuyez sur une heure de début ci-dessous",
-        "rangeHintEnd": "Appuyez maintenant sur l'heure de fin",
-        "rangeSelected": "{range}",
-        "periods": {
-          "morning": "Matin",
-          "afternoon": "Après-midi",
-          "evening": "Soir"
-        },
-        "openCourts": "{count} terrains",
-        "noOpenCourts": "Aucun terrain",
-        "availabilityLegend": {
-          "high": "Beaucoup de plages",
-          "medium": "Quelques plages",
-          "low": "Peu de plages",
-          "none": "Aucune plage"
-        }
-      },
-      "location": {
-        "question": "Où voulez-vous jouer?",
-        "hint": "Entrez votre adresse domicile ou de jeu, puis choisissez une installation à proximité.",
-        "resolving": "Recherche de votre adresse…",
-        "searching": "Recherche d'installations à proximité…",
-        "openSlots": "{count} plages horaires ouvertes",
-        "noOpenSlots": "Aucune plage en ligne",
-        "noResults": "Aucune installation trouvée dans un rayon de 25 km.",
-        "errors": {
-          "notFound": "Adresse introuvable.",
-          "searchFailed": "Impossible de charger les installations. Réessayez."
-        }
+      "B": {
+        "badge": "On organise tout",
+        "headline": "On organise ta prochaine partie à ta place.",
+        "subheadline": "Dis-nous quand tu veux jouer et on s'occupe du reste : trouver un joueur compatible, s'entendre sur l'heure et confirmer ta partie.",
+        "cta": "Organise ma partie"
       }
     },
-    "form": {
-      "ratingLabel": "Votre niveau",
-      "timeLabel": "Quand voulez-vous jouer ?",
-      "locationLabel": "Où ?",
-      "postalPlaceholder": "H2X 1Y4",
-      "addressPlaceholder": "1234 rue Saint-Denis, Montréal",
-      "submit": "Trouver un joueur",
-      "submitting": "Lancement de la recherche…",
-      "timeFlexible": "Flexible — n'importe quand dans les 48 prochaines heures",
-      "timeFlexibleHint": "Notre IA contactera des joueurs disponibles bientôt",
-      "timeWindow": "{day} · {window}",
-      "timeDays": {
-        "today": "Aujourd'hui",
-        "tomorrow": "Demain",
-        "day_after": "Après-demain"
+    "preferences": {
+      "title": "Parle-nous de ta partie",
+      "subtitle": "Quelques infos rapides pour te trouver le bon joueur.",
+      "sportLabel": "Sport",
+      "sports": {
+        "tennis": "Tennis",
+        "pickleball": "Pickleball"
       },
-      "formats": {
-        "singles": "Simple",
-        "doubles": "Double"
-      },
-      "formatHints": {
-        "singles": "1 contre 1",
-        "doubles": "2 contre 2 — on trouve un partenaire ou une paire"
-      },
+      "levelLabel": "Ton niveau ({scale})",
+      "natureLabel": "Type de partie",
       "natures": {
-        "casual": "Échanges décontractés",
-        "competitive": "Match compétitif"
+        "recreational": "Récréatif",
+        "competitive": "Compétitif"
       },
       "natureHints": {
-        "casual": "Frappes relax et échanges",
-        "competitive": "Vraie partie avec score"
+        "recreational": "Des échanges relax, juste pour le plaisir",
+        "competitive": "Une vraie partie avec pointage"
       },
-      "locations": {
-        "near_me": "Près de moi",
-        "postal_code": "Code postal"
-      },
+      "singlesNote": "Simple seulement pour l'instant (1 contre 1).",
+      "continueCta": "Continuer"
+    },
+    "location": {
+      "question": "Où veux-tu jouer ?",
+      "hint": "Entre ton adresse, puis choisis un terrain proche.",
+      "placeholder": "1234 Rue Saint-Denis, Montréal",
+      "resolving": "On cherche ton adresse…",
+      "searching": "On trouve les terrains proches…",
+      "openSlots": "{count} plages de terrain libres",
+      "noOpenSlots": "Aucune plage en ligne",
+      "noResults": "Aucun terrain trouvé à moins de 25 km.",
       "errors": {
-        "rating": "Choisissez votre niveau pour continuer.",
-        "time": "Choisissez quand vous voulez jouer.",
-        "postalCode": "Entrez un code postal canadien valide.",
-        "address": "Sélectionnez une adresse dans les suggestions.",
-        "facility": "Sélectionnez une installation."
+        "notFound": "On n'a pas trouvé cette adresse.",
+        "searchFailed": "Impossible de charger les terrains. Réessaie."
       }
     },
-    "search": {
-      "title": "Lancement de votre recherche IA…",
-      "message1": "Analyse des joueurs compatibles près de chez vous…",
-      "message2": "Vérification des disponibilités pour votre créneau…",
-      "message3": "Relance des meilleurs candidats…",
-      "footer": "Cela prend habituellement quelques minutes."
+    "courts": {
+      "dayQuestion": "Quelle journée te convient ?",
+      "dayHint": "Les chiffres montrent les plages réservables à ton terrain.",
+      "dayHintNoFacility": "Choisis une journée qui te convient.",
+      "loading": "Chargement des disponibilités…",
+      "openSlots": "{count} plages de terrain libres",
+      "noOpenSlots": "Aucune plage listée",
+      "timeQuestion": "Quelle heure te convient ?",
+      "timeHint": "Pour {day}. Les couleurs montrent la disponibilité des terrains, pas encore les joueurs.",
+      "timeHintNoFacility": "Pour {day}, choisis une heure.",
+      "periods": {
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soir"
+      },
+      "openCourts": "{count} terrains",
+      "noOpenCourts": "Aucun terrain",
+      "availabilityLegend": {
+        "high": "Beaucoup de plages",
+        "medium": "Quelques plages",
+        "low": "Peu de plages",
+        "none": "Aucune plage listée"
+      },
+      "bookingExcludedNote": "La réservation du terrain n'est pas incluse ici. Réserve ton terrain seulement une fois ta partie confirmée avec un partenaire.",
+      "days": {
+        "today": "Aujourd'hui",
+        "tomorrow": "Demain",
+        "dayAfter": "Surlendemain"
+      },
+      "timeFlexible": "Flexible : n'importe quand dans les prochaines 48 heures",
+      "timeWindow": "{day} · {window}"
     },
-    "promise": {
-      "title": "Voici la suite",
-      "subtitle": "Vous ne parcourez pas une liste — un agent IA gère la coordination pour vous.",
-      "summaryTitle": "Votre demande",
-      "summaryLevel": "Niveau {rating}",
-      "summaryFormat": "Format : {format}",
-      "summaryNature": "Style : {nature}",
-      "summaryTime": "Quand : {time}",
-      "summaryNearMe": "Où : près de chez vous",
-      "summaryPostal": "Où : {postal}",
-      "summaryAddress": "Où : {address}",
-      "summaryFacility": "Où : {facility} · {address}",
-      "point1": "Notre IA contacte les joueurs compatibles, relance, et négocie l'heure et le fit jusqu'à confirmer le meilleur match pour votre créneau.",
-      "point2": "Si tout n'est pas confirmé en 30 minutes, remboursement automatique à 100 % — sans question.",
-      "point3": "Une fois confirmé, on vous texte les détails. Répondez pour accepter.",
-      "continueCta": "Choisir un forfait"
+    "contact": {
+      "badge": "Presque fini",
+      "title": "Où veux-tu recevoir ta confirmation ?",
+      "subtitle": "On utilise ton courriel et ton téléphone seulement pour t'envoyer la confirmation de ta partie.",
+      "emailPlaceholder": "toi@courriel.com",
+      "phonePlaceholder": "(514) 555-0123",
+      "continueCta": "Continuer",
+      "submitting": "Enregistrement…",
+      "privacyNote": "On s'en sert seulement pour te rejoindre au sujet de ta partie.",
+      "errors": {
+        "email": "Entre une adresse courriel valide.",
+        "phone": "Entre un numéro de téléphone valide à 10 chiffres.",
+        "generic": "Une erreur est survenue. Réessaie."
+      }
     },
-    "match": {
-      "badge": "Match disponible",
-      "title": "Un joueur compatible est disponible",
-      "subtitle": "Choisissez un forfait pour débloquer l'intro et confirmer la partie.",
-      "rating": "Niveau {rating}",
-      "games": "{count} parties",
-      "distance": "À {km} km",
-      "continueCta": "Choisir un forfait",
-      "continueNote": "L'IA coordonne les joueurs pour vous — remboursement si pas de match en 30 min."
+    "recap": {
+      "title": "Petit récapitulatif",
+      "subtitle": "Voici ce que tu es en train d'organiser.",
+      "sport": "Sport : {sport}",
+      "level": "Niveau : {scale} {rating}",
+      "nature": "Type : {nature}",
+      "when": "Quand : {time}",
+      "whereFacility": "Où : {facility} · {address}",
+      "whereAddress": "Où : {address}",
+      "point1": "On contacte les joueurs compatibles et on gère les échanges.",
+      "point2": "Dès qu'un joueur est confirmé, on t'envoie les détails par texto et courriel.",
+      "point3": "Tu réserves le terrain une fois ta partie confirmée.",
+      "continueCta": "Voir les forfaits"
     },
     "plans": {
-      "title": "Comment voulez-vous chercher?",
-      "subtitle": "Chaque crédit = une recherche active. Un agent IA coordonne les joueurs compatibles pour vous.",
-      "bestValue": "Meilleur rapport",
-      "comingSoon": "Bientôt",
-      "perSearch": "{amount} / recherche",
+      "title": "Choisis ton forfait",
+      "subtitle": "Prends l'option qui colle à ta fréquence de jeu.",
       "single": {
-        "title": "1 recherche",
-        "price": "1,99 $",
-        "description": "Juste pour cette partie — à la carte."
+        "title": "Une partie",
+        "description": "Organise juste cette partie."
       },
-      "pack_3": {
-        "title": "3 recherches",
-        "price": "2,99 $",
-        "description": "Vous jouez souvent? Couvrez quelques parties à meilleur prix."
+      "weekly": {
+        "title": "Hebdomadaire",
+        "description": "Parties illimitées pour une semaine."
       },
-      "sub_monthly": {
-        "title": "Illimité",
-        "price": "4,99 $/mois",
-        "description": "Pour ceux qui cherchent un partenaire chaque semaine."
+      "monthly": {
+        "title": "Mensuel",
+        "description": "Parties illimitées, chaque semaine."
       },
-      "subscriptionNote": "Les forfaits illimités ne sont pas encore disponibles dans cet aperçu — nous vous aviserons au lancement.",
-      "continueCta": "Continuer vers le paiement"
-    },
-    "email": {
-      "badge": "Presque fini",
-      "title": "On t'envoie les détails de ta partie où?",
-      "subtitle": "On t'écrit dès que ta partie est confirmée. C'est comme ça que tu vas recevoir l'intro.",
-      "placeholder": "toi@courriel.com",
-      "submit": "Continuer vers le paiement",
-      "privacyNote": "On va l'utiliser juste pour te rejoindre au sujet de ta partie.",
-      "errors": {
-        "invalid": "Entre une adresse courriel valide."
-      }
-    },
-    "payment": {
-      "title": "Finaliser votre achat",
-      "subtitleSingle": "Payez {amount} pour 1 crédit de recherche.",
-      "subtitlePack": "Payez {amount} pour 3 crédits de recherche.",
-      "submit": "Payer {amount}",
-      "processing": "Traitement…",
-      "back": "Retour aux forfaits",
-      "secureNote": "Sécurisé par Stripe. Vos informations bancaires ne sont jamais stockées par Rallia.",
-      "failed": "Paiement échoué. Veuillez vérifier vos informations et réessayer.",
-      "genericError": "Une erreur s'est produite. Veuillez réessayer."
-    },
-    "phone": {
-      "badge": "Paiement reçu",
-      "title": "Où doit-on vous texter?",
-      "subtitle": "On vous texte quand votre match coordonné par l'IA est confirmé — répondez pour accepter.",
-      "placeholder": "(514) 555-0123",
-      "codePlaceholder": "Code à 6 chiffres",
-      "sendCode": "Envoyer le code",
-      "sending": "Envoi…",
-      "verifyCode": "Vérifier et terminer",
-      "verifying": "Vérification…",
-      "changeNumber": "Changer de numéro",
-      "devCodeHint": "Mode dev — votre code est {code}",
-      "errors": {
-        "invalidPhone": "Entrez un numéro à 10 chiffres valide.",
-        "invalidCode": "Entrez le code à 6 chiffres reçu par SMS.",
-        "sendFailed": "Impossible d'envoyer le code. Réessayez.",
-        "verifyFailed": "Vérification échouée. Vérifiez le code et réessayez."
-      }
-    },
-    "done": {
-      "badge": "C'est lancé",
-      "headline": "Votre agent IA s'en occupe.",
-      "message": "On contacte les joueurs compatibles, gère les réponses et converge vers le meilleur match. Surveillez vos textos dans les 30 prochaines minutes.",
-      "smsNote": "Quand la partie est confirmée, on vous texte les détails — répondez pour accepter.",
-      "previewNote": "Aperçu anticipé — la coordination par IA se déploie marché par marché pendant la validation de la demande."
+      "priceWeek": "{price} / semaine",
+      "priceMonth": "{price} / mois",
+      "bookingExcluded": "La réservation du terrain n'est pas incluse. Tu réserves ton terrain une fois ta partie confirmée.",
+      "proceedCta": "Procéder au paiement"
     },
     "reveal": {
       "badge": "Petit mot",
       "headline": "C'était un test, pis t'as rien payé.",
-      "message": "On valide combien de joueurs veulent qu'une IA trouve et organise leurs parties à leur place. Tu viens de nous aider à le prouver. Aucune carte n'a été chargée et rien n'a été enregistré.",
+      "message": "Aucun champ de carte n'a été affiché et aucun paiement n'a été ni ne sera prélevé. On valide combien de joueurs veulent qu'on organise leurs parties avant de le bâtir.",
       "thanks": "Merci de nous aider à bâtir la vraie affaire.",
-      "note": "On ouvre ça pour vrai bientôt. Reste à l'affût."
-    },
-    "success": {
-      "badge": "C'est noté",
-      "headline": "Merci — vous êtes sur la liste d'accès anticipé.",
-      "message": "Votre paiement confirme la demande pour le jumelage instantané. Nous vous contacterons dès que les intros seront disponibles dans votre secteur.",
-      "previewNote": "Il s'agissait d'un aperçu anticipé — aucun contact avec un joueur n'a encore été établi. Un reçu a été envoyé si vous avez entré un courriel au paiement.",
-      "tryAgain": "Essayer une autre recherche"
+      "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville.",
+      "deletion": "Tu veux retirer ton courriel et ton téléphone ? Écris à contact@rallia.ca et on les supprime."
     }
   },
   "subscription": {

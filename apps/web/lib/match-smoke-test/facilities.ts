@@ -1,23 +1,26 @@
 import { searchFacilitiesNearby } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
+import type { SportOption } from './constants';
+
 import { createClient } from '@/lib/supabase/client';
 
 const DEFAULT_MAX_DISTANCE_KM = 25;
 const FACILITY_SEARCH_LIMIT = 15;
 
-let cachedTennisSportId: string | null = null;
+const sportIdCache = new Map<SportOption, string>();
 
-export async function getTennisSportId(): Promise<string> {
-  if (cachedTennisSportId) return cachedTennisSportId;
+export async function getSportId(sport: SportOption): Promise<string> {
+  const cached = sportIdCache.get(sport);
+  if (cached) return cached;
 
   const supabase = createClient();
-  const { data, error } = await supabase.from('sport').select('id').eq('slug', 'tennis').single();
+  const { data, error } = await supabase.from('sport').select('id').eq('slug', sport).single();
   if (error || !data?.id) {
-    throw new Error('Failed to resolve tennis sport');
+    throw new Error(`Failed to resolve ${sport} sport`);
   }
 
-  cachedTennisSportId = data.id;
+  sportIdCache.set(sport, data.id);
   return data.id;
 }
 
@@ -37,10 +40,11 @@ export function formatFacilityDistance(meters: number | null, locale: string): s
 }
 
 export async function searchFacilitiesNearCoordinates(params: {
+  sport: SportOption;
   latitude: number;
   longitude: number;
 }): Promise<FacilitySearchResult[]> {
-  const sportId = await getTennisSportId();
+  const sportId = await getSportId(params.sport);
   const page = await searchFacilitiesNearby({
     sportIds: [sportId],
     latitude: params.latitude,

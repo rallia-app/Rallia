@@ -1,34 +1,56 @@
-import { getAdminClient } from '@/lib/match-smoke-test/admin';
-import {
-  MATCH_FORMAT_OPTIONS,
-  MATCH_NATURE_OPTIONS,
-  MATCH_PLAN_TIERS,
-  MATCH_PLANS,
-  RATING_OPTIONS,
-  type MatchPlanTier,
-} from '@/lib/match-smoke-test/constants';
-import { isValidTimeSlot } from '@/lib/match-smoke-test/time-selection';
-import { validateEmail } from '@rallia/shared-utils';
+import { validateEmail, validatePhoneNumber } from '@rallia/shared-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAdminClient } from '@/lib/match-smoke-test/admin';
+import {
+  ALL_RATING_OPTIONS,
+  DEFAULT_MATCH_FORMAT,
+  MATCH_NATURE_OPTIONS,
+  SPORT_OPTIONS,
+  isValidMonthlyPrice,
+  type MatchNatureOption,
+  type SportOption,
+} from '@/lib/match-smoke-test/constants';
+import { isValidTimeSlot } from '@/lib/match-smoke-test/time-selection';
+
+/**
+ * Captures the visitor's contact details at the contact step — BEFORE any price
+ * is shown — so interest can be measured independently of price and we keep the
+ * lead even if the person never reaches the pricing screen. No plan is chosen
+ * yet, so plan columns stay null.
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
+      sport,
       rating,
-      matchFormat,
       matchNature,
       timeSlot,
       locationType,
       homeAddress,
       postalCode,
       facilityId,
-      planTier,
+      city,
       email,
+      phone,
+      langue,
+      sessionId,
+      variantValueProp,
+      variantPriceCents,
     } = body;
 
-    if (!rating || !RATING_OPTIONS.includes(rating)) {
+    if (!sport || !SPORT_OPTIONS.includes(sport as SportOption)) {
+      return NextResponse.json({ error: 'Invalid sport.' }, { status: 400 });
+    }
+    if (!rating || !ALL_RATING_OPTIONS.includes(String(rating))) {
       return NextResponse.json({ error: 'Invalid rating.' }, { status: 400 });
+    }
+    if (!matchNature || !MATCH_NATURE_OPTIONS.includes(matchNature as MatchNatureOption)) {
+      return NextResponse.json({ error: 'Invalid match type.' }, { status: 400 });
+    }
+    if (!timeSlot || typeof timeSlot !== 'string' || !isValidTimeSlot(timeSlot)) {
+      return NextResponse.json({ error: 'Invalid time slot.' }, { status: 400 });
     }
 
     const normalizedEmail = String(email ?? '')
@@ -37,22 +59,10 @@ export async function POST(request: NextRequest) {
     if (!validateEmail(normalizedEmail)) {
       return NextResponse.json({ error: 'Invalid email.' }, { status: 400 });
     }
-    if (!matchFormat || !MATCH_FORMAT_OPTIONS.includes(matchFormat)) {
-      return NextResponse.json({ error: 'Invalid format.' }, { status: 400 });
-    }
-    if (!matchNature || !MATCH_NATURE_OPTIONS.includes(matchNature)) {
-      return NextResponse.json({ error: 'Invalid match type.' }, { status: 400 });
-    }
-    if (!timeSlot || typeof timeSlot !== 'string' || !isValidTimeSlot(timeSlot)) {
-      return NextResponse.json({ error: 'Invalid time slot.' }, { status: 400 });
-    }
-    if (!planTier || !MATCH_PLAN_TIERS.includes(planTier as MatchPlanTier)) {
-      return NextResponse.json({ error: 'Invalid plan.' }, { status: 400 });
-    }
 
-    const plan = MATCH_PLANS[planTier as MatchPlanTier];
-    if (!plan.purchasable) {
-      return NextResponse.json({ error: 'This plan is not available yet.' }, { status: 400 });
+    const phoneDigits = validatePhoneNumber(String(phone ?? ''));
+    if (phoneDigits.length !== 10) {
+      return NextResponse.json({ error: 'Invalid phone number.' }, { status: 400 });
     }
 
     if (locationType !== 'address') {
@@ -70,20 +80,32 @@ export async function POST(request: NextRequest) {
     const normalizedPostal = postalCode
       ? String(postalCode).trim().toUpperCase().replace(/\s+/g, ' ')
       : null;
+    const normalizedCity = city ? String(city).trim().slice(0, 120) : null;
+    const normalizedLangue = langue === 'fr' || langue === 'en' ? langue : null;
+    const normalizedSessionId = sessionId ? String(sessionId).slice(0, 80) : null;
+    const normalizedVariantValueProp =
+      variantValueProp === 'A' || variantValueProp === 'B' ? variantValueProp : null;
+    const normalizedVariantPrice = isValidMonthlyPrice(variantPriceCents)
+      ? variantPriceCents
+      : null;
 
     const supabase = getAdminClient();
     const { error: upsertError } = await supabase.from('match_smoke_test_lead').upsert(
       {
         email: normalizedEmail,
+        phone: phoneDigits,
+        sport: String(sport),
         rating: String(rating),
-        match_format: String(matchFormat),
+        match_format: DEFAULT_MATCH_FORMAT,
         match_nature: String(matchNature),
         time_slot: String(timeSlot),
         location_type: String(locationType),
         postal_code: normalizedPostal,
-        plan_tier: plan.tier,
-        credits: plan.credits,
-        amount_cents: plan.amountCents,
+        city: normalizedCity,
+        langue: normalizedLangue,
+        session_id: normalizedSessionId,
+        variant_valueprop: normalizedVariantValueProp,
+        variant_price_cents: normalizedVariantPrice,
       },
       { onConflict: 'email' }
     );
@@ -93,12 +115,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save your info.' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      ok: true,
-      amountCents: plan.amountCents,
-      planTier: plan.tier,
-      credits: plan.credits,
-    });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Error capturing match smoke test lead:', error);
     return NextResponse.json({ error: 'Failed to save your info.' }, { status: 500 });
