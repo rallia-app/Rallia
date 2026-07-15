@@ -6110,6 +6110,7 @@ export type Database = {
           freeze_consumed: boolean
           freeze_used: boolean
           frequency_goal: number | null
+          goal_is_explicit: boolean
           player_id: string
           sessions_played: number | null
           sport_id: string
@@ -6120,6 +6121,7 @@ export type Database = {
           freeze_consumed?: boolean
           freeze_used?: boolean
           frequency_goal?: number | null
+          goal_is_explicit?: boolean
           player_id: string
           sessions_played?: number | null
           sport_id: string
@@ -6130,6 +6132,7 @@ export type Database = {
           freeze_consumed?: boolean
           freeze_used?: boolean
           frequency_goal?: number | null
+          goal_is_explicit?: boolean
           player_id?: string
           sessions_played?: number | null
           sport_id?: string
@@ -11975,6 +11978,7 @@ export type Database = {
           p_auto_create: boolean
           p_auto_invite: boolean
           p_frequency_goal: number
+          p_goal_is_explicit?: boolean
           p_match_plan?: Json
           p_sport_id?: string
           p_timezone?: string

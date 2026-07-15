@@ -134,9 +134,9 @@ export interface UseWeeklyCheckInWizard {
   /** Selected cells within the window — the real gate for the availability CTA. */
   windowCellCount: number;
   /**
-   * The goal was already set this ISO week, so the recap+goal step is skipped
-   * entirely — the wizard opens on availability and back stops there. Drives
-   * the header's step numbering (3 dots instead of 4).
+   * The objective is still fresh (set within the last 3 months), so the
+   * recap+goal step is skipped entirely — the wizard opens on availability and
+   * back stops there. Drives the header's step numbering (3 dots instead of 4).
    */
   skipRecapStep: boolean;
   /**
@@ -249,10 +249,11 @@ export function useWeeklyCheckInWizard(
     () => countCellsForDays(availability, windowDays),
     [availability, windowDays]
   );
-  // The weekly objective is asked once per ISO week. Once it's set, the whole
-  // recap+goal step is skipped — a re-opened wizard (rolling availability
-  // coverage ran out mid-week) goes straight to the availability step instead
-  // of replaying a recap with nothing to decide.
+  // The playing objective is asked once per quarter (fresh ⇔ (re)declared within
+  // the last 3 months). While it's fresh the whole recap+goal step is skipped —
+  // a re-opened wizard (rolling availability coverage ran out mid-week) goes
+  // straight to the availability step instead of replaying a recap with nothing
+  // to decide.
   const skipRecapStep = !!context?.frequencyAlreadySetThisWeek;
   // Availability was refreshed recently (coverage still covers the window), so
   // there's nothing to re-declare — skip the availability step. Drives the
@@ -518,6 +519,10 @@ export function useWeeklyCheckInWizard(
     try {
       const res = await recordCheckIn({
         frequencyGoal,
+        // The objective was actually (re)declared this session iff the recap+goal
+        // step was shown. When skipped, the goal is inherited — carried forward
+        // without re-arming the 3-month gate.
+        goalIsExplicit: !skipRecapStep,
         sportId,
         optOut,
         autoInvite,
@@ -563,6 +568,7 @@ export function useWeeklyCheckInWizard(
   }, [
     recordCheckIn,
     frequencyGoal,
+    skipRecapStep,
     sportId,
     plan,
     planError,

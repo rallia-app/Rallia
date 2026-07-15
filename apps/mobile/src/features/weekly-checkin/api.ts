@@ -109,14 +109,19 @@ export interface CheckInContext {
   lastFrequencyGoal: number | null;
   /**
    * Per-sport pending trigger for the banner + auto-opener: availability
-   * coverage lapsed OR this sport's goal isn't set this ISO week.
+   * coverage lapsed OR this sport's playing objective has gone stale (not
+   * (re)declared within the last 3 months).
    */
   isPendingCheckIn: boolean;
   /** Resolved player timezone (IANA). Used to format the window labels. */
   timezone: string;
   /** Last local date the player declared availability for (= last today+3). */
   availabilityCoveredThrough: string | null;
-  /** True once a real (non-rescue) check-in exists this ISO week for the sport. */
+  /**
+   * The playing objective is "fresh" — explicitly (re)declared for this sport
+   * within the last 3 months — so the wizard skips the recap+goal step. (Wire
+   * name kept from the old weekly regime; it now means "set this quarter".)
+   */
   frequencyAlreadySetThisWeek: boolean;
   /**
    * Player-wide: the rolling window rolled past the last declared coverage, so
@@ -189,6 +194,12 @@ export interface PlanProposalSubmit {
 
 export interface RecordCheckInInput {
   frequencyGoal: number;
+  /**
+   * True when the player actually saw + (re)declared the objective this session
+   * (the recap+goal step was shown). Marks the week explicit so the quarterly
+   * gate resets; false carries the inherited goal forward without re-arming it.
+   */
+  goalIsExplicit: boolean;
   /**
    * Sport the check-in's goal + streak apply to (the wizard's sport mode).
    * Null lets the server fall back to the player's primary sport.
@@ -453,6 +464,7 @@ async function recordCheckIn(input: RecordCheckInInput): Promise<CheckInResult> 
       ? ({ version: 1, proposals: input.plan.proposals } as unknown as Json)
       : null,
     p_sport_id: input.sportId,
+    p_goal_is_explicit: input.goalIsExplicit,
   });
   if (error) throw error;
 
