@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import type { Locale } from '@rallia/shared-translations';
 
 import FindAMatchClient from './FindAMatchClient';
-import { MatchSmokeTestTracker } from '@/components/match-smoke-test-tracker';
+
 import { buildPageMetadata } from '@/lib/seo';
 
 export async function generateMetadata({
@@ -19,21 +21,32 @@ export async function generateMetadata({
   });
 }
 
-interface Props {
-  searchParams: Promise<{ payment_intent?: string; redirect_status?: string }>;
+/** FR for Québec and France, EN everywhere else. */
+function preferredLocaleFromGeo(country?: string, region?: string): 'fr-CA' | 'en-US' {
+  const c = country?.toUpperCase();
+  const r = region?.toUpperCase();
+  if (c === 'FR' || (c === 'CA' && r === 'QC')) return 'fr-CA';
+  return 'en-US';
 }
 
-export default async function FindAMatchPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const defaultPaymentIntentId =
-    params.redirect_status === 'succeeded' && params.payment_intent
-      ? params.payment_intent
-      : undefined;
+export default async function FindAMatchPage({ params }: { params: Promise<{ locale: Locale }> }) {
+  const { locale } = await params;
 
-  return (
-    <>
-      <MatchSmokeTestTracker />
-      <FindAMatchClient defaultPaymentIntentId={defaultPaymentIntentId} />
-    </>
-  );
+  // Default the language by geolocation on first visit, unless the visitor has
+  // manually picked one (cookie set by the in-flow language switcher). Only acts
+  // when Vercel geo headers are present, so local dev never forces a redirect.
+  const [headerList, cookieStore] = await Promise.all([headers(), cookies()]);
+  const manualChoice = cookieStore.get('smoke_lang')?.value;
+  if (!manualChoice) {
+    const country = headerList.get('x-vercel-ip-country') ?? undefined;
+    if (country) {
+      const region = headerList.get('x-vercel-ip-country-region') ?? undefined;
+      const preferred = preferredLocaleFromGeo(country, region);
+      if (preferred !== locale) {
+        redirect(`/${preferred}/find-a-match`);
+      }
+    }
+  }
+
+  return <FindAMatchClient />;
 }

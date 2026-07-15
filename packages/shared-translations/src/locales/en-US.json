@@ -11206,245 +11206,147 @@
     }
   },
   "findAMatch": {
-    "hero": {
-      "badge": "Early preview",
-      "headline": "Find a player at your level, near you, when you want.",
-      "subheadline": "Tell us your level, where, and when — our AI coordinates compatible players and locks in your match."
-    },
     "wizard": {
-      "stepOf": "Question {current} of {total}",
       "back": "Back",
-      "continue": "Continue",
-      "submit": "Find my match",
-      "intro": {
-        "headline": "Need someone to play with?",
-        "subheadline": "Answer {count} quick questions — then our AI agent runs the back-and-forth with players in our network to find your best match.",
-        "cta": "Get started"
+      "stepOf": "Step {current} of {total}"
+    },
+    "valueProp": {
+      "A": {
+        "badge": "Find a partner",
+        "headline": "Find a player at your level, near you, when you want.",
+        "subheadline": "Tell us your level, your spot, and your availability. We line up compatible players and match your schedules.",
+        "cta": "Find a partner"
       },
-      "rating": {
-        "question": "What's your level?",
-        "hint": "Pick the rating closest to yours — we'll match you with someone similar."
-      },
-      "matchType": {
-        "question": "What kind of game?",
-        "hint": "Pick your format and style."
-      },
-      "format": {
-        "question": "Singles or doubles?",
-        "hint": "We'll find players looking for the same format."
-      },
-      "nature": {
-        "question": "Casual or competitive?",
-        "hint": "So our AI reaches players with the same vibe."
-      },
-      "day": {
-        "question": "Which day works for you?",
-        "hint": "Pick today or tomorrow. Counts show bookable court slots at your facility.",
-        "hintNoFacility": "Pick today or tomorrow.",
-        "loading": "Loading availability…",
-        "openSlots": "{count} court slots open",
-        "noOpenSlots": "No court slots listed"
-      },
-      "time": {
-        "question": "What time works for you?",
-        "hint": "For {day} — pick one time. Colors show court availability at your facility, not players yet.",
-        "hintNoFacility": "For {day}, pick one time.",
-        "startLabel": "Start",
-        "endLabel": "End",
-        "rangeHintStart": "Tap a start time below",
-        "rangeHintEnd": "Now tap your end time",
-        "rangeSelected": "{range}",
-        "periods": {
-          "morning": "Morning",
-          "afternoon": "Afternoon",
-          "evening": "Evening"
-        },
-        "openCourts": "{count} courts",
-        "noOpenCourts": "No courts",
-        "availabilityLegend": {
-          "high": "Lots of court slots",
-          "medium": "Some court slots",
-          "low": "Few court slots",
-          "none": "No slots listed"
-        }
-      },
-      "location": {
-        "question": "Where do you want to play?",
-        "hint": "Enter your home or playing address, then pick a nearby facility.",
-        "resolving": "Looking up your address…",
-        "searching": "Finding nearby facilities…",
-        "openSlots": "{count} court slots open",
-        "noOpenSlots": "No online slots listed",
-        "noResults": "No facilities found within 25 km.",
-        "errors": {
-          "notFound": "We couldn't find that address.",
-          "searchFailed": "Couldn't load facilities. Try again."
-        }
+      "B": {
+        "badge": "We organize it",
+        "headline": "We set up your next game for you.",
+        "subheadline": "Tell us when you want to play and we handle the rest: finding a compatible player, agreeing on a time, and locking in your game.",
+        "cta": "Set up my game"
       }
     },
-    "form": {
-      "ratingLabel": "Your level",
-      "timeLabel": "When do you want to play?",
-      "locationLabel": "Where?",
-      "postalPlaceholder": "H2X 1Y4",
-      "addressPlaceholder": "1234 Rue Saint-Denis, Montréal",
-      "submit": "Find a player",
-      "submitting": "Starting search…",
-      "timeFlexible": "Flexible — any time in the next 48 hours",
-      "timeFlexibleHint": "Our AI will reach players who can fit you in soon",
-      "timeWindow": "{day} · {window}",
-      "timeDays": {
-        "today": "Today",
-        "tomorrow": "Tomorrow",
-        "day_after": "Day after"
+    "preferences": {
+      "title": "Tell us about your game",
+      "subtitle": "A few quick details so we find the right player for you.",
+      "sportLabel": "Sport",
+      "sports": {
+        "tennis": "Tennis",
+        "pickleball": "Pickleball"
       },
-      "formats": {
-        "singles": "Singles",
-        "doubles": "Doubles"
-      },
-      "formatHints": {
-        "singles": "1 vs 1",
-        "doubles": "2 vs 2 — we'll find you a partner or a pair"
-      },
+      "levelLabel": "Your level ({scale})",
+      "natureLabel": "Type of game",
       "natures": {
-        "casual": "Casual rallies",
-        "competitive": "Competitive match"
+        "recreational": "Recreational",
+        "competitive": "Competitive"
       },
       "natureHints": {
-        "casual": "Relaxed hitting and rallying",
-        "competitive": "Real match with scoring"
+        "recreational": "Relaxed rallies, just for fun",
+        "competitive": "Real game with scoring"
       },
-      "locations": {
-        "near_me": "Near me",
-        "postal_code": "Postal code"
-      },
+      "singlesNote": "Singles only for now (1 vs 1).",
+      "continueCta": "Continue"
+    },
+    "location": {
+      "question": "Where do you want to play?",
+      "hint": "Enter your address, then pick a nearby facility.",
+      "placeholder": "1234 Rue Saint-Denis, Montréal",
+      "resolving": "Looking up your address…",
+      "searching": "Finding nearby facilities…",
+      "openSlots": "{count} court slots open",
+      "noOpenSlots": "No online slots listed",
+      "noResults": "No facilities found within 25 km.",
       "errors": {
-        "rating": "Pick your level to continue.",
-        "time": "Pick when you'd like to play.",
-        "postalCode": "Enter a valid Canadian postal code.",
-        "address": "Select an address from the suggestions.",
-        "facility": "Select a facility."
+        "notFound": "We couldn't find that address.",
+        "searchFailed": "Couldn't load facilities. Try again."
       }
     },
-    "search": {
-      "title": "Starting your AI search…",
-      "message1": "Scanning compatible players near you…",
-      "message2": "Checking who's free for your time slot…",
-      "message3": "Following up with the best candidates…",
-      "footer": "This usually takes a few minutes."
-    },
-    "promise": {
-      "title": "Here's what happens next",
-      "subtitle": "You're not browsing a list — an AI agent handles the coordination for you.",
-      "summaryTitle": "Your request",
-      "summaryLevel": "Level {rating}",
-      "summaryFormat": "Format: {format}",
-      "summaryNature": "Style: {nature}",
-      "summaryTime": "When: {time}",
-      "summaryNearMe": "Where: near you",
-      "summaryPostal": "Where: {postal}",
-      "summaryAddress": "Where: {address}",
-      "summaryFacility": "Where: {facility} · {address}",
-      "point1": "Our AI contacts compatible players, follows up, and negotiates time and fit until we land on the best match for your slot.",
-      "point2": "If we can't get everyone confirmed within 30 minutes, you're automatically refunded 100% — no questions asked.",
-      "point3": "Once confirmed, we'll text you the match details. Reply to accept.",
-      "continueCta": "Choose a plan"
-    },
-    "match": {
-      "badge": "Match available",
-      "title": "A compatible player is available",
-      "subtitle": "Choose a plan to unlock the intro and lock in your game.",
-      "rating": "Level {rating}",
-      "games": "{count} games",
-      "distance": "{km} km away",
-      "continueCta": "Choose a plan",
-      "continueNote": "AI coordinates players for you — refund if no match in 30 min."
-    },
-    "plans": {
-      "title": "How do you want to search?",
-      "subtitle": "Each credit is one active search. An AI agent coordinates compatible players for you.",
-      "bestValue": "Best value",
-      "comingSoon": "Coming soon",
-      "perSearch": "{amount} / search",
-      "single": {
-        "title": "1 search",
-        "price": "$1.99",
-        "description": "Just this game — pay as you go."
+    "courts": {
+      "dayQuestion": "Which day works for you?",
+      "dayHint": "Counts show bookable court slots at your facility.",
+      "dayHintNoFacility": "Pick a day that works.",
+      "loading": "Loading availability…",
+      "openSlots": "{count} court slots open",
+      "noOpenSlots": "No court slots listed",
+      "timeQuestion": "What time works for you?",
+      "timeHint": "For {day}. Colors show court availability at your facility, not players yet.",
+      "timeHintNoFacility": "For {day}, pick one time.",
+      "periods": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
       },
-      "pack_3": {
-        "title": "3 searches",
-        "price": "$2.99",
-        "description": "Play regularly? Cover a few games at a better rate."
+      "openCourts": "{count} courts",
+      "noOpenCourts": "No courts",
+      "availabilityLegend": {
+        "high": "Lots of court slots",
+        "medium": "Some court slots",
+        "low": "Few court slots",
+        "none": "No slots listed"
       },
-      "sub_monthly": {
-        "title": "Unlimited",
-        "price": "$4.99/mo",
-        "description": "For players who need a partner every week."
+      "bookingExcludedNote": "Court booking isn't included here. Book your court only once your game is confirmed with a partner.",
+      "days": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "dayAfter": "Day after"
       },
-      "subscriptionNote": "Unlimited plans aren't available in this preview yet — we'll notify you when they launch.",
-      "continueCta": "Continue to payment"
+      "timeFlexible": "Flexible: any time in the next 48 hours",
+      "timeWindow": "{day} · {window}"
     },
-    "email": {
+    "contact": {
       "badge": "Almost there",
-      "title": "Where should we send your game details?",
-      "subtitle": "We'll email you the moment your game is locked in — that's how you'll get the intro.",
-      "placeholder": "you@email.com",
-      "submit": "Continue to payment",
+      "title": "Where should we send your confirmation?",
+      "subtitle": "We'll use your email and phone only to send you the game confirmation.",
+      "emailPlaceholder": "you@email.com",
+      "phonePlaceholder": "(514) 555-0123",
+      "continueCta": "Continue",
+      "submitting": "Saving…",
       "privacyNote": "We'll only use this to reach you about your game.",
       "errors": {
-        "invalid": "Enter a valid email address."
+        "email": "Enter a valid email address.",
+        "phone": "Enter a valid 10-digit phone number.",
+        "generic": "Something went wrong. Please try again."
       }
     },
-    "payment": {
-      "title": "Complete your purchase",
-      "subtitleSingle": "Pay {amount} for 1 search credit.",
-      "subtitlePack": "Pay {amount} for 3 search credits.",
-      "submit": "Pay {amount}",
-      "processing": "Processing…",
-      "back": "Back to plans",
-      "secureNote": "Secured by Stripe. Your card details are never stored by Rallia.",
-      "failed": "Payment failed. Please check your details and try again.",
-      "genericError": "Something went wrong. Please try again."
+    "recap": {
+      "title": "Quick recap",
+      "subtitle": "Here's what you're setting up.",
+      "sport": "Sport: {sport}",
+      "level": "Level: {scale} {rating}",
+      "nature": "Type: {nature}",
+      "when": "When: {time}",
+      "whereFacility": "Where: {facility} · {address}",
+      "whereAddress": "Where: {address}",
+      "point1": "We reach out to compatible players and handle the back-and-forth.",
+      "point2": "Once someone's confirmed, we text and email you the details.",
+      "point3": "You book the court after your game is confirmed.",
+      "continueCta": "See the plans"
     },
-    "phone": {
-      "badge": "Payment received",
-      "title": "Where should we text you?",
-      "subtitle": "We'll text you when your AI-coordinated match is confirmed — reply to accept.",
-      "placeholder": "(514) 555-0123",
-      "codePlaceholder": "6-digit code",
-      "sendCode": "Send verification code",
-      "sending": "Sending…",
-      "verifyCode": "Verify & finish",
-      "verifying": "Verifying…",
-      "changeNumber": "Use a different number",
-      "devCodeHint": "Dev mode — your code is {code}",
-      "errors": {
-        "invalidPhone": "Enter a valid 10-digit phone number.",
-        "invalidCode": "Enter the 6-digit code we sent you.",
-        "sendFailed": "Couldn't send the code. Try again.",
-        "verifyFailed": "Verification failed. Check the code and try again."
-      }
-    },
-    "done": {
-      "badge": "You're all set",
-      "headline": "Your AI agent is on it.",
-      "message": "We're contacting compatible players, handling replies, and zeroing in on the best fit. Watch for a text within the next 30 minutes.",
-      "smsNote": "When a match is locked in, we'll text you the details — reply to accept.",
-      "previewNote": "Early preview — AI coordination is rolling out market by market while we validate demand."
+    "plans": {
+      "title": "Choose your plan",
+      "subtitle": "Pick the option that fits how often you play.",
+      "single": {
+        "title": "One game",
+        "description": "Set up just this game."
+      },
+      "weekly": {
+        "title": "Weekly",
+        "description": "Unlimited games for a week."
+      },
+      "monthly": {
+        "title": "Monthly",
+        "description": "Unlimited games, every week."
+      },
+      "priceWeek": "{price} / week",
+      "priceMonth": "{price} / month",
+      "bookingExcluded": "Court booking isn't included. You book your court once your game is confirmed.",
+      "proceedCta": "Proceed to payment"
     },
     "reveal": {
       "badge": "Heads up",
       "headline": "This was a test, and you weren't charged.",
-      "message": "We're validating how many players want AI to find and lock in their games for them. You just helped us prove it — no card was charged and nothing was saved.",
+      "message": "No card field was ever shown and no payment was or will be taken. We're validating how many players want us to set up their games before we build it.",
       "thanks": "Thanks for helping us build the real thing.",
-      "note": "We'll open this up for real soon. Hang tight."
-    },
-    "success": {
-      "badge": "You're in",
-      "headline": "Thanks — you're on the early access list.",
-      "message": "Your payment confirms real demand for instant matchmaking. We'll reach out as soon as intros go live in your area.",
-      "previewNote": "This was an early preview — no player contact is made yet. A receipt was sent if you entered an email at checkout.",
-      "tryAgain": "Try another search"
+      "purpose": "Your interest tells us this is worth building for your city.",
+      "deletion": "Want your email and phone removed? Write to contact@rallia.ca and we'll delete them."
     }
   },
   "subscription": {

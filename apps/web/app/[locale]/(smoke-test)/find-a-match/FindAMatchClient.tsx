@@ -1,8 +1,5 @@
 'use client';
 
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import type { Appearance } from '@stripe/stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
 import { validateEmail, validatePhoneNumber } from '@rallia/shared-utils';
 import { usePlacesAutocomplete } from '@rallia/shared-hooks';
 import type {
@@ -13,53 +10,34 @@ import type {
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
+  CalendarClock,
   ChevronRight,
+  Info,
   Loader2,
   Lock,
   MessageSquare,
-  ShieldCheck,
+  Sparkles,
   Users,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { primary, secondary, darkMode } from '@rallia/design-system';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { trackSmokeEvent, type SmokeEventContext } from '@/lib/match-smoke-test/analytics';
 import {
-  matchSmokeTestCheckoutStarted,
-  matchSmokeTestCheckoutViewed,
-  matchSmokeTestCompleted,
-  matchSmokeTestDone,
-  matchSmokeTestEmailCaptured,
-  matchSmokeTestFailed,
-  matchSmokeTestFormSubmitted,
-  matchSmokeTestPhoneCodeSent,
-  matchSmokeTestPhoneStepViewed,
-  matchSmokeTestPhoneVerified,
-  matchSmokeTestPlanPickerViewed,
-  matchSmokeTestPlanSelected,
-  matchSmokeTestPromiseContinued,
-  matchSmokeTestPromiseViewed,
-  matchSmokeTestSubscriptionInterest,
-} from '@/lib/analytics';
-import {
-  MATCH_FORMAT_OPTIONS,
+  getMatchPlans,
+  getRatingOptions,
+  ratingScaleLabel,
+  formatMatchPlanPrice,
   MATCH_NATURE_OPTIONS,
   MATCH_PLAN_TIERS,
-  MATCH_PLANS,
-  MATCH_SMOKE_TEST_CURRENCY,
-  RATING_OPTIONS,
-  formatMatchPlanPrice,
-  getMatchPlan,
-  type MatchFormatOption,
+  SPORT_OPTIONS,
   type MatchNatureOption,
-  type MatchPlanConfig,
   type MatchPlanTier,
   type RatingOption,
+  type SportOption,
   type TimeDayOption,
 } from '@/lib/match-smoke-test/constants';
 import {
@@ -89,79 +67,29 @@ import {
 import { formatPhoneInput } from '@/lib/match-smoke-test/phone';
 import {
   clearRequestContext,
+  getOrCreateExperiment,
   persistRequestContext,
-  readRequestContext,
+  type SmokeExperiment,
 } from '@/lib/match-smoke-test/session';
-
-// Fake-door: never charges, so it uses a TEST publishable key on purpose (always
-// renders, can't charge). Falls back to the default key for local dev (already test).
-const smokeTestStripeKey =
-  process.env.NEXT_PUBLIC_STRIPE_SMOKE_TEST_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = smokeTestStripeKey ? loadStripe(smokeTestStripeKey) : null;
 
 const WIZARD_STEPS = [
   'intro',
-  'rating',
-  'matchType',
+  'preferences',
   'location',
   'day',
   'time',
-  'promise',
+  'contact',
+  'recap',
   'plan',
-  'email',
-  'checkout',
-  'phone',
-  'done',
   'reveal',
 ] as const;
 
-const DEFAULT_PLAN_TIER: MatchPlanTier = 'pack_3';
-const AUTO_ADVANCE_MS = 380;
+const AUTO_ADVANCE_MS = 320;
 
 type Step = (typeof WIZARD_STEPS)[number];
-type QuestionStep = 'rating' | 'matchType' | 'day' | 'time' | 'location';
-type PhonePhase = 'enter' | 'verify';
+type QuestionStep = 'preferences' | 'location' | 'day' | 'time';
 
-const QUESTION_STEPS: QuestionStep[] = ['rating', 'matchType', 'location', 'day', 'time'];
-
-function paymentAnalyticsProps(rating: RatingOption, plan: MatchPlanConfig) {
-  return {
-    rating,
-    plan_tier: plan.tier,
-    amount_cents: plan.amountCents,
-    currency: MATCH_SMOKE_TEST_CURRENCY,
-    credits: plan.credits,
-  };
-}
-
-function getAppearance(theme: string | undefined): Appearance {
-  const isDark = theme === 'dark';
-  return {
-    theme: isDark ? 'night' : 'stripe',
-    variables: {
-      colorPrimary: primary[500],
-      colorDanger: isDark ? darkMode.secondary[500] : secondary[500],
-      borderRadius: '8px',
-      fontFamily: 'Inter, sans-serif',
-      fontSizeBase: '15px',
-      ...(isDark && { colorBackground: '#232323' }),
-    },
-    rules: {
-      '.Input': {
-        borderColor: isDark ? '#3a3a3a' : '#e2e8f0',
-        boxShadow: 'none',
-      },
-      '.Input:focus': {
-        borderColor: primary[500],
-        boxShadow: '0 0 0 2px rgba(20,184,166,0.2)',
-      },
-      '.Label': {
-        fontWeight: '500',
-      },
-    },
-  };
-}
+const QUESTION_STEPS: QuestionStep[] = ['preferences', 'location', 'day', 'time'];
 
 function optionClass(active: boolean): string {
   return `group w-full rounded-2xl border-2 px-5 py-4 text-left transition-all duration-200 ${
@@ -176,18 +104,17 @@ function formatTimeSlotLabel(
   locale: string,
   translate: (key: string, values?: Record<string, string>) => string
 ): string {
-  if (isFlexibleTimeSlot(timeSlot)) return translate('form.timeFlexible');
+  if (isFlexibleTimeSlot(timeSlot)) return translate('courts.timeFlexible');
   const parsed = parseTimeSlot(timeSlot);
   if (!parsed) return timeSlot;
 
   let dayLabel: string;
-  if (parsed.day === 'today') dayLabel = translate('form.timeDays.today');
-  else if (parsed.day === 'tomorrow') dayLabel = translate('form.timeDays.tomorrow');
+  if (parsed.day === 'today') dayLabel = translate('courts.days.today');
+  else if (parsed.day === 'tomorrow') dayLabel = translate('courts.days.tomorrow');
   else dayLabel = getDayWeekdayName(parsed.day, locale);
 
   const timeLabel = formatHourLabel(parsed.hour, locale);
-
-  return translate('form.timeWindow', { day: dayLabel, window: timeLabel });
+  return translate('courts.timeWindow', { day: dayLabel, window: timeLabel });
 }
 
 type HourCellState = 'default' | 'disabled' | 'selected';
@@ -237,12 +164,8 @@ function hourChipClass(state: HourCellState, tier: HourAvailabilityTier): string
 function hourCountClass(state: HourCellState, tier: HourAvailabilityTier): string {
   const base = 'text-[10px] leading-none';
 
-  if (state === 'selected') {
-    return `${base} font-medium text-primary-foreground/90`;
-  }
-  if (state === 'disabled') {
-    return `${base} font-normal opacity-50`;
-  }
+  if (state === 'selected') return `${base} font-medium text-primary-foreground/90`;
+  if (state === 'disabled') return `${base} font-normal opacity-50`;
 
   switch (tier) {
     case 'high':
@@ -283,7 +206,7 @@ function TimePicker({
   onSelectHour,
   showAvailability,
 }: TimePickerProps) {
-  const tw = useTranslations('findAMatch.wizard.time');
+  const tw = useTranslations('findAMatch.courts');
   const allHours = TIME_HOUR_GROUPS.flatMap(group => group.hours);
   const maxOpenCount = showAvailability
     ? getMaxAvailabilityCountForHours(availabilitySlots, timeDay, allHours, timezone)
@@ -374,10 +297,20 @@ interface WizardShellProps {
   showBack?: boolean;
   onBack?: () => void;
   questionStep?: QuestionStep;
+  onSwitchLanguage: () => void;
+  otherLangLabel: string;
   children: ReactNode;
 }
 
-function WizardShell({ step, showBack, onBack, questionStep, children }: WizardShellProps) {
+function WizardShell({
+  step,
+  showBack,
+  onBack,
+  questionStep,
+  onSwitchLanguage,
+  otherLangLabel,
+  children,
+}: WizardShellProps) {
   const t = useTranslations('findAMatch.wizard');
 
   return (
@@ -387,6 +320,16 @@ function WizardShell({ step, showBack, onBack, questionStep, children }: WizardS
           className="h-full bg-[var(--primary-500)] transition-all duration-500 ease-out"
           style={{ width: `${stepProgress(step)}%` }}
         />
+      </div>
+
+      <div className="fixed right-4 top-4 z-30">
+        <button
+          type="button"
+          onClick={onSwitchLanguage}
+          className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+        >
+          {otherLangLabel}
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col justify-center px-5 py-20 sm:px-8">
@@ -425,58 +368,20 @@ function WizardShell({ step, showBack, onBack, questionStep, children }: WizardS
   );
 }
 
-interface PaymentFormProps {
-  formattedAmount: string;
-  onSuccess: () => void;
-}
-
-function PaymentForm({ formattedAmount, onSuccess }: PaymentFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const t = useTranslations('findAMatch');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!stripe || !elements) return;
-    setIsSubmitting(true);
-    // Smoke test: never charge — simulate processing, then reveal it was a test.
-    await new Promise(resolve => setTimeout(resolve, 1100));
-    onSuccess();
-  };
-
-  return (
-    <div className="flex flex-col gap-4">
-      <PaymentElement options={{ layout: 'accordion' }} />
-      <Button
-        onClick={handleSubmit}
-        disabled={isSubmitting || !stripe || !elements}
-        className="h-12 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
-      >
-        {isSubmitting ? t('payment.processing') : t('payment.submit', { amount: formattedAmount })}
-      </Button>
-    </div>
-  );
-}
-
-interface Props {
-  defaultPaymentIntentId?: string;
-}
-
-export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
+export default function FindAMatchClient() {
   const t = useTranslations('findAMatch');
   const tw = useTranslations('findAMatch.wizard');
   const locale = useLocale();
-  const { resolvedTheme } = useTheme();
+  const langue: 'fr' | 'en' = locale.toLowerCase().startsWith('fr') ? 'fr' : 'en';
   const advanceTimer = useRef<number | null>(null);
 
+  const [experiment, setExperiment] = useState<SmokeExperiment | null>(null);
+
   const [step, setStep] = useState<Step>('intro');
+  const [sport, setSport] = useState<SportOption | null>(null);
   const [rating, setRating] = useState<RatingOption | null>(null);
-  const [email, setEmail] = useState('');
-  const [matchFormat, setMatchFormat] = useState<MatchFormatOption | null>(null);
   const [matchNature, setMatchNature] = useState<MatchNatureOption | null>(null);
-  const [timeSlot, setTimeSlot] = useState<string | null>(null);
-  const [timeDay, setTimeDay] = useState<TimeDayOption | null>(null);
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+
   const [addressQuery, setAddressQuery] = useState('');
   const [homeAddress, setHomeAddress] = useState<string | null>(null);
   const [homePostalCode, setHomePostalCode] = useState<string | null>(null);
@@ -487,6 +392,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const [nearbyFacilities, setNearbyFacilities] = useState<FacilitySearchResult[]>([]);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [selectedFacilityName, setSelectedFacilityName] = useState<string | null>(null);
+  const [selectedFacilityCity, setSelectedFacilityCity] = useState<string | null>(null);
   const [selectedFacilityTimezone, setSelectedFacilityTimezone] = useState('America/Toronto');
   const [facilityAvailabilitySlots, setFacilityAvailabilitySlots] = useState<
     FacilityAvailabilitySlotRow[]
@@ -495,19 +401,25 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   const [isSearchingFacilities, setIsSearchingFacilities] = useState(false);
   const [facilitySearchError, setFacilitySearchError] = useState<string | null>(null);
   const [isOutOfArea, setIsOutOfArea] = useState(false);
-  const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier>(DEFAULT_PLAN_TIER);
-  const [activePlan, setActivePlan] = useState<MatchPlanConfig>(getMatchPlan(DEFAULT_PLAN_TIER));
-  const [subscriptionNoteVisible, setSubscriptionNoteVisible] = useState(false);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+
+  const [timeSlot, setTimeSlot] = useState<string | null>(null);
+  const [timeDay, setTimeDay] = useState<TimeDayOption | null>(null);
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+
+  const [email, setEmail] = useState('');
   const [phoneDigits, setPhoneDigits] = useState('');
-  const [phonePhase, setPhonePhase] = useState<PhonePhase>('enter');
-  const [otpCode, setOtpCode] = useState('');
-  const [devCodeHint, setDevCodeHint] = useState<string | null>(null);
+
+  const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const facilitySearchRequest = useRef(0);
   const availabilityLoadedFor = useRef<string | null>(null);
+  const pageViewFired = useRef(false);
+  const prefsCompletedFired = useRef(false);
+  const courtsViewedFired = useRef(false);
+  const pricingViewedFired = useRef(false);
+  const revealFired = useRef(false);
 
   const {
     predictions,
@@ -522,11 +434,20 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     scope: 'worldwide',
   });
 
-  const selectedPlan = getMatchPlan(selectedPlanTier);
-  const formattedAmount = formatMatchPlanPrice(activePlan.amountCents);
-  const effectiveRating = rating ?? readRequestContext()?.rating ?? '4.0';
-  const effectivePaymentIntentId =
-    paymentIntentId ?? defaultPaymentIntentId ?? readRequestContext()?.paymentIntentId ?? null;
+  const eventContext = useCallback(
+    (exp: SmokeExperiment, overrides?: Partial<SmokeEventContext>): SmokeEventContext => ({
+      test_id: exp.testId,
+      variant_valueprop: exp.variantValueProp,
+      variant_price: exp.variantPriceCents,
+      sport,
+      ville: selectedFacilityCity,
+      langue,
+      forfait: selectedPlanTier,
+      session_id: exp.sessionId,
+      ...overrides,
+    }),
+    [sport, selectedFacilityCity, langue, selectedPlanTier]
+  );
 
   const clearAdvanceTimer = useCallback(() => {
     if (advanceTimer.current !== null) {
@@ -546,6 +467,20 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     [clearAdvanceTimer]
   );
 
+  // Assign the A/B experiment once on mount, then fire page_view.
+  useEffect(() => {
+    setExperiment(getOrCreateExperiment());
+  }, []);
+
+  useEffect(() => {
+    if (!experiment || pageViewFired.current) return;
+    pageViewFired.current = true;
+    trackSmokeEvent('page_view', eventContext(experiment));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experiment]);
+
+  useEffect(() => () => clearAdvanceTimer(), [clearAdvanceTimer]);
+
   useEffect(() => {
     if (step === 'time' && !timeDay) setStep('day');
   }, [step, timeDay]);
@@ -554,91 +489,37 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     if (step === 'day' && !selectedFacilityId && !isOutOfArea) setStep('location');
   }, [step, selectedFacilityId, isOutOfArea]);
 
-  useEffect(() => () => clearAdvanceTimer(), [clearAdvanceTimer]);
-
-  const resetFlow = useCallback(() => {
-    clearAdvanceTimer();
-    clearRequestContext();
-    setStep('intro');
-    setRating(null);
-    setMatchFormat(null);
-    setMatchNature(null);
-    setTimeSlot(null);
-    setTimeDay(null);
-    setSelectedHour(null);
-    setAddressQuery('');
-    setHomeAddress(null);
-    setHomePostalCode(null);
-    setHomeCoordinates(null);
-    setNearbyFacilities([]);
-    setSelectedFacilityId(null);
-    setSelectedFacilityName(null);
-    setSelectedFacilityTimezone('America/Toronto');
-    setFacilityAvailabilitySlots([]);
-    availabilityLoadedFor.current = null;
-    setIsLoadingAvailability(false);
-    setFacilitySearchError(null);
-    setIsOutOfArea(false);
-    setIsSearchingFacilities(false);
-    setSelectedPlanTier(DEFAULT_PLAN_TIER);
-    setActivePlan(getMatchPlan(DEFAULT_PLAN_TIER));
-    setSubscriptionNoteVisible(false);
-    setPaymentIntentId(null);
-    setPhoneDigits('');
-    setPhonePhase('enter');
-    setOtpCode('');
-    setDevCodeHint(null);
-    setError(null);
-    setIsSubmitting(false);
-  }, [clearAdvanceTimer]);
-
-  useEffect(() => {
-    if (!defaultPaymentIntentId) return;
-    const ctx = readRequestContext();
-    if (ctx?.rating) setRating(ctx.rating);
-    if (ctx?.matchFormat) setMatchFormat(ctx.matchFormat);
-    if (ctx?.matchNature) setMatchNature(ctx.matchNature);
-    if (ctx?.timeSlot) setTimeSlot(ctx.timeSlot);
-    if (ctx?.facilityId) setSelectedFacilityId(ctx.facilityId);
-    if (ctx?.facilityName) setSelectedFacilityName(ctx.facilityName);
-    if (ctx?.planTier) {
-      setSelectedPlanTier(ctx.planTier);
-      setActivePlan(getMatchPlan(ctx.planTier));
-    }
-    setPaymentIntentId(defaultPaymentIntentId);
-    setStep('phone');
-    const plan = ctx?.planTier ? getMatchPlan(ctx.planTier) : getMatchPlan(DEFAULT_PLAN_TIER);
-    matchSmokeTestCompleted(paymentAnalyticsProps(ctx?.rating ?? '4.0', plan));
-  }, [defaultPaymentIntentId]);
-
   useEffect(() => {
     if (step !== 'time' || !timeDay || !timeSlot) return;
     const parsed = parseTimeSlot(timeSlot);
     if (parsed?.day === timeDay) setSelectedHour(parsed.hour);
   }, [step, timeDay, timeSlot]);
 
+  // courts_viewed — first time the availability screen is shown.
   useEffect(() => {
-    if (step !== 'promise' || !rating) return;
-    matchSmokeTestPromiseViewed({ rating });
-  }, [step, rating]);
-
-  useEffect(() => {
-    if (step !== 'plan' || !rating) return;
-    matchSmokeTestPlanPickerViewed({ rating });
-  }, [step, rating]);
-
-  useEffect(() => {
-    if (step !== 'checkout' || !rating) return;
-    matchSmokeTestCheckoutViewed(paymentAnalyticsProps(rating, activePlan));
-  }, [step, rating, activePlan]);
-
-  useEffect(() => {
-    if (step !== 'phone' || !effectivePaymentIntentId) return;
-    matchSmokeTestPhoneStepViewed({
-      rating: effectiveRating,
-      payment_intent_id: effectivePaymentIntentId,
+    if (step !== 'day' || !experiment || courtsViewedFired.current) return;
+    courtsViewedFired.current = true;
+    trackSmokeEvent('courts_viewed', eventContext(experiment), {
+      courts_available: Boolean(selectedFacilityId),
     });
-  }, [step, effectivePaymentIntentId, effectiveRating]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, experiment]);
+
+  // pricing_viewed — first time the pricing screen is shown.
+  useEffect(() => {
+    if (step !== 'plan' || !experiment || pricingViewedFired.current) return;
+    pricingViewedFired.current = true;
+    trackSmokeEvent('pricing_viewed', eventContext(experiment));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, experiment]);
+
+  // test_reveal_shown — the "this was a test" screen.
+  useEffect(() => {
+    if (step !== 'reveal' || !experiment || revealFired.current) return;
+    revealFired.current = true;
+    trackSmokeEvent('test_reveal_shown', eventContext(experiment));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, experiment]);
 
   const loadFacilityAvailability = useCallback(async (facilityId: string) => {
     availabilityLoadedFor.current = facilityId;
@@ -660,8 +541,14 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     void loadFacilityAvailability(selectedFacilityId);
   }, [step, selectedFacilityId, isLoadingAvailability, loadFacilityAvailability]);
 
+  const markPreferencesCompleted = useCallback(() => {
+    if (!experiment || prefsCompletedFired.current) return;
+    prefsCompletedFired.current = true;
+    trackSmokeEvent('preferences_completed', eventContext(experiment));
+  }, [experiment, eventContext]);
+
   const loadNearbyFacilities = useCallback(
-    async (coordinates: { latitude: number; longitude: number }) => {
+    async (coordinates: { latitude: number; longitude: number }, sportChoice: SportOption) => {
       const requestId = ++facilitySearchRequest.current;
       setIsSearchingFacilities(true);
       setFacilitySearchError(null);
@@ -669,14 +556,20 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
       setNearbyFacilities([]);
       setSelectedFacilityId(null);
       setSelectedFacilityName(null);
+      setSelectedFacilityCity(null);
 
       try {
-        const facilities = await searchFacilitiesNearCoordinates(coordinates);
+        const facilities = await searchFacilitiesNearCoordinates({
+          sport: sportChoice,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+        });
         if (requestId !== facilitySearchRequest.current) return;
 
         setNearbyFacilities(facilities);
         if (facilities.length === 0) {
           setIsOutOfArea(true);
+          markPreferencesCompleted();
           setStep('day');
         }
       } catch {
@@ -688,7 +581,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         }
       }
     },
-    [tw]
+    [tw, markPreferencesCompleted]
   );
 
   const handleAddressQueryChange = (value: string) => {
@@ -699,6 +592,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     setNearbyFacilities([]);
     setSelectedFacilityId(null);
     setSelectedFacilityName(null);
+    setSelectedFacilityCity(null);
     setFacilitySearchError(null);
     setIsOutOfArea(false);
     setError(null);
@@ -706,6 +600,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
   };
 
   const handleSelectPlace = async (prediction: PlacePrediction) => {
+    if (!sport) return;
     clearPredictions();
     setAddressQuery(
       prediction.address ? `${prediction.name}, ${prediction.address}` : prediction.name
@@ -725,254 +620,31 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
       setHomePostalCode(normalizePostalCode(details.postalCode));
     }
 
-    void loadNearbyFacilities({
-      latitude: details.latitude,
-      longitude: details.longitude,
-    });
+    void loadNearbyFacilities({ latitude: details.latitude, longitude: details.longitude }, sport);
   };
 
-  const advanceToPromise = useCallback(
-    (slotOverride?: string) => {
-      const effectiveSlot = slotOverride ?? timeSlot;
-      if (!rating || !matchFormat || !matchNature || !effectiveSlot) return;
-      if (!selectedFacilityId && !isOutOfArea) return;
-      if (!homeAddress) {
-        setError(t('form.errors.address'));
-        return;
-      }
-
-      matchSmokeTestFormSubmitted({
-        rating,
-        match_format: matchFormat,
-        match_nature: matchNature,
-        time_slot: effectiveSlot,
-        location_type: 'address',
-        has_postal_code: Boolean(homePostalCode),
-        geolocation_granted: false,
-      });
-
-      if (slotOverride) setTimeSlot(slotOverride);
-      setStep('promise');
-      setError(null);
-    },
-    [
-      rating,
-      matchFormat,
-      matchNature,
-      timeSlot,
-      selectedFacilityId,
-      isOutOfArea,
-      homeAddress,
-      homePostalCode,
-      t,
-    ]
-  );
-
-  const handleContinueToPlans = () => {
-    if (!rating) return;
-    matchSmokeTestPromiseContinued({ rating });
-    setStep('plan');
+  const selectSport = (option: SportOption) => {
+    setSport(option);
+    // Level scales differ per sport — clear a rating that isn't on the new scale.
+    setRating(prev => (prev && getRatingOptions(option).includes(prev) ? prev : null));
     setError(null);
   };
 
-  const handleSelectPlan = (tier: MatchPlanTier) => {
-    const plan = getMatchPlan(tier);
-    if (!plan.purchasable) {
-      if (rating) matchSmokeTestSubscriptionInterest({ rating });
-      setSubscriptionNoteVisible(true);
-      return;
-    }
-    setSelectedPlanTier(tier);
-    setSubscriptionNoteVisible(false);
+  const selectFacility = (facility: FacilitySearchResult) => {
+    setSelectedFacilityId(facility.id);
+    setSelectedFacilityName(facility.name);
+    setSelectedFacilityCity(facility.city ?? null);
+    setSelectedFacilityTimezone(facility.timezone ?? 'America/Toronto');
+    setFacilityAvailabilitySlots([]);
     setError(null);
-    if (rating) matchSmokeTestPlanSelected(paymentAnalyticsProps(rating, plan));
-  };
-
-  const handlePurchase = async () => {
-    if (!rating || !matchFormat || !matchNature || !timeSlot) return;
-
-    const trimmedEmail = email.trim();
-    if (!validateEmail(trimmedEmail)) {
-      setError(t('email.errors.invalid'));
-      return;
-    }
-
-    const plan = getMatchPlan(selectedPlanTier);
-    if (!plan.purchasable) {
-      setError(t('payment.genericError'));
-      return;
-    }
-
-    setError(null);
-    setActivePlan(plan);
-
-    if (!stripePromise) {
-      setError(t('payment.genericError'));
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/match-smoke-test/capture-lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rating,
-          matchFormat,
-          matchNature,
-          timeSlot,
-          locationType: 'address',
-          homeAddress,
-          postalCode: homePostalCode ?? undefined,
-          facilityId: selectedFacilityId,
-          facilityName: selectedFacilityName ?? undefined,
-          planTier: plan.tier,
-          email: trimmedEmail,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || t('payment.genericError'));
-      }
-
-      persistRequestContext({
-        rating,
-        matchFormat,
-        matchNature,
-        timeSlot,
-        locationType: 'address',
-        facilityId: selectedFacilityId ?? undefined,
-        facilityName: selectedFacilityName ?? undefined,
-        planTier: plan.tier,
-        amountCents: plan.amountCents,
-        credits: plan.credits,
-      });
-      setStep('checkout');
-      matchSmokeTestEmailCaptured(paymentAnalyticsProps(rating, plan));
-      matchSmokeTestCheckoutStarted(paymentAnalyticsProps(rating, plan));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('payment.genericError'));
-      matchSmokeTestFailed({
-        ...paymentAnalyticsProps(rating, plan),
-        stage: 'intent_create',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handlePaymentSuccess = () => {
-    if (!rating) return;
-    matchSmokeTestCompleted(paymentAnalyticsProps(rating, activePlan));
-    clearRequestContext();
-    setStep('reveal');
-    setError(null);
-  };
-
-  const handleSendPhoneCode = async () => {
-    if (!effectivePaymentIntentId) return;
-    const digits = validatePhoneNumber(phoneDigits);
-    if (digits.length !== 10) {
-      setError(t('phone.errors.invalidPhone'));
-      return;
-    }
-
-    setError(null);
-    setIsSubmitting(true);
-    setDevCodeHint(null);
-
-    try {
-      const res = await fetch('/api/match-smoke-test/send-phone-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneDigits: digits,
-          paymentIntentId: effectivePaymentIntentId,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || t('phone.errors.sendFailed'));
-
-      if (data.devCode) setDevCodeHint(String(data.devCode));
-      setPhonePhase('verify');
-      matchSmokeTestPhoneCodeSent({
-        rating: effectiveRating,
-        payment_intent_id: effectivePaymentIntentId,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('phone.errors.sendFailed'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifyPhone = async () => {
-    if (!effectivePaymentIntentId) return;
-    const digits = validatePhoneNumber(phoneDigits);
-    const code = otpCode.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      setError(t('phone.errors.invalidPhone'));
-      return;
-    }
-    if (code.length !== 6) {
-      setError(t('phone.errors.invalidCode'));
-      return;
-    }
-
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      const res = await fetch('/api/match-smoke-test/verify-phone', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneDigits: digits,
-          code,
-          paymentIntentId: effectivePaymentIntentId,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || t('phone.errors.verifyFailed'));
-
-      matchSmokeTestPhoneVerified({
-        rating: effectiveRating,
-        payment_intent_id: effectivePaymentIntentId,
-      });
-      matchSmokeTestDone({
-        rating: effectiveRating,
-        payment_intent_id: effectivePaymentIntentId,
-      });
-      setStep('done');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('phone.errors.verifyFailed'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const selectRating = (option: RatingOption) => {
-    setRating(option);
-    setError(null);
-    scheduleAdvance('matchType');
-  };
-
-  const selectFormat = (option: MatchFormatOption) => {
-    setMatchFormat(option);
-    setError(null);
-    if (matchNature) scheduleAdvance('location');
-  };
-
-  const selectNature = (option: MatchNatureOption) => {
-    setMatchNature(option);
-    setError(null);
-    if (matchFormat) scheduleAdvance('location');
+    void loadFacilityAvailability(facility.id);
+    markPreferencesCompleted();
+    scheduleAdvance('day');
   };
 
   const getDayLabel = (day: TimeDayOption): string => {
-    if (day === 'today') return t('form.timeDays.today');
-    if (day === 'tomorrow') return t('form.timeDays.tomorrow');
+    if (day === 'today') return t('courts.days.today');
+    if (day === 'tomorrow') return t('courts.days.tomorrow');
     return getDayWeekdayName(day, locale);
   };
 
@@ -989,66 +661,170 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     if (!timeDay || !isHourSelectable(timeDay, hour)) return;
     const slot = encodeTimeSlot(timeDay, hour);
     setSelectedHour(hour);
+    setTimeSlot(slot);
     setError(null);
     clearAdvanceTimer();
-    advanceToPromise(slot);
+    setStep('contact');
   };
 
-  const selectFacility = (facility: FacilitySearchResult) => {
-    setSelectedFacilityId(facility.id);
-    setSelectedFacilityName(facility.name);
-    setSelectedFacilityTimezone(facility.timezone ?? 'America/Toronto');
-    setFacilityAvailabilitySlots([]);
+  const handleSubmitContact = async () => {
+    if (!experiment || !sport || !rating || !matchNature || !timeSlot) return;
+
+    const trimmedEmail = email.trim();
+    if (!validateEmail(trimmedEmail)) {
+      setError(t('contact.errors.email'));
+      return;
+    }
+    if (validatePhoneNumber(phoneDigits).length !== 10) {
+      setError(t('contact.errors.phone'));
+      return;
+    }
+
     setError(null);
-    void loadFacilityAvailability(facility.id);
-    scheduleAdvance('day');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/match-smoke-test/capture-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sport,
+          rating,
+          matchNature,
+          timeSlot,
+          locationType: 'address',
+          homeAddress,
+          postalCode: homePostalCode ?? undefined,
+          facilityId: selectedFacilityId,
+          city: selectedFacilityCity ?? undefined,
+          email: trimmedEmail,
+          phone: phoneDigits,
+          langue,
+          sessionId: experiment.sessionId,
+          variantValueProp: experiment.variantValueProp,
+          variantPriceCents: experiment.variantPriceCents,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t('contact.errors.generic'));
+      }
+
+      persistRequestContext({
+        sport,
+        rating,
+        matchNature,
+        timeSlot,
+        locationType: 'address',
+        facilityId: selectedFacilityId ?? undefined,
+        facilityName: selectedFacilityName ?? undefined,
+        city: selectedFacilityCity ?? undefined,
+      });
+      trackSmokeEvent('contact_submitted', eventContext(experiment), { has_phone: true });
+      setStep('recap');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('contact.errors.generic'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const renderConditionSummary = () => {
-    if (!rating || !matchFormat || !matchNature || !timeSlot) return null;
+  const handleSelectPlan = (tier: MatchPlanTier) => {
+    if (!experiment) return;
+    setSelectedPlanTier(tier);
+    setError(null);
+    const plans = getMatchPlans(experiment.variantPriceCents);
+    trackSmokeEvent('plan_selected', eventContext(experiment, { forfait: tier }), {
+      amount_cents: plans[tier].amountCents,
+    });
+  };
+
+  const handlePaymentIntent = () => {
+    if (!experiment || !selectedPlanTier) return;
+    const plans = getMatchPlans(experiment.variantPriceCents);
+    trackSmokeEvent(
+      'payment_intent_click',
+      eventContext(experiment, { forfait: selectedPlanTier }),
+      { amount_cents: plans[selectedPlanTier].amountCents }
+    );
+    clearRequestContext();
+    setStep('reveal');
+    setError(null);
+  };
+
+  const switchLanguage = () => {
+    const target = langue === 'fr' ? 'en-US' : 'fr-CA';
+    // Remember the manual choice so the geo default doesn't override it.
+    document.cookie = `smoke_lang=${target}; path=/; max-age=31536000; samesite=lax`;
+    window.location.assign(`/${target}/find-a-match`);
+  };
+
+  const otherLangLabel = langue === 'fr' ? 'EN' : 'FR';
+
+  const shellProps = {
+    onSwitchLanguage: switchLanguage,
+    otherLangLabel,
+  };
+
+  if (!experiment) return null;
+
+  const plans = getMatchPlans(experiment.variantPriceCents);
+
+  const planPriceLabel = (tier: MatchPlanTier): string => {
+    const amount = formatMatchPlanPrice(plans[tier].amountCents, locale);
+    if (tier === 'weekly') return t('plans.priceWeek', { price: amount });
+    if (tier === 'monthly') return t('plans.priceMonth', { price: amount });
+    return amount;
+  };
+
+  const renderRecapSummary = () => {
+    if (!sport || !rating || !matchNature || !timeSlot) return null;
+    const where = selectedFacilityName
+      ? homeAddress
+        ? t('recap.whereFacility', { facility: selectedFacilityName, address: homeAddress })
+        : selectedFacilityName
+      : homeAddress
+        ? t('recap.whereAddress', { address: homeAddress })
+        : null;
     return (
       <div className="rounded-2xl border bg-muted/30 p-4 text-sm">
-        <p className="font-medium">{t('promise.summaryTitle')}</p>
-        <ul className="mt-2 space-y-1 text-muted-foreground">
-          <li>{t('promise.summaryLevel', { rating })}</li>
-          <li>{t('promise.summaryFormat', { format: t(`form.formats.${matchFormat}`) })}</li>
-          <li>{t('promise.summaryNature', { nature: t(`form.natures.${matchNature}`) })}</li>
-          <li>{t('promise.summaryTime', { time: formatTimeSlotLabel(timeSlot, locale, t) })}</li>
-          <li>
-            {selectedFacilityName && homeAddress
-              ? t('promise.summaryFacility', {
-                  facility: selectedFacilityName,
-                  address: homeAddress,
-                })
-              : homeAddress
-                ? t('promise.summaryAddress', { address: homeAddress })
-                : null}
-          </li>
+        <ul className="space-y-1.5 text-muted-foreground">
+          <li>{t('recap.sport', { sport: t(`preferences.sports.${sport}`) })}</li>
+          <li>{t('recap.level', { scale: ratingScaleLabel(sport), rating })}</li>
+          <li>{t('recap.nature', { nature: t(`preferences.natures.${matchNature}`) })}</li>
+          <li>{t('recap.when', { time: formatTimeSlotLabel(timeSlot, locale, t) })}</li>
+          {where && <li>{where}</li>}
         </ul>
       </div>
     );
   };
 
+  // ---- Steps ----
+
   if (step === 'intro') {
+    const variant = experiment.variantValueProp;
     return (
-      <WizardShell step={step}>
+      <WizardShell step={step} {...shellProps}>
         <div className="flex flex-col gap-6">
           <Badge className="w-fit bg-[var(--secondary-500)] px-3 py-1 text-white hover:bg-[var(--secondary-500)]">
-            {t('hero.badge')}
+            {t(`valueProp.${variant}.badge`)}
           </Badge>
           <div className="flex flex-col gap-4">
             <h1 className="text-3xl font-bold leading-tight text-balance sm:text-4xl md:text-5xl">
-              {tw('intro.headline')}
+              {t(`valueProp.${variant}.headline`)}
             </h1>
             <p className="text-lg text-muted-foreground text-balance sm:text-xl">
-              {tw('intro.subheadline', { count: QUESTION_STEPS.length })}
+              {t(`valueProp.${variant}.subheadline`)}
             </p>
           </div>
           <Button
-            onClick={() => setStep('rating')}
+            onClick={() => {
+              trackSmokeEvent('value_prop_click', eventContext(experiment));
+              setStep('preferences');
+            }}
             className="mt-2 h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)] sm:w-fit sm:px-8"
           >
-            {tw('intro.cta')}
+            {t(`valueProp.${variant}.cta`)}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
@@ -1056,121 +832,134 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     );
   }
 
-  if (step === 'rating') {
-    return (
-      <WizardShell step={step} showBack onBack={() => setStep('intro')} questionStep="rating">
-        <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('rating.question')}</h2>
-          <p className="text-muted-foreground">{tw('rating.hint')}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {RATING_OPTIONS.map(option => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => selectRating(option)}
-              className={ratingChipClass(rating === option)}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </WizardShell>
-    );
-  }
-
-  if (step === 'matchType') {
+  if (step === 'preferences') {
+    const levelOptions = sport ? getRatingOptions(sport) : [];
+    const canContinue = Boolean(sport && rating && matchNature);
     return (
       <WizardShell
         step={step}
         showBack
-        onBack={() => {
-          clearAdvanceTimer();
-          setStep('rating');
-        }}
-        questionStep="matchType"
+        onBack={() => setStep('intro')}
+        questionStep="preferences"
+        {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">
-            {tw('matchType.question')}
-          </h2>
-          <p className="text-muted-foreground">{tw('matchType.hint')}</p>
+          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('preferences.title')}</h2>
+          <p className="text-muted-foreground">{t('preferences.subtitle')}</p>
         </div>
 
+        {/* Sport */}
         <div className="flex flex-col gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {tw('format.question')}
+            {t('preferences.sportLabel')}
           </p>
-          {MATCH_FORMAT_OPTIONS.map(option => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => selectFormat(option)}
-              className={optionClass(matchFormat === option)}
-            >
-              <span className="flex flex-col gap-1 text-left">
-                <span className="flex items-center justify-between gap-3">
-                  <span className="text-lg font-semibold">{t(`form.formats.${option}`)}</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {t(`form.formatHints.${option}`)}
-                </span>
-              </span>
-            </button>
-          ))}
+          <div className="grid grid-cols-2 gap-2">
+            {SPORT_OPTIONS.map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => selectSport(option)}
+                className={optionClass(sport === option)}
+              >
+                <span className="text-lg font-semibold">{t(`preferences.sports.${option}`)}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* Level */}
+        {sport && (
+          <div className="flex flex-col gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('preferences.levelLabel', { scale: ratingScaleLabel(sport) })}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {levelOptions.map(option => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setRating(option);
+                    setError(null);
+                  }}
+                  className={ratingChipClass(rating === option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Nature */}
         <div className="flex flex-col gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {tw('nature.question')}
+            {t('preferences.natureLabel')}
           </p>
-          {MATCH_NATURE_OPTIONS.map(option => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => selectNature(option)}
-              className={optionClass(matchNature === option)}
-            >
-              <span className="flex flex-col gap-1 text-left">
+          <div className="flex flex-col gap-3">
+            {MATCH_NATURE_OPTIONS.map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setMatchNature(option);
+                  setError(null);
+                }}
+                className={optionClass(matchNature === option)}
+              >
                 <span className="flex items-center justify-between gap-3">
-                  <span className="text-lg font-semibold">{t(`form.natures.${option}`)}</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  <span className="flex flex-col gap-1 text-left">
+                    <span className="text-lg font-semibold">
+                      {t(`preferences.natures.${option}`)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {t(`preferences.natureHints.${option}`)}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </span>
-                <span className="text-sm text-muted-foreground">
-                  {t(`form.natureHints.${option}`)}
-                </span>
-              </span>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground">{t('preferences.singlesNote')}</p>
+
+        <Button
+          onClick={() => setStep('location')}
+          disabled={!canContinue}
+          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+        >
+          {t('preferences.continueCta')}
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
       </WizardShell>
     );
   }
 
   if (step === 'location') {
     const isResolvingAddress = isLoadingPredictions || isSearchingFacilities;
-
     return (
       <WizardShell
         step={step}
         showBack
         onBack={() => {
           clearAdvanceTimer();
-          setStep('matchType');
+          setStep('preferences');
         }}
         questionStep="location"
+        {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('location.question')}</h2>
-          <p className="text-muted-foreground">{tw('location.hint')}</p>
+          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('location.question')}</h2>
+          <p className="text-muted-foreground">{t('location.hint')}</p>
         </div>
 
         <div className="relative">
           <Input
             value={addressQuery}
             onChange={e => handleAddressQueryChange(e.target.value)}
-            placeholder={t('form.addressPlaceholder')}
+            placeholder={t('location.placeholder')}
             autoFocus
             className="h-14 rounded-2xl border-2 px-5 text-lg"
           />
@@ -1197,7 +986,7 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
         {isResolvingAddress && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            {isSearchingFacilities ? tw('location.searching') : tw('location.resolving')}
+            {isSearchingFacilities ? t('location.searching') : t('location.resolving')}
           </div>
         )}
 
@@ -1239,8 +1028,8 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
                       }
                     >
                       {openSlots > 0
-                        ? tw('location.openSlots', { count: openSlots })
-                        : tw('location.noOpenSlots')}
+                        ? t('location.openSlots', { count: openSlots })
+                        : t('location.noOpenSlots')}
                     </span>
                   </span>
                 </button>
@@ -1264,13 +1053,20 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           setStep('location');
         }}
         questionStep="day"
+        {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('day.question')}</h2>
+          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('courts.dayQuestion')}</h2>
           <p className="text-muted-foreground">
-            {tw(selectedFacilityId ? 'day.hint' : 'day.hintNoFacility')}
+            {t(selectedFacilityId ? 'courts.dayHint' : 'courts.dayHintNoFacility')}
           </p>
         </div>
+
+        <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3 text-sm text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary-600)]" />
+          <span>{t('courts.bookingExcludedNote')}</span>
+        </div>
+
         <div className="flex flex-col gap-3">
           {TIME_DAY_OPTIONS.map(day => {
             const selectable = isDaySelectable(day);
@@ -1304,10 +1100,10 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
                         }
                       >
                         {isLoadingAvailability
-                          ? tw('day.loading')
+                          ? t('courts.loading')
                           : openCount > 0
-                            ? tw('day.openSlots', { count: openCount })
-                            : tw('day.noOpenSlots')}
+                            ? t('courts.openSlots', { count: openCount })
+                            : t('courts.noOpenSlots')}
                       </span>
                     )}
                   </span>
@@ -1334,11 +1130,14 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
           setStep('day');
         }}
         questionStep="time"
+        {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{tw('time.question')}</h2>
+          <h2 className="text-2xl font-bold text-balance sm:text-3xl">
+            {t('courts.timeQuestion')}
+          </h2>
           <p className="text-muted-foreground">
-            {tw(selectedFacilityId ? 'time.hint' : 'time.hintNoFacility', {
+            {t(selectedFacilityId ? 'courts.timeHint' : 'courts.timeHintNoFacility', {
               day: getDayLabel(timeDay),
             })}
           </p>
@@ -1359,52 +1158,139 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
     );
   }
 
-  if (step === 'promise' && rating && matchFormat && matchNature && timeSlot) {
+  if (step === 'contact') {
+    const emailValid = validateEmail(email.trim());
+    const phoneValid = validatePhoneNumber(phoneDigits).length === 10;
     return (
-      <WizardShell step={step} showBack onBack={() => setStep('time')}>
+      <WizardShell
+        step={step}
+        showBack
+        onBack={() => {
+          setError(null);
+          setStep(timeDay ? 'time' : 'day');
+        }}
+        {...shellProps}
+      >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('promise.title')}</h2>
-          <p className="text-muted-foreground">{t('promise.subtitle')}</p>
+          <Badge className="w-fit bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
+            {t('contact.badge')}
+          </Badge>
+          <h2 className="text-2xl font-bold sm:text-3xl">{t('contact.title')}</h2>
+          <p className="text-muted-foreground">{t('contact.subtitle')}</p>
         </div>
 
-        {renderConditionSummary()}
+        <div className="flex flex-col gap-3">
+          <Input
+            value={email}
+            onChange={e => {
+              setEmail(e.target.value);
+              setError(null);
+            }}
+            placeholder={t('contact.emailPlaceholder')}
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoFocus
+            className="h-14 rounded-2xl border-2 px-5 text-lg"
+          />
+          <Input
+            value={phoneDigits}
+            onChange={e => {
+              setPhoneDigits(formatPhoneInput(e.target.value));
+              setError(null);
+            }}
+            placeholder={t('contact.phonePlaceholder')}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            className="h-14 rounded-2xl border-2 px-5 text-lg"
+          />
+        </div>
+
+        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
+
+        <Button
+          onClick={handleSubmitContact}
+          disabled={isSubmitting || !emailValid || !phoneValid}
+          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              {t('contact.submitting')}
+            </>
+          ) : (
+            <>
+              {t('contact.continueCta')}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </>
+          )}
+        </Button>
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <Lock className="h-3 w-3 shrink-0" />
+          {t('contact.privacyNote')}
+        </p>
+      </WizardShell>
+    );
+  }
+
+  if (step === 'recap') {
+    return (
+      <WizardShell
+        step={step}
+        showBack
+        onBack={() => {
+          setError(null);
+          setStep('contact');
+        }}
+        {...shellProps}
+      >
+        <div className="flex flex-col gap-3">
+          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('recap.title')}</h2>
+          <p className="text-muted-foreground">{t('recap.subtitle')}</p>
+        </div>
+
+        {renderRecapSummary()}
 
         <ul className="flex flex-col gap-4">
           <li className="flex gap-3">
             <Users className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
-            <span className="text-sm">{t('promise.point1')}</span>
-          </li>
-          <li className="flex gap-3">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
-            <span className="text-sm">{t('promise.point2')}</span>
+            <span className="text-sm">{t('recap.point1')}</span>
           </li>
           <li className="flex gap-3">
             <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
-            <span className="text-sm">{t('promise.point3')}</span>
+            <span className="text-sm">{t('recap.point2')}</span>
+          </li>
+          <li className="flex gap-3">
+            <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
+            <span className="text-sm">{t('recap.point3')}</span>
           </li>
         </ul>
 
         <Button
-          onClick={handleContinueToPlans}
+          onClick={() => {
+            setError(null);
+            setStep('plan');
+          }}
           className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
         >
-          {t('promise.continueCta')}
+          {t('recap.continueCta')}
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </WizardShell>
     );
   }
 
-  if (step === 'plan' && rating) {
+  if (step === 'plan') {
     return (
       <WizardShell
         step={step}
         showBack
         onBack={() => {
-          setStep('promise');
           setError(null);
-          setSubscriptionNoteVisible(false);
+          setStep('recap');
         }}
+        {...shellProps}
       >
         <div className="flex flex-col gap-3">
           <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('plans.title')}</h2>
@@ -1413,261 +1299,58 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
 
         <div className="flex flex-col gap-3">
           {MATCH_PLAN_TIERS.map(tier => {
-            const plan = getMatchPlan(tier);
-            const isSelected = selectedPlanTier === tier && plan.purchasable;
-            const isDisabled = !plan.purchasable;
-
+            const isSelected = selectedPlanTier === tier;
             return (
               <button
                 key={tier}
                 type="button"
                 onClick={() => handleSelectPlan(tier)}
-                className={`${optionClass(isSelected)} ${isDisabled ? 'cursor-default opacity-60 hover:border-border hover:bg-transparent' : ''}`}
+                className={optionClass(isSelected)}
               >
                 <span className="flex items-start justify-between gap-4">
                   <span className="flex flex-col gap-1 text-left">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-lg font-semibold">{t(`plans.${tier}.title`)}</span>
-                      {tier === 'pack_3' && (
-                        <Badge className="bg-[var(--secondary-500)] text-white hover:bg-[var(--secondary-500)]">
-                          {t('plans.bestValue')}
-                        </Badge>
-                      )}
-                      {isDisabled && (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          {t('plans.comingSoon')}
-                        </Badge>
-                      )}
-                    </span>
+                    <span className="text-lg font-semibold">{t(`plans.${tier}.title`)}</span>
                     <span className="text-2xl font-bold text-[var(--primary-700)] dark:text-[var(--primary-500)]">
-                      {t(`plans.${tier}.price`)}
+                      {planPriceLabel(tier)}
                     </span>
                     <span className="text-sm text-muted-foreground">
                       {t(`plans.${tier}.description`)}
                     </span>
-                    {tier === 'pack_3' && plan.purchasable && (
-                      <span className="text-xs text-muted-foreground">
-                        {t('plans.perSearch', {
-                          amount: formatMatchPlanPrice(Math.round(plan.amountCents / 3)),
-                        })}
-                      </span>
-                    )}
                   </span>
-                  {!isDisabled && (
-                    <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
-                  )}
+                  <ChevronRight
+                    className={`mt-1 h-5 w-5 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}
+                  />
                 </span>
               </button>
             );
           })}
         </div>
 
-        {subscriptionNoteVisible && (
-          <p className="text-sm text-muted-foreground">{t('plans.subscriptionNote')}</p>
-        )}
+        <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3 text-sm text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary-600)]" />
+          <span>{t('plans.bookingExcluded')}</span>
+        </div>
+
         {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
 
         <Button
-          onClick={() => {
-            setError(null);
-            setStep('email');
-          }}
-          disabled={!selectedPlan.purchasable}
+          onClick={handlePaymentIntent}
+          disabled={!selectedPlanTier}
           className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
         >
-          {t('plans.continueCta')}
+          {t('plans.proceedCta')}
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </WizardShell>
     );
   }
 
-  if (step === 'email' && rating) {
-    return (
-      <WizardShell
-        step={step}
-        showBack
-        onBack={() => {
-          setStep('plan');
-          setError(null);
-        }}
-      >
-        <div className="flex flex-col gap-3">
-          <Badge className="w-fit bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
-            {t('email.badge')}
-          </Badge>
-          <h2 className="text-2xl font-bold sm:text-3xl">{t('email.title')}</h2>
-          <p className="text-muted-foreground">{t('email.subtitle')}</p>
-        </div>
-
-        <Input
-          value={email}
-          onChange={e => {
-            setEmail(e.target.value);
-            setError(null);
-          }}
-          placeholder={t('email.placeholder')}
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          autoFocus
-          className="h-14 rounded-2xl border-2 px-5 text-lg"
-        />
-
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
-
-        <Button
-          onClick={handlePurchase}
-          disabled={isSubmitting || !validateEmail(email.trim())}
-          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              {t('payment.processing')}
-            </>
-          ) : (
-            <>
-              {t('email.submit')}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </>
-          )}
-        </Button>
-        <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <Lock className="h-3 w-3" />
-          {t('email.privacyNote')}
-        </p>
-      </WizardShell>
-    );
-  }
-
-  if (step === 'checkout' && stripePromise && rating) {
-    return (
-      <WizardShell
-        step={step}
-        showBack
-        onBack={() => {
-          setStep('plan');
-          setError(null);
-        }}
-      >
-        <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-bold sm:text-3xl">{t('payment.title')}</h2>
-          <p className="text-muted-foreground">
-            {activePlan.tier === 'pack_3'
-              ? t('payment.subtitlePack', { amount: formattedAmount })
-              : t('payment.subtitleSingle', { amount: formattedAmount })}
-          </p>
-        </div>
-        <Elements
-          key={resolvedTheme}
-          stripe={stripePromise}
-          options={{
-            mode: 'payment',
-            amount: activePlan.amountCents,
-            currency: MATCH_SMOKE_TEST_CURRENCY.toLowerCase(),
-            appearance: getAppearance(resolvedTheme),
-          }}
-        >
-          <PaymentForm formattedAmount={formattedAmount} onSuccess={handlePaymentSuccess} />
-        </Elements>
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
-        <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <Lock className="h-3 w-3" />
-          {t('payment.secureNote')}
-        </p>
-      </WizardShell>
-    );
-  }
-
-  if (step === 'phone' && effectivePaymentIntentId) {
-    return (
-      <WizardShell step={step}>
-        <div className="flex flex-col gap-3">
-          <Badge className="w-fit bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
-            {t('phone.badge')}
-          </Badge>
-          <h2 className="text-2xl font-bold sm:text-3xl">{t('phone.title')}</h2>
-          <p className="text-muted-foreground">{t('phone.subtitle')}</p>
-        </div>
-
-        <Input
-          value={phoneDigits}
-          onChange={e => {
-            setPhoneDigits(formatPhoneInput(e.target.value));
-            setError(null);
-          }}
-          placeholder={t('phone.placeholder')}
-          type="tel"
-          autoComplete="tel"
-          disabled={phonePhase === 'verify'}
-          className="h-14 rounded-2xl border-2 px-5 text-lg"
-        />
-
-        {phonePhase === 'verify' && (
-          <Input
-            value={otpCode}
-            onChange={e => {
-              setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-              setError(null);
-            }}
-            placeholder={t('phone.codePlaceholder')}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            autoFocus
-            className="h-14 rounded-2xl border-2 px-5 text-lg tracking-widest"
-          />
-        )}
-
-        {devCodeHint && (
-          <p className="text-xs text-muted-foreground">
-            {t('phone.devCodeHint', { code: devCodeHint })}
-          </p>
-        )}
-
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
-
-        {phonePhase === 'enter' ? (
-          <Button
-            onClick={handleSendPhoneCode}
-            disabled={isSubmitting || validatePhoneNumber(phoneDigits).length !== 10}
-            className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
-          >
-            {isSubmitting ? t('phone.sending') : t('phone.sendCode')}
-          </Button>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={handleVerifyPhone}
-              disabled={isSubmitting || otpCode.length !== 6}
-              className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
-            >
-              {isSubmitting ? t('phone.verifying') : t('phone.verifyCode')}
-            </Button>
-            <button
-              type="button"
-              onClick={() => {
-                setPhonePhase('enter');
-                setOtpCode('');
-                setDevCodeHint(null);
-                setError(null);
-              }}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              {t('phone.changeNumber')}
-            </button>
-          </div>
-        )}
-      </WizardShell>
-    );
-  }
-
   if (step === 'reveal') {
     return (
-      <WizardShell step={step}>
+      <WizardShell step={step} {...shellProps}>
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
-            <ShieldCheck className="h-10 w-10 text-primary" />
+            <Sparkles className="h-10 w-10 text-primary" />
           </div>
           <Badge className="bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
             {t('reveal.badge')}
@@ -1676,28 +1359,8 @@ export default function FindAMatchClient({ defaultPaymentIntentId }: Props) {
             <h2 className="text-2xl font-bold sm:text-3xl">{t('reveal.headline')}</h2>
             <p className="text-muted-foreground">{t('reveal.message')}</p>
             <p className="text-sm font-medium text-foreground">{t('reveal.thanks')}</p>
-            <p className="text-xs text-muted-foreground">{t('reveal.note')}</p>
-          </div>
-        </div>
-      </WizardShell>
-    );
-  }
-
-  if (step === 'done') {
-    return (
-      <WizardShell step={step}>
-        <div className="flex flex-col items-center gap-6 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
-            <CheckCircle2 className="h-10 w-10 text-primary" />
-          </div>
-          <Badge className="bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
-            {t('done.badge')}
-          </Badge>
-          <div className="flex flex-col gap-3">
-            <h2 className="text-2xl font-bold sm:text-3xl">{t('done.headline')}</h2>
-            <p className="text-muted-foreground">{t('done.message')}</p>
-            <p className="text-sm text-muted-foreground">{t('done.smsNote')}</p>
-            <p className="text-xs text-muted-foreground">{t('done.previewNote')}</p>
+            <p className="text-sm text-muted-foreground">{t('reveal.purpose')}</p>
+            <p className="text-xs text-muted-foreground">{t('reveal.deletion')}</p>
           </div>
         </div>
       </WizardShell>
