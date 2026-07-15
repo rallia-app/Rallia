@@ -6,8 +6,9 @@
  * and the weekly goal picker is the focus below. The CTA advances to the
  * availability step.
  *
- * Only rendered when the goal hasn't been set this ISO week — otherwise the
- * wizard skips straight to availability (skipRecapStep in the hook).
+ * Only rendered when the objective is stale (not set within the last 3 months)
+ * — otherwise the wizard skips straight to availability (skipRecapStep in the
+ * hook).
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
