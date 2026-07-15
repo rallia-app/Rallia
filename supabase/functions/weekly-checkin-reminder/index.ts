@@ -82,7 +82,8 @@ function buildNotification(player: EligiblePlayer): NotificationInput {
     payload: {
       deepLink: 'rallia://weekly-checkin',
     },
-    priority: 'default',
+    // notification_priority_enum value — 'default' is not a member and made insert_notifications reject every batch.
+    priority: 'normal',
   };
 }
 
