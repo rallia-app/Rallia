@@ -44,8 +44,10 @@ jobs:
 
       - name: Push OTA update
         id: update
+        # Metro export OOMs at the default ~2GB heap on 2-core/7GB private-repo runners.
         env:
           DISPATCH_ROLLOUT: ${{ github.event.inputs.rollout_percentage }}
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           # Full rollout on main pushes; workflow_dispatch can pass a lower % for canary.
