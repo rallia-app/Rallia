@@ -29,4 +29,6 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Perform CodeQL Analysis
+        # Non-blocking: SARIF upload needs code scanning (GHAS), unavailable on this private repo.
+        continue-on-error: true
         uses: github/codeql-action/analyze@v3
