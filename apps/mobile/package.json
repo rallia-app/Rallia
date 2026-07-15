@@ -17,7 +17,7 @@
     "export": "expo export --platform all",
     "export:production": "expo export --platform all",
     "analyze": "npm run export:production && node analyze-bundle.js",
-    "lint": "eslint",
+    "lint": "NODE_OPTIONS=--max-old-space-size=5120 eslint",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf node_modules .expo dist"
   },
