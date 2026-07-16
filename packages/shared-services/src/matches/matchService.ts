@@ -1347,15 +1347,17 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Determine status based on join mode and availability
   let participantStatus: Extract<MatchParticipantStatusEnum, 'joined' | 'requested' | 'waitlisted'>;
 
+  // An invited player (existing 'pending' row) accepting is standing approval.
+  const isAcceptingInvite = existingParticipant?.status === 'pending';
+
   if (availableSpots <= 0) {
     // Match is full - add to waitlist
     participantStatus = 'waitlisted';
-  } else if (match.join_mode === 'request') {
-    // Request-to-join always needs host approval, invited players included: an
-    // invite is not a standing approval (auto-gen matches invite for an absentee host)
+  } else if (match.join_mode === 'request' && !isAcceptingInvite) {
+    // Cold request-to-join still needs host approval.
     participantStatus = 'requested';
   } else {
-    // Direct-join match: joining cold or accepting an invite both land joined
+    // Direct-join, or accepting an invite: both land joined.
     participantStatus = 'joined';
   }
 
