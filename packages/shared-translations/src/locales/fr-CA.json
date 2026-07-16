@@ -11322,18 +11322,18 @@
     },
     "plans": {
       "title": "Choisis ton forfait",
-      "subtitle": "Prends l'option qui colle à ta fréquence de jeu.",
+      "subtitle": "Paie à la partie, ou passe en illimité.",
       "single": {
         "title": "Une partie",
         "description": "On organise une partie pour toi."
       },
-      "weekly": {
-        "title": "Hebdomadaire",
-        "description": "On organise autant de parties que tu veux, toute la semaine."
+      "unlimited": {
+        "title": "Illimité",
+        "description": "On organise autant de parties que tu veux."
       },
-      "monthly": {
-        "title": "Mensuel",
-        "description": "On organise autant de parties que tu veux, chaque semaine."
+      "billing": {
+        "weekly": "Hebdomadaire",
+        "monthly": "Mensuel"
       },
       "priceWeek": "{price} / semaine",
       "priceMonth": "{price} / mois",

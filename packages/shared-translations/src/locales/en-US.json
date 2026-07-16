@@ -11322,18 +11322,18 @@
     },
     "plans": {
       "title": "Choose your plan",
-      "subtitle": "Pick the option that fits how often you play.",
+      "subtitle": "Pay per game, or go unlimited.",
       "single": {
         "title": "One game",
         "description": "We organize one game for you."
       },
-      "weekly": {
-        "title": "Weekly",
-        "description": "We organize as many games as you want, all week."
+      "unlimited": {
+        "title": "Unlimited",
+        "description": "We organize as many games as you want."
       },
-      "monthly": {
-        "title": "Monthly",
-        "description": "We organize as many games as you want, every week."
+      "billing": {
+        "weekly": "Weekly",
+        "monthly": "Monthly"
       },
       "priceWeek": "{price} / week",
       "priceMonth": "{price} / month",
