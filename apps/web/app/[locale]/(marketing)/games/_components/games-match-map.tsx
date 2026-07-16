@@ -6,6 +6,16 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { primary, accent, status } from '@rallia/design-system';
 
+import {
+  buildMatchChips,
+  getMatchCounts,
+  PlayerSlots,
+  resolveCta,
+  ShareButton,
+  ViewerStatusBanner,
+} from './match-card-parts';
+import { MatchChipRow } from './match-chip';
+import { getViewerMatchStatus, getViewerParticipant } from './match-viewer-status';
 import type { PublicMatch } from './public-match-card';
 import { formatDuration, resolveMatchCoords } from './utils';
 
@@ -119,7 +129,7 @@ export default function GamesMatchMap({
         {/* Side panel — desktop only, synced with the map */}
         <div
           ref={panelRef}
-          className="relative hidden lg:flex w-[360px] shrink-0 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1.5 [scrollbar-width:thin]"
+          className="relative hidden lg:flex w-[360px] shrink-0 flex-col gap-2.5 overflow-y-auto overscroll-contain py-1.5 pl-0.5 pr-1.5 [scrollbar-width:thin]"
         >
           {isLoading && mappable.length === 0 ? (
             Array.from({ length: 5 }).map((_, i) => (
@@ -192,7 +202,12 @@ function MapPanelCard({
   onJoin: (matchId: string) => void;
 }) {
   const t = useTranslations('gamesPage');
+  const tMatch = useTranslations('match');
   const locale = useLocale();
+
+  const viewerStatus = getViewerMatchStatus(
+    getViewerParticipant(match.participants, viewerPlayerId)
+  );
 
   const date = new Date(match.match_date + 'T00:00:00');
   const weekday = date.toLocaleDateString(locale, { weekday: 'short' });
@@ -205,13 +220,12 @@ function MapPanelCard({
 
   const location = match.facility?.name || match.location_name || t('locationTBD');
   const city = match.facility?.city;
+  const courtName = match.court?.name;
 
-  const total = match.format === 'doubles' ? 4 : 2;
-  const joinedCount = match.participants?.filter(p => p.status === 'joined').length ?? 0;
-  const spotsLeft = Math.max(0, total - joinedCount);
-  const isFull = spotsLeft === 0;
-  const viewerIn =
-    !!viewerPlayerId && !!match.participants?.some(p => p.player_id === viewerPlayerId);
+  const { total, joinedCount, spotsLeft, isFull } = getMatchCounts(match);
+  const isRequestMode = match.join_mode === 'request';
+  const chips = buildMatchChips(match, t);
+  const cta = resolveCta(viewerStatus, isFull, isRequestMode, tMatch);
 
   const color = sportColor(match.sport?.name);
 
@@ -230,7 +244,7 @@ function MapPanelCard({
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       className={cn(
-        'group relative flex shrink-0 cursor-pointer gap-3 rounded-xl border bg-card p-3 pl-4 text-left transition-all',
+        'group relative flex shrink-0 cursor-pointer flex-col gap-2 rounded-xl border bg-card p-3 pl-4 text-left transition-all',
         'hover:-translate-y-px hover:border-primary/40 hover:shadow-md',
         isActive && 'border-primary shadow-md ring-2 ring-primary/20'
       )}
@@ -242,67 +256,87 @@ function MapPanelCard({
         aria-hidden
       />
 
-      {/* Date rail */}
-      <div className="flex w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-muted/60 py-1.5">
-        <span className="text-[10px] font-medium uppercase text-muted-foreground">{weekday}</span>
-        <span className="text-lg font-bold leading-tight">{dayNum}</span>
-        <span className="text-[10px] text-muted-foreground">{month}</span>
+      {/* Date rail + when/where + sport */}
+      <div className="flex gap-3">
+        <div className="flex w-12 shrink-0 flex-col items-center justify-center self-start rounded-lg bg-muted/60 py-1.5">
+          <span className="text-[10px] font-medium uppercase text-muted-foreground">{weekday}</span>
+          <span className="text-lg font-bold leading-tight">{dayNum}</span>
+          <span className="text-[10px] text-muted-foreground">{month}</span>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold">
+              {time}
+              {duration && <span className="font-normal text-muted-foreground"> · {duration}</span>}
+            </span>
+            {match.sport && (
+              <span
+                className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+                style={{ background: `${color}1a`, color }}
+              >
+                {match.sport.name}
+              </span>
+            )}
+          </div>
+          <p className="mb-0 mt-0.5 truncate text-sm font-medium">{location}</p>
+          <p className="mb-0 mt-1 truncate text-xs text-muted-foreground">
+            {[
+              courtName,
+              city,
+              match.distance != null ? t('kmAway', { distance: Math.round(match.distance) }) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </div>
       </div>
 
-      {/* Details */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">
-            {time}
-            {duration && <span className="font-normal text-muted-foreground"> · {duration}</span>}
+      {/* Players + spots */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <PlayerSlots match={match} viewerPlayerId={viewerPlayerId} size="sm" />
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="size-3.5" />
+            {joinedCount}/{total}
           </span>
-          {match.sport && (
-            <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
-              style={{ background: `${color}1a`, color }}
-            >
-              {match.sport.name}
-            </span>
+        </span>
+        <span
+          className={cn(
+            'shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            isFull
+              ? 'bg-destructive/10 text-destructive'
+              : spotsLeft === 1
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
           )}
-        </div>
+        >
+          {isFull ? t('matchFull') : t('spotsLeft', { count: spotsLeft })}
+        </span>
+      </div>
 
-        <p className="mt-0.5 truncate text-sm font-medium">{location}</p>
+      {viewerStatus && <ViewerStatusBanner status={viewerStatus} compact />}
 
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="size-3 shrink-0" />
-            <span
-              className={cn(
-                'font-semibold',
-                isFull
-                  ? 'text-destructive'
-                  : spotsLeft === 1
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
-              )}
-            >
-              {joinedCount}/{total}
-            </span>
-            {city && <span className="truncate">· {city}</span>}
-          </span>
-          {viewerIn ? (
-            <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-              {t('cardStatus.joined')}
-            </span>
-          ) : (
-            <Button
-              size="sm"
-              variant={isFull ? 'outline' : 'default'}
-              className="h-9 shrink-0 rounded-full px-5 text-sm font-semibold"
-              onClick={e => {
-                e.stopPropagation();
-                onJoin(match.id);
-              }}
-            >
-              {isFull ? t('waitlistShort') : t('joinShort')}
-            </Button>
-          )}
-        </div>
+      <MatchChipRow chips={chips} />
+
+      {/* CTA + share */}
+      <div className="mt-0.5 flex items-center gap-2">
+        <Button
+          size="sm"
+          variant={cta.variant}
+          disabled={cta.disabled}
+          className={cn('h-9 flex-1 rounded-full text-sm font-semibold', cta.className)}
+          onClick={e => {
+            e.stopPropagation();
+            onJoin(match.id);
+          }}
+        >
+          {cta.label}
+        </Button>
+        <ShareButton
+          matchId={match.id}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border p-0"
+        />
       </div>
     </div>
   );
