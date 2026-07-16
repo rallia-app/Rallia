@@ -1,8 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { getStorageImageUrl } from '@rallia/shared-utils';
 import {
   BarChart3,
@@ -22,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
+
 import { getRelativeDateLabel, formatDuration } from './utils';
 import { MatchChipRow, type MatchChipDef } from './match-chip';
 import {
@@ -29,6 +27,10 @@ import {
   getViewerParticipant,
   type ViewerMatchStatus,
 } from './match-viewer-status';
+
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { publicMatchShareClicked } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------

@@ -80,12 +80,31 @@ export default async function GamesPage() {
   const events = matchesToSportsEvents(matches);
 
   return (
-    <div className="flex flex-col w-full gap-8">
+    <div className="relative flex w-full flex-col gap-8">
       {events.length > 0 && <JsonLd data={events} />}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">{t('title')}</h1>
-        <p className="mt-3 text-lg text-muted-foreground">{t('subtitle')}</p>
+
+      {/* Soft decorative glow behind the hero */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[36rem] max-w-full -translate-x-1/2 rounded-full bg-primary/10 blur-3xl dark:bg-primary/15"
+      />
+
+      <div className="flex flex-col items-center gap-4 text-center">
+        <span className="inline-flex items-center gap-3 rounded-full border border-border/70 bg-background/60 px-3.5 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+          <span className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-teal-500" />
+            Tennis
+          </span>
+          <span className="h-3 w-px bg-border" />
+          <span className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-amber-500" />
+            Pickleball
+          </span>
+        </span>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t('title')}</h1>
+        <p className="max-w-xl text-lg text-muted-foreground">{t('subtitle')}</p>
       </div>
+
       <GamesMatchList initialMatches={matches} />
     </div>
   );

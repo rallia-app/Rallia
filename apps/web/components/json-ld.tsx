@@ -3,8 +3,22 @@ import { SITE_NAME, SITE_URL } from '@/lib/seo';
 type JsonLdValue = Record<string, unknown>;
 
 export function JsonLd({ data }: { data: JsonLdValue | JsonLdValue[] }) {
+  // Wrap multiple entities in a single @graph root rather than a bare top-level
+  // array. Both are valid JSON-LD, but @graph is Google's preferred form and
+  // gives every emitted block a top-level "@context" — bare arrays have none,
+  // which crashes structured-data parsers that assume `node["@context"]` exists.
+  const payload: JsonLdValue = Array.isArray(data)
+    ? {
+        '@context': 'https://schema.org',
+        '@graph': data.map(({ '@context': _context, ...rest }) => rest),
+      }
+    : data;
+
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(payload) }}
+    />
   );
 }
 
