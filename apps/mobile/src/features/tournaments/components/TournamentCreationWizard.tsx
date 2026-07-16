@@ -67,6 +67,7 @@ import {
   useUpdateTournament,
   useRatingScoresForSport,
   useFacilitySearch,
+  useAdminStatus,
 } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
@@ -82,9 +83,6 @@ import * as Analytics from '../../../services/analytics';
 const BASE_WHITE = '#ffffff';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 4;
-// Paid tournaments are gated off for now: new events are free-only. Flip to true
-// to restore entry-fee creation (all fee wiring is kept intact behind this flag).
-const PAID_TOURNAMENTS_ENABLED = false;
 const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number];
 
@@ -1941,6 +1939,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const { session } = useAuth();
   const userId = session?.user?.id;
   const { homeLocation } = useUserHomeLocation();
+  const { isAdmin } = useAdminStatus();
   const toast = useToast();
   const isDark = theme === 'dark';
   const isEditMode = !!editTournament;
@@ -2747,7 +2746,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
                 setPrizeMoneyInput={setPrizeMoneyInput}
                 startDate={startDate}
                 feeLocked={isEditMode && editTournament?.status !== 'draft'}
-                allowEntryFee={PAID_TOURNAMENTS_ENABLED || (editTournament?.entryFeeCents ?? 0) > 0}
+                allowEntryFee={isAdmin || (editTournament?.entryFeeCents ?? 0) > 0}
                 errors={errors}
                 colors={colors}
                 t={t}

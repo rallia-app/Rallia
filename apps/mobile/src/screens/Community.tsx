@@ -95,22 +95,21 @@ const Community = () => {
   const actionButtons: ActionButton[] = useMemo(() => {
     const buttons: ActionButton[] = [];
 
-    // Tournaments and leagues stay admin-gated while the features are in rollout.
+    buttons.push({
+      id: 'tournaments',
+      icon: 'trophy-outline',
+      label: t('community.tournaments'),
+      onPress: handleTournaments,
+    });
+
+    // Leagues stay admin-gated while the feature is in rollout.
     if (isAdmin) {
-      buttons.push(
-        {
-          id: 'tournaments',
-          icon: 'trophy-outline',
-          label: t('community.tournaments'),
-          onPress: handleTournaments,
-        },
-        {
-          id: 'leagues',
-          icon: 'ribbon-outline',
-          label: t('community.leagues'),
-          onPress: handleLeagues,
-        }
-      );
+      buttons.push({
+        id: 'leagues',
+        icon: 'ribbon-outline',
+        label: t('community.leagues'),
+        onPress: handleLeagues,
+      });
     }
 
     buttons.push(
@@ -131,8 +130,8 @@ const Community = () => {
     return buttons;
   }, [handleGroups, handleCommunities, handleTournaments, handleLeagues, isAdmin, t]);
 
-  // When there are few enough buttons to fit without scrolling (e.g. signed-out /
-  // non-admin users only see Communities + Groups), stretch them to fill the width.
+  // When there are few enough buttons to fit without scrolling (e.g. non-admin
+  // users only see Tournaments + Communities + Groups), stretch them to fill the width.
   const fillWidth = actionButtons.length <= 2;
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();

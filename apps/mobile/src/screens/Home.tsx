@@ -1272,10 +1272,10 @@ const Home = () => {
   // Competitive calls-to-action: released bracket/matchup slots with no game
   // linked yet. Once a game is linked they become real `match` rows and flow
   // through usePlayerMatches into the My Games carousel like any other game.
-  // Tournaments and leagues stay admin-gated during rollout, so these queries
-  // only fire for admins (passing an undefined userId disables the hook's query).
+  // Leagues stay admin-gated during rollout, so that query only fires for admins
+  // (passing an undefined userId disables the hook's query); tournaments are not.
   const { data: tournamentActionMatches = [], refetch: refetchTournamentActions } =
-    useMyUnscheduledTournamentMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
+    useMyUnscheduledTournamentMatches(session?.user?.id, selectedSport?.id);
   const { data: sessionActionMatches = [], refetch: refetchLeagueActions } =
     useMyUnscheduledSessionMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
 
@@ -2089,8 +2089,7 @@ const Home = () => {
         }}
       />,
     ];
-    if (session && isAdmin) {
-      // Tournaments and leagues stay admin-gated until the rollout un-gates them.
+    if (session) {
       playTiles.push(
         <QuickNavButton
           key="tournaments"
@@ -2099,14 +2098,17 @@ const Home = () => {
           onPress={() => appNavigation.navigate('Tournaments')}
         />
       );
-      playTiles.push(
-        <QuickNavButton
-          key="leagues"
-          icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-          label={t('home.playGrid.leagues')}
-          onPress={() => appNavigation.navigate('Leagues')}
-        />
-      );
+      // Leagues stay admin-gated until the rollout un-gates them.
+      if (isAdmin) {
+        playTiles.push(
+          <QuickNavButton
+            key="leagues"
+            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+            label={t('home.playGrid.leagues')}
+            onPress={() => appNavigation.navigate('Leagues')}
+          />
+        );
+      }
     }
     headerComponents.push(
       <View key="play-grid">
