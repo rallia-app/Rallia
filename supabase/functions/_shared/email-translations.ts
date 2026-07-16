@@ -191,15 +191,13 @@ const translations: Translations = {
     'sms.separator': ' - ',
 
     // Push: nearby_match_available
-    'notification.nearby.title': 'New {sportName} game nearby',
-    'notification.nearby.body':
-      '{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}',
-    'notification.nearby.hostLabel': ' · with {hostName}',
-    'notification.nearby.startTimePrefix': ' at {time}',
-    'notification.nearby.locationPrefix': ' · {location}',
-    'notification.nearby.minRatingPrefix': ' · {score}+',
-    'notification.nearby.spotsLabel': ' · {count} spot left',
-    'notification.nearby.spotsLabel_plural': ' · {count} spots left',
+    'notification.nearby.title.host': '{hostName} wants to play near you',
+    'notification.nearby.title.generic': 'New game near you',
+    'notification.nearby.timeAt': ' at {time}',
+    'notification.nearby.locationAt': ' at {location}',
+    'notification.nearby.spotsCta': '{count} spots left, tap to join!',
+    'notification.nearby.spotsCta_one': '{count} spot left, tap to join!',
+    'notification.nearby.cta': 'Tap to join!',
     'notification.nearby.today': 'Today',
     'notification.nearby.tomorrow': 'Tomorrow',
 
@@ -442,15 +440,13 @@ const translations: Translations = {
     'sms.separator': ' - ',
 
     // Push: nearby_match_available
-    'notification.nearby.title': 'Nouvelle partie de {sportName} près de toi',
-    'notification.nearby.body':
-      '{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}',
-    'notification.nearby.hostLabel': ' · avec {hostName}',
-    'notification.nearby.startTimePrefix': ' à {time}',
-    'notification.nearby.locationPrefix': ' · {location}',
-    'notification.nearby.minRatingPrefix': ' · {score}+',
-    'notification.nearby.spotsLabel': ' · {count} place libre',
-    'notification.nearby.spotsLabel_plural': ' · {count} places libres',
+    'notification.nearby.title.host': '{hostName} veut jouer pas loin de toi',
+    'notification.nearby.title.generic': 'Nouvelle partie pas loin de toi',
+    'notification.nearby.timeAt': ' à {time}',
+    'notification.nearby.locationAt': ', {location}',
+    'notification.nearby.spotsCta': '{count} places libres, clique pour embarquer!',
+    'notification.nearby.spotsCta_one': '{count} place libre, clique pour embarquer!',
+    'notification.nearby.cta': 'Clique pour embarquer!',
     'notification.nearby.today': "Aujourd'hui",
     'notification.nearby.tomorrow': 'Demain',
 

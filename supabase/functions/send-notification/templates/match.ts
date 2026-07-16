@@ -388,10 +388,14 @@ export function generateEmailHtml(
  * - Within 6 days → weekday name (Wednesday, Mercredi).
  * - Further out → "Mon, Apr 28" / "lun. 28 avr." style.
  */
-function formatNearbyDate(matchDate: string | undefined, timezone: string, locale: string): string {
-  if (!matchDate) return '';
+function formatNearbyDate(
+  matchDate: string | undefined,
+  timezone: string,
+  locale: string
+): { text: string; relative: boolean } {
+  if (!matchDate) return { text: '', relative: false };
   const parts = matchDate.split('-').map(Number);
-  if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return '';
+  if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return { text: '', relative: false };
 
   const tz = timezone || 'America/Toronto';
   const ymd = (d: Date) =>
@@ -409,10 +413,10 @@ function formatNearbyDate(matchDate: string | undefined, timezone: string, local
   const tomorrow = ymd(tomorrowDate);
 
   if (matchDate === today) {
-    return t(locale, 'notification.nearby.today');
+    return { text: t(locale, 'notification.nearby.today'), relative: true };
   }
   if (matchDate === tomorrow) {
-    return t(locale, 'notification.nearby.tomorrow');
+    return { text: t(locale, 'notification.nearby.tomorrow'), relative: true };
   }
 
   // Compute day delta from midnight in the target timezone (matches util logic)
@@ -432,22 +436,25 @@ function formatNearbyDate(matchDate: string | undefined, timezone: string, local
       timeZone: tz,
       weekday: 'long',
     }).format(anchored);
-    return capitalize(weekday);
+    return { text: capitalize(weekday), relative: false };
   }
 
-  return capitalize(
-    new Intl.DateTimeFormat(locale, {
-      timeZone: tz,
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    }).format(anchored)
-  );
+  return {
+    text: capitalize(
+      new Intl.DateTimeFormat(locale, {
+        timeZone: tz,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      }).format(anchored)
+    ),
+    relative: false,
+  };
 }
 
 /**
  * Format a HH:MM time for the nearby_match push body.
- * EN: "6:30 PM". FR: "18:30".
+ * EN: "6:30 PM". FR: "18 h 30" (matches shared formatTimeInTimezone's fr-CA output).
  */
 function formatNearbyTime(startTime: string | undefined, locale: string): string {
   if (!startTime) return '';
@@ -456,7 +463,7 @@ function formatNearbyTime(startTime: string | undefined, locale: string): string
   const m = Number(mStr);
   if (Number.isNaN(h) || Number.isNaN(m)) return '';
   if (locale.startsWith('fr')) {
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return `${h} h ${String(m).padStart(2, '0')}`;
   }
   const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
@@ -468,8 +475,13 @@ function formatNearbyTime(startTime: string | undefined, locale: string): string
  *
  * The trigger writes a compact English fallback into notification.title/body,
  * but the lock-screen experience should be in the recipient's preferred locale.
- * Each segment is conditionally rendered so a match without a min rating, a
- * custom location, or unknown spots count doesn't leak empty placeholders.
+ *
+ * Title leads with the host's first name when known ("Alex wants to play near
+ * you"), falling back to a generic label. Body is a short invitation (when ·
+ * where · join CTA); each segment drops out when its data is missing so nothing
+ * leaks empty placeholders. For multi-sport recipients (payload.showSport) the
+ * body leads with the capitalized sport ("Tennis tomorrow at ...") — single-sport
+ * players already know the sport, so it's omitted for them.
  */
 export function renderNearbyMatchPush(
   payload: Record<string, unknown> | null | undefined,
@@ -477,53 +489,55 @@ export function renderNearbyMatchPush(
 ): { title: string; body: string } {
   const sportNameRaw = (payload?.sportName as string | undefined)?.trim();
   const sportName = sportNameRaw ? sportNameRaw.toLowerCase() : '';
+  const showSport = payload?.showSport === true && sportName !== '';
 
-  const hostNameRaw = (payload?.hostName as string | undefined)?.trim();
+  const hostName = (payload?.hostName as string | undefined)?.trim();
   const timezone = (payload?.timezone as string | undefined) ?? 'America/Toronto';
 
-  const matchDate = formatNearbyDate(payload?.matchDate as string | undefined, timezone, locale);
+  const title = hostName
+    ? t(locale, 'notification.nearby.title.host', { hostName })
+    : t(locale, 'notification.nearby.title.generic');
+
+  const date = formatNearbyDate(payload?.matchDate as string | undefined, timezone, locale);
   const timeFormatted = formatNearbyTime(payload?.startTime as string | undefined, locale);
-  const startTime = timeFormatted
-    ? t(locale, 'notification.nearby.startTimePrefix', { time: timeFormatted })
+  const timeLabel = timeFormatted
+    ? t(locale, 'notification.nearby.timeAt', { time: timeFormatted })
     : '';
   const locationNameRaw = (payload?.locationName as string | undefined)?.trim();
-  const locationName = locationNameRaw
-    ? t(locale, 'notification.nearby.locationPrefix', { location: locationNameRaw })
+  const locationLabel = locationNameRaw
+    ? t(locale, 'notification.nearby.locationAt', { location: locationNameRaw })
     : '';
+  let whenWhere = `${date.text}${timeLabel}${locationLabel}`.replace(/^[\s,]+/, '').trim();
 
-  const minRating = payload?.minRatingScore as string | undefined;
-  const minRatingLabel = minRating
-    ? t(locale, 'notification.nearby.minRatingPrefix', { score: minRating })
-    : '';
+  // Lead with the sport for multi-sport recipients. French date words are
+  // lowercase mid-sentence, and so are EN today/tomorrow; EN weekdays/dates keep
+  // their capital. Lowercase the lead-in accordingly so "Tennis Tomorrow" reads
+  // as "Tennis tomorrow".
+  if (showSport) {
+    const sportLead = sportName.charAt(0).toUpperCase() + sportName.slice(1);
+    if (whenWhere) {
+      const lowerFirst = locale.startsWith('fr') || date.relative;
+      const tail = lowerFirst ? whenWhere.charAt(0).toLowerCase() + whenWhere.slice(1) : whenWhere;
+      whenWhere = `${sportLead} ${tail}`;
+    } else {
+      whenWhere = sportLead;
+    }
+  }
 
   const spotsRaw = payload?.spotsLeft;
   const spotsCount = typeof spotsRaw === 'number' ? spotsRaw : Number(spotsRaw);
-  const spotsLabel =
+  const cta =
     Number.isFinite(spotsCount) && spotsCount > 0
       ? t(
           locale,
-          spotsCount === 1
-            ? 'notification.nearby.spotsLabel'
-            : 'notification.nearby.spotsLabel_plural',
+          spotsCount === 1 ? 'notification.nearby.spotsCta_one' : 'notification.nearby.spotsCta',
           { count: String(spotsCount) }
         )
-      : '';
+      : t(locale, 'notification.nearby.cta');
 
-  const hostLabel = hostNameRaw
-    ? t(locale, 'notification.nearby.hostLabel', { hostName: hostNameRaw })
-    : '';
+  const body = whenWhere ? `${whenWhere}. ${cta}` : cta;
 
-  const title = t(locale, 'notification.nearby.title', { sportName });
-  const body = t(locale, 'notification.nearby.body', {
-    matchDate,
-    startTime,
-    locationName,
-    minRatingLabel,
-    spotsLabel,
-    hostLabel,
-  });
-
-  return { title, body: body.trim() };
+  return { title, body };
 }
 
 /**
