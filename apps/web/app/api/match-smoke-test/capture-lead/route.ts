@@ -11,7 +11,7 @@ import {
   type MatchNatureOption,
   type SportOption,
 } from '@/lib/match-smoke-test/constants';
-import { isValidTimeSlot } from '@/lib/match-smoke-test/time-selection';
+import { isWellFormedTimeSlot } from '@/lib/match-smoke-test/time-selection';
 
 /**
  * Captures the visitor's contact details at the contact step — BEFORE any price
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (!matchNature || !MATCH_NATURE_OPTIONS.includes(matchNature as MatchNatureOption)) {
       return NextResponse.json({ error: 'Invalid match type.' }, { status: 400 });
     }
-    if (!timeSlot || typeof timeSlot !== 'string' || !isValidTimeSlot(timeSlot)) {
+    if (!timeSlot || typeof timeSlot !== 'string' || !isWellFormedTimeSlot(timeSlot)) {
       return NextResponse.json({ error: 'Invalid time slot.' }, { status: 400 });
     }
 
