@@ -125,7 +125,11 @@ function usePopupStyles() {
   }, []);
 }
 
-/** Fit the map to all markers on first load, else fall back to the user's location. */
+/**
+ * Fit the map to all markers whenever the dataset changes (the full match set
+ * loads asynchronously and refetches on filter changes), else center on the user.
+ * Keyed on a signature so panning/zooming between fetches isn't disturbed.
+ */
 function FitToMarkers({
   points,
   center,
@@ -134,22 +138,23 @@ function FitToMarkers({
   center: [number, number] | null;
 }) {
   const map = useMap();
+  const signature =
+    points.length === 0
+      ? 'empty'
+      : `${points.length}:${points[0].match.id}:${points[points.length - 1].match.id}`;
   useEffect(() => {
-    if (points.length === 0) return;
+    if (points.length === 0) {
+      if (center) map.setView(center, 11);
+      return;
+    }
     if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 13);
       return;
     }
     const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number]));
     map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
-    // Only fit once, on mount — subsequent filter changes shouldn't yank the viewport.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  // Center on the user when there are no markers to fit.
-  useEffect(() => {
-    if (points.length === 0 && center) map.setView(center, 11);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [signature]);
   return null;
 }
 

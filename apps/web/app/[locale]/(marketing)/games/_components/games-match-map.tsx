@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { MapPinned } from 'lucide-react';
+import { Loader2, MapPinned } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { PublicMatch } from './public-match-card';
@@ -15,6 +15,7 @@ const GamesMatchMapInner = dynamic(() => import('./games-match-map-inner'), {
 
 interface GamesMatchMapProps {
   matches: PublicMatch[];
+  isLoading?: boolean;
   viewerPlayerId?: string | null;
   center: [number, number] | null;
   onJoin: (matchId: string) => void;
@@ -31,6 +32,7 @@ function mappableCount(matches: PublicMatch[]): number {
 
 export default function GamesMatchMap({
   matches,
+  isLoading = false,
   viewerPlayerId,
   center,
   onJoin,
@@ -41,8 +43,8 @@ export default function GamesMatchMap({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <MapPinned className="size-4" />
-        {t('mapGamesShown', { count: shown })}
+        {isLoading ? <Loader2 className="size-4 animate-spin" /> : <MapPinned className="size-4" />}
+        {isLoading ? t('mapLoading') : t('mapGamesShown', { count: shown })}
       </div>
       <GamesMatchMapInner
         matches={matches}

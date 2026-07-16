@@ -70,6 +70,11 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
   // List vs. map presentation
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
+  // Map view loads the FULL set (no pagination) — a map with a "load more"
+  // button makes no sense; every match in range should appear at once.
+  const [mapMatches, setMapMatches] = useState<PublicMatch[]>([]);
+  const [mapLoading, setMapLoading] = useState(false);
+
   const handleJoin = (matchId: string) => {
     router.push(`/join/match/${matchId}`);
   };
@@ -94,10 +99,11 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
       lat?: number | null,
       lng?: number | null,
       sportId?: string | null,
-      mine?: boolean
+      mine?: boolean,
+      limit: number = PAGE_SIZE
     ) => {
       const params = new URLSearchParams({
-        limit: String(PAGE_SIZE),
+        limit: String(limit),
         offset: String(fetchOffset),
       });
       if (lat != null && lng != null) {
@@ -171,6 +177,49 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
       cancelled = true;
     };
   }, [fetchMatches, activeSportId, mineOnly]);
+
+  // When the map view is active, pull every match in range (paginated to
+  // completion), refetching whenever coords or the sport/scope filters change.
+  useEffect(() => {
+    if (viewMode !== 'map') return;
+    let cancelled = false;
+
+    (async () => {
+      setMapLoading(true);
+      try {
+        const MAP_PAGE = 200;
+        const all: PublicMatch[] = [];
+        const seen = new Set<string>();
+        let pageOffset = 0;
+        for (;;) {
+          const result = await fetchMatches(
+            pageOffset,
+            coords?.latitude,
+            coords?.longitude,
+            activeSportId,
+            mineOnly,
+            MAP_PAGE
+          );
+          if (!result || result.matches.length === 0) break;
+          for (const m of result.matches) {
+            if (!seen.has(m.id)) {
+              seen.add(m.id);
+              all.push(m);
+            }
+          }
+          pageOffset += result.matches.length;
+          if (!result.hasMore) break;
+        }
+        if (!cancelled) setMapMatches(all);
+      } finally {
+        if (!cancelled) setMapLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode, coords, activeSportId, mineOnly, fetchMatches]);
 
   // Sport filter change
   const handleSportChange = async (sportId: string | null) => {
@@ -340,25 +389,12 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
       <>
         {filterControls}
         <GamesMatchMap
-          matches={matches}
+          matches={mapMatches}
+          isLoading={mapLoading}
           viewerPlayerId={viewerPlayerId}
           center={mapCenter}
           onJoin={handleJoin}
         />
-        {hasMore && (
-          <div className="flex justify-center mt-2">
-            <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
-              {isLoadingMore ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  {t('loadMore')}
-                </>
-              ) : (
-                t('loadMore')
-              )}
-            </Button>
-          </div>
-        )}
       </>
     );
   }
