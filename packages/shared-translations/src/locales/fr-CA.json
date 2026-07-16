@@ -10809,6 +10809,13 @@
     "listView": "Liste",
     "mapView": "Carte",
     "mapLoading": "Chargement des parties…",
+    "dateAll": "Toutes les dates",
+    "dateWeekend": "Fin de semaine",
+    "gamesCount": "{count, plural, =1 {1 partie} other {# parties}}",
+    "noFilteredTitle": "Aucune partie ne correspond à ces filtres",
+    "clearFilters": "Réinitialiser les filtres",
+    "joinShort": "Rejoindre",
+    "waitlistShort": "Liste d'attente",
     "mapGamesShown": "{count, plural, =0 {Aucune partie à afficher sur la carte ici} =1 {1 partie sur la carte} other {# parties sur la carte}}",
     "copied": "Lien copié!",
     "cardStatus": {

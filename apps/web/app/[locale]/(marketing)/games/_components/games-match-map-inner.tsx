@@ -2,7 +2,7 @@
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { useLocale, useTranslations } from 'next-intl';
@@ -10,7 +10,7 @@ import { useTheme } from 'next-themes';
 import { primary, accent, neutral, status } from '@rallia/design-system';
 
 import type { PublicMatch } from './public-match-card';
-import { getRelativeDateLabel, formatDuration } from './utils';
+import { getRelativeDateLabel, formatDuration, resolveMatchCoords } from './utils';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -35,17 +35,6 @@ interface MappableMatch {
   lng: number;
 }
 
-/** Facility coordinates take priority, then the match's custom location. */
-function resolveCoords(match: PublicMatch): { lat: number; lng: number } | null {
-  const fLat = match.facility?.latitude;
-  const fLng = match.facility?.longitude;
-  if (fLat != null && fLng != null) return { lat: fLat, lng: fLng };
-  if (match.custom_latitude != null && match.custom_longitude != null) {
-    return { lat: match.custom_latitude, lng: match.custom_longitude };
-  }
-  return null;
-}
-
 function sportColor(sportName: string | undefined): string {
   const s = sportName?.toLowerCase();
   if (s === 'tennis') return TENNIS_COLOR;
@@ -56,23 +45,27 @@ function sportColor(sportName: string | undefined): string {
 const usersSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
 
 const matchIconCache = new Map<string, L.DivIcon>();
-function getMatchIcon(color: string, isFull: boolean): L.DivIcon {
-  const key = `${color}-${isFull}`;
+function getMatchIcon(color: string, isFull: boolean, emphasized = false): L.DivIcon {
+  const key = `${color}-${isFull}-${emphasized}`;
   const cached = matchIconCache.get(key);
   if (cached) return cached;
 
   const ring = isFull ? status.error.DEFAULT : color;
   const bg = isFull ? neutral[400] : color;
-  const html = `<span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:${bg};border-radius:9999px 9999px 9999px 2px;transform:rotate(45deg);box-shadow:0 0 0 2px ${ring},0 2px 4px rgba(0,0,0,.25);">
+  const size = emphasized ? 38 : 30;
+  const shadow = emphasized
+    ? `0 0 0 3px #fff,0 0 0 5px ${ring},0 4px 12px rgba(0,0,0,.35)`
+    : `0 0 0 2px ${ring},0 2px 4px rgba(0,0,0,.25)`;
+  const html = `<span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;background:${bg};border-radius:9999px 9999px 9999px 2px;transform:rotate(45deg);box-shadow:${shadow};transition:all .15s ease;">
     <span style="transform:rotate(-45deg);display:flex;color:white;">${usersSvg}</span>
   </span>`;
 
   const icon = L.divIcon({
     html,
     className: '',
-    iconSize: L.point(30, 30),
-    iconAnchor: L.point(15, 28),
-    popupAnchor: L.point(0, -26),
+    iconSize: L.point(size, size),
+    iconAnchor: L.point(size / 2, size - 2),
+    popupAnchor: L.point(0, -(size - 4)),
   });
   matchIconCache.set(key, icon);
   return icon;
@@ -138,11 +131,13 @@ function FitToMarkers({
   center: [number, number] | null;
 }) {
   const map = useMap();
+  const needsRefit = useRef(false);
   const signature =
     points.length === 0
       ? 'empty'
       : `${points.length}:${points[0].match.id}:${points[points.length - 1].match.id}`;
-  useEffect(() => {
+
+  const fit = useCallback(() => {
     if (points.length === 0) {
       if (center) map.setView(center, 11);
       return;
@@ -154,7 +149,53 @@ function FitToMarkers({
     const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number]));
     map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
+  }, [signature, center, map]);
+
+  useEffect(() => {
+    // A fit computed while the container is collapsed (hidden tab, mid-layout)
+    // produces a garbage viewport — redo it once the map gets real dimensions.
+    const size = map.getSize();
+    needsRefit.current = size.x < 50 || size.y < 50;
+    fit();
+  }, [fit, map]);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (!needsRefit.current) return;
+      const size = map.getSize();
+      if (size.x >= 50 && size.y >= 50) {
+        needsRefit.current = false;
+        fit();
+      }
+    };
+    map.on('resize', onResize);
+    return () => {
+      map.off('resize', onResize);
+    };
+  }, [map, fit]);
+
+  return null;
+}
+
+/** Keep Leaflet's internal size in sync with the container (split-view resizes). */
+function ResizeHandler() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
+/** Animates the camera to a card-selected match (desktop panel sync). */
+function FlyToHandler({ flyTo }: { flyTo: { lat: number; lng: number; ts: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!flyTo) return;
+    map.flyTo([flyTo.lat, flyTo.lng], Math.max(map.getZoom(), 14), { duration: 0.8 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyTo?.ts]);
   return null;
 }
 
@@ -253,6 +294,12 @@ interface GamesMatchMapInnerProps {
   viewerPlayerId?: string | null;
   center: [number, number] | null;
   onJoin: (matchId: string) => void;
+  /** Desktop split view: markers select the side-panel card instead of opening popups. */
+  panelMode?: boolean;
+  activeMatchId?: string | null;
+  hoveredMatchId?: string | null;
+  onMarkerClick?: (matchId: string) => void;
+  flyTo?: { lat: number; lng: number; ts: number } | null;
 }
 
 export default function GamesMatchMapInner({
@@ -260,6 +307,11 @@ export default function GamesMatchMapInner({
   viewerPlayerId,
   center,
   onJoin,
+  panelMode = false,
+  activeMatchId = null,
+  hoveredMatchId = null,
+  onMarkerClick,
+  flyTo = null,
 }: GamesMatchMapInnerProps) {
   usePopupStyles();
   const { resolvedTheme } = useTheme();
@@ -268,7 +320,7 @@ export default function GamesMatchMapInner({
   const points = useMemo<MappableMatch[]>(() => {
     const out: MappableMatch[] = [];
     for (const match of matches) {
-      const coords = resolveCoords(match);
+      const coords = resolveMatchCoords(match);
       if (coords) out.push({ match, lat: coords.lat, lng: coords.lng });
     }
     return out;
@@ -279,14 +331,16 @@ export default function GamesMatchMapInner({
       center={center ?? MONTREAL}
       zoom={11}
       scrollWheelZoom
-      className="w-full h-[70vh] min-h-[420px] rounded-xl border border-border z-0"
+      className="w-full h-full rounded-xl border border-border z-0"
     >
       <TileLayer
         key={isDark ? 'dark' : 'light'}
         attribution={isDark ? ATTR_DARK : ATTR_LIGHT}
         url={isDark ? TILE_DARK : TILE_LIGHT}
       />
+      <ResizeHandler />
       <FitToMarkers points={points} center={center} />
+      <FlyToHandler flyTo={flyTo} />
 
       <MarkerClusterGroup
         chunkedLoading
@@ -299,15 +353,20 @@ export default function GamesMatchMapInner({
           const total = match.format === 'doubles' ? 4 : 2;
           const joinedCount = match.participants?.filter(p => p.status === 'joined').length ?? 0;
           const isFull = total - joinedCount <= 0;
+          const emphasized = match.id === activeMatchId || match.id === hoveredMatchId;
           return (
             <Marker
               key={match.id}
               position={[lat, lng]}
-              icon={getMatchIcon(sportColor(match.sport?.name), isFull)}
+              icon={getMatchIcon(sportColor(match.sport?.name), isFull, emphasized)}
+              zIndexOffset={emphasized ? 1000 : 0}
+              eventHandlers={panelMode ? { click: () => onMarkerClick?.(match.id) } : undefined}
             >
-              <Popup>
-                <MatchPopup match={match} viewerPlayerId={viewerPlayerId} onJoin={onJoin} />
-              </Popup>
+              {!panelMode && (
+                <Popup>
+                  <MatchPopup match={match} viewerPlayerId={viewerPlayerId} onJoin={onJoin} />
+                </Popup>
+              )}
             </Marker>
           );
         })}

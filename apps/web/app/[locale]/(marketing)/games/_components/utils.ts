@@ -25,6 +25,37 @@ export function getRelativeDateLabel(
   return matchDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
+import type { PublicMatch } from './public-match-card';
+
+/** Facility coordinates take priority, then the match's custom location. */
+export function resolveMatchCoords(match: PublicMatch): { lat: number; lng: number } | null {
+  const fLat = match.facility?.latitude;
+  const fLng = match.facility?.longitude;
+  if (fLat != null && fLng != null) return { lat: fLat, lng: fLng };
+  if (match.custom_latitude != null && match.custom_longitude != null) {
+    return { lat: match.custom_latitude, lng: match.custom_longitude };
+  }
+  return null;
+}
+
+export type DateChip = 'all' | 'today' | 'tomorrow' | 'weekend';
+
+/** Whether a YYYY-MM-DD match date falls inside the given chip's window (local time). */
+export function matchesDateChip(dateStr: string, chip: DateChip): boolean {
+  if (chip === 'all') return true;
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const date = new Date(dateStr + 'T00:00:00');
+  const dayDiff = Math.round((date.getTime() - todayStart.getTime()) / 86400000);
+
+  if (chip === 'today') return dayDiff === 0;
+  if (chip === 'tomorrow') return dayDiff === 1;
+  // weekend: upcoming Saturday & Sunday (or the rest of it if we're already there)
+  const dow = todayStart.getDay(); // 0 = Sunday
+  const daysToSaturday = dow === 0 ? -1 : 6 - dow;
+  return dayDiff >= Math.max(0, daysToSaturday) && dayDiff <= daysToSaturday + 1;
+}
+
 export function formatDuration(startTime: string, endTime: string): string {
   const [sH, sM] = startTime.split(':').map(Number);
   const [eH, eM] = endTime.split(':').map(Number);
