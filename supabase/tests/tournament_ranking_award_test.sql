@@ -44,6 +44,8 @@ BEGIN
              ORDER BY player_id LIMIT 8) s;
     ASSERT array_length(v_players, 1) = 8, 'need 8 tennis players';
     v_org := v_players[1];
+    -- Certified organizer: required for the tournament to award ranking points.
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
     SELECT * INTO v_t FROM tournament_create(
@@ -177,6 +179,7 @@ BEGIN
              WHERE sport_id = v_sport AND is_active = true
              ORDER BY player_id LIMIT 4) s;
     v_org := v_players[1];
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
     SELECT * INTO v_t FROM tournament_create(
@@ -267,6 +270,7 @@ BEGIN
              ORDER BY player_id LIMIT 16) s;
     ASSERT array_length(v_players, 1) = 16, 'need 16 tennis players for 8 doubles teams';
     v_org := v_players[1];
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
     SELECT * INTO v_t FROM tournament_create(
@@ -587,6 +591,138 @@ BEGIN
     ASSERT v_filtered = 0, 'random rating id should filter to empty, got ' || v_filtered;
 
     RAISE NOTICE 'PASS 6: exact-rating filter — active-rating-id player selection, empty for unknown rating';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 7. Certified-organizer gate — only a certified organizer's tournament awards
+--    ranking points. Plays a real 4-entry bracket to completion with a
+--    NON-certified organizer (0 rows via the trigger), then certifies + direct
+--    re-award (4 rows), then de-certifies + re-award (rows cleared).
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport   uuid;
+    v_players uuid[];
+    v_org     uuid;
+    v_t       tournaments;
+    v_tid     uuid;
+    v_ver     integer;
+    v_match   tournament_matches;
+    v_guard   integer := 0;
+    v_count   integer;
+    i         integer;
+BEGIN
+    -- Re-enable triggers: block 5 set replica mode (transaction-scoped), which
+    -- would otherwise suppress the completion + award triggers this block needs.
+    SET LOCAL session_replication_role = 'origin';
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
+    -- Fresh players unused by blocks 1-3 (which consumed the first 16): those
+    -- players are already registered/certified/rate-limited in this transaction.
+    SELECT array_agg(player_id) INTO v_players
+      FROM (SELECT player_id FROM player_sport
+             WHERE sport_id = v_sport AND is_active = true
+             ORDER BY player_id OFFSET 20 LIMIT 4) s;
+    v_org := v_players[1];
+    -- Precondition: organizer is NOT certified.
+    UPDATE player SET is_certified_organizer = false WHERE id = v_org;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_create(
+        p_name => 'Ranking Gate 4', p_sport_id => v_sport,
+        p_max_participants => 4::smallint,
+        p_start_date => now() + interval '7 days',
+        p_end_date   => now() + interval '8 days',
+        p_visibility => 'public', p_registration_mode => 'open'
+    );
+    v_tid := v_t.id; v_ver := v_t.version;
+    SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+
+    FOR i IN 1..4 LOOP
+        PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[i]::text)::text, true);
+        IF NOT EXISTS (SELECT 1 FROM tournament_registrations
+                        WHERE tournament_id = v_tid AND user_id = v_players[i]
+                          AND status = 'registered') THEN
+            PERFORM tournament_register(v_tid);
+        END IF;
+    END LOOP;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_close_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+    PERFORM tournament_generate_bracket(v_tid, v_ver);
+
+    LOOP
+        v_guard := v_guard + 1;
+        ASSERT v_guard < 50, 'override loop did not converge';
+        SELECT * INTO v_match FROM tournament_matches
+         WHERE tournament_id = v_tid AND status = 'pending'
+           AND player1_is_bye = false AND player2_is_bye = false
+           AND player1_registration_id IS NOT NULL
+           AND player2_registration_id IS NOT NULL
+         ORDER BY round_number, match_position LIMIT 1;
+        EXIT WHEN v_match.id IS NULL;
+        PERFORM tournament_override_score(v_match.id, v_match.player1_registration_id, '6-0 6-0');
+    END LOOP;
+
+    ASSERT (SELECT status FROM tournaments WHERE id = v_tid) = 'completed', 'expected completed';
+
+    -- Gate: non-certified organizer → completion trigger awards nothing.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 0, 'non-certified organizer must award 0 rows, got ' || v_count;
+
+    -- Certify → direct re-award now produces the ledger.
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
+    PERFORM award_tournament_ranking_points(v_tid);
+    SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 4, 'certified organizer must award 4 rows, got ' || v_count;
+
+    -- De-certify → re-award clears the stale rows (idempotent).
+    UPDATE player SET is_certified_organizer = false WHERE id = v_org;
+    PERFORM award_tournament_ranking_points(v_tid);
+    SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 0, 'de-certified organizer must clear rows, got ' || v_count;
+
+    RAISE NOTICE 'PASS 7: certified-organizer gate — non-certified awards 0, certify awards, de-certify clears';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 8. admin_certify_organizer RPC — auth gate + flag/audit columns.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_admin  uuid;
+    v_player uuid;
+    v_res    jsonb;
+BEGIN
+    -- Admin fixture (local seed has no admin rows). Promote an existing player.
+    SELECT id INTO v_admin FROM player ORDER BY id LIMIT 1;
+    INSERT INTO admin (id, role) VALUES (v_admin, 'super_admin') ON CONFLICT (id) DO NOTHING;
+    SELECT id INTO v_player FROM player WHERE id <> v_admin ORDER BY id LIMIT 1;
+
+    -- Non-admin caller is refused.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_player::text)::text, true);
+    v_res := admin_certify_organizer(v_player, true, 'should fail');
+    ASSERT (v_res->>'success') = 'false', 'non-admin must be refused';
+    ASSERT NOT (SELECT is_certified_organizer FROM player WHERE id = v_player),
+        'refused call must not certify';
+
+    -- Admin grants certification + stamps audit columns.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_admin::text)::text, true);
+    v_res := admin_certify_organizer(v_player, true, 'club partner');
+    ASSERT (v_res->>'success') = 'true', 'admin grant should succeed';
+    ASSERT (SELECT is_certified_organizer FROM player WHERE id = v_player), 'flag not set';
+    ASSERT (SELECT certified_organizer_at IS NOT NULL FROM player WHERE id = v_player), 'certified_at not stamped';
+    ASSERT (SELECT certified_organizer_by = v_admin FROM player WHERE id = v_player), 'certified_by wrong';
+
+    -- Revoke clears the flag + audit columns.
+    v_res := admin_certify_organizer(v_player, false, NULL);
+    ASSERT (v_res->>'success') = 'true', 'admin revoke should succeed';
+    ASSERT NOT (SELECT is_certified_organizer FROM player WHERE id = v_player), 'flag not cleared';
+    ASSERT (SELECT certified_organizer_at IS NULL FROM player WHERE id = v_player), 'certified_at not cleared';
+
+    RAISE NOTICE 'PASS 8: admin_certify_organizer — non-admin refused, grant/revoke + audit columns';
 END $$;
 
 ROLLBACK;

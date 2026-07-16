@@ -5025,6 +5025,9 @@ export type Database = {
       player: {
         Row: {
           address: string | null
+          certified_organizer_at: string | null
+          certified_organizer_by: string | null
+          certified_organizer_notes: string | null
           chat_rules_agreed_at: string | null
           city: string | null
           country: string | null
@@ -5032,6 +5035,7 @@ export type Database = {
           expo_push_token: string | null
           gender: Database["public"]["Enums"]["gender_enum"] | null
           id: string
+          is_certified_organizer: boolean
           last_seen_at: string | null
           latitude: number | null
           location: unknown
@@ -5055,6 +5059,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          certified_organizer_at?: string | null
+          certified_organizer_by?: string | null
+          certified_organizer_notes?: string | null
           chat_rules_agreed_at?: string | null
           city?: string | null
           country?: string | null
@@ -5062,6 +5069,7 @@ export type Database = {
           expo_push_token?: string | null
           gender?: Database["public"]["Enums"]["gender_enum"] | null
           id: string
+          is_certified_organizer?: boolean
           last_seen_at?: string | null
           latitude?: number | null
           location?: unknown
@@ -5085,6 +5093,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          certified_organizer_at?: string | null
+          certified_organizer_by?: string | null
+          certified_organizer_notes?: string | null
           chat_rules_agreed_at?: string | null
           city?: string | null
           country?: string | null
@@ -5092,6 +5103,7 @@ export type Database = {
           expo_push_token?: string | null
           gender?: Database["public"]["Enums"]["gender_enum"] | null
           id?: string
+          is_certified_organizer?: boolean
           last_seen_at?: string | null
           latitude?: number | null
           location?: unknown
@@ -5114,6 +5126,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "player_certified_organizer_by_fkey"
+            columns: ["certified_organizer_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_id_fkey"
             columns: ["id"]
@@ -9601,6 +9620,10 @@ export type Database = {
           p_network_id: string
           p_notes?: string
         }
+        Returns: Json
+      }
+      admin_certify_organizer: {
+        Args: { p_is_certified: boolean; p_notes?: string; p_player_id: string }
         Returns: Json
       }
       admin_delete_network: {
