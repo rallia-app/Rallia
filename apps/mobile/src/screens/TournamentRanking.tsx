@@ -200,7 +200,7 @@ export const TournamentRanking: React.FC = () => {
         />
       ) : null}
 
-      {myRank?.levelBucket || myRatingValue != null ? (
+      {myRank && (myRank.levelBucket || myRatingValue != null) ? (
         <View style={styles.filterRow}>
           {myRank?.levelBucket ? (
             <FilterChip
