@@ -46,11 +46,16 @@ import {
   useReferral,
   useAdminStatus,
   useMySportRank,
+  useMyTournamentRanking,
   useMyUnscheduledTournamentMatches,
   useMyUnscheduledSessionMatches,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { MatchScoringPreferences, MySportRank } from '@rallia/shared-hooks';
+import type {
+  MatchScoringPreferences,
+  MySportRank,
+  MyTournamentRanking,
+} from '@rallia/shared-hooks';
 import type { FacilitySearchResult, MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
@@ -270,130 +275,174 @@ const quickNavStyles = StyleSheet.create({
 });
 
 /**
- * Monthly challenge entry point: shows the player's live rank (or a join-the-
- * challenge nudge when unranked) and routes to the full challenge screen.
+ * Classements entry point: two sibling tiles — the monthly challenge (games
+ * played, gold) and the Circuit Rallia (tournament points, teal) — each
+ * showing the player's live standing (or a join nudge when unranked) and
+ * deep-linking to its own tab of the Classements screen.
  */
-const LeaderboardCard: React.FC<{
-  myRank: MySportRank | null | undefined;
+const ClassementsTile: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  watermark: keyof typeof Ionicons.glyphMap;
+  gradient: [string, string];
+  borderColor: string;
+  label: string;
+  standing: { rank: number; value: number; unit: string } | null;
   loading: boolean;
+  nudge: string;
   onPress: () => void;
-  t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ myRank, loading, onPress, t }) => {
+}> = ({ icon, watermark, gradient, borderColor, label, standing, loading, nudge, onPress }) => {
   const handlePress = () => {
     void lightHaptic();
     onPress();
   };
 
-  let mainLine: string;
-  // Space, not empty — reserves the line so the card doesn't grow when data
-  // lands (same trick as splitLabelTwoLines above).
-  let subLine = ' ';
-  if (myRank) {
-    mainLine = t('leaderboard.yourRank', { rank: myRank.rank });
-    subLine = t('home.leaderboardCard.rankedSubtitle');
-  } else if (loading) {
-    mainLine = t('home.leaderboardCard.subtitle');
-  } else {
-    mainLine = t('home.leaderboardCard.unrankedTitle');
-    subLine = t('home.leaderboardCard.unrankedSubtitle');
-  }
-
   return (
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.85}
-      style={leaderboardCardStyles.wrap}
+      style={classementsCardStyles.tileWrap}
       accessibilityRole="button"
-      accessibilityLabel={`${t('home.leaderboardCard.title')}. ${mainLine}`}
+      accessibilityLabel={`${label}. ${standing ? `#${standing.rank} · ${standing.value} ${standing.unit}` : nudge}`}
     >
       <LinearGradient
-        colors={[accent[400], accent[600]]}
+        colors={gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={leaderboardCardStyles.inner}
+        style={[classementsCardStyles.tileInner, { borderColor }]}
       >
         <Ionicons
-          name="podium"
-          size={96}
+          name={watermark}
+          size={64}
           color="rgba(255,255,255,0.12)"
-          style={leaderboardCardStyles.watermark}
+          style={classementsCardStyles.watermark}
         />
-        <View style={leaderboardCardStyles.badge}>
-          {myRank ? (
-            <Text size="sm" weight="bold" color="#ffffff" numberOfLines={1}>
-              {`#${myRank.rank}`}
-            </Text>
+        <View style={classementsCardStyles.labelRow}>
+          <Ionicons name={icon} size={14} color="rgba(255,255,255,0.92)" />
+          <Text
+            size="xs"
+            weight="semibold"
+            color="rgba(255,255,255,0.92)"
+            numberOfLines={1}
+            style={classementsCardStyles.labelText}
+          >
+            {label}
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.7)" />
+        </View>
+
+        <View style={classementsCardStyles.valueBlock}>
+          {standing ? (
+            <>
+              <Text size="xl" weight="bold" color="#ffffff" numberOfLines={1}>
+                {`#${standing.rank}`}
+              </Text>
+              <Text size="xs" color="rgba(255,255,255,0.85)" numberOfLines={1}>
+                {`${standing.value.toLocaleString()} ${standing.unit}`}
+              </Text>
+            </>
           ) : (
-            <Ionicons name="trophy-outline" size={22} color="#ffffff" />
+            <Text
+              size="sm"
+              weight="semibold"
+              color="#ffffff"
+              numberOfLines={2}
+              style={classementsCardStyles.nudge}
+            >
+              {/* Space, not empty, while loading — reserves the block height. */}
+              {loading ? ' ' : nudge}
+            </Text>
           )}
         </View>
-        <View style={leaderboardCardStyles.textCol}>
-          <Text size="xs" weight="semibold" color="rgba(255,255,255,0.85)">
-            {t('home.leaderboardCard.title')}
-          </Text>
-          <Text size="base" weight="bold" color="#ffffff" numberOfLines={1}>
-            {mainLine}
-          </Text>
-          <Text size="xs" color="rgba(255,255,255,0.85)" numberOfLines={1}>
-            {subLine}
-          </Text>
-        </View>
-        {myRank ? (
-          <View style={leaderboardCardStyles.gamesCol}>
-            <Text size="xl" weight="bold" color="#ffffff">
-              {myRank.games}
-            </Text>
-            <Text size="xs" color="rgba(255,255,255,0.85)">
-              {t('leaderboard.games')}
-            </Text>
-          </View>
-        ) : null}
-        <Ionicons name="chevron-forward" size={20} color="#ffffff" />
       </LinearGradient>
     </TouchableOpacity>
   );
 };
 
-const leaderboardCardStyles = StyleSheet.create({
-  wrap: {
+const ClassementsCard: React.FC<{
+  challengeRank: MySportRank | null | undefined;
+  challengeLoading: boolean;
+  circuitRank: MyTournamentRanking | null | undefined;
+  circuitLoading: boolean;
+  onPressBoard: (board: 'challenge' | 'ranking') => void;
+  t: (key: string, options?: Record<string, string | number | boolean>) => string;
+}> = ({ challengeRank, challengeLoading, circuitRank, circuitLoading, onPressBoard, t }) => (
+  <View style={classementsCardStyles.row}>
+    <ClassementsTile
+      icon="calendar"
+      watermark="podium"
+      gradient={[accent[400], accent[600]]}
+      borderColor={accent[500]}
+      label={t('classements.tabs.challenge')}
+      standing={
+        challengeRank
+          ? { rank: challengeRank.rank, value: challengeRank.games, unit: t('leaderboard.games') }
+          : null
+      }
+      loading={challengeLoading}
+      nudge={t('home.classementsCard.challengeNudge')}
+      onPress={() => onPressBoard('challenge')}
+    />
+    <ClassementsTile
+      icon="trophy"
+      watermark="ribbon"
+      gradient={[primary[500], primary[700]]}
+      borderColor={primary[600]}
+      label={t('classements.tabs.ranking')}
+      standing={
+        circuitRank
+          ? {
+              rank: circuitRank.rank,
+              value: circuitRank.points,
+              unit: t('tournamentRanking.points'),
+            }
+          : null
+      }
+      loading={circuitLoading}
+      nudge={t('home.classementsCard.circuitNudge')}
+      onPress={() => onPressBoard('ranking')}
+    />
+  </View>
+);
+
+const classementsCardStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
     marginHorizontal: spacingPixels[4],
     marginTop: spacingPixels[4],
     marginBottom: spacingPixels[2],
-    borderRadius: radiusPixels['2xl'],
   },
-  inner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    borderRadius: radiusPixels['2xl'],
+  tileWrap: {
+    flex: 1,
+    borderRadius: radiusPixels.xl,
+  },
+  tileInner: {
+    borderRadius: radiusPixels.xl,
     borderWidth: 1.5,
-    borderColor: accent[500],
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
     overflow: 'hidden',
+    gap: spacingPixels[2],
   },
   watermark: {
     position: 'absolute',
-    right: spacingPixels[8],
-    bottom: -spacingPixels[4],
+    right: -spacingPixels[2],
+    bottom: -spacingPixels[3],
   },
-  badge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  labelRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    flexShrink: 0,
+    gap: 5,
   },
-  textCol: {
+  labelText: {
     flex: 1,
   },
-  gamesCol: {
-    alignItems: 'center',
-    flexShrink: 0,
+  valueBlock: {
+    minHeight: 42,
+    justifyContent: 'center',
+  },
+  nudge: {
+    lineHeight: 18,
   },
 });
 
@@ -1081,9 +1130,12 @@ const Home = () => {
     if (!playerRatingScoreId) return null;
     return ratingScores.find(rs => rs.id === playerRatingScoreId)?.value ?? null;
   }, [ratingScores, playerRatingScoreId]);
-  // Live monthly rank for the home leaderboard card — signed-in only (the
-  // hook no-ops on undefined sportId).
+  // Live standings for the home Classements card — signed-in only (both hooks
+  // no-op on undefined sportId).
   const { data: myLeaderboardRank, isLoading: myLeaderboardRankLoading } = useMySportRank(
+    session ? selectedSport?.id : undefined
+  );
+  const { data: myCircuitRank, isLoading: myCircuitRankLoading } = useMyTournamentRanking(
     session ? selectedSport?.id : undefined
   );
 
@@ -1915,20 +1967,24 @@ const Home = () => {
       );
     }
 
-    // Leaderboard card sits right under the action banners: the player's live
-    // monthly rank is the first thing an onboarded player sees.
+    // Classements card sits right under the action banners: the player's live
+    // standings (monthly challenge + Circuit Rallia) are the first thing an
+    // onboarded player sees. Each tile deep-links to its own tab.
     if (session && isOnboarded) {
       headerComponents.push(
-        <LeaderboardCard
-          key="leaderboard-card"
-          myRank={myLeaderboardRank}
-          loading={myLeaderboardRankLoading}
+        <ClassementsCard
+          key="classements-card"
+          challengeRank={myLeaderboardRank}
+          challengeLoading={myLeaderboardRankLoading}
+          circuitRank={myCircuitRank}
+          circuitLoading={myCircuitRankLoading}
           t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          onPress={() => {
+          onPressBoard={board => {
             Logger.logUserAction('home_leaderboard_card_pressed', {
-              ranked: !!myLeaderboardRank,
+              board,
+              ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
             });
-            appNavigation.navigate('Leaderboard');
+            appNavigation.navigate('Classements', { initialTab: board });
           }}
         />
       );
@@ -2120,6 +2176,8 @@ const Home = () => {
     navigation,
     myLeaderboardRank,
     myLeaderboardRankLoading,
+    myCircuitRank,
+    myCircuitRankLoading,
     tournamentActionMatches,
     sessionActionMatches,
   ]);

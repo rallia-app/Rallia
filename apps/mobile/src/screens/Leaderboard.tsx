@@ -2,24 +2,17 @@
  * Monthly Challenge — GMA per-sport participation rankings
  *
  * Participation-based rankings (games played) over the canonical
- * qualifying_played_game definition.
+ * qualifying_played_game definition. Hosted as the "Défi du mois" tab of
+ * Classements; shares its visual kit with the Points Rallia board.
  */
 
-import React, { useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, shadowsNative } from '@rallia/design-system';
+import { spacingPixels, primary } from '@rallia/design-system';
 import {
   useAuth,
   useSportLeaderboard,
@@ -30,35 +23,14 @@ import {
 import { useTranslation, useThemeStyles } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
-
-function RankBadge({
-  rank,
-  isDark,
-  mutedColor,
-}: {
-  rank: number;
-  isDark: boolean;
-  mutedColor: string;
-}) {
-  if (rank <= 10) {
-    return (
-      <View
-        style={[styles.rankBadge, { backgroundColor: isDark ? `${primary[700]}55` : primary[100] }]}
-      >
-        <Text size="sm" weight="semibold" color={isDark ? primary[200] : primary[700]}>
-          {rank}
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <View style={styles.rankBadge}>
-      <Text size="sm" weight="medium" color={mutedColor}>
-        {rank}
-      </Text>
-    </View>
-  );
-}
+import {
+  BoardRow,
+  MyStandingCard,
+  BoardHeader,
+  BoardEmptyState,
+  type BoardEntry,
+  type ThemeBits,
+} from '../components/classements/BoardKit';
 
 export const Leaderboard: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -74,107 +46,61 @@ export const Leaderboard: React.FC = () => {
   const { data: myRank } = useMySportRank(sportId);
 
   const accentColor = isDark ? primary[300] : primary[600];
-  const sportLabel = selectedSport?.name
-    ? selectedSport.name.charAt(0).toUpperCase() + selectedSport.name.slice(1)
-    : '';
-  const monthLabel = useMemo(
-    () => new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
-    [locale]
+  const monthLabel = useMemo(() => {
+    const label = new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }, [locale]);
+
+  const theme: ThemeBits = useMemo(
+    () => ({
+      isDark,
+      cardColor: colors.card,
+      borderColor: colors.border,
+      textColor: colors.text,
+      mutedColor: colors.textMuted,
+      inputColor: colors.input,
+    }),
+    [isDark, colors]
   );
 
-  const renderItem = ({ item }: { item: SportLeaderboardEntry }) => {
-    const isMe = item.playerId === userId;
-    return (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('PlayerProfile', { playerId: item.playerId })}
-        style={[
-          styles.row,
-          { backgroundColor: colors.card, borderColor: colors.border },
-          isMe
-            ? {
-                backgroundColor: isDark ? `${primary[700]}33` : primary[50],
-                borderColor: primary[400],
-              }
-            : null,
-        ]}
-      >
-        <RankBadge rank={item.rank} isDark={isDark} mutedColor={colors.textMuted} />
+  const toEntry = useCallback(
+    (item: SportLeaderboardEntry): BoardEntry => ({
+      id: item.playerId,
+      rank: item.rank,
+      name:
+        item.playerId === userId
+          ? `${item.displayName} ${t('leaderboard.youSuffix')}`
+          : item.displayName,
+      avatarUrl: item.avatarUrl,
+      value: item.games,
+      isMe: item.playerId === userId,
+    }),
+    [userId, t]
+  );
 
-        {item.avatarUrl ? (
-          <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View
-            style={[
-              styles.avatar,
-              styles.avatarFallback,
-              { backgroundColor: isDark ? colors.input : colors.border },
-            ]}
-          >
-            <Ionicons name="person" size={18} color={colors.textMuted} />
-          </View>
-        )}
-
-        <View style={styles.nameCol}>
-          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
-            {item.displayName}
-            {isMe ? ` ${t('leaderboard.youSuffix')}` : ''}
-          </Text>
-        </View>
-
-        <View style={styles.gamesCol}>
-          <Text size="xl" weight="bold" color={accentColor}>
-            {item.games}
-          </Text>
-          <Text size="xs" color={colors.textMuted} style={styles.gamesLabel}>
-            {t('leaderboard.games')}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const openProfile = useCallback(
+    (entry: BoardEntry) => navigation.navigate('PlayerProfile', { playerId: entry.id }),
+    [navigation]
+  );
 
   const header = (
     <View style={styles.header}>
-      <Text size="sm" weight="semibold" color={accentColor}>
-        {t('leaderboard.subtitle', { month: monthLabel, sport: sportLabel })}
-      </Text>
-      <Text size="xs" color={colors.textMuted} style={styles.note}>
-        {t('leaderboard.pointsNote')}
-      </Text>
+      <BoardHeader
+        icon="calendar"
+        title={t('leaderboard.title')}
+        subtitle={t('leaderboard.subtitle', { month: monthLabel })}
+        note={t('leaderboard.pointsNote')}
+        theme={theme}
+      />
 
       {myRank ? (
-        <View
-          style={[
-            styles.yourCard,
-            {
-              backgroundColor: isDark ? `${primary[700]}33` : primary[50],
-              borderColor: isDark ? primary[700] : primary[200],
-            },
-          ]}
-        >
-          <View style={styles.yourBadge}>
-            <Text size="base" weight="bold" color="#ffffff">
-              {`#${myRank.rank}`}
-            </Text>
-          </View>
-          <View style={styles.yourTextCol}>
-            <Text size="base" weight="bold" color={colors.text}>
-              {t('leaderboard.yourRank', { rank: myRank.rank })}
-            </Text>
-            <Text size="sm" color={colors.textMuted}>
-              {t('leaderboard.gamesPlayed', { count: myRank.games })}
-            </Text>
-          </View>
-          <View style={styles.gamesCol}>
-            <Text size="xl" weight="bold" color={accentColor}>
-              {myRank.games}
-            </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.gamesLabel}>
-              {t('leaderboard.games')}
-            </Text>
-          </View>
-        </View>
+        <MyStandingCard
+          rank={myRank.rank}
+          title={t('leaderboard.yourRank', { rank: myRank.rank })}
+          subtitle={t('leaderboard.gamesPlayed', { count: myRank.games })}
+          value={myRank.games}
+          valueLabel={t('leaderboard.games')}
+        />
       ) : null}
     </View>
   );
@@ -204,7 +130,14 @@ export const Leaderboard: React.FC = () => {
       contentContainerStyle={styles.listContent}
       data={items}
       keyExtractor={e => e.playerId}
-      renderItem={renderItem}
+      renderItem={({ item }) => (
+        <BoardRow
+          entry={toEntry(item)}
+          valueLabel={t('leaderboard.games')}
+          theme={theme}
+          onPress={openProfile}
+        />
+      )}
       ListHeaderComponent={header}
       showsVerticalScrollIndicator={false}
       onEndReached={() => fetchNextPage()}
@@ -217,18 +150,19 @@ export const Leaderboard: React.FC = () => {
         ) : null
       }
       ListEmptyComponent={
-        <View style={styles.center}>
-          <Ionicons name="trophy-outline" size={40} color={colors.textMuted} />
-          <Text size="base" weight="semibold" color={colors.text}>
-            {t('leaderboard.empty.title')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.centerText}>
-            {t('leaderboard.empty.description')}
-          </Text>
-        </View>
+        <BoardEmptyState
+          icon="calendar-outline"
+          title={t('leaderboard.empty.title')}
+          description={t('leaderboard.empty.description')}
+          theme={theme}
+        />
       }
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={accentColor} />
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
+          tintColor={accentColor}
+        />
       }
     />
   );
@@ -238,75 +172,11 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
+    flexGrow: 1,
   },
   header: {
     gap: spacingPixels[1],
-    marginBottom: spacingPixels[3],
-  },
-  note: {
-    lineHeight: 17,
-    marginBottom: spacingPixels[1],
-  },
-  yourCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1.5,
-    marginTop: spacingPixels[2],
-    ...shadowsNative.sm,
-  },
-  yourBadge: {
-    minWidth: 46,
-    height: 46,
-    paddingHorizontal: spacingPixels[2],
-    borderRadius: radiusPixels.lg,
-    backgroundColor: primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  yourTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
     marginBottom: spacingPixels[2],
-    ...shadowsNative.sm,
-  },
-  rankBadge: {
-    width: 30,
-    height: 26,
-    borderRadius: radiusPixels.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: radiusPixels.full,
-  },
-  avatarFallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nameCol: {
-    flex: 1,
-    gap: 2,
-  },
-  gamesCol: {
-    alignItems: 'flex-end',
-    minWidth: 46,
-  },
-  gamesLabel: {
-    marginTop: -2,
   },
   footer: {
     paddingVertical: spacingPixels[4],
