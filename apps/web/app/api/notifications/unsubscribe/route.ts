@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getUnsubscribeTokenSecret } from '@/lib/unsubscribe-token';
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -43,7 +44,7 @@ function getSiteOrigin(req: NextRequest): string {
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const token = new URL(req.url).searchParams.get('token');
-  const secret = process.env.SUPABASE_JWT_SECRET;
+  const secret = getUnsubscribeTokenSecret();
   const origin = getSiteOrigin(req);
 
   if (!secret) {
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const token = new URL(req.url).searchParams.get('token');
-  const secret = process.env.SUPABASE_JWT_SECRET;
+  const secret = getUnsubscribeTokenSecret();
 
   if (!secret || !token) {
     return NextResponse.json({ ok: false, error: 'Missing token or secret' }, { status: 400 });

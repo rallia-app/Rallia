@@ -15,8 +15,10 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'Rallia <no-reply@updates.rallia.ca>';
 const SITE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://rallia.app';
 // Signs per-recipient one-click unsubscribe tokens, verified by the web route
-// /api/notifications/unsubscribe. Same secret resolution as the digest/broadcast
-// senders so the existing SUPABASE_JWT_SECRET on the web side verifies them.
+// /api/notifications/unsubscribe. JWT_SECRET is the effective secret here — the
+// SUPABASE_ prefix is reserved, so SUPABASE_JWT_SECRET is never set on the edge.
+// The web verifier resolves the secret in this same order; keep JWT_SECRET aligned
+// across Vercel and the Supabase function secrets.
 const JWT_SECRET = Deno.env.get('JWT_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRET');
 const ENC = new TextEncoder();
 
