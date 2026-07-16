@@ -4149,7 +4149,7 @@
   },
   "leaderboard": {
     "title": "Défi du mois",
-    "subtitle": "Défi de {month} · Grand Montréal · {sport}",
+    "subtitle": "{month} · Grand Montréal",
     "pointsNote": "Classé par parties jouées. Joue plus pour monter dans le défi.",
     "yourRank": "Tu es #{rank} dans le défi",
     "gamesPlayed": "{count} parties jouées",
@@ -4161,6 +4161,37 @@
       "title": "Le défi est lancé",
       "description": "Joue une partie pour te joindre au défi. Chaque match compte."
     }
+  },
+  "classements": {
+    "title": "Classements",
+    "tabs": {
+      "challenge": "Défi du mois",
+      "ranking": "Circuit Rallia"
+    }
+  },
+  "tournamentRanking": {
+    "title": "Circuit Rallia",
+    "subtitle": "Saison {season}",
+    "pointsNote": "Gagne des points Rallia en participant et en avançant dans les tournois.",
+    "filterMyLevel": "Mon niveau · {level}",
+    "filterMyRating": "Ma cote · {rating}",
+    "levels": {
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "advanced": "Avancé"
+    },
+    "points": "pts",
+    "events": "{count} tournois",
+    "events_one": "{count} tournoi",
+    "youSuffix": "(toi)",
+    "yourRank": "Tu es #{rank} cette saison",
+    "error": "Impossible de charger le classement. Tire pour réessayer.",
+    "empty": {
+      "title": "La saison commence",
+      "description": "Inscris-toi à un tournoi pour gagner tes premiers points pis apparaître au classement."
+    },
+    "seasonSpringSummer": "Printemps/Été {year}",
+    "seasonFallWinter": "Automne/Hiver {year}"
   },
   "leagueList": {
     "title": "Ligues",
@@ -5190,12 +5221,9 @@
       "tournaments": "Rejoindre un tournoi",
       "leagues": "Rejoindre une ligue"
     },
-    "leaderboardCard": {
-      "title": "Défi du mois",
-      "subtitle": "Joue plus, monte plus haut",
-      "rankedSubtitle": "Joue plus pour monter",
-      "unrankedTitle": "Rejoins le défi",
-      "unrankedSubtitle": "Une partie ce mois-ci et t'es dans le coup"
+    "classementsCard": {
+      "challengeNudge": "Une partie ce mois-ci et t'es dans le coup",
+      "circuitNudge": "Fais un tournoi pour te classer"
     },
     "tournamentActionBanner": {
       "title": "Partie de tournoi à planifier",

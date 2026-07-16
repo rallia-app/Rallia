@@ -57,7 +57,8 @@ export type RootStackParamList = {
   MyTournaments: undefined; // Caller's tournaments (organized + registered), reached from Tournaments
   Leagues: undefined; // Public league discovery — full-screen, reached from Home quick-nav (admin-gated; tournaments are not)
   MyLeagues: undefined; // Caller's leagues (organized + member), reached from Leagues or Community
-  Leaderboard: undefined; // Monthly GMA tennis leaderboard — full-screen, reached from Home quick-nav
+  Leaderboard: undefined; // Monthly GMA challenge board — hosted as a tab inside Classements (component, not a route entry point)
+  Classements: { initialTab?: 'challenge' | 'ranking' } | undefined; // Boards hub — monthly challenge + Points Rallia tabs, reached from Home quick-nav
   TournamentDetail: {
     tournamentId: string;
     tournamentName?: string;

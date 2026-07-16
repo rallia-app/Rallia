@@ -3621,57 +3621,75 @@ export type Database = {
       }
       match_smoke_test_lead: {
         Row: {
-          amount_cents: number
+          amount_cents: number | null
+          city: string | null
           created_at: string
           credits: number | null
           email: string | null
           id: string
+          langue: string | null
           location_type: string
           match_format: string | null
           match_nature: string | null
           payment_intent_id: string | null
           phone: string | null
           phone_verified: boolean
-          plan_tier: string
+          plan_tier: string | null
           postal_code: string | null
           rating: string
+          session_id: string | null
+          sport: string | null
           time_slot: string
+          variant_price_cents: number | null
+          variant_valueprop: string | null
           verified_at: string | null
         }
         Insert: {
-          amount_cents: number
+          amount_cents?: number | null
+          city?: string | null
           created_at?: string
           credits?: number | null
           email?: string | null
           id?: string
+          langue?: string | null
           location_type: string
           match_format?: string | null
           match_nature?: string | null
           payment_intent_id?: string | null
           phone?: string | null
           phone_verified?: boolean
-          plan_tier: string
+          plan_tier?: string | null
           postal_code?: string | null
           rating: string
+          session_id?: string | null
+          sport?: string | null
           time_slot: string
+          variant_price_cents?: number | null
+          variant_valueprop?: string | null
           verified_at?: string | null
         }
         Update: {
-          amount_cents?: number
+          amount_cents?: number | null
+          city?: string | null
           created_at?: string
           credits?: number | null
           email?: string | null
           id?: string
+          langue?: string | null
           location_type?: string
           match_format?: string | null
           match_nature?: string | null
           payment_intent_id?: string | null
           phone?: string | null
           phone_verified?: boolean
-          plan_tier?: string
+          plan_tier?: string | null
           postal_code?: string | null
           rating?: string
+          session_id?: string | null
+          sport?: string | null
           time_slot?: string
+          variant_price_cents?: number | null
+          variant_valueprop?: string | null
           verified_at?: string | null
         }
         Relationships: []
@@ -6964,6 +6982,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ranking_season: {
+        Row: {
+          code: string
+          created_at: string
+          ends_at: string
+          id: string
+          label: string
+          starts_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          label: string
+          starts_at: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          label?: string
+          starts_at?: string
+        }
+        Relationships: []
+      }
       rating_proof: {
         Row: {
           auto_flag_confidence: number | null
@@ -8925,6 +8970,84 @@ export type Database = {
           },
         ]
       }
+      tournament_ranking_points: {
+        Row: {
+          computed_at: string
+          id: string
+          level_bucket: string | null
+          placement: string
+          points: number
+          registration_id: string
+          season_id: string
+          sport_id: string
+          tier: string
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          computed_at?: string
+          id?: string
+          level_bucket?: string | null
+          placement: string
+          points: number
+          registration_id: string
+          season_id: string
+          sport_id: string
+          tier: string
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          computed_at?: string
+          id?: string
+          level_bucket?: string | null
+          placement?: string
+          points?: number
+          registration_id?: string
+          season_id?: string
+          sport_id?: string
+          tier?: string
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_ranking_points_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_ranking_points_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_season"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_ranking_points_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_ranking_points_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_ranking_points_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_registrations: {
         Row: {
           approved_at: string | null
@@ -9085,6 +9208,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -9138,6 +9262,7 @@ export type Database = {
           cancelled_reason?: string | null
           categories?: string[]
           city?: string | null
+          completed_at?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -9191,6 +9316,7 @@ export type Database = {
           cancelled_reason?: string | null
           categories?: string[]
           city?: string | null
+          completed_at?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -9505,6 +9631,10 @@ export type Database = {
         Returns: Json
       }
       auto_confirm_expired_scores: { Args: never; Returns: number }
+      award_tournament_ranking_points: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
       calculate_reputation_tier: {
         Args: { min_events?: number; score: number; total_events: number }
         Returns: Database["public"]["Enums"]["reputation_tier"]
@@ -10361,6 +10491,16 @@ export type Database = {
           rank: number
         }[]
       }
+      get_my_tournament_ranking: {
+        Args: { p_season_code?: string }
+        Returns: {
+          events_played: number
+          level_bucket: string
+          points: number
+          rank: number
+          sport_id: string
+        }[]
+      }
       get_nearby_public_matches: {
         Args: {
           p_latitude: number
@@ -11153,6 +11293,24 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_tournament_leaderboard: {
+        Args: {
+          p_level_filter?: string
+          p_limit?: number
+          p_offset?: number
+          p_rating_score_id?: string
+          p_season_code?: string
+          p_sport_id: string
+        }
+        Returns: {
+          avatar_url: string
+          events_played: number
+          full_name: string
+          points: number
+          rank: number
+          user_id: string
+        }[]
+      }
       get_unread_conversations_count: {
         Args: { p_player_id: string }
         Returns: number
@@ -11757,6 +11915,10 @@ export type Database = {
       lt_propagate_match_result_to_session: {
         Args: { p_match_result_id: string }
         Returns: undefined
+      }
+      lt_rating_skill_bucket: {
+        Args: { p_skill_level: Database["public"]["Enums"]["skill_level"] }
+        Returns: string
       }
       lt_registration_display_name: {
         Args: { p_registration_id: string }
@@ -12922,6 +13084,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -13043,6 +13206,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -13105,6 +13269,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -13191,6 +13356,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -13414,6 +13580,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -13517,6 +13684,20 @@ export type Database = {
           winner_registration_id: string
         }[]
       }
+      tournament_ranked_board: {
+        Args: {
+          p_level_filter?: string
+          p_rating_score_id?: string
+          p_season_id: string
+          p_sport_id: string
+        }
+        Returns: {
+          events_played: number
+          points: number
+          rank: number
+          user_id: string
+        }[]
+      }
       tournament_register: {
         Args: { p_partner_id?: string; p_tournament_id: string }
         Returns: {
@@ -13600,6 +13781,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null
@@ -13737,6 +13919,7 @@ export type Database = {
           cancelled_reason: string | null
           categories: string[]
           city: string | null
+          completed_at: string | null
           created_at: string
           currency: string
           description: string | null

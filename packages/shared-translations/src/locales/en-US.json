@@ -4149,7 +4149,7 @@
   },
   "leaderboard": {
     "title": "Monthly Challenge",
-    "subtitle": "{month} challenge · Greater Montreal · {sport}",
+    "subtitle": "{month} · Greater Montreal",
     "pointsNote": "Ranked by games played. Play more to climb the challenge.",
     "yourRank": "You're #{rank} in the challenge",
     "gamesPlayed": "{count} games played",
@@ -4161,6 +4161,37 @@
       "title": "The challenge is on",
       "description": "Play a game to join and start climbing. Every match counts."
     }
+  },
+  "classements": {
+    "title": "Rankings",
+    "tabs": {
+      "challenge": "Monthly challenge",
+      "ranking": "Circuit Rallia"
+    }
+  },
+  "tournamentRanking": {
+    "title": "Circuit Rallia",
+    "subtitle": "{season} season",
+    "pointsNote": "Earn Rallia points by entering and advancing in tournaments.",
+    "filterMyLevel": "My level · {level}",
+    "filterMyRating": "My rating · {rating}",
+    "levels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "points": "pts",
+    "events": "{count} tournaments",
+    "events_one": "{count} tournament",
+    "youSuffix": "(you)",
+    "yourRank": "You're #{rank} this season",
+    "error": "Couldn't load the ranking. Pull to retry.",
+    "empty": {
+      "title": "The season's just getting started",
+      "description": "Enter a tournament to earn your first points and land on the board."
+    },
+    "seasonSpringSummer": "Spring/Summer {year}",
+    "seasonFallWinter": "Fall/Winter {year}"
   },
   "leagueList": {
     "title": "Leagues",
@@ -5190,12 +5221,9 @@
       "tournaments": "Join a tournament",
       "leagues": "Join a league"
     },
-    "leaderboardCard": {
-      "title": "Monthly Challenge",
-      "subtitle": "Play more, climb higher",
-      "rankedSubtitle": "Play more to move up",
-      "unrankedTitle": "Join the challenge",
-      "unrankedSubtitle": "One game this month and you're in"
+    "classementsCard": {
+      "challengeNudge": "One game this month and you're in",
+      "circuitNudge": "Enter a tournament to get ranked"
     },
     "tournamentActionBanner": {
       "title": "Tournament game to schedule",

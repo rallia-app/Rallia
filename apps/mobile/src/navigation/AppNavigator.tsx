@@ -92,7 +92,7 @@ import Tournaments from '#/screens/Tournaments';
 import MyTournaments from '#/screens/MyTournaments';
 import Leagues from '#/screens/Leagues';
 import MyLeagues from '#/screens/MyLeagues';
-import Leaderboard from '#/screens/Leaderboard';
+import Classements from '#/screens/Classements';
 import LeagueDetail from '#/screens/LeagueDetail';
 import SessionDetail from '#/screens/SessionDetail';
 import NetworkMatches from '#/screens/NetworkMatches';
@@ -1606,11 +1606,11 @@ export default function AppNavigator() {
       />
 
       <RootStack.Screen
-        name="Leaderboard"
-        component={Leaderboard}
+        name="Classements"
+        component={Classements}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: t('leaderboard.title'),
+          headerTitle: t('classements.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
