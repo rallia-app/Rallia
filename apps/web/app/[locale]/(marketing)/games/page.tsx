@@ -43,7 +43,7 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
   const { data: matches } = await supabase
     .from('match')
     .select(
-      `*, sport:sport_id (name, slug), facility:facility_id (name, city, latitude, longitude), court:court_id (name), participants:match_participant (id, status, is_host, player_id, player:player_id (profile (display_name, profile_picture_url))), min_rating_score:min_rating_score_id (label)`
+      `*, sport:sport_id (name, slug), facility:facility_id (name, city, latitude, longitude), court:court_id (name), participants:match_participant (id, status, is_host, player_id, player:player_id (profile!player_id_fkey (display_name, profile_picture_url))), min_rating_score:min_rating_score_id (label)`
     )
     .in('id', matchIds);
 

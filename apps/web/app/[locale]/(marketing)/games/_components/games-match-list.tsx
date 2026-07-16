@@ -4,13 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link, useRouter } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { CalendarX, Loader2 } from 'lucide-react';
+import { CalendarX, LayoutGrid, Loader2, MapIcon } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MatchCardSkeleton from './match-card-skeleton';
 import PublicMatchCard, { type PublicMatch } from './public-match-card';
+import GamesMatchMap from './games-match-map';
 import { getRelativeDateLabel } from './utils';
 import { createClient } from '@/lib/supabase/client';
+
+type ViewMode = 'list' | 'map';
 
 const PAGE_SIZE = 36;
 
@@ -63,6 +66,9 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
 
   // Scope filter: all games vs. only the signed-in viewer's games
   const [mineOnly, setMineOnly] = useState(false);
+
+  // List vs. map presentation
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const handleJoin = (matchId: string) => {
     router.push(`/join/match/${matchId}`);
@@ -261,6 +267,14 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
 
   const filterControls = (
     <div className="flex flex-col items-center gap-3">
+      {/* View toggle: list vs. map */}
+      <ViewToggle
+        viewMode={viewMode}
+        onChange={setViewMode}
+        listLabel={t('listView')}
+        mapLabel={t('mapView')}
+      />
+
       {/* Scope toggle: only relevant when signed in */}
       {viewerPlayerId && (
         <ScopeToggle
@@ -283,8 +297,10 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
     </div>
   );
 
-  // Empty state
-  if (matches.length === 0 && locationLoaded) {
+  const mapCenter: [number, number] | null = coords ? [coords.latitude, coords.longitude] : null;
+
+  // Empty state (list view only — map view still renders, centered on the user)
+  if (viewMode === 'list' && matches.length === 0 && locationLoaded) {
     return (
       <>
         {filterControls}
@@ -315,6 +331,34 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
             </Button>
           )}
         </div>
+      </>
+    );
+  }
+
+  if (viewMode === 'map') {
+    return (
+      <>
+        {filterControls}
+        <GamesMatchMap
+          matches={matches}
+          viewerPlayerId={viewerPlayerId}
+          center={mapCenter}
+          onJoin={handleJoin}
+        />
+        {hasMore && (
+          <div className="flex justify-center mt-2">
+            <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {t('loadMore')}
+                </>
+              ) : (
+                t('loadMore')
+              )}
+            </Button>
+          </div>
+        )}
       </>
     );
   }
@@ -369,6 +413,51 @@ export default function GamesMatchList({ initialMatches }: GamesMatchListProps) 
         </div>
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// View Toggle (list vs. map)
+// ---------------------------------------------------------------------------
+
+function ViewToggle({
+  viewMode,
+  onChange,
+  listLabel,
+  mapLabel,
+}: {
+  viewMode: ViewMode;
+  onChange: (mode: ViewMode) => void;
+  listLabel: string;
+  mapLabel: string;
+}) {
+  return (
+    <div className="inline-flex rounded-full bg-muted p-1">
+      <button
+        onClick={() => onChange('list')}
+        className={cn(
+          'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
+          viewMode === 'list'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <LayoutGrid className="size-3.5" />
+        {listLabel}
+      </button>
+      <button
+        onClick={() => onChange('map')}
+        className={cn(
+          'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
+          viewMode === 'map'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <MapIcon className="size-3.5" />
+        {mapLabel}
+      </button>
+    </div>
   );
 }
 
