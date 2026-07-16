@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const DEFAULT_LIMIT = 12;
 
-const MATCH_SELECT = `*, sport:sport_id (name, slug), facility:facility_id (name, city, latitude, longitude), court:court_id (name), participants:match_participant (id, status, is_host, player_id, player:player_id (profile (display_name, profile_picture_url))), min_rating_score:min_rating_score_id (label)`;
+// `profile!player_id_fkey` disambiguates the embed — player now has two FKs to
+// profile (id + certified_organizer_by); PostgREST errors without the hint.
+// Custom lat/lng live directly on the match row and are covered by the `*`.
+const MATCH_SELECT = `*, sport:sport_id (name, slug), facility:facility_id (name, city, latitude, longitude), court:court_id (name), participants:match_participant (id, status, is_host, player_id, player:player_id (profile!player_id_fkey (display_name, profile_picture_url))), min_rating_score:min_rating_score_id (label)`;
 
 // Participation statuses that count as one of "my games" (mirrors getViewerMatchStatus)
 const MINE_STATUSES = ['joined', 'requested', 'waitlisted', 'pending'] as const;

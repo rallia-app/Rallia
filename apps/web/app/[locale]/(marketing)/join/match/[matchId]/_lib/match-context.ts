@@ -61,7 +61,7 @@ export async function getMatchForWebJoin(matchId: string): Promise<WebJoinMatchC
        min_rating_score:min_rating_score_id (label),
        participants:match_participant (
          id, status, is_host, player_id,
-         player:player_id (profile (first_name, last_name, profile_picture_url))
+         player:player_id (profile!player_id_fkey (first_name, last_name, profile_picture_url))
        )`
     )
     .eq('id', matchId)

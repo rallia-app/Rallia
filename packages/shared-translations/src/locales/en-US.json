@@ -10806,6 +10806,9 @@
     "allSports": "All",
     "allGames": "All games",
     "myGames": "My games",
+    "listView": "List",
+    "mapView": "Map",
+    "mapGamesShown": "{count, plural, =0 {No games to show on the map here} =1 {1 game on the map} other {# games on the map}}",
     "copied": "Link copied!",
     "cardStatus": {
       "joined": "You're in",

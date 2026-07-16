@@ -61,6 +61,8 @@ export interface PublicMatch {
   estimated_cost: number | null;
   location_name: string | null;
   location_address?: string | null;
+  custom_latitude?: number | null;
+  custom_longitude?: number | null;
   notes?: string | null;
   sport: { name: string; slug: string } | null;
   facility: {
