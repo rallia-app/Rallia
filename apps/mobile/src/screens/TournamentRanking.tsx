@@ -34,6 +34,7 @@ import {
 import { useTranslation, useThemeStyles } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
+import { lightHaptic } from '#/utils/haptics';
 import {
   BoardRow,
   MyStandingCard,
@@ -71,7 +72,10 @@ const FilterChip: React.FC<{
 }) => (
   <TouchableOpacity
     activeOpacity={0.8}
-    onPress={onPress}
+    onPress={() => {
+      void lightHaptic();
+      onPress();
+    }}
     accessibilityRole="button"
     accessibilityState={{ selected: active }}
     style={[

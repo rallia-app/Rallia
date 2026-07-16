@@ -16,6 +16,7 @@ import { spacingPixels, primary } from '@rallia/design-system';
 
 import { useTranslation, useThemeStyles } from '../hooks';
 import type { RootStackParamList } from '../navigation';
+import { lightHaptic } from '#/utils/haptics';
 
 import Leaderboard from './Leaderboard';
 import TournamentRanking from './TournamentRanking';
@@ -37,7 +38,12 @@ export const Classements: React.FC = () => {
     return (
       <TouchableOpacity
         style={[styles.tab, isActive && [styles.activeTab, { backgroundColor: colors.card }]]}
-        onPress={() => setActiveTab(tab)}
+        onPress={() => {
+          if (tab !== activeTab) {
+            void lightHaptic();
+            setActiveTab(tab);
+          }
+        }}
         activeOpacity={0.8}
       >
         <Ionicons name={icon} size={18} color={isActive ? activeColor : colors.textMuted} />
