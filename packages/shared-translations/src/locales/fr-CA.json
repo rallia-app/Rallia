@@ -4387,6 +4387,32 @@
         "generic": "Ça n'a pas fonctionné. Réessaye."
       }
     },
+    "paid": {
+      "enrollFor": "Embarquer pour {amount}",
+      "pay": "Payer",
+      "confirmTitle": "Confirme ta place",
+      "confirmAmount": "On va te charger {amount}.",
+      "confirmFeeTax": "Inclut {amount} de TPS/TVQ sur les frais de service Rallia.",
+      "confirmFeeNonRefundable": "Les frais de service Rallia ne sont pas remboursables.",
+      "liabilityNotice": "C'est l'organisateur qui gère cette saison, pas Rallia. Rallia s'occupe juste du paiement.",
+      "refundNone": "Aucun remboursement une fois que t'es inscrit.",
+      "refundFull": "Remboursement complet de l'inscription si tu te retires.",
+      "refundFullUntil": "Remboursement complet de l'inscription si tu te retires avant le {date}.",
+      "refundPartial": "{pct} % de l'inscription est remboursé si tu te retires.",
+      "refundPartialUntil": "{pct} % de l'inscription est remboursé si tu te retires avant le {date}.",
+      "withdrawConfirmTitle": "Quitter cette saison?",
+      "withdrawConfirmRefund": "Tu vas ravoir {amount}. Les frais de service ne sont pas remboursés.",
+      "withdrawConfirmNoRefund": "La période de remboursement est passée, tu ne seras pas remboursé.",
+      "refunded": "C'est fait. {amount} s'en revient vers toi.",
+      "errors": {
+        "seasonNotOpen": "Cette saison n'est pas ouverte aux inscriptions.",
+        "alreadyEnrolled": "T'es déjà inscrit à cette saison.",
+        "organizerNotReady": "L'organisateur ne peut pas encore recevoir de paiements. Réessaye plus tard.",
+        "notMember": "Rejoins la ligue avant de t'inscrire à une saison.",
+        "refundFailed": "Impossible de traiter le remboursement. Réessaye.",
+        "generic": "Le paiement n'a pas passé. Réessaye."
+      }
+    },
     "sections": {
       "pending": "En attente d'approbation",
       "members": "Membres",
@@ -4395,7 +4421,8 @@
     "seasonStatus": {
       "draft": "Brouillon",
       "open": "Ouverte",
-      "closed": "Fermée"
+      "closed": "Fermée",
+      "cancelled": "Annulée"
     },
     "sessionStatus": {
       "draft": "Brouillon",

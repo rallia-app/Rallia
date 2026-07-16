@@ -4387,6 +4387,32 @@
         "generic": "That didn't work. Please try again."
       }
     },
+    "paid": {
+      "enrollFor": "Join for {amount}",
+      "pay": "Pay",
+      "confirmTitle": "Confirm your spot",
+      "confirmAmount": "You'll be charged {amount}.",
+      "confirmFeeTax": "Includes {amount} GST/QST on the Rallia service fee.",
+      "confirmFeeNonRefundable": "The Rallia service fee isn't refundable.",
+      "liabilityNotice": "The organizer runs this season, not Rallia. Rallia only handles the payment.",
+      "refundNone": "No refunds once you've joined.",
+      "refundFull": "Full refund of the entry if you withdraw.",
+      "refundFullUntil": "Full refund of the entry if you withdraw before {date}.",
+      "refundPartial": "{pct}% of the entry is refunded if you withdraw.",
+      "refundPartialUntil": "{pct}% of the entry is refunded if you withdraw before {date}.",
+      "withdrawConfirmTitle": "Leave this season?",
+      "withdrawConfirmRefund": "You'll get {amount} back. The service fee isn't refunded.",
+      "withdrawConfirmNoRefund": "This season's refund window has closed, so you won't get money back.",
+      "refunded": "You're out. {amount} is on its way back.",
+      "errors": {
+        "seasonNotOpen": "This season isn't open for sign-ups.",
+        "alreadyEnrolled": "You're already in this season.",
+        "organizerNotReady": "The organizer can't take payments yet. Try again later.",
+        "notMember": "Join the league before signing up for a season.",
+        "refundFailed": "Couldn't process the refund. Please try again.",
+        "generic": "The payment didn't go through. Please try again."
+      }
+    },
     "sections": {
       "pending": "Pending approval",
       "members": "Members",
@@ -4395,7 +4421,8 @@
     "seasonStatus": {
       "draft": "Draft",
       "open": "Open",
-      "closed": "Closed"
+      "closed": "Closed",
+      "cancelled": "Cancelled"
     },
     "sessionStatus": {
       "draft": "Draft",

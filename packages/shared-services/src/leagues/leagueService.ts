@@ -8,8 +8,10 @@ import type { Tables, Enums } from '@rallia/shared-types';
 
 import {
   getProfilesByIds,
+  TournamentPaymentError,
   type PlayerProfile,
   type LinkableMatch,
+  type RegistrationPaymentIntent,
 } from '../tournaments/tournamentService';
 import { supabase } from '../supabase';
 
@@ -250,6 +252,181 @@ export async function closeLeague(
   return data as League;
 }
 
+// ---------------------------------------------------------------------------
+// Paid seasons
+//
+// The paid unit is the SEASON: a league is permanent, you pay to play a season.
+// Both edge functions are shared with tournaments and return the same shapes,
+// so TournamentPaymentError is reused rather than cloned — the code strings are
+// what differ ('season_not_open' vs 'tournament_reg_closed').
+// ---------------------------------------------------------------------------
+
+export interface SeasonFeeQuote {
+  entryCents: number;
+  serviceFeeCents: number;
+  /** GST/QST on the service fee (Rallia remits). Never refunded. */
+  feeTaxCents: number;
+  /** What the player is charged. */
+  totalCents: number;
+  organizerReceivesCents: number;
+  feePayer: Enums<'fee_payer_enum'>;
+  currency: string;
+  refundPolicyKind: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps: number | null;
+  refundCutoffAt: string | null;
+}
+
+/** Returns null for a free season. */
+export async function getSeasonFeeQuote(seasonId: string): Promise<SeasonFeeQuote | null> {
+  const { data, error } = await supabase.rpc('season_fee_quote', { p_season_id: seasonId });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || row.entry_cents <= 0) return null;
+  return {
+    entryCents: row.entry_cents,
+    serviceFeeCents: row.service_fee_cents,
+    feeTaxCents: row.fee_tax_cents,
+    totalCents: row.total_cents,
+    organizerReceivesCents: row.organizer_receives_cents,
+    feePayer: row.fee_payer,
+    currency: row.currency,
+    refundPolicyKind: row.refund_policy_kind,
+    refundPartialBps: row.refund_partial_bps,
+    refundCutoffAt: row.refund_cutoff_at,
+  };
+}
+
+/**
+ * Claim a season slot at payment_pending and open a Stripe PaymentIntent. The
+ * caller drives the PaymentSheet with `clientSecret`; the webhook flips the
+ * member to 'enrolled'. Throws TournamentPaymentError(code) on guard failures.
+ */
+export async function createSeasonEnrollmentPayment(
+  seasonId: string
+): Promise<RegistrationPaymentIntent> {
+  const { data, error } = await supabase.functions.invoke('lt-create-registration-payment', {
+    body: { seasonId },
+  });
+
+  // Guard failures come back as { error: code }; supabase-js surfaces non-2xx as
+  // `error` (body on error.context) and may leave data null, so check both.
+  let code: string | undefined = (data as { error?: string } | null)?.error;
+  if (!code && error) {
+    const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+    if (ctx?.json) {
+      try {
+        code = (await ctx.json())?.error;
+      } catch {
+        // body wasn't JSON — fall through
+      }
+    }
+  }
+  if (code) throw new TournamentPaymentError(code);
+  if (error || !data?.clientSecret) throw new Error(error?.message ?? 'no_client_secret');
+
+  return {
+    clientSecret: data.clientSecret,
+    paymentId: data.paymentId,
+    entryCents: data.entryCents,
+    serviceFeeCents: data.serviceFeeCents,
+    feeTaxCents: data.feeTaxCents,
+    amountChargedCents: data.amountChargedCents,
+    currency: data.currency,
+  };
+}
+
+/** Withdraw from a paid season and refund per policy. The entry only — the
+ *  service fee and its tax are never returned. */
+export async function refundSeasonEnrollment(
+  seasonMemberId: string,
+  versionWas: number
+): Promise<{ withdrawn: boolean; refundedCents: number }> {
+  const { data, error } = await supabase.functions.invoke('lt-refund-registration', {
+    body: { seasonMemberId, versionWas },
+  });
+
+  let code: string | undefined = (data as { error?: string } | null)?.error;
+  if (!code && error) {
+    const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+    if (ctx?.json) {
+      try {
+        code = (await ctx.json())?.error;
+      } catch {
+        // non-JSON body — fall through
+      }
+    }
+  }
+  if (code) throw new TournamentPaymentError(code);
+  if (error) throw new Error(error.message);
+
+  return { withdrawn: !!data?.withdrawn, refundedCents: data?.refundedCents ?? 0 };
+}
+
+export interface SeasonUpdatePatch {
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  rules?: Record<string, unknown>;
+  // Server gates all fee fields to 'draft' — once a season opens, the price
+  // someone agreed to is history.
+  entryFeeCents?: number;
+  feePayer?: Enums<'fee_payer_enum'>;
+  payoutTiming?: Enums<'payout_timing_enum'>;
+  refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps?: number | null;
+  refundCutoffAt?: string | null;
+}
+
+const SEASON_UPDATE_PATCH_COLUMNS: Record<keyof SeasonUpdatePatch, string> = {
+  name: 'name',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  rules: 'rules',
+  entryFeeCents: 'entry_fee_cents',
+  feePayer: 'fee_payer',
+  payoutTiming: 'payout_timing',
+  refundPolicyKind: 'refund_policy_kind',
+  refundPartialBps: 'refund_partial_bps',
+  refundCutoffAt: 'refund_cutoff_at',
+};
+
+export async function updateSeason(
+  seasonId: string,
+  versionWas: number,
+  patch: SeasonUpdatePatch
+): Promise<Season> {
+  const snakePatch: Record<string, LeaguePatchValue> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined) {
+      snakePatch[SEASON_UPDATE_PATCH_COLUMNS[key as keyof SeasonUpdatePatch]] =
+        value as LeaguePatchValue;
+    }
+  }
+  const { data, error } = await supabase.rpc('season_update', {
+    p_season_id: seasonId,
+    p_version_was: versionWas,
+    p_patch: snakePatch,
+  });
+  if (error) throw new Error(error.message);
+  return data as Season;
+}
+
+/** Cancels the season and its pending sessions. This is what makes paid
+ *  enrolments refundable — the settle cron picks cancelled seasons up. */
+export async function cancelSeason(
+  seasonId: string,
+  reason: string | null,
+  versionWas: number
+): Promise<Season> {
+  const { data, error } = await supabase.rpc('season_cancel', {
+    p_season_id: seasonId,
+    p_reason: reason,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Season;
+}
+
 export async function joinLeague(leagueId: string): Promise<LeagueMember> {
   const { data, error } = await supabase.rpc('league_join', { p_league_id: leagueId });
   if (error) throw new Error(error.message);
@@ -316,6 +493,13 @@ export async function createSeason(input: {
   startDate: string;
   endDate: string;
   rulesOverride?: Record<string, unknown>;
+  /** Omit or 0 for a free season. */
+  entryFeeCents?: number;
+  feePayer?: Enums<'fee_payer_enum'>;
+  payoutTiming?: Enums<'payout_timing_enum'>;
+  refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+  refundPartialBps?: number | null;
+  refundCutoffAt?: string | null;
 }): Promise<Season> {
   const { data, error } = await supabase.rpc('season_create', {
     p_league_id: input.leagueId,
@@ -323,6 +507,12 @@ export async function createSeason(input: {
     p_start_date: input.startDate,
     p_end_date: input.endDate,
     p_rules_override: input.rulesOverride ?? null,
+    p_entry_fee_cents: input.entryFeeCents ?? 0,
+    p_fee_payer: input.feePayer ?? 'player_pays',
+    p_payout_timing: input.payoutTiming ?? 'hold_until_event_end',
+    p_refund_policy_kind: input.refundPolicyKind ?? 'none',
+    p_refund_partial_bps: input.refundPartialBps ?? null,
+    p_refund_cutoff_at: input.refundCutoffAt ?? null,
   });
   if (error) throw new Error(error.message);
   return data as Season;

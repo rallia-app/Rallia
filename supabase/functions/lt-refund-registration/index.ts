@@ -13,7 +13,9 @@
  * the refund, and `refund_application_fee:false`, which keeps Rallia's fee.
  *
  * POST /lt-refund-registration   (authenticated — JWT validated internally)
- * Body:    { registrationId: string, versionWas: number }
+ * Body:    { registrationId: string, versionWas: number }    -- tournament entry
+ *      or  { seasonMemberId: string, versionWas: number }    -- league season entry
+ *          (exactly one of registrationId / seasonMemberId)
  * Success: { withdrawn: true, refundedCents: number }
  * Errors:  { error: ErrorCode }
  *
@@ -36,6 +38,8 @@ type ErrorCode =
   | 'registration_not_found'
   | 'withdraw_not_allowed'
   | 'no_paid_registration'
+  | 'enrollment_not_found'
+  | 'no_paid_enrollment'
   | 'lock_conflict'
   | 'refund_failed'
   | 'internal_error';
@@ -60,6 +64,10 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'withdraw_not_allowed';
     case 'NO_PAID_REGISTRATION':
       return 'no_paid_registration';
+    case 'ENROLLMENT_NOT_FOUND':
+      return 'enrollment_not_found';
+    case 'NO_PAID_ENROLLMENT':
+      return 'no_paid_enrollment';
     case 'OPTIMISTIC_LOCK_CONFLICT':
       return 'lock_conflict';
     default:
@@ -95,23 +103,36 @@ Deno.serve(async req => {
     } = await userClient.auth.getUser();
     if (authError || !user) return err('invalid_auth', 401);
 
-    let registrationId: string;
+    // Exactly one of registrationId (tournament) / seasonMemberId (season).
+    // Both RPCs return the same 8-column plan, so everything downstream is shared.
+    let registrationId: string | null = null;
+    let seasonMemberId: string | null = null;
     let versionWas: number;
     try {
       const body = await req.json();
-      registrationId = body?.registrationId;
+      if (body?.registrationId && typeof body.registrationId === 'string') {
+        registrationId = body.registrationId;
+      }
+      if (body?.seasonMemberId && typeof body.seasonMemberId === 'string') {
+        seasonMemberId = body.seasonMemberId;
+      }
       versionWas = body?.versionWas;
-      if (!registrationId || typeof registrationId !== 'string') throw new Error();
+      if (!registrationId === !seasonMemberId) throw new Error();
       if (typeof versionWas !== 'number') throw new Error();
     } catch {
       return err('invalid_body');
     }
 
     // Withdraw + compute the refundable entry (as the user; SECURITY DEFINER).
-    const { data: rows, error: rpcError } = await userClient.rpc('tournament_request_refund', {
-      p_registration_id: registrationId,
-      p_version_was: versionWas,
-    });
+    const { data: rows, error: rpcError } = registrationId
+      ? await userClient.rpc('tournament_request_refund', {
+          p_registration_id: registrationId,
+          p_version_was: versionWas,
+        })
+      : await userClient.rpc('season_request_refund', {
+          p_season_member_id: seasonMemberId,
+          p_version_was: versionWas,
+        });
     if (rpcError) return err(mapRpcError(rpcError.message), 400);
 
     const plan = (Array.isArray(rows) ? rows[0] : rows) as RefundPlan | undefined;
