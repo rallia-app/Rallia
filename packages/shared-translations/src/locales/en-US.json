@@ -5047,6 +5047,7 @@
     "payments": {
       "stepTitle": "Entry & payments",
       "stepDescription": "Set an entry fee, choose who covers the service fee, and your refund policy",
+      "stepDescriptionFree": "This event is free to enter. You can add optional prize money below.",
       "lockedNote": "Entry fee and refund policy lock once registration opens",
       "entryFeeLabel": "Entry fee",
       "entryFeeHintFree": "Leave at $0 for a free event — players register with no payment",
