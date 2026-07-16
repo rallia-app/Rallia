@@ -4365,6 +4365,28 @@
         "generic": "Couldn't save the changes. Please try again."
       }
     },
+    "lifecycle": {
+      "pause": "Pause league",
+      "resume": "Resume league",
+      "close": "Close league",
+      "pausing": "Pausing...",
+      "resuming": "Resuming...",
+      "closing": "Closing...",
+      "paused": "League paused",
+      "resumed": "League resumed",
+      "closed": "League closed",
+      "pausedBanner": "This league is paused. No new members or sessions until you resume it.",
+      "closedBanner": "This league is closed.",
+      "pauseConfirmTitle": "Pause this league?",
+      "pauseConfirmBody": "No one can join and you can't add sessions while it's paused. Games already scheduled still go ahead. You can resume anytime.",
+      "closeConfirmTitle": "Close this league?",
+      "closeConfirmBody": "This can't be undone. The league becomes read-only and members keep access to past seasons.",
+      "errors": {
+        "hasOpenSeasons": "Close the open season before closing the league.",
+        "stale": "This league changed since you opened it. Refresh and try again.",
+        "generic": "That didn't work. Please try again."
+      }
+    },
     "sections": {
       "pending": "Pending approval",
       "members": "Members",

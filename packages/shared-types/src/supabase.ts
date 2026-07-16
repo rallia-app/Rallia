@@ -2489,6 +2489,8 @@ export type Database = {
       leagues: {
         Row: {
           categories: string[]
+          closed_at: string | null
+          closed_reason: string | null
           created_at: string
           default_rules: Json
           description: string | null
@@ -2515,6 +2517,8 @@ export type Database = {
         }
         Insert: {
           categories?: string[]
+          closed_at?: string | null
+          closed_reason?: string | null
           created_at?: string
           default_rules?: Json
           description?: string | null
@@ -2541,6 +2545,8 @@ export type Database = {
         }
         Update: {
           categories?: string[]
+          closed_at?: string | null
+          closed_reason?: string | null
           created_at?: string
           default_rules?: Json
           description?: string | null
@@ -11614,6 +11620,43 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_close: {
+        Args: { p_league_id: string; p_reason: string; p_version_was: number }
+        Returns: {
+          categories: string[]
+          closed_at: string | null
+          closed_reason: string | null
+          created_at: string
+          default_rules: Json
+          description: string | null
+          facility_id: string | null
+          id: string
+          join_mode: Database["public"]["Enums"]["tournament_registration_mode"]
+          level: string | null
+          logo_url: string | null
+          max_rating: number | null
+          member_capacity: number | null
+          min_rating: number | null
+          min_reputation: number | null
+          name: string
+          network_id: string | null
+          organizer_id: string
+          sport_id: string
+          status: Database["public"]["Enums"]["league_status"]
+          surfaces: string[]
+          updated_at: string
+          venue_name: string | null
+          version: number
+          visibility: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_create: {
         Args: {
           p_description?: string
@@ -11630,6 +11673,8 @@ export type Database = {
         }
         Returns: {
           categories: string[]
+          closed_at: string | null
+          closed_reason: string | null
           created_at: string
           default_rules: Json
           description: string | null
@@ -11720,6 +11765,43 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_pause: {
+        Args: { p_league_id: string; p_version_was: number }
+        Returns: {
+          categories: string[]
+          closed_at: string | null
+          closed_reason: string | null
+          created_at: string
+          default_rules: Json
+          description: string | null
+          facility_id: string | null
+          id: string
+          join_mode: Database["public"]["Enums"]["tournament_registration_mode"]
+          level: string | null
+          logo_url: string | null
+          max_rating: number | null
+          member_capacity: number | null
+          min_rating: number | null
+          min_reputation: number | null
+          name: string
+          network_id: string | null
+          organizer_id: string
+          sport_id: string
+          status: Database["public"]["Enums"]["league_status"]
+          surfaces: string[]
+          updated_at: string
+          venue_name: string | null
+          version: number
+          visibility: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_reinstate_member: {
         Args: { p_member_id: string; p_version_was: number }
         Returns: {
@@ -11770,6 +11852,43 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_resume: {
+        Args: { p_league_id: string; p_version_was: number }
+        Returns: {
+          categories: string[]
+          closed_at: string | null
+          closed_reason: string | null
+          created_at: string
+          default_rules: Json
+          description: string | null
+          facility_id: string | null
+          id: string
+          join_mode: Database["public"]["Enums"]["tournament_registration_mode"]
+          level: string | null
+          logo_url: string | null
+          max_rating: number | null
+          member_capacity: number | null
+          min_rating: number | null
+          min_reputation: number | null
+          name: string
+          network_id: string | null
+          organizer_id: string
+          sport_id: string
+          status: Database["public"]["Enums"]["league_status"]
+          surfaces: string[]
+          updated_at: string
+          venue_name: string | null
+          version: number
+          visibility: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -11837,6 +11956,8 @@ export type Database = {
         Args: { p_league_id: string; p_patch: Json; p_version_was: number }
         Returns: {
           categories: string[]
+          closed_at: string | null
+          closed_reason: string | null
           created_at: string
           default_rules: Json
           description: string | null

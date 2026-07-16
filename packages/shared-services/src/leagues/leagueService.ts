@@ -213,6 +213,43 @@ export async function updateLeague(
   return data as League;
 }
 
+/**
+ * Lifecycle transitions. Each is version-guarded server-side, so a stale copy
+ * raises OPTIMISTIC_LOCK_CONFLICT rather than silently re-applying.
+ */
+export async function pauseLeague(leagueId: string, versionWas: number): Promise<League> {
+  const { data, error } = await supabase.rpc('league_pause', {
+    p_league_id: leagueId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as League;
+}
+
+export async function resumeLeague(leagueId: string, versionWas: number): Promise<League> {
+  const { data, error } = await supabase.rpc('league_resume', {
+    p_league_id: leagueId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as League;
+}
+
+/** Terminal. Refuses with LEAGUE_HAS_OPEN_SEASONS until every season is closed. */
+export async function closeLeague(
+  leagueId: string,
+  reason: string | null,
+  versionWas: number
+): Promise<League> {
+  const { data, error } = await supabase.rpc('league_close', {
+    p_league_id: leagueId,
+    p_reason: reason,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as League;
+}
+
 export async function joinLeague(leagueId: string): Promise<LeagueMember> {
   const { data, error } = await supabase.rpc('league_join', { p_league_id: leagueId });
   if (error) throw new Error(error.message);

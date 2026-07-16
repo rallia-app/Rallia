@@ -47,6 +47,9 @@ import {
   useRemoveLeagueMember,
   useSuspendLeagueMember,
   useReinstateLeagueMember,
+  usePauseLeague,
+  useResumeLeague,
+  useCloseLeague,
   useOpenSeason,
   useCloseSeason,
   useSeasonSessions,
@@ -1150,6 +1153,99 @@ export const LeagueDetail: React.FC = () => {
     });
   }, [league]);
 
+  // All three lifecycle transitions map their server errors the same way.
+  const lifecycleErrorHandler = useCallback(
+    (err: Error) => {
+      const msg = err.message || '';
+      const key = msg.includes('LEAGUE_HAS_OPEN_SEASONS')
+        ? 'leagueDetail.lifecycle.errors.hasOpenSeasons'
+        : msg.includes('OPTIMISTIC_LOCK_CONFLICT') ||
+            msg.includes('LEAGUE_NOT_ACTIVE') ||
+            msg.includes('LEAGUE_NOT_PAUSED') ||
+            msg.includes('LEAGUE_NOT_CLOSABLE')
+          ? 'leagueDetail.lifecycle.errors.stale'
+          : 'leagueDetail.lifecycle.errors.generic';
+      warningHaptic();
+      toast.error(t(key as TranslationKey));
+    },
+    [t, toast]
+  );
+
+  const { pauseLeagueAsync, isPausing } = usePauseLeague({ onError: lifecycleErrorHandler });
+  const { resumeLeagueAsync, isResuming } = useResumeLeague({ onError: lifecycleErrorHandler });
+  const { closeLeagueAsync, isClosing } = useCloseLeague({ onError: lifecycleErrorHandler });
+
+  const handlePauseLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    Alert.alert(
+      t('leagueDetail.lifecycle.pauseConfirmTitle'),
+      t('leagueDetail.lifecycle.pauseConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.lifecycle.pause'),
+          onPress: () => {
+            void (async () => {
+              try {
+                await pauseLeagueAsync({ leagueId: league.id, versionWas: league.version });
+                successHaptic();
+                toast.success(t('leagueDetail.lifecycle.paused'));
+              } catch {
+                // toast handled in hook
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [league, pauseLeagueAsync, t, toast]);
+
+  const handleResumeLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    void (async () => {
+      try {
+        await resumeLeagueAsync({ leagueId: league.id, versionWas: league.version });
+        successHaptic();
+        toast.success(t('leagueDetail.lifecycle.resumed'));
+      } catch {
+        // toast handled in hook
+      }
+    })();
+  }, [league, resumeLeagueAsync, t, toast]);
+
+  const handleCloseLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    Alert.alert(
+      t('leagueDetail.lifecycle.closeConfirmTitle'),
+      t('leagueDetail.lifecycle.closeConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.lifecycle.close'),
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await closeLeagueAsync({
+                  leagueId: league.id,
+                  reason: null,
+                  versionWas: league.version,
+                });
+                successHaptic();
+                toast.success(t('leagueDetail.lifecycle.closed'));
+              } catch {
+                // toast handled in hook
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [league, closeLeagueAsync, t, toast]);
+
   const handleOpenCreateSeason = useCallback(() => {
     lightHaptic();
     void SheetManager.show('create-season', { payload: { leagueId } });
@@ -1417,6 +1513,34 @@ export const LeagueDetail: React.FC = () => {
         {/* Overview */}
         {currentTabKey === 'overview' && (
           <View style={styles.tabContent}>
+            {/* Paused/closed are otherwise invisible to members — the controls
+                that change are all organizer-only. */}
+            {league.status !== 'active' && (
+              <View
+                style={[
+                  styles.section,
+                  styles.lifecycleBanner,
+                  { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
+                ]}
+                testID="league-lifecycle-banner"
+              >
+                <Ionicons
+                  name={league.status === 'paused' ? 'pause-circle-outline' : 'lock-closed-outline'}
+                  size={18}
+                  color={colors.statusMutedText}
+                />
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={colors.statusMutedText}
+                  style={styles.flex1}
+                >
+                  {league.status === 'paused'
+                    ? t('leagueDetail.lifecycle.pausedBanner')
+                    : t('leagueDetail.lifecycle.closedBanner')}
+                </Text>
+              </View>
+            )}
             <View
               style={[
                 styles.section,
@@ -1655,6 +1779,78 @@ export const LeagueDetail: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
+
+            {/* Lifecycle. Pause/resume are mutually exclusive on status; close is
+                terminal so it's hidden once closed rather than shown and refused. */}
+            {isOrganizer && league.status === 'active' && (
+              <TouchableOpacity
+                onPress={handlePauseLeague}
+                disabled={isPausing}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  },
+                  isPausing && styles.buttonDisabled,
+                ]}
+                testID="cta-pause-league"
+              >
+                <Ionicons name="pause-circle-outline" size={20} color={colors.textMuted} />
+                <Text size="base" weight="semibold" color={colors.textMuted}>
+                  {isPausing
+                    ? t('leagueDetail.lifecycle.pausing')
+                    : t('leagueDetail.lifecycle.pause')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {isOrganizer && league.status === 'paused' && (
+              <TouchableOpacity
+                onPress={handleResumeLeague}
+                disabled={isResuming}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  { backgroundColor: colors.primary },
+                  isResuming && styles.buttonDisabled,
+                ]}
+                testID="cta-resume-league"
+              >
+                <Ionicons name="play-circle-outline" size={20} color="#ffffff" />
+                <Text size="base" weight="semibold" color="#ffffff">
+                  {isResuming
+                    ? t('leagueDetail.lifecycle.resuming')
+                    : t('leagueDetail.lifecycle.resume')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {isOrganizer && league.status !== 'closed' && (
+              <TouchableOpacity
+                onPress={handleCloseLeague}
+                disabled={isClosing}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderWidth: 1,
+                    borderColor: colors.danger,
+                  },
+                  isClosing && styles.buttonDisabled,
+                ]}
+                testID="cta-close-league"
+              >
+                <Ionicons name="lock-closed-outline" size={20} color={colors.danger} />
+                <Text size="base" weight="semibold" color={colors.danger}>
+                  {isClosing
+                    ? t('leagueDetail.lifecycle.closing')
+                    : t('leagueDetail.lifecycle.close')}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <PendingMembersSection
               rows={pendingMemberRows}
               onPlayerPress={handlePlayerPress}
@@ -2122,6 +2318,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.lg,
     padding: spacingPixels[4],
+  },
+  lifecycleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+  },
+  flex1: {
+    flex: 1,
   },
   stepperRow: {
     flexDirection: 'row',

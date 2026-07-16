@@ -47,6 +47,9 @@ import {
   regenerateSessionSheet,
   setSessionMatchLock,
   updateLeague,
+  pauseLeague,
+  resumeLeague,
+  closeLeague,
   type CreateLeagueInput,
   type League,
   type LeagueListItem,
@@ -224,6 +227,56 @@ export function useUpdateLeague(options: MutationOptions<League> = {}) {
     isUpdating: mutation.isPending,
     error: mutation.error,
   };
+}
+
+/**
+ * Lifecycle transitions share a shape: version-guarded, invalidate the detail +
+ * lists (status drives list filtering and every organizer control).
+ */
+function useLeagueLifecycleMutation(
+  fn: (leagueId: string, versionWas: number) => Promise<League>,
+  options: MutationOptions<League> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  return useMutation<League, Error, { leagueId: string; versionWas: number }>({
+    mutationFn: ({ leagueId, versionWas }) => fn(leagueId, versionWas),
+    onSuccess: league => {
+      invalidate(league.id);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      options.onSuccess?.(league);
+    },
+    onError: e => options.onError?.(e),
+  });
+}
+
+export function usePauseLeague(options: MutationOptions<League> = {}) {
+  const mutation = useLeagueLifecycleMutation(pauseLeague, options);
+  return { pauseLeagueAsync: mutation.mutateAsync, isPausing: mutation.isPending };
+}
+
+export function useResumeLeague(options: MutationOptions<League> = {}) {
+  const mutation = useLeagueLifecycleMutation(resumeLeague, options);
+  return { resumeLeagueAsync: mutation.mutateAsync, isResuming: mutation.isPending };
+}
+
+export function useCloseLeague(options: MutationOptions<League> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    League,
+    Error,
+    { leagueId: string; reason: string | null; versionWas: number }
+  >({
+    mutationFn: ({ leagueId, reason, versionWas }) => closeLeague(leagueId, reason, versionWas),
+    onSuccess: league => {
+      invalidate(league.id);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      options.onSuccess?.(league);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return { closeLeagueAsync: mutation.mutateAsync, isClosing: mutation.isPending };
 }
 
 export function useJoinLeague(leagueId: string, options: MutationOptions<LeagueMember> = {}) {

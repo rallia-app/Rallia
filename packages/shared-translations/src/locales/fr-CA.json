@@ -4365,6 +4365,28 @@
         "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
       }
     },
+    "lifecycle": {
+      "pause": "Mettre la ligue en pause",
+      "resume": "Reprendre la ligue",
+      "close": "Fermer la ligue",
+      "pausing": "Mise en pause...",
+      "resuming": "Reprise...",
+      "closing": "Fermeture...",
+      "paused": "Ligue en pause",
+      "resumed": "Ligue reprise",
+      "closed": "Ligue fermée",
+      "pausedBanner": "Cette ligue est en pause. Aucun nouveau membre ni séance tant que tu ne la reprends pas.",
+      "closedBanner": "Cette ligue est fermée.",
+      "pauseConfirmTitle": "Mettre cette ligue en pause?",
+      "pauseConfirmBody": "Personne ne peut s'inscrire et tu ne peux pas ajouter de séances pendant la pause. Les parties déjà planifiées ont lieu quand même. Tu peux reprendre en tout temps.",
+      "closeConfirmTitle": "Fermer cette ligue?",
+      "closeConfirmBody": "C'est irréversible. La ligue devient en lecture seule et les membres gardent accès aux saisons passées.",
+      "errors": {
+        "hasOpenSeasons": "Ferme la saison en cours avant de fermer la ligue.",
+        "stale": "Cette ligue a changé depuis que tu l'as ouverte. Actualise et réessaye.",
+        "generic": "Ça n'a pas fonctionné. Réessaye."
+      }
+    },
     "sections": {
       "pending": "En attente d'approbation",
       "members": "Membres",
