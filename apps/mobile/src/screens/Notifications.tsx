@@ -42,6 +42,7 @@ import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
 import { useCommunityNavigation, useAppNavigation } from '#/navigation/hooks';
 import SignInPrompt from '#/components/SignInPrompt';
 import { SportIcon } from '#/components/SportIcon';
+import { renderNearbyMatchCard } from './nearbyNotificationCard';
 
 // Notification-type routing groups (match, community, reference, tournament,
 // league, session, payouts) come from @rallia/shared-types so this screen and
@@ -188,7 +189,19 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   const notificationType = notification.type;
   const iconName = NOTIFICATION_TYPE_ICONS[notificationType] ?? 'notifications-outline';
   const iconColor = NOTIFICATION_TYPE_COLORS[notificationType] ?? primary[500];
-  const notificationTitle = getNotificationTitle(notification, t);
+
+  // nearby_match_available stores an English fallback; re-render it from the
+  // payload in the viewer's locale so French users get French, EN get English.
+  const nearbyCard =
+    notificationType === 'nearby_match_available'
+      ? renderNearbyMatchCard(
+          notification.payload as Record<string, unknown> | null | undefined,
+          locale,
+          t
+        )
+      : null;
+  const notificationTitle = nearbyCard ? nearbyCard.title : getNotificationTitle(notification, t);
+  const notificationBody = nearbyCard ? nearbyCard.body : notification.body;
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const cardColors = {
@@ -248,14 +261,14 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               {notificationTitle}
             </Text>
           </View>
-          {notification.body && (
+          {notificationBody && (
             <Text
               size="sm"
               color={cardColors.textSecondary}
               numberOfLines={3}
               style={styles.bodyText}
             >
-              {notification.body}
+              {notificationBody}
             </Text>
           )}
           <Text size="xs" color={cardColors.textSecondary} style={styles.timeText}>
