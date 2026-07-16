@@ -5047,6 +5047,7 @@
     "payments": {
       "stepTitle": "Frais et paiements",
       "stepDescription": "Fixe des frais d'inscription, choisis qui paie les frais de service pis ta politique de remboursement",
+      "stepDescriptionFree": "L'inscription à cet événement est gratuite. Tu peux ajouter une bourse optionnelle plus bas.",
       "lockedNote": "Les frais d'inscription et la politique de remboursement se verrouillent à l'ouverture des inscriptions",
       "entryFeeLabel": "Frais d'inscription",
       "entryFeeHintFree": "Laisse à 0 $ pour un événement gratuit, les joueurs s'inscrivent sans payer",

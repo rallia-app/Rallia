@@ -82,6 +82,9 @@ import * as Analytics from '../../../services/analytics';
 const BASE_WHITE = '#ffffff';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 4;
+// Paid tournaments are gated off for now: new events are free-only. Flip to true
+// to restore entry-fee creation (all fee wiring is kept intact behind this flag).
+const PAID_TOURNAMENTS_ENABLED = false;
 const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number];
 
@@ -1476,6 +1479,7 @@ const PaymentsStep: React.FC<{
   setPrizeMoneyInput: (v: string) => void;
   startDate: Date | null;
   feeLocked: boolean;
+  allowEntryFee: boolean;
   errors: Record<string, string | undefined>;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
@@ -1497,6 +1501,7 @@ const PaymentsStep: React.FC<{
   setPrizeMoneyInput,
   startDate,
   feeLocked,
+  allowEntryFee,
   errors,
   colors,
   t,
@@ -1646,45 +1651,49 @@ const PaymentsStep: React.FC<{
           {t('tournamentCreation.payments.stepTitle' as TranslationKey)}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('tournamentCreation.payments.stepDescription' as TranslationKey)}
+          {allowEntryFee
+            ? t('tournamentCreation.payments.stepDescription' as TranslationKey)
+            : t('tournamentCreation.payments.stepDescriptionFree' as TranslationKey)}
         </Text>
       </View>
 
-      {/* Entry fee */}
-      <View style={styles.fieldGroup}>
-        <FieldLabel colors={colors}>
-          {t('tournamentCreation.payments.entryFeeLabel' as TranslationKey)}
-        </FieldLabel>
-        <View
-          style={[
-            styles.textInput,
-            styles.feeInputRow,
-            { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
-          ]}
-        >
-          <Text size="base" weight="semibold" color={colors.textMuted}>
-            $
-          </Text>
-          <TextInput
-            style={[styles.feeInputField, { color: colors.text }]}
-            placeholder="0"
-            placeholderTextColor={colors.textMuted}
-            value={entryFeeInput}
-            onChangeText={setEntryFeeInput}
-            keyboardType="decimal-pad"
-            maxLength={7}
-            testID="tournament-entry-fee-input"
-          />
-          <Text size="sm" color={colors.textMuted}>
-            {FEE_CURRENCY}
+      {/* Entry fee — hidden while paid tournaments are gated off */}
+      {allowEntryFee && (
+        <View style={styles.fieldGroup}>
+          <FieldLabel colors={colors}>
+            {t('tournamentCreation.payments.entryFeeLabel' as TranslationKey)}
+          </FieldLabel>
+          <View
+            style={[
+              styles.textInput,
+              styles.feeInputRow,
+              { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+            ]}
+          >
+            <Text size="base" weight="semibold" color={colors.textMuted}>
+              $
+            </Text>
+            <TextInput
+              style={[styles.feeInputField, { color: colors.text }]}
+              placeholder="0"
+              placeholderTextColor={colors.textMuted}
+              value={entryFeeInput}
+              onChangeText={setEntryFeeInput}
+              keyboardType="decimal-pad"
+              maxLength={7}
+              testID="tournament-entry-fee-input"
+            />
+            <Text size="sm" color={colors.textMuted}>
+              {FEE_CURRENCY}
+            </Text>
+          </View>
+          <Text size="xs" color={colors.textMuted} style={styles.helperText}>
+            {isPaid
+              ? t('tournamentCreation.payments.entryFeeHintPaid' as TranslationKey)
+              : t('tournamentCreation.payments.entryFeeHintFree' as TranslationKey)}
           </Text>
         </View>
-        <Text size="xs" color={colors.textMuted} style={styles.helperText}>
-          {isPaid
-            ? t('tournamentCreation.payments.entryFeeHintPaid' as TranslationKey)
-            : t('tournamentCreation.payments.entryFeeHintFree' as TranslationKey)}
-        </Text>
-      </View>
+      )}
 
       {prizeField}
 
@@ -2738,6 +2747,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
                 setPrizeMoneyInput={setPrizeMoneyInput}
                 startDate={startDate}
                 feeLocked={isEditMode && editTournament?.status !== 'draft'}
+                allowEntryFee={PAID_TOURNAMENTS_ENABLED || (editTournament?.entryFeeCents ?? 0) > 0}
                 errors={errors}
                 colors={colors}
                 t={t}
