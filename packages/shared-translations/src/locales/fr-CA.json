@@ -5226,6 +5226,13 @@
       "challengeNudge": "Une partie ce mois-ci et t'es dans le coup",
       "circuitNudge": "Fais un tournoi pour te classer"
     },
+    "leaderboardCard": {
+      "title": "Défi du mois",
+      "subtitle": "Joue plus, monte plus haut",
+      "rankedSubtitle": "Joue plus pour monter",
+      "unrankedTitle": "Rejoins le défi",
+      "unrankedSubtitle": "Une partie ce mois-ci et t'es dans le coup"
+    },
     "tournamentActionBanner": {
       "title": "Partie de tournoi à planifier",
       "description": "Ton adversaire de la ronde {round} dans {name} est connu. Choisis un moment et réserve.",

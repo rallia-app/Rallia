@@ -93,6 +93,7 @@ import MyTournaments from '#/screens/MyTournaments';
 import Leagues from '#/screens/Leagues';
 import MyLeagues from '#/screens/MyLeagues';
 import Classements from '#/screens/Classements';
+import MonthlyChallengeBoard from '#/screens/MonthlyChallengeBoard';
 import LeagueDetail from '#/screens/LeagueDetail';
 import SessionDetail from '#/screens/SessionDetail';
 import NetworkMatches from '#/screens/NetworkMatches';
@@ -1611,6 +1612,17 @@ export default function AppNavigator() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('classements.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      {/* Non-admin entry point: monthly challenge only, old card UI. */}
+      <RootStack.Screen
+        name="Leaderboard"
+        component={MonthlyChallengeBoard}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('leaderboard.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />
