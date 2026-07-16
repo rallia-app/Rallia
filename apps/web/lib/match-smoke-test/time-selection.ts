@@ -118,6 +118,20 @@ export function isValidTimeSlot(value: string, now: Date = new Date()): boolean 
   return isHourSelectable(parsed.day, parsed.hour, now);
 }
 
+/**
+ * Timezone-agnostic shape check: a flexible slot, or a day+hour within play
+ * hours. Unlike isValidTimeSlot it does NOT re-derive the absolute time against
+ * "now", so server-side validation stays correct regardless of the server's
+ * timezone (e.g. UTC on Vercel vs the visitor's local time) or clock drift
+ * between picking a slot and submitting it.
+ */
+export function isWellFormedTimeSlot(value: string): boolean {
+  if (value === FLEXIBLE_TIME_SLOT) return true;
+  const parsed = parseTimeSlot(value);
+  if (!parsed) return false;
+  return parsed.hour >= PLAY_HOUR_START && parsed.hour <= PLAY_HOUR_END;
+}
+
 export function isFlexibleTimeSlot(value: string): boolean {
   return value === FLEXIBLE_TIME_SLOT;
 }
