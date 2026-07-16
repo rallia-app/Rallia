@@ -4486,7 +4486,32 @@
       "startDate": "Début",
       "endDate": "Fin",
       "submit": "Créer la saison",
-      "creating": "Création..."
+      "creating": "Création...",
+      "payments": {
+        "entryFeeLabel": "Frais d'inscription",
+        "entryFeeHintFree": "Laisse vide pour une saison gratuite — les joueurs embarquent sans payer",
+        "entryFeeHintPaid": "Ce que chaque joueur paie pour la saison, avant les frais de service",
+        "whoPaysLabel": "Qui paie les frais de service?",
+        "playerPaysTitle": "Le joueur paie",
+        "playerPaysDescription": "Ajoutés par-dessus l'inscription. Tu reçois le plein montant.",
+        "organizerAbsorbsTitle": "Je les absorbe",
+        "organizerAbsorbsDescription": "Pris sur tes revenus. Les joueurs paient juste l'inscription.",
+        "previewPlayersPay": "Les joueurs paient",
+        "previewServiceFee": "Frais de service",
+        "previewFeeTax": "TPS + TVQ sur les frais de service",
+        "previewYouReceive": "Tu reçois",
+        "refundLabel": "Politique de remboursement",
+        "refundFeeNote": "Les frais de service ne sont jamais remboursables — ça s'applique juste à l'inscription.",
+        "refundFullTitle": "Remboursement complet",
+        "refundFullDescription": "Les joueurs ravoir le plein montant s'ils quittent la saison.",
+        "refundPartialTitle": "Remboursement partiel",
+        "refundPartialDescription": "Les joueurs ravoir une partie du montant s'ils quittent la saison.",
+        "refundNoneTitle": "Aucun remboursement",
+        "refundNoneDescription": "L'inscription n'est pas remboursable.",
+        "refundPctInvalid": "Entre un pourcentage de remboursement entre 1 et 99.",
+        "payoutNote": "Les paiements sont gardés en sécurité, puis versés dans ton compte bancaire une fois la saison fermée.",
+        "lockedNote": "Les frais et la politique de remboursement se verrouillent dès l'ouverture de la saison."
+      }
     },
     "validation": {
       "seasonNameRequired": "Le nom de la saison est requis",

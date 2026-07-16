@@ -978,6 +978,10 @@ export function seasonCreatedAnalytics(props: {
   leagueId: string;
   seasonId: string;
   hasOverride: boolean;
+  /** Whether the organizer priced this season — the paid-league pilot's signal. */
+  isPaid?: boolean;
+  entryFeeCents?: number;
+  feePayer?: string;
 }): void {
   capture('lt.season.created', props);
 }

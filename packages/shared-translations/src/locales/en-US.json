@@ -4486,7 +4486,32 @@
       "startDate": "Start",
       "endDate": "End",
       "submit": "Create season",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "payments": {
+        "entryFeeLabel": "Entry fee",
+        "entryFeeHintFree": "Leave empty for a free season — players join with no payment",
+        "entryFeeHintPaid": "What each player pays for the season, before the service fee",
+        "whoPaysLabel": "Who covers the service fee?",
+        "playerPaysTitle": "Player pays",
+        "playerPaysDescription": "Added on top of the entry. You receive the full entry price.",
+        "organizerAbsorbsTitle": "I cover it",
+        "organizerAbsorbsDescription": "Taken from your earnings. Players pay only the entry price.",
+        "previewPlayersPay": "Players pay",
+        "previewServiceFee": "Service fee",
+        "previewFeeTax": "GST + QST on service fee",
+        "previewYouReceive": "You receive",
+        "refundLabel": "Refund policy",
+        "refundFeeNote": "The service fee is never refundable — this applies to the entry price only.",
+        "refundFullTitle": "Full refund",
+        "refundFullDescription": "Players get the full entry price back if they leave the season.",
+        "refundPartialTitle": "Partial refund",
+        "refundPartialDescription": "Players get part of the entry price back if they leave the season.",
+        "refundNoneTitle": "No refund",
+        "refundNoneDescription": "The entry price isn't refundable.",
+        "refundPctInvalid": "Enter a refund percentage between 1 and 99.",
+        "payoutNote": "Entry payments are held securely, then paid out to your bank account once the season closes.",
+        "lockedNote": "Entry fee and refund policy lock once the season opens."
+      }
     },
     "validation": {
       "seasonNameRequired": "Season name is required",

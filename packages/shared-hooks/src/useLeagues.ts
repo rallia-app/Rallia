@@ -324,6 +324,13 @@ export function useCreateSeason(leagueId: string, options: MutationOptions<Seaso
       startDate: string;
       endDate: string;
       rulesOverride?: Record<string, unknown>;
+      /** Omit or 0 for a free season. Fees lock once the season opens. */
+      entryFeeCents?: number;
+      feePayer?: Enums<'fee_payer_enum'>;
+      payoutTiming?: Enums<'payout_timing_enum'>;
+      refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+      refundPartialBps?: number | null;
+      refundCutoffAt?: string | null;
     }) => createSeason({ leagueId, ...input }),
     onSuccess: result => {
       invalidate(leagueId);
