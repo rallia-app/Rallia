@@ -145,6 +145,74 @@ export async function createLeague(input: CreateLeagueInput): Promise<League> {
   return data as League;
 }
 
+export interface LeagueUpdatePatch {
+  name?: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  visibility?: Enums<'tournament_visibility'>;
+  joinMode?: Enums<'tournament_registration_mode'>;
+  facilityId?: string | null;
+  venueName?: string | null;
+  surfaces?: string[];
+  categories?: string[];
+  level?: string | null;
+  // Snapshotted by season_create, so an edit only reaches seasons created after it.
+  defaultRules?: Record<string, unknown>;
+  memberCapacity?: number | null;
+  waitlistEnabled?: boolean;
+  minRating?: number | null;
+  maxRating?: number | null;
+  minReputation?: number | null;
+}
+
+const LEAGUE_UPDATE_PATCH_COLUMNS: Record<keyof LeagueUpdatePatch, string> = {
+  name: 'name',
+  description: 'description',
+  logoUrl: 'logo_url',
+  visibility: 'visibility',
+  joinMode: 'join_mode',
+  facilityId: 'facility_id',
+  venueName: 'venue_name',
+  surfaces: 'surfaces',
+  categories: 'categories',
+  level: 'level',
+  defaultRules: 'default_rules',
+  memberCapacity: 'member_capacity',
+  waitlistEnabled: 'waitlist_enabled',
+  minRating: 'min_rating',
+  maxRating: 'max_rating',
+  minReputation: 'min_reputation',
+};
+
+type LeaguePatchValue = string | number | boolean | null | string[] | Record<string, unknown>;
+
+/**
+ * Organizer partial-update. Only keys present in the patch are sent; the server
+ * gates each field on the league's current status and bumps `version`. Keys with
+ * an explicit null clear the column, so undefined (not null) means "don't touch".
+ */
+export async function updateLeague(
+  leagueId: string,
+  versionWas: number,
+  patch: LeagueUpdatePatch
+): Promise<League> {
+  const snakePatch: Record<string, LeaguePatchValue> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined) {
+      snakePatch[LEAGUE_UPDATE_PATCH_COLUMNS[key as keyof LeagueUpdatePatch]] =
+        value as LeaguePatchValue;
+    }
+  }
+
+  const { data, error } = await supabase.rpc('league_update', {
+    p_league_id: leagueId,
+    p_version_was: versionWas,
+    p_patch: snakePatch,
+  });
+  if (error) throw new Error(error.message);
+  return data as League;
+}
+
 export async function joinLeague(leagueId: string): Promise<LeagueMember> {
   const { data, error } = await supabase.rpc('league_join', { p_league_id: leagueId });
   if (error) throw new Error(error.message);

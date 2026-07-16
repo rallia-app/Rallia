@@ -44,10 +44,12 @@ import { TournamentInviteSheet } from '#/features/tournaments/components/Tournam
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
+import { LeagueEditActionSheet } from '#/features/leagues/components/LeagueEditSheet';
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
 import type { TournamentEditData } from '#/features/tournaments';
+import type { LeagueEditData } from '#/features/leagues';
 // Facilities components
 import { ExternalBookingActionSheet } from '#/features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '#/features/facilities/components/CourtBookingSheet';
@@ -400,6 +402,11 @@ declare module 'react-native-actions-sheet' {
     'tournament-edit': SheetDefinition<{
       payload: {
         tournament: TournamentEditData;
+      };
+    }>;
+    'league-edit': SheetDefinition<{
+      payload: {
+        league: LeagueEditData;
       };
     }>;
     'tournament-invite': SheetDefinition<{
@@ -944,6 +951,7 @@ export const Sheets = () => {
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
+        'league-edit': LeagueEditActionSheet,
         'create-season': CreateSeasonActionSheet,
         'create-session': CreateSessionActionSheet,
         'court-selection': CourtSelectionActionSheet,

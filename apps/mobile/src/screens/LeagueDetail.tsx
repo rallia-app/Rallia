@@ -69,6 +69,7 @@ import type {
 import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
+import type { LeagueEditData } from '../features/leagues';
 import { useTranslation, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -1132,6 +1133,23 @@ export const LeagueDetail: React.FC = () => {
     });
   }, [league, members, leagueId]);
 
+  const handleEditLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    void SheetManager.show('league-edit', {
+      payload: {
+        league: {
+          id: league.id,
+          version: league.version,
+          name: league.name,
+          description: league.description,
+          visibility: league.visibility as LeagueEditData['visibility'],
+          joinMode: league.join_mode,
+        },
+      },
+    });
+  }, [league]);
+
   const handleOpenCreateSeason = useCallback(() => {
     lightHaptic();
     void SheetManager.show('create-season', { payload: { leagueId } });
@@ -1612,6 +1630,28 @@ export const LeagueDetail: React.FC = () => {
                 <Ionicons name="person-add-outline" size={20} color="#ffffff" />
                 <Text size="base" weight="semibold" color="#ffffff">
                   {t('leagueDetail.invitePlayers.button')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {/* A closed league is terminal server-side, so edit is hidden rather
+                than offered and then refused. */}
+            {isOrganizer && league.status !== 'closed' && (
+              <TouchableOpacity
+                onPress={handleEditLeague}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  },
+                ]}
+                testID="cta-edit-league"
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+                <Text size="base" weight="semibold" color={colors.primary}>
+                  {t('leagueDetail.editModal.title')}
                 </Text>
               </TouchableOpacity>
             )}

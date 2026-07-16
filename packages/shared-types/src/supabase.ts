@@ -5127,13 +5127,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "player_certified_organizer_by_fkey"
-            columns: ["certified_organizer_by"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "player_id_fkey"
             columns: ["id"]
             isOneToOne: true
@@ -11836,6 +11829,41 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_update: {
+        Args: { p_league_id: string; p_patch: Json; p_version_was: number }
+        Returns: {
+          categories: string[]
+          created_at: string
+          default_rules: Json
+          description: string | null
+          facility_id: string | null
+          id: string
+          join_mode: Database["public"]["Enums"]["tournament_registration_mode"]
+          level: string | null
+          logo_url: string | null
+          max_rating: number | null
+          member_capacity: number | null
+          min_rating: number | null
+          min_reputation: number | null
+          name: string
+          network_id: string | null
+          organizer_id: string
+          sport_id: string
+          status: Database["public"]["Enums"]["league_status"]
+          surfaces: string[]
+          updated_at: string
+          venue_name: string | null
+          version: number
+          visibility: Database["public"]["Enums"]["tournament_visibility"]
+          waitlist_enabled: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leagues"
           isOneToOne: true
           isSetofReturn: false
         }

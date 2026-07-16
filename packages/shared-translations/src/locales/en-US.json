@@ -4354,6 +4354,17 @@
         "description": "Opening a season lets members register and sessions begin"
       }
     },
+    "editModal": {
+      "title": "Edit league",
+      "subtitle": "Changes are visible to players right away.",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "saved": "League updated",
+      "errors": {
+        "notEditable": "One of these fields can't be changed anymore. Refresh and try again.",
+        "generic": "Couldn't save the changes. Please try again."
+      }
+    },
     "sections": {
       "pending": "Pending approval",
       "members": "Members",

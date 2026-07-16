@@ -46,11 +46,13 @@ import {
   recordSessionScore,
   regenerateSessionSheet,
   setSessionMatchLock,
+  updateLeague,
   type CreateLeagueInput,
   type League,
   type LeagueListItem,
   type LeagueMember,
   type LeagueMemberWithProfile,
+  type LeagueUpdatePatch,
   type PresenceStatus,
   type Season,
   type SeasonMember,
@@ -197,6 +199,30 @@ export function useCreateLeague(options: MutationOptions<League> = {}) {
     isCreating: mutation.isPending,
     error: mutation.error,
     reset: mutation.reset,
+  };
+}
+
+export function useUpdateLeague(options: MutationOptions<League> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    League,
+    Error,
+    { leagueId: string; versionWas: number; patch: LeagueUpdatePatch }
+  >({
+    mutationFn: ({ leagueId, versionWas, patch }) => updateLeague(leagueId, versionWas, patch),
+    onSuccess: league => {
+      invalidate(league.id);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      options.onSuccess?.(league);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    updateLeague: mutation.mutate,
+    updateLeagueAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
+    error: mutation.error,
   };
 }
 

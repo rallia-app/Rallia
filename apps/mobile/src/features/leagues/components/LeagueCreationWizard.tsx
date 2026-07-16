@@ -30,7 +30,8 @@ import {
   status,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useTheme, useCreateLeague } from '@rallia/shared-hooks';
+import { useTheme, useCreateLeague, useUpdateLeague } from '@rallia/shared-hooks';
+import type { LeagueUpdatePatch } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
@@ -44,10 +45,25 @@ const TOTAL_STEPS = 2;
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>;
 type JoinMode = Enums<'tournament_registration_mode'>;
 
+/**
+ * The subset of a league the wizard can edit. Passed via sheet payload, so it
+ * carries `version` for the server's optimistic lock.
+ */
+export interface LeagueEditData {
+  id: string;
+  version: number;
+  name: string;
+  description: string | null;
+  visibility: Visibility;
+  joinMode: JoinMode;
+}
+
 export interface LeagueCreationWizardProps {
   onClose: () => void;
   onBackToLanding: () => void;
   onSuccess: (leagueId: string) => void;
+  /** Present ⇒ edit mode: the wizard PATCHes instead of creating. */
+  editLeague?: LeagueEditData;
 }
 
 interface ThemeColors {
@@ -74,6 +90,7 @@ interface ThemeColors {
 
 const WizardHeader: React.FC<{
   currentStep: number;
+  isEditMode: boolean;
   onBack: () => void;
   onBackToLanding: () => void;
   onClose: () => void;
@@ -81,22 +98,35 @@ const WizardHeader: React.FC<{
   sportKey: string;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
-}> = ({ currentStep, onBack, onBackToLanding, onClose, sportName, sportKey, colors, t }) => (
+}> = ({
+  currentStep,
+  isEditMode,
+  onBack,
+  onBackToLanding,
+  onClose,
+  sportName,
+  sportKey,
+  colors,
+  t,
+}) => (
   <View style={[styles.header, { borderBottomColor: colors.border }]}>
     <View style={styles.headerLeft}>
-      <TouchableOpacity
-        onPress={() => {
-          Keyboard.dismiss();
-          lightHaptic();
-          if (currentStep === 1) onBackToLanding();
-          else onBack();
-        }}
-        style={styles.headerButton}
-        accessibilityRole="button"
-        accessibilityLabel={t('common.back' as TranslationKey)}
-      >
-        <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-      </TouchableOpacity>
+      {/* Edit opens straight into the form, so step 1 has no landing to go back to. */}
+      {!(isEditMode && currentStep === 1) && (
+        <TouchableOpacity
+          onPress={() => {
+            Keyboard.dismiss();
+            lightHaptic();
+            if (currentStep === 1) onBackToLanding();
+            else onBack();
+          }}
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back' as TranslationKey)}
+        >
+          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
+        </TouchableOpacity>
+      )}
     </View>
 
     <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
@@ -387,6 +417,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   onClose,
   onBackToLanding,
   onSuccess,
+  editLeague,
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -419,11 +450,15 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   const sportName = selectedSport?.display_name ?? selectedSport?.name ?? '';
   const sportKey = selectedSport?.name ?? 'tennis';
 
+  const isEditMode = !!editLeague;
+
+  // The sheet unmounts its children on close, so each open remounts with fresh
+  // state seeded from the payload — no sync effect needed.
   const [currentStep, setCurrentStep] = useState(1);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState<Visibility>('private');
-  const [joinMode, setJoinMode] = useState<JoinMode>('approval');
+  const [name, setName] = useState(editLeague?.name ?? '');
+  const [description, setDescription] = useState(editLeague?.description ?? '');
+  const [visibility, setVisibility] = useState<Visibility>(editLeague?.visibility ?? 'private');
+  const [joinMode, setJoinMode] = useState<JoinMode>(editLeague?.joinMode ?? 'approval');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -440,6 +475,24 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       toast.error(t(key as TranslationKey));
     },
   });
+
+  const { updateLeagueAsync, isUpdating } = useUpdateLeague({
+    onError: err => {
+      const msg = err.message || '';
+      // OPTIMISTIC_LOCK_CONFLICT / FIELD_NOT_EDITABLE / LEAGUE_TERMINAL all mean
+      // the same thing to a player: your copy is stale, reload.
+      const key =
+        msg.includes('OPTIMISTIC_LOCK_CONFLICT') ||
+        msg.includes('FIELD_NOT_EDITABLE') ||
+        msg.includes('LEAGUE_TERMINAL')
+          ? 'leagueDetail.editModal.errors.notEditable'
+          : 'leagueDetail.editModal.errors.generic';
+      warningHaptic();
+      toast.error(t(key as TranslationKey));
+    },
+  });
+
+  const isSubmitting = isCreating || isUpdating;
 
   const validateStep = useCallback(
     (step: number): boolean => {
@@ -484,6 +537,38 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       setCurrentStep(1);
       return;
     }
+
+    // ---- Edit mode: diff against the original and PATCH only what changed ----
+    if (isEditMode && editLeague) {
+      try {
+        const patch: LeagueUpdatePatch = {};
+        const trimmedName = name.trim();
+        if (trimmedName !== editLeague.name) patch.name = trimmedName;
+        const desc = description.trim();
+        if (desc !== (editLeague.description ?? '')) patch.description = desc.length ? desc : null;
+        if (visibility !== editLeague.visibility) patch.visibility = visibility;
+        if (joinMode !== editLeague.joinMode) patch.joinMode = joinMode;
+
+        // The server rejects an empty patch, so a no-op save just closes.
+        if (Object.keys(patch).length === 0) {
+          onClose();
+          return;
+        }
+
+        await updateLeagueAsync({
+          leagueId: editLeague.id,
+          versionWas: editLeague.version,
+          patch,
+        });
+        successHaptic();
+        onSuccess(editLeague.id);
+      } catch {
+        // toast handled in hook
+      }
+      return;
+    }
+
+    // ---- Create mode ----
     if (!selectedSport?.id) return;
     try {
       const league = await createLeagueAsync({
@@ -505,7 +590,20 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     } catch {
       // toast handled in hook
     }
-  }, [createLeagueAsync, description, joinMode, name, selectedSport, validateStep, visibility]);
+  }, [
+    createLeagueAsync,
+    description,
+    editLeague,
+    isEditMode,
+    joinMode,
+    name,
+    onClose,
+    onSuccess,
+    selectedSport,
+    updateLeagueAsync,
+    validateStep,
+    visibility,
+  ]);
 
   const handleCreateAnother = useCallback(() => {
     setName('');
@@ -573,6 +671,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
       <WizardHeader
         currentStep={currentStep}
+        isEditMode={isEditMode}
         onBack={goBack}
         onBackToLanding={onBackToLanding}
         onClose={handleClose}
@@ -610,20 +709,24 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity
           onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
-          disabled={isCreating}
+          disabled={isSubmitting}
           style={[
             styles.nextButton,
             { backgroundColor: colors.buttonActive },
-            isCreating && styles.buttonDisabled,
+            isSubmitting && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
           testID="league-wizard-submit"
         >
           <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
             {currentStep === TOTAL_STEPS
-              ? isCreating
-                ? t('leagueCreation.creating' as TranslationKey)
-                : t('leagueCreation.createLeague' as TranslationKey)
+              ? isEditMode
+                ? isUpdating
+                  ? t('leagueDetail.editModal.saving' as TranslationKey)
+                  : t('leagueDetail.editModal.save' as TranslationKey)
+                : isCreating
+                  ? t('leagueCreation.creating' as TranslationKey)
+                  : t('leagueCreation.createLeague' as TranslationKey)
               : t('leagueCreation.next' as TranslationKey)}
           </Text>
           {currentStep !== TOTAL_STEPS && (

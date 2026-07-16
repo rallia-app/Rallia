@@ -1,5 +1,6 @@
 export { LeagueCreationWizard } from './components/LeagueCreationWizard';
-export type { LeagueCreationWizardProps } from './components/LeagueCreationWizard';
+export type { LeagueCreationWizardProps, LeagueEditData } from './components/LeagueCreationWizard';
+export { LeagueEditActionSheet } from './components/LeagueEditSheet';
 export {
   LeagueListScaffold,
   LeagueCard,

@@ -4354,6 +4354,17 @@
         "description": "Ouvrir une saison permet aux membres de s'inscrire et aux sessions de commencer"
       }
     },
+    "editModal": {
+      "title": "Modifier la ligue",
+      "subtitle": "Les changements sont visibles aux joueurs immédiatement.",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "saved": "Ligue mise à jour",
+      "errors": {
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
+        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+      }
+    },
     "sections": {
       "pending": "En attente d'approbation",
       "members": "Membres",
