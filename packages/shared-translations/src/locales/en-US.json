@@ -5226,6 +5226,13 @@
       "challengeNudge": "One game this month and you're in",
       "circuitNudge": "Enter a tournament to get ranked"
     },
+    "leaderboardCard": {
+      "title": "Monthly Challenge",
+      "subtitle": "Play more, climb higher",
+      "rankedSubtitle": "Play more to move up",
+      "unrankedTitle": "Join the challenge",
+      "unrankedSubtitle": "One game this month and you're in"
+    },
     "tournamentActionBanner": {
       "title": "Tournament game to schedule",
       "description": "Your round {round} opponent in {name} is set. Pick a time and get it booked.",
