@@ -30,9 +30,13 @@ function DateTimeColumn({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex min-w-[60px] flex-col items-center">
+    <div className="flex min-w-0 flex-col items-center">
       <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      <span className={cn('mt-0.5 text-lg font-bold', valueClassName)}>{value}</span>
+      <span
+        className={cn('mt-0.5 whitespace-nowrap text-base font-bold sm:text-lg', valueClassName)}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -131,7 +135,7 @@ export function MatchDateTimeCard({ match, isFull, className }: MatchDateTimeCar
         </span>
       )}
 
-      <div className="flex w-full items-center justify-center gap-5">
+      <div className="flex w-full items-center justify-center gap-3 sm:gap-5">
         <DateTimeColumn label={tMatches('date')} value={dateLabel} valueClassName={valueColor} />
         <DateTimeDivider />
         <DateTimeColumn
