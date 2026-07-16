@@ -57,10 +57,20 @@ every entrant lands on their sport's one board.
 
 ## 2. Data model
 
-Two new tables plus one column on `tournaments`. All new tables get **RLS
-enabled** (public/authenticated `SELECT`; no client writes — only the award
-function, `security definer`, writes) and **explicit GRANTs** (Data-API
-deprecation).
+Two new tables plus one column on `tournaments`, and a certified-organizer flag
+on `player`. All new tables get **RLS enabled** (public/authenticated `SELECT`;
+no client writes — only the award function, `security definer`, writes) and
+**explicit GRANTs** (Data-API deprecation).
+
+### `player.is_certified_organizer` (new column) — eligibility gate
+
+`is_certified_organizer boolean NOT NULL DEFAULT false`, plus audit columns
+`certified_organizer_at`, `certified_organizer_by` (→ `profile`), and
+`certified_organizer_notes`. Granted by an admin via
+`admin_certify_organizer(player, bool, notes)` — mirrors the existing
+community-network certification (`network.is_certified` / `admin_certify_network`).
+Only a certified organizer's tournaments award Points Rallia (§7 step 1b).
+Migration `20260715120000_tournament_ranking_certified_organizer_gate.sql`.
 
 ### `tournaments.completed_at` (new column)
 
@@ -352,6 +362,16 @@ stateDiagram-v2
 `award_tournament_ranking_points(p_tournament_id)` — `security definer`:
 
 1. Guard: tournament `status = 'completed'` (and `completed_at` set).
+   1b. **Certified-organizer gate** — resolve `player.is_certified_organizer` for
+   the tournament's `organizer_id`. If the organizer is **not** certified,
+   clear any stale ledger rows for the tournament and **return without
+   awarding**. Only a certified organizer's tournament contributes Points
+   Rallia to the Circuit Rallia ranking; a tournament from a random organizer
+   completes and plays out normally but earns nobody ranking points. This is
+   the single chokepoint — RLS blocks direct ledger writes and the completion
+   trigger is the only caller, so the gate cannot be bypassed. Because the gate
+   also _clears_ rows, de-certifying an organizer and recomputing removes their
+   past points.
 2. Resolve the season from `completed_at`; **raise** if no season row covers it.
 3. Compute tier (§4) from the bracket entries; apply the `n < 8` floor.
 4. For each **entry appearing in the bracket** (skip phantom slots): compute
