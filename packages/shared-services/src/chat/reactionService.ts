@@ -125,7 +125,7 @@ export async function getMessageReactions(
       player_id,
       player:player!message_reaction_player_id_fkey (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name
         )
       )
@@ -189,7 +189,7 @@ export async function getMessagesReactions(
       player_id,
       player:player!message_reaction_player_id_fkey (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name
         )
       )

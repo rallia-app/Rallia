@@ -44,7 +44,7 @@ export async function getMessages(
       metadata,
       sender:player!message_sender_id_fkey (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -85,7 +85,7 @@ export async function getMessages(
         id,
         content,
         sender:player!message_sender_id_fkey (
-          profile (
+          profile!player_id_fkey (
             first_name
           )
         )
@@ -164,7 +164,7 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
       metadata,
       sender:player!message_sender_id_fkey (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -197,7 +197,7 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
         id,
         content,
         sender:player!message_sender_id_fkey (
-          profile (
+          profile!player_id_fkey (
             first_name
           )
         )

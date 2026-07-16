@@ -46,7 +46,7 @@ async function getGroupWithMembersInternal(groupId: string): Promise<GroupWithMe
       *,
       player:player_id (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
