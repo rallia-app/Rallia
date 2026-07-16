@@ -231,7 +231,8 @@ function MatchPopup({
     <div style={{ width: '100%' }}>
       <div style={{ height: 3, background: color }} />
       <div style={{ padding: '12px 14px' }} className="text-card-foreground">
-        <div className="flex items-center justify-between gap-2 mb-2">
+        {/* pr-7 keeps the right badge clear of the Leaflet close button (top-right) */}
+        <div className="flex items-center justify-between gap-2 mb-2 pr-7">
           {match.sport && (
             <span
               className="text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize"
@@ -242,7 +243,7 @@ function MatchPopup({
           )}
           <span
             className={cn(
-              'text-[11px] font-semibold px-2 py-0.5 rounded-full',
+              'whitespace-nowrap text-[11px] font-semibold px-2 py-0.5 rounded-full',
               isFull
                 ? 'bg-destructive/10 text-destructive'
                 : spotsLeft === 1
