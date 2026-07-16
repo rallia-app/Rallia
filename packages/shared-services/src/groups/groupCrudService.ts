@@ -123,7 +123,7 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
       *,
       player:player_id (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,

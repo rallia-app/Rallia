@@ -64,7 +64,7 @@ export async function getGroupActivity(
       created_at,
       player:player_id (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           profile_picture_url

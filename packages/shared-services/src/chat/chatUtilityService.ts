@@ -232,7 +232,7 @@ async function getSenderNames(senderIds: string[]): Promise<Map<string, string>>
     .select(
       `
       id,
-      profile (
+      profile!player_id_fkey (
         first_name
       )
     `

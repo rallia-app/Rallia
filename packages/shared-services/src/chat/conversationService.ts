@@ -210,7 +210,7 @@ export async function getConversation(
       is_muted,
       player:player!conversation_participant_player_id_fkey (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -236,7 +236,7 @@ export async function getConversation(
       updated_at,
       sender:player!message_sender_id_fkey (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,

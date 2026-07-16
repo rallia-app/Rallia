@@ -273,7 +273,7 @@ export async function getOpponentsForFeedback(
       checked_in_at,
       player:player_id (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -424,7 +424,7 @@ export async function getMatchContextForFeedback(
         status,
         player:player_id (
           id,
-          profile (
+          profile!player_id_fkey (
             first_name,
             display_name
           )

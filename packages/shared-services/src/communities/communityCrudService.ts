@@ -148,7 +148,7 @@ export async function getCommunityWithMembers(
       *,
       player:player_id (
         id,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,

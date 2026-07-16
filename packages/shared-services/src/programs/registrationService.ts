@@ -115,7 +115,7 @@ export async function getRegistration(
       player:player_id (
         id,
         username,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -153,7 +153,7 @@ export async function listRegistrations(
       player:player_id (
         id,
         username,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,

@@ -114,7 +114,7 @@ export async function getWaitlistEntry(
       player:player_id (
         id,
         username,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -157,7 +157,7 @@ export async function listWaitlist(
       player:player_id (
         id,
         username,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -257,7 +257,7 @@ export async function getNextInWaitlist(
       player:player_id (
         id,
         username,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
@@ -344,7 +344,7 @@ export async function getExpiredPromotions(
       player:player_id (
         id,
         username,
-        profile (
+        profile!player_id_fkey (
           first_name,
           last_name,
           display_name,
