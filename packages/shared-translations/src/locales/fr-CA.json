@@ -11325,15 +11325,15 @@
       "subtitle": "Prends l'option qui colle à ta fréquence de jeu.",
       "single": {
         "title": "Une partie",
-        "description": "Une tentative d'organisation automatisée."
+        "description": "On organise une partie pour toi."
       },
       "weekly": {
         "title": "Hebdomadaire",
-        "description": "Tentatives d'organisation illimitées pour une semaine."
+        "description": "On organise autant de parties que tu veux, toute la semaine."
       },
       "monthly": {
         "title": "Mensuel",
-        "description": "Tentatives d'organisation illimitées, chaque semaine."
+        "description": "On organise autant de parties que tu veux, chaque semaine."
       },
       "priceWeek": "{price} / semaine",
       "priceMonth": "{price} / mois",
