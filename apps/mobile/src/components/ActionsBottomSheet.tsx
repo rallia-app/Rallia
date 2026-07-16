@@ -37,7 +37,7 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useTheme, useAdminStatus } from '@rallia/shared-hooks';
+import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '#/hooks';
@@ -245,12 +245,10 @@ export const ActionsBottomSheet: React.FC = () => {
   } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
-  const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Leagues stay admin-gated while the feature is in rollout; tournaments are not.
   const showCreateTournament = true;
-  const showCreateLeague = isAdmin;
+  const showCreateLeague = true;
 
   // Wizard state for all sliding panels (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);

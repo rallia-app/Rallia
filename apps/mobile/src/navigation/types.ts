@@ -55,7 +55,7 @@ export type RootStackParamList = {
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
   Tournaments: undefined; // Public tournament discovery — full-screen, reached from Home quick-nav (back returns to Home)
   MyTournaments: undefined; // Caller's tournaments (organized + registered), reached from Tournaments
-  Leagues: undefined; // Public league discovery — full-screen, reached from Home quick-nav (admin-gated; tournaments are not)
+  Leagues: undefined; // Public league discovery — full-screen, reached from Home quick-nav (back returns to Home)
   MyLeagues: undefined; // Caller's leagues (organized + member), reached from Leagues or Community
   Leaderboard: undefined; // Monthly GMA challenge board (old card UI) — non-admin Home entry point; also the "challenge" tab body inside Classements
   Classements: { initialTab?: 'challenge' | 'ranking' } | undefined; // Boards hub — monthly challenge + Points Rallia tabs, admin-only Home entry point during Circuit Rallia rollout

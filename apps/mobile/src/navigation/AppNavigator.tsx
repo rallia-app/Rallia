@@ -686,6 +686,37 @@ function TournamentCreateHeaderButton() {
   );
 }
 
+/** Header "+" that opens the league creation wizard. Live for everyone. */
+function LeagueCreateHeaderButton({
+  navigation,
+}: {
+  navigation: { navigate: (screen: 'LeagueDetail', params: { leagueId: string }) => void };
+}) {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (!guardAction()) return;
+        lightHaptic();
+        void SheetManager.show('league-create', {
+          payload: {
+            onCreated: (leagueId: string) => navigation.navigate('LeagueDetail', { leagueId }),
+          },
+        });
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ marginRight: spacingPixels[2] }}
+      accessibilityRole="button"
+      accessibilityLabel={t('actions.createLeague')}
+    >
+      <Ionicons name="add" size={28} color={colors.headerForeground} />
+    </TouchableOpacity>
+  );
+}
+
 /**
  * Community Stack - Social features
  */
@@ -1593,6 +1624,7 @@ export default function AppNavigator() {
           ...sharedOptions,
           headerTitle: t('leagueList.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
+          headerRight: () => <LeagueCreateHeaderButton navigation={navigation} />,
         })}
       />
 

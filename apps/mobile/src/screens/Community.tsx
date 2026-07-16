@@ -14,7 +14,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useAdminStatus } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -46,7 +45,6 @@ interface ActionButton {
 const Community = () => {
   const { colors } = useThemeStyles();
   const { session } = useAuth();
-  const { isAdmin } = useAdminStatus();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
   const { t } = useTranslation();
@@ -102,15 +100,12 @@ const Community = () => {
       onPress: handleTournaments,
     });
 
-    // Leagues stay admin-gated while the feature is in rollout.
-    if (isAdmin) {
-      buttons.push({
-        id: 'leagues',
-        icon: 'ribbon-outline',
-        label: t('community.leagues'),
-        onPress: handleLeagues,
-      });
-    }
+    buttons.push({
+      id: 'leagues',
+      icon: 'ribbon-outline',
+      label: t('community.leagues'),
+      onPress: handleLeagues,
+    });
 
     buttons.push(
       {
@@ -128,7 +123,7 @@ const Community = () => {
     );
 
     return buttons;
-  }, [handleGroups, handleCommunities, handleTournaments, handleLeagues, isAdmin, t]);
+  }, [handleGroups, handleCommunities, handleTournaments, handleLeagues, t]);
 
   // When there are few enough buttons to fit without scrolling (e.g. non-admin
   // users only see Tournaments + Communities + Groups), stretch them to fill the width.

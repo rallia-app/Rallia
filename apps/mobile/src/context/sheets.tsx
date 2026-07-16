@@ -44,7 +44,10 @@ import { TournamentInviteSheet } from '#/features/tournaments/components/Tournam
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
-import { LeagueEditActionSheet } from '#/features/leagues/components/LeagueEditSheet';
+import {
+  LeagueEditActionSheet,
+  LeagueCreateActionSheet,
+} from '#/features/leagues/components/LeagueFormSheets';
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
@@ -407,6 +410,11 @@ declare module 'react-native-actions-sheet' {
     'league-edit': SheetDefinition<{
       payload: {
         league: LeagueEditData;
+      };
+    }>;
+    'league-create': SheetDefinition<{
+      payload: {
+        onCreated?: (leagueId: string) => void;
       };
     }>;
     'tournament-invite': SheetDefinition<{
@@ -952,6 +960,7 @@ export const Sheets = () => {
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,
+        'league-create': LeagueCreateActionSheet,
         'create-season': CreateSeasonActionSheet,
         'create-session': CreateSessionActionSheet,
         'court-selection': CourtSelectionActionSheet,
