@@ -11325,15 +11325,15 @@
       "subtitle": "Pick the option that fits how often you play.",
       "single": {
         "title": "One game",
-        "description": "One automated matchup attempt."
+        "description": "We organize one game for you."
       },
       "weekly": {
         "title": "Weekly",
-        "description": "Unlimited matchup attempts for a week."
+        "description": "We organize as many games as you want, all week."
       },
       "monthly": {
         "title": "Monthly",
-        "description": "Unlimited matchup attempts, every week."
+        "description": "We organize as many games as you want, every week."
       },
       "priceWeek": "{price} / week",
       "priceMonth": "{price} / month",
