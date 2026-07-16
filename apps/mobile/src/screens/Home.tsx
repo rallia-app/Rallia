@@ -546,6 +546,7 @@ const classementsCardStyles = StyleSheet.create({
     borderRadius: radiusPixels.xl,
   },
   tileInner: {
+    flex: 1,
     borderRadius: radiusPixels.xl,
     borderWidth: 1.5,
     paddingVertical: spacingPixels[3],
