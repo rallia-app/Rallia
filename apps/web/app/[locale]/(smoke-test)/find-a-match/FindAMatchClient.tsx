@@ -25,7 +25,9 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { trackSmokeEvent, type SmokeEventContext } from '@/lib/match-smoke-test/analytics';
+import { SmokeBrandLockup } from '@/lib/match-smoke-test/brand';
 import {
   getMatchPlans,
   getRatingOptions,
@@ -48,6 +50,8 @@ import {
   type HourAvailabilityTier,
 } from '@/lib/match-smoke-test/facility-availability';
 import {
+  DEFAULT_MAX_DISTANCE_KM,
+  DISTANCE_OPTIONS_KM,
   countFutureOpenAvailabilities,
   formatFacilityDistance,
   searchFacilitiesNearCoordinates,
@@ -291,6 +295,52 @@ function questionNumber(step: QuestionStep): number {
   return QUESTION_STEPS.indexOf(step) + 1;
 }
 
+// Level-guide rows — mirror the onboarding rating descriptions we reuse.
+const NTRP_GUIDE_KEYS = ['1_5', '2_0', '2_5', '3_0', '3_5', '4_0', '4_5', '5_0', '5_5', '6_0'];
+const DUPR_GUIDE_KEYS = ['1_0', '2_0', '2_5', '3_0', '3_5', '4_0', '4_5', '5_0', '5_5', '6_0'];
+
+/** Info popover explaining the NTRP/DUPR scale, like the app onboarding. */
+function LevelGuidePopover({ sport }: { sport: SportOption }) {
+  const tp = useTranslations('findAMatch.preferences.levelInfo');
+  const tr = useTranslations('onboarding.ratingStep');
+  const scale = ratingScaleLabel(sport);
+  const isPickleball = sport === 'pickleball';
+  const keys = isPickleball ? DUPR_GUIDE_KEYS : NTRP_GUIDE_KEYS;
+  const descNamespace = isPickleball ? 'duprDescriptions' : 'ntrpDescriptions';
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary-600)] transition-colors hover:text-[var(--primary-700)]"
+        >
+          <Info className="h-3.5 w-3.5" />
+          {tp('trigger')}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="max-h-[60vh] w-80 overflow-y-auto">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold">{tp('title', { scale })}</p>
+          <p className="text-xs text-muted-foreground">{tp('subtitle')}</p>
+        </div>
+        <ul className="mt-3 flex flex-col gap-2.5">
+          {keys.map(key => (
+            <li key={key} className="flex gap-2.5 text-left">
+              <span className="mt-0.5 inline-flex h-6 min-w-[2.75rem] shrink-0 items-center justify-center rounded-md bg-primary/10 px-1 text-xs font-bold text-[var(--primary-700)] dark:text-[var(--primary-500)]">
+                {key.replace('_', '.')}
+              </span>
+              <span className="text-xs leading-snug text-muted-foreground">
+                {tr(`${descNamespace}.${key}`)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 interface WizardShellProps {
   step: Step;
   showBack?: boolean;
@@ -298,6 +348,8 @@ interface WizardShellProps {
   questionStep?: QuestionStep;
   onSwitchLanguage: () => void;
   otherLangLabel: string;
+  /** Decorative gradient behind the content — used on the intro landing. */
+  backdrop?: boolean;
   children: ReactNode;
 }
 
@@ -308,17 +360,29 @@ function WizardShell({
   questionStep,
   onSwitchLanguage,
   otherLangLabel,
+  backdrop,
   children,
 }: WizardShellProps) {
   const t = useTranslations('findAMatch.wizard');
 
   return (
-    <div className="flex min-h-[100svh] w-full flex-col">
+    <div className="relative flex min-h-[100svh] w-full flex-col overflow-hidden">
+      {backdrop && (
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-[15%] right-[-12%] h-[65vh] w-[65vh] rounded-full bg-[var(--primary-500)] opacity-[0.14] blur-3xl" />
+          <div className="absolute bottom-[-18%] left-[-12%] h-[55vh] w-[55vh] rounded-full bg-[var(--secondary-500)] opacity-[0.12] blur-3xl" />
+        </div>
+      )}
+
       <div className="fixed inset-x-0 top-0 z-20 h-1 bg-muted/80">
         <div
           className="h-full bg-[var(--primary-500)] transition-all duration-500 ease-out"
           style={{ width: `${stepProgress(step)}%` }}
         />
+      </div>
+
+      <div className="fixed left-4 top-3.5 z-30 sm:left-6">
+        <SmokeBrandLockup />
       </div>
 
       <div className="fixed right-4 top-4 z-30">
@@ -331,7 +395,7 @@ function WizardShell({
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col justify-center px-5 py-20 sm:px-8">
+      <div className="relative z-10 flex flex-1 flex-col justify-center px-5 py-20 sm:px-8">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
           {(showBack || questionStep) && (
             <div className="flex min-h-8 items-center justify-between gap-4">
@@ -367,7 +431,7 @@ function WizardShell({
   );
 }
 
-export default function FindAMatchClient() {
+export default function FindAMatchClient({ geoCity = null }: { geoCity?: string | null }) {
   const t = useTranslations('findAMatch');
   const tw = useTranslations('findAMatch.wizard');
   const locale = useLocale();
@@ -400,6 +464,8 @@ export default function FindAMatchClient() {
   const [isSearchingFacilities, setIsSearchingFacilities] = useState(false);
   const [facilitySearchError, setFacilitySearchError] = useState<string | null>(null);
   const [isOutOfArea, setIsOutOfArea] = useState(false);
+  const [searchCompleted, setSearchCompleted] = useState(false);
+  const [maxDistanceKm, setMaxDistanceKm] = useState<number>(DEFAULT_MAX_DISTANCE_KM);
 
   const [timeSlot, setTimeSlot] = useState<string | null>(null);
   const [timeDay, setTimeDay] = useState<TimeDayOption | null>(null);
@@ -439,13 +505,15 @@ export default function FindAMatchClient() {
       variant_valueprop: exp.variantValueProp,
       variant_price: exp.variantPriceCents,
       sport,
-      ville: selectedFacilityCity,
+      // Precise facility city once chosen; otherwise the IP-geo city so early
+      // funnel events (page_view, value_prop_click…) still carry a `ville`.
+      ville: selectedFacilityCity ?? geoCity,
       langue,
       forfait: selectedPlanTier,
       session_id: exp.sessionId,
       ...overrides,
     }),
-    [sport, selectedFacilityCity, langue, selectedPlanTier]
+    [sport, selectedFacilityCity, geoCity, langue, selectedPlanTier]
   );
 
   const clearAdvanceTimer = useCallback(() => {
@@ -547,9 +615,14 @@ export default function FindAMatchClient() {
   }, [experiment, eventContext]);
 
   const loadNearbyFacilities = useCallback(
-    async (coordinates: { latitude: number; longitude: number }, sportChoice: SportOption) => {
+    async (
+      coordinates: { latitude: number; longitude: number },
+      sportChoice: SportOption,
+      distanceKm: number
+    ) => {
       const requestId = ++facilitySearchRequest.current;
       setIsSearchingFacilities(true);
+      setSearchCompleted(false);
       setFacilitySearchError(null);
       setIsOutOfArea(false);
       setNearbyFacilities([]);
@@ -562,15 +635,14 @@ export default function FindAMatchClient() {
           sport: sportChoice,
           latitude: coordinates.latitude,
           longitude: coordinates.longitude,
+          maxDistanceKm: distanceKm,
         });
         if (requestId !== facilitySearchRequest.current) return;
 
+        // No auto-advance on an empty result: the location step surfaces an
+        // empty state so the visitor can widen the radius or continue anyway.
         setNearbyFacilities(facilities);
-        if (facilities.length === 0) {
-          setIsOutOfArea(true);
-          markPreferencesCompleted();
-          setStep('day');
-        }
+        setSearchCompleted(true);
       } catch {
         if (requestId !== facilitySearchRequest.current) return;
         setFacilitySearchError(tw('location.errors.searchFailed'));
@@ -580,7 +652,7 @@ export default function FindAMatchClient() {
         }
       }
     },
-    [tw, markPreferencesCompleted]
+    [tw]
   );
 
   const handleAddressQueryChange = (value: string) => {
@@ -594,8 +666,17 @@ export default function FindAMatchClient() {
     setSelectedFacilityCity(null);
     setFacilitySearchError(null);
     setIsOutOfArea(false);
+    setSearchCompleted(false);
     setError(null);
     clearPredictions();
+  };
+
+  const handleSelectDistance = (distanceKm: number) => {
+    setMaxDistanceKm(distanceKm);
+    setError(null);
+    if (sport && homeCoordinates) {
+      void loadNearbyFacilities(homeCoordinates, sport, distanceKm);
+    }
   };
 
   const handleSelectPlace = async (prediction: PlacePrediction) => {
@@ -619,7 +700,18 @@ export default function FindAMatchClient() {
       setHomePostalCode(normalizePostalCode(details.postalCode));
     }
 
-    void loadNearbyFacilities({ latitude: details.latitude, longitude: details.longitude }, sport);
+    void loadNearbyFacilities(
+      { latitude: details.latitude, longitude: details.longitude },
+      sport,
+      maxDistanceKm
+    );
+  };
+
+  const continueWithoutFacility = () => {
+    setIsOutOfArea(true);
+    markPreferencesCompleted();
+    clearAdvanceTimer();
+    setStep('day');
   };
 
   const selectSport = (option: SportOption) => {
@@ -797,7 +889,7 @@ export default function FindAMatchClient() {
   if (step === 'intro') {
     const variant = experiment.variantValueProp;
     return (
-      <WizardShell step={step} {...shellProps}>
+      <WizardShell step={step} backdrop {...shellProps}>
         <div className="flex flex-col gap-6">
           <Badge className="w-fit bg-[var(--secondary-500)] px-3 py-1 text-white hover:bg-[var(--secondary-500)]">
             {t(`valueProp.${variant}.badge`)}
@@ -863,9 +955,12 @@ export default function FindAMatchClient() {
         {/* Level */}
         {sport && (
           <div className="flex flex-col gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('preferences.levelLabel', { scale: ratingScaleLabel(sport) })}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('preferences.levelLabel', { scale: ratingScaleLabel(sport) })}
+              </p>
+              <LevelGuidePopover sport={sport} />
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {levelOptions.map(option => (
                 <button
@@ -952,7 +1047,11 @@ export default function FindAMatchClient() {
           <Input
             value={addressQuery}
             onChange={e => handleAddressQueryChange(e.target.value)}
-            placeholder={t('location.placeholder')}
+            placeholder={
+              geoCity
+                ? t('location.placeholderWithCity', { city: geoCity })
+                : t('location.placeholder')
+            }
             autoFocus
             className="h-14 rounded-2xl border-2 px-5 text-lg"
           />
@@ -975,6 +1074,27 @@ export default function FindAMatchClient() {
             </div>
           )}
         </div>
+
+        {homeCoordinates && (
+          <div className="flex flex-col gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('location.distanceLabel')}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {DISTANCE_OPTIONS_KM.map(km => (
+                <button
+                  key={km}
+                  type="button"
+                  onClick={() => handleSelectDistance(km)}
+                  disabled={isSearchingFacilities}
+                  className={ratingChipClass(maxDistanceKm === km)}
+                >
+                  {t('location.distanceOption', { km: String(km) })}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isResolvingAddress && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1030,6 +1150,26 @@ export default function FindAMatchClient() {
             })}
           </div>
         )}
+
+        {homeCoordinates &&
+          searchCompleted &&
+          !isSearchingFacilities &&
+          !facilitySearchError &&
+          nearbyFacilities.length === 0 && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-sm font-medium text-foreground">
+                {t('location.noResultsRadius', { km: String(maxDistanceKm) })}
+              </p>
+              <p className="text-sm text-muted-foreground">{t('location.widenHint')}</p>
+              <Button
+                onClick={continueWithoutFacility}
+                className="h-12 w-full bg-[var(--primary-600)] text-sm font-semibold text-white hover:bg-[var(--primary-700)]"
+              >
+                {t('location.continueAnyway')}
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          )}
 
         {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
       </WizardShell>

@@ -48,5 +48,10 @@ export default async function FindAMatchPage({ params }: { params: Promise<{ loc
     }
   }
 
-  return <FindAMatchClient />;
+  // Visitor's city from Vercel geo, so the address example matches where they
+  // are and early funnel events carry a `ville`. Absent in local dev.
+  const rawCity = headerList.get('x-vercel-ip-city') ?? undefined;
+  const geoCity = rawCity ? decodeURIComponent(rawCity) : null;
+
+  return <FindAMatchClient geoCity={geoCity} />;
 }

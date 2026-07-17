@@ -5,7 +5,8 @@ import type { SportOption } from './constants';
 
 import { createClient } from '@/lib/supabase/client';
 
-const DEFAULT_MAX_DISTANCE_KM = 25;
+export const DEFAULT_MAX_DISTANCE_KM = 25;
+export const DISTANCE_OPTIONS_KM = [10, 25, 50] as const;
 const FACILITY_SEARCH_LIMIT = 15;
 
 const sportIdCache = new Map<SportOption, string>();
@@ -43,13 +44,14 @@ export async function searchFacilitiesNearCoordinates(params: {
   sport: SportOption;
   latitude: number;
   longitude: number;
+  maxDistanceKm?: number;
 }): Promise<FacilitySearchResult[]> {
   const sportId = await getSportId(params.sport);
   const page = await searchFacilitiesNearby({
     sportIds: [sportId],
     latitude: params.latitude,
     longitude: params.longitude,
-    maxDistanceKm: DEFAULT_MAX_DISTANCE_KM,
+    maxDistanceKm: params.maxDistanceKm ?? DEFAULT_MAX_DISTANCE_KM,
     limit: FACILITY_SEARCH_LIMIT,
     offset: 0,
   });
