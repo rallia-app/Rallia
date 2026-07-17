@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
@@ -187,6 +188,10 @@ export const TournamentRanking: React.FC = () => {
         title={t('tournamentRanking.title')}
         subtitle={t('tournamentRanking.subtitle', { season: seasonLabel })}
         note={t('tournamentRanking.pointsNote')}
+        onNotePress={() => {
+          void lightHaptic();
+          void SheetManager.show('circuit-ranking-explainer');
+        }}
         theme={theme}
       />
 

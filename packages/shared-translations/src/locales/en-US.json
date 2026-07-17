@@ -5398,6 +5398,7 @@
       "nav": {
         "home": "Home",
         "games": "Games",
+        "courts": "Courts",
         "communities": "Communities",
         "guides": "Guides",
         "donate": "Support"
@@ -10901,6 +10902,34 @@
       }
     }
   },
+  "courtsPage": {
+    "title": "Courts Near You",
+    "subtitle": "Find tennis and pickleball courts near you and see what's open.",
+    "searchPlaceholder": "Search by name or city",
+    "allSports": "All sports",
+    "kmAway": "{distance} km away",
+    "courtCount": "{count} courts",
+    "courtCountSingular": "1 court",
+    "badgePublic": "Public",
+    "badgePrivate": "Private",
+    "badgeFirstCome": "First come, first served",
+    "badgeBookable": "Bookable",
+    "badgeMembership": "Members only",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "noSlots": "No open slots right now",
+    "bookCta": "Book in the app",
+    "loadMore": "Load more",
+    "emptyTitle": "No courts found",
+    "emptyDescription": "We couldn't find courts here yet. Try a different search, or get the app to explore more.",
+    "emptyCta": "Get the app",
+    "bookDialog": {
+      "title": "Book on Rallia",
+      "description": "Scan to open this court in the Rallia app and book an open slot.",
+      "descriptionNamed": "Scan to open {name} in the Rallia app and book an open slot.",
+      "qrHint": "Scan with your phone's camera, or download the app below."
+    }
+  },
   "gamesPage": {
     "title": "Upcoming Games",
     "subtitle": "Find public matches near you and join the action.",
@@ -11288,6 +11317,30 @@
         "title": "Wear it proudly",
         "body": "It marks you as part of the original crew that built the community behind every game on Rallia today."
       }
+    },
+    "circuitRanking": {
+      "title": "How the Circuit Rallia works",
+      "intro": "A ranking per sport and season. You earn points by entering tournaments and winning games.",
+      "placement": {
+        "title": "How far you get",
+        "note": "A win against a bye doesn't count."
+      },
+      "placements": {
+        "champion": "Champion 500",
+        "finalist": "Finalist 300",
+        "semifinal": "Semi 180",
+        "quarterfinal": "Quarter 90",
+        "played": "Played 20"
+      },
+      "worth": {
+        "title": "What a tournament is worth",
+        "body": "Bigger draws and higher minimum levels are worth more. Each tournament shows its value up front, like \"up to 650 pts\" on the card."
+      },
+      "season": {
+        "title": "Your season score",
+        "body": "Your 8 best results this season add up to your rank. A bad day never sets you back."
+      },
+      "finePrint": "Only tournaments run by a certified organizer award points. Two seasons a year: spring/summer and fall/winter."
     }
   },
   "profileCompletion": {
@@ -11656,6 +11709,12 @@
       "description": "Browse open tennis and pickleball games happening near you. Join a game in seconds — singles, doubles, all levels, real courts, real players.",
       "ogTitle": "Open Tennis & Pickleball Games — Join One Now",
       "ogDescription": "Live list of open games near you. Singles, doubles, all levels. Join in seconds with Rallia."
+    },
+    "courts": {
+      "title": "Tennis & Pickleball Courts Near You",
+      "description": "Find tennis and pickleball courts near you and see live availability. Browse public parks and clubs, check open slots, and book straight from the Rallia app.",
+      "ogTitle": "Tennis & Pickleball Courts — See Live Availability",
+      "ogDescription": "Browse courts near you with real-time open slots. Public parks, clubs, and indoor centers. Book in the Rallia app."
     },
     "communities": {
       "title": "Tennis & Pickleball Communities",

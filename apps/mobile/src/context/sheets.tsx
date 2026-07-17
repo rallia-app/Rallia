@@ -112,6 +112,7 @@ import {
   ReputationExplainerActionSheet,
   CovetedPlayerExplainerActionSheet,
   FoundingMemberExplainerActionSheet,
+  CircuitRankingExplainerActionSheet,
 } from '#/components/explainers';
 // Summer League announcement
 import { SummerLeagueAnnouncementActionSheet } from '#/features/summer-league/SummerLeagueAnnouncementSheet';
@@ -872,6 +873,9 @@ declare module 'react-native-actions-sheet' {
     'founding-member-explainer': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'circuit-ranking-explainer': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
     'match-suggestions': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
@@ -1012,6 +1016,7 @@ export const Sheets = () => {
         'reputation-explainer': ReputationExplainerActionSheet,
         'coveted-player-explainer': CovetedPlayerExplainerActionSheet,
         'founding-member-explainer': FoundingMemberExplainerActionSheet,
+        'circuit-ranking-explainer': CircuitRankingExplainerActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
         'suggest-match-time': SuggestMatchTimeActionSheet,

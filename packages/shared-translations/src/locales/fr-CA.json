@@ -5398,6 +5398,7 @@
       "nav": {
         "home": "Accueil",
         "games": "Parties",
+        "courts": "Terrains",
         "communities": "Communautés",
         "guides": "Guides",
         "donate": "Soutenir"
@@ -10901,6 +10902,34 @@
       }
     }
   },
+  "courtsPage": {
+    "title": "Terrains près de chez vous",
+    "subtitle": "Trouve des terrains de tennis et pickleball près de toi pis vois ce qui est libre.",
+    "searchPlaceholder": "Cherche par nom ou par ville",
+    "allSports": "Tous les sports",
+    "kmAway": "à {distance} km",
+    "courtCount": "{count} terrains",
+    "courtCountSingular": "1 terrain",
+    "badgePublic": "Public",
+    "badgePrivate": "Privé",
+    "badgeFirstCome": "Premier arrivé, premier servi",
+    "badgeBookable": "Réservable",
+    "badgeMembership": "Membres seulement",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "noSlots": "Aucune plage libre pour l'instant",
+    "bookCta": "Réserver dans l'app",
+    "loadMore": "Voir plus",
+    "emptyTitle": "Aucun terrain trouvé",
+    "emptyDescription": "On n'a pas trouvé de terrains ici pour l'instant. Essaie une autre recherche ou télécharge l'app pour en voir plus.",
+    "emptyCta": "Télécharger l'app",
+    "bookDialog": {
+      "title": "Réserver sur Rallia",
+      "description": "Scanne pour ouvrir ce terrain dans l'app Rallia pis réserver une plage libre.",
+      "descriptionNamed": "Scanne pour ouvrir {name} dans l'app Rallia pis réserver une plage libre.",
+      "qrHint": "Scanne avec la caméra de ton téléphone, ou télécharge l'app ci-dessous."
+    }
+  },
   "gamesPage": {
     "title": "Parties à venir",
     "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
@@ -11288,6 +11317,30 @@
         "title": "Porte-le avec fierté",
         "body": "Ça montre que tu fais partie de la gang des débuts, celle qui a bâti la communauté derrière chaque partie sur Rallia aujourd'hui."
       }
+    },
+    "circuitRanking": {
+      "title": "Comment marche le Circuit Rallia",
+      "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
+      "placement": {
+        "title": "Jusqu'où tu te rends",
+        "note": "Une victoire sur un bye compte pas."
+      },
+      "placements": {
+        "champion": "Champion 500",
+        "finalist": "Finaliste 300",
+        "semifinal": "Demi 180",
+        "quarterfinal": "Quart 90",
+        "played": "Participation 20"
+      },
+      "worth": {
+        "title": "Ce que vaut un tournoi",
+        "body": "Les gros tableaux et les niveaux minimums plus élevés valent plus. Chaque tournoi affiche sa valeur d'avance, comme « jusqu'à 650 pts » sur la carte."
+      },
+      "season": {
+        "title": "Ton score de saison",
+        "body": "Tes 8 meilleurs résultats de la saison forment ton rang. Une mauvaise journée te fait jamais reculer."
+      },
+      "finePrint": "Seuls les tournois d'un organisateur certifié donnent des points. Deux saisons par année : printemps/été et automne/hiver."
     }
   },
   "profileCompletion": {
@@ -11656,6 +11709,12 @@
       "description": "Parcourez les parties de tennis et pickleball ouvertes près de vous. Joignez-vous à une partie en quelques secondes — simples, doubles, tous niveaux, vrais terrains, vrais joueurs.",
       "ogTitle": "Parties ouvertes de tennis et pickleball — Joignez-vous maintenant",
       "ogDescription": "Liste en direct des parties ouvertes près de vous. Simples, doubles, tous niveaux. Joignez-vous en quelques secondes avec Rallia."
+    },
+    "courts": {
+      "title": "Terrains de tennis et pickleball près de chez vous",
+      "description": "Trouvez des terrains de tennis et pickleball près de vous et voyez les disponibilités en temps réel. Parcourez les parcs publics et les clubs, regardez les plages libres et réservez directement dans l'application Rallia.",
+      "ogTitle": "Terrains de tennis et pickleball — Disponibilités en temps réel",
+      "ogDescription": "Parcourez les terrains près de vous avec les plages libres en temps réel. Parcs publics, clubs et centres intérieurs. Réservez dans l'application Rallia."
     },
     "communities": {
       "title": "Communautés de tennis et pickleball",

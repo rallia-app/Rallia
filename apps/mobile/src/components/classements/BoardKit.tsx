@@ -171,12 +171,15 @@ export function BoardHeader({
   title,
   subtitle,
   note,
+  onNotePress,
   theme,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
   note: string;
+  /** When set, the note becomes a tappable "how it works" affordance. */
+  onNotePress?: () => void;
   theme: ThemeBits;
 }) {
   const accentColor = theme.isDark ? primary[300] : primary[600];
@@ -202,9 +205,23 @@ export function BoardHeader({
           </Text>
         </View>
       </View>
-      <Text size="sm" color={theme.mutedColor} style={styles.headerNote}>
-        {note}
-      </Text>
+      {onNotePress ? (
+        <TouchableOpacity
+          onPress={onNotePress}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          style={styles.headerNoteRow}
+        >
+          <Text size="sm" color={theme.mutedColor} style={styles.headerNoteFlex}>
+            {note}
+          </Text>
+          <Ionicons name="information-circle-outline" size={18} color={accentColor} />
+        </TouchableOpacity>
+      ) : (
+        <Text size="sm" color={theme.mutedColor} style={styles.headerNote}>
+          {note}
+        </Text>
+      )}
     </View>
   );
 }
@@ -354,6 +371,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   headerNote: {
+    lineHeight: 19,
+  },
+  headerNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  headerNoteFlex: {
+    flex: 1,
     lineHeight: 19,
   },
 
