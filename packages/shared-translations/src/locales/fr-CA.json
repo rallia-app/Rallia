@@ -11333,6 +11333,8 @@
         "finalist": "Finaliste 300",
         "semifinal": "Demi 180",
         "quarterfinal": "Quart 90",
+        "roundOf16": "R16 50",
+        "roundOf32": "R32 30",
         "played": "Participation 20"
       },
       "worth": {

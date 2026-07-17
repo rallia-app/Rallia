@@ -71,6 +71,8 @@ export function CircuitRankingExplainerActionSheet(
       label: t('explainers.circuitRanking.placements.quarterfinal'),
       accent: false,
     },
+    { key: 'roundOf16', label: t('explainers.circuitRanking.placements.roundOf16'), accent: false },
+    { key: 'roundOf32', label: t('explainers.circuitRanking.placements.roundOf32'), accent: false },
     { key: 'played', label: t('explainers.circuitRanking.placements.played'), accent: false },
   ];
 

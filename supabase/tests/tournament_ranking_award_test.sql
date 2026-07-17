@@ -812,4 +812,119 @@ BEGIN
     RAISE NOTICE 'PASS 9: pricing function — log2 draw curve, level from min_rating, clamps';
 END $$;
 
+-- --------------------------------------------------------------------------
+-- 10. Round-of-N placements — every real win moves the ladder. 18 entrants in
+--     a 32-cap bracket: seeds 15–18 collide in two real R1 matches, so their
+--     winners carry a real win into R2 and exit as round_of_16; every other
+--     R2 loser bye-advanced through R1 (zero real wins) and must stay on the
+--     participation floor. draw_mult(18) = 1.585 → snapped ×1.6.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport   uuid;
+    v_players uuid[];
+    v_org     uuid;
+    v_t       tournaments;
+    v_tid     uuid;
+    v_ver     integer;
+    v_match   tournament_matches;
+    v_guard   integer := 0;
+    v_count   integer;
+    i         integer;
+BEGIN
+    -- Block 9 sets SET LOCAL session_replication_role = replica, which lives
+    -- until transaction end and would silence the stamp + award triggers here.
+    SET LOCAL session_replication_role = origin;
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
+    SELECT array_agg(player_id) INTO v_players
+      FROM (SELECT player_id FROM player_sport
+             WHERE sport_id = v_sport AND is_active = true
+             ORDER BY player_id LIMIT 18) s;
+    ASSERT array_length(v_players, 1) = 18, 'need 18 active tennis players';
+    v_org := v_players[1];
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_create(
+        p_name => 'Ranking Cup 32 sparse', p_sport_id => v_sport,
+        p_max_participants => 32::smallint,
+        p_start_date => now() + interval '7 days',
+        p_end_date   => now() + interval '8 days',
+        p_visibility => 'public', p_registration_mode => 'open'
+    );
+    v_tid := v_t.id; v_ver := v_t.version;
+    SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+
+    FOR i IN 1..18 LOOP
+        PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[i]::text)::text, true);
+        IF NOT EXISTS (SELECT 1 FROM tournament_registrations
+                        WHERE tournament_id = v_tid AND user_id = v_players[i]
+                          AND status = 'registered') THEN
+            PERFORM tournament_register(v_tid);
+        END IF;
+    END LOOP;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_close_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+    PERFORM tournament_generate_bracket(v_tid, v_ver);
+
+    LOOP
+        v_guard := v_guard + 1;
+        ASSERT v_guard < 100, 'override loop did not converge';
+        SELECT * INTO v_match FROM tournament_matches
+         WHERE tournament_id = v_tid AND status = 'pending'
+           AND player1_is_bye = false AND player2_is_bye = false
+           AND player1_registration_id IS NOT NULL
+           AND player2_registration_id IS NOT NULL
+         ORDER BY round_number, match_position LIMIT 1;
+        EXIT WHEN v_match.id IS NULL;
+        PERFORM tournament_override_score(v_match.id, v_match.player1_registration_id, '6-0 6-0');
+    END LOOP;
+
+    ASSERT (SELECT status FROM tournaments WHERE id = v_tid) = 'completed', 'expected completed';
+
+    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 1.6,
+        'expected stamped multiplier 1.6 for an 18-entry field, got '
+        || (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid)
+        || ' (draw_size=' || (SELECT ranking_draw_size FROM tournaments WHERE id = v_tid) || ')';
+
+    SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 18, 'expected 18 ledger rows, got ' || v_count;
+
+    -- The two R1 winners lose in R2 with a real win → round_of_16 at 50×1.6 = 80.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'round_of_16' AND points = 80;
+    ASSERT v_count = 2, 'expected 2 round_of_16 rows at 80 pts, got ' || v_count;
+
+    -- Every other R2 loser bye-advanced (zero real wins) → participation floor,
+    -- alongside the two R1 losers: 6 + 2 = 8 rows at round(20*1.6/10)*10 = 30.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 30;
+    ASSERT v_count = 8, 'expected 8 participated rows at 30 pts, got ' || v_count;
+
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'quarterfinal' AND points = 140;
+    ASSERT v_count = 4, 'expected 4 quarterfinal rows at 140 pts, got ' || v_count;
+
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'semifinal' AND points = 290;
+    ASSERT v_count = 2, 'expected 2 semifinal rows at 290 pts, got ' || v_count;
+
+    SELECT points INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'champion';
+    ASSERT v_count = 800, 'champion should earn 500×1.6 = 800, got ' || v_count;
+
+    SELECT points INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'finalist';
+    ASSERT v_count = 480, 'finalist should earn 300×1.6 = 480, got ' || v_count;
+
+    SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 2820, 'expected total 800+480+580+560+160+240 = 2820, got ' || v_count;
+
+    RAISE NOTICE 'PASS 10: round-of-N placements — real R1 win pays a rung, bye-advance stays floored';
+END $$;
+
 ROLLBACK;
