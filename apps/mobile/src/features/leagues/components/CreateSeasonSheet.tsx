@@ -65,6 +65,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
   const [feePayer, setFeePayer] = useState<FeePayer>('player_pays');
   const [refundKind, setRefundKind] = useState<RefundKind>('none');
   const [refundPct, setRefundPct] = useState('50');
+  const [refundCutoff, setRefundCutoff] = useState<Date>(() => new Date());
 
   const entryFeeCents = dollarsToCents(entryFee);
   const isPaid = entryFeeCents > 0;
@@ -110,6 +111,8 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
   const handleStartChange = useCallback((date: Date) => {
     setStartDate(date);
     setEndDate(prev => (prev < date ? date : prev));
+    // Refunds can't be promised past the season's own start date.
+    setRefundCutoff(prev => (prev > date ? date : prev));
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -141,6 +144,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
       feePayer: isPaid ? feePayer : 'player_pays',
       refundPolicyKind: isPaid ? refundKind : 'none',
       refundPartialBps: isPaid && refundKind === 'partial' ? pct * 100 : null,
+      refundCutoffAt: isPaid && refundKind !== 'none' ? refundCutoff.toISOString() : null,
     });
   }, [
     name,
@@ -154,6 +158,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     feePayer,
     refundKind,
     refundPct,
+    refundCutoff,
   ]);
 
   return (
@@ -364,6 +369,25 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
                 {t('leagueDetail.createSeason.payments.refundFeeNote')}
               </Text>
             </View>
+
+            {refundKind !== 'none' && (
+              <View style={styles.fieldGroup}>
+                <SheetDateField
+                  label={t('leagueDetail.createSeason.payments.refundCutoffLabel')}
+                  value={refundCutoff}
+                  displayValue={formatDate(refundCutoff)}
+                  mode="date"
+                  maximumDate={startDate}
+                  onChange={setRefundCutoff}
+                  colors={colors}
+                  isDark={isDark}
+                  testID="season-refund-cutoff-field"
+                />
+                <Text size="xs" color={colors.textMuted}>
+                  {t('leagueDetail.createSeason.payments.refundCutoffHint')}
+                </Text>
+              </View>
+            )}
 
             <Text size="xs" color={colors.textMuted}>
               {t('leagueDetail.createSeason.payments.payoutNote')}

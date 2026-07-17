@@ -11712,6 +11712,7 @@ export type Database = {
           p_description?: string
           p_facility_id?: string
           p_join_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
+          p_logo_url?: string
           p_max_rating?: number
           p_min_rating?: number
           p_min_reputation?: number

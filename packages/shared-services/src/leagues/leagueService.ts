@@ -66,6 +66,7 @@ export interface CreateLeagueInput {
   minRating?: number;
   maxRating?: number;
   minReputation?: number;
+  logoUrl?: string;
 }
 
 export interface LeagueMemberWithProfile extends LeagueMember {
@@ -142,6 +143,7 @@ export async function createLeague(input: CreateLeagueInput): Promise<League> {
     p_min_rating: input.minRating ?? null,
     p_max_rating: input.maxRating ?? null,
     p_min_reputation: input.minReputation ?? null,
+    p_logo_url: input.logoUrl ?? null,
   });
   if (error) throw new Error(error.message);
   return data as League;

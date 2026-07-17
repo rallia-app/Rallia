@@ -39,6 +39,7 @@ interface SheetDateFieldProps {
   displayValue: string;
   mode: 'date' | 'time';
   minimumDate?: Date;
+  maximumDate?: Date;
   onChange: (date: Date) => void;
   colors: FieldColors;
   isDark: boolean;
@@ -52,6 +53,7 @@ export function SheetDateField({
   displayValue,
   mode,
   minimumDate,
+  maximumDate,
   onChange,
   colors,
   isDark,
@@ -109,6 +111,7 @@ export function SheetDateField({
           mode={mode}
           display="default"
           minimumDate={minimumDate}
+          maximumDate={maximumDate}
           onChange={handleChange}
         />
       )}
@@ -143,6 +146,7 @@ export function SheetDateField({
                 mode={mode}
                 display="spinner"
                 minimumDate={minimumDate}
+                maximumDate={maximumDate}
                 onChange={handleChange}
                 themeVariant={isDark ? 'dark' : 'light'}
                 style={styles.iosPicker}

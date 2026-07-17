@@ -16,8 +16,18 @@
 
 import * as React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Keyboard,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import {
@@ -29,18 +39,25 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useTheme, useCreateLeague, useUpdateLeague } from '@rallia/shared-hooks';
+import { lightHaptic, successHaptic, warningHaptic, getLeagueLogoUrl } from '@rallia/shared-utils';
+import {
+  useTheme,
+  useCreateLeague,
+  useUpdateLeague,
+  useRatingScoresForSport,
+} from '@rallia/shared-hooks';
 import type { LeagueUpdatePatch } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
-import { useSport } from '../../../context';
+import { useSport, useAuth } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
+import { pickImageWithCropper } from '../../../utils/imagePicker';
+import { uploadImage, deleteImage } from '../../../services/imageUpload';
 import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
-const TOTAL_STEPS = 2;
+const TOTAL_STEPS = 3;
 
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>;
 type JoinMode = Enums<'tournament_registration_mode'>;
@@ -56,6 +73,9 @@ export interface LeagueEditData {
   description: string | null;
   visibility: Visibility;
   joinMode: JoinMode;
+  minRating?: number | null;
+  maxRating?: number | null;
+  logoUrl?: string | null;
 }
 
 export interface LeagueCreationWizardProps {
@@ -162,6 +182,7 @@ const ProgressBar: React.FC<{
   const stepNames = [
     t('leagueCreation.stepNames.details' as TranslationKey),
     t('leagueCreation.stepNames.visibility' as TranslationKey),
+    t('leagueCreation.stepNames.eligibility' as TranslationKey),
   ];
   return (
     <View style={styles.progressContainer}>
@@ -254,10 +275,26 @@ const DetailsStep: React.FC<{
   setName: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
+  logoUrl: string | null;
+  posterUploading: boolean;
+  onPickPoster: () => void;
+  onRemovePoster: () => void;
   errors: Record<string, string | undefined>;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
-}> = ({ name, setName, description, setDescription, errors, colors, t }) => (
+}> = ({
+  name,
+  setName,
+  description,
+  setDescription,
+  logoUrl,
+  posterUploading,
+  onPickPoster,
+  onRemovePoster,
+  errors,
+  colors,
+  t,
+}) => (
   <SheetScrollView
     style={styles.stepContainer}
     contentContainerStyle={styles.stepContent}
@@ -272,6 +309,64 @@ const DetailsStep: React.FC<{
       <Text size="sm" color={colors.textMuted}>
         {t('leagueCreation.step1Description' as TranslationKey)}
       </Text>
+    </View>
+
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>{t('leagueCreation.fields.cover' as TranslationKey)}</FieldLabel>
+      {logoUrl ? (
+        <View>
+          <Image
+            source={{
+              uri: logoUrl.startsWith('http') ? (getLeagueLogoUrl(logoUrl) ?? logoUrl) : logoUrl,
+            }}
+            style={styles.posterPreview}
+            resizeMode="cover"
+          />
+          <TouchableOpacity
+            style={[styles.posterRemoveBtn, { backgroundColor: colors.cardBackground }]}
+            onPress={onRemovePoster}
+            disabled={posterUploading}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('leagueCreation.fields.coverRemove' as TranslationKey)}
+          >
+            <Ionicons name="close" size={18} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.posterChangeBtn}
+            onPress={onPickPoster}
+            disabled={posterUploading}
+          >
+            {posterUploading ? (
+              <ActivityIndicator color={colors.textSecondary} />
+            ) : (
+              <Text size="xs" weight="semibold" color={colors.textSecondary}>
+                {t('leagueCreation.fields.coverChange' as TranslationKey)}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.posterAddBtn,
+            { borderColor: colors.inputBorder, backgroundColor: colors.inputBackground },
+          ]}
+          onPress={onPickPoster}
+          disabled={posterUploading}
+          activeOpacity={0.7}
+        >
+          {posterUploading ? (
+            <ActivityIndicator color={colors.textSecondary} />
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
+              <Text size="sm" weight="medium" color={colors.textSecondary}>
+                {t('leagueCreation.fields.coverAdd' as TranslationKey)}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
 
     <View style={styles.fieldGroup}>
@@ -409,6 +504,152 @@ const VisibilityStep: React.FC<{
   </SheetScrollView>
 );
 
+const RatingTierRow: React.FC<{
+  label: string;
+  noneLabel: string;
+  value: number | null;
+  setValue: (v: number | null) => void;
+  ratingOptions: { id: string; value: number; label: string; skillLevel: string | null }[];
+  colors: ThemeColors;
+  t: (k: TranslationKey) => string;
+  testID?: string;
+}> = ({ label, noneLabel, value, setValue, ratingOptions, colors, t, testID }) => (
+  <View style={styles.fieldGroup}>
+    <FieldLabel colors={colors}>{label}</FieldLabel>
+    <GestureScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.ratingScrollContent}
+      nestedScrollEnabled
+      testID={testID}
+    >
+      <TouchableOpacity
+        onPress={() => {
+          lightHaptic();
+          setValue(null);
+        }}
+        activeOpacity={0.7}
+        style={[
+          styles.ratingCard,
+          {
+            backgroundColor: value === null ? `${colors.buttonActive}15` : colors.buttonInactive,
+            borderColor: value === null ? colors.buttonActive : colors.border,
+          },
+        ]}
+      >
+        <Text
+          size="sm"
+          weight={value === null ? 'bold' : 'regular'}
+          color={value === null ? colors.buttonActive : colors.text}
+        >
+          {noneLabel}
+        </Text>
+      </TouchableOpacity>
+      {ratingOptions.map(opt => {
+        const selected = value === opt.value;
+        return (
+          <TouchableOpacity
+            key={opt.id}
+            onPress={() => {
+              lightHaptic();
+              setValue(opt.value);
+            }}
+            activeOpacity={0.7}
+            style={[
+              styles.ratingCard,
+              {
+                backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+                borderColor: selected ? colors.buttonActive : colors.border,
+              },
+            ]}
+          >
+            <Text
+              size="base"
+              weight={selected ? 'bold' : 'semibold'}
+              color={selected ? colors.buttonActive : colors.text}
+            >
+              {opt.label}
+            </Text>
+            {opt.skillLevel && (
+              <Text
+                size="xs"
+                color={selected ? colors.buttonActive : colors.textMuted}
+                style={styles.ratingSkillLevel}
+              >
+                {t(`matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey)}
+              </Text>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </GestureScrollView>
+  </View>
+);
+
+const EligibilityStep: React.FC<{
+  minRating: number | null;
+  setMinRating: (v: number | null) => void;
+  maxRating: number | null;
+  setMaxRating: (v: number | null) => void;
+  ratingOptions: { id: string; value: number; label: string; skillLevel: string | null }[];
+  errors: Record<string, string | undefined>;
+  colors: ThemeColors;
+  t: (k: TranslationKey) => string;
+}> = ({ minRating, setMinRating, maxRating, setMaxRating, ratingOptions, errors, colors, t }) => (
+  <SheetScrollView
+    style={styles.stepContainer}
+    contentContainerStyle={styles.stepContent}
+    showsVerticalScrollIndicator={false}
+    keyboardShouldPersistTaps="handled"
+  >
+    <View style={styles.stepHeader}>
+      <Text size="lg" weight="bold" color={colors.text}>
+        {t('leagueCreation.eligibilityStepTitle' as TranslationKey)}
+      </Text>
+      <Text size="sm" color={colors.textMuted}>
+        {t('leagueCreation.eligibilityStepDescription' as TranslationKey)}
+      </Text>
+    </View>
+
+    {ratingOptions.length > 0 ? (
+      <>
+        <RatingTierRow
+          label={t('leagueCreation.fields.minRating' as TranslationKey)}
+          noneLabel={t('leagueCreation.fields.minRatingNone' as TranslationKey)}
+          value={minRating}
+          setValue={setMinRating}
+          ratingOptions={ratingOptions}
+          colors={colors}
+          t={t}
+          testID="league-min-rating"
+        />
+        <RatingTierRow
+          label={t('leagueCreation.fields.maxRating' as TranslationKey)}
+          noneLabel={t('leagueCreation.fields.maxRatingNone' as TranslationKey)}
+          value={maxRating}
+          setValue={setMaxRating}
+          ratingOptions={ratingOptions}
+          colors={colors}
+          t={t}
+          testID="league-max-rating"
+        />
+        {errors.ratingRange && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {errors.ratingRange}
+          </Text>
+        )}
+        <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+          {t('leagueCreation.fields.ratingGateHint' as TranslationKey)}
+        </Text>
+      </>
+    ) : (
+      <Text size="sm" color={colors.textMuted}>
+        {t('leagueCreation.fields.ratingGateUnavailable' as TranslationKey)}
+      </Text>
+    )}
+  </SheetScrollView>
+);
+
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -422,6 +663,8 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { selectedSport } = useSport();
+  const { session } = useAuth();
+  const userId = session?.user?.id;
   const toast = useToast();
   const isDark = theme === 'dark';
 
@@ -457,11 +700,42 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [name, setName] = useState(editLeague?.name ?? '');
   const [description, setDescription] = useState(editLeague?.description ?? '');
+  const [logoUrl, setLogoUrl] = useState<string | null>(editLeague?.logoUrl ?? null);
+  const [posterUploading, setPosterUploading] = useState(false);
   const [visibility, setVisibility] = useState<Visibility>(editLeague?.visibility ?? 'private');
   const [joinMode, setJoinMode] = useState<JoinMode>(editLeague?.joinMode ?? 'approval');
+  const [minRating, setMinRating] = useState<number | null>(editLeague?.minRating ?? null);
+  const [maxRating, setMaxRating] = useState<number | null>(editLeague?.maxRating ?? null);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
+
+  const { ratingScores } = useRatingScoresForSport(sportKey, selectedSport?.id, userId);
+  const ratingOptions = useMemo(
+    () =>
+      ratingScores.map(r => ({
+        id: r.id,
+        value: r.value,
+        label: r.label,
+        skillLevel: r.skillLevel,
+      })),
+    [ratingScores]
+  );
+
+  // Pick + crop only — the upload is deferred to submit (handleSubmit) so an
+  // abandoned/cancelled form never orphans an uploaded file. logoUrl holds the
+  // local URI until then. Mirrors TournamentCreationWizard's poster flow.
+  const handlePickPoster = useCallback(async () => {
+    const { uri } = await pickImageWithCropper({ aspectRatio: [16, 9], quality: 0.85 });
+    if (!uri) return;
+    lightHaptic();
+    setLogoUrl(uri);
+  }, []);
+
+  const handleRemovePoster = useCallback(() => {
+    lightHaptic();
+    setLogoUrl(null);
+  }, []);
 
   const { createLeagueAsync, isCreating } = useCreateLeague({
     onError: err => {
@@ -492,7 +766,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     },
   });
 
-  const isSubmitting = isCreating || isUpdating;
+  const isSubmitting = isCreating || isUpdating || posterUploading;
 
   const validateStep = useCallback(
     (step: number): boolean => {
@@ -503,10 +777,13 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         else if (trimmed.length > 100)
           next.name = t('leagueCreation.validation.nameTooLong' as TranslationKey);
       }
+      if (step === 3 && minRating !== null && maxRating !== null && maxRating < minRating) {
+        next.ratingRange = t('leagueCreation.validation.ratingRangeInvalid' as TranslationKey);
+      }
       setErrors(next);
       return Object.values(next).every(v => !v);
     },
-    [name, t]
+    [name, minRating, maxRating, t]
   );
 
   const goNext = useCallback(() => {
@@ -537,6 +814,29 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       setCurrentStep(1);
       return;
     }
+    if (!validateStep(3)) {
+      setCurrentStep(3);
+      return;
+    }
+
+    // Upload a freshly-picked cover now (on submit) rather than at selection,
+    // so abandoning the form never orphans an uploaded file. logoUrl is a local
+    // URI for a new pick, or an existing remote URL (https) when unchanged.
+    let resolvedLogoUrl = logoUrl;
+    if (logoUrl && !/^https?:\/\//.test(logoUrl)) {
+      setPosterUploading(true);
+      const { url } = await uploadImage(logoUrl, 'league-logos');
+      setPosterUploading(false);
+      if (!url) {
+        warningHaptic();
+        Alert.alert(
+          t('leagueCreation.errors.coverUploadFailedTitle' as TranslationKey),
+          t('leagueCreation.errors.coverUploadFailed' as TranslationKey)
+        );
+        return;
+      }
+      resolvedLogoUrl = url;
+    }
 
     // ---- Edit mode: diff against the original and PATCH only what changed ----
     if (isEditMode && editLeague) {
@@ -548,6 +848,9 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         if (desc !== (editLeague.description ?? '')) patch.description = desc.length ? desc : null;
         if (visibility !== editLeague.visibility) patch.visibility = visibility;
         if (joinMode !== editLeague.joinMode) patch.joinMode = joinMode;
+        if (minRating !== (editLeague.minRating ?? null)) patch.minRating = minRating;
+        if (maxRating !== (editLeague.maxRating ?? null)) patch.maxRating = maxRating;
+        if (resolvedLogoUrl !== (editLeague.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
 
         // The server rejects an empty patch, so a no-op save just closes.
         if (Object.keys(patch).length === 0) {
@@ -561,6 +864,12 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
           patch,
         });
         successHaptic();
+        // Only after the update commits: clean up the previous cover file when
+        // it was replaced or removed, so the bucket doesn't accumulate orphans.
+        const oldLogo = editLeague.logoUrl;
+        if (oldLogo && oldLogo !== resolvedLogoUrl && oldLogo.startsWith('http')) {
+          void deleteImage(oldLogo, 'league-logos');
+        }
         onSuccess(editLeague.id);
       } catch {
         // toast handled in hook
@@ -577,6 +886,9 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         sportId: selectedSport.id,
         visibility,
         joinMode,
+        minRating: minRating ?? undefined,
+        maxRating: maxRating ?? undefined,
+        logoUrl: resolvedLogoUrl ?? undefined,
       });
       successHaptic();
       Analytics.leagueCreated({
@@ -596,10 +908,14 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     editLeague,
     isEditMode,
     joinMode,
+    logoUrl,
+    maxRating,
+    minRating,
     name,
     onClose,
     onSuccess,
     selectedSport,
+    t,
     updateLeagueAsync,
     validateStep,
     visibility,
@@ -608,8 +924,11 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   const handleCreateAnother = useCallback(() => {
     setName('');
     setDescription('');
+    setLogoUrl(null);
     setVisibility('private');
     setJoinMode('approval');
+    setMinRating(null);
+    setMaxRating(null);
     setErrors({});
     setShowSuccess(false);
     setCreatedId(null);
@@ -689,6 +1008,10 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
             setName={setName}
             description={description}
             setDescription={setDescription}
+            logoUrl={logoUrl}
+            posterUploading={posterUploading}
+            onPickPoster={handlePickPoster}
+            onRemovePoster={handleRemovePoster}
             errors={errors}
             colors={colors}
             t={t}
@@ -700,6 +1023,18 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
             setVisibility={setVisibility}
             joinMode={joinMode}
             setJoinMode={setJoinMode}
+            colors={colors}
+            t={t}
+          />
+        )}
+        {currentStep === 3 && (
+          <EligibilityStep
+            minRating={minRating}
+            setMinRating={setMinRating}
+            maxRating={maxRating}
+            setMaxRating={setMaxRating}
+            ratingOptions={ratingOptions}
+            errors={errors}
             colors={colors}
             t={t}
           />
@@ -813,6 +1148,54 @@ const styles = StyleSheet.create({
   },
   errorText: {
     marginTop: spacingPixels[1],
+  },
+  fieldHint: {
+    marginTop: spacingPixels[2],
+  },
+  ratingScrollContent: {
+    gap: spacingPixels[2],
+    paddingRight: spacingPixels[2],
+  },
+  ratingCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    minWidth: 60,
+  },
+  ratingSkillLevel: {
+    marginTop: spacingPixels[0.5],
+  },
+  posterAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    height: 120,
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  posterPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: radiusPixels.lg,
+  },
+  posterRemoveBtn: {
+    position: 'absolute',
+    top: spacingPixels[2],
+    right: spacingPixels[2],
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  posterChangeBtn: {
+    alignSelf: 'center',
+    paddingVertical: spacingPixels[2],
   },
   textInput: {
     padding: spacingPixels[4],

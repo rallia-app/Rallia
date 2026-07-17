@@ -4509,6 +4509,9 @@
         "refundNoneTitle": "No refund",
         "refundNoneDescription": "The entry price isn't refundable.",
         "refundPctInvalid": "Enter a refund percentage between 1 and 99.",
+        "refundCutoffLabel": "Refund cutoff",
+        "refundCutoffPlaceholder": "Select a date",
+        "refundCutoffHint": "Refunds aren't allowed after this date. Defaults to the season's start date.",
         "payoutNote": "Entry payments are held securely, then paid out to your bank account once the season closes.",
         "lockedNote": "Entry fee and refund policy lock once the season opens."
       }
@@ -4606,12 +4609,15 @@
     "step": "Step {current} of {total}",
     "stepNames": {
       "details": "Details",
-      "visibility": "Visibility"
+      "visibility": "Visibility",
+      "eligibility": "Eligibility"
     },
     "step1Title": "Details",
     "step1Description": "Name your league and add an optional description",
     "visibilityStepTitle": "Visibility",
     "visibilityStepDescription": "Who can find and join your league?",
+    "eligibilityStepTitle": "Eligibility",
+    "eligibilityStepDescription": "Optionally restrict who can join based on rating",
     "next": "Next",
     "createLeague": "Create league",
     "creating": "Creating...",
@@ -4620,6 +4626,10 @@
     "viewLeague": "View league",
     "createAnother": "Create another",
     "fields": {
+      "cover": "Cover image",
+      "coverAdd": "Add a cover image",
+      "coverChange": "Change cover image",
+      "coverRemove": "Remove cover image",
       "name": "Name",
       "namePlaceholder": "e.g., Montreal Summer Ladder",
       "description": "Description",
@@ -4635,16 +4645,25 @@
       "joinModeApproval": "Approval",
       "joinModeApprovalDescription": "You approve each join request",
       "joinModeInviteOnly": "Invite only",
-      "joinModeInviteOnlyDescription": "Only players you invite can join"
+      "joinModeInviteOnlyDescription": "Only players you invite can join",
+      "minRating": "Minimum rating",
+      "minRatingNone": "No minimum",
+      "maxRating": "Maximum rating",
+      "maxRatingNone": "No maximum",
+      "ratingGateHint": "Players outside this range can't join — this is enforced automatically, not left to you to approve.",
+      "ratingGateUnavailable": "Rating gating isn't available for this sport yet."
     },
     "validation": {
       "nameRequired": "League name is required",
-      "nameTooLong": "Name must be 100 characters or fewer"
+      "nameTooLong": "Name must be 100 characters or fewer",
+      "ratingRangeInvalid": "Maximum rating must be at or above the minimum"
     },
     "errors": {
       "sportMismatch": "Switch to a sport on your profile before creating a league",
       "rateLimited": "You can create up to 5 leagues per day",
-      "generic": "Couldn't create the league. Try again."
+      "generic": "Couldn't create the league. Try again.",
+      "coverUploadFailedTitle": "Upload failed",
+      "coverUploadFailed": "Couldn't upload the cover image. Please try again."
     }
   },
   "tournamentList": {

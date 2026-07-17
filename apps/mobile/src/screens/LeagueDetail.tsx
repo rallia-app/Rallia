@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,7 @@ import {
   warningHaptic,
   getHumanName,
   formatPrice,
+  getLeagueLogoUrl,
 } from '@rallia/shared-utils';
 import {
   useTheme,
@@ -85,6 +87,7 @@ import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
 import type { LeagueEditData } from '../features/leagues';
+import { DEFAULT_LEAGUE_BANNER } from '../features/leagues/defaultBanner';
 import { useTranslation, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -1375,6 +1378,9 @@ export const LeagueDetail: React.FC = () => {
           description: league.description,
           visibility: league.visibility as LeagueEditData['visibility'],
           joinMode: league.join_mode,
+          minRating: league.min_rating,
+          maxRating: league.max_rating,
+          logoUrl: league.logo_url,
         },
       },
     });
@@ -1569,6 +1575,15 @@ export const LeagueDetail: React.FC = () => {
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
           >
+            <Image
+              source={
+                league.logo_url
+                  ? { uri: getLeagueLogoUrl(league.logo_url) ?? league.logo_url }
+                  : DEFAULT_LEAGUE_BANNER
+              }
+              style={styles.heroPoster}
+              resizeMode="cover"
+            />
             <View style={styles.heroTopRow}>
               <LeagueStatusBadge status={league.status} colors={colors} t={t} />
             </View>
@@ -2484,6 +2499,12 @@ const styles = StyleSheet.create({
   playersTabContent: {
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[8],
+  },
+  heroPoster: {
+    width: '100%',
+    height: 160,
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[3],
   },
   heroTopRow: {
     flexDirection: 'row',

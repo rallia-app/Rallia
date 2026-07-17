@@ -8,6 +8,7 @@ const RESIZE_WIDTHS: Record<string, number> = {
   'facility-images': 800,
   'group-images': 800,
   'tournament-logos': 1080,
+  'league-logos': 1080,
   'feedback-screenshots': 800,
   'report-evidence': 800,
 };

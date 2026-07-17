@@ -4509,6 +4509,9 @@
         "refundNoneTitle": "Aucun remboursement",
         "refundNoneDescription": "L'inscription n'est pas remboursable.",
         "refundPctInvalid": "Entre un pourcentage de remboursement entre 1 et 99.",
+        "refundCutoffLabel": "Date limite de remboursement",
+        "refundCutoffPlaceholder": "Choisis une date",
+        "refundCutoffHint": "Aucun remboursement après cette date. Par défaut, la date de début de la saison.",
         "payoutNote": "Les paiements sont gardés en sécurité, puis versés dans ton compte bancaire une fois la saison fermée.",
         "lockedNote": "Les frais et la politique de remboursement se verrouillent dès l'ouverture de la saison."
       }
@@ -4606,12 +4609,15 @@
     "step": "Étape {current} sur {total}",
     "stepNames": {
       "details": "Détails",
-      "visibility": "Visibilité"
+      "visibility": "Visibilité",
+      "eligibility": "Admissibilité"
     },
     "step1Title": "Détails",
     "step1Description": "Nommez votre ligue et ajoutez une description (optionnel)",
     "visibilityStepTitle": "Visibilité",
     "visibilityStepDescription": "Qui peut trouver et rejoindre votre ligue?",
+    "eligibilityStepTitle": "Admissibilité",
+    "eligibilityStepDescription": "Restreignez l'accès selon le niveau, si vous le souhaitez",
     "next": "Suivant",
     "createLeague": "Créer la ligue",
     "creating": "Création...",
@@ -4620,6 +4626,10 @@
     "viewLeague": "Voir la ligue",
     "createAnother": "Créer une autre",
     "fields": {
+      "cover": "Image de couverture",
+      "coverAdd": "Ajouter une image de couverture",
+      "coverChange": "Changer l'image de couverture",
+      "coverRemove": "Retirer l'image de couverture",
       "name": "Nom",
       "namePlaceholder": "p. ex., Ligue d'été de Montréal",
       "description": "Description",
@@ -4635,16 +4645,25 @@
       "joinModeApproval": "Approbation",
       "joinModeApprovalDescription": "Vous approuvez chaque demande",
       "joinModeInviteOnly": "Sur invitation",
-      "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre"
+      "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre",
+      "minRating": "Niveau minimum",
+      "minRatingNone": "Aucun minimum",
+      "maxRating": "Niveau maximum",
+      "maxRatingNone": "Aucun maximum",
+      "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, vous n'avez rien à approuver.",
+      "ratingGateUnavailable": "L'admissibilité par niveau n'est pas encore offerte pour ce sport."
     },
     "validation": {
       "nameRequired": "Le nom de la ligue est requis",
-      "nameTooLong": "Le nom doit contenir 100 caractères ou moins"
+      "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
+      "ratingRangeInvalid": "Le niveau maximum doit être égal ou supérieur au minimum"
     },
     "errors": {
       "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",
       "rateLimited": "Vous pouvez créer jusqu'à 5 ligues par jour",
-      "generic": "Impossible de créer la ligue. Réessayez."
+      "generic": "Impossible de créer la ligue. Réessayez.",
+      "coverUploadFailedTitle": "Échec du téléversement",
+      "coverUploadFailed": "Impossible de téléverser l'image de couverture. Réessayez."
     }
   },
   "tournamentList": {
