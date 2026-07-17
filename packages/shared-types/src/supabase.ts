@@ -9043,12 +9043,12 @@ export type Database = {
           computed_at: string
           id: string
           level_bucket: string | null
+          multiplier: number
           placement: string
           points: number
           registration_id: string
           season_id: string
           sport_id: string
-          tier: string
           tournament_id: string
           user_id: string
         }
@@ -9056,12 +9056,12 @@ export type Database = {
           computed_at?: string
           id?: string
           level_bucket?: string | null
+          multiplier: number
           placement: string
           points: number
           registration_id: string
           season_id: string
           sport_id: string
-          tier: string
           tournament_id: string
           user_id: string
         }
@@ -9069,12 +9069,12 @@ export type Database = {
           computed_at?: string
           id?: string
           level_bucket?: string | null
+          multiplier?: number
           placement?: string
           points?: number
           registration_id?: string
           season_id?: string
           sport_id?: string
-          tier?: string
           tournament_id?: string
           user_id?: string
         }
@@ -9304,6 +9304,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -9358,6 +9361,9 @@ export type Database = {
           organizer_id: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents?: number | null
+          ranking_draw_size?: number | null
+          ranking_multiplier?: number | null
+          ranking_points_ceiling?: number | null
           refund_cutoff_at?: string | null
           refund_partial_bps?: number | null
           refund_policy_kind?: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -9412,6 +9418,9 @@ export type Database = {
           organizer_id?: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents?: number | null
+          ranking_draw_size?: number | null
+          ranking_multiplier?: number | null
+          ranking_points_ceiling?: number | null
           refund_cutoff_at?: string | null
           refund_partial_bps?: number | null
           refund_policy_kind?: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -12111,8 +12120,10 @@ export type Database = {
           stripe_payment_intent_id: string
         }[]
       }
+      lt_champion_base: { Args: never; Returns: number }
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
+      lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
       lt_get_or_create_tournament_chat: {
         Args: { p_tournament_id: string }
@@ -12123,6 +12134,10 @@ export type Database = {
         Returns: string
       }
       lt_league_default_rules: { Args: { p_sport_id: string }; Returns: Json }
+      lt_min_rating_level_multiplier: {
+        Args: { p_min_rating: number; p_sport_id: string }
+        Returns: number
+      }
       lt_notify_tournament_match_ready: {
         Args: { p_tm_id: string }
         Returns: undefined
@@ -12201,6 +12216,14 @@ export type Database = {
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       lt_send_session_confirm_reminders: { Args: never; Returns: number }
+      lt_sport_rating_system: { Args: { p_sport_id: string }; Returns: string }
+      lt_tournament_ranking_multiplier: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          draw_size: number
+          multiplier: number
+        }[]
+      }
       lt_user_is_fr: { Args: { p_user_id: string }; Returns: boolean }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
@@ -13501,6 +13524,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -13623,6 +13649,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -13686,6 +13715,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -13773,6 +13805,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -13997,6 +14032,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -14198,6 +14236,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
@@ -14336,6 +14377,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
           refund_cutoff_at: string | null
           refund_partial_bps: number | null
           refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]

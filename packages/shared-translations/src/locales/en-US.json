@@ -4676,6 +4676,8 @@
     "create": "Create a tournament",
     "createSubtitle": "Set up a bracket and invite players",
     "roleOrganizer": "Organizer",
+    "rankingPoints": "{points} pts",
+    "rankingPointsUpTo": "Up to {points} pts",
     "registerBy": "Register by {date}",
     "searchPlaceholder": "Search tournaments...",
     "discoverFilters": {
@@ -4797,6 +4799,8 @@
       "feesTitle": "Entry & refunds",
       "organizedBy": "Organized by {name}",
       "prizePool": "Prize pool",
+      "rankingPoints": "Circuit Rallia · {points} pts",
+      "rankingPointsUpTo": "Circuit Rallia · up to {points} pts",
       "champion": "Champion",
       "steps": {
         "draft": "Draft",
@@ -5133,6 +5137,10 @@
       "partnerRequired": "Pick a partner to register for this doubles tournament.",
       "partnerAlreadyRegistered": "That player is already registered in this tournament.",
       "partnerSportMismatch": "Your partner doesn't have this sport active on their profile.",
+      "ratingTooLow": "Your rating is below this tournament's minimum level.",
+      "ratingRequired": "You need a rating in this sport to register for this tournament.",
+      "partnerRatingTooLow": "Your partner's rating is below this tournament's minimum level.",
+      "partnerRatingRequired": "Your partner needs a rating in this sport to be entered.",
       "partnerInvalid": "That partner can't be registered. Pick someone else.",
       "inviteInvalid": "This invite link is no longer valid."
     }
@@ -11384,6 +11392,11 @@
         "pickleball": "Pickleball"
       },
       "levelLabel": "Your level ({scale})",
+      "levelInfo": {
+        "trigger": "What do these levels mean?",
+        "title": "Understanding {scale} levels",
+        "subtitle": "Not sure where you fit? Here's a quick guide to each level."
+      },
       "natureLabel": "Type of game",
       "natures": {
         "recreational": "Recreational",
@@ -11400,11 +11413,17 @@
       "question": "Where do you want to play?",
       "hint": "Enter your address, then pick a nearby facility.",
       "placeholder": "1234 Rue Saint-Denis, Montréal",
+      "placeholderWithCity": "Your address in {city}",
       "resolving": "Looking up your address…",
       "searching": "Finding nearby facilities…",
       "openSlots": "{count} court slots open",
       "noOpenSlots": "No online slots listed",
       "noResults": "No facilities found within 25 km.",
+      "distanceLabel": "How far are you willing to travel?",
+      "distanceOption": "{km} km",
+      "noResultsRadius": "No courts on Rallia within {km} km yet.",
+      "widenHint": "Try a wider radius, or keep going and we'll match you by area.",
+      "continueAnyway": "Continue anyway",
       "errors": {
         "notFound": "We couldn't find that address.",
         "searchFailed": "Couldn't load facilities. Try again."

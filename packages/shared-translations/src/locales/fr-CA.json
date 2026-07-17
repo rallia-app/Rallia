@@ -4676,6 +4676,8 @@
     "create": "Créer un tournoi",
     "createSubtitle": "Crée ton tableau et invite des joueurs",
     "roleOrganizer": "Organisateur",
+    "rankingPoints": "{points} pts",
+    "rankingPointsUpTo": "Jusqu'à {points} pts",
     "registerBy": "Inscriptions jusqu'au {date}",
     "searchPlaceholder": "Rechercher des tournois...",
     "discoverFilters": {
@@ -4797,6 +4799,8 @@
       "feesTitle": "Inscription et remboursements",
       "organizedBy": "Organisé par {name}",
       "prizePool": "Bourse",
+      "rankingPoints": "Circuit Rallia · {points} pts",
+      "rankingPointsUpTo": "Circuit Rallia · jusqu'à {points} pts",
       "champion": "Champion",
       "steps": {
         "draft": "Brouillon",
@@ -5133,6 +5137,10 @@
       "partnerRequired": "Choisis un partenaire pour t'inscrire à ce tournoi en double.",
       "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
       "partnerSportMismatch": "Ton partenaire n'a pas ce sport actif sur son profil.",
+      "ratingTooLow": "Ton niveau est sous le minimum de ce tournoi.",
+      "ratingRequired": "Ça te prend un niveau dans ce sport pour t'inscrire à ce tournoi.",
+      "partnerRatingTooLow": "Le niveau de ton partenaire est sous le minimum de ce tournoi.",
+      "partnerRatingRequired": "Ton partenaire a besoin d'un niveau dans ce sport pour être inscrit.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide."
     }
@@ -11384,6 +11392,11 @@
         "pickleball": "Pickleball"
       },
       "levelLabel": "Ton niveau ({scale})",
+      "levelInfo": {
+        "trigger": "Ça veut dire quoi, ces niveaux ?",
+        "title": "Comprendre les niveaux {scale}",
+        "subtitle": "Pas sûr de ton niveau ? Voici un petit guide pour chaque échelon."
+      },
       "natureLabel": "Type de partie",
       "natures": {
         "recreational": "Récréatif",
@@ -11400,11 +11413,17 @@
       "question": "Où veux-tu jouer ?",
       "hint": "Entre ton adresse, puis choisis un terrain proche.",
       "placeholder": "1234 Rue Saint-Denis, Montréal",
+      "placeholderWithCity": "Ton adresse à {city}",
       "resolving": "On cherche ton adresse…",
       "searching": "On trouve les terrains proches…",
       "openSlots": "{count} plages de terrain libres",
       "noOpenSlots": "Aucune plage en ligne",
       "noResults": "Aucun terrain trouvé à moins de 25 km.",
+      "distanceLabel": "Jusqu'où es-tu prêt à te déplacer ?",
+      "distanceOption": "{km} km",
+      "noResultsRadius": "Encore aucun terrain sur Rallia à moins de {km} km.",
+      "widenHint": "Élargis le rayon, ou continue et on te jumelle par secteur.",
+      "continueAnyway": "Continuer quand même",
       "errors": {
         "notFound": "On n'a pas trouvé cette adresse.",
         "searchFailed": "Impossible de charger les terrains. Réessaie."

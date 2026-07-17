@@ -13,7 +13,12 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { getProfilePictureUrl, getTournamentLogoUrl, formatPrice } from '@rallia/shared-utils';
+import {
+  getProfilePictureUrl,
+  getTournamentLogoUrl,
+  formatPrice,
+  tournamentRankingHeadline,
+} from '@rallia/shared-utils';
 import {
   lightTheme,
   darkTheme,
@@ -288,6 +293,14 @@ export const TournamentCard: React.FC<{
       : null;
 
   const ratingRange = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const rankingHeadline = tournamentRankingHeadline(tournament);
+  const rankingLabel = rankingHeadline
+    ? t(
+        rankingHeadline.projected
+          ? 'tournamentList.rankingPointsUpTo'
+          : 'tournamentList.rankingPoints'
+      ).replace('{points}', String(rankingHeadline.points))
+    : null;
   const prizeLabel =
     tournament.prize_money_cents && tournament.prize_money_cents > 0
       ? formatPrice(tournament.prize_money_cents, tournament.currency, {
@@ -373,6 +386,9 @@ export const TournamentCard: React.FC<{
         )}
         {ratingRange && (
           <MetaChip label={ratingRange} icon="analytics" colors={colors} tone="secondary" />
+        )}
+        {rankingLabel && (
+          <MetaChip label={rankingLabel} icon="ribbon-outline" colors={colors} tone="accent" />
         )}
         {prizeLabel && (
           <MetaChip label={prizeLabel} icon="trophy-outline" colors={colors} tone="accent" />

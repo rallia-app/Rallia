@@ -1286,7 +1286,7 @@ const DetailsStep: React.FC<{
             </View>
           )}
 
-          {ratingOptions.length > 0 && (
+          {canEditStructure && ratingOptions.length > 0 && (
             <View style={styles.fieldGroup}>
               <FieldLabel colors={colors}>
                 {t('tournamentCreation.fields.minLevel' as TranslationKey)}
@@ -2348,7 +2348,6 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (trimmedRules !== (editTournament.rules ?? ''))
           patch.rules = trimmedRules.length ? trimmedRules : null;
         if (resolvedLogoUrl !== (editTournament.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
-        if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
         if (locationPayload) {
           if ((locationPayload.facilityId ?? null) !== (editTournament.facilityId ?? null))
             patch.facilityId = locationPayload.facilityId;
@@ -2369,6 +2368,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (canEditStructure) {
           if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
           if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
+          if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
         }
         // Fee settings are server-gated to 'draft'. Send the refund trio together
         // so the partial/bps CHECK stays consistent.

@@ -54,6 +54,7 @@ import {
   getProfilePictureUrl,
   getTournamentLogoUrl,
   formatPrice,
+  tournamentRankingHeadline,
 } from '@rallia/shared-utils';
 import {
   useTheme,
@@ -867,7 +868,16 @@ export const TournamentDetail: React.FC = () => {
                                       : lower.includes('tournament_reg_closed') ||
                                           lower.includes('reg_closed')
                                         ? 'tournamentDetail.errors.regClosed'
-                                        : fallbackKey;
+                                        : // partner_rating_* first: they contain the bare rating_* codes.
+                                          lower.includes('partner_rating_too_low')
+                                          ? 'tournamentDetail.errors.partnerRatingTooLow'
+                                          : lower.includes('partner_rating_required')
+                                            ? 'tournamentDetail.errors.partnerRatingRequired'
+                                            : lower.includes('rating_too_low')
+                                              ? 'tournamentDetail.errors.ratingTooLow'
+                                              : lower.includes('rating_required')
+                                                ? 'tournamentDetail.errors.ratingRequired'
+                                                : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -2056,6 +2066,7 @@ export const TournamentDetail: React.FC = () => {
   // (entry fee / what the player pays / prize) so every attribute set at
   // creation has a persistent home beyond the glanceable hero.
   const ratingRangeLabel = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const rankingHeadline = tournamentRankingHeadline(tournament);
   const entryFeeLabel = isPaidTournament
     ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
     : null;
@@ -2205,6 +2216,20 @@ export const TournamentDetail: React.FC = () => {
                     style={styles.heroMetaText}
                   >
                     {t('tournamentDetail.dashboard.organizedBy').replace('{name}', organizerName)}
+                  </Text>
+                </View>
+              ) : null}
+              {rankingHeadline ? (
+                <View style={styles.heroMetaRow}>
+                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusActiveBg }]}>
+                    <Ionicons name="ribbon-outline" size={14} color={colors.primary} />
+                  </View>
+                  <Text size="sm" weight="medium" color={colors.text} style={styles.heroMetaText}>
+                    {t(
+                      rankingHeadline.projected
+                        ? 'tournamentDetail.dashboard.rankingPointsUpTo'
+                        : 'tournamentDetail.dashboard.rankingPoints'
+                    ).replace('{points}', String(rankingHeadline.points))}
                   </Text>
                 </View>
               ) : null}
