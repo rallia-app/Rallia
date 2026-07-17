@@ -5993,6 +5993,7 @@
     "about": "About",
     "guides": "Guides",
     "games": "Open Games",
+    "courts": "Courts",
     "communities": "Communities",
     "donate": "Support Rallia",
     "legal": "Legal",
@@ -6008,6 +6009,7 @@
     "backHome": "Back to home",
     "exploreHeading": "Or explore",
     "games": "Games",
+    "courts": "Courts",
     "communities": "Communities",
     "guides": "Guides"
   },

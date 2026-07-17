@@ -9,6 +9,7 @@ export default async function NotFound() {
 
   const exploreLinks = [
     { href: '/games', key: 'games' },
+    { href: '/courts', key: 'courts' },
     { href: '/communities', key: 'communities' },
     { href: '/guides', key: 'guides' },
   ] as const;
