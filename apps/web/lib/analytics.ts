@@ -38,7 +38,8 @@ export type AppStorePlacement =
   | 'download_dialog'
   | 'match_page'
   | 'invite_page'
-  | 'join_dialog';
+  | 'join_dialog'
+  | 'courts_book_dialog';
 
 export function appStoreClicked(props: {
   store: 'app_store' | 'play_store';
@@ -114,6 +115,12 @@ export function publicMatchShareClicked(props: {
 
 export function joinMatchDialogViewed(props: { match_id: string }): void {
   capture('join_match_dialog_viewed', props);
+}
+
+// ---- /courts public facility discovery ----
+
+export function courtsBookDialogViewed(props: { facility_id: string }): void {
+  capture('courts_book_dialog_viewed', props);
 }
 
 // ---- Web join onboarding funnel ----
