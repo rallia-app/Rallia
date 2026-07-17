@@ -170,10 +170,11 @@ BEGIN
 END $$;
 
 -- --------------------------------------------------------------------------
--- 2. 4-entry bracket → draw_mult 0.5. The old 'local' tier flattened EVERY
---    placement here onto 10 points, so the champion tied the first-round exit.
---    Now the discount is carried by the multiplier alone and the ordering
---    survives: champion 250, finalist 150, zero-win R1 losers 10.
+-- 2. 4-entry bracket → draw_mult 0.5, snapped to the 0.2 grid → 0.6 (round
+--    half away from zero). The old 'local' tier flattened EVERY placement here
+--    onto 10 points, so the champion tied the first-round exit. Now the
+--    discount is carried by the multiplier alone and the ordering survives:
+--    champion 300, finalist 180, zero-win R1 losers 10 (12 dime-rounded).
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -240,18 +241,18 @@ BEGIN
     SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
     ASSERT v_count = 4, 'expected 4 ledger rows, got ' || v_count;
 
-    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 0.5,
-        'expected stamped multiplier 0.5 for a 4-entry draw';
+    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 0.6,
+        'expected stamped multiplier 0.6 (0.5 snapped to the 0.2 grid) for a 4-entry draw';
 
     -- Placement ordering must SURVIVE the small-draw discount — this is the
     -- assertion the old local floor could not satisfy.
     SELECT points INTO v_count FROM tournament_ranking_points
      WHERE tournament_id = v_tid AND placement = 'champion';
-    ASSERT v_count = 250, 'champion of a 4-draw should earn 500*0.5 = 250, got ' || v_count;
+    ASSERT v_count = 300, 'champion of a 4-draw should earn 500*0.6 = 300, got ' || v_count;
 
     SELECT points INTO v_count FROM tournament_ranking_points
      WHERE tournament_id = v_tid AND placement = 'finalist';
-    ASSERT v_count = 150, 'finalist should earn 300*0.5 = 150, got ' || v_count;
+    ASSERT v_count = 180, 'finalist should earn 300*0.6 = 180, got ' || v_count;
 
     -- R1 losers won nothing → zero-win floor still applies, then ×0.5.
     SELECT count(*) INTO v_count FROM tournament_ranking_points
@@ -259,9 +260,9 @@ BEGIN
     ASSERT v_count = 2, 'expected 2 zero-win R1 losers at 10 pts, got ' || v_count;
 
     SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_count = 420, 'expected total 250+150+10+10 = 420, got ' || v_count;
+    ASSERT v_count = 500, 'expected total 300+180+10+10 = 500, got ' || v_count;
 
-    RAISE NOTICE 'PASS 2: 4-entry draw — ×0.5 discount, placement ordering preserved (no local floor)';
+    RAISE NOTICE 'PASS 2: 4-entry draw — ×0.6 snapped discount, placement ordering preserved (no local floor)';
 END $$;
 
 -- --------------------------------------------------------------------------
@@ -749,10 +750,11 @@ END $$;
 
 -- --------------------------------------------------------------------------
 -- 9. lt_tournament_ranking_multiplier — the pricing function in isolation.
---    draw_mult is a smooth log2 curve (no cliffs); level_mult comes from the
---    floor the organizer set, resolved through the sport's single active rating
---    system. Synthetic tournaments with no bracket, so draw size falls back to
---    the registered count and each case is exact.
+--    draw_mult is a smooth log2 curve (no cliffs); level_mult is CONTINUOUS in
+--    the floor's rank on the sport's scale (×1.0 bottom → ×2.0 top, tennis rank
+--    r of 10 → 1 + (r−1)/9); the product then SNAPS to the 0.2 grid so champion
+--    points land on multiples of 100. Synthetic tournaments with no bracket, so
+--    draw size falls back to the registered count and each case is exact.
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -768,18 +770,18 @@ BEGIN
 
     -- (registered entries, min_rating, expected multiplier)
     FOR r IN SELECT * FROM (VALUES
-        --                          NTRP level      draw × level
-        (8,  NULL::numeric, 1.000),   -- open              1.0 × 1.0
-        (8,  2.0,           1.000),   -- beginner floor    1.0 × 1.0
-        (8,  3.0,           1.150),   -- intermediate      1.0 × 1.15
-        (8,  4.5,           1.300),   -- advanced          1.0 × 1.3
-        (8,  6.0,           1.300),   -- professional folds into advanced
-        (4,  4.5,           0.650),   -- 0.5 × 1.3
-        (16, 3.0,           1.725),   -- 1.5 × 1.15
-        (64, NULL,          2.500),   -- 2.5 × 1.0
-        (4,  NULL,          0.500),
-        (3,  NULL,          0.292),   -- log2 curve handles a sub-4 field
-        (1,  NULL,          0.250)    -- clamp: log2 would go negative
+        --                          draw × level (rank)      → snapped to 0.2 grid
+        (8,  NULL::numeric, 1.000),   -- 1.0 × 1.0                 → 1.0
+        (8,  2.0,           1.200),   -- 1.0 × 1.111 (rank 2)      → 1.2
+        (8,  3.0,           1.400),   -- 1.0 × 1.333 (rank 4)      → 1.4
+        (8,  4.5,           1.600),   -- 1.0 × 1.667 (rank 7)      → 1.6
+        (8,  6.0,           2.000),   -- 1.0 × 2.0   (top rank)    → 2.0
+        (4,  4.5,           0.800),   -- 0.5 × 1.667 = 0.834       → 0.8
+        (16, 3.0,           2.000),   -- 1.5 × 1.333 = 2.0         → 2.0
+        (64, NULL,          2.600),   -- 2.5 × 1.0, 12.5 half-up   → 2.6
+        (4,  NULL,          0.600),   -- 0.5, 2.5 half-up          → 0.6
+        (3,  NULL,          0.200),   -- log2 sub-4 field 0.292    → 0.2
+        (1,  NULL,          0.200)    -- clamp 0.25 → snap floor   → 0.2
     ) AS t(n, min_rating, expected)
     LOOP
         INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date,

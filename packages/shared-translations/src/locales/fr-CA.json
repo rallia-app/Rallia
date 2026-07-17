@@ -11337,7 +11337,7 @@
       },
       "worth": {
         "title": "Ce que vaut un tournoi",
-        "body": "Les gros tableaux et les niveaux minimums plus élevés valent plus. Chaque tournoi affiche sa valeur d'avance, comme « jusqu'à 650 pts » sur la carte."
+        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Chaque tournoi affiche sa valeur d'avance, comme « jusqu'à 1300 pts » sur la carte."
       },
       "season": {
         "title": "Ton score de saison",
