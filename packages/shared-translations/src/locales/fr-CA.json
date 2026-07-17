@@ -4173,6 +4173,7 @@
     "title": "Circuit Rallia",
     "subtitle": "Saison {season}",
     "pointsNote": "Gagne des points Rallia en participant et en avançant dans les tournois.",
+    "howItWorks": "Comment ça marche",
     "filterMyLevel": "Mon niveau · {level}",
     "filterMyRating": "Ma cote · {rating}",
     "levels": {

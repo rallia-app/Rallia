@@ -188,6 +188,7 @@ export const TournamentRanking: React.FC = () => {
         title={t('tournamentRanking.title')}
         subtitle={t('tournamentRanking.subtitle', { season: seasonLabel })}
         note={t('tournamentRanking.pointsNote')}
+        noteCtaLabel={t('tournamentRanking.howItWorks')}
         onNotePress={() => {
           void lightHaptic();
           void SheetManager.show('circuit-ranking-explainer');

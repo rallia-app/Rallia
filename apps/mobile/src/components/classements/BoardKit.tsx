@@ -172,14 +172,17 @@ export function BoardHeader({
   subtitle,
   note,
   onNotePress,
+  noteCtaLabel,
   theme,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
   note: string;
-  /** When set, the note becomes a tappable "how it works" affordance. */
+  /** When set (with noteCtaLabel), renders a tappable CTA pill under the note. */
   onNotePress?: () => void;
+  /** Label for the CTA pill, e.g. "How it works". */
+  noteCtaLabel?: string;
   theme: ThemeBits;
 }) {
   const accentColor = theme.isDark ? primary[300] : primary[600];
@@ -205,23 +208,23 @@ export function BoardHeader({
           </Text>
         </View>
       </View>
-      {onNotePress ? (
+      <Text size="sm" color={theme.mutedColor} style={styles.headerNote}>
+        {note}
+      </Text>
+      {onNotePress && noteCtaLabel ? (
         <TouchableOpacity
           onPress={onNotePress}
           activeOpacity={0.7}
           accessibilityRole="button"
-          style={styles.headerNoteRow}
+          style={styles.headerCta}
         >
-          <Text size="sm" color={theme.mutedColor} style={styles.headerNoteFlex}>
-            {note}
+          <Ionicons name="information-circle" size={16} color={accentColor} />
+          <Text size="sm" weight="bold" color={accentColor} style={styles.headerCtaText}>
+            {noteCtaLabel}
           </Text>
-          <Ionicons name="information-circle-outline" size={18} color={accentColor} />
+          <Ionicons name="arrow-forward" size={15} color={accentColor} />
         </TouchableOpacity>
-      ) : (
-        <Text size="sm" color={theme.mutedColor} style={styles.headerNote}>
-          {note}
-        </Text>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -373,14 +376,15 @@ const styles = StyleSheet.create({
   headerNote: {
     lineHeight: 19,
   },
-  headerNoteRow: {
+  headerCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2],
+    alignSelf: 'flex-start',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[2],
   },
-  headerNoteFlex: {
-    flex: 1,
-    lineHeight: 19,
+  headerCtaText: {
+    textDecorationLine: 'underline',
   },
 
   // Empty
