@@ -1,0 +1,7 @@
+{
+  "lock": false,
+  "imports": {
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+    "stripe": "npm:stripe@^14"
+  }
+}
