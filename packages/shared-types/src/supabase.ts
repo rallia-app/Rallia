@@ -6043,25 +6043,34 @@ export type Database = {
       }
       player_stripe_account: {
         Row: {
+          charges_enabled: boolean
           created_at: string
+          details_submitted: boolean
           id: string
           onboarding_completed: boolean
+          payouts_enabled: boolean
           player_id: string
           stripe_account_id: string
           updated_at: string
         }
         Insert: {
+          charges_enabled?: boolean
           created_at?: string
+          details_submitted?: boolean
           id?: string
           onboarding_completed?: boolean
+          payouts_enabled?: boolean
           player_id: string
           stripe_account_id: string
           updated_at?: string
         }
         Update: {
+          charges_enabled?: boolean
           created_at?: string
+          details_submitted?: boolean
           id?: string
           onboarding_completed?: boolean
+          payouts_enabled?: boolean
           player_id?: string
           stripe_account_id?: string
           updated_at?: string

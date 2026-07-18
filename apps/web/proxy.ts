@@ -46,7 +46,9 @@ export default async function middleware(request: NextRequest) {
   if (
     request.nextUrl.pathname.startsWith('/api') ||
     request.nextUrl.pathname.startsWith('/monitoring') ||
-    request.nextUrl.pathname.startsWith('/ingest')
+    request.nextUrl.pathname.startsWith('/ingest') ||
+    // Stripe Connect return page: a locale-less bouncer to the rallia:// scheme.
+    request.nextUrl.pathname.startsWith('/stripe-connect-return')
   ) {
     return supabaseResponse;
   }

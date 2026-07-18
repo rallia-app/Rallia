@@ -24,6 +24,7 @@ import {
   revokeTournamentInvite,
   registerForTournament,
   getTournamentFeeQuote,
+  getMyPayoutAccount,
   createTournamentRegistrationPayment,
   refundTournamentRegistration,
   withdrawFromTournament,
@@ -66,6 +67,7 @@ import {
   type PlayerProfile,
   type PlayerSearchResult,
   type TournamentFeeQuote,
+  type PayoutAccountStatus,
   type RegistrationPaymentIntent,
   type TournamentRefundResult,
 } from '@rallia/shared-services';
@@ -99,6 +101,7 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
+  myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
 };
 
 /**
@@ -581,6 +584,20 @@ export function useTournamentFeeQuote(tournamentId: string | undefined, enabled 
     queryKey: tournamentKeys.feeQuote(tournamentId ?? ''),
     queryFn: () => getTournamentFeeQuote(tournamentId as string),
     enabled: !!tournamentId && enabled,
+  });
+}
+
+/**
+ * The current organizer's payout (Stripe Express) account status. Drives the
+ * payout status pill + manage/onboard affordance on paid events. Returns null
+ * when they've never set up payouts. `userId` only scopes the cache key — the
+ * read itself is RLS-scoped to the caller.
+ */
+export function useMyPayoutAccount(userId: string | undefined, enabled = true) {
+  return useQuery<PayoutAccountStatus | null>({
+    queryKey: tournamentKeys.myPayoutAccount(userId ?? ''),
+    queryFn: () => getMyPayoutAccount(),
+    enabled: !!userId && enabled,
   });
 }
 

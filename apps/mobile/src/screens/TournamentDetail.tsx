@@ -61,6 +61,7 @@ import {
   useTournamentRegistrations,
   useMyTournamentRegistration,
   useTournamentFeeQuote,
+  useMyPayoutAccount,
   useCreateRegistrationPayment,
   useRefundRegistration,
   useOpenTournamentRegistration,
@@ -884,14 +885,49 @@ export const TournamentDetail: React.FC = () => {
           body: { businessType },
         });
         if (error || !data?.url) throw new Error(error?.message);
-        await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
+        // The return URL must be the app's custom scheme, not an https URL:
+        // ASWebAuthenticationSession only auto-dismisses on a custom-scheme
+        // callback. Stripe's https return_url bounces to this scheme via the
+        // web /stripe-connect-return page, which closes the modal.
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          'rallia://stripe-connect-return'
+        );
+        if (result.type === 'success') {
+          // stripe-connect-webhook flips onboarding_completed once charges are
+          // enabled; refetch to clear the organizer payout gate. It settles
+          // asynchronously, so refetch again shortly after.
+          successHaptic();
+          void refetch();
+          setTimeout(() => void refetch(), 2500);
+        }
       } catch {
         warningHaptic();
         toast.error(t('tournamentDetail.payments.onboardingError'));
       }
     },
-    [toast, t]
+    [toast, t, refetch]
   );
+
+  // Ask individual vs company, then kick off Stripe onboarding. Shared by the
+  // registration-guard error path and the organizer's payout setup card.
+  const promptOnboardBusinessType = useCallback(() => {
+    Alert.alert(
+      t('tournamentDetail.payments.payoutsSetupTitle'),
+      t('tournamentDetail.payments.payoutsSetupBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('tournamentDetail.payments.onboardTypeIndividual'),
+          onPress: () => void handleStripeOnboard('individual'),
+        },
+        {
+          text: t('tournamentDetail.payments.onboardTypeBusiness'),
+          onPress: () => void handleStripeOnboard('company'),
+        },
+      ]
+    );
+  }, [t, handleStripeOnboard]);
 
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
@@ -900,21 +936,7 @@ export const TournamentDetail: React.FC = () => {
       // finish Stripe onboarding instead of a generic error.
       if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
         warningHaptic();
-        Alert.alert(
-          t('tournamentDetail.payments.payoutsSetupTitle'),
-          t('tournamentDetail.payments.payoutsSetupBody'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('tournamentDetail.payments.onboardTypeIndividual'),
-              onPress: () => void handleStripeOnboard('individual'),
-            },
-            {
-              text: t('tournamentDetail.payments.onboardTypeBusiness'),
-              onPress: () => void handleStripeOnboard('company'),
-            },
-          ]
-        );
+        promptOnboardBusinessType();
         return;
       }
       showError(e.message, 'tournamentDetail.errors.openFailed');
@@ -958,6 +980,28 @@ export const TournamentDetail: React.FC = () => {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const isPaidTournament = (tournament?.entry_fee_cents ?? 0) > 0;
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
+  // Organizer payout status drives the manage/onboard card on paid events.
+  const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
+
+  // Post-onboarding management: opens the Stripe Express dashboard (update bank
+  // details, view payouts) when ready, or resumes onboarding when unfinished.
+  // The webhook refreshes account status, so invalidate on return.
+  const handleManagePayouts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-manage');
+      if (error || !data?.url) throw new Error(error?.message);
+      // Custom scheme (not https) so the auth session dismisses on return — see
+      // handleStripeOnboard.
+      await WebBrowser.openAuthSessionAsync(data.url, 'rallia://stripe-connect-return');
+      if (userId) {
+        void queryClient.invalidateQueries({ queryKey: tournamentKeys.myPayoutAccount(userId) });
+      }
+    } catch {
+      warningHaptic();
+      toast.error(t('tournamentDetail.payments.manageError'));
+    }
+  }, [toast, t, userId, queryClient]);
+
   const createRegistrationPayment = useCreateRegistrationPayment();
 
   const handlePaidRegister = useCallback(
@@ -2399,6 +2443,54 @@ export const TournamentDetail: React.FC = () => {
                 accent="secondary"
                 colors={colors}
                 testID="cta-pending-requests"
+              />
+            )}
+
+            {/* Organizer payouts: set up / finish / manage the Stripe account */}
+            {isOrganizer && isPaidTournament && payoutAccount === null && (
+              <DashboardCtaCard
+                icon="card-outline"
+                title={t('tournamentDetail.payments.payoutCard.setupTitle')}
+                description={t('tournamentDetail.payments.payoutCard.setupDescription')}
+                buttonLabel={t('tournamentDetail.payments.payoutCard.setupButton')}
+                buttonIcon="card-outline"
+                onPress={promptOnboardBusinessType}
+                accent="secondary"
+                colors={colors}
+                testID="cta-payout-setup"
+              />
+            )}
+            {isOrganizer &&
+              isPaidTournament &&
+              !!payoutAccount &&
+              !payoutAccount.chargesEnabled && (
+                <DashboardCtaCard
+                  icon="alert-circle-outline"
+                  title={t('tournamentDetail.payments.payoutCard.actionNeededTitle')}
+                  description={t('tournamentDetail.payments.payoutCard.actionNeededDescription')}
+                  buttonLabel={t('tournamentDetail.payments.payoutCard.finishButton')}
+                  buttonIcon="arrow-forward-outline"
+                  onPress={() => void handleManagePayouts()}
+                  accent="secondary"
+                  colors={colors}
+                  testID="cta-payout-finish"
+                />
+              )}
+            {isOrganizer && isPaidTournament && !!payoutAccount && payoutAccount.chargesEnabled && (
+              <DashboardCtaCard
+                icon="wallet-outline"
+                title={t('tournamentDetail.payments.payoutCard.readyTitle')}
+                description={
+                  payoutAccount.payoutsEnabled
+                    ? t('tournamentDetail.payments.payoutCard.readyDescription')
+                    : t('tournamentDetail.payments.payoutCard.payoutsPendingDescription')
+                }
+                buttonLabel={t('tournamentDetail.payments.payoutCard.manageButton')}
+                buttonIcon="open-outline"
+                onPress={() => void handleManagePayouts()}
+                accent="secondary"
+                colors={colors}
+                testID="cta-payout-manage"
               />
             )}
 

@@ -53,16 +53,23 @@ Deno.serve(async req => {
     // so it must be able to take card payments — charges_enabled reflects that.
     // Mirror both directions so a deauthorized account flips back to incomplete.
     const isReady = account.charges_enabled === true;
+    const payoutsEnabled = account.payouts_enabled === true;
+    const detailsSubmitted = account.details_submitted === true;
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
+    // Unconditional update: the granular flags can shift (e.g. payouts_enabled
+    // flips while charges_enabled is unchanged), so we can't gate on
+    // onboarding_completed alone the way the single-flag version did.
     const { error } = await admin
       .from('player_stripe_account')
       .update({
         onboarding_completed: isReady,
+        charges_enabled: isReady,
+        payouts_enabled: payoutsEnabled,
+        details_submitted: detailsSubmitted,
         updated_at: new Date().toISOString(),
       })
-      .eq('stripe_account_id', stripeAccountId)
-      .neq('onboarding_completed', isReady); // no-op when unchanged
+      .eq('stripe_account_id', stripeAccountId);
 
     if (error) {
       console.error('[stripe-connect-webhook] Failed to update onboarding state:', error);
@@ -71,7 +78,7 @@ Deno.serve(async req => {
     }
 
     console.log(
-      `[stripe-connect-webhook] account ${stripeAccountId} onboarding_completed=${isReady}`
+      `[stripe-connect-webhook] account ${stripeAccountId} charges=${isReady} payouts=${payoutsEnabled} details=${detailsSubmitted}`
     );
   }
 
