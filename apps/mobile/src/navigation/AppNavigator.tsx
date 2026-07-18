@@ -44,6 +44,7 @@ import {
   useProfileCompleteness,
   chatKeys,
   useTheme,
+  useAdminStatus,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
@@ -686,7 +687,7 @@ function TournamentCreateHeaderButton() {
   );
 }
 
-/** Header "+" that opens the league creation wizard. Live for everyone. */
+/** Header "+" that opens the league creation wizard. Admin-only during rollout. */
 function LeagueCreateHeaderButton({
   navigation,
 }: {
@@ -695,6 +696,9 @@ function LeagueCreateHeaderButton({
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
+  const { isAdmin } = useAdminStatus();
+
+  if (!isAdmin) return null;
 
   return (
     <TouchableOpacity

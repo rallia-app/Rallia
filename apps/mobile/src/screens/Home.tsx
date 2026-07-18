@@ -1404,10 +1404,12 @@ const Home = () => {
   // Competitive calls-to-action: released bracket/matchup slots with no game
   // linked yet. Once a game is linked they become real `match` rows and flow
   // through usePlayerMatches into the My Games carousel like any other game.
+  // Leagues are re-admin-gated during rollout, so that query only fires for admins
+  // (passing an undefined userId disables the hook's query); tournaments are not.
   const { data: tournamentActionMatches = [], refetch: refetchTournamentActions } =
     useMyUnscheduledTournamentMatches(session?.user?.id, selectedSport?.id);
   const { data: sessionActionMatches = [], refetch: refetchLeagueActions } =
-    useMyUnscheduledSessionMatches(session?.user?.id, selectedSport?.id);
+    useMyUnscheduledSessionMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
 
   const scrollRef = useRef<ScrollView>(null);
   const isManualRefresh = useRef(false);
@@ -2244,14 +2246,17 @@ const Home = () => {
           onPress={() => appNavigation.navigate('Tournaments')}
         />
       );
-      playTiles.push(
-        <QuickNavButton
-          key="leagues"
-          icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-          label={t('home.playGrid.leagues')}
-          onPress={() => appNavigation.navigate('Leagues')}
-        />
-      );
+      // Leagues are re-admin-gated during rollout.
+      if (isAdmin) {
+        playTiles.push(
+          <QuickNavButton
+            key="leagues"
+            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+            label={t('home.playGrid.leagues')}
+            onPress={() => appNavigation.navigate('Leagues')}
+          />
+        );
+      }
     }
     headerComponents.push(
       <View key="play-grid">
