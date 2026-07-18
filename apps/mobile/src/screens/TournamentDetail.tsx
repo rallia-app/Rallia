@@ -2153,7 +2153,7 @@ export const TournamentDetail: React.FC = () => {
                 size="sm"
                 color={colors.textMuted}
                 style={styles.heroDescription}
-                numberOfLines={2}
+                numberOfLines={5}
               >
                 {tournament.description}
               </Text>
