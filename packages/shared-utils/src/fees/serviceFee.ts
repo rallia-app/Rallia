@@ -9,16 +9,16 @@
  *
  * Rule: free events (entry ≤ 0) pay nothing; otherwise
  *   min(cap, round(entry * pctBps / 10000) + flat).
- * Defaults are 6% + $1.50, capped at $20, but are resolved per event →
+ * Defaults are 5% + $1.00, capped at $20, but are resolved per event →
  * per organizer → global default, so callers pass the effective params.
  */
 
 export type FeePayer = 'player_pays' | 'organizer_absorbs';
 
 export interface ServiceFeeParams {
-  /** Percentage of entry, in basis points (600 = 6%). */
+  /** Percentage of entry, in basis points (500 = 5%). */
   pctBps: number;
-  /** Flat add-on, in cents (150 = $1.50). */
+  /** Flat add-on, in cents (100 = $1.00). */
   flatCents: number;
   /** Hard cap on the fee, in cents (2000 = $20). */
   capCents: number;
@@ -26,8 +26,8 @@ export interface ServiceFeeParams {
 
 /** Platform-wide default when no organizer/event override is set. */
 export const DEFAULT_SERVICE_FEE_PARAMS: ServiceFeeParams = {
-  pctBps: 600,
-  flatCents: 150,
+  pctBps: 500,
+  flatCents: 100,
   capCents: 2000,
 };
 
