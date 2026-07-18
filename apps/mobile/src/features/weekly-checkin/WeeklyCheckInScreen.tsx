@@ -48,6 +48,10 @@ import { useJoinOpportunity } from './useJoinOpportunity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Delay (ms) matched to the iOS Alert dismissal animation, so the exit-confirm
+// pop doesn't collide with the alert's own native transition.
+const ALERT_DISMISS_MS = 350;
+
 // Stable funnel names per step index, for the abandon event.
 const STEP_NAMES: Record<number, string> = {
   1: 'recap_goal',
@@ -258,7 +262,9 @@ export function WeeklyCheckInScreen() {
               step_index: currentStepForClose,
               duration_seconds: Math.round((Date.now() - startedAt) / 1000),
             });
-            dismissModal();
+            // Let the Alert's native dismissal finish before popping the modal:
+            // racing both native transitions on iOS strands a touch-eating layer.
+            setTimeout(dismissModal, ALERT_DISMISS_MS);
           },
         },
       ],
