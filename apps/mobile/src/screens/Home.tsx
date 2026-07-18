@@ -358,135 +358,6 @@ const ClassementsTile: React.FC<{
   );
 };
 
-/**
- * Monthly-challenge entry point shown to non-admins while the Circuit Rallia /
- * Classements hub stays admin-gated. Old single-card UI, links to the
- * standalone Leaderboard screen.
- */
-const LeaderboardCard: React.FC<{
-  myRank: MySportRank | null | undefined;
-  loading: boolean;
-  onPress: () => void;
-  t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ myRank, loading, onPress, t }) => {
-  const handlePress = () => {
-    void lightHaptic();
-    onPress();
-  };
-
-  let mainLine: string;
-  // Space, not empty — reserves the line so the card doesn't grow when data
-  // lands (same trick as splitLabelTwoLines above).
-  let subLine = ' ';
-  if (myRank) {
-    mainLine = t('leaderboard.yourRank', { rank: myRank.rank });
-    subLine = t('home.leaderboardCard.rankedSubtitle');
-  } else if (loading) {
-    mainLine = t('home.leaderboardCard.subtitle');
-  } else {
-    mainLine = t('home.leaderboardCard.unrankedTitle');
-    subLine = t('home.leaderboardCard.unrankedSubtitle');
-  }
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.85}
-      style={leaderboardCardStyles.wrap}
-      accessibilityRole="button"
-      accessibilityLabel={`${t('home.leaderboardCard.title')}. ${mainLine}`}
-    >
-      <LinearGradient
-        colors={[accent[400], accent[600]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={leaderboardCardStyles.inner}
-      >
-        <Ionicons
-          name="podium"
-          size={96}
-          color="rgba(255,255,255,0.12)"
-          style={leaderboardCardStyles.watermark}
-        />
-        <View style={leaderboardCardStyles.badge}>
-          {myRank ? (
-            <Text size="sm" weight="bold" color="#ffffff" numberOfLines={1}>
-              {`#${myRank.rank}`}
-            </Text>
-          ) : (
-            <Ionicons name="trophy-outline" size={22} color="#ffffff" />
-          )}
-        </View>
-        <View style={leaderboardCardStyles.textCol}>
-          <Text size="xs" weight="semibold" color="rgba(255,255,255,0.85)">
-            {t('home.leaderboardCard.title')}
-          </Text>
-          <Text size="base" weight="bold" color="#ffffff" numberOfLines={1}>
-            {mainLine}
-          </Text>
-          <Text size="xs" color="rgba(255,255,255,0.85)" numberOfLines={1}>
-            {subLine}
-          </Text>
-        </View>
-        {myRank ? (
-          <View style={leaderboardCardStyles.gamesCol}>
-            <Text size="xl" weight="bold" color="#ffffff">
-              {myRank.games}
-            </Text>
-            <Text size="xs" color="rgba(255,255,255,0.85)">
-              {t('leaderboard.games')}
-            </Text>
-          </View>
-        ) : null}
-        <Ionicons name="chevron-forward" size={20} color="#ffffff" />
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-};
-
-const leaderboardCardStyles = StyleSheet.create({
-  wrap: {
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-    borderRadius: radiusPixels['2xl'],
-  },
-  inner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    borderRadius: radiusPixels['2xl'],
-    borderWidth: 1.5,
-    borderColor: accent[500],
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
-    overflow: 'hidden',
-  },
-  watermark: {
-    position: 'absolute',
-    right: spacingPixels[8],
-    bottom: -spacingPixels[4],
-  },
-  badge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    flexShrink: 0,
-  },
-  textCol: {
-    flex: 1,
-  },
-  gamesCol: {
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-});
-
 const ClassementsCard: React.FC<{
   challengeRank: MySportRank | null | undefined;
   challengeLoading: boolean;
@@ -1265,10 +1136,8 @@ const Home = () => {
   const { data: myLeaderboardRank, isLoading: myLeaderboardRankLoading } = useMySportRank(
     session ? selectedSport?.id : undefined
   );
-  // Circuit Rallia is admin-gated during rollout — only fetch its standing for
-  // admins, so the ranking backend stays dormant for everyone else.
   const { data: myCircuitRank, isLoading: myCircuitRankLoading } = useMyTournamentRanking(
-    session && isAdmin ? selectedSport?.id : undefined
+    session ? selectedSport?.id : undefined
   );
 
   const { favorites } = useFavoriteFacilities(session?.user?.id ?? null, selectedSport?.id);
@@ -2100,41 +1969,25 @@ const Home = () => {
     }
 
     // Standings card sits right under the action banners: the player's live
-    // rank is the first thing an onboarded player sees. Admins get the dual
-    // Classements card (challenge + Circuit Rallia); everyone else gets the
-    // monthly-challenge-only card while Circuit Rallia stays admin-gated.
+    // rank is the first thing an onboarded player sees — the dual Classements
+    // card (challenge + Circuit Rallia).
     if (session && isOnboarded) {
       headerComponents.push(
-        isAdmin ? (
-          <ClassementsCard
-            key="classements-card"
-            challengeRank={myLeaderboardRank}
-            challengeLoading={myLeaderboardRankLoading}
-            circuitRank={myCircuitRank}
-            circuitLoading={myCircuitRankLoading}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-            onPressBoard={board => {
-              Logger.logUserAction('home_leaderboard_card_pressed', {
-                board,
-                ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
-              });
-              appNavigation.navigate('Classements', { initialTab: board });
-            }}
-          />
-        ) : (
-          <LeaderboardCard
-            key="leaderboard-card"
-            myRank={myLeaderboardRank}
-            loading={myLeaderboardRankLoading}
-            t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-            onPress={() => {
-              Logger.logUserAction('home_leaderboard_card_pressed', {
-                ranked: !!myLeaderboardRank,
-              });
-              appNavigation.navigate('Leaderboard');
-            }}
-          />
-        )
+        <ClassementsCard
+          key="classements-card"
+          challengeRank={myLeaderboardRank}
+          challengeLoading={myLeaderboardRankLoading}
+          circuitRank={myCircuitRank}
+          circuitLoading={myCircuitRankLoading}
+          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+          onPressBoard={board => {
+            Logger.logUserAction('home_leaderboard_card_pressed', {
+              board,
+              ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
+            });
+            appNavigation.navigate('Classements', { initialTab: board });
+          }}
+        />
       );
     }
 
