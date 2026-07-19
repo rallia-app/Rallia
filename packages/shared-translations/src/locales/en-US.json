@@ -4805,8 +4805,35 @@
       "overview": "Overview",
       "bracket": "Bracket",
       "players": "Participants",
+      "points": "Points",
       "rules": "Rules",
       "details": "Details"
+    },
+    "points": {
+      "eligibleLabel": "Counts for Circuit Rallia",
+      "upTo": "up to",
+      "unit": "pts",
+      "heroCaption": "What the champion takes home. Every player who shows up leaves with points.",
+      "tableTitle": "What each finish is worth",
+      "howTitle": "How it works",
+      "placement": {
+        "champion": "Champion",
+        "finalist": "Finalist",
+        "semifinal": "Semifinalist",
+        "quarterfinal": "Quarterfinalist",
+        "round_of_16": "Round of 16",
+        "round_of_32": "Round of 32",
+        "round_of_64": "Round of 64",
+        "participated": "Played the tournament"
+      },
+      "notes": {
+        "projected": "These are the numbers at a full draw. The final value is locked in when the bracket is published, so a smaller field pays a bit less.",
+        "firm": "The bracket is set, so these numbers are final.",
+        "scale": "Bigger draws and higher level requirements are worth more points.",
+        "zeroWinFloor": "You need to win at least one game to place above participation. A bye doesn't count as a win.",
+        "doubles": "Both partners earn the full team result. Points aren't split.",
+        "season": "Points land on your Circuit Rallia ranking for the season once the organizer completes the tournament."
+      }
     },
     "dashboard": {
       "details": "Details",
@@ -4816,6 +4843,11 @@
       "prizePool": "Prize pool",
       "rankingPoints": "Circuit Rallia · {points} pts",
       "rankingPointsUpTo": "Circuit Rallia · up to {points} pts",
+      "rankingBanner": {
+        "label": "Circuit Rallia · for the champion",
+        "upTo": "up to",
+        "unit": "pts"
+      },
       "champion": "Champion",
       "steps": {
         "draft": "Draft",
@@ -4887,6 +4919,9 @@
       "participants": {
         "title": "Participants",
         "empty": "No players registered yet",
+        "emptyDescription": "Players show up here as soon as they register.",
+        "emptySpotsLabel": "spots in the draw",
+        "emptyDeadlineLabel": "registration closes",
         "pending": "Pending",
         "removeLabel": "Remove {name}"
       },
@@ -5068,6 +5103,7 @@
       "bye": "BYE",
       "tbd": "TBD",
       "phantom": "—",
+      "seed": "Seed {n}",
       "linkMatch": "Link a played match to this slot",
       "overrideMatch": "Record the result as organizer",
       "recordResult": "Record result",
@@ -11349,6 +11385,7 @@
         "quarterfinal": "Quarter 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
+        "roundOf64": "R64 25",
         "played": "Played 20"
       },
       "worth": {

@@ -4805,8 +4805,35 @@
       "overview": "Aperçu",
       "bracket": "Tableau",
       "players": "Participants",
+      "points": "Points",
       "rules": "Règles",
       "details": "Détails"
+    },
+    "points": {
+      "eligibleLabel": "Compte pour le Circuit Rallia",
+      "upTo": "jusqu'à",
+      "unit": "pts",
+      "heroCaption": "Ce que le champion remporte. Tous ceux qui se présentent repartent avec des points.",
+      "tableTitle": "Ce que chaque résultat rapporte",
+      "howTitle": "Comment ça marche",
+      "placement": {
+        "champion": "Champion",
+        "finalist": "Finaliste",
+        "semifinal": "Demi-finaliste",
+        "quarterfinal": "Quart-de-finaliste",
+        "round_of_16": "Huitièmes de finale",
+        "round_of_32": "Seizièmes de finale",
+        "round_of_64": "Trente-deuxièmes de finale",
+        "participated": "A joué le tournoi"
+      },
+      "notes": {
+        "projected": "Ce sont les montants pour un tableau complet. La valeur finale se fixe quand le tableau est publié, donc un tableau plus petit rapporte un peu moins.",
+        "firm": "Le tableau est fixé, donc ces montants sont finaux.",
+        "scale": "Plus le tableau est gros et plus le niveau exigé est élevé, plus ça rapporte.",
+        "zeroWinFloor": "Ça prend au moins une victoire pour dépasser les points de participation. Un laissez-passer ne compte pas comme une victoire.",
+        "doubles": "Les deux partenaires reçoivent le plein résultat de l'équipe. Les points ne sont pas divisés.",
+        "season": "Les points s'ajoutent à ton classement Circuit Rallia de la saison une fois que l'organisateur complète le tournoi."
+      }
     },
     "dashboard": {
       "details": "Détails",
@@ -4816,6 +4843,11 @@
       "prizePool": "Bourse",
       "rankingPoints": "Circuit Rallia · {points} pts",
       "rankingPointsUpTo": "Circuit Rallia · jusqu'à {points} pts",
+      "rankingBanner": {
+        "label": "Circuit Rallia · au champion",
+        "upTo": "jusqu'à",
+        "unit": "pts"
+      },
       "champion": "Champion",
       "steps": {
         "draft": "Brouillon",
@@ -4887,6 +4919,9 @@
       "participants": {
         "title": "Participants",
         "empty": "Aucun joueur inscrit pour le moment",
+        "emptyDescription": "Les joueurs apparaissent ici dès qu'ils s'inscrivent.",
+        "emptySpotsLabel": "places au tableau",
+        "emptyDeadlineLabel": "fin des inscriptions",
         "pending": "En attente",
         "removeLabel": "Retirer {name}"
       },
@@ -5068,6 +5103,7 @@
       "bye": "EXEMPT",
       "tbd": "À déterminer",
       "phantom": "—",
+      "seed": "Tête de série {n}",
       "linkMatch": "Lier une partie jouée à ce slot",
       "overrideMatch": "Inscrire le résultat (organisateur)",
       "recordResult": "Inscrire le résultat",
@@ -11349,6 +11385,7 @@
         "quarterfinal": "Quart 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
+        "roundOf64": "R64 25",
         "played": "Participation 20"
       },
       "worth": {

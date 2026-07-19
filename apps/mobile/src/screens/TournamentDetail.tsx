@@ -25,6 +25,7 @@ import {
   Animated,
   Easing,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -32,7 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -55,7 +56,9 @@ import {
   getTournamentLogoUrl,
   formatPrice,
   tournamentRankingHeadline,
+  tournamentPointsLadder,
 } from '@rallia/shared-utils';
+import type { TournamentPlacement } from '@rallia/shared-utils';
 import {
   useTheme,
   useTournament,
@@ -79,6 +82,7 @@ import {
   useTournamentMatches,
   useOpenTournamentRoundChat,
   useIsTournamentOrganizer,
+  useIsCertifiedOrganizer,
   useCancelTournament,
   useArchiveTournament,
   useProfilesByIds,
@@ -113,6 +117,8 @@ import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+type TabKey = 'overview' | 'bracket' | 'players' | 'points' | 'rules' | 'details';
 
 type Status = Enums<'tournament_status'>;
 type Visibility = Enums<'tournament_visibility'>;
@@ -251,6 +257,198 @@ const LabeledBlock: React.FC<{
     </View>
   </View>
 );
+
+/** Initial-load placeholder shaped like the hero + tab bar + first cards, so the
+ *  screen keeps its silhouette while the tournament loads. */
+const TournamentDetailSkeleton: React.FC<{ colors: ScreenColors; isDark: boolean }> = ({
+  colors,
+  isDark,
+}) => {
+  const bg = isDark ? neutral[800] : neutral[200];
+  const highlight = isDark ? neutral[700] : neutral[100];
+  const shimmer = { backgroundColor: bg, highlightColor: highlight };
+  return (
+    <View>
+      <View style={styles.heroFixed}>
+        <View
+          style={[
+            styles.heroCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
+          <Skeleton {...shimmer} height={160} borderRadius={radiusPixels.lg} />
+          <View style={styles.skeletonHeroBody}>
+            <Skeleton {...shimmer} width="35%" height={22} borderRadius={radiusPixels.full} />
+            <Skeleton {...shimmer} width="80%" height={26} />
+            <Skeleton {...shimmer} width="60%" height={16} />
+          </View>
+          <View style={[styles.heroDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.heroMetaRows}>
+            {[0, 1, 2].map(i => (
+              <View key={i} style={styles.heroMetaRow}>
+                <Skeleton {...shimmer} width={28} height={28} borderRadius={radiusPixels.lg} />
+                <Skeleton {...shimmer} width={`${70 - i * 15}%`} height={14} />
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+      <View style={styles.skeletonTabBar}>
+        {[0, 1, 2].map(i => (
+          <Skeleton key={i} {...shimmer} width={72} height={14} />
+        ))}
+      </View>
+      <View style={styles.tabContent}>
+        <Skeleton {...shimmer} height={72} borderRadius={radiusPixels.lg} />
+        <View style={styles.skeletonCardGap}>
+          <Skeleton {...shimmer} height={120} borderRadius={radiusPixels.xl} />
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const PLACEMENT_ICON: Record<TournamentPlacement, keyof typeof Ionicons.glyphMap> = {
+  champion: 'trophy',
+  finalist: 'medal-outline',
+  semifinal: 'ribbon-outline',
+  quarterfinal: 'flash-outline',
+  round_of_16: 'arrow-up-circle-outline',
+  round_of_32: 'arrow-up-circle-outline',
+  round_of_64: 'arrow-up-circle-outline',
+  participated: 'checkmark-circle-outline',
+};
+
+/**
+ * Circuit Rallia points explainer: what each finish is worth on this specific
+ * tournament. Numbers come from the shared ladder helper, which mirrors the
+ * award function exactly — never recompute the scale here.
+ */
+const PointsTab: React.FC<{
+  ladder: NonNullable<ReturnType<typeof tournamentPointsLadder>>;
+  isDoubles: boolean;
+  colors: ScreenColors;
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ ladder, isDoubles, colors, t }) => {
+  const { projected, rows } = ladder;
+  const champion = rows[0];
+
+  return (
+    <View style={styles.tabContent}>
+      {/* Headline: the number a player is actually competing for */}
+      <View
+        style={[
+          styles.section,
+          styles.pointsHero,
+          { backgroundColor: colors.championBg, borderColor: colors.championText },
+        ]}
+      >
+        <View style={[styles.pointsHeroIcon, { backgroundColor: colors.championText }]}>
+          <Ionicons name="trophy" size={22} color={accent[900]} />
+        </View>
+        <Text size="xs" weight="semibold" color={colors.championText}>
+          {t('tournamentDetail.points.eligibleLabel')}
+        </Text>
+        <View style={styles.pointsHeroValueRow}>
+          {projected ? (
+            <Text size="sm" weight="medium" color={colors.textMuted}>
+              {t('tournamentDetail.points.upTo')}
+            </Text>
+          ) : null}
+          {/* lineHeight is explicit: Text defaults to the body variant's fixed
+              24px box, which clips ascenders at 3xl (30px). */}
+          <Text size="3xl" weight="bold" lineHeight="tight" color={colors.championText}>
+            {champion.points}
+          </Text>
+          <Text size="sm" weight="medium" color={colors.textMuted}>
+            {t('tournamentDetail.points.unit')}
+          </Text>
+        </View>
+        <Text size="sm" color={colors.textMuted} style={styles.pointsHeroCaption}>
+          {t('tournamentDetail.points.heroCaption')}
+        </Text>
+      </View>
+
+      {/* The ladder */}
+      <Section title={t('tournamentDetail.points.tableTitle')} colors={colors}>
+        {rows.map((row, i) => (
+          <View
+            key={row.placement}
+            style={[
+              styles.pointsRow,
+              { borderBottomColor: colors.border },
+              i === rows.length - 1 && styles.pointsRowLast,
+            ]}
+          >
+            <View
+              style={[
+                styles.pointsRowIcon,
+                {
+                  backgroundColor:
+                    row.placement === 'champion' ? colors.championBg : colors.statusMutedBg,
+                },
+              ]}
+            >
+              <Ionicons
+                name={PLACEMENT_ICON[row.placement]}
+                size={16}
+                color={row.placement === 'champion' ? colors.championText : colors.textMuted}
+              />
+            </View>
+            <Text
+              size="base"
+              weight={row.placement === 'champion' ? 'semibold' : 'medium'}
+              color={colors.text}
+              style={styles.pointsRowLabel}
+            >
+              {t(`tournamentDetail.points.placement.${row.placement}`)}
+            </Text>
+            <Text
+              size="base"
+              weight="bold"
+              color={row.placement === 'champion' ? colors.championText : colors.text}
+              style={styles.pointsRowValue}
+            >
+              {row.points}
+            </Text>
+          </View>
+        ))}
+      </Section>
+
+      {/* How the number is set, and the rules that bite */}
+      <Section title={t('tournamentDetail.points.howTitle')} colors={colors}>
+        {[
+          projected
+            ? 'tournamentDetail.points.notes.projected'
+            : 'tournamentDetail.points.notes.firm',
+          'tournamentDetail.points.notes.scale',
+          'tournamentDetail.points.notes.zeroWinFloor',
+          ...(isDoubles ? ['tournamentDetail.points.notes.doubles'] : []),
+          'tournamentDetail.points.notes.season',
+        ].map((key, i, arr) => (
+          <View
+            key={key}
+            style={[
+              styles.pointsNoteRow,
+              { borderBottomColor: colors.border },
+              i === arr.length - 1 && styles.pointsRowLast,
+            ]}
+          >
+            <View style={[styles.ruleDot, { backgroundColor: colors.primary }]} />
+            <Text size="sm" color={colors.text} style={styles.ruleText}>
+              {t(key as TranslationKey)}
+            </Text>
+          </View>
+        ))}
+      </Section>
+    </View>
+  );
+};
+
+/** Fallback label for a bracket slot whose player has no resolvable name yet. */
+function seedFallbackLabel(seed: number | undefined, t: (k: TranslationKey) => string): string {
+  return t('tournamentDetail.bracket.seed').replace('{n}', seed !== undefined ? String(seed) : '?');
+}
 
 /** Player-facing level requirement, e.g. "3.0+", "≤ 4.5", "3.0–4.5".
  *  Mirrors the tournament-card formatting so display stays consistent. */
@@ -613,9 +811,23 @@ const ParticipantsSection: React.FC<{
   onPlayerPress: (player: PlayerSearchResult) => void;
   onRemovePress?: (player: PlayerSearchResult) => void;
   currentUserId?: string;
+  /** Draw capacity, surfaced in the empty state so a bare roster still says
+   *  how big the event is. */
+  maxParticipants: number;
+  /** Pre-formatted registration deadline, or null when there's none to show. */
+  deadlineLabel?: string | null;
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
-}> = ({ players, onPlayerPress, onRemovePress, currentUserId, colors, t }) => {
+}> = ({
+  players,
+  onPlayerPress,
+  onRemovePress,
+  currentUserId,
+  maxParticipants,
+  deadlineLabel,
+  colors,
+  t,
+}) => {
   return (
     <View>
       <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
@@ -623,9 +835,40 @@ const ParticipantsSection: React.FC<{
       </Text>
       {players.length === 0 ? (
         <View style={styles.participantEmpty}>
-          <Text size="sm" color={colors.textMuted}>
+          <View style={[styles.participantEmptyDisc, { backgroundColor: colors.statusActiveBg }]}>
+            <Ionicons name="people-outline" size={34} color={colors.primary} />
+          </View>
+          <Text size="base" weight="semibold" color={colors.text}>
             {t('tournamentDetail.dashboard.participants.empty')}
           </Text>
+          <Text size="sm" color={colors.textMuted} style={styles.participantEmptyText}>
+            {t('tournamentDetail.dashboard.participants.emptyDescription')}
+          </Text>
+          <View style={[styles.participantEmptyStats, { borderTopColor: colors.border }]}>
+            <View style={styles.participantEmptyStat}>
+              <Text size="base" weight="bold" color={colors.text}>
+                {maxParticipants}
+              </Text>
+              <Text size="xs" color={colors.textMuted}>
+                {t('tournamentDetail.dashboard.participants.emptySpotsLabel')}
+              </Text>
+            </View>
+            {deadlineLabel ? (
+              <>
+                <View
+                  style={[styles.participantEmptyStatDivider, { backgroundColor: colors.border }]}
+                />
+                <View style={styles.participantEmptyStat}>
+                  <Text size="base" weight="bold" color={colors.text} numberOfLines={1}>
+                    {deadlineLabel}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('tournamentDetail.dashboard.participants.emptyDeadlineLabel')}
+                  </Text>
+                </View>
+              </>
+            ) : null}
+          </View>
         </View>
       ) : (
         players.map(player => (
@@ -787,6 +1030,9 @@ export const TournamentDetail: React.FC = () => {
   // sync primary check so the owner sees controls immediately (no query flicker).
   const { data: amIOrganizer } = useIsTournamentOrganizer(tournament?.id);
   const isOrganizer = isPrimaryOrganizer || !!amIOrganizer;
+  // Only a certified organizer's tournament awards Circuit Rallia points.
+  const { data: organizerIsCertified } = useIsCertifiedOrganizer(tournament?.organizer_id);
+  const awardsRankingPoints = !!organizerIsCertified;
   const canManageCoOrganizers =
     isPrimaryOrganizer &&
     !!tournament &&
@@ -1151,6 +1397,7 @@ export const TournamentDetail: React.FC = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<PlayerSearchResult | null>(null);
   const insets = useSafeAreaInsets();
 
@@ -1667,6 +1914,11 @@ export const TournamentDetail: React.FC = () => {
 
   const organizerName = useMemo(() => {
     if (!tournament) return '';
+    // Official events carry a brand override so they read "Rallia" rather than
+    // whichever team member owns the row; player-run events fall back to the
+    // organizer's profile.
+    const brand = tournament.organizer_display_name?.trim();
+    if (brand) return brand;
     const p = profiles?.[tournament.organizer_id];
     return p ? getHumanName(p, '') : '';
   }, [profiles, tournament]);
@@ -1695,9 +1947,9 @@ export const TournamentDetail: React.FC = () => {
     if (!final?.winner_registration_id) return null;
     return (
       nameByRegId.get(final.winner_registration_id) ??
-      `Seed ${seedByRegId.get(final.winner_registration_id) ?? '?'}`
+      seedFallbackLabel(seedByRegId.get(final.winner_registration_id), t)
     );
-  }, [matches, totalRounds, nameByRegId, seedByRegId]);
+  }, [matches, totalRounds, nameByRegId, seedByRegId, t]);
 
   // Playable games only — bye/phantom slots auto-advance and are never played.
   const matchProgress = useMemo(() => {
@@ -1744,11 +1996,18 @@ export const TournamentDetail: React.FC = () => {
         ? myNextMatch.player2_registration_id
         : myNextMatch.player1_registration_id;
     if (!oppId) return null;
-    return nameByRegId.get(oppId) ?? `Seed ${seedByRegId.get(oppId) ?? '?'}`;
-  }, [myNextMatch, myRegId, nameByRegId, seedByRegId]);
+    return nameByRegId.get(oppId) ?? seedFallbackLabel(seedByRegId.get(oppId), t);
+  }, [myNextMatch, myRegId, nameByRegId, seedByRegId, t]);
 
-  // Flashscore-style content tabs (Overview / Bracket / Players / Details)
-  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  // Flashscore-style content tabs (Overview / Bracket / Players / Details).
+  // Keyed, not positional: tabs appear and disappear with tournament state, so
+  // an index would silently select a different tab underneath the user.
+  const [activeTabKey, setActiveTabKey] = useState<TabKey>('overview');
+
+  // Tab switches scroll back to the tab bar (measured, since the hero varies in
+  // height) so a new pane never opens mid-content.
+  const scrollRef = useRef<ScrollView>(null);
+  const heroHeightRef = useRef(0);
 
   const handleBracketMatchTap = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
@@ -1805,8 +2064,8 @@ export const TournamentDetail: React.FC = () => {
           tournamentId: tournament.id,
           player1RegId: p1RegId,
           player2RegId: p2RegId,
-          player1Name: nameByRegId.get(p1RegId) ?? `Seed ${seedByRegId.get(p1RegId) ?? '?'}`,
-          player2Name: nameByRegId.get(p2RegId) ?? `Seed ${seedByRegId.get(p2RegId) ?? '?'}`,
+          player1Name: nameByRegId.get(p1RegId) ?? seedFallbackLabel(seedByRegId.get(p1RegId), t),
+          player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
           isPickleball: sportName === 'pickleball',
           matchFormat: tournament.match_format,
           onSuccess: () => {
@@ -1815,7 +2074,7 @@ export const TournamentDetail: React.FC = () => {
         },
       });
     },
-    [tournament, sports, nameByRegId, seedByRegId]
+    [tournament, sports, nameByRegId, seedByRegId, t]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -2005,15 +2264,35 @@ export const TournamentDetail: React.FC = () => {
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 
+  // Pull-to-refresh: results, rosters and paid-registration state all settle
+  // server-side after the user leaves the screen, so refetch the whole set.
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(params.tournamentId) }),
+        queryClient.invalidateQueries({
+          queryKey: tournamentKeys.registrations(params.tournamentId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: tournamentKeys.participants(params.tournamentId),
+        }),
+        queryClient.invalidateQueries({ queryKey: tournamentKeys.matches(params.tournamentId) }),
+        userId
+          ? queryClient.invalidateQueries({
+              queryKey: tournamentKeys.myRegistration(params.tournamentId, userId),
+            })
+          : Promise.resolve(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient, params.tournamentId, userId]);
+
   if (isLoading || (invitePreviewEnabled && invitePreviewLoading)) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text size="sm" color={colors.textMuted} style={styles.centeredText}>
-            {t('tournamentDetail.loading')}
-          </Text>
-        </View>
+        <TournamentDetailSkeleton colors={colors} isDark={isDark} />
       </SafeAreaView>
     );
   }
@@ -2135,6 +2414,12 @@ export const TournamentDetail: React.FC = () => {
   // (player-absorbs mode); organizer-absorbs makes the two amounts equal.
   const playerPaysServiceFee = !!feeQuote && feeQuote.totalCents > feeQuote.entryCents;
 
+  // Circuit Rallia eligibility. The ranking ceiling is stamped on EVERY
+  // tournament, certified organizer or not, so the ceiling alone would promise
+  // points the award will never pay — the certification is the real gate.
+  const pointsLadder = awardsRankingPoints ? tournamentPointsLadder(tournament) : null;
+  const showPointsTab = !!pointsLadder;
+
   const showBracketTab = shouldFetchBracket && matches.length > 0;
   const showPlayersTab = tournament.status !== 'draft';
   const showRulesTab = !!tournament.rules?.trim();
@@ -2144,10 +2429,7 @@ export const TournamentDetail: React.FC = () => {
     .split('\n')
     .map(l => l.trim())
     .filter(Boolean);
-  const tabs: Array<{
-    key: 'overview' | 'bracket' | 'players' | 'rules' | 'details';
-    label: string;
-  }> = [
+  const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'overview', label: t('tournamentDetail.tabs.overview') },
     ...(showBracketTab
       ? [{ key: 'bracket' as const, label: t('tournamentDetail.tabs.bracket') }]
@@ -2155,28 +2437,47 @@ export const TournamentDetail: React.FC = () => {
     ...(showPlayersTab
       ? [{ key: 'players' as const, label: t('tournamentDetail.tabs.players') }]
       : []),
+    ...(showPointsTab
+      ? [{ key: 'points' as const, label: t('tournamentDetail.tabs.points') }]
+      : []),
     ...(showRulesTab ? [{ key: 'rules' as const, label: t('tournamentDetail.tabs.rules') }] : []),
     { key: 'details', label: t('tournamentDetail.tabs.details') },
   ];
-  const currentTabIdx = Math.min(activeTabIdx, tabs.length - 1);
-  const currentTabKey = tabs[currentTabIdx].key;
-  const playersTabIdx = tabs.findIndex(tab => tab.key === 'players');
+  // The selected tab can vanish (bracket published, rules cleared) — fall back
+  // to Overview rather than rendering an empty pane.
+  const currentTabKey = tabs.some(tab => tab.key === activeTabKey) ? activeTabKey : 'overview';
+  const hasPlayersTab = tabs.some(tab => tab.key === 'players');
 
-  const goToTab = (idx: number) => {
+  const goToTab = (key: TabKey) => {
     void lightHaptic();
-    setActiveTabIdx(idx);
+    setActiveTabKey(key);
+    scrollRef.current?.scrollTo({ y: heroHeightRef.current, animated: true });
   };
 
   return (
     <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
+        ref={scrollRef}
         style={styles.screenScroll}
         contentContainerStyle={styles.screenScrollContent}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void onRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Hero */}
-        <View style={styles.heroFixed}>
+        <View
+          style={styles.heroFixed}
+          onLayout={e => {
+            heroHeightRef.current = e.nativeEvent.layout.height;
+          }}
+        >
           <View
             style={[
               styles.heroCard,
@@ -2274,21 +2575,50 @@ export const TournamentDetail: React.FC = () => {
                   </Text>
                 </View>
               ) : null}
-              {rankingHeadline ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusActiveBg }]}>
-                    <Ionicons name="ribbon-outline" size={14} color={colors.primary} />
-                  </View>
-                  <Text size="sm" weight="medium" color={colors.text} style={styles.heroMetaText}>
-                    {t(
-                      rankingHeadline.projected
-                        ? 'tournamentDetail.dashboard.rankingPointsUpTo'
-                        : 'tournamentDetail.dashboard.rankingPoints'
-                    ).replace('{points}', String(rankingHeadline.points))}
-                  </Text>
-                </View>
-              ) : null}
             </View>
+
+            {/* Circuit Rallia payout — pulled out of the meta rows and given a
+                tinted band, so the number a player competes for is the loudest
+                thing in the hero after the title. Gated on the same eligibility
+                as the Points tab: the ceiling is stamped on every tournament,
+                so an uncertified organizer's event would otherwise advertise
+                points the award never pays. Tapping opens the full breakdown. */}
+            {rankingHeadline && awardsRankingPoints ? (
+              <TouchableOpacity
+                onPress={() => goToTab('points')}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('tournamentDetail.tabs.points')}
+                testID="hero-ranking-banner"
+                style={[
+                  styles.rankingBanner,
+                  { backgroundColor: colors.championBg, borderColor: colors.championText },
+                ]}
+              >
+                <View style={[styles.rankingBannerIcon, { backgroundColor: colors.championText }]}>
+                  <Ionicons name="trophy" size={20} color={accent[900]} />
+                </View>
+                <View style={styles.rankingBannerTexts}>
+                  <Text size="xs" weight="semibold" color={colors.championText} numberOfLines={1}>
+                    {t('tournamentDetail.dashboard.rankingBanner.label')}
+                  </Text>
+                  <View style={styles.rankingBannerValueRow}>
+                    {rankingHeadline.projected ? (
+                      <Text size="sm" weight="medium" color={colors.textMuted}>
+                        {t('tournamentDetail.dashboard.rankingBanner.upTo')}
+                      </Text>
+                    ) : null}
+                    <Text size="2xl" weight="bold" lineHeight="tight" color={colors.championText}>
+                      {rankingHeadline.points}
+                    </Text>
+                    <Text size="sm" weight="medium" color={colors.textMuted}>
+                      {t('tournamentDetail.dashboard.rankingBanner.unit')}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.championText} />
+              </TouchableOpacity>
+            ) : null}
 
             {myActiveRegistration &&
               tournament.status !== 'cancelled' &&
@@ -2327,23 +2657,27 @@ export const TournamentDetail: React.FC = () => {
           </View>
         </View>
 
-        {/* Sticky tab bar */}
-        <View style={[styles.tabTrackSticky, { backgroundColor: colors.background }]}>
-          <View style={[styles.tabTrack, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-            {tabs.map((tab, i) => {
-              const selected = i === currentTabIdx;
+        {/* Sticky tab bar — scrollable underline tabs: each sized to its label
+            and left-aligned, so any number of tabs scrolls cleanly */}
+        <View
+          style={[
+            styles.tabBarSticky,
+            { backgroundColor: colors.background, borderBottomColor: colors.border },
+          ]}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {tabs.map(tab => {
+              const selected = tab.key === currentTabKey;
               return (
                 <TouchableOpacity
                   key={tab.key}
-                  onPress={() => goToTab(i)}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.tabPill,
-                    selected && [
-                      styles.tabPillActive,
-                      { backgroundColor: isDark ? darkTheme.card : lightTheme.card },
-                    ],
-                  ]}
+                  onPress={() => goToTab(tab.key)}
+                  activeOpacity={0.7}
+                  style={styles.tabItem}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
                   testID={`tournament-tab-${tab.key}`}
@@ -2353,15 +2687,19 @@ export const TournamentDetail: React.FC = () => {
                     weight={selected ? 'semibold' : 'medium'}
                     color={selected ? colors.primary : colors.textMuted}
                     numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.85}
                   >
                     {tab.label}
                   </Text>
+                  <View
+                    style={[
+                      styles.tabUnderline,
+                      { backgroundColor: selected ? colors.primary : 'transparent' },
+                    ]}
+                  />
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
         {/* ============================ OVERVIEW ============================ */}
@@ -2478,7 +2816,7 @@ export const TournamentDetail: React.FC = () => {
                 )}
                 buttonLabel={t('tournamentDetail.dashboard.pendingRequestsCta.review')}
                 buttonIcon="people-outline"
-                onPress={() => playersTabIdx >= 0 && goToTab(playersTabIdx)}
+                onPress={() => hasPlayersTab && goToTab('players')}
                 accent="secondary"
                 colors={colors}
                 testID="cta-pending-requests"
@@ -2949,6 +3287,12 @@ export const TournamentDetail: React.FC = () => {
               onPlayerPress={handlePlayerPress}
               onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
               currentUserId={userId}
+              maxParticipants={tournament.max_participants}
+              deadlineLabel={
+                tournament.registration_closes_at && tournament.status === 'registration_open'
+                  ? formatDate(tournament.registration_closes_at)
+                  : null
+              }
               colors={colors}
               t={t}
             />
@@ -3068,6 +3412,11 @@ export const TournamentDetail: React.FC = () => {
               </Section>
             ) : null}
           </View>
+        )}
+
+        {/* ============================= POINTS ============================= */}
+        {currentTabKey === 'points' && pointsLadder && (
+          <PointsTab ladder={pointsLadder} isDoubles={isDoubles} colors={colors} t={t} />
         )}
 
         {/* ============================= RULES ============================== */}
@@ -3314,7 +3663,7 @@ const slotLabel = (
   if (name) return name;
   // Fall back to the seed rank for a determined-but-unnamed slot.
   const seed = seedByRegId.get(regId);
-  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
+  return seed !== undefined ? seedFallbackLabel(seed, t) : t('tournamentDetail.bracket.tbd');
 };
 
 type SlotKind = 'player' | 'bye' | 'tbd' | 'phantom';
@@ -3422,7 +3771,7 @@ const BracketSection: React.FC<{
   const finalMatch = matches.find(m => m.round_number === totalRounds && m.winner_registration_id);
   const championRegId = finalMatch?.winner_registration_id ?? null;
   const championName = championRegId
-    ? (nameByRegId.get(championRegId) ?? `Seed ${seedByRegId.get(championRegId) ?? '?'}`)
+    ? (nameByRegId.get(championRegId) ?? seedFallbackLabel(seedByRegId.get(championRegId), t))
     : null;
 
   const renderMatch = (m: MatchRow) => {
@@ -3948,29 +4297,25 @@ const styles = StyleSheet.create({
   screenScrollContent: {
     flexGrow: 1,
   },
-  tabTrackSticky: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[1],
-    paddingBottom: spacingPixels[2],
+  tabBarSticky: {
+    paddingTop: spacingPixels[2],
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  tabTrack: {
+  tabBarContent: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
+    alignItems: 'flex-end',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
   },
-  tabPill: {
-    flex: 1,
+  tabItem: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[2],
-    borderRadius: 10,
+    paddingTop: spacingPixels[2],
+    gap: spacingPixels[2],
   },
-  tabPillActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  tabUnderline: {
+    alignSelf: 'stretch',
+    height: 2,
+    borderRadius: 1,
   },
   tabContent: {
     padding: spacingPixels[4],
@@ -4001,6 +4346,75 @@ const styles = StyleSheet.create({
   playersTabContent: {
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[8],
+  },
+  pointsHero: {
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    padding: spacingPixels[5],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+  },
+  pointsHeroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  pointsHeroValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacingPixels[1.5],
+  },
+  pointsHeroCaption: {
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pointsRowLast: {
+    borderBottomWidth: 0,
+  },
+  pointsRowIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointsRowLabel: {
+    flex: 1,
+  },
+  pointsRowValue: {
+    fontVariant: ['tabular-nums'],
+  },
+  pointsNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  skeletonHeroBody: {
+    marginTop: spacingPixels[3],
+    gap: spacingPixels[2],
+  },
+  skeletonTabBar: {
+    flexDirection: 'row',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
+  },
+  skeletonCardGap: {
+    marginTop: spacingPixels[4],
   },
   heroPoster: {
     width: '100%',
@@ -4121,6 +4535,31 @@ const styles = StyleSheet.create({
   heroMetaText: {
     flex: 1,
   },
+  rankingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    marginTop: spacingPixels[4],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+  },
+  rankingBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankingBannerTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  rankingBannerValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacingPixels[1.5],
+  },
   stepperCard: {
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
@@ -4191,8 +4630,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   participantEmpty: {
-    padding: spacingPixels[4],
     alignItems: 'center',
+    paddingVertical: spacingPixels[8],
+    paddingHorizontal: spacingPixels[5],
+    gap: spacingPixels[2],
+  },
+  participantEmptyDisc: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  participantEmptyText: {
+    textAlign: 'center',
+  },
+  participantEmptyStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    gap: spacingPixels[5],
+    marginTop: spacingPixels[3],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  participantEmptyStat: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  participantEmptyStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
   },
   pendingSection: {
     marginBottom: spacingPixels[4],
