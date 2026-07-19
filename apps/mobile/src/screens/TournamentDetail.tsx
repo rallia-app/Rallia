@@ -2137,7 +2137,17 @@ export const TournamentDetail: React.FC = () => {
 
   const showBracketTab = shouldFetchBracket && matches.length > 0;
   const showPlayersTab = tournament.status !== 'draft';
-  const tabs: Array<{ key: 'overview' | 'bracket' | 'players' | 'details'; label: string }> = [
+  const showRulesTab = !!tournament.rules?.trim();
+  // Split rules into per-line rows so each rule reads as its own item. Falls
+  // back to the whole string as one row when the organizer wrote a paragraph.
+  const rulesLines = (tournament.rules ?? '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+  const tabs: Array<{
+    key: 'overview' | 'bracket' | 'players' | 'rules' | 'details';
+    label: string;
+  }> = [
     { key: 'overview', label: t('tournamentDetail.tabs.overview') },
     ...(showBracketTab
       ? [{ key: 'bracket' as const, label: t('tournamentDetail.tabs.bracket') }]
@@ -2145,6 +2155,7 @@ export const TournamentDetail: React.FC = () => {
     ...(showPlayersTab
       ? [{ key: 'players' as const, label: t('tournamentDetail.tabs.players') }]
       : []),
+    ...(showRulesTab ? [{ key: 'rules' as const, label: t('tournamentDetail.tabs.rules') }] : []),
     { key: 'details', label: t('tournamentDetail.tabs.details') },
   ];
   const currentTabIdx = Math.min(activeTabIdx, tabs.length - 1);
@@ -2341,6 +2352,9 @@ export const TournamentDetail: React.FC = () => {
                     size="sm"
                     weight={selected ? 'semibold' : 'medium'}
                     color={selected ? colors.primary : colors.textMuted}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
                   >
                     {tab.label}
                   </Text>
@@ -3053,14 +3067,28 @@ export const TournamentDetail: React.FC = () => {
                 ) : null}
               </Section>
             ) : null}
+          </View>
+        )}
 
-            {tournament.rules?.trim() ? (
-              <LabeledBlock
-                label={t('tournamentDetail.dashboard.rulesTitle')}
-                value={tournament.rules}
-                colors={colors}
-              />
-            ) : null}
+        {/* ============================= RULES ============================== */}
+        {currentTabKey === 'rules' && showRulesTab && (
+          <View style={styles.tabContent}>
+            <View
+              style={[
+                styles.card,
+                styles.rulesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              {rulesLines.map((line, i) => (
+                <View key={i} style={styles.ruleRow}>
+                  <View style={[styles.ruleDot, { backgroundColor: colors.primary }]} />
+                  <Text size="sm" color={colors.text} style={styles.ruleText}>
+                    {line}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -3947,6 +3975,26 @@ const styles = StyleSheet.create({
   tabContent: {
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
+  },
+  rulesCard: {
+    paddingVertical: spacingPixels[1],
+  },
+  ruleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2.5],
+  },
+  ruleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 7,
+  },
+  ruleText: {
+    flex: 1,
+    lineHeight: 20,
   },
   // Players tab: no horizontal padding — PlayerCard supplies its own 16px
   // side margins so the cards align with the rest of the app.
