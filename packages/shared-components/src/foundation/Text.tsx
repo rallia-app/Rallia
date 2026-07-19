@@ -75,31 +75,41 @@ export interface TextProps extends Omit<RNTextProps, 'style'> {
 }
 
 /**
- * Get styles for text variants
+ * Line-height ratio each variant reads at. Kept as a ratio, not an absolute, so
+ * it still applies once `size` overrides the variant's own font size.
+ */
+const VARIANT_LINE_HEIGHT: Record<string, NonNullable<TextProps['lineHeight']>> = {
+  body: 'normal',
+  caption: 'normal',
+  label: 'tight',
+};
+
+/**
+ * Get styles for text variants.
+ *
+ * Deliberately omits lineHeight — it is derived from the *resolved* font size in
+ * the component. Returning an absolute here is what made `size` and line height
+ * disagree (a 30px `size="3xl"` rendered in the body variant's fixed 24px box
+ * and clipped its ascenders).
  */
 const getVariantStyles = (variant: TextProps['variant']): TextStyle => {
   // Defensive checks for runtime initialization
   const baseSize = typography?.fontSize?.base ?? 16;
   const smSize = typography?.fontSize?.sm ?? 14;
-  const normalLineHeight = typography?.lineHeight?.normal ?? 1.5;
-  const tightLineHeight = typography?.lineHeight?.tight ?? 1.25;
 
   const variants: Record<string, TextStyle> = {
     body: {
       fontSize: baseSize,
       fontWeight: typography?.fontWeight?.regular ?? '400',
-      lineHeight: baseSize * normalLineHeight,
     },
     caption: {
       fontSize: smSize,
       fontWeight: typography?.fontWeight?.regular ?? '400',
-      lineHeight: smSize * normalLineHeight,
       color: colors.gray,
     },
     label: {
       fontSize: smSize,
       fontWeight: typography?.fontWeight?.medium ?? '500',
-      lineHeight: smSize * tightLineHeight,
       letterSpacing: typography?.letterSpacing?.wide ?? 0.5,
       textTransform: 'uppercase',
     },
@@ -119,7 +129,7 @@ const getFontWeight = (weight: TextProps['weight']): TextStyle['fontWeight'] => 
 /**
  * Get font size value
  */
-const getFontSize = (size: TextProps['size']): number => {
+export const getFontSize = (size: TextProps['size']): number => {
   if (typeof size === 'number') return size;
   // Defensive check for runtime initialization
   if (!typography?.fontSize) {
@@ -130,12 +140,18 @@ const getFontSize = (size: TextProps['size']): number => {
 };
 
 /**
- * Get line height multiplier
+ * Resolve line height against the font size actually being rendered. Explicit
+ * `lineHeight` wins, otherwise the variant's ratio applies.
+ *
+ * Exported for unit tests: this is the rule that decides whether tall glyphs fit.
  */
-const getLineHeight = (lineHeight: TextProps['lineHeight'], fontSize: number): number => {
-  const normalLineHeight = typography?.lineHeight?.normal ?? 1.5;
-  if (!lineHeight) return fontSize * normalLineHeight;
-  return fontSize * (typography?.lineHeight?.[lineHeight] ?? normalLineHeight);
+export const getLineHeight = (
+  lineHeight: TextProps['lineHeight'],
+  variant: TextProps['variant'],
+  fontSize: number
+): number => {
+  const ratioKey = lineHeight ?? VARIANT_LINE_HEIGHT[variant || 'body'] ?? 'normal';
+  return fontSize * (typography?.lineHeight?.[ratioKey] ?? 1.5);
 };
 
 export const Text: React.FC<TextProps> = ({
@@ -160,11 +176,7 @@ export const Text: React.FC<TextProps> = ({
     ? getFontSize(size)
     : variantStyles.fontSize || (typography?.fontSize?.base ?? 16);
 
-  // Calculate line height based on font size
-  const normalLineHeight = typography?.lineHeight?.normal ?? 1.5;
-  const calculatedLineHeight = lineHeight
-    ? getLineHeight(lineHeight, fontSize)
-    : variantStyles.lineHeight || fontSize * normalLineHeight;
+  const calculatedLineHeight = getLineHeight(lineHeight, variant, fontSize);
 
   // Build style object
   const textStyle: TextStyle = {
