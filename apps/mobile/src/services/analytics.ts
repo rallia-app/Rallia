@@ -744,6 +744,23 @@ export function summerLeagueAnnouncementDismissed(): void {
   capture('summer_league_announcement_dismissed');
 }
 
+// ---- Série 1 tournaments ----
+
+/** The Série 1 tournaments announcement popup was shown to the player. */
+export function serie1AnnouncementViewed(): void {
+  capture('serie1_announcement_viewed');
+}
+
+/** The player tapped "See the tournaments" from the announcement. */
+export function serie1AnnouncementCtaPressed(): void {
+  capture('serie1_announcement_cta_pressed');
+}
+
+/** The player dismissed the announcement without visiting the tournaments. */
+export function serie1AnnouncementDismissed(): void {
+  capture('serie1_announcement_dismissed');
+}
+
 // ---- Subscription ----
 
 export function paywallViewed(): void {
