@@ -9310,6 +9310,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -9367,6 +9368,7 @@ export type Database = {
           min_reputation?: number | null
           name: string
           network_id?: string | null
+          organizer_display_name?: string | null
           organizer_id: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents?: number | null
@@ -9424,6 +9426,7 @@ export type Database = {
           min_reputation?: number | null
           name?: string
           network_id?: string | null
+          organizer_display_name?: string | null
           organizer_id?: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents?: number | null
@@ -12225,6 +12228,7 @@ export type Database = {
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       lt_send_session_confirm_reminders: { Args: never; Returns: number }
+      lt_snap_ranking_multiplier: { Args: { p_mult: number }; Returns: number }
       lt_sport_rating_system: { Args: { p_sport_id: string }; Returns: string }
       lt_tournament_ranking_multiplier: {
         Args: { p_tournament_id: string }
@@ -13530,6 +13534,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -13655,6 +13660,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -13721,6 +13727,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -13811,6 +13818,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -14038,6 +14046,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -14242,6 +14251,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
@@ -14383,6 +14393,7 @@ export type Database = {
           min_reputation: number | null
           name: string
           network_id: string | null
+          organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           prize_money_cents: number | null
