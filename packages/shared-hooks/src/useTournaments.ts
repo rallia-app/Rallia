@@ -38,6 +38,7 @@ import {
   addTournamentCoOrganizer,
   removeTournamentCoOrganizer,
   amITournamentOrganizer,
+  isCertifiedOrganizer,
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
   overrideTournamentMatchScore,
@@ -102,6 +103,8 @@ export const tournamentKeys = {
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
   myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
+  certifiedOrganizer: (playerId: string) =>
+    [...tournamentKeys.all, 'certifiedOrganizer', playerId] as const,
 };
 
 /**
@@ -494,6 +497,18 @@ export function useIsTournamentOrganizer(tournamentId: string | undefined) {
     queryKey: tournamentKeys.amIOrganizer(tournamentId ?? ''),
     queryFn: () => amITournamentOrganizer(tournamentId!),
     enabled: !!tournamentId,
+  });
+}
+
+/**
+ * Whether the given organizer is certified — i.e. whether this tournament's
+ * results will actually award Circuit Rallia points.
+ */
+export function useIsCertifiedOrganizer(organizerId: string | undefined) {
+  return useQuery<boolean>({
+    queryKey: tournamentKeys.certifiedOrganizer(organizerId ?? ''),
+    queryFn: () => isCertifiedOrganizer(organizerId!),
+    enabled: !!organizerId,
   });
 }
 

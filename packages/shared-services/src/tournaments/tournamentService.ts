@@ -1064,6 +1064,23 @@ export async function amITournamentOrganizer(tournamentId: string): Promise<bool
   return !!data;
 }
 
+/**
+ * Whether a player is a certified organizer — the gate that decides if their
+ * tournaments award Circuit Rallia points (see award_tournament_ranking_points).
+ * The ranking ceiling is stamped on every tournament regardless, so this is the
+ * only honest signal that points will actually be paid.
+ */
+export async function isCertifiedOrganizer(playerId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('player')
+    .select('is_certified_organizer')
+    .eq('id', playerId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data?.is_certified_organizer === true;
+}
+
 export interface LinkableMatch {
   id: string;
   match_date: string;
