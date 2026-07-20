@@ -177,8 +177,10 @@ describe('listMyTournaments', () => {
       ],
       error: null,
     });
+    const coOrgChain = chain({ data: [], error: null });
     mockFrom
       .mockReturnValueOnce(regChain.p)
+      .mockReturnValueOnce(coOrgChain.p)
       .mockReturnValueOnce(tnChain.p)
       .mockReturnValueOnce(profileChain.p);
 
@@ -194,16 +196,21 @@ describe('listMyTournaments', () => {
       },
     ]);
     expect(mockFrom).toHaveBeenNthCalledWith(1, 'tournament_registrations');
-    expect(mockFrom).toHaveBeenNthCalledWith(2, 'tournaments');
-    expect(mockFrom).toHaveBeenNthCalledWith(3, 'profile');
+    expect(mockFrom).toHaveBeenNthCalledWith(2, 'tournament_co_organizers');
+    expect(mockFrom).toHaveBeenNthCalledWith(3, 'tournaments');
+    expect(mockFrom).toHaveBeenNthCalledWith(4, 'profile');
     expect(tnChain.calls.or).toHaveBeenCalledWith('organizer_id.eq.u1,id.in.(r1,r2)');
     expect(tnChain.calls.neq).toHaveBeenCalledWith('status', 'archived');
   });
 
   it('falls back to an organizer-only filter when there are no registrations', async () => {
     const regChain = chain({ data: [], error: null });
+    const coOrgChain = chain({ data: [], error: null });
     const tnChain = chain({ data: [], error: null });
-    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(tnChain.p);
+    mockFrom
+      .mockReturnValueOnce(regChain.p)
+      .mockReturnValueOnce(coOrgChain.p)
+      .mockReturnValueOnce(tnChain.p);
 
     await listMyTournaments('u1');
 
@@ -213,12 +220,48 @@ describe('listMyTournaments', () => {
 
   it('applies optional sport filter', async () => {
     const regChain = chain({ data: [], error: null });
+    const coOrgChain = chain({ data: [], error: null });
     const tnChain = chain({ data: [], error: null });
-    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(tnChain.p);
+    mockFrom
+      .mockReturnValueOnce(regChain.p)
+      .mockReturnValueOnce(coOrgChain.p)
+      .mockReturnValueOnce(tnChain.p);
 
     await listMyTournaments('u1', { sportId: 's1' });
 
     expect(tnChain.calls.eq).toHaveBeenCalledWith('sport_id', 's1');
+  });
+
+  it('includes co-organized tournaments and flags them', async () => {
+    const regChain = chain({ data: [], error: null });
+    const coOrgChain = chain({ data: [{ tournament_id: 'c1' }], error: null });
+    const tnChain = chain({
+      data: [
+        { id: 'c1', tournament_registrations: [] },
+        { id: 'own', tournament_registrations: [] },
+      ],
+      error: null,
+    });
+    mockFrom
+      .mockReturnValueOnce(regChain.p)
+      .mockReturnValueOnce(coOrgChain.p)
+      .mockReturnValueOnce(tnChain.p);
+
+    const out = await listMyTournaments('u1');
+
+    // The co-organized id widens the filter beyond organizer_id...
+    expect(tnChain.calls.or).toHaveBeenCalledWith('organizer_id.eq.u1,id.in.(c1)');
+    expect(coOrgChain.calls.eq).toHaveBeenCalledWith('user_id', 'u1');
+    // ...and only that row carries the flag, so the screen can treat it as mine.
+    expect(out.find(t => t.id === 'c1')?.is_co_organizer).toBe(true);
+    expect(out.find(t => t.id === 'own')?.is_co_organizer).toBeUndefined();
+  });
+
+  it('throws when the co-organizer query errors', async () => {
+    const regChain = chain({ data: [], error: null });
+    const coOrgChain = chain({ data: null, error: { message: 'co boom' } });
+    mockFrom.mockReturnValueOnce(regChain.p).mockReturnValueOnce(coOrgChain.p);
+    await expect(listMyTournaments('u1')).rejects.toThrow('co boom');
   });
 
   it('throws when the registrations query errors', async () => {
