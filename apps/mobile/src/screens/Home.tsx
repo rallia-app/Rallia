@@ -65,7 +65,14 @@ import {
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
 import type { JustForYouItem } from '@rallia/shared-services';
-import { spacingPixels, radiusPixels, accent, neutral, primary } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  accent,
+  neutral,
+  primary,
+  secondary,
+} from '@rallia/design-system';
 
 import {
   PENDING_REFERRAL_KEY,
@@ -99,6 +106,7 @@ import {
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
 import { SportIcon } from '#/components/SportIcon';
+import { GradientNavTile, NAV_TILE_WATERMARK_COLOR } from '#/components/GradientNavTile';
 import { FavoriteAvailabilityCard, FavoriteAvailabilityCardSkeleton } from '#/features/facilities';
 import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
 import { useTabPreload } from '#/navigation/useTabPreload';
@@ -119,6 +127,7 @@ import { IS_E2E } from '#/utils/e2e';
 
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 
 /** Dismissible banner alerting the player to unread notifications in another sport */
 const CrossSportBanner: React.FC<{
@@ -159,69 +168,6 @@ const SecondSportBanner: React.FC<{
   />
 );
 
-// Splits a label across two lines at the space nearest its midpoint, so every
-// quick-nav button renders exactly two balanced lines regardless of locale —
-// e.g. FR "Explorer les parties publiques" → "Explorer les" / "parties
-// publiques" rather than stranding "publiques" on its own. Single-word labels
-// (rare) still take two lines of vertical space — the second line is empty but
-// reserves height so the row stays visually aligned.
-const splitLabelTwoLines = (label: string): [string, string] => {
-  const trimmed = label.trim();
-  const mid = trimmed.length / 2;
-  let splitAt = -1;
-  for (let i = 0; i < trimmed.length; i++) {
-    if (trimmed[i] !== ' ') continue;
-    if (splitAt === -1 || Math.abs(i - mid) <= Math.abs(splitAt - mid)) splitAt = i;
-  }
-  if (splitAt === -1) return [trimmed, ' '];
-  return [trimmed.slice(0, splitAt), trimmed.slice(splitAt + 1)];
-};
-
-const QuickNavButton: React.FC<{
-  icon: (color: string) => React.ReactNode;
-  label: string;
-  onPress: () => void;
-}> = ({ icon, label, onPress }) => {
-  const [lineOne, lineTwo] = splitLabelTwoLines(label);
-  const handlePress = () => {
-    void lightHaptic();
-    onPress();
-  };
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.85}
-      style={quickNavStyles.item}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <View style={quickNavStyles.inner}>
-        <View style={quickNavStyles.iconCircle}>{icon('#ffffff')}</View>
-        <View style={quickNavStyles.labelBlock}>
-          <Text
-            size="sm"
-            weight="semibold"
-            color="#ffffff"
-            style={quickNavStyles.label}
-            numberOfLines={1}
-          >
-            {lineOne}
-          </Text>
-          <Text
-            size="sm"
-            weight="semibold"
-            color="#ffffff"
-            style={quickNavStyles.label}
-            numberOfLines={1}
-          >
-            {lineTwo}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
 const quickNavStyles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: spacingPixels[4],
@@ -240,37 +186,6 @@ const quickNavStyles = StyleSheet.create({
   item: {
     flexGrow: 1,
     flexBasis: '40%',
-    borderRadius: radiusPixels['2xl'],
-  },
-  inner: {
-    flexDirection: 'row',
-    borderRadius: radiusPixels['2xl'],
-    borderWidth: 1.5,
-    borderColor: accent[500],
-    backgroundColor: accent[400],
-    alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[4],
-    overflow: 'hidden',
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    flexShrink: 0,
-  },
-  labelBlock: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  label: {
-    textAlign: 'center',
   },
 });
 
@@ -2069,18 +1984,26 @@ const Home = () => {
     const SportIconComponent =
       selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
     const playTiles: React.ReactNode[] = [
-      <QuickNavButton
+      <GradientNavTile
         key="find-game"
+        style={quickNavStyles.item}
         icon={color => <SportIconComponent width={24} height={24} fill={color} />}
+        watermark={<SportIconComponent width={56} height={56} fill={NAV_TILE_WATERMARK_COLOR} />}
+        gradient={[primary[500], primary[700]]}
+        borderColor={primary[600]}
         label={t('home.playGrid.findGame')}
         onPress={() => {
           Analytics.publicMatchesOpened({ cta: 'find_game' });
           navigation.navigate('PublicMatches');
         }}
       />,
-      <QuickNavButton
+      <GradientNavTile
         key="book-court"
+        style={quickNavStyles.item}
         icon={color => <Ionicons name="calendar-outline" size={24} color={color} />}
+        watermark={<TennisCourtIcon width={56} height={56} stroke={NAV_TILE_WATERMARK_COLOR} />}
+        gradient={[accent[400], accent[600]]}
+        borderColor={accent[500]}
         label={t('home.playGrid.bookCourt')}
         onPress={() => {
           appNavigation.navigate('Main', {
@@ -2092,9 +2015,13 @@ const Home = () => {
     ];
     if (session) {
       playTiles.push(
-        <QuickNavButton
+        <GradientNavTile
           key="tournaments"
+          style={quickNavStyles.item}
           icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+          watermark={<Ionicons name="trophy" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
+          gradient={[secondary[400], secondary[600]]}
+          borderColor={secondary[500]}
           label={t('home.playGrid.tournaments')}
           onPress={() => appNavigation.navigate('Tournaments')}
         />
@@ -2102,9 +2029,13 @@ const Home = () => {
       // Leagues are re-admin-gated during rollout.
       if (isAdmin) {
         playTiles.push(
-          <QuickNavButton
+          <GradientNavTile
             key="leagues"
+            style={quickNavStyles.item}
             icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+            watermark={<Ionicons name="ribbon" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
+            gradient={[primary[700], primary[900]]}
+            borderColor={primary[800]}
             label={t('home.playGrid.leagues')}
             onPress={() => appNavigation.navigate('Leagues')}
           />

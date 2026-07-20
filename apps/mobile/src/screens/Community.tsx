@@ -7,15 +7,14 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { lightHaptic } from '@rallia/shared-utils';
 import { useAdminStatus } from '@rallia/shared-hooks';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, accent, primary, secondary } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
@@ -25,10 +24,10 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
-  type TranslationKey,
 } from '#/hooks';
 import { useSport } from '#/context';
 import { PlayerDirectory } from '#/features/community';
+import { GradientNavTile, NAV_TILE_WATERMARK_COLOR } from '#/components/GradientNavTile';
 import type { RootStackParamList, CommunityStackParamList } from '#/navigation/types';
 
 type CommunityNavigationProp = CompositeNavigationProp<
@@ -39,6 +38,9 @@ type CommunityNavigationProp = CompositeNavigationProp<
 interface ActionButton {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
+  watermark: keyof typeof Ionicons.glyphMap;
+  gradient: [string, string];
+  borderColor: string;
   label: string;
   onPress: () => void;
 }
@@ -67,37 +69,38 @@ const Community = () => {
     [colors]
   );
 
-  // Action button handlers
+  // Action button handlers — the tile fires the haptic on press.
   const handleGroups = useCallback(() => {
     if (!guardAction()) return;
-    lightHaptic();
     navigation.navigate('Groups');
   }, [navigation, guardAction]);
 
   const handleCommunities = useCallback(() => {
-    lightHaptic();
     navigation.navigate('Communities');
   }, [navigation]);
 
   const handleTournaments = useCallback(() => {
     if (!guardAction()) return;
-    lightHaptic();
     navigation.navigate('Tournaments');
   }, [navigation, guardAction]);
 
   const handleLeagues = useCallback(() => {
     if (!guardAction()) return;
-    lightHaptic();
     navigation.navigate('Leagues');
   }, [navigation, guardAction]);
 
-  // Action buttons configuration
+  // Action buttons configuration — gradients match the Home play grid so each
+  // destination keeps one color identity across the app (tournaments coral,
+  // leagues deep teal).
   const actionButtons: ActionButton[] = useMemo(() => {
     const buttons: ActionButton[] = [];
 
     buttons.push({
       id: 'tournaments',
       icon: 'trophy-outline',
+      watermark: 'trophy',
+      gradient: [secondary[400], secondary[600]],
+      borderColor: secondary[500],
       label: t('community.tournaments'),
       onPress: handleTournaments,
     });
@@ -107,6 +110,9 @@ const Community = () => {
       buttons.push({
         id: 'leagues',
         icon: 'ribbon-outline',
+        watermark: 'ribbon',
+        gradient: [primary[700], primary[900]],
+        borderColor: primary[800],
         label: t('community.leagues'),
         onPress: handleLeagues,
       });
@@ -116,12 +122,18 @@ const Community = () => {
       {
         id: 'communities',
         icon: 'globe-outline',
+        watermark: 'globe',
+        gradient: [accent[400], accent[600]],
+        borderColor: accent[500],
         label: t('community.communities'),
         onPress: handleCommunities,
       },
       {
         id: 'groups',
         icon: 'people-outline',
+        watermark: 'people',
+        gradient: [primary[500], primary[700]],
+        borderColor: primary[600],
         label: t('community.groups'),
         onPress: handleGroups,
       }
@@ -147,34 +159,16 @@ const Community = () => {
   // List header with action buttons and section title
   const listHeader = useMemo(() => {
     const buttonElements = actionButtons.map(button => (
-      <TouchableOpacity
+      <GradientNavTile
         key={button.id}
-        style={[
-          styles.actionButton,
-          fillWidth ? styles.actionButtonFill : styles.actionButtonFixed,
-        ]}
+        style={fillWidth ? styles.actionButtonFill : styles.actionButtonFixed}
+        icon={color => <Ionicons name={button.icon} size={24} color={color} />}
+        watermark={<Ionicons name={button.watermark} size={56} color={NAV_TILE_WATERMARK_COLOR} />}
+        gradient={button.gradient}
+        borderColor={button.borderColor}
+        label={button.label}
         onPress={button.onPress}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel={button.label}
-      >
-        <View style={styles.actionButtonInner}>
-          <View style={styles.actionButtonIcon}>
-            <Ionicons name={button.icon} size={26} color="#ffffff" />
-          </View>
-          <View style={styles.actionButtonLabelBlock}>
-            <Text
-              size="sm"
-              weight="semibold"
-              color="#ffffff"
-              style={styles.actionButtonLabel}
-              numberOfLines={1}
-            >
-              {button.label}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
+      />
     ));
 
     return (
@@ -225,45 +219,11 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  actionButton: {
-    borderRadius: radiusPixels['2xl'],
-  },
   actionButtonFixed: {
-    width: 132,
+    width: 140,
   },
   actionButtonFill: {
     flex: 1,
-  },
-  actionButtonInner: {
-    flexDirection: 'column',
-    borderRadius: radiusPixels['2xl'],
-    borderWidth: 1.5,
-    borderColor: accent[500],
-    backgroundColor: accent[400],
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[4],
-    paddingHorizontal: spacingPixels[3],
-    overflow: 'hidden',
-  },
-  actionButtonIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    flexShrink: 0,
-  },
-  actionButtonLabelBlock: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-  },
-  actionButtonLabel: {
-    textAlign: 'center',
   },
   sectionHeader: {
     flexDirection: 'row',
