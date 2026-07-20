@@ -24,16 +24,6 @@ type InvitationType =
   | 'poster'
   | 'social';
 
-/**
- * Click tracking, store URLs, and attribution handoff don't know 'tournament'
- * yet (DB CHECK constraints on invitation_type) — those paths keep the
- * pre-tournament behavior of logging as a plain referral.
- */
-type TrackedInvitationType = Exclude<InvitationType, 'tournament'>;
-function toTrackedType(type: InvitationType): TrackedInvitationType {
-  return type === 'tournament' ? 'referral' : type;
-}
-
 const CHANNEL_TYPES: readonly InvitationType[] = ['flyer', 'poster', 'social'] as const;
 function isChannelType(type: InvitationType): boolean {
   return (CHANNEL_TYPES as readonly string[]).includes(type);
@@ -221,16 +211,17 @@ export default async function InvitePage({ params, searchParams }: Props) {
   const { code, locale } = await params;
   const query = await searchParams;
   const invitationType = parseInvitationType(query.type);
-  const trackingType = toTrackedType(invitationType);
   const targetId = query.id;
 
   const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
 
   // Log click for all visitors (non-blocking)
-  logReferralClick(code, ip, userAgent, trackingType, targetId, webDistinctId, utm).catch(() => {});
+  logReferralClick(code, ip, userAgent, invitationType, targetId, webDistinctId, utm).catch(
+    () => {}
+  );
 
   if (platform === 'android') {
-    redirect(buildPlayStoreUrl(code, trackingType, targetId, { webDistinctId, utm }));
+    redirect(buildPlayStoreUrl(code, invitationType, targetId, { webDistinctId, utm }));
   }
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
@@ -323,7 +314,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
       <InviteLandingTracker
         surface="invite"
-        invitationType={trackingType}
+        invitationType={invitationType}
         platform={platform ?? 'desktop'}
         code={code}
         {...(targetId ? { targetId } : {})}
@@ -350,7 +341,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
           copiedLabel={t('iosCodeCopied')}
           referral={{
             code,
-            type: trackingType,
+            type: invitationType,
             ...(targetId ? { targetId } : {}),
           }}
         />
@@ -365,7 +356,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
 
           <TrackedStoreBadges
             placement="invite_page"
-            playStoreUrl={buildPlayStoreUrl(code, trackingType, targetId, {
+            playStoreUrl={buildPlayStoreUrl(code, invitationType, targetId, {
               webDistinctId,
               utm,
             })}
@@ -375,7 +366,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
             {...(targetId ? { matchId: targetId } : {})}
             referral={{
               code,
-              type: trackingType,
+              type: invitationType,
               ...(targetId ? { targetId } : {}),
             }}
           />
