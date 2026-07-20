@@ -236,6 +236,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[6],
   },
   title: {
+    // Extra inset on the title only: it wraps earlier and more evenly, while
+    // the stretched CTA buttons below keep the body's full width.
+    paddingHorizontal: spacingPixels[3],
     marginBottom: spacingPixels[2],
     lineHeight: 32,
   },
