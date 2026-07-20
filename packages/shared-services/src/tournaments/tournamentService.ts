@@ -24,6 +24,10 @@ export type RegistrantPreview = { id: string; avatarUrl: string | null; name: st
 export type TournamentListItem = Tournament & {
   registration_count: number;
   registrant_preview: RegistrantPreview[];
+  /** True when the caller co-organizes this tournament (they are not the
+   *  primary organizer_id, but hold the same powers). Only set by
+   *  listMyTournaments — undefined on caller-agnostic surfaces like discovery. */
+  is_co_organizer?: boolean;
 };
 
 /** How many registrant avatars to surface on a list card. */
@@ -173,20 +177,35 @@ export async function listMyTournaments(
   if (regsError) throw new Error(regsError.message);
 
   const registeredIds = [...new Set((regs ?? []).map(r => r.tournament_id))];
+
+  // Co-organizers hold the same powers as the organizer (is_tournament_organizer
+  // covers both), so their events belong in their own library too — organizer_id
+  // alone would hide a tournament they can generate the bracket for.
+  const { data: coOrg, error: coOrgError } = await supabase
+    .from('tournament_co_organizers')
+    .select('tournament_id')
+    .eq('user_id', userId);
+  if (coOrgError) throw new Error(coOrgError.message);
+  const coOrganizedIds = new Set((coOrg ?? []).map(c => c.tournament_id));
+
+  const relatedIds = [...new Set([...registeredIds, ...coOrganizedIds])];
   let query = supabase
     .from('tournaments')
     .select(LIST_SELECT)
     .neq('status', 'archived')
     .eq('tournament_registrations.status', 'registered')
     .order('created_at', { ascending: false });
-  query = registeredIds.length
-    ? query.or(`organizer_id.eq.${userId},id.in.(${registeredIds.join(',')})`)
+  query = relatedIds.length
+    ? query.or(`organizer_id.eq.${userId},id.in.(${relatedIds.join(',')})`)
     : query.eq('organizer_id', userId);
   if (opts.sportId) query = query.eq('sport_id', opts.sportId);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return toListItems((data ?? []) as ListRow[]);
+  const items = await toListItems((data ?? []) as ListRow[]);
+  return items.map(item =>
+    coOrganizedIds.has(item.id) ? { ...item, is_co_organizer: true } : item
+  );
 }
 
 /**
