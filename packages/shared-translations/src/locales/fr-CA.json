@@ -11089,6 +11089,10 @@
     "groupInviteHeading": "Vous êtes invité à rejoindre {group}!",
     "communityInviteTitle": "Rejoignez {community} sur Rallia",
     "communityInviteHeading": "Vous êtes invité à rejoindre {community}!",
+    "tournamentInviteTitle": "{name} vous invite au tournoi {tournament}!",
+    "tournamentInviteTitleGeneric": "Vous êtes invité au tournoi {tournament}!",
+    "tournamentInviteHeading": "{name} vous invite au tournoi {tournament}!",
+    "tournamentInviteHeadingGeneric": "Vous êtes invité au tournoi {tournament}!",
     "at": "à",
     "scanQr": "Scannez ce code QR avec votre téléphone pour commencer.",
     "appStore": "Télécharger sur l'App Store",
@@ -11109,6 +11113,18 @@
     "physicalTitle": "Bienvenue sur Rallia",
     "physicalHeading": "Bienvenue sur Rallia",
     "physicalDescription": "Téléchargez l'app pour trouver des joueurs, rejoindre des parties et jouer plus."
+  },
+  "tournamentOg": {
+    "tournament": "Tournoi",
+    "singles": "Simple",
+    "doubles": "Double",
+    "mixedDoubles": "Double mixte",
+    "free": "Entrée gratuite",
+    "entryFee": "Entrée {amount}",
+    "prizePool": "{amount} en prix",
+    "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
+    "full": "Complet",
+    "registrationClosed": "Inscriptions fermées"
   },
   "feedback": {
     "title": "Commentaires",

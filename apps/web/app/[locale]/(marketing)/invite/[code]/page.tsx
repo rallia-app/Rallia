@@ -12,8 +12,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TrackedStoreBadges } from '@/components/tracked-store-badges';
 import { InviteLandingTracker } from '@/components/invite-landing-tracker';
 import ThemeLogo from '@/components/theme-logo';
+import { formatDateRange } from '@/lib/format-date-range';
 
-type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster' | 'social';
+type InvitationType =
+  | 'referral'
+  | 'match'
+  | 'group'
+  | 'community'
+  | 'tournament'
+  | 'flyer'
+  | 'poster'
+  | 'social';
+
+/**
+ * Click tracking, store URLs, and attribution handoff don't know 'tournament'
+ * yet (DB CHECK constraints on invitation_type) — those paths keep the
+ * pre-tournament behavior of logging as a plain referral.
+ */
+type TrackedInvitationType = Exclude<InvitationType, 'tournament'>;
+function toTrackedType(type: InvitationType): TrackedInvitationType {
+  return type === 'tournament' ? 'referral' : type;
+}
 
 const CHANNEL_TYPES: readonly InvitationType[] = ['flyer', 'poster', 'social'] as const;
 function isChannelType(type: InvitationType): boolean {
@@ -73,14 +92,57 @@ async function getCommunityDetails(inviteCode: string) {
   return data;
 }
 
+interface TournamentDetails {
+  name: string;
+  start_date: string;
+  end_date: string;
+  city: string | null;
+  venue_name: string | null;
+  facility: { name: string; city: string | null } | null;
+}
+
+async function getTournamentDetails(tournamentId: string): Promise<TournamentDetails | null> {
+  // The web Database type deliberately omits the mobile-only tournament tables.
+  const supabase =
+    createServiceRoleClient() as unknown as import('@supabase/supabase-js').SupabaseClient;
+  const { data } = await supabase
+    .from('tournaments')
+    .select('name, start_date, end_date, city, venue_name, facility:facility_id (name, city)')
+    .eq('id', tournamentId)
+    .single();
+  return data as unknown as TournamentDetails | null;
+}
+
+function tournamentLocation(tournament: TournamentDetails): string {
+  const venue = tournament.venue_name ?? tournament.facility?.name ?? null;
+  const city = tournament.city ?? tournament.facility?.city ?? null;
+  return [venue, city].filter(Boolean).join(', ');
+}
+
 function parseInvitationType(type?: string): InvitationType {
   if (
     type &&
-    ['match', 'group', 'community', 'referral', 'flyer', 'poster', 'social'].includes(type)
+    ['match', 'group', 'community', 'tournament', 'referral', 'flyer', 'poster', 'social'].includes(
+      type
+    )
   ) {
     return type as InvitationType;
   }
   return 'referral';
+}
+
+/** OG image URL for this invite — /api/og/invite branches on type/id (query params
+ *  the file-convention opengraph-image can't see). */
+function buildOgImageUrl(
+  code: string,
+  locale: string,
+  invitationType: InvitationType,
+  targetId?: string
+): string {
+  const params = new URLSearchParams({ code, locale });
+  if (invitationType !== 'referral') params.set('type', invitationType);
+  if (targetId) params.set('id', targetId);
+  return `/api/og/invite?${params.toString()}`;
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -88,6 +150,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const query = await searchParams;
   const invitationType = parseInvitationType(query.type);
   const t = await getTranslations({ locale, namespace: 'invitePage' });
+  const ogImage = buildOgImageUrl(code, locale, invitationType, query.id);
+  const ogImages = [{ url: ogImage, width: 1200, height: 630 }];
 
   if (isChannelType(invitationType)) {
     const title = t('physicalTitle');
@@ -95,14 +159,25 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       title,
       description: t('physicalDescription'),
       robots: { index: false, follow: false },
-      openGraph: { title, description: t('physicalDescription'), type: 'website' },
-      twitter: { card: 'summary_large_image', title, description: t('physicalDescription') },
+      openGraph: {
+        title,
+        description: t('physicalDescription'),
+        type: 'website',
+        images: ogImages,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description: t('physicalDescription'),
+        images: [ogImage],
+      },
     };
   }
 
   const inviter = await getInviter(code);
 
   let title: string;
+  let description = t('description');
 
   if (invitationType === 'match' && query.id) {
     const match = await getMatchDetails(query.id);
@@ -111,6 +186,18 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     title = inviter?.first_name
       ? t('matchInviteTitle', { name: inviter.first_name, sport: sportName })
       : t('matchInviteTitleGeneric', { sport: sportName });
+  } else if (invitationType === 'tournament' && query.id) {
+    const tournament = await getTournamentDetails(query.id);
+    if (tournament) {
+      title = inviter?.first_name
+        ? t('tournamentInviteTitle', { name: inviter.first_name, tournament: tournament.name })
+        : t('tournamentInviteTitleGeneric', { tournament: tournament.name });
+      const location = tournamentLocation(tournament);
+      const dateRange = formatDateRange(tournament.start_date, tournament.end_date, locale);
+      description = location ? `${dateRange} · ${location}` : dateRange;
+    } else {
+      title = inviter?.first_name ? t('invitedBy', { name: inviter.first_name }) : t('title');
+    }
   } else if (invitationType === 'group' && query.id) {
     const group = await getGroupDetails(query.id);
     title = group?.name ? t('groupInviteTitle', { group: group.name }) : t('title');
@@ -123,10 +210,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   return {
     title,
-    description: t('description'),
+    description,
     robots: { index: false, follow: false },
-    openGraph: { title, description: t('description'), type: 'website' },
-    twitter: { card: 'summary_large_image', title, description: t('description') },
+    openGraph: { title, description, type: 'website', images: ogImages },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   };
 }
 
@@ -134,17 +221,16 @@ export default async function InvitePage({ params, searchParams }: Props) {
   const { code, locale } = await params;
   const query = await searchParams;
   const invitationType = parseInvitationType(query.type);
+  const trackingType = toTrackedType(invitationType);
   const targetId = query.id;
 
   const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
 
   // Log click for all visitors (non-blocking)
-  logReferralClick(code, ip, userAgent, invitationType, targetId, webDistinctId, utm).catch(
-    () => {}
-  );
+  logReferralClick(code, ip, userAgent, trackingType, targetId, webDistinctId, utm).catch(() => {});
 
   if (platform === 'android') {
-    redirect(buildPlayStoreUrl(code, invitationType, targetId, { webDistinctId, utm }));
+    redirect(buildPlayStoreUrl(code, trackingType, targetId, { webDistinctId, utm }));
   }
 
   // iOS + Desktop: show landing page (iOS gets clipboard CTA, desktop gets QR code)
@@ -197,6 +283,18 @@ export default async function InvitePage({ params, searchParams }: Props) {
       if (location) parts.push(`📍 ${location}`);
       contextDescription = parts.join(' · ');
     }
+  } else if (invitationType === 'tournament' && targetId) {
+    const tournament = await getTournamentDetails(targetId);
+    if (tournament) {
+      contextHeading = inviter?.first_name
+        ? t('tournamentInviteHeading', { name: inviter.first_name, tournament: tournament.name })
+        : t('tournamentInviteHeadingGeneric', { tournament: tournament.name });
+      const location = tournamentLocation(tournament);
+      const dateRange = formatDateRange(tournament.start_date, tournament.end_date, locale);
+      const parts = [`📅 ${dateRange}`];
+      if (location) parts.push(`📍 ${location}`);
+      contextDescription = parts.join(' · ');
+    }
   } else if (invitationType === 'group' && targetId) {
     const group = await getGroupDetails(targetId);
     if (group) {
@@ -225,7 +323,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
     <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
       <InviteLandingTracker
         surface="invite"
-        invitationType={invitationType}
+        invitationType={trackingType}
         platform={platform ?? 'desktop'}
         code={code}
         {...(targetId ? { targetId } : {})}
@@ -252,7 +350,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
           copiedLabel={t('iosCodeCopied')}
           referral={{
             code,
-            type: invitationType,
+            type: trackingType,
             ...(targetId ? { targetId } : {}),
           }}
         />
@@ -267,7 +365,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
 
           <TrackedStoreBadges
             placement="invite_page"
-            playStoreUrl={buildPlayStoreUrl(code, invitationType, targetId, {
+            playStoreUrl={buildPlayStoreUrl(code, trackingType, targetId, {
               webDistinctId,
               utm,
             })}
@@ -277,7 +375,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
             {...(targetId ? { matchId: targetId } : {})}
             referral={{
               code,
-              type: invitationType,
+              type: trackingType,
               ...(targetId ? { targetId } : {}),
             }}
           />
