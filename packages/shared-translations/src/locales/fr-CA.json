@@ -10,19 +10,6 @@
     "cta": "Voir les tournois",
     "later": "Plus tard"
   },
-  "summerLeague": {
-    "announcement": {
-      "badge": "Cet été",
-      "title": "La toute première Ligue d'été Rallia",
-      "subtitle": "Nous sondons l'intérêt pour adapter la première édition à des joueurs comme vous. Ça vous tente ?",
-      "interested": "Ça m'intéresse",
-      "later": "Plus tard",
-      "successTitle": "Vous êtes sur la liste",
-      "successBody": "Votre intérêt nous aide à la façonner — nous vous écrirons bientôt.",
-      "done": "Terminé",
-      "error": "Une erreur s'est produite. Veuillez réessayer."
-    }
-  },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
   },
@@ -4790,6 +4777,12 @@
         "organizerNotReady": "L'organisateur n'a pas terminé sa configuration de paiement.",
         "closed": "Les inscriptions sont fermées.",
         "generic": "Impossible de démarrer ton inscription. Réessaie."
+      },
+      "payoutRow": {
+        "label": "Versements",
+        "setup": "À configurer",
+        "actionNeeded": "Action requise",
+        "ready": "Prêt"
       }
     },
     "loading": "Chargement du tournoi...",
@@ -4873,7 +4866,8 @@
         "startsInDays": "Dans {n} jours",
         "startsToday": "Aujourd'hui",
         "live": "En cours",
-        "ended": "Terminé"
+        "ended": "Terminé",
+        "deadline": "Date limite"
       },
       "nextStep": {
         "draftTitle": "Prêt à lancer?",
@@ -4951,7 +4945,8 @@
         "revokeConfirmMessage": "{name} ne sera plus invité. Tu peux le réinviter plus tard.",
         "revokeConfirm": "Retirer",
         "revokeCancel": "Garder"
-      }
+      },
+      "manageTitle": "Gérer"
     },
     "labels": {
       "bracketSize": "Taille du tableau",

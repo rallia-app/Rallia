@@ -2,10 +2,10 @@
  * Serie1AnnouncementAutoOpener — opens the Série 1 tournaments announcement
  * once per player, after launch, when it's safe and RELEVANT to do so.
  *
- * Renders nothing (`return null`). Mirrors SummerLeagueAnnouncementAutoOpener:
- * gate on splash + sport-selection + auth + onboarding, wait a beat for the UI
- * to settle, and never open on top of the weekly check-in wizard or another
- * sheet (it'll be picked up on a later launch instead).
+ * Renders nothing (`return null`). Gates on splash + sport-selection + auth +
+ * onboarding, waits a beat for the UI to settle, and never opens on top of the
+ * weekly check-in wizard or another sheet (it'll be picked up on a later
+ * launch instead).
  *
  * On top of the house gates, this one is data-driven:
  *   - only for players who play tennis (Série 1 is tennis-only);
@@ -36,8 +36,7 @@ const SERIE1_NAME_PREFIX = 'Tournois Rallia — Série 1';
 // Past this date the campaign is over for good: persist the flag and stop
 // querying on every launch. Kept a day past the July 25 close as a buffer.
 const CAMPAIGN_END_ISO = '2026-07-27T00:00:00-04:00';
-// Slightly longer than the Summer League opener's 600ms so a launch where both
-// are eligible resolves deterministically (the other wins, we retry later).
+// Let the home screen settle before presenting.
 const OPEN_DELAY_MS = 700;
 
 // ⚠️ TEMPORARY (dev only): set to true to reopen the announcement on every

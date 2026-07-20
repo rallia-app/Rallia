@@ -10,19 +10,6 @@
     "cta": "See the tournaments",
     "later": "Later"
   },
-  "summerLeague": {
-    "announcement": {
-      "badge": "Coming this summer",
-      "title": "The first Rallia Summer League",
-      "subtitle": "We're gauging interest to shape the first edition around players like you. Want in?",
-      "interested": "Count me in",
-      "later": "Maybe later",
-      "successTitle": "You're on the list",
-      "successBody": "Your interest helps shape it — we'll be in touch soon.",
-      "done": "Done",
-      "error": "Something went wrong. Please try again."
-    }
-  },
   "suggestionCard": {
     "courtsAvailable": "{count} courts available"
   },
@@ -4790,6 +4777,12 @@
         "organizerNotReady": "The organizer hasn't finished payout setup yet.",
         "closed": "Registration is closed.",
         "generic": "Couldn't start your registration. Please try again."
+      },
+      "payoutRow": {
+        "label": "Payouts",
+        "setup": "Set up",
+        "actionNeeded": "Action needed",
+        "ready": "Ready"
       }
     },
     "loading": "Loading tournament...",
@@ -4873,7 +4866,8 @@
         "startsInDays": "In {n} days",
         "startsToday": "Today",
         "live": "Live",
-        "ended": "Ended"
+        "ended": "Ended",
+        "deadline": "Deadline"
       },
       "nextStep": {
         "draftTitle": "Ready to launch?",
@@ -4951,7 +4945,8 @@
         "revokeConfirmMessage": "{name} will be un-invited. You can re-invite them later.",
         "revokeConfirm": "Revoke",
         "revokeCancel": "Keep"
-      }
+      },
+      "manageTitle": "Manage"
     },
     "labels": {
       "bracketSize": "Bracket size",

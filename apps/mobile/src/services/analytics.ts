@@ -727,23 +727,6 @@ export function appOpened(props: { cold_start: boolean }): void {
   capture('app_opened', props);
 }
 
-// ---- Summer League ----
-
-/** The Summer League announcement popup was shown to the player. */
-export function summerLeagueAnnouncementViewed(): void {
-  capture('summer_league_announcement_viewed');
-}
-
-/** The player tapped "I'm interested" and we recorded their interest. */
-export function summerLeagueInterestRegistered(): void {
-  capture('summer_league_interest_registered');
-}
-
-/** The player dismissed the announcement without registering interest. */
-export function summerLeagueAnnouncementDismissed(): void {
-  capture('summer_league_announcement_dismissed');
-}
-
 // ---- Série 1 tournaments ----
 
 /** The Série 1 tournaments announcement popup was shown to the player. */
