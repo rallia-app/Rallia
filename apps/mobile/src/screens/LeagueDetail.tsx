@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +32,14 @@ import {
   neutral,
   secondary,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic, getHumanName } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  getHumanName,
+  formatPrice,
+  getLeagueLogoUrl,
+} from '@rallia/shared-utils';
 import {
   useTheme,
   useAuth,
@@ -47,6 +55,13 @@ import {
   useRemoveLeagueMember,
   useSuspendLeagueMember,
   useReinstateLeagueMember,
+  usePauseLeague,
+  useResumeLeague,
+  useCloseLeague,
+  useSeasonFeeQuote,
+  useCreateSeasonEnrollmentPayment,
+  useRefundSeasonEnrollment,
+  leagueKeys,
   useOpenSeason,
   useCloseSeason,
   useSeasonSessions,
@@ -59,7 +74,9 @@ import {
   useProfilesByIds,
 } from '@rallia/shared-hooks';
 import { SheetManager } from 'react-native-actions-sheet';
-import { isLeagueOrganizer } from '@rallia/shared-services';
+import { useStripe } from '@stripe/stripe-react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { isLeagueOrganizer, TournamentPaymentError } from '@rallia/shared-services';
 import type {
   LeagueMemberWithProfile,
   PlayerProfile,
@@ -69,6 +86,8 @@ import type {
 import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
+import type { LeagueEditData } from '../features/leagues';
+import { DEFAULT_LEAGUE_BANNER } from '../features/leagues/defaultBanner';
 import { useTranslation, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -106,6 +125,7 @@ const SEASON_STATUS_KEY: Record<SeasonStatus, string> = {
   draft: 'leagueDetail.seasonStatus.draft',
   open: 'leagueDetail.seasonStatus.open',
   closed: 'leagueDetail.seasonStatus.closed',
+  cancelled: 'leagueDetail.seasonStatus.cancelled',
 };
 const SESSION_STATUS_KEY: Record<SessionStatus, string> = {
   draft: 'leagueDetail.sessionStatus.draft',
@@ -114,6 +134,55 @@ const SESSION_STATUS_KEY: Record<SessionStatus, string> = {
   completed: 'leagueDetail.sessionStatus.completed',
   cancelled: 'leagueDetail.sessionStatus.cancelled',
 };
+
+/** One-line, player-facing summary of a season's refund policy. Shared by the
+ *  enroll CTA and the pre-payment confirmation so the wording can't drift. */
+function seasonRefundPolicyLine(
+  quote:
+    | { refundPolicyKind: string; refundPartialBps: number | null; refundCutoffAt: string | null }
+    | null
+    | undefined,
+  t: (k: TranslationKey) => string,
+  locale: string
+): string | null {
+  if (!quote) return null;
+  const cutoff = quote.refundCutoffAt
+    ? new Date(quote.refundCutoffAt).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null;
+  if (quote.refundPolicyKind === 'none') return t('leagueDetail.paid.refundNone');
+  if (quote.refundPolicyKind === 'full')
+    return cutoff
+      ? t('leagueDetail.paid.refundFullUntil').replace('{date}', cutoff)
+      : t('leagueDetail.paid.refundFull');
+  const pct = String(Math.round((quote.refundPartialBps ?? 0) / 100));
+  return cutoff
+    ? t('leagueDetail.paid.refundPartialUntil').replace('{pct}', pct).replace('{date}', cutoff)
+    : t('leagueDetail.paid.refundPartial').replace('{pct}', pct);
+}
+
+/** Mirrors season_request_refund's policy math for the confirm copy. The server
+ *  recomputes the authoritative amount; this only sets expectations. */
+function estimateSeasonRefundCents(
+  quote:
+    | {
+        entryCents: number;
+        refundPolicyKind: string;
+        refundPartialBps: number | null;
+        refundCutoffAt: string | null;
+      }
+    | null
+    | undefined
+): number {
+  if (!quote) return 0;
+  if (quote.refundPolicyKind === 'none') return 0;
+  if (quote.refundCutoffAt && new Date(quote.refundCutoffAt) < new Date()) return 0;
+  if (quote.refundPolicyKind === 'full') return quote.entryCents;
+  return Math.round((quote.entryCents * (quote.refundPartialBps ?? 0)) / 10000);
+}
 
 interface ScreenColors {
   background: string;
@@ -567,6 +636,7 @@ export const LeagueDetail: React.FC = () => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const toast = useToast();
+  const qc = useQueryClient();
   const navigation = useNavigation<NavigationProp>();
   const { session } = useAuth();
   const userId = session?.user?.id;
@@ -855,7 +925,161 @@ export const LeagueDetail: React.FC = () => {
     }
   );
 
+  // ---------------------------------------------------------------- paid seasons
+  const isPaidSeason = (openSeason?.entry_fee_cents ?? 0) > 0;
+  const { data: seasonFeeQuote } = useSeasonFeeQuote(openSeasonId, isPaidSeason);
+  const { mutateAsync: createSeasonPayment, isPending: isPayingSeason } =
+    useCreateSeasonEnrollmentPayment();
+  const { mutateAsync: refundSeasonEnrollmentAsync, isPending: isRefundingSeason } =
+    useRefundSeasonEnrollment();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+  const handlePaidEnroll = useCallback(async () => {
+    if (!openSeasonId || !seasonFeeQuote) return;
+
+    // Point-of-sale disclosure before any charge: what they pay, the refund
+    // policy, that the service fee isn't refundable, and that Rallia only
+    // facilitates (the organizer, not Rallia, owns the season).
+    const cur = seasonFeeQuote.currency;
+    // GST/QST rides on Rallia's service fee; the player only pays it in
+    // player_pays mode (organizer_absorbs nets it from the organizer's take).
+    const taxLabel =
+      seasonFeeQuote.feePayer === 'player_pays' && seasonFeeQuote.feeTaxCents > 0
+        ? formatPrice(seasonFeeQuote.feeTaxCents, cur, { locale })
+        : null;
+    const lines = [
+      t('leagueDetail.paid.confirmAmount').replace(
+        '{amount}',
+        formatPrice(seasonFeeQuote.totalCents, cur, { locale })
+      ),
+      taxLabel ? t('leagueDetail.paid.confirmFeeTax').replace('{amount}', taxLabel) : null,
+      seasonRefundPolicyLine(seasonFeeQuote, t, locale),
+      t('leagueDetail.paid.confirmFeeNonRefundable'),
+      t('leagueDetail.paid.liabilityNotice'),
+    ].filter(Boolean) as string[];
+
+    const confirmed = await new Promise<boolean>(resolve => {
+      Alert.alert(t('leagueDetail.paid.confirmTitle'), lines.join('\n\n'), [
+        { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+        { text: t('leagueDetail.paid.pay'), onPress: () => resolve(true) },
+      ]);
+    });
+    if (!confirmed) return;
+
+    try {
+      const intent = await createSeasonPayment({ seasonId: openSeasonId });
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: intent.clientSecret,
+        merchantDisplayName: 'Rallia',
+        applePay: { merchantCountryCode: 'CA' },
+        googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+      });
+      if (initError) throw new Error(initError.message);
+
+      const { error: payError } = await presentPaymentSheet();
+      if (payError) {
+        // Cancelling is not a failure: the 15-min reaper frees the slot.
+        if (payError.code === 'Canceled') return;
+        throw new Error(payError.message);
+      }
+
+      successHaptic();
+      toast.success(t('leagueDetail.roster.enrolled'));
+
+      // The webhook flips payment_pending -> enrolled asynchronously, so a single
+      // invalidate here would re-read the pre-webhook state. Refetch again shortly
+      // after (same trick TournamentDetail uses).
+      const refresh = () => {
+        void qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) });
+        void qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(openSeasonId) });
+        void qc.invalidateQueries({
+          queryKey: leagueKeys.mySeasonMembership(openSeasonId, userId ?? ''),
+        });
+        void qc.invalidateQueries({ queryKey: leagueKeys.rankings(openSeasonId) });
+      };
+      refresh();
+      setTimeout(refresh, 2500);
+    } catch (e) {
+      warningHaptic();
+      const code = e instanceof TournamentPaymentError ? e.code : null;
+      const key =
+        code === 'season_not_open'
+          ? 'leagueDetail.paid.errors.seasonNotOpen'
+          : code === 'already_enrolled'
+            ? 'leagueDetail.paid.errors.alreadyEnrolled'
+            : code === 'organizer_not_ready'
+              ? 'leagueDetail.paid.errors.organizerNotReady'
+              : code === 'not_league_member'
+                ? 'leagueDetail.paid.errors.notMember'
+                : 'leagueDetail.paid.errors.generic';
+      toast.error(t(key as TranslationKey));
+    }
+  }, [
+    createSeasonPayment,
+    initPaymentSheet,
+    leagueId,
+    locale,
+    openSeasonId,
+    presentPaymentSheet,
+    qc,
+    seasonFeeQuote,
+    t,
+    toast,
+    userId,
+  ]);
+
   const handleWithdrawSeason = useCallback(() => {
+    // A paid enrolment must go through the refund path, not a plain withdraw:
+    // the refund RPC is what reverses the charge per the season's policy.
+    if (isPaidSeason && mySeasonMembership) {
+      // Client-side mirror of the SQL policy math, for the confirm copy only —
+      // the server recomputes the authoritative amount.
+      const estimate = estimateSeasonRefundCents(seasonFeeQuote);
+      Alert.alert(
+        t('leagueDetail.paid.withdrawConfirmTitle'),
+        estimate > 0
+          ? t('leagueDetail.paid.withdrawConfirmRefund').replace(
+              '{amount}',
+              formatPrice(estimate, seasonFeeQuote?.currency ?? 'CAD', { locale })
+            )
+          : t('leagueDetail.paid.withdrawConfirmNoRefund'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('leagueDetail.roster.leave'),
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                try {
+                  const r = await refundSeasonEnrollmentAsync({
+                    seasonMemberId: mySeasonMembership.id,
+                    versionWas: mySeasonMembership.version,
+                    seasonId: mySeasonMembership.season_id,
+                    leagueId,
+                  });
+                  lightHaptic();
+                  toast.success(
+                    r.refundedCents > 0
+                      ? t('leagueDetail.paid.refunded').replace(
+                          '{amount}',
+                          formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', {
+                            locale,
+                          })
+                        )
+                      : t('leagueDetail.roster.withdrew')
+                  );
+                } catch {
+                  warningHaptic();
+                  toast.error(t('leagueDetail.paid.errors.refundFailed'));
+                }
+              })();
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     Alert.alert(
       t('leagueDetail.roster.leaveConfirmTitle'),
       t('leagueDetail.roster.leaveConfirmBody'),
@@ -868,7 +1092,17 @@ export const LeagueDetail: React.FC = () => {
         },
       ]
     );
-  }, [t, withdrawSeasonMut]);
+  }, [
+    isPaidSeason,
+    leagueId,
+    locale,
+    mySeasonMembership,
+    refundSeasonEnrollmentAsync,
+    seasonFeeQuote,
+    t,
+    toast,
+    withdrawSeasonMut,
+  ]);
 
   // Standings come from the open season, else the most recent closed one.
   const rankingSeason = useMemo(
@@ -1132,6 +1366,119 @@ export const LeagueDetail: React.FC = () => {
     });
   }, [league, members, leagueId]);
 
+  const handleEditLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    void SheetManager.show('league-edit', {
+      payload: {
+        league: {
+          id: league.id,
+          version: league.version,
+          name: league.name,
+          description: league.description,
+          visibility: league.visibility as LeagueEditData['visibility'],
+          joinMode: league.join_mode,
+          minRating: league.min_rating,
+          maxRating: league.max_rating,
+          logoUrl: league.logo_url,
+        },
+      },
+    });
+  }, [league]);
+
+  // All three lifecycle transitions map their server errors the same way.
+  const lifecycleErrorHandler = useCallback(
+    (err: Error) => {
+      const msg = err.message || '';
+      const key = msg.includes('LEAGUE_HAS_OPEN_SEASONS')
+        ? 'leagueDetail.lifecycle.errors.hasOpenSeasons'
+        : msg.includes('OPTIMISTIC_LOCK_CONFLICT') ||
+            msg.includes('LEAGUE_NOT_ACTIVE') ||
+            msg.includes('LEAGUE_NOT_PAUSED') ||
+            msg.includes('LEAGUE_NOT_CLOSABLE')
+          ? 'leagueDetail.lifecycle.errors.stale'
+          : 'leagueDetail.lifecycle.errors.generic';
+      warningHaptic();
+      toast.error(t(key as TranslationKey));
+    },
+    [t, toast]
+  );
+
+  const { pauseLeagueAsync, isPausing } = usePauseLeague({ onError: lifecycleErrorHandler });
+  const { resumeLeagueAsync, isResuming } = useResumeLeague({ onError: lifecycleErrorHandler });
+  const { closeLeagueAsync, isClosing } = useCloseLeague({ onError: lifecycleErrorHandler });
+
+  const handlePauseLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    Alert.alert(
+      t('leagueDetail.lifecycle.pauseConfirmTitle'),
+      t('leagueDetail.lifecycle.pauseConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.lifecycle.pause'),
+          onPress: () => {
+            void (async () => {
+              try {
+                await pauseLeagueAsync({ leagueId: league.id, versionWas: league.version });
+                successHaptic();
+                toast.success(t('leagueDetail.lifecycle.paused'));
+              } catch {
+                // toast handled in hook
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [league, pauseLeagueAsync, t, toast]);
+
+  const handleResumeLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    void (async () => {
+      try {
+        await resumeLeagueAsync({ leagueId: league.id, versionWas: league.version });
+        successHaptic();
+        toast.success(t('leagueDetail.lifecycle.resumed'));
+      } catch {
+        // toast handled in hook
+      }
+    })();
+  }, [league, resumeLeagueAsync, t, toast]);
+
+  const handleCloseLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    Alert.alert(
+      t('leagueDetail.lifecycle.closeConfirmTitle'),
+      t('leagueDetail.lifecycle.closeConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.lifecycle.close'),
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await closeLeagueAsync({
+                  leagueId: league.id,
+                  reason: null,
+                  versionWas: league.version,
+                });
+                successHaptic();
+                toast.success(t('leagueDetail.lifecycle.closed'));
+              } catch {
+                // toast handled in hook
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [league, closeLeagueAsync, t, toast]);
+
   const handleOpenCreateSeason = useCallback(() => {
     lightHaptic();
     void SheetManager.show('create-season', { payload: { leagueId } });
@@ -1228,6 +1575,15 @@ export const LeagueDetail: React.FC = () => {
               { backgroundColor: colors.cardBackground, borderColor: colors.border },
             ]}
           >
+            <Image
+              source={
+                league.logo_url
+                  ? { uri: getLeagueLogoUrl(league.logo_url) ?? league.logo_url }
+                  : DEFAULT_LEAGUE_BANNER
+              }
+              style={styles.heroPoster}
+              resizeMode="cover"
+            />
             <View style={styles.heroTopRow}>
               <LeagueStatusBadge status={league.status} colors={colors} t={t} />
             </View>
@@ -1399,6 +1755,34 @@ export const LeagueDetail: React.FC = () => {
         {/* Overview */}
         {currentTabKey === 'overview' && (
           <View style={styles.tabContent}>
+            {/* Paused/closed are otherwise invisible to members — the controls
+                that change are all organizer-only. */}
+            {league.status !== 'active' && (
+              <View
+                style={[
+                  styles.section,
+                  styles.lifecycleBanner,
+                  { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
+                ]}
+                testID="league-lifecycle-banner"
+              >
+                <Ionicons
+                  name={league.status === 'paused' ? 'pause-circle-outline' : 'lock-closed-outline'}
+                  size={18}
+                  color={colors.statusMutedText}
+                />
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={colors.statusMutedText}
+                  style={styles.flex1}
+                >
+                  {league.status === 'paused'
+                    ? t('leagueDetail.lifecycle.pausedBanner')
+                    : t('leagueDetail.lifecycle.closedBanner')}
+                </Text>
+              </View>
+            )}
             <View
               style={[
                 styles.section,
@@ -1615,6 +1999,100 @@ export const LeagueDetail: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
+            {/* A closed league is terminal server-side, so edit is hidden rather
+                than offered and then refused. */}
+            {isOrganizer && league.status !== 'closed' && (
+              <TouchableOpacity
+                onPress={handleEditLeague}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  },
+                ]}
+                testID="cta-edit-league"
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+                <Text size="base" weight="semibold" color={colors.primary}>
+                  {t('leagueDetail.editModal.title')}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Lifecycle. Pause/resume are mutually exclusive on status; close is
+                terminal so it's hidden once closed rather than shown and refused. */}
+            {isOrganizer && league.status === 'active' && (
+              <TouchableOpacity
+                onPress={handlePauseLeague}
+                disabled={isPausing}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  },
+                  isPausing && styles.buttonDisabled,
+                ]}
+                testID="cta-pause-league"
+              >
+                <Ionicons name="pause-circle-outline" size={20} color={colors.textMuted} />
+                <Text size="base" weight="semibold" color={colors.textMuted}>
+                  {isPausing
+                    ? t('leagueDetail.lifecycle.pausing')
+                    : t('leagueDetail.lifecycle.pause')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {isOrganizer && league.status === 'paused' && (
+              <TouchableOpacity
+                onPress={handleResumeLeague}
+                disabled={isResuming}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  { backgroundColor: colors.primary },
+                  isResuming && styles.buttonDisabled,
+                ]}
+                testID="cta-resume-league"
+              >
+                <Ionicons name="play-circle-outline" size={20} color="#ffffff" />
+                <Text size="base" weight="semibold" color="#ffffff">
+                  {isResuming
+                    ? t('leagueDetail.lifecycle.resuming')
+                    : t('leagueDetail.lifecycle.resume')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {isOrganizer && league.status !== 'closed' && (
+              <TouchableOpacity
+                onPress={handleCloseLeague}
+                disabled={isClosing}
+                style={[
+                  styles.primaryButton,
+                  styles.inviteButton,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderWidth: 1,
+                    borderColor: colors.danger,
+                  },
+                  isClosing && styles.buttonDisabled,
+                ]}
+                testID="cta-close-league"
+              >
+                <Ionicons name="lock-closed-outline" size={20} color={colors.danger} />
+                <Text size="base" weight="semibold" color={colors.danger}>
+                  {isClosing
+                    ? t('leagueDetail.lifecycle.closing')
+                    : t('leagueDetail.lifecycle.close')}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <PendingMembersSection
               rows={pendingMemberRows}
               onPlayerPress={handlePlayerPress}
@@ -1768,12 +2246,12 @@ export const LeagueDetail: React.FC = () => {
                   (isEnrolledInSeason ? (
                     <TouchableOpacity
                       onPress={handleWithdrawSeason}
-                      disabled={isWithdrawingSeason}
+                      disabled={isWithdrawingSeason || isRefundingSeason}
                       testID="cta-leave-season"
                       style={[styles.seasonCtaButton, { borderColor: colors.danger }]}
                     >
                       <Text size="sm" weight="semibold" color={colors.danger}>
-                        {isWithdrawingSeason
+                        {isWithdrawingSeason || isRefundingSeason
                           ? t('leagueDetail.roster.leaving')
                           : t('leagueDetail.roster.leave')}
                       </Text>
@@ -1782,16 +2260,27 @@ export const LeagueDetail: React.FC = () => {
                     <TouchableOpacity
                       onPress={() => {
                         lightHaptic();
-                        enrollSeasonMut();
+                        // Paid seasons must go through Stripe: season_enroll is
+                        // blocked by the payment-required trigger.
+                        if (isPaidSeason) void handlePaidEnroll();
+                        else enrollSeasonMut();
                       }}
-                      disabled={isEnrollingSeason}
+                      disabled={isEnrollingSeason || isPayingSeason}
                       testID="cta-enroll-season"
                       style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
                     >
                       <Text size="sm" weight="semibold" color={colors.primary}>
-                        {isEnrollingSeason
+                        {isEnrollingSeason || isPayingSeason
                           ? t('leagueDetail.roster.enrolling')
-                          : t('leagueDetail.roster.enroll')}
+                          : isPaidSeason && seasonFeeQuote
+                            ? t('leagueDetail.paid.enrollFor').replace(
+                                '{amount}',
+                                formatPrice(seasonFeeQuote.totalCents, seasonFeeQuote.currency, {
+                                  locale,
+                                  trimZeroCents: true,
+                                })
+                              )
+                            : t('leagueDetail.roster.enroll')}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -2011,6 +2500,12 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
+  heroPoster: {
+    width: '100%',
+    height: 160,
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[3],
+  },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2082,6 +2577,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.lg,
     padding: spacingPixels[4],
+  },
+  lifecycleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+  },
+  flex1: {
+    flex: 1,
   },
   stepperRow: {
     flexDirection: 'row',

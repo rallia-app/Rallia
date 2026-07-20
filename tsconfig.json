@@ -1,4 +1,17 @@
 {
   "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  "extends": "expo/tsconfig.base",
+  // apps/* and packages/* own their tsconfigs (paths, jsx) and are type-checked via `turbo run type-check`.
+  // Expo's own excludes are repeated here because "exclude" replaces rather than merges.
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.js",
+    "android",
+    "ios",
+    "apps",
+    "packages",
+    ".claude"
+  ]
 }

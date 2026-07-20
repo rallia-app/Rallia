@@ -464,6 +464,9 @@ verify_jwt = false
 [functions.player-stripe-onboard]
 verify_jwt = false
 
+[functions.player-stripe-manage]
+verify_jwt = false
+
 [functions.stripe-connect-webhook]
 verify_jwt = false
 

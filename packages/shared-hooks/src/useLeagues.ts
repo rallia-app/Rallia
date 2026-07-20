@@ -46,11 +46,24 @@ import {
   recordSessionScore,
   regenerateSessionSheet,
   setSessionMatchLock,
+  updateLeague,
+  pauseLeague,
+  resumeLeague,
+  closeLeague,
+  getSeasonFeeQuote,
+  createSeasonEnrollmentPayment,
+  refundSeasonEnrollment,
+  updateSeason,
+  cancelSeason,
   type CreateLeagueInput,
   type League,
   type LeagueListItem,
   type LeagueMember,
   type LeagueMemberWithProfile,
+  type LeagueUpdatePatch,
+  type SeasonFeeQuote,
+  type SeasonUpdatePatch,
+  type RegistrationPaymentIntent,
   type PresenceStatus,
   type Season,
   type SeasonMember,
@@ -77,6 +90,7 @@ export const leagueKeys = {
   myMembership: (leagueId: string, userId: string) =>
     [...leagueKeys.all, 'myMembership', leagueId, userId] as const,
   seasons: (leagueId: string) => [...leagueKeys.all, 'seasons', leagueId] as const,
+  seasonFeeQuote: (seasonId: string) => [...leagueKeys.all, 'seasonFeeQuote', seasonId] as const,
   sessions: (seasonId: string) => [...leagueKeys.all, 'sessions', seasonId] as const,
   myUnscheduledSessionMatches: (userId: string, sportId?: string) =>
     [...leagueKeys.all, 'myUnscheduledSessionMatches', userId, sportId ?? 'all'] as const,
@@ -200,6 +214,80 @@ export function useCreateLeague(options: MutationOptions<League> = {}) {
   };
 }
 
+export function useUpdateLeague(options: MutationOptions<League> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    League,
+    Error,
+    { leagueId: string; versionWas: number; patch: LeagueUpdatePatch }
+  >({
+    mutationFn: ({ leagueId, versionWas, patch }) => updateLeague(leagueId, versionWas, patch),
+    onSuccess: league => {
+      invalidate(league.id);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      options.onSuccess?.(league);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    updateLeague: mutation.mutate,
+    updateLeagueAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Lifecycle transitions share a shape: version-guarded, invalidate the detail +
+ * lists (status drives list filtering and every organizer control).
+ */
+function useLeagueLifecycleMutation(
+  fn: (leagueId: string, versionWas: number) => Promise<League>,
+  options: MutationOptions<League> = {}
+) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  return useMutation<League, Error, { leagueId: string; versionWas: number }>({
+    mutationFn: ({ leagueId, versionWas }) => fn(leagueId, versionWas),
+    onSuccess: league => {
+      invalidate(league.id);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      options.onSuccess?.(league);
+    },
+    onError: e => options.onError?.(e),
+  });
+}
+
+export function usePauseLeague(options: MutationOptions<League> = {}) {
+  const mutation = useLeagueLifecycleMutation(pauseLeague, options);
+  return { pauseLeagueAsync: mutation.mutateAsync, isPausing: mutation.isPending };
+}
+
+export function useResumeLeague(options: MutationOptions<League> = {}) {
+  const mutation = useLeagueLifecycleMutation(resumeLeague, options);
+  return { resumeLeagueAsync: mutation.mutateAsync, isResuming: mutation.isPending };
+}
+
+export function useCloseLeague(options: MutationOptions<League> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    League,
+    Error,
+    { leagueId: string; reason: string | null; versionWas: number }
+  >({
+    mutationFn: ({ leagueId, reason, versionWas }) => closeLeague(leagueId, reason, versionWas),
+    onSuccess: league => {
+      invalidate(league.id);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      options.onSuccess?.(league);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return { closeLeagueAsync: mutation.mutateAsync, isClosing: mutation.isPending };
+}
+
 export function useJoinLeague(leagueId: string, options: MutationOptions<LeagueMember> = {}) {
   const invalidate = useLeagueDetailInvalidator();
   return useMutation({
@@ -236,6 +324,13 @@ export function useCreateSeason(leagueId: string, options: MutationOptions<Seaso
       startDate: string;
       endDate: string;
       rulesOverride?: Record<string, unknown>;
+      /** Omit or 0 for a free season. Fees lock once the season opens. */
+      entryFeeCents?: number;
+      feePayer?: Enums<'fee_payer_enum'>;
+      payoutTiming?: Enums<'payout_timing_enum'>;
+      refundPolicyKind?: Enums<'refund_policy_kind_enum'>;
+      refundPartialBps?: number | null;
+      refundCutoffAt?: string | null;
     }) => createSeason({ leagueId, ...input }),
     onSuccess: result => {
       invalidate(leagueId);
@@ -737,3 +832,93 @@ export type {
   SeasonRankingWithProfile,
   PresenceStatus,
 };
+
+// ---------------------------------------------------------------------------
+// Paid seasons
+// ---------------------------------------------------------------------------
+
+/** Null for a free season. */
+export function useSeasonFeeQuote(seasonId: string | undefined, enabled = true) {
+  return useQuery<SeasonFeeQuote | null>({
+    queryKey: leagueKeys.seasonFeeQuote(seasonId ?? ''),
+    queryFn: () => getSeasonFeeQuote(seasonId as string),
+    enabled: !!seasonId && enabled,
+  });
+}
+
+/**
+ * Claim a season slot + open a Stripe PaymentIntent. The screen drives the
+ * PaymentSheet with the returned clientSecret; the webhook flips the member to
+ * 'enrolled'. Throws TournamentPaymentError(code) on guard failures.
+ */
+export function useCreateSeasonEnrollmentPayment(
+  options: MutationOptions<RegistrationPaymentIntent> = {}
+) {
+  const mutation = useMutation<RegistrationPaymentIntent, Error, { seasonId: string }>({
+    mutationFn: ({ seasonId }) => createSeasonEnrollmentPayment(seasonId),
+    onSuccess: r => options.onSuccess?.(r),
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Withdraw from a paid season + refund the entry per policy. */
+export function useRefundSeasonEnrollment(
+  options: MutationOptions<{ withdrawn: boolean; refundedCents: number }> = {}
+) {
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    { withdrawn: boolean; refundedCents: number },
+    Error,
+    { seasonMemberId: string; versionWas: number; seasonId: string; leagueId: string }
+  >({
+    mutationFn: ({ seasonMemberId, versionWas }) =>
+      refundSeasonEnrollment(seasonMemberId, versionWas),
+    onSuccess: (r, vars) => {
+      qc.invalidateQueries({ queryKey: leagueKeys.seasons(vars.leagueId) });
+      qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(vars.seasonId) });
+      options.onSuccess?.(r);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return { mutateAsync: mutation.mutateAsync, isPending: mutation.isPending };
+}
+
+export function useUpdateSeason(options: MutationOptions<Season> = {}) {
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    Season,
+    Error,
+    { seasonId: string; versionWas: number; patch: SeasonUpdatePatch; leagueId: string }
+  >({
+    mutationFn: ({ seasonId, versionWas, patch }) => updateSeason(seasonId, versionWas, patch),
+    onSuccess: (season, vars) => {
+      qc.invalidateQueries({ queryKey: leagueKeys.seasons(vars.leagueId) });
+      qc.invalidateQueries({ queryKey: leagueKeys.seasonFeeQuote(season.id) });
+      options.onSuccess?.(season);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return { updateSeasonAsync: mutation.mutateAsync, isUpdatingSeason: mutation.isPending };
+}
+
+export function useCancelSeason(options: MutationOptions<Season> = {}) {
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    Season,
+    Error,
+    { seasonId: string; reason: string | null; versionWas: number; leagueId: string }
+  >({
+    mutationFn: ({ seasonId, reason, versionWas }) => cancelSeason(seasonId, reason, versionWas),
+    onSuccess: (season, vars) => {
+      qc.invalidateQueries({ queryKey: leagueKeys.seasons(vars.leagueId) });
+      qc.invalidateQueries({ queryKey: leagueKeys.sessions(season.id) });
+      options.onSuccess?.(season);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return { cancelSeasonAsync: mutation.mutateAsync, isCancellingSeason: mutation.isPending };
+}

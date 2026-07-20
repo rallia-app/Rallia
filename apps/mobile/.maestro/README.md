@@ -6,7 +6,7 @@ real dev build talking to **staging** Supabase.
 ## Prerequisites
 
 1. **Build + Metro with the E2E flag** (gates the non-deterministic auto-opener
-   sheets — referral, weekly check-in, summer-league, pending match feedback —
+   sheets — referral, weekly check-in, Série 1 announcement, pending match feedback —
    that otherwise hijack the screen; see `src/utils/e2e.ts`):
 
    ```sh

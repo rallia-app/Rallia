@@ -115,10 +115,15 @@ BEGIN
      WHERE trp.tournament_id = v_tid LIMIT 1;
     ASSERT v_season IS NOT NULL, 'season not resolved';
 
-    -- Tier: n=8 → regional (< 16 so never vedette regardless of strength).
+    -- Stamped at bracket generation: 8 real entries, no min_rating
+    -- → draw_mult = 0.5*(log2(8)-1) = 1.0, level_mult = 1.0.
+    ASSERT (SELECT ranking_draw_size FROM tournaments WHERE id = v_tid) = 8,
+        'expected stamped draw size 8';
+    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 1.0,
+        'expected stamped multiplier 1.0';
     SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND tier <> 'regional';
-    ASSERT v_count = 0, 'expected all rows regional tier';
+     WHERE tournament_id = v_tid AND multiplier <> 1.0;
+    ASSERT v_count = 0, 'expected every row scored at multiplier 1.0';
 
     -- Placement distribution — the zero-win floor is the load-bearing assertion.
     SELECT count(*) INTO v_count FROM tournament_ranking_points
@@ -152,13 +157,24 @@ BEGIN
     SELECT sum(points) INTO v_total FROM tournament_ranking_points WHERE tournament_id = v_tid;
     ASSERT v_total = 1240, 'recompute changed total, got ' || v_total;
 
-    RAISE NOTICE 'PASS 1: 8-entry regional bracket — zero-win floor + points + idempotency';
+    -- Self-heal: an event whose bracket predates the stamp must not award at a
+    -- NULL rate — award recomputes the multiplier from the bracket and stores it.
+    UPDATE tournaments SET ranking_multiplier = NULL, ranking_draw_size = NULL WHERE id = v_tid;
+    PERFORM award_tournament_ranking_points(v_tid);
+    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 1.0,
+        'self-heal should have re-stamped multiplier 1.0';
+    SELECT sum(points) INTO v_total FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_total = 1240, 'self-heal changed total, got ' || v_total;
+
+    RAISE NOTICE 'PASS 1: 8-entry draw — zero-win floor, points, idempotency, stamp self-heal';
 END $$;
 
 -- --------------------------------------------------------------------------
--- 2. 4-entry bracket → local tier (n < 8): participation-only floor.
---    Champion keeps the 'champion' label but earns participation points
---    (20 * 0.5 = 10), same as everyone else.
+-- 2. 4-entry bracket → draw_mult 0.5, snapped to the 0.2 grid → 0.6 (round
+--    half away from zero). The old 'local' tier flattened EVERY placement here
+--    onto 10 points, so the champion tied the first-round exit. Now the
+--    discount is carried by the multiplier alone and the ordering survives:
+--    champion 300, finalist 180, zero-win R1 losers 10 (12 dime-rounded).
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -225,21 +241,28 @@ BEGIN
     SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
     ASSERT v_count = 4, 'expected 4 ledger rows, got ' || v_count;
 
-    SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND tier <> 'local';
-    ASSERT v_count = 0, 'expected all rows local tier';
+    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 0.6,
+        'expected stamped multiplier 0.6 (0.5 snapped to the 0.2 grid) for a 4-entry draw';
 
-    -- Every player earns the participation floor: 20 * 0.5 = 10.
-    SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND points <> 10;
-    ASSERT v_count = 0, 'expected all points = 10 (local floor), found ' || v_count || ' rows differing';
-
-    -- The champion label is still recorded even though points are floored.
-    SELECT count(*) INTO v_count FROM tournament_ranking_points
+    -- Placement ordering must SURVIVE the small-draw discount — this is the
+    -- assertion the old local floor could not satisfy.
+    SELECT points INTO v_count FROM tournament_ranking_points
      WHERE tournament_id = v_tid AND placement = 'champion';
-    ASSERT v_count = 1, 'expected champion label preserved, got ' || v_count;
+    ASSERT v_count = 300, 'champion of a 4-draw should earn 500*0.6 = 300, got ' || v_count;
 
-    RAISE NOTICE 'PASS 2: 4-entry local bracket — participation-only floor (10 pts), champion label kept';
+    SELECT points INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'finalist';
+    ASSERT v_count = 180, 'finalist should earn 300*0.6 = 180, got ' || v_count;
+
+    -- R1 losers won nothing → zero-win floor still applies, then ×0.5.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 10;
+    ASSERT v_count = 2, 'expected 2 zero-win R1 losers at 10 pts, got ' || v_count;
+
+    SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 500, 'expected total 300+180+10+10 = 500, got ' || v_count;
+
+    RAISE NOTICE 'PASS 2: 4-entry draw — ×0.6 snapped discount, placement ordering preserved (no local floor)';
 END $$;
 
 -- --------------------------------------------------------------------------
@@ -396,8 +419,8 @@ BEGIN
         INSERT INTO tournament_registrations (tournament_id, user_id)
         VALUES (v_tid, v_row.pid) RETURNING id INTO v_rid;
         INSERT INTO tournament_ranking_points
-            (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, tier, points)
-        VALUES (v_season, v_tid, v_rid, v_row.pid, v_sport, 'intermediate', 'participated', 'regional', v_row.pts);
+            (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, multiplier, points)
+        VALUES (v_season, v_tid, v_rid, v_row.pid, v_sport, 'intermediate', 'participated', 1.0, v_row.pts);
     END LOOP;
 
     -- best-8 cap + events_played
@@ -489,26 +512,26 @@ BEGIN
     INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date, organizer_id, status, completed_at)
       VALUES ('lf', v_sport, 8, now(), now(), v_org, 'completed', now()) RETURNING id INTO v_tid;
     INSERT INTO tournament_registrations (tournament_id, user_id) VALUES (v_tid, v_pa) RETURNING id INTO v_rid;
-    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, tier, points)
-      VALUES (v_season, v_tid, v_rid, v_pa, v_sport, 'intermediate', 'participated', 'regional', 100);
+    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, multiplier, points)
+      VALUES (v_season, v_tid, v_rid, v_pa, v_sport, 'intermediate', 'participated', 1.0, 100);
 
     INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date, organizer_id, status, completed_at)
       VALUES ('lf', v_sport, 8, now(), now(), v_org, 'completed', now()) RETURNING id INTO v_tid;
     INSERT INTO tournament_registrations (tournament_id, user_id) VALUES (v_tid, v_pa) RETURNING id INTO v_rid;
-    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, tier, points)
-      VALUES (v_season, v_tid, v_rid, v_pa, v_sport, 'intermediate', 'participated', 'regional', 100);
+    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, multiplier, points)
+      VALUES (v_season, v_tid, v_rid, v_pa, v_sport, 'intermediate', 'participated', 1.0, 100);
 
     INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date, organizer_id, status, completed_at)
       VALUES ('lf', v_sport, 8, now(), now(), v_org, 'completed', now()) RETURNING id INTO v_tid;
     INSERT INTO tournament_registrations (tournament_id, user_id) VALUES (v_tid, v_pb) RETURNING id INTO v_rid;
-    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, tier, points)
-      VALUES (v_season, v_tid, v_rid, v_pb, v_sport, 'advanced', 'participated', 'regional', 100);
+    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, multiplier, points)
+      VALUES (v_season, v_tid, v_rid, v_pb, v_sport, 'advanced', 'participated', 1.0, 100);
 
     INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date, organizer_id, status, completed_at)
       VALUES ('lf', v_sport, 8, now(), now(), v_org, 'completed', now()) RETURNING id INTO v_tid;
     INSERT INTO tournament_registrations (tournament_id, user_id) VALUES (v_tid, v_pc) RETURNING id INTO v_rid;
-    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, tier, points)
-      VALUES (v_season, v_tid, v_rid, v_pc, v_sport, NULL, 'participated', 'regional', 100);
+    INSERT INTO tournament_ranking_points (season_id, tournament_id, registration_id, user_id, sport_id, level_bucket, placement, multiplier, points)
+      VALUES (v_season, v_tid, v_rid, v_pc, v_sport, NULL, 'participated', 1.0, 100);
 
     -- No filter → all three appear.
     SELECT count(*) INTO v_count FROM get_tournament_leaderboard(v_sport, NULL, NULL, NULL, 25, 0)
@@ -723,6 +746,185 @@ BEGIN
     ASSERT (SELECT certified_organizer_at IS NULL FROM player WHERE id = v_player), 'certified_at not cleared';
 
     RAISE NOTICE 'PASS 8: admin_certify_organizer — non-admin refused, grant/revoke + audit columns';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 9. lt_tournament_ranking_multiplier — the pricing function in isolation.
+--    draw_mult is a smooth log2 curve (no cliffs); level_mult is CONTINUOUS in
+--    the floor's rank on the sport's scale (×1.0 bottom → ×2.0 top, tennis rank
+--    r of 10 → 1 + (r−1)/9); the product then SNAPS to the 0.2 grid so champion
+--    points land on multiples of 100. Synthetic tournaments with no bracket, so
+--    draw size falls back to the registered count and each case is exact.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_org uuid; v_tid uuid;
+    v_mult numeric; v_draw integer;
+    r record; i integer;
+BEGIN
+    SET LOCAL session_replication_role = replica;  -- no notification side effects
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
+    SELECT player_id INTO v_org FROM player_sport
+     WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 1;
+
+    -- (registered entries, min_rating, expected multiplier)
+    FOR r IN SELECT * FROM (VALUES
+        --                          draw × level (rank)      → snapped to 0.2 grid
+        (8,  NULL::numeric, 1.000),   -- 1.0 × 1.0                 → 1.0
+        (8,  2.0,           1.200),   -- 1.0 × 1.111 (rank 2)      → 1.2
+        (8,  3.0,           1.400),   -- 1.0 × 1.333 (rank 4)      → 1.4
+        (8,  4.5,           1.600),   -- 1.0 × 1.667 (rank 7)      → 1.6
+        (8,  6.0,           2.000),   -- 1.0 × 2.0   (top rank)    → 2.0
+        (4,  4.5,           0.800),   -- 0.5 × 1.667 = 0.834       → 0.8
+        (16, 3.0,           2.000),   -- 1.5 × 1.333 = 2.0         → 2.0
+        (64, NULL,          2.600),   -- 2.5 × 1.0, 12.5 half-up   → 2.6
+        (4,  NULL,          0.600),   -- 0.5, 2.5 half-up          → 0.6
+        (3,  NULL,          0.200),   -- log2 sub-4 field 0.292    → 0.2
+        (1,  NULL,          0.200)    -- clamp 0.25 → snap floor   → 0.2
+    ) AS t(n, min_rating, expected)
+    LOOP
+        INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date,
+                                 organizer_id, status, min_rating)
+        VALUES ('mult probe', v_sport, 64, now(), now(), v_org, 'draft', r.min_rating)
+        RETURNING id INTO v_tid;
+
+        FOR i IN 1..r.n LOOP
+            INSERT INTO tournament_registrations (tournament_id, user_id, status)
+            VALUES (v_tid, (SELECT player_id FROM player_sport
+                             WHERE sport_id = v_sport AND is_active = true
+                             ORDER BY player_id OFFSET (i - 1) LIMIT 1), 'registered');
+        END LOOP;
+
+        SELECT draw_size, multiplier INTO v_draw, v_mult
+          FROM lt_tournament_ranking_multiplier(v_tid);
+
+        ASSERT v_draw = r.n, 'draw size: expected ' || r.n || ', got ' || v_draw;
+        ASSERT v_mult = r.expected,
+            'n=' || r.n || ' min_rating=' || coalesce(r.min_rating::text, 'none')
+            || ': expected multiplier ' || r.expected || ', got ' || v_mult;
+    END LOOP;
+
+    -- No cliff: one extra entrant must never double anyone's points. The old
+    -- tier jumped 1.0 → 2.0 crossing n=16; the curve moves by ~0.05 there.
+    ASSERT (SELECT multiplier FROM lt_tournament_ranking_multiplier(v_tid)) IS NOT NULL;
+
+    RAISE NOTICE 'PASS 9: pricing function — log2 draw curve, level from min_rating, clamps';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 10. Round-of-N placements — every real win moves the ladder. 18 entrants in
+--     a 32-cap bracket: seeds 15–18 collide in two real R1 matches, so their
+--     winners carry a real win into R2 and exit as round_of_16; every other
+--     R2 loser bye-advanced through R1 (zero real wins) and must stay on the
+--     participation floor. draw_mult(18) = 1.585 → snapped ×1.6.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport   uuid;
+    v_players uuid[];
+    v_org     uuid;
+    v_t       tournaments;
+    v_tid     uuid;
+    v_ver     integer;
+    v_match   tournament_matches;
+    v_guard   integer := 0;
+    v_count   integer;
+    i         integer;
+BEGIN
+    -- Block 9 sets SET LOCAL session_replication_role = replica, which lives
+    -- until transaction end and would silence the stamp + award triggers here.
+    SET LOCAL session_replication_role = origin;
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
+    SELECT array_agg(player_id) INTO v_players
+      FROM (SELECT player_id FROM player_sport
+             WHERE sport_id = v_sport AND is_active = true
+             ORDER BY player_id LIMIT 18) s;
+    ASSERT array_length(v_players, 1) = 18, 'need 18 active tennis players';
+    v_org := v_players[1];
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_create(
+        p_name => 'Ranking Cup 32 sparse', p_sport_id => v_sport,
+        p_max_participants => 32::smallint,
+        p_start_date => now() + interval '7 days',
+        p_end_date   => now() + interval '8 days',
+        p_visibility => 'public', p_registration_mode => 'open'
+    );
+    v_tid := v_t.id; v_ver := v_t.version;
+    SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+
+    FOR i IN 1..18 LOOP
+        PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[i]::text)::text, true);
+        IF NOT EXISTS (SELECT 1 FROM tournament_registrations
+                        WHERE tournament_id = v_tid AND user_id = v_players[i]
+                          AND status = 'registered') THEN
+            PERFORM tournament_register(v_tid);
+        END IF;
+    END LOOP;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_close_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+    PERFORM tournament_generate_bracket(v_tid, v_ver);
+
+    LOOP
+        v_guard := v_guard + 1;
+        ASSERT v_guard < 100, 'override loop did not converge';
+        SELECT * INTO v_match FROM tournament_matches
+         WHERE tournament_id = v_tid AND status = 'pending'
+           AND player1_is_bye = false AND player2_is_bye = false
+           AND player1_registration_id IS NOT NULL
+           AND player2_registration_id IS NOT NULL
+         ORDER BY round_number, match_position LIMIT 1;
+        EXIT WHEN v_match.id IS NULL;
+        PERFORM tournament_override_score(v_match.id, v_match.player1_registration_id, '6-0 6-0');
+    END LOOP;
+
+    ASSERT (SELECT status FROM tournaments WHERE id = v_tid) = 'completed', 'expected completed';
+
+    ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 1.6,
+        'expected stamped multiplier 1.6 for an 18-entry field, got '
+        || (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid)
+        || ' (draw_size=' || (SELECT ranking_draw_size FROM tournaments WHERE id = v_tid) || ')';
+
+    SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 18, 'expected 18 ledger rows, got ' || v_count;
+
+    -- The two R1 winners lose in R2 with a real win → round_of_16 at 50×1.6 = 80.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'round_of_16' AND points = 80;
+    ASSERT v_count = 2, 'expected 2 round_of_16 rows at 80 pts, got ' || v_count;
+
+    -- Every other R2 loser bye-advanced (zero real wins) → participation floor,
+    -- alongside the two R1 losers: 6 + 2 = 8 rows at round(20*1.6/10)*10 = 30.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 30;
+    ASSERT v_count = 8, 'expected 8 participated rows at 30 pts, got ' || v_count;
+
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'quarterfinal' AND points = 140;
+    ASSERT v_count = 4, 'expected 4 quarterfinal rows at 140 pts, got ' || v_count;
+
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'semifinal' AND points = 290;
+    ASSERT v_count = 2, 'expected 2 semifinal rows at 290 pts, got ' || v_count;
+
+    SELECT points INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'champion';
+    ASSERT v_count = 800, 'champion should earn 500×1.6 = 800, got ' || v_count;
+
+    SELECT points INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'finalist';
+    ASSERT v_count = 480, 'finalist should earn 300×1.6 = 480, got ' || v_count;
+
+    SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 2820, 'expected total 800+480+580+560+160+240 = 2820, got ' || v_count;
+
+    RAISE NOTICE 'PASS 10: round-of-N placements — real R1 win pays a rung, bye-advance stays floored';
 END $$;
 
 ROLLBACK;

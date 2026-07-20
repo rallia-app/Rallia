@@ -62,7 +62,11 @@ function PreviewSide({
         style={[
           styles.seedChip,
           isBye
-            ? { backgroundColor: 'transparent', borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth }
+            ? {
+                backgroundColor: 'transparent',
+                borderColor: colors.border,
+                borderWidth: StyleSheet.hairlineWidth,
+              }
             : { backgroundColor: `${accent}1A` },
         ]}
       >
@@ -101,7 +105,8 @@ export default function TournamentBracketSetup() {
 
   // Names: registration_id -> display label (pair label for doubles).
   const userIds = useMemo(
-    () => registered.flatMap(r => (r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id])),
+    () =>
+      registered.flatMap(r => (r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id])),
     [registered]
   );
   const { data: profiles } = useProfilesByIds(userIds);
@@ -237,7 +242,10 @@ export default function TournamentBracketSetup() {
 
   if (!tournament) {
     return (
-      <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.flex, { backgroundColor: colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.center}>
           <ActivityIndicator color={accent} />
         </View>
@@ -285,9 +293,7 @@ export default function TournamentBracketSetup() {
                 <View
                   style={[
                     styles.seedBadge,
-                    isTop
-                      ? { backgroundColor: accent }
-                      : { backgroundColor: `${accent}1A` },
+                    isTop ? { backgroundColor: accent } : { backgroundColor: `${accent}1A` },
                   ]}
                 >
                   <Text size="sm" weight="bold" color={isTop ? '#ffffff' : accent}>
@@ -372,12 +378,19 @@ export default function TournamentBracketSetup() {
             return (
               <View
                 key={`${m.round_number}-${m.match_position}`}
-                style={[styles.matchCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[
+                  styles.matchCard,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
               >
                 <PreviewSide
                   isBye={m.player1_is_bye}
                   seed={seed1}
-                  name={m.player1_is_bye ? t('tournamentDetail.bracket.bye') : nameByRegId.get(m.player1_registration_id) ?? '—'}
+                  name={
+                    m.player1_is_bye
+                      ? t('tournamentDetail.bracket.bye')
+                      : (nameByRegId.get(m.player1_registration_id) ?? '—')
+                  }
                   colors={colors}
                   accent={accent}
                 />
@@ -391,7 +404,11 @@ export default function TournamentBracketSetup() {
                 <PreviewSide
                   isBye={m.player2_is_bye}
                   seed={seed2}
-                  name={m.player2_is_bye ? t('tournamentDetail.bracket.bye') : nameByRegId.get(m.player2_registration_id) ?? '—'}
+                  name={
+                    m.player2_is_bye
+                      ? t('tournamentDetail.bracket.bye')
+                      : (nameByRegId.get(m.player2_registration_id) ?? '—')
+                  }
                   colors={colors}
                   accent={accent}
                 />
@@ -402,7 +419,12 @@ export default function TournamentBracketSetup() {
       </ScrollView>
 
       {/* Publish */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.publishBtn, { backgroundColor: accent }, publishing && styles.disabled]}
           onPress={() => {
@@ -411,6 +433,7 @@ export default function TournamentBracketSetup() {
           }}
           disabled={publishing || registered.length < 2}
           accessibilityRole="button"
+          testID="cta-generate-bracket"
         >
           {publishing ? (
             <ActivityIndicator color="#ffffff" />
@@ -431,6 +454,7 @@ export default function TournamentBracketSetup() {
         message={t('bracketSetup.confirmMessage')}
         confirmLabel={t('bracketSetup.confirmCta')}
         cancelLabel={t('common.cancel')}
+        confirmTestID="confirm-generate-bracket"
         onConfirm={onPublish}
         onClose={() => setConfirmVisible(false)}
       />
@@ -473,7 +497,11 @@ const styles = StyleSheet.create({
   },
 
   // Seed list
-  card: { borderRadius: radiusPixels.xl, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  card: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
   seedRow: {
     flexDirection: 'row',
     alignItems: 'center',

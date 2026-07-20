@@ -24,6 +24,7 @@ import {
   revokeTournamentInvite,
   registerForTournament,
   getTournamentFeeQuote,
+  getMyPayoutAccount,
   createTournamentRegistrationPayment,
   refundTournamentRegistration,
   withdrawFromTournament,
@@ -37,6 +38,7 @@ import {
   addTournamentCoOrganizer,
   removeTournamentCoOrganizer,
   amITournamentOrganizer,
+  isCertifiedOrganizer,
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
   overrideTournamentMatchScore,
@@ -66,6 +68,7 @@ import {
   type PlayerProfile,
   type PlayerSearchResult,
   type TournamentFeeQuote,
+  type PayoutAccountStatus,
   type RegistrationPaymentIntent,
   type TournamentRefundResult,
 } from '@rallia/shared-services';
@@ -99,6 +102,9 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
+  myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
+  certifiedOrganizer: (playerId: string) =>
+    [...tournamentKeys.all, 'certifiedOrganizer', playerId] as const,
 };
 
 /**
@@ -494,6 +500,18 @@ export function useIsTournamentOrganizer(tournamentId: string | undefined) {
   });
 }
 
+/**
+ * Whether the given organizer is certified — i.e. whether this tournament's
+ * results will actually award Circuit Rallia points.
+ */
+export function useIsCertifiedOrganizer(organizerId: string | undefined) {
+  return useQuery<boolean>({
+    queryKey: tournamentKeys.certifiedOrganizer(organizerId ?? ''),
+    queryFn: () => isCertifiedOrganizer(organizerId!),
+    enabled: !!organizerId,
+  });
+}
+
 /** A tournament's co-organizers (organizer-only read). */
 export function useTournamentCoOrganizers(tournamentId: string | undefined) {
   return useQuery<TournamentCoOrganizer[]>({
@@ -581,6 +599,20 @@ export function useTournamentFeeQuote(tournamentId: string | undefined, enabled 
     queryKey: tournamentKeys.feeQuote(tournamentId ?? ''),
     queryFn: () => getTournamentFeeQuote(tournamentId as string),
     enabled: !!tournamentId && enabled,
+  });
+}
+
+/**
+ * The current organizer's payout (Stripe Express) account status. Drives the
+ * payout status pill + manage/onboard affordance on paid events. Returns null
+ * when they've never set up payouts. `userId` only scopes the cache key — the
+ * read itself is RLS-scoped to the caller.
+ */
+export function useMyPayoutAccount(userId: string | undefined, enabled = true) {
+  return useQuery<PayoutAccountStatus | null>({
+    queryKey: tournamentKeys.myPayoutAccount(userId ?? ''),
+    queryFn: () => getMyPayoutAccount(),
+    enabled: !!userId && enabled,
   });
 }
 

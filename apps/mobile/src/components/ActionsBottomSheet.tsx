@@ -248,7 +248,7 @@ export const ActionsBottomSheet: React.FC = () => {
   const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Leagues stay admin-gated while the feature is in rollout; tournaments are not.
+  // Leagues are re-admin-gated during rollout; tournaments are not.
   const showCreateTournament = true;
   const showCreateLeague = isAdmin;
 

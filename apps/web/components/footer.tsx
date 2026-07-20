@@ -61,6 +61,14 @@ export async function Footer() {
               </li>
               <li>
                 <Link
+                  href="/courts"
+                  className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
+                >
+                  {t('courts')}
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/communities"
                   className="text-gray-600 dark:text-gray-400 hover:text-foreground transition-colors"
                 >

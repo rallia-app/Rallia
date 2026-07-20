@@ -171,12 +171,18 @@ export function BoardHeader({
   title,
   subtitle,
   note,
+  onNotePress,
+  noteCtaLabel,
   theme,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
   note: string;
+  /** When set (with noteCtaLabel), renders a tappable CTA pill under the note. */
+  onNotePress?: () => void;
+  /** Label for the CTA pill, e.g. "How it works". */
+  noteCtaLabel?: string;
   theme: ThemeBits;
 }) {
   const accentColor = theme.isDark ? primary[300] : primary[600];
@@ -205,6 +211,20 @@ export function BoardHeader({
       <Text size="sm" color={theme.mutedColor} style={styles.headerNote}>
         {note}
       </Text>
+      {onNotePress && noteCtaLabel ? (
+        <TouchableOpacity
+          onPress={onNotePress}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          style={styles.headerCta}
+        >
+          <Ionicons name="information-circle" size={16} color={accentColor} />
+          <Text size="sm" weight="bold" color={accentColor} style={styles.headerCtaText}>
+            {noteCtaLabel}
+          </Text>
+          <Ionicons name="arrow-forward" size={15} color={accentColor} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -355,6 +375,16 @@ const styles = StyleSheet.create({
   },
   headerNote: {
     lineHeight: 19,
+  },
+  headerCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[2],
+  },
+  headerCtaText: {
+    textDecorationLine: 'underline',
   },
 
   // Empty

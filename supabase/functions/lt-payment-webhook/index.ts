@@ -3,18 +3,24 @@
  *
  * Receives Stripe webhook events for paid tournament / league-season
  * registrations (metadata.rallia_flow === 'lt_registration'). Finalizes the
- * registration ledger written by tournament_begin_paid_registration.
+ * registration ledger written by tournament_begin_paid_registration or
+ * season_begin_paid_enrollment.
+ *
+ * Both legs share this endpoint and the same rallia_flow marker: the leg is
+ * resolved from the ledger row, whose target CHECK guarantees exactly one of
+ * tournament_registration_id / season_user_id is set.
  *
  *   payment_intent.succeeded
  *     - Mark lt_registration_payment.status = 'succeeded', store charge id.
- *     - Flip the reserved registration 'payment_pending' → 'registered'.
+ *     - Flip the reserved slot 'payment_pending' → 'registered' (tournament) or
+ *       → 'enrolled' (season, which also seeds the payer's season_rankings row).
  *       (For hold_until_event_end the funds stay in Rallia's balance until the
  *       event ends; the payout is released by Phase 3's event-end job.)
  *
  *   payment_intent.payment_failed | payment_intent.canceled
  *     - Mark the ledger 'failed' / 'cancelled' and release the reserved slot
- *       (registration → 'withdrawn'). The reaper would catch it eventually, but
- *       freeing it immediately is friendlier.
+ *       (→ 'withdrawn'). The reaper would catch it eventually, but freeing it
+ *       immediately is friendlier.
  *
  * Idempotent: re-deliveries are no-ops once the ledger row is terminal.
  *
@@ -89,7 +95,7 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
 
   const { data: row } = await admin
     .from('lt_registration_payment')
-    .select('id, status, tournament_registration_id')
+    .select('id, status, tournament_registration_id, season_user_id')
     .eq('stripe_payment_intent_id', pi.id)
     .maybeSingle();
   if (!row) {
@@ -112,12 +118,20 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
     .neq('status', 'succeeded');
 
   // Finalize the reserved registration. Conditional so re-deliveries / manual
-  // edits don't clobber a withdrawn/disqualified state.
+  // edits don't clobber a withdrawn/disqualified state. The ledger's target
+  // CHECK guarantees exactly one of these legs is set.
   if (row.tournament_registration_id) {
     await admin
       .from('tournament_registrations')
       .update({ status: 'registered', approved_at: new Date().toISOString() })
       .eq('id', row.tournament_registration_id)
+      .eq('status', 'payment_pending');
+  } else if (row.season_user_id) {
+    // 'enrolled' also fires the trigger that seeds this payer's ranking row.
+    await admin
+      .from('season_members')
+      .update({ status: 'enrolled', enrolled_at: new Date().toISOString() })
+      .eq('id', row.season_user_id)
       .eq('status', 'payment_pending');
   }
 }
@@ -131,7 +145,7 @@ async function handleTerminal(
 
   const { data: row } = await admin
     .from('lt_registration_payment')
-    .select('id, status, tournament_registration_id')
+    .select('id, status, tournament_registration_id, season_user_id')
     .eq('stripe_payment_intent_id', pi.id)
     .maybeSingle();
   if (!row) return;
@@ -155,6 +169,12 @@ async function handleTerminal(
       .from('tournament_registrations')
       .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
       .eq('id', row.tournament_registration_id)
+      .eq('status', 'payment_pending');
+  } else if (row.season_user_id) {
+    await admin
+      .from('season_members')
+      .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
+      .eq('id', row.season_user_id)
       .eq('status', 'payment_pending');
   }
 }

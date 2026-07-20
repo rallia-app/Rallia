@@ -22,7 +22,9 @@
  * lt_expire_stale_registration_payments cron.
  *
  * POST /lt-create-registration-payment   (authenticated — JWT validated internally)
- * Body:    { tournamentId: string; partnerId?: string }
+ * Body:    { tournamentId: string; partnerId?: string }   -- tournament entry
+ *      or  { seasonId: string }                           -- league season entry
+ *          (exactly one of tournamentId / seasonId)
  * Success: { clientSecret, paymentId, entryCents, serviceFeeCents,
  *            feeTaxCents, amountChargedCents, currency }
  * Errors:  { error: ErrorCode }
@@ -48,6 +50,11 @@ type ErrorCode =
   | 'tournament_full'
   | 'already_registered'
   | 'paid_mode_unsupported'
+  | 'season_not_found'
+  | 'season_not_open'
+  | 'season_not_paid'
+  | 'not_league_member'
+  | 'already_enrolled'
   | 'organizer_not_ready'
   | 'registration_failed'
   | 'internal_error';
@@ -77,6 +84,16 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'already_registered';
     case 'PAID_REG_MODE_UNSUPPORTED':
       return 'paid_mode_unsupported';
+    case 'SEASON_NOT_FOUND':
+      return 'season_not_found';
+    case 'SEASON_NOT_OPEN':
+      return 'season_not_open';
+    case 'SEASON_NOT_PAID':
+      return 'season_not_paid';
+    case 'NOT_LEAGUE_MEMBER':
+      return 'not_league_member';
+    case 'ALREADY_ENROLLED':
+      return 'already_enrolled';
     default:
       return 'registration_failed';
   }
@@ -84,7 +101,10 @@ function mapRpcError(message: string | undefined): ErrorCode {
 
 interface BeginRow {
   payment_id: string;
-  registration_id: string;
+  /** Tournament leg only. */
+  registration_id?: string;
+  /** Season leg only. */
+  season_user_id?: string;
   entry_cents: number;
   service_fee_cents: number;
   fee_tax_cents: number;
@@ -123,12 +143,21 @@ Deno.serve(async req => {
     if (authError || !user) return err('invalid_auth', 401);
 
     // ---------------------------------------------------------------- body
-    let tournamentId: string;
+    // Exactly one of tournamentId / seasonId. Both legs are identical from the
+    // begin-RPC's return onward, so only the reservation call and the rollback
+    // target differ.
+    let tournamentId: string | null = null;
+    let seasonId: string | null = null;
     let partnerId: string | null = null;
     try {
       const body = await req.json();
-      tournamentId = body?.tournamentId;
-      if (!tournamentId || typeof tournamentId !== 'string') throw new Error();
+      if (body?.tournamentId && typeof body.tournamentId === 'string') {
+        tournamentId = body.tournamentId;
+      }
+      if (body?.seasonId && typeof body.seasonId === 'string') {
+        seasonId = body.seasonId;
+      }
+      if (!tournamentId === !seasonId) throw new Error();
       if (body?.partnerId && typeof body.partnerId === 'string') partnerId = body.partnerId;
     } catch {
       return err('invalid_body');
@@ -136,10 +165,12 @@ Deno.serve(async req => {
 
     // ------------------------------------- reserve slot + snapshot fee (as user)
     // SECURITY DEFINER RPC resolves auth.uid() from the forwarded JWT.
-    const { data: rows, error: rpcError } = await userClient.rpc(
-      'tournament_begin_paid_registration',
-      { p_tournament_id: tournamentId, p_partner_user_id: partnerId }
-    );
+    const { data: rows, error: rpcError } = tournamentId
+      ? await userClient.rpc('tournament_begin_paid_registration', {
+          p_tournament_id: tournamentId,
+          p_partner_user_id: partnerId,
+        })
+      : await userClient.rpc('season_begin_paid_enrollment', { p_season_id: seasonId });
     if (rpcError) {
       return err(mapRpcError(rpcError.message), 400);
     }
@@ -150,11 +181,14 @@ Deno.serve(async req => {
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
 
     const currency = (reg.currency || 'CAD').toLowerCase();
+    // rallia_flow stays 'lt_registration' for both legs — the webhook keys off it
+    // to recognise our intents, then resolves the leg from the ledger row itself.
     const metadata: Record<string, string> = {
       rallia_flow: 'lt_registration',
       paymentId: reg.payment_id,
-      registrationId: reg.registration_id,
-      tournamentId,
+      ...(tournamentId
+        ? { registrationId: String(reg.registration_id), tournamentId }
+        : { seasonUserId: String(reg.season_user_id), seasonId: String(seasonId) }),
       payerUserId: user.id,
       organizerId: reg.organizer_id,
       entryCents: String(reg.entry_cents),
@@ -177,11 +211,19 @@ Deno.serve(async req => {
         .from('lt_registration_payment')
         .update({ status: 'cancelled' })
         .eq('id', reg.payment_id);
-      await admin
-        .from('tournament_registrations')
-        .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
-        .eq('id', reg.registration_id)
-        .eq('status', 'payment_pending');
+      if (tournamentId) {
+        await admin
+          .from('tournament_registrations')
+          .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
+          .eq('id', reg.registration_id)
+          .eq('status', 'payment_pending');
+      } else {
+        await admin
+          .from('season_members')
+          .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
+          .eq('id', reg.season_user_id)
+          .eq('status', 'payment_pending');
+      }
       return err('organizer_not_ready', 409);
     }
 
@@ -189,7 +231,7 @@ Deno.serve(async req => {
       amount: reg.amount_charged_cents,
       currency,
       automatic_payment_methods: { enabled: true },
-      description: 'Rallia — tournament registration',
+      description: tournamentId ? 'Rallia — tournament registration' : 'Rallia — league season',
       on_behalf_of: reg.organizer_stripe_account_id,
       transfer_data: { destination: reg.organizer_stripe_account_id },
       // Rallia's cut = service fee + GST/QST on it (Rallia remits the tax).

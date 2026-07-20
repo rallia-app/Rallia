@@ -181,6 +181,15 @@ export function getTournamentLogoUrl(logoUrl: string | null | undefined): string
 }
 
 /**
+ * Resolve a league cover image URL for display. Served raw from the public
+ * `league-logos` bucket (no Supabase image transform).
+ * @returns Normalized raw URL or null
+ */
+export function getLeagueLogoUrl(logoUrl: string | null | undefined): string | null {
+  return normalizeStorageUrl(logoUrl, 'league-logos');
+}
+
+/**
  * Get a thumbnail URL for a group/community cover image.
  * Defaults to 800×400 q75 list-row sizing (retina-friendly); override per
  * surface for headers (e.g. 1200×600 for hero) or square avatars.

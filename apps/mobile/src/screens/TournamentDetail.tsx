@@ -25,14 +25,17 @@ import {
   Animated,
   Easing,
   Alert,
+  RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -52,15 +55,18 @@ import {
   warningHaptic,
   getHumanName,
   getProfilePictureUrl,
-  getTournamentLogoUrl,
   formatPrice,
+  tournamentRankingHeadline,
+  tournamentPointsLadder,
 } from '@rallia/shared-utils';
+import type { TournamentPlacement } from '@rallia/shared-utils';
 import {
   useTheme,
   useTournament,
   useTournamentRegistrations,
   useMyTournamentRegistration,
   useTournamentFeeQuote,
+  useMyPayoutAccount,
   useCreateRegistrationPayment,
   useRefundRegistration,
   useOpenTournamentRegistration,
@@ -77,6 +83,7 @@ import {
   useTournamentMatches,
   useOpenTournamentRoundChat,
   useIsTournamentOrganizer,
+  useIsCertifiedOrganizer,
   useCancelTournament,
   useArchiveTournament,
   useProfilesByIds,
@@ -106,11 +113,16 @@ import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import PlayerCard from '../features/community/components/PlayerCard';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
-import { DEFAULT_TOURNAMENT_BANNER } from '../features/tournaments/defaultBanner';
+import {
+  TournamentBanner,
+  TOURNAMENT_BANNER_ASPECT,
+} from '../features/tournaments/components/TournamentBanner';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+type TabKey = 'overview' | 'bracket' | 'players' | 'points' | 'rules' | 'details';
 
 type Status = Enums<'tournament_status'>;
 type Visibility = Enums<'tournament_visibility'>;
@@ -250,6 +262,182 @@ const LabeledBlock: React.FC<{
   </View>
 );
 
+/** Initial-load placeholder shaped like the hero + tab bar + first cards, so the
+ *  screen keeps its silhouette while the tournament loads. */
+const TournamentDetailSkeleton: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const { width } = useWindowDimensions();
+  const bg = isDark ? neutral[800] : neutral[200];
+  const highlight = isDark ? neutral[700] : neutral[100];
+  const shimmer = { backgroundColor: bg, highlightColor: highlight };
+  return (
+    <View>
+      <Skeleton
+        {...shimmer}
+        height={Math.round(width / TOURNAMENT_BANNER_ASPECT)}
+        borderRadius={0}
+      />
+      <View style={styles.heroChipRow}>
+        {[110, 88].map(w => (
+          <Skeleton key={w} {...shimmer} width={w} height={26} borderRadius={radiusPixels.full} />
+        ))}
+      </View>
+      <View style={styles.skeletonTabBar}>
+        {[0, 1, 2].map(i => (
+          <Skeleton key={i} {...shimmer} width={72} height={14} />
+        ))}
+      </View>
+      <View style={styles.tabContent}>
+        <Skeleton {...shimmer} height={72} borderRadius={radiusPixels.lg} />
+        <View style={styles.skeletonCardGap}>
+          <Skeleton {...shimmer} height={120} borderRadius={radiusPixels.xl} />
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const PLACEMENT_ICON: Record<TournamentPlacement, keyof typeof Ionicons.glyphMap> = {
+  champion: 'trophy',
+  finalist: 'medal-outline',
+  semifinal: 'ribbon-outline',
+  quarterfinal: 'flash-outline',
+  round_of_16: 'arrow-up-circle-outline',
+  round_of_32: 'arrow-up-circle-outline',
+  round_of_64: 'arrow-up-circle-outline',
+  participated: 'checkmark-circle-outline',
+};
+
+/**
+ * Circuit Rallia points explainer: what each finish is worth on this specific
+ * tournament. Numbers come from the shared ladder helper, which mirrors the
+ * award function exactly — never recompute the scale here.
+ */
+const PointsTab: React.FC<{
+  ladder: NonNullable<ReturnType<typeof tournamentPointsLadder>>;
+  isDoubles: boolean;
+  colors: ScreenColors;
+  t: (k: TranslationKey, options?: Record<string, string>) => string;
+}> = ({ ladder, isDoubles, colors, t }) => {
+  const { projected, rows } = ladder;
+  const champion = rows[0];
+
+  return (
+    <View style={styles.tabContent}>
+      {/* Headline: the number a player is actually competing for */}
+      <View
+        style={[
+          styles.section,
+          styles.pointsHero,
+          { backgroundColor: colors.championBg, borderColor: colors.championText },
+        ]}
+      >
+        <View style={[styles.pointsHeroIcon, { backgroundColor: colors.championText }]}>
+          <Ionicons name="trophy" size={22} color={accent[900]} />
+        </View>
+        <Text size="xs" weight="semibold" color={colors.championText}>
+          {t('tournamentDetail.points.eligibleLabel')}
+        </Text>
+        <View style={styles.pointsHeroValueRow}>
+          {projected ? (
+            <Text size="sm" weight="medium" color={colors.textMuted}>
+              {t('tournamentDetail.points.upTo')}
+            </Text>
+          ) : null}
+          {/* lineHeight is explicit: Text defaults to the body variant's fixed
+              24px box, which clips ascenders at 3xl (30px). */}
+          <Text size="3xl" weight="bold" lineHeight="tight" color={colors.championText}>
+            {champion.points}
+          </Text>
+          <Text size="sm" weight="medium" color={colors.textMuted}>
+            {t('tournamentDetail.points.unit')}
+          </Text>
+        </View>
+        <Text size="sm" color={colors.textMuted} style={styles.pointsHeroCaption}>
+          {t('tournamentDetail.points.heroCaption')}
+        </Text>
+      </View>
+
+      {/* The ladder */}
+      <Section title={t('tournamentDetail.points.tableTitle')} colors={colors}>
+        {rows.map((row, i) => (
+          <View
+            key={row.placement}
+            style={[
+              styles.pointsRow,
+              { borderBottomColor: colors.border },
+              i === rows.length - 1 && styles.pointsRowLast,
+            ]}
+          >
+            <View
+              style={[
+                styles.pointsRowIcon,
+                {
+                  backgroundColor:
+                    row.placement === 'champion' ? colors.championBg : colors.statusMutedBg,
+                },
+              ]}
+            >
+              <Ionicons
+                name={PLACEMENT_ICON[row.placement]}
+                size={16}
+                color={row.placement === 'champion' ? colors.championText : colors.textMuted}
+              />
+            </View>
+            <Text
+              size="base"
+              weight={row.placement === 'champion' ? 'semibold' : 'medium'}
+              color={colors.text}
+              style={styles.pointsRowLabel}
+            >
+              {t(`tournamentDetail.points.placement.${row.placement}`)}
+            </Text>
+            <Text
+              size="base"
+              weight="bold"
+              color={row.placement === 'champion' ? colors.championText : colors.text}
+              style={styles.pointsRowValue}
+            >
+              {row.points}
+            </Text>
+          </View>
+        ))}
+      </Section>
+
+      {/* How the number is set, and the rules that bite */}
+      <Section title={t('tournamentDetail.points.howTitle')} colors={colors}>
+        {[
+          projected
+            ? 'tournamentDetail.points.notes.projected'
+            : 'tournamentDetail.points.notes.firm',
+          'tournamentDetail.points.notes.scale',
+          'tournamentDetail.points.notes.zeroWinFloor',
+          ...(isDoubles ? ['tournamentDetail.points.notes.doubles'] : []),
+          'tournamentDetail.points.notes.season',
+        ].map((key, i, arr) => (
+          <View
+            key={key}
+            style={[
+              styles.pointsNoteRow,
+              { borderBottomColor: colors.border },
+              i === arr.length - 1 && styles.pointsRowLast,
+            ]}
+          >
+            <View style={[styles.ruleDot, { backgroundColor: colors.primary }]} />
+            <Text size="sm" color={colors.text} style={styles.ruleText}>
+              {t(key as TranslationKey)}
+            </Text>
+          </View>
+        ))}
+      </Section>
+    </View>
+  );
+};
+
+/** Fallback label for a bracket slot whose player has no resolvable name yet. */
+function seedFallbackLabel(seed: number | undefined, t: (k: TranslationKey) => string): string {
+  return t('tournamentDetail.bracket.seed').replace('{n}', seed !== undefined ? String(seed) : '?');
+}
+
 /** Player-facing level requirement, e.g. "3.0+", "≤ 4.5", "3.0–4.5".
  *  Mirrors the tournament-card formatting so display stays consistent. */
 function formatRatingRange(min: number | null, max: number | null): string | null {
@@ -277,22 +465,34 @@ const Section: React.FC<{ title: string; children: React.ReactNode; colors: Scre
   </View>
 );
 
+// Fixed light-tone text colors for badges sitting on the hero banner: the pill
+// background is near-white there regardless of theme.
+const ON_IMAGE_TONE_TEXT: Record<'neutral' | 'positive' | 'active' | 'muted', string> = {
+  positive: '#15803d',
+  active: primary[700],
+  neutral: neutral[700],
+  muted: neutral[500],
+};
+
 const StatusBadge: React.FC<{
   status: Status;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
-}> = ({ status, colors, t }) => {
+  onImage?: boolean;
+}> = ({ status, colors, t, onImage }) => {
   const tone = STATUS_TONE[status];
-  const bg =
-    tone === 'positive'
+  const bg = onImage
+    ? 'rgba(255,255,255,0.94)'
+    : tone === 'positive'
       ? colors.statusPositiveBg
       : tone === 'active'
         ? colors.statusActiveBg
         : tone === 'muted'
           ? colors.statusMutedBg
           : colors.statusNeutralBg;
-  const fg =
-    tone === 'positive'
+  const fg = onImage
+    ? ON_IMAGE_TONE_TEXT[tone]
+    : tone === 'positive'
       ? colors.statusPositiveText
       : tone === 'active'
         ? colors.statusActiveText
@@ -313,9 +513,15 @@ const StatusBadge: React.FC<{
  * indicator in MatchCard (coral/red `secondary` palette, expanding ring +
  * core glow).
  */
-const LiveBadge: React.FC<{ label: string; isDark: boolean }> = ({ label, isDark }) => {
+const LiveBadge: React.FC<{ label: string; isDark: boolean; onImage?: boolean }> = ({
+  label,
+  isDark,
+  onImage,
+}) => {
   const pulse = useRef(new Animated.Value(0)).current;
-  const liveColor = isDark ? secondary[400] : secondary[500];
+  // On the banner the pill is near-white in both themes, so the dot and label
+  // take the darker coral that reads against it.
+  const liveColor = onImage ? secondary[600] : isDark ? secondary[400] : secondary[500];
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -344,7 +550,14 @@ const LiveBadge: React.FC<{ label: string; isDark: boolean }> = ({ label, isDark
 
   return (
     <View
-      style={[styles.liveBadge, { backgroundColor: `${secondary[500]}${isDark ? '30' : '1f'}` }]}
+      style={[
+        styles.liveBadge,
+        {
+          backgroundColor: onImage
+            ? 'rgba(255,255,255,0.94)'
+            : `${secondary[500]}${isDark ? '30' : '1f'}`,
+        },
+      ]}
     >
       <View style={styles.liveIndicatorContainer}>
         <Animated.View
@@ -433,26 +646,26 @@ const LifecycleStepper: React.FC<{
   );
 };
 
-const StatTile: React.FC<{
-  icon: keyof typeof Ionicons.glyphMap;
+/** One column of the segmented stats card. The card draws the single border;
+ *  segments stay flat with hairline dividers between them, mirroring the
+ *  Players empty-state stats strip. */
+const StatSegment: React.FC<{
   value: string;
   label: string;
   colors: ScreenColors;
-}> = ({ icon, value, label, colors }) => (
-  <View
-    style={[
-      styles.statTile,
-      { backgroundColor: colors.cardBackground, borderColor: colors.border },
-    ]}
-  >
-    <Ionicons name={icon} size={18} color={colors.primary} />
-    <Text size="lg" weight="bold" color={colors.text}>
-      {value}
-    </Text>
-    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
-      {label}
-    </Text>
-  </View>
+  showDivider?: boolean;
+}> = ({ value, label, colors, showDivider }) => (
+  <>
+    {showDivider && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
+    <View style={styles.statSegment}>
+      <Text size="lg" weight="bold" color={colors.text} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  </>
 );
 
 /**
@@ -552,6 +765,148 @@ const DashboardCtaCard: React.FC<{
   );
 };
 
+/**
+ * Compact status chip sitting in the row under the hero banner. Replaces the
+ * full-width registered band / chat button / ranking banner stack — same
+ * information, one row instead of three blocks.
+ */
+const HeroChip: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  tone: 'positive' | 'outline';
+  colors: ScreenColors;
+  onPress?: () => void;
+  testID?: string;
+}> = ({ icon, label, tone, colors, onPress, testID }) => {
+  const bg = tone === 'positive' ? colors.statusPositiveBg : 'transparent';
+  const fg = tone === 'positive' ? colors.statusPositiveText : colors.primary;
+  const inner = (
+    <>
+      <Ionicons name={icon} size={14} color={fg} />
+      <Text size="xs" weight="semibold" color={fg} numberOfLines={1}>
+        {label}
+      </Text>
+      {onPress && <Ionicons name="chevron-forward" size={13} color={fg} />}
+    </>
+  );
+  const style = [
+    styles.heroChip,
+    { backgroundColor: bg, borderColor: tone === 'outline' ? colors.border : 'transparent' },
+  ];
+  if (!onPress) return <View style={style}>{inner}</View>;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={style}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+    >
+      {inner}
+    </TouchableOpacity>
+  );
+};
+
+/**
+ * Quiet grouped row for the organizer's utility actions (invite, payouts, edit,
+ * co-organizers). Deliberately lower-contrast than DashboardCtaCard so the one
+ * accent card and the docked bar stay the loudest things on the screen.
+ */
+const OverviewActionRow: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  colors: ScreenColors;
+  onPress: () => void;
+  badge?: { label: string; tone: 'positive' | 'warning' | 'muted' };
+  showDivider?: boolean;
+  testID?: string;
+}> = ({ icon, label, colors, onPress, badge, showDivider, testID }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.7}
+    testID={testID}
+    accessibilityRole="button"
+    style={[
+      styles.overviewActionRow,
+      showDivider && {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.border,
+      },
+    ]}
+  >
+    <Ionicons name={icon} size={18} color={colors.primary} />
+    <Text size="sm" weight="medium" color={colors.text} style={styles.overviewActionLabel}>
+      {label}
+    </Text>
+    {badge && (
+      <View
+        style={[
+          styles.overviewActionBadge,
+          {
+            backgroundColor:
+              badge.tone === 'positive'
+                ? colors.statusPositiveBg
+                : badge.tone === 'warning'
+                  ? colors.cancelledBg
+                  : colors.statusMutedBg,
+          },
+        ]}
+      >
+        <Text
+          size="xs"
+          weight="semibold"
+          color={
+            badge.tone === 'positive'
+              ? colors.statusPositiveText
+              : badge.tone === 'warning'
+                ? colors.cancelledText
+                : colors.textMuted
+          }
+        >
+          {badge.label}
+        </Text>
+      </View>
+    )}
+    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+  </TouchableOpacity>
+);
+
+/** Friendly icon row for the Overview's at-a-glance card: icon disc, primary
+ *  line, optional secondary line. Softer than the Details tab's spec-sheet
+ *  InfoRow on purpose. */
+const OverviewInfoRow: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  subText?: string;
+  colors: ScreenColors;
+  showDivider?: boolean;
+}> = ({ icon, text, subText, colors, showDivider }) => (
+  <View
+    style={[
+      styles.overviewInfoRow,
+      showDivider && {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.border,
+      },
+    ]}
+  >
+    <View style={[styles.overviewInfoIcon, { backgroundColor: colors.statusActiveBg }]}>
+      <Ionicons name={icon} size={15} color={colors.primary} />
+    </View>
+    <View style={styles.overviewInfoTexts}>
+      <Text size="sm" weight="medium" color={colors.text}>
+        {text}
+      </Text>
+      {subText ? (
+        <Text size="xs" color={colors.textMuted}>
+          {subText}
+        </Text>
+      ) : null}
+    </View>
+  </View>
+);
+
 // Mirror PlayerDirectory: derive reputation display straight from the row,
 // no extra API call. Hidden unless the player's reputation is public.
 function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | undefined {
@@ -611,9 +966,23 @@ const ParticipantsSection: React.FC<{
   onPlayerPress: (player: PlayerSearchResult) => void;
   onRemovePress?: (player: PlayerSearchResult) => void;
   currentUserId?: string;
+  /** Draw capacity, surfaced in the empty state so a bare roster still says
+   *  how big the event is. */
+  maxParticipants: number;
+  /** Pre-formatted registration deadline, or null when there's none to show. */
+  deadlineLabel?: string | null;
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
-}> = ({ players, onPlayerPress, onRemovePress, currentUserId, colors, t }) => {
+}> = ({
+  players,
+  onPlayerPress,
+  onRemovePress,
+  currentUserId,
+  maxParticipants,
+  deadlineLabel,
+  colors,
+  t,
+}) => {
   return (
     <View>
       <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
@@ -621,9 +990,40 @@ const ParticipantsSection: React.FC<{
       </Text>
       {players.length === 0 ? (
         <View style={styles.participantEmpty}>
-          <Text size="sm" color={colors.textMuted}>
+          <View style={[styles.participantEmptyDisc, { backgroundColor: colors.statusActiveBg }]}>
+            <Ionicons name="people-outline" size={34} color={colors.primary} />
+          </View>
+          <Text size="base" weight="semibold" color={colors.text}>
             {t('tournamentDetail.dashboard.participants.empty')}
           </Text>
+          <Text size="sm" color={colors.textMuted} style={styles.participantEmptyText}>
+            {t('tournamentDetail.dashboard.participants.emptyDescription')}
+          </Text>
+          <View style={[styles.participantEmptyStats, { borderTopColor: colors.border }]}>
+            <View style={styles.participantEmptyStat}>
+              <Text size="base" weight="bold" color={colors.text}>
+                {maxParticipants}
+              </Text>
+              <Text size="xs" color={colors.textMuted}>
+                {t('tournamentDetail.dashboard.participants.emptySpotsLabel')}
+              </Text>
+            </View>
+            {deadlineLabel ? (
+              <>
+                <View
+                  style={[styles.participantEmptyStatDivider, { backgroundColor: colors.border }]}
+                />
+                <View style={styles.participantEmptyStat}>
+                  <Text size="base" weight="bold" color={colors.text} numberOfLines={1}>
+                    {deadlineLabel}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t('tournamentDetail.dashboard.participants.emptyDeadlineLabel')}
+                  </Text>
+                </View>
+              </>
+            ) : null}
+          </View>
         </View>
       ) : (
         players.map(player => (
@@ -785,6 +1185,9 @@ export const TournamentDetail: React.FC = () => {
   // sync primary check so the owner sees controls immediately (no query flicker).
   const { data: amIOrganizer } = useIsTournamentOrganizer(tournament?.id);
   const isOrganizer = isPrimaryOrganizer || !!amIOrganizer;
+  // Only a certified organizer's tournament awards Circuit Rallia points.
+  const { data: organizerIsCertified } = useIsCertifiedOrganizer(tournament?.organizer_id);
+  const awardsRankingPoints = !!organizerIsCertified;
   const canManageCoOrganizers =
     isPrimaryOrganizer &&
     !!tournament &&
@@ -867,7 +1270,16 @@ export const TournamentDetail: React.FC = () => {
                                       : lower.includes('tournament_reg_closed') ||
                                           lower.includes('reg_closed')
                                         ? 'tournamentDetail.errors.regClosed'
-                                        : fallbackKey;
+                                        : // partner_rating_* first: they contain the bare rating_* codes.
+                                          lower.includes('partner_rating_too_low')
+                                          ? 'tournamentDetail.errors.partnerRatingTooLow'
+                                          : lower.includes('partner_rating_required')
+                                            ? 'tournamentDetail.errors.partnerRatingRequired'
+                                            : lower.includes('rating_too_low')
+                                              ? 'tournamentDetail.errors.ratingTooLow'
+                                              : lower.includes('rating_required')
+                                                ? 'tournamentDetail.errors.ratingRequired'
+                                                : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -884,14 +1296,49 @@ export const TournamentDetail: React.FC = () => {
           body: { businessType },
         });
         if (error || !data?.url) throw new Error(error?.message);
-        await WebBrowser.openAuthSessionAsync(data.url, 'https://rallia.app/stripe-connect-return');
+        // The return URL must be the app's custom scheme, not an https URL:
+        // ASWebAuthenticationSession only auto-dismisses on a custom-scheme
+        // callback. Stripe's https return_url bounces to this scheme via the
+        // web /stripe-connect-return page, which closes the modal.
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          'rallia://stripe-connect-return'
+        );
+        if (result.type === 'success') {
+          // stripe-connect-webhook flips onboarding_completed once charges are
+          // enabled; refetch to clear the organizer payout gate. It settles
+          // asynchronously, so refetch again shortly after.
+          successHaptic();
+          void refetch();
+          setTimeout(() => void refetch(), 2500);
+        }
       } catch {
         warningHaptic();
         toast.error(t('tournamentDetail.payments.onboardingError'));
       }
     },
-    [toast, t]
+    [toast, t, refetch]
   );
+
+  // Ask individual vs company, then kick off Stripe onboarding. Shared by the
+  // registration-guard error path and the organizer's payout setup card.
+  const promptOnboardBusinessType = useCallback(() => {
+    Alert.alert(
+      t('tournamentDetail.payments.payoutsSetupTitle'),
+      t('tournamentDetail.payments.payoutsSetupBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('tournamentDetail.payments.onboardTypeIndividual'),
+          onPress: () => void handleStripeOnboard('individual'),
+        },
+        {
+          text: t('tournamentDetail.payments.onboardTypeBusiness'),
+          onPress: () => void handleStripeOnboard('company'),
+        },
+      ]
+    );
+  }, [t, handleStripeOnboard]);
 
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
@@ -900,21 +1347,7 @@ export const TournamentDetail: React.FC = () => {
       // finish Stripe onboarding instead of a generic error.
       if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
         warningHaptic();
-        Alert.alert(
-          t('tournamentDetail.payments.payoutsSetupTitle'),
-          t('tournamentDetail.payments.payoutsSetupBody'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('tournamentDetail.payments.onboardTypeIndividual'),
-              onPress: () => void handleStripeOnboard('individual'),
-            },
-            {
-              text: t('tournamentDetail.payments.onboardTypeBusiness'),
-              onPress: () => void handleStripeOnboard('company'),
-            },
-          ]
-        );
+        promptOnboardBusinessType();
         return;
       }
       showError(e.message, 'tournamentDetail.errors.openFailed');
@@ -958,6 +1391,28 @@ export const TournamentDetail: React.FC = () => {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const isPaidTournament = (tournament?.entry_fee_cents ?? 0) > 0;
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
+  // Organizer payout status drives the manage/onboard card on paid events.
+  const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
+
+  // Post-onboarding management: opens the Stripe Express dashboard (update bank
+  // details, view payouts) when ready, or resumes onboarding when unfinished.
+  // The webhook refreshes account status, so invalidate on return.
+  const handleManagePayouts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-manage');
+      if (error || !data?.url) throw new Error(error?.message);
+      // Custom scheme (not https) so the auth session dismisses on return — see
+      // handleStripeOnboard.
+      await WebBrowser.openAuthSessionAsync(data.url, 'rallia://stripe-connect-return');
+      if (userId) {
+        void queryClient.invalidateQueries({ queryKey: tournamentKeys.myPayoutAccount(userId) });
+      }
+    } catch {
+      warningHaptic();
+      toast.error(t('tournamentDetail.payments.manageError'));
+    }
+  }, [toast, t, userId, queryClient]);
+
   const createRegistrationPayment = useCreateRegistrationPayment();
 
   const handlePaidRegister = useCallback(
@@ -1097,6 +1552,7 @@ export const TournamentDetail: React.FC = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<PlayerSearchResult | null>(null);
   const insets = useSafeAreaInsets();
 
@@ -1613,6 +2069,11 @@ export const TournamentDetail: React.FC = () => {
 
   const organizerName = useMemo(() => {
     if (!tournament) return '';
+    // Official events carry a brand override so they read "Rallia" rather than
+    // whichever team member owns the row; player-run events fall back to the
+    // organizer's profile.
+    const brand = tournament.organizer_display_name?.trim();
+    if (brand) return brand;
     const p = profiles?.[tournament.organizer_id];
     return p ? getHumanName(p, '') : '';
   }, [profiles, tournament]);
@@ -1641,9 +2102,9 @@ export const TournamentDetail: React.FC = () => {
     if (!final?.winner_registration_id) return null;
     return (
       nameByRegId.get(final.winner_registration_id) ??
-      `Seed ${seedByRegId.get(final.winner_registration_id) ?? '?'}`
+      seedFallbackLabel(seedByRegId.get(final.winner_registration_id), t)
     );
-  }, [matches, totalRounds, nameByRegId, seedByRegId]);
+  }, [matches, totalRounds, nameByRegId, seedByRegId, t]);
 
   // Playable games only — bye/phantom slots auto-advance and are never played.
   const matchProgress = useMemo(() => {
@@ -1690,11 +2151,18 @@ export const TournamentDetail: React.FC = () => {
         ? myNextMatch.player2_registration_id
         : myNextMatch.player1_registration_id;
     if (!oppId) return null;
-    return nameByRegId.get(oppId) ?? `Seed ${seedByRegId.get(oppId) ?? '?'}`;
-  }, [myNextMatch, myRegId, nameByRegId, seedByRegId]);
+    return nameByRegId.get(oppId) ?? seedFallbackLabel(seedByRegId.get(oppId), t);
+  }, [myNextMatch, myRegId, nameByRegId, seedByRegId, t]);
 
-  // Flashscore-style content tabs (Overview / Bracket / Players / Details)
-  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  // Flashscore-style content tabs (Overview / Bracket / Players / Details).
+  // Keyed, not positional: tabs appear and disappear with tournament state, so
+  // an index would silently select a different tab underneath the user.
+  const [activeTabKey, setActiveTabKey] = useState<TabKey>('overview');
+
+  // Tab switches scroll back to the tab bar (measured, since the hero varies in
+  // height) so a new pane never opens mid-content.
+  const scrollRef = useRef<ScrollView>(null);
+  const heroHeightRef = useRef(0);
 
   const handleBracketMatchTap = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
@@ -1751,8 +2219,8 @@ export const TournamentDetail: React.FC = () => {
           tournamentId: tournament.id,
           player1RegId: p1RegId,
           player2RegId: p2RegId,
-          player1Name: nameByRegId.get(p1RegId) ?? `Seed ${seedByRegId.get(p1RegId) ?? '?'}`,
-          player2Name: nameByRegId.get(p2RegId) ?? `Seed ${seedByRegId.get(p2RegId) ?? '?'}`,
+          player1Name: nameByRegId.get(p1RegId) ?? seedFallbackLabel(seedByRegId.get(p1RegId), t),
+          player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
           isPickleball: sportName === 'pickleball',
           matchFormat: tournament.match_format,
           onSuccess: () => {
@@ -1761,7 +2229,7 @@ export const TournamentDetail: React.FC = () => {
         },
       });
     },
-    [tournament, sports, nameByRegId, seedByRegId]
+    [tournament, sports, nameByRegId, seedByRegId, t]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -1951,15 +2419,35 @@ export const TournamentDetail: React.FC = () => {
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 
+  // Pull-to-refresh: results, rosters and paid-registration state all settle
+  // server-side after the user leaves the screen, so refetch the whole set.
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(params.tournamentId) }),
+        queryClient.invalidateQueries({
+          queryKey: tournamentKeys.registrations(params.tournamentId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: tournamentKeys.participants(params.tournamentId),
+        }),
+        queryClient.invalidateQueries({ queryKey: tournamentKeys.matches(params.tournamentId) }),
+        userId
+          ? queryClient.invalidateQueries({
+              queryKey: tournamentKeys.myRegistration(params.tournamentId, userId),
+            })
+          : Promise.resolve(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient, params.tournamentId, userId]);
+
   if (isLoading || (invitePreviewEnabled && invitePreviewLoading)) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text size="sm" color={colors.textMuted} style={styles.centeredText}>
-            {t('tournamentDetail.loading')}
-          </Text>
-        </View>
+        <TournamentDetailSkeleton isDark={isDark} />
       </SafeAreaView>
     );
   }
@@ -2023,18 +2511,18 @@ export const TournamentDetail: React.FC = () => {
         : isLive
           ? 2
           : 3;
+  // Kept short: this sits in a narrow stats segment, so an upcoming start shows
+  // the date ("Jul 26") rather than a countdown phrase that would wrap.
   const startTileValue = isLive
     ? t('tournamentDetail.dashboard.stats.live')
     : isFinished
       ? t('tournamentDetail.dashboard.stats.ended')
-      : daysToStart > 0
-        ? t('tournamentDetail.dashboard.stats.startsInDays').replace('{n}', String(daysToStart))
-        : daysToStart === 0
-          ? t('tournamentDetail.dashboard.stats.startsToday')
-          : new Date(tournament.start_date).toLocaleDateString(locale, {
-              month: 'short',
-              day: 'numeric',
-            });
+      : daysToStart === 0
+        ? t('tournamentDetail.dashboard.stats.startsToday')
+        : new Date(tournament.start_date).toLocaleDateString(locale, {
+            month: 'short',
+            day: 'numeric',
+          });
   const myMatchP1 = myNextMatch?.player1_registration_id ?? null;
   const myMatchP2 = myNextMatch?.player2_registration_id ?? null;
   const registerCloseHint = tournament.registration_closes_at
@@ -2052,10 +2540,212 @@ export const TournamentDetail: React.FC = () => {
   const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
 
+  // Late entry by share link: registration closed but the bracket isn't
+  // published, so a still-active invite link still gets a visitor in.
+  const canLateEnterViaInvite =
+    !isOrganizer &&
+    tournament.status === 'registration_closed' &&
+    !tournament.bracket_locked_at &&
+    !!params.inviteToken &&
+    !isPaidTournament &&
+    !myActiveRegistration &&
+    spotsLeft > 0;
+
+  const spotsLeftLabel =
+    spotsLeft > 0
+      ? t(
+          isDoubles
+            ? 'tournamentDetail.dashboard.registerCta.spotsLeftTeams'
+            : 'tournamentDetail.dashboard.registerCta.spotsLeft'
+        ).replace('{n}', String(spotsLeft))
+      : null;
+
+  /**
+   * The one state-advancing action for this viewer, docked to the bottom of the
+   * screen so the conversion moment is never below the fold. Everything else
+   * (utilities, withdraw, informational cards) stays in the Overview tab.
+   * Null once the tournament is cancelled, finished, or there's nothing to do.
+   */
+  const primaryAction: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    onPress: () => void;
+    disabled: boolean;
+    hint: string | null;
+    testID: string;
+  } | null = (() => {
+    if (wasCancelled || isFinished || isLive) return null;
+    const withFee = (base: string) => (feeTotalLabel ? `${base} · ${feeTotalLabel}` : base);
+    const registerHint = [spotsLeftLabel, registerCloseHint, refundSummary]
+      .filter(Boolean)
+      .join(' · ');
+
+    // Organizer-sent invite: accepted via tournament_accept_invite.
+    if (isInvitedPending) {
+      const busy = acceptInvite.isPending || createRegistrationPayment.isPending;
+      return {
+        label: busy
+          ? t('tournamentDetail.actions.accepting')
+          : withFee(t('tournamentDetail.actions.acceptInvite')),
+        icon: 'checkmark-circle-outline',
+        onPress: onAcceptInvite,
+        disabled: busy,
+        hint: refundSummary,
+        testID: 'cta-accept-tournament-invite',
+      };
+    }
+    // Invite-only invitee confirming their own pending row.
+    if (isInvitePending) {
+      return {
+        label: registerPending
+          ? t('tournamentDetail.actions.accepting')
+          : t('tournamentDetail.actions.acceptInvite'),
+        icon: 'checkmark-circle-outline',
+        onPress: onRegister,
+        disabled: registerPending,
+        hint: null,
+        testID: 'cta-accept-invite',
+      };
+    }
+    if (!isOrganizer && !myActiveRegistration) {
+      if (tournament.status === 'registration_open' && spotsLeft > 0) {
+        return {
+          label: registerBusy
+            ? t('tournamentDetail.actions.registering')
+            : withFee(t('tournamentDetail.actions.register')),
+          icon: 'person-add-outline',
+          onPress: onRegister,
+          disabled: registerBusy,
+          hint: registerHint || null,
+          testID: 'cta-register',
+        };
+      }
+      if (canLateEnterViaInvite) {
+        return {
+          label: registerBusy
+            ? t('tournamentDetail.actions.registering')
+            : t('tournamentDetail.actions.register'),
+          icon: 'person-add-outline',
+          onPress: onRegister,
+          disabled: registerBusy,
+          hint: t('tournamentDetail.dashboard.registerCta.inviteLateDescription'),
+          testID: 'cta-register-invite-late',
+        };
+      }
+    }
+    if (isOrganizer) {
+      if (tournament.status === 'draft') {
+        return {
+          label: open.isPending
+            ? t('tournamentDetail.actions.opening')
+            : t('tournamentDetail.actions.openRegistration'),
+          icon: 'lock-open-outline',
+          onPress: onOpen,
+          disabled: open.isPending,
+          hint: t('tournamentDetail.dashboard.nextStep.draftDescription'),
+          testID: 'cta-open-registration',
+        };
+      }
+      if (tournament.status === 'registration_open') {
+        return {
+          label: close.isPending
+            ? t('tournamentDetail.actions.closing')
+            : t('tournamentDetail.actions.closeRegistration'),
+          icon: 'lock-closed-outline',
+          onPress: onClose,
+          disabled: close.isPending,
+          hint: t('tournamentDetail.dashboard.nextStep.openDescription')
+            .replace('{count}', String(activeCount))
+            .replace('{max}', String(tournament.max_participants)),
+          testID: 'cta-close-registration',
+        };
+      }
+      if (tournament.status === 'registration_closed') {
+        return {
+          label: t('tournamentDetail.actions.setUpBracket'),
+          icon: 'git-network-outline',
+          onPress: onSetUpBracket,
+          disabled: false,
+          hint: t('tournamentDetail.dashboard.nextStep.closedDescription').replace(
+            '{count}',
+            String(activeCount)
+          ),
+          testID: 'cta-setup-bracket',
+        };
+      }
+    }
+    return null;
+  })();
+
+  /** Organizer utilities, rendered as one quiet grouped list in the Overview. */
+  const organizerRows: Array<{
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    onPress: () => void;
+    badge?: { label: string; tone: 'positive' | 'warning' | 'muted' };
+    testID: string;
+  }> = [];
+  if (isOrganizer) {
+    if (adminActions.canInvite) {
+      organizerRows.push({
+        icon: 'share-social-outline',
+        label: t('tournamentDetail.actions.invitePlayers'),
+        onPress: handleInvitePlayers,
+        testID: 'action-invite-players',
+      });
+    }
+    if (tournament.status === 'registration_open' && !myActiveRegistration) {
+      organizerRows.push({
+        icon: 'person-add-outline',
+        label: register.isPending
+          ? t('tournamentDetail.actions.registering')
+          : t('tournamentDetail.actions.addMyself'),
+        onPress: onRegister,
+        testID: 'cta-add-myself',
+      });
+    }
+    // undefined = still loading; the row appears once the status is known.
+    if (isPaidTournament && payoutAccount !== undefined) {
+      organizerRows.push({
+        icon: 'wallet-outline',
+        label: t('tournamentDetail.payments.payoutRow.label'),
+        onPress:
+          payoutAccount === null ? promptOnboardBusinessType : () => void handleManagePayouts(),
+        badge:
+          payoutAccount === null
+            ? { label: t('tournamentDetail.payments.payoutRow.setup'), tone: 'muted' }
+            : !payoutAccount.chargesEnabled
+              ? { label: t('tournamentDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }
+              : { label: t('tournamentDetail.payments.payoutRow.ready'), tone: 'positive' },
+        testID: 'action-payouts',
+      });
+    }
+    if (adminActions.canEdit) {
+      organizerRows.push({
+        icon: 'create-outline',
+        label: t('tournamentDetail.actions.editDetails'),
+        onPress: handleEditDetails,
+        testID: 'action-edit-details',
+      });
+    }
+    if (canManageCoOrganizers) {
+      organizerRows.push({
+        icon: 'people-circle-outline',
+        label: t('tournamentDetail.coOrganizers.ctaTitle'),
+        onPress: handleManageCoOrganizers,
+        testID: 'action-manage-co-organizers',
+      });
+    }
+  }
+
   // Details-tab spec-sheet values: level requirement, venue, and the money
   // (entry fee / what the player pays / prize) so every attribute set at
   // creation has a persistent home beyond the glanceable hero.
   const ratingRangeLabel = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const rankingHeadline = tournamentRankingHeadline(tournament);
+  const showRegisteredChip =
+    !!myActiveRegistration && !wasCancelled && tournament.status !== 'archived';
+  const showRankingChip = !!rankingHeadline && awardsRankingPoints;
   const entryFeeLabel = isPaidTournament
     ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
     : null;
@@ -2080,143 +2770,183 @@ export const TournamentDetail: React.FC = () => {
   // (player-absorbs mode); organizer-absorbs makes the two amounts equal.
   const playerPaysServiceFee = !!feeQuote && feeQuote.totalCents > feeQuote.entryCents;
 
+  // Circuit Rallia eligibility. The ranking ceiling is stamped on EVERY
+  // tournament, certified organizer or not, so the ceiling alone would promise
+  // points the award will never pay — the certification is the real gate.
+  const pointsLadder = awardsRankingPoints ? tournamentPointsLadder(tournament) : null;
+  const showPointsTab = !!pointsLadder;
+
   const showBracketTab = shouldFetchBracket && matches.length > 0;
   const showPlayersTab = tournament.status !== 'draft';
-  const tabs: Array<{ key: 'overview' | 'bracket' | 'players' | 'details'; label: string }> = [
+  const showRulesTab = !!tournament.rules?.trim();
+  // Split rules into per-line rows so each rule reads as its own item. Falls
+  // back to the whole string as one row when the organizer wrote a paragraph.
+  const rulesLines = (tournament.rules ?? '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+  // Overview → Bracket → Rules → Points → Players → Details. Bracket sits up
+  // front because it's the tab that matters most once play starts; everything
+  // else follows the reading order of "what is this / what do I win / who's in".
+  const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'overview', label: t('tournamentDetail.tabs.overview') },
     ...(showBracketTab
       ? [{ key: 'bracket' as const, label: t('tournamentDetail.tabs.bracket') }]
+      : []),
+    ...(showRulesTab ? [{ key: 'rules' as const, label: t('tournamentDetail.tabs.rules') }] : []),
+    ...(showPointsTab
+      ? [{ key: 'points' as const, label: t('tournamentDetail.tabs.points') }]
       : []),
     ...(showPlayersTab
       ? [{ key: 'players' as const, label: t('tournamentDetail.tabs.players') }]
       : []),
     { key: 'details', label: t('tournamentDetail.tabs.details') },
   ];
-  const currentTabIdx = Math.min(activeTabIdx, tabs.length - 1);
-  const currentTabKey = tabs[currentTabIdx].key;
-  const playersTabIdx = tabs.findIndex(tab => tab.key === 'players');
+  // The selected tab can vanish (bracket published, rules cleared) — fall back
+  // to Overview rather than rendering an empty pane.
+  const currentTabKey = tabs.some(tab => tab.key === activeTabKey) ? activeTabKey : 'overview';
+  const hasPlayersTab = tabs.some(tab => tab.key === 'players');
 
-  const goToTab = (idx: number) => {
+  /** Tab-bar taps: switch panes and leave the scroll position alone. */
+  const selectTab = (key: TabKey) => {
     void lightHaptic();
-    setActiveTabIdx(idx);
+    setActiveTabKey(key);
+  };
+
+  /** Jumping into a tab from elsewhere on the page (hero badge, a CTA) does
+   *  scroll, otherwise the pane you asked for opens off-screen. */
+  const goToTab = (key: TabKey) => {
+    selectTab(key);
+    scrollRef.current?.scrollTo({ y: heroHeightRef.current, animated: true });
   };
 
   return (
     <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
+        ref={scrollRef}
         style={styles.screenScroll}
-        contentContainerStyle={styles.screenScrollContent}
+        contentContainerStyle={[
+          styles.screenScrollContent,
+          // Clear the docked bar (button + a two-line hint at worst) so the
+          // last card is never trapped behind it.
+          primaryAction ? { paddingBottom: 120 + insets.bottom } : null,
+        ]}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void onRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Hero */}
-        <View style={styles.heroFixed}>
-          <View
-            style={[
-              styles.heroCard,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            ]}
-          >
-            <Image
-              source={
-                tournament.logo_url
-                  ? { uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }
-                  : DEFAULT_TOURNAMENT_BANNER
-              }
-              style={styles.heroPoster}
-              resizeMode="cover"
-            />
-            <View style={styles.heroTopRow}>
+        <View
+          style={styles.heroFixed}
+          onLayout={e => {
+            heroHeightRef.current = e.nativeEvent.layout.height;
+          }}
+        >
+          {/* Full-bleed banner: status and prize float on the image, the scrim
+              carries the identity line. Mirrors the list card so tapping a card
+              reads as it expanding, and keeps the fold free for the tabs. The
+              description now lives at the top of the Details tab. */}
+          <View style={styles.heroBanner}>
+            <TournamentBanner logoUrl={tournament.logo_url} />
+            <View style={styles.heroBannerTopRow}>
               {isLive ? (
-                <LiveBadge label={t('tournamentDetail.status.in_progress')} isDark={isDark} />
+                <LiveBadge
+                  label={t('tournamentDetail.status.in_progress')}
+                  isDark={isDark}
+                  onImage
+                />
               ) : (
-                <StatusBadge status={tournament.status} colors={colors} t={t} />
+                <StatusBadge status={tournament.status} colors={colors} t={t} onImage />
               )}
+              {/* What the event is worth, both currencies together: cash in the
+                  solid gold pill, Circuit Rallia points in the lighter one. */}
+              <View style={styles.heroBannerBadges}>
+                {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
+                  <View style={styles.heroPrizeBadge}>
+                    <Ionicons name="trophy" size={13} color={accent[900]} />
+                    <Text size="xs" weight="semibold" color={accent[900]} numberOfLines={1}>
+                      {formatPrice(tournament.prize_money_cents, tournament.currency, {
+                        locale,
+                        trimZeroCents: true,
+                      })}
+                    </Text>
+                  </View>
+                ) : null}
+                {showRankingChip && rankingHeadline ? (
+                  <TouchableOpacity
+                    onPress={() => goToTab('points')}
+                    activeOpacity={0.7}
+                    style={styles.heroPointsBadge}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('tournamentDetail.tabs.points')}
+                    testID="hero-ranking-banner"
+                  >
+                    <Ionicons name="ribbon" size={13} color={accent[700]} />
+                    <Text size="xs" weight="semibold" color={accent[700]} numberOfLines={1}>
+                      {t('tournamentList.rankingPoints').replace(
+                        '{points}',
+                        String(rankingHeadline.points)
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
-
-            <Text size="2xl" weight="bold" color={colors.text} style={styles.heroTitle}>
-              {tournament.name}
-            </Text>
-            {tournament.description ? (
+            {/* Scrim is deliberately shallow and light: it only has to carry two
+                lines, and the text shadow does the rest of the legibility work,
+                so the artwork stays visible. */}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.68)']}
+              locations={[0, 0.42, 1]}
+              style={styles.heroScrim}
+            >
+              {/* One line: the 2.4:1 banner is a wide strip, so a two-line
+                  title left almost no artwork visible. */}
+              <Text
+                size="2xl"
+                weight="bold"
+                lineHeight="tight"
+                color="#ffffff"
+                numberOfLines={1}
+                style={styles.scrimText}
+              >
+                {tournament.name}
+              </Text>
               <Text
                 size="sm"
-                color={colors.textMuted}
-                style={styles.heroDescription}
-                numberOfLines={2}
+                color="rgba(255,255,255,0.92)"
+                numberOfLines={1}
+                style={styles.scrimText}
               >
-                {tournament.description}
+                {/* Dates + venue only: the organizer byline has its own row in
+                    the Overview's Event info card and overflowed this line. */}
+                {[
+                  `${formatDate(tournament.start_date)} – ${formatDate(tournament.end_date)}`,
+                  tournament.venue_name || tournament.city,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </Text>
-            ) : null}
+            </LinearGradient>
+          </View>
 
-            <View style={[styles.heroDivider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.heroMetaRows}>
-              <View style={styles.heroMetaRow}>
-                <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusActiveBg }]}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-                </View>
-                <Text size="sm" weight="medium" color={colors.text} style={styles.heroMetaText}>
-                  {formatDate(tournament.start_date)} – {formatDate(tournament.end_date)}
-                </Text>
-              </View>
-              {tournament.venue_name || tournament.city ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {tournament.venue_name || tournament.city}
-                  </Text>
-                </View>
-              ) : null}
-              {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {`${t('tournamentDetail.dashboard.prizePool')} ${formatPrice(
-                      tournament.prize_money_cents,
-                      tournament.currency,
-                      { locale, trimZeroCents: true }
-                    )}`}
-                  </Text>
-                </View>
-              ) : null}
-              {organizerName ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {t('tournamentDetail.dashboard.organizedBy').replace('{name}', organizerName)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-
-            {myActiveRegistration &&
-              tournament.status !== 'cancelled' &&
-              tournament.status !== 'archived' && (
-                <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                    {myActiveRegistration.status === 'pending'
+          {/* One chip row replaces the registered band and the chat button. */}
+          {showRegisteredChip || !!chatConversationId ? (
+            <View style={styles.heroChipRow}>
+              {showRegisteredChip ? (
+                <HeroChip
+                  icon="checkmark-circle"
+                  tone="positive"
+                  colors={colors}
+                  label={
+                    myActiveRegistration.status === 'pending'
                       ? isInvitePending || isInvitedPending
                         ? t('tournamentDetail.actions.invitePendingLabel')
                         : t('tournamentDetail.actions.registrationPendingLabel')
@@ -2225,45 +2955,44 @@ export const TournamentDetail: React.FC = () => {
                             '{name}',
                             myPartnerName
                           )
-                        : t('tournamentDetail.actions.registeredLabel')}
-                  </Text>
-                </View>
-              )}
-
-            {chatConversationId && (
-              <TouchableOpacity
-                onPress={handleOpenChat}
-                activeOpacity={0.8}
-                style={[styles.heroChatButton, { borderColor: colors.border }]}
-                accessibilityRole="button"
-                accessibilityLabel={t('tournamentDetail.chat.open')}
-              >
-                <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
-                <Text size="sm" weight="semibold" color={colors.primary}>
-                  {t('tournamentDetail.chat.open')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                        : t('tournamentDetail.actions.registeredLabel')
+                  }
+                />
+              ) : null}
+              {chatConversationId ? (
+                <HeroChip
+                  icon="chatbubbles-outline"
+                  tone="outline"
+                  colors={colors}
+                  onPress={handleOpenChat}
+                  label={t('tournamentDetail.chat.open')}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
-        {/* Sticky tab bar */}
-        <View style={[styles.tabTrackSticky, { backgroundColor: colors.background }]}>
-          <View style={[styles.tabTrack, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
-            {tabs.map((tab, i) => {
-              const selected = i === currentTabIdx;
+        {/* Sticky tab bar — scrollable underline tabs: each sized to its label
+            and left-aligned, so any number of tabs scrolls cleanly */}
+        <View
+          style={[
+            styles.tabBarSticky,
+            { backgroundColor: colors.background, borderBottomColor: colors.border },
+          ]}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {tabs.map(tab => {
+              const selected = tab.key === currentTabKey;
               return (
                 <TouchableOpacity
                   key={tab.key}
-                  onPress={() => goToTab(i)}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.tabPill,
-                    selected && [
-                      styles.tabPillActive,
-                      { backgroundColor: isDark ? darkTheme.card : lightTheme.card },
-                    ],
-                  ]}
+                  onPress={() => selectTab(tab.key)}
+                  activeOpacity={0.7}
+                  style={styles.tabItem}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
                   testID={`tournament-tab-${tab.key}`}
@@ -2272,13 +3001,20 @@ export const TournamentDetail: React.FC = () => {
                     size="sm"
                     weight={selected ? 'semibold' : 'medium'}
                     color={selected ? colors.primary : colors.textMuted}
+                    numberOfLines={1}
                   >
                     {tab.label}
                   </Text>
+                  <View
+                    style={[
+                      styles.tabUnderline,
+                      { backgroundColor: selected ? colors.primary : 'transparent' },
+                    ]}
+                  />
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
         {/* ============================ OVERVIEW ============================ */}
@@ -2310,8 +3046,50 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Lifecycle pipeline */}
-            {!wasCancelled && (
+            {/* Champion banner */}
+            {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
+
+            {/* Stats first: the numbers worth a glance, one segmented card */}
+            <View
+              style={[
+                styles.section,
+                styles.statsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <StatSegment
+                value={`${activeCount}/${tournament.max_participants}`}
+                label={t('tournamentDetail.dashboard.stats.registered')}
+                colors={colors}
+              />
+              {(isLive || isFinished) && !wasCancelled ? (
+                <StatSegment
+                  value={`${matchProgress.done}/${matchProgress.total}`}
+                  label={t('tournamentDetail.dashboard.stats.games')}
+                  colors={colors}
+                  showDivider
+                />
+              ) : tournament.status === 'registration_open' && tournament.registration_closes_at ? (
+                <StatSegment
+                  value={new Date(tournament.registration_closes_at).toLocaleDateString(locale, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                  label={t('tournamentDetail.dashboard.stats.deadline')}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              <StatSegment
+                value={startTileValue}
+                label={t('tournamentDetail.dashboard.stats.start')}
+                colors={colors}
+                showDivider
+              />
+            </View>
+
+            {/* Lifecycle pipeline — drops away once the event is over */}
+            {!wasCancelled && !isFinished && (
               <View
                 style={[
                   styles.section,
@@ -2323,68 +3101,8 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Champion banner */}
-            {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
-
-            {/* Organizer: edit & co-organizers up front (also in the header ⋯ menu) */}
-            {isOrganizer && (adminActions.canEdit || canManageCoOrganizers) && (
-              <View style={styles.organizerActionRow}>
-                {adminActions.canEdit && (
-                  <Pressable
-                    onPress={handleEditDetails}
-                    style={({ pressed }) => [
-                      styles.organizerActionBtn,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.cardBackground,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    testID="action-edit-details"
-                  >
-                    <Ionicons name="create-outline" size={18} color={colors.primary} />
-                    <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('tournamentDetail.actions.editDetails')}
-                    </Text>
-                  </Pressable>
-                )}
-                {canManageCoOrganizers && (
-                  <Pressable
-                    onPress={handleManageCoOrganizers}
-                    style={({ pressed }) => [
-                      styles.organizerActionBtn,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.cardBackground,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    testID="action-manage-co-organizers"
-                  >
-                    <Ionicons name="people-circle-outline" size={18} color={colors.primary} />
-                    <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('tournamentDetail.coOrganizers.ctaTitle')}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-
-            {/* Invite players — prominent CTA, only once registration is open */}
-            {isOrganizer && tournament.status === 'registration_open' && (
-              <DashboardCtaCard
-                icon="share-social-outline"
-                title={t('tournamentDetail.invitePlayers.ctaTitle')}
-                description={t('tournamentDetail.invitePlayers.ctaDescription')}
-                buttonLabel={t('tournamentDetail.actions.invitePlayers')}
-                buttonIcon="share-social-outline"
-                onPress={handleInvitePlayers}
-                accent="secondary"
-                colors={colors}
-                testID="cta-invite-players"
-              />
-            )}
-
+            {/* At most one accent card: approvals waiting, or the live summary.
+                Everything state-advancing lives in the docked bar instead. */}
             {isOrganizer && pendingRequestRows.length > 0 && (
               <DashboardCtaCard
                 icon="hourglass-outline"
@@ -2395,63 +3113,10 @@ export const TournamentDetail: React.FC = () => {
                 )}
                 buttonLabel={t('tournamentDetail.dashboard.pendingRequestsCta.review')}
                 buttonIcon="people-outline"
-                onPress={() => playersTabIdx >= 0 && goToTab(playersTabIdx)}
+                onPress={() => hasPlayersTab && goToTab('players')}
                 accent="secondary"
                 colors={colors}
                 testID="cta-pending-requests"
-              />
-            )}
-
-            {/* Organizer: what's next */}
-            {isOrganizer && tournament.status === 'draft' && (
-              <DashboardCtaCard
-                icon="rocket-outline"
-                title={t('tournamentDetail.dashboard.nextStep.draftTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.draftDescription')}
-                buttonLabel={
-                  open.isPending
-                    ? t('tournamentDetail.actions.opening')
-                    : t('tournamentDetail.actions.openRegistration')
-                }
-                buttonIcon="lock-open-outline"
-                onPress={onOpen}
-                disabled={open.isPending}
-                colors={colors}
-                testID="cta-open-registration"
-              />
-            )}
-            {isOrganizer && tournament.status === 'registration_open' && (
-              <DashboardCtaCard
-                icon="people-outline"
-                title={t('tournamentDetail.dashboard.nextStep.openTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.openDescription')
-                  .replace('{count}', String(activeCount))
-                  .replace('{max}', String(tournament.max_participants))}
-                buttonLabel={
-                  close.isPending
-                    ? t('tournamentDetail.actions.closing')
-                    : t('tournamentDetail.actions.closeRegistration')
-                }
-                buttonIcon="lock-closed-outline"
-                onPress={onClose}
-                disabled={close.isPending}
-                colors={colors}
-                testID="cta-close-registration"
-              />
-            )}
-            {isOrganizer && tournament.status === 'registration_closed' && (
-              <DashboardCtaCard
-                icon="git-network-outline"
-                title={t('tournamentDetail.dashboard.nextStep.closedTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.closedDescription').replace(
-                  '{count}',
-                  String(activeCount)
-                )}
-                buttonLabel={t('tournamentDetail.actions.setUpBracket')}
-                buttonIcon="git-network-outline"
-                onPress={onSetUpBracket}
-                colors={colors}
-                testID="cta-setup-bracket"
               />
             )}
             {isOrganizer && isLive && (
@@ -2465,144 +3130,18 @@ export const TournamentDetail: React.FC = () => {
               />
             )}
 
-            {/* Participant: register CTA */}
-            {!isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
-              <DashboardCtaCard
-                icon="person-add-outline"
-                title={
-                  spotsLeft > 0
-                    ? t('tournamentDetail.dashboard.registerCta.title')
-                    : t('tournamentDetail.dashboard.registerCta.full')
-                }
-                description={
-                  spotsLeft > 0
-                    ? [
-                        t(
-                          isDoubles
-                            ? 'tournamentDetail.dashboard.registerCta.spotsLeftTeams'
-                            : 'tournamentDetail.dashboard.registerCta.spotsLeft'
-                        ).replace('{n}', String(spotsLeft)),
-                        registerCloseHint,
-                        refundSummary,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    : t('tournamentDetail.dashboard.registerCta.fullDescription')
-                }
-                buttonLabel={
-                  spotsLeft > 0
-                    ? registerBusy
-                      ? t('tournamentDetail.actions.registering')
-                      : feeTotalLabel
-                        ? `${t('tournamentDetail.actions.register')} · ${feeTotalLabel}`
-                        : t('tournamentDetail.actions.register')
-                    : undefined
-                }
-                buttonIcon="person-add-outline"
-                onPress={spotsLeft > 0 ? onRegister : undefined}
-                disabled={registerBusy}
-                colors={colors}
-                testID="cta-register"
-              />
-            )}
-
-            {/* Late entry via shareable link: registration has closed but the
-                bracket isn't published yet, so a visitor who followed a still-active
-                invite link can still join. Free tournaments only (the paid flow
-                closes with registration). */}
+            {/* Full house: no docked action to show, so say so here instead. */}
             {!isOrganizer &&
-              tournament.status === 'registration_closed' &&
-              !tournament.bracket_locked_at &&
-              !!params.inviteToken &&
-              !isPaidTournament &&
+              tournament.status === 'registration_open' &&
               !myActiveRegistration &&
-              spotsLeft > 0 && (
+              spotsLeft === 0 && (
                 <DashboardCtaCard
                   icon="person-add-outline"
-                  title={t('tournamentDetail.dashboard.registerCta.title')}
-                  description={t('tournamentDetail.dashboard.registerCta.inviteLateDescription')}
-                  buttonLabel={
-                    registerBusy
-                      ? t('tournamentDetail.actions.registering')
-                      : t('tournamentDetail.actions.register')
-                  }
-                  buttonIcon="person-add-outline"
-                  onPress={onRegister}
-                  disabled={registerBusy}
+                  title={t('tournamentDetail.dashboard.registerCta.full')}
+                  description={t('tournamentDetail.dashboard.registerCta.fullDescription')}
                   colors={colors}
-                  testID="cta-register-invite-late"
                 />
               )}
-
-            {/* Organizer: add myself as a player */}
-            {isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
-              <DashboardCtaCard
-                icon="person-add-outline"
-                title={t('tournamentDetail.dashboard.addMyselfCta.title')}
-                description={t('tournamentDetail.dashboard.addMyselfCta.description')}
-                buttonLabel={
-                  register.isPending
-                    ? t('tournamentDetail.actions.registering')
-                    : t('tournamentDetail.actions.addMyself')
-                }
-                buttonIcon="person-add-outline"
-                onPress={onRegister}
-                disabled={register.isPending}
-                colors={colors}
-                testID="cta-add-myself"
-              />
-            )}
-
-            {/* Registered (any persona): withdraw card — only while registration is open */}
-            {/* Invite-only invitee: accept the pending invitation (organizer
-                never approves it — the invitee confirms it themselves). */}
-            {isInvitePending && !isInvitedPending && (
-              <DashboardCtaCard
-                icon="mail-open-outline"
-                title={t('tournamentDetail.dashboard.inviteCta.title')}
-                description={t(
-                  isDoubles
-                    ? 'tournamentDetail.dashboard.inviteCta.descriptionDoubles'
-                    : 'tournamentDetail.dashboard.inviteCta.description'
-                )}
-                buttonLabel={
-                  registerPending
-                    ? t('tournamentDetail.actions.accepting')
-                    : t('tournamentDetail.actions.acceptInvite')
-                }
-                buttonIcon="checkmark-circle-outline"
-                onPress={onRegister}
-                disabled={registerPending}
-                testID="cta-accept-invite"
-                colors={colors}
-              />
-            )}
-
-            {/* Organizer intra-app invite: accept via tournament_accept_invite
-                (doubles supplies a partner through the picker). */}
-            {isInvitedPending && (
-              <DashboardCtaCard
-                icon="mail-open-outline"
-                title={t('tournamentDetail.dashboard.inviteCta.title')}
-                description={t(
-                  isDoubles
-                    ? 'tournamentDetail.dashboard.inviteCta.descriptionDoubles'
-                    : 'tournamentDetail.dashboard.inviteCta.description'
-                )}
-                buttonLabel={
-                  acceptInvite.isPending || createRegistrationPayment.isPending
-                    ? t('tournamentDetail.actions.accepting')
-                    : feeTotalLabel
-                      ? `${t('tournamentDetail.actions.acceptInvite')} · ${feeTotalLabel}`
-                      : t('tournamentDetail.actions.acceptInvite')
-                }
-                buttonIcon="checkmark-circle-outline"
-                onPress={onAcceptInvite}
-                disabled={acceptInvite.isPending || createRegistrationPayment.isPending}
-                testID="cta-accept-tournament-invite"
-                colors={colors}
-              />
-            )}
 
             {myActiveRegistration && tournament.status === 'registration_open' && (
               <DashboardCtaCard
@@ -2733,29 +3272,170 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Stats */}
-            <View style={[styles.section, styles.statsRow]}>
-              <StatTile
-                icon="people-outline"
-                value={`${activeCount}/${tournament.max_participants}`}
-                label={t('tournamentDetail.dashboard.stats.registered')}
-                colors={colors}
-              />
-              {(isLive || isFinished) && !wasCancelled && (
-                <StatTile
-                  icon="checkmark-done-outline"
-                  value={`${matchProgress.done}/${matchProgress.total}`}
-                  label={t('tournamentDetail.dashboard.stats.games')}
-                  colors={colors}
-                />
-              )}
-              <StatTile
+            {/* About: the organizer's pitch, clamped; the full text lives in
+                Details. The length check approximates "6 lines would clip". */}
+            {tournament.description?.trim() ? (
+              <Section title={t('tournamentDetail.labels.description')} colors={colors}>
+                <View style={styles.aboutBlock}>
+                  <Text size="sm" color={colors.text} style={styles.aboutText} numberOfLines={6}>
+                    {tournament.description}
+                  </Text>
+                  {tournament.description.length > 280 && (
+                    <TouchableOpacity
+                      onPress={() => goToTab('details')}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      style={styles.aboutMore}
+                    >
+                      <Text size="sm" weight="semibold" color={colors.primary}>
+                        {t('tournamentDetail.overview.readMore')}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </Section>
+            ) : null}
+
+            {/* Event info: the friendly at-a-glance card (Details keeps the
+                full spec sheet). Rows only render when they have something. */}
+            <Section title={t('tournamentDetail.overview.infoTitle')} colors={colors}>
+              <OverviewInfoRow
                 icon="calendar-outline"
-                value={startTileValue}
-                label={t('tournamentDetail.dashboard.stats.start')}
+                text={`${formatDate(tournament.start_date)} – ${formatDate(tournament.end_date)}`}
                 colors={colors}
               />
-            </View>
+              {tournament.venue_name || tournament.city ? (
+                <OverviewInfoRow
+                  icon="location-outline"
+                  text={tournament.venue_name || tournament.city || ''}
+                  subText={venueSecondaryLine || undefined}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {ratingRangeLabel ? (
+                <OverviewInfoRow
+                  icon="analytics-outline"
+                  text={`${t('tournamentDetail.labels.ratingRange')} · ${ratingRangeLabel}`}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {entryFeeLabel ? (
+                <OverviewInfoRow
+                  icon="card-outline"
+                  text={`${t('tournamentDetail.labels.entryFee')} · ${entryFeeLabel}`}
+                  subText={refundSummary ?? undefined}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {organizerName ? (
+                <OverviewInfoRow
+                  icon="person-outline"
+                  text={t('tournamentDetail.dashboard.organizedBy').replace(
+                    '{name}',
+                    organizerName
+                  )}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+            </Section>
+
+            {/* Who's in: social proof, tappable through to the Players tab */}
+            {hasPlayersTab && registeredParticipantPlayers.length > 0 && (
+              <Section title={t('tournamentDetail.dashboard.participants.title')} colors={colors}>
+                <TouchableOpacity
+                  onPress={() => goToTab('players')}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('tournamentDetail.tabs.players')}
+                  style={styles.playersPreviewRow}
+                  testID="overview-players-preview"
+                >
+                  <View style={styles.playersPreviewAvatars}>
+                    {registeredParticipantPlayers.slice(0, 6).map((p, i) => {
+                      const uri = getProfilePictureUrl(p.profile_picture_url);
+                      return (
+                        <View
+                          key={p.id}
+                          style={[
+                            styles.playersPreviewAvatar,
+                            i > 0 && styles.playersPreviewAvatarOverlap,
+                            {
+                              backgroundColor: colors.statusMutedBg,
+                              borderColor: colors.cardBackground,
+                            },
+                          ]}
+                        >
+                          {uri ? (
+                            <Image source={{ uri }} style={styles.playersPreviewAvatarImg} />
+                          ) : (
+                            <Ionicons name="person" size={14} color={colors.textMuted} />
+                          )}
+                        </View>
+                      );
+                    })}
+                    {registeredParticipantPlayers.length > 6 && (
+                      <View
+                        style={[
+                          styles.playersPreviewAvatar,
+                          styles.playersPreviewAvatarOverlap,
+                          {
+                            backgroundColor: colors.statusActiveBg,
+                            borderColor: colors.cardBackground,
+                          },
+                        ]}
+                      >
+                        <Text size="xs" weight="semibold" color={colors.primary}>
+                          +{registeredParticipantPlayers.length - 6}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text size="sm" weight="semibold" color={colors.textMuted}>
+                    {activeCount}/{tournament.max_participants}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </Section>
+            )}
+
+            {/* Organizer utilities: quiet grouped rows, not competing cards.
+                Edit and Invite also live in the header ⋯ menu. */}
+            {isOrganizer && organizerRows.length > 0 && (
+              <View style={styles.section}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionTitle}
+                >
+                  {t('tournamentDetail.dashboard.manageTitle').toUpperCase()}
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
+                >
+                  {organizerRows.map((row, i) => (
+                    <OverviewActionRow
+                      key={row.testID}
+                      icon={row.icon}
+                      label={row.label}
+                      badge={row.badge}
+                      onPress={row.onPress}
+                      showDivider={i > 0}
+                      colors={colors}
+                      testID={row.testID}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -2818,6 +3498,12 @@ export const TournamentDetail: React.FC = () => {
               onPlayerPress={handlePlayerPress}
               onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
               currentUserId={userId}
+              maxParticipants={tournament.max_participants}
+              deadlineLabel={
+                tournament.registration_closes_at && tournament.status === 'registration_open'
+                  ? formatDate(tournament.registration_closes_at)
+                  : null
+              }
               colors={colors}
               t={t}
             />
@@ -2936,17 +3622,74 @@ export const TournamentDetail: React.FC = () => {
                 ) : null}
               </Section>
             ) : null}
+          </View>
+        )}
 
-            {tournament.rules?.trim() ? (
-              <LabeledBlock
-                label={t('tournamentDetail.dashboard.rulesTitle')}
-                value={tournament.rules}
-                colors={colors}
-              />
-            ) : null}
+        {/* ============================= POINTS ============================= */}
+        {currentTabKey === 'points' && pointsLadder && (
+          <PointsTab ladder={pointsLadder} isDoubles={isDoubles} colors={colors} t={t} />
+        )}
+
+        {/* ============================= RULES ============================== */}
+        {currentTabKey === 'rules' && showRulesTab && (
+          <View style={styles.tabContent}>
+            <View
+              style={[
+                styles.card,
+                styles.rulesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              {rulesLines.map((line, i) => (
+                <View key={i} style={styles.ruleRow}>
+                  <View style={[styles.ruleDot, { backgroundColor: colors.primary }]} />
+                  <Text size="sm" color={colors.text} style={styles.ruleText}>
+                    {line}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
       </ScrollView>
+
+      {/* Docked primary action — the one thing this viewer should do next, kept
+          out of the scroll so it's reachable from any tab at any position. */}
+      {primaryAction && (
+        <View
+          style={[
+            styles.dockedBar,
+            {
+              backgroundColor: colors.cardBackground,
+              borderTopColor: colors.border,
+              paddingBottom: spacingPixels[3] + insets.bottom,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={primaryAction.onPress}
+            disabled={primaryAction.disabled}
+            activeOpacity={0.7}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: colors.primary },
+              primaryAction.disabled && styles.buttonDisabled,
+            ]}
+            accessibilityRole="button"
+            testID={primaryAction.testID}
+          >
+            <Ionicons name={primaryAction.icon} size={20} color="#ffffff" />
+            <Text size="base" weight="semibold" color="#ffffff">
+              {primaryAction.label}
+            </Text>
+          </TouchableOpacity>
+          {primaryAction.hint ? (
+            <Text size="xs" color={colors.textMuted} numberOfLines={2} style={styles.dockedBarHint}>
+              {primaryAction.hint}
+            </Text>
+          ) : null}
+        </View>
+      )}
 
       {/* Organizer admin overflow menu (anchored under the header "⋯") */}
       <Modal
@@ -3169,7 +3912,7 @@ const slotLabel = (
   if (name) return name;
   // Fall back to the seed rank for a determined-but-unnamed slot.
   const seed = seedByRegId.get(regId);
-  return seed !== undefined ? `Seed ${seed}` : t('tournamentDetail.bracket.tbd');
+  return seed !== undefined ? seedFallbackLabel(seed, t) : t('tournamentDetail.bracket.tbd');
 };
 
 type SlotKind = 'player' | 'bye' | 'tbd' | 'phantom';
@@ -3277,7 +4020,7 @@ const BracketSection: React.FC<{
   const finalMatch = matches.find(m => m.round_number === totalRounds && m.winner_registration_id);
   const championRegId = finalMatch?.winner_registration_id ?? null;
   const championName = championRegId
-    ? (nameByRegId.get(championRegId) ?? `Seed ${seedByRegId.get(championRegId) ?? '?'}`)
+    ? (nameByRegId.get(championRegId) ?? seedFallbackLabel(seedByRegId.get(championRegId), t))
     : null;
 
   const renderMatch = (m: MatchRow) => {
@@ -3751,22 +4494,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
   },
-  organizerActionRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[2],
-    marginBottom: spacingPixels[4],
-  },
-  organizerActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
   playersInviteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3781,21 +4508,162 @@ const styles = StyleSheet.create({
     marginHorizontal: spacingPixels[4],
   },
   heroFixed: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[5],
-    paddingBottom: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
-  heroCard: {
-    borderRadius: radiusPixels['2xl'],
+  heroBanner: {
+    position: 'relative',
+  },
+  heroBannerTopRow: {
+    position: 'absolute',
+    top: spacingPixels[3],
+    left: spacingPixels[4],
+    right: spacingPixels[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+  },
+  heroBannerBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    marginLeft: 'auto',
+    flexShrink: 1,
+  },
+  heroPrizeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    backgroundColor: accent[300],
+  },
+  heroPointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+  },
+  heroScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[3],
+    gap: spacingPixels[1],
+  },
+  scrimText: {
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
+  heroChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+  },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
     borderWidth: 1,
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    flexShrink: 1,
+  },
+  overviewActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3.5],
+  },
+  overviewActionLabel: {
+    flex: 1,
+  },
+  overviewActionBadge: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+  },
+  aboutBlock: {
+    padding: spacingPixels[4],
+    gap: spacingPixels[2],
+  },
+  aboutText: {
+    lineHeight: 20,
+  },
+  aboutMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    alignSelf: 'flex-start',
+  },
+  overviewInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  overviewInfoIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewInfoTexts: {
+    flex: 1,
+    gap: 1,
+  },
+  playersPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  playersPreviewAvatars: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  playersPreviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  playersPreviewAvatarOverlap: {
+    marginLeft: -10,
+  },
+  playersPreviewAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  dockedBar: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacingPixels[1.5],
+  },
+  dockedBarHint: {
+    textAlign: 'center',
+    lineHeight: 16,
   },
   screenScroll: {
     flex: 1,
@@ -3803,33 +4671,49 @@ const styles = StyleSheet.create({
   screenScrollContent: {
     flexGrow: 1,
   },
-  tabTrackSticky: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[1],
-    paddingBottom: spacingPixels[2],
+  tabBarSticky: {
+    paddingTop: spacingPixels[2],
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  tabTrack: {
+  tabBarContent: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
+    alignItems: 'flex-end',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
   },
-  tabPill: {
-    flex: 1,
+  tabItem: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[2],
-    borderRadius: 10,
+    paddingTop: spacingPixels[2],
+    gap: spacingPixels[2],
   },
-  tabPillActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  tabUnderline: {
+    alignSelf: 'stretch',
+    height: 2,
+    borderRadius: 1,
   },
   tabContent: {
     padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
+  },
+  rulesCard: {
+    paddingVertical: spacingPixels[1],
+  },
+  ruleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2.5],
+  },
+  ruleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 7,
+  },
+  ruleText: {
+    flex: 1,
+    lineHeight: 20,
   },
   // Players tab: no horizontal padding — PlayerCard supplies its own 16px
   // side margins so the cards align with the rest of the app.
@@ -3837,16 +4721,70 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
-  heroPoster: {
-    width: '100%',
-    height: 160,
-    borderRadius: radiusPixels.lg,
-    marginBottom: spacingPixels[3],
+  pointsHero: {
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    padding: spacingPixels[5],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
   },
-  heroTopRow: {
+  pointsHeroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  pointsHeroValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacingPixels[1.5],
+  },
+  pointsHeroCaption: {
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  pointsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacingPixels[3],
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pointsRowLast: {
+    borderBottomWidth: 0,
+  },
+  pointsRowIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointsRowLabel: {
+    flex: 1,
+  },
+  pointsRowValue: {
+    fontVariant: ['tabular-nums'],
+  },
+  pointsNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  skeletonTabBar: {
+    flexDirection: 'row',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
+  },
+  skeletonCardGap: {
+    marginTop: spacingPixels[4],
   },
   statusBadge: {
     paddingHorizontal: spacingPixels[3],
@@ -3883,13 +4821,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  heroTitle: {
-    marginBottom: spacingPixels[1.5],
-    lineHeight: 30,
-  },
-  heroDescription: {
-    lineHeight: 20,
-  },
   stackedBlock: {
     padding: spacingPixels[4],
     gap: spacingPixels[1],
@@ -3913,11 +4844,6 @@ const styles = StyleSheet.create({
   stackedValue: {
     lineHeight: 20,
   },
-  heroDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-  },
   section: {
     marginBottom: spacingPixels[5],
   },
@@ -3937,24 +4863,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  heroMetaRows: {
-    gap: spacingPixels[2.5],
-  },
-  heroMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2.5],
-  },
-  heroMetaIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroMetaText: {
-    flex: 1,
   },
   stepperCard: {
     borderRadius: radiusPixels.lg,
@@ -4012,22 +4920,59 @@ const styles = StyleSheet.create({
   ctaCardDescription: {
     lineHeight: 19,
   },
-  statsRow: {
+  statsCard: {
     flexDirection: 'row',
-    gap: spacingPixels[2],
-  },
-  statTile: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[2],
+    alignItems: 'stretch',
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
+    paddingVertical: spacingPixels[3.5],
+  },
+  statSegment: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: spacingPixels[2],
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: spacingPixels[0.5],
   },
   participantEmpty: {
-    padding: spacingPixels[4],
     alignItems: 'center',
+    paddingVertical: spacingPixels[8],
+    paddingHorizontal: spacingPixels[5],
+    gap: spacingPixels[2],
+  },
+  participantEmptyDisc: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[1],
+  },
+  participantEmptyText: {
+    textAlign: 'center',
+  },
+  participantEmptyStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    gap: spacingPixels[5],
+    marginTop: spacingPixels[3],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  participantEmptyStat: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  participantEmptyStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
   },
   pendingSection: {
     marginBottom: spacingPixels[4],
@@ -4090,27 +5035,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3.5],
-  },
-  heroChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginTop: spacingPixels[3],
-  },
-  heroRegistered: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    marginTop: spacingPixels[4],
   },
   bracketChipsRow: {
     flexDirection: 'row',

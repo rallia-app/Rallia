@@ -3,22 +3,33 @@
 appId: com.mathisl971.rallia-app
 tags: [tournaments]
 ---
-# Close registration
-- scrollUntilVisible:
-    element:
+# Close registration (docked bar, always on screen)
+- extendedWaitUntil:
+    visible:
       id: "cta-close-registration"
-    direction: UP
     timeout: 10000
 - tapOn:
     id: "cta-close-registration"
 - extendedWaitUntil:
     visible:
-      id: "cta-generate-bracket"
+      id: "cta-setup-bracket"
     timeout: 20000
 
-# Generate the bracket
+# Open the bracket-setup screen and publish the bracket
+- tapOn:
+    id: "cta-setup-bracket"
+- extendedWaitUntil:
+    visible:
+      id: "cta-generate-bracket"
+    timeout: 20000
 - tapOn:
     id: "cta-generate-bracket"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-generate-bracket"
+    timeout: 10000
+- tapOn:
+    id: "confirm-generate-bracket"
 - extendedWaitUntil:
     visible: ".*Tournament in progress.*"
     timeout: 30000

@@ -2,7 +2,7 @@
 #
 # Requires:
 #   - the build running with EXPO_PUBLIC_E2E=1 (gates the auto-opener sheets:
-#     referral, weekly check-in, summer-league, pending match feedback)
+#     referral, weekly check-in, Série 1 announcement, pending match feedback)
 #   - demo@rallia.ca already signed in (session persists across launches)
 #   - demo granted admin on the target env (unlocks the create action)
 appId: com.mathisl971.rallia-app

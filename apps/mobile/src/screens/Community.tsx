@@ -102,7 +102,7 @@ const Community = () => {
       onPress: handleTournaments,
     });
 
-    // Leagues stay admin-gated while the feature is in rollout.
+    // Leagues are re-admin-gated during rollout.
     if (isAdmin) {
       buttons.push({
         id: 'leagues',

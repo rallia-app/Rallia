@@ -44,6 +44,7 @@ import {
   useProfileCompleteness,
   chatKeys,
   useTheme,
+  useAdminStatus,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { spacingPixels, fontSizePixels, neutral } from '@rallia/design-system';
@@ -680,6 +681,40 @@ function TournamentCreateHeaderButton() {
       style={{ marginRight: spacingPixels[2] }}
       accessibilityRole="button"
       accessibilityLabel={t('actions.createTournament')}
+    >
+      <Ionicons name="add" size={28} color={colors.headerForeground} />
+    </TouchableOpacity>
+  );
+}
+
+/** Header "+" that opens the league creation wizard. Admin-only during rollout. */
+function LeagueCreateHeaderButton({
+  navigation,
+}: {
+  navigation: { navigate: (screen: 'LeagueDetail', params: { leagueId: string }) => void };
+}) {
+  const { colors } = useThemeStyles();
+  const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+  const { isAdmin } = useAdminStatus();
+
+  if (!isAdmin) return null;
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (!guardAction()) return;
+        lightHaptic();
+        void SheetManager.show('league-create', {
+          payload: {
+            onCreated: (leagueId: string) => navigation.navigate('LeagueDetail', { leagueId }),
+          },
+        });
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ marginRight: spacingPixels[2] }}
+      accessibilityRole="button"
+      accessibilityLabel={t('actions.createLeague')}
     >
       <Ionicons name="add" size={28} color={colors.headerForeground} />
     </TouchableOpacity>
@@ -1593,6 +1628,7 @@ export default function AppNavigator() {
           ...sharedOptions,
           headerTitle: t('leagueList.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
+          headerRight: () => <LeagueCreateHeaderButton navigation={navigation} />,
         })}
       />
 

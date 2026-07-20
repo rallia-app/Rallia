@@ -32,7 +32,6 @@ export default [
       '*.config.mjs',
       'apps/**',
       'packages/**',
-      'supabase/types.ts',
     ],
   },
 ];

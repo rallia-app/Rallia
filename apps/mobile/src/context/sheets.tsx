@@ -44,10 +44,15 @@ import { TournamentInviteSheet } from '#/features/tournaments/components/Tournam
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
+import {
+  LeagueEditActionSheet,
+  LeagueCreateActionSheet,
+} from '#/features/leagues/components/LeagueFormSheets';
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
 import type { TournamentEditData } from '#/features/tournaments';
+import type { LeagueEditData } from '#/features/leagues';
 // Facilities components
 import { ExternalBookingActionSheet } from '#/features/facilities/components/ExternalBookingSheet';
 import { CourtBookingActionSheet } from '#/features/facilities/components/CourtBookingSheet';
@@ -107,9 +112,10 @@ import {
   ReputationExplainerActionSheet,
   CovetedPlayerExplainerActionSheet,
   FoundingMemberExplainerActionSheet,
+  CircuitRankingExplainerActionSheet,
 } from '#/components/explainers';
 // Summer League announcement
-import { SummerLeagueAnnouncementActionSheet } from '#/features/summer-league/SummerLeagueAnnouncementSheet';
+import { Serie1AnnouncementActionSheet } from '#/features/tournaments/announcement/Serie1AnnouncementSheet';
 // Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
 // cell keys from the hourly 7×17 grid (hours 6..22). Defined inline to keep
 // this declaration free of feature-folder imports.
@@ -400,6 +406,16 @@ declare module 'react-native-actions-sheet' {
     'tournament-edit': SheetDefinition<{
       payload: {
         tournament: TournamentEditData;
+      };
+    }>;
+    'league-edit': SheetDefinition<{
+      payload: {
+        league: LeagueEditData;
+      };
+    }>;
+    'league-create': SheetDefinition<{
+      payload: {
+        onCreated?: (leagueId: string) => void;
       };
     }>;
     'tournament-invite': SheetDefinition<{
@@ -857,6 +873,9 @@ declare module 'react-native-actions-sheet' {
     'founding-member-explainer': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
+    'circuit-ranking-explainer': SheetDefinition<{
+      payload?: Record<string, never>;
+    }>;
     'match-suggestions': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
@@ -890,7 +909,7 @@ declare module 'react-native-actions-sheet' {
         proofTitle: string;
       };
     }>;
-    'summer-league-announcement': SheetDefinition<{
+    'serie1-announcement': SheetDefinition<{
       payload?: Record<string, never>;
     }>;
     feedback: SheetDefinition;
@@ -944,6 +963,8 @@ export const Sheets = () => {
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
+        'league-edit': LeagueEditActionSheet,
+        'league-create': LeagueCreateActionSheet,
         'create-season': CreateSeasonActionSheet,
         'create-session': CreateSessionActionSheet,
         'court-selection': CourtSelectionActionSheet,
@@ -995,11 +1016,12 @@ export const Sheets = () => {
         'reputation-explainer': ReputationExplainerActionSheet,
         'coveted-player-explainer': CovetedPlayerExplainerActionSheet,
         'founding-member-explainer': FoundingMemberExplainerActionSheet,
+        'circuit-ranking-explainer': CircuitRankingExplainerActionSheet,
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
         'suggest-match-time': SuggestMatchTimeActionSheet,
-        // Summer League announcement
-        'summer-league-announcement': SummerLeagueAnnouncementActionSheet,
+        // Série 1 tournaments announcement
+        'serie1-announcement': Serie1AnnouncementActionSheet,
       }}
     />
   );

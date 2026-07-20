@@ -6,6 +6,7 @@ import {
   BookOpen,
   Heart,
   Home as HomeIcon,
+  MapPin,
   Menu,
   Trophy,
   Users,
@@ -23,13 +24,14 @@ import ThemeLogo from './theme-logo';
 
 type NavLink = {
   href: string;
-  key: 'home' | 'games' | 'communities' | 'guides';
+  key: 'home' | 'games' | 'courts' | 'communities' | 'guides';
   icon: LucideIcon;
 };
 
 const navLinks: NavLink[] = [
   { href: '/', key: 'home', icon: HomeIcon },
   { href: '/games', key: 'games', icon: Trophy },
+  { href: '/courts', key: 'courts', icon: MapPin },
   { href: '/communities', key: 'communities', icon: Users },
   { href: '/guides', key: 'guides', icon: BookOpen },
 ];

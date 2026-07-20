@@ -772,6 +772,36 @@ export async function getTournamentFeeQuote(
   };
 }
 
+/** The caller's payout (Stripe Express) account status, mirrored from Stripe by
+ *  stripe-connect-webhook. `null` when the organizer has never onboarded. */
+export interface PayoutAccountStatus {
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  /** True once the account can settle registration charges (== chargesEnabled). */
+  onboardingCompleted: boolean;
+}
+
+/**
+ * Read the current organizer's own payout account status. RLS scopes the select
+ * to the caller's row, so no id is needed. Returns null when they've never set
+ * up payouts (the UI then offers onboarding instead of management).
+ */
+export async function getMyPayoutAccount(): Promise<PayoutAccountStatus | null> {
+  const { data, error } = await supabase
+    .from('player_stripe_account')
+    .select('charges_enabled, payouts_enabled, details_submitted, onboarding_completed')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return {
+    chargesEnabled: data.charges_enabled,
+    payoutsEnabled: data.payouts_enabled,
+    detailsSubmitted: data.details_submitted,
+    onboardingCompleted: data.onboarding_completed,
+  };
+}
+
 /** A guard-code error from the create-registration-payment edge function
  *  (e.g. 'tournament_full', 'already_registered', 'organizer_not_ready'). */
 export class TournamentPaymentError extends Error {
@@ -1032,6 +1062,23 @@ export async function amITournamentOrganizer(tournamentId: string): Promise<bool
   });
   if (error) throw new Error(error.message);
   return !!data;
+}
+
+/**
+ * Whether a player is a certified organizer — the gate that decides if their
+ * tournaments award Circuit Rallia points (see award_tournament_ranking_points).
+ * The ranking ceiling is stamped on every tournament regardless, so this is the
+ * only honest signal that points will actually be paid.
+ */
+export async function isCertifiedOrganizer(playerId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('player')
+    .select('is_certified_organizer')
+    .eq('id', playerId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data?.is_certified_organizer === true;
 }
 
 export interface LinkableMatch {

@@ -8,12 +8,20 @@
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Image,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
-import { getProfilePictureUrl, getTournamentLogoUrl, formatPrice } from '@rallia/shared-utils';
+import { getProfilePictureUrl, formatPrice, tournamentRankingHeadline } from '@rallia/shared-utils';
 import {
   lightTheme,
   darkTheme,
@@ -29,7 +37,7 @@ import type { TournamentListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
-import { DEFAULT_TOURNAMENT_BANNER } from '../defaultBanner';
+import { TournamentBanner, TOURNAMENT_BANNER_ASPECT } from './TournamentBanner';
 
 type Status = Enums<'tournament_status'>;
 
@@ -124,22 +132,34 @@ export function useTournamentListColors(): TournamentListColors {
 
 // =============================================================================
 
+// Fixed light-tone text colors for pills sitting on the banner image: the
+// pill background is near-white there regardless of theme.
+const ON_IMAGE_TONE_TEXT: Record<'neutral' | 'positive' | 'active' | 'muted', string> = {
+  positive: '#15803d',
+  active: primary[700],
+  neutral: neutral[700],
+  muted: neutral[500],
+};
+
 const StatusPill: React.FC<{
   status: Status;
   colors: TournamentListColors;
   t: (k: TranslationKey) => string;
-}> = ({ status, colors, t }) => {
+  onImage?: boolean;
+}> = ({ status, colors, t, onImage }) => {
   const tone = STATUS_TONE[status];
-  const bg =
-    tone === 'positive'
+  const bg = onImage
+    ? 'rgba(255,255,255,0.94)'
+    : tone === 'positive'
       ? colors.positiveBg
       : tone === 'active'
         ? colors.activeBg
         : tone === 'muted'
           ? colors.mutedBg
           : colors.neutralBg;
-  const fg =
-    tone === 'positive'
+  const fg = onImage
+    ? ON_IMAGE_TONE_TEXT[tone]
+    : tone === 'positive'
       ? colors.positiveText
       : tone === 'active'
         ? colors.activeText
@@ -193,10 +213,8 @@ function formatRatingRange(min: number | null, max: number | null): string | nul
 
 const AVATARS_SHOWN = 5;
 const AVATAR_SIZE = 24;
-/** Matches avatar outer size (24px + 1.5px border each side). */
-const ROW_ITEM_HEIGHT = AVATAR_SIZE + 3;
 
-/** Stacked registrant faces with a compact fill count beside the stack. */
+/** Stacked registrant faces with a quiet fill count beside the stack. */
 const RegistrationStrip: React.FC<{
   preview: TournamentListItem['registrant_preview'];
   total: number;
@@ -220,7 +238,7 @@ const RegistrationStrip: React.FC<{
                   i > 0 && styles.avatarSlotOverlap,
                   {
                     backgroundColor: uri ? colors.cardBackground : colors.avatarPlaceholder,
-                    borderColor: colors.primary,
+                    borderColor: colors.cardBackground,
                   },
                 ]}
               >
@@ -234,25 +252,16 @@ const RegistrationStrip: React.FC<{
           })}
         </View>
       )}
-      <View
-        style={[
-          styles.fillChip,
-          {
-            backgroundColor: isFull ? colors.mutedBg : colors.chipPrimaryBg,
-            borderColor: isFull ? colors.mutedBg : colors.chipPrimaryBg,
-          },
-        ]}
-      >
+      <View style={styles.fillCount}>
         <Ionicons
           name="people-outline"
-          size={12}
+          size={13}
           color={isFull ? colors.mutedText : colors.chipPrimaryText}
         />
         <Text
           size="xs"
           weight="semibold"
           color={isFull ? colors.mutedText : colors.chipPrimaryText}
-          style={styles.fillChipText}
         >
           {total}/{maxParticipants}
         </Text>
@@ -286,8 +295,19 @@ export const TournamentCard: React.FC<{
     tournament.status === 'registration_open' && tournament.registration_closes_at
       ? t('tournamentList.registerBy').replace('{date}', fmtDate(tournament.registration_closes_at))
       : null;
+  const [mountedAt] = useState(() => Date.now());
+  const registerByUrgent =
+    tournament.status === 'registration_open' &&
+    tournament.registration_closes_at != null &&
+    new Date(tournament.registration_closes_at).getTime() - mountedAt < 48 * 3600 * 1000;
 
   const ratingRange = formatRatingRange(tournament.min_rating, tournament.max_rating);
+  const rankingHeadline = tournamentRankingHeadline(tournament);
+  // Always the champion figure, projected or not: the chip is a headline, and
+  // the Points tab carries the "up to" nuance.
+  const rankingLabel = rankingHeadline
+    ? t('tournamentList.rankingPoints').replace('{points}', String(rankingHeadline.points))
+    : null;
   const prizeLabel =
     tournament.prize_money_cents && tournament.prize_money_cents > 0
       ? formatPrice(tournament.prize_money_cents, tournament.currency, {
@@ -295,6 +315,16 @@ export const TournamentCard: React.FC<{
           trimZeroCents: true,
         })
       : null;
+  const venue = tournament.venue_name || tournament.city;
+
+  // Quiet decision facts, dot-separated; special facts (points, role) keep a chip.
+  // `level` is deliberately left out: the rating range already says who can enter.
+  const metaFacts = [
+    ratingRange,
+    t(ENTRY_FORMAT_KEYS[tournament.entry_format] as TranslationKey),
+    t(MATCH_FORMAT_KEYS[tournament.match_format] as TranslationKey),
+  ].filter((f): f is string => !!f);
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -305,99 +335,122 @@ export const TournamentCard: React.FC<{
         { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
       ]}
     >
-      <Image
-        source={
-          tournament.logo_url
-            ? { uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }
-            : DEFAULT_TOURNAMENT_BANNER
-        }
-        style={styles.cardBanner}
-        resizeMode="cover"
-      />
-
-      <View style={styles.cardTopRow}>
-        <RegistrationStrip
-          preview={tournament.registrant_preview}
-          total={tournament.registration_count}
-          maxParticipants={tournament.max_participants}
-          colors={colors}
-        />
-        <StatusPill status={tournament.status} colors={colors} t={t} />
-      </View>
-
-      <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
-        {tournament.name}
-      </Text>
-
-      <View style={styles.cardMetaLine}>
-        <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-        <Text size="xs" color={colors.textMuted}>
-          {dateRange}
-        </Text>
-        {registerBy && (
-          <>
-            <View style={styles.metaSeparator} />
-            <Ionicons name="time-outline" size={14} color={colors.positiveText} />
-            <Text size="xs" weight="medium" color={colors.positiveText}>
-              {registerBy}
-            </Text>
-          </>
-        )}
-      </View>
-
-      {(tournament.venue_name || tournament.city) && (
-        <View style={styles.cardMetaLine}>
-          <Ionicons name="location" size={14} color={colors.textMuted} />
-          <Text size="xs" color={colors.textMuted} numberOfLines={1} style={styles.venueText}>
-            {tournament.venue_name || tournament.city}
-          </Text>
+      <View style={styles.bannerWrap}>
+        <TournamentBanner logoUrl={tournament.logo_url} />
+        <View style={styles.bannerTopRow}>
+          <StatusPill status={tournament.status} colors={colors} t={t} onImage />
+          {/* What the event is worth, both currencies together: cash in the
+              solid gold pill, Circuit Rallia points in the lighter one. */}
+          <View style={styles.bannerBadges}>
+            {prizeLabel && (
+              <View style={styles.prizeBadge}>
+                <Ionicons name="trophy" size={12} color={accent[900]} />
+                <Text size="xs" weight="semibold" color={accent[900]} numberOfLines={1}>
+                  {prizeLabel}
+                </Text>
+              </View>
+            )}
+            {rankingLabel && (
+              <View style={styles.pointsBadge}>
+                <Ionicons name="ribbon" size={12} color={accent[700]} />
+                <Text size="xs" weight="semibold" color={accent[700]} numberOfLines={1}>
+                  {rankingLabel}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      )}
+        {/* Scrim is deliberately shallow and light: it only has to carry two
+            lines, and the text shadow does the rest of the legibility work, so
+            the artwork stays visible. */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.66)']}
+          locations={[0, 0.42, 1]}
+          style={styles.bannerScrim}
+        >
+          <Text
+            size="base"
+            weight="semibold"
+            color="#ffffff"
+            numberOfLines={1}
+            style={styles.scrimText}
+          >
+            {tournament.name}
+          </Text>
+          <Text size="xs" color="rgba(255,255,255,0.92)" numberOfLines={1} style={styles.scrimText}>
+            {venue ? `${dateRange} · ${venue}` : dateRange}
+          </Text>
+        </LinearGradient>
+      </View>
 
-      {/* Importance order: role, eligibility (rating), what you play, room left, details.
-          Horizontally scrollable so the chips always stay on a single row. */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        nestedScrollEnabled
-        style={styles.chipScroll}
-        contentContainerStyle={styles.chipScrollContent}
-      >
-        {isOrganizer && (
-          <MetaChip
-            label={t('tournamentList.roleOrganizer')}
-            icon="person-outline"
+      <View style={styles.cardBody}>
+        <View style={styles.metaRow}>
+          {metaFacts.map((fact, i) => (
+            <React.Fragment key={`${i}-${fact}`}>
+              {i > 0 && (
+                <Text size="xs" color={colors.textMuted}>
+                  ·
+                </Text>
+              )}
+              <View style={styles.metaItem}>
+                {i === 0 && ratingRange && (
+                  <Ionicons name="analytics" size={13} color={colors.primary} />
+                )}
+                <Text size="xs" weight="medium" color={colors.textMuted}>
+                  {fact}
+                </Text>
+              </View>
+            </React.Fragment>
+          ))}
+          {isOrganizer && (
+            <MetaChip
+              label={t('tournamentList.roleOrganizer')}
+              icon="person-outline"
+              colors={colors}
+              tone="accent"
+            />
+          )}
+        </View>
+
+        <View style={[styles.cardFooter, { borderTopColor: colors.cardBorder }]}>
+          <RegistrationStrip
+            preview={tournament.registrant_preview}
+            total={tournament.registration_count}
+            maxParticipants={tournament.max_participants}
             colors={colors}
-            tone="accent"
           />
-        )}
-        {ratingRange && (
-          <MetaChip label={ratingRange} icon="analytics" colors={colors} tone="secondary" />
-        )}
-        {prizeLabel && (
-          <MetaChip label={prizeLabel} icon="trophy-outline" colors={colors} tone="accent" />
-        )}
-        <MetaChip
-          label={t(ENTRY_FORMAT_KEYS[tournament.entry_format] as TranslationKey)}
-          colors={colors}
-        />
-        <MetaChip
-          label={t(MATCH_FORMAT_KEYS[tournament.match_format] as TranslationKey)}
-          colors={colors}
-        />
-        {tournament.level && <MetaChip label={tournament.level} colors={colors} />}
-      </ScrollView>
+          {registerBy && (
+            <View style={styles.registerByWrap}>
+              <Text
+                size="xs"
+                weight="semibold"
+                color={registerByUrgent ? colors.chipSecondaryText : colors.positiveText}
+              >
+                {registerBy}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={registerByUrgent ? colors.chipSecondaryText : colors.positiveText}
+              />
+            </View>
+          )}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 };
 
 /**
  * Loading placeholder following MatchCardSkeleton's primary-tinted recipe,
- * shaped like a TournamentCard (title + status pill, meta lines, chip row).
+ * shaped like a TournamentCard (banner block, meta line, footer row).
  */
 export const TournamentCardSkeleton: React.FC = () => {
   const { theme } = useTheme();
+  const { width } = useWindowDimensions();
   const isDark = theme === 'dark';
+  // Skeleton takes a numeric height, so mirror the card banner's 16:9 box.
+  const bannerHeight = Math.round((width - spacingPixels[4] * 2) / TOURNAMENT_BANNER_ASPECT);
   const bone = isDark ? primary[900] : primary[100];
   const boneHighlight = isDark ? primary[800] : primary[50];
   return (
@@ -410,29 +463,18 @@ export const TournamentCardSkeleton: React.FC = () => {
         },
       ]}
     >
-      <View style={styles.cardHeader}>
-        <Skeleton width="55%" height={18} backgroundColor={bone} highlightColor={boneHighlight} />
-        <Skeleton
-          width={88}
-          height={22}
-          borderRadius={radiusPixels.full}
-          backgroundColor={bone}
-          highlightColor={boneHighlight}
-        />
-      </View>
-      <Skeleton width="45%" height={12} backgroundColor={bone} highlightColor={boneHighlight} />
-      <Skeleton width="35%" height={12} backgroundColor={bone} highlightColor={boneHighlight} />
-      <View style={styles.chipRow}>
-        {[56, 72, 64].map(w => (
-          <Skeleton
-            key={w}
-            width={w}
-            height={24}
-            borderRadius={radiusPixels.full}
-            backgroundColor={bone}
-            highlightColor={boneHighlight}
-          />
-        ))}
+      <Skeleton
+        width="100%"
+        height={bannerHeight}
+        backgroundColor={bone}
+        highlightColor={boneHighlight}
+      />
+      <View style={styles.cardBody}>
+        <Skeleton width="65%" height={12} backgroundColor={bone} highlightColor={boneHighlight} />
+        <View style={styles.cardHeader}>
+          <Skeleton width={96} height={20} backgroundColor={bone} highlightColor={boneHighlight} />
+          <Skeleton width={110} height={12} backgroundColor={bone} highlightColor={boneHighlight} />
+        </View>
       </View>
     </View>
   );
@@ -611,24 +653,100 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[1],
   },
-  cardBanner: {
-    width: '100%',
-    height: 120,
-    borderRadius: radiusPixels.lg,
+  bannerWrap: {
+    position: 'relative',
+  },
+  bannerTopRow: {
+    position: 'absolute',
+    top: spacingPixels[2.5],
+    left: spacingPixels[2.5],
+    right: spacingPixels[2.5],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+  },
+  bannerBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginLeft: 'auto',
+    flexShrink: 1,
+  },
+  prizeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+    backgroundColor: accent[300],
+  },
+  pointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+  },
+  bannerScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacingPixels[3],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[2],
+    gap: 1,
+  },
+  scrimText: {
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
+  cardBody: {
+    paddingHorizontal: spacingPixels[3],
+    paddingTop: spacingPixels[2.5],
+    paddingBottom: spacingPixels[3],
+    gap: spacingPixels[2.5],
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacingPixels[1.5],
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: spacingPixels[2.5],
+  },
+  registerByWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   card: {
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[3],
-    padding: spacingPixels[4],
     borderRadius: radiusPixels.xl,
-    borderWidth: 1.5,
-    gap: spacingPixels[2],
+    borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   skeletonList: {
     paddingTop: spacingPixels[2],
@@ -639,47 +757,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacingPixels[3],
   },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacingPixels[2],
-  },
   registrationStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[2],
+    gap: spacingPixels[1.5],
     flexShrink: 1,
-  },
-  cardMetaLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
-  },
-  venueText: {
-    flex: 1,
-  },
-  metaSeparator: {
-    width: 1,
-    height: 12,
-    backgroundColor: 'rgba(128,128,128,0.3)',
-    marginHorizontal: spacingPixels[1.5],
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacingPixels[1.5],
-    marginTop: spacingPixels[0.5],
-  },
-  chipScroll: {
-    marginTop: spacingPixels[0.5],
-    flexGrow: 0,
-  },
-  chipScrollContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1.5],
-    paddingRight: spacingPixels[1],
   },
   metaChip: {
     flexDirection: 'row',
@@ -710,18 +792,10 @@ const styles = StyleSheet.create({
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
   },
-  fillChip: {
-    height: ROW_ITEM_HEIGHT,
+  fillCount: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[1],
-    paddingHorizontal: spacingPixels[2],
-    borderRadius: ROW_ITEM_HEIGHT / 2,
-    borderWidth: 1.5,
-  },
-  fillChipText: {
-    lineHeight: 16,
-    includeFontPadding: false,
   },
   statusPill: {
     paddingHorizontal: spacingPixels[2],

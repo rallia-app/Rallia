@@ -727,21 +727,21 @@ export function appOpened(props: { cold_start: boolean }): void {
   capture('app_opened', props);
 }
 
-// ---- Summer League ----
+// ---- Série 1 tournaments ----
 
-/** The Summer League announcement popup was shown to the player. */
-export function summerLeagueAnnouncementViewed(): void {
-  capture('summer_league_announcement_viewed');
+/** The Série 1 tournaments announcement popup was shown to the player. */
+export function serie1AnnouncementViewed(): void {
+  capture('serie1_announcement_viewed');
 }
 
-/** The player tapped "I'm interested" and we recorded their interest. */
-export function summerLeagueInterestRegistered(): void {
-  capture('summer_league_interest_registered');
+/** The player tapped "See the tournaments" from the announcement. */
+export function serie1AnnouncementCtaPressed(): void {
+  capture('serie1_announcement_cta_pressed');
 }
 
-/** The player dismissed the announcement without registering interest. */
-export function summerLeagueAnnouncementDismissed(): void {
-  capture('summer_league_announcement_dismissed');
+/** The player dismissed the announcement without visiting the tournaments. */
+export function serie1AnnouncementDismissed(): void {
+  capture('serie1_announcement_dismissed');
 }
 
 // ---- Subscription ----
@@ -978,6 +978,10 @@ export function seasonCreatedAnalytics(props: {
   leagueId: string;
   seasonId: string;
   hasOverride: boolean;
+  /** Whether the organizer priced this season — the paid-league pilot's signal. */
+  isPaid?: boolean;
+  entryFeeCents?: number;
+  feePayer?: string;
 }): void {
   capture('lt.season.created', props);
 }

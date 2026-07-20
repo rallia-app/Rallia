@@ -1,16 +1,14 @@
 {
-  "summerLeague": {
-    "announcement": {
-      "badge": "Cet été",
-      "title": "La toute première Ligue d'été Rallia",
-      "subtitle": "Nous sondons l'intérêt pour adapter la première édition à des joueurs comme vous. Ça vous tente ?",
-      "interested": "Ça m'intéresse",
-      "later": "Plus tard",
-      "successTitle": "Vous êtes sur la liste",
-      "successBody": "Votre intérêt nous aide à la façonner — nous vous écrirons bientôt.",
-      "done": "Terminé",
-      "error": "Une erreur s'est produite. Veuillez réessayer."
-    }
+  "serie1Announcement": {
+    "badge": "Série 1",
+    "title": "Nos premiers tournois sont là",
+    "subtitle": "Des tableaux simples et gratuits, ouverts à tout le Grand Montréal. Trois catégories, pis des points Rallia pour tous ceux qui embarquent.",
+    "catBeginner": "Débutant 1.5+",
+    "catIntermediate": "Intermédiaire 3.0+",
+    "catAdvanced": "Avancé 4.0+",
+    "dates": "Inscriptions jusqu'au 25 juillet · Ça commence le 26",
+    "cta": "Voir les tournois",
+    "later": "Plus tard"
   },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
@@ -4173,6 +4171,7 @@
     "title": "Circuit Rallia",
     "subtitle": "Saison {season}",
     "pointsNote": "Gagne des points Rallia en participant et en avançant dans les tournois.",
+    "howItWorks": "Comment ça marche",
     "filterMyLevel": "Mon niveau · {level}",
     "filterMyRating": "Ma cote · {rating}",
     "levels": {
@@ -4354,6 +4353,65 @@
         "description": "Ouvrir une saison permet aux membres de s'inscrire et aux sessions de commencer"
       }
     },
+    "editModal": {
+      "title": "Modifier la ligue",
+      "subtitle": "Les changements sont visibles aux joueurs immédiatement.",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "saved": "Ligue mise à jour",
+      "errors": {
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
+        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+      }
+    },
+    "lifecycle": {
+      "pause": "Mettre la ligue en pause",
+      "resume": "Reprendre la ligue",
+      "close": "Fermer la ligue",
+      "pausing": "Mise en pause...",
+      "resuming": "Reprise...",
+      "closing": "Fermeture...",
+      "paused": "Ligue en pause",
+      "resumed": "Ligue reprise",
+      "closed": "Ligue fermée",
+      "pausedBanner": "Cette ligue est en pause. Aucun nouveau membre ni séance tant que tu ne la reprends pas.",
+      "closedBanner": "Cette ligue est fermée.",
+      "pauseConfirmTitle": "Mettre cette ligue en pause?",
+      "pauseConfirmBody": "Personne ne peut s'inscrire et tu ne peux pas ajouter de séances pendant la pause. Les parties déjà planifiées ont lieu quand même. Tu peux reprendre en tout temps.",
+      "closeConfirmTitle": "Fermer cette ligue?",
+      "closeConfirmBody": "C'est irréversible. La ligue devient en lecture seule et les membres gardent accès aux saisons passées.",
+      "errors": {
+        "hasOpenSeasons": "Ferme la saison en cours avant de fermer la ligue.",
+        "stale": "Cette ligue a changé depuis que tu l'as ouverte. Actualise et réessaye.",
+        "generic": "Ça n'a pas fonctionné. Réessaye."
+      }
+    },
+    "paid": {
+      "enrollFor": "Embarquer pour {amount}",
+      "pay": "Payer",
+      "confirmTitle": "Confirme ta place",
+      "confirmAmount": "On va te charger {amount}.",
+      "confirmFeeTax": "Inclut {amount} de TPS/TVQ sur les frais de service Rallia.",
+      "confirmFeeNonRefundable": "Les frais de service Rallia ne sont pas remboursables.",
+      "liabilityNotice": "C'est l'organisateur qui gère cette saison, pas Rallia. Rallia s'occupe juste du paiement.",
+      "refundNone": "Aucun remboursement une fois que t'es inscrit.",
+      "refundFull": "Remboursement complet de l'inscription si tu te retires.",
+      "refundFullUntil": "Remboursement complet de l'inscription si tu te retires avant le {date}.",
+      "refundPartial": "{pct} % de l'inscription est remboursé si tu te retires.",
+      "refundPartialUntil": "{pct} % de l'inscription est remboursé si tu te retires avant le {date}.",
+      "withdrawConfirmTitle": "Quitter cette saison?",
+      "withdrawConfirmRefund": "Tu vas ravoir {amount}. Les frais de service ne sont pas remboursés.",
+      "withdrawConfirmNoRefund": "La période de remboursement est passée, tu ne seras pas remboursé.",
+      "refunded": "C'est fait. {amount} s'en revient vers toi.",
+      "errors": {
+        "seasonNotOpen": "Cette saison n'est pas ouverte aux inscriptions.",
+        "alreadyEnrolled": "T'es déjà inscrit à cette saison.",
+        "organizerNotReady": "L'organisateur ne peut pas encore recevoir de paiements. Réessaye plus tard.",
+        "notMember": "Rejoins la ligue avant de t'inscrire à une saison.",
+        "refundFailed": "Impossible de traiter le remboursement. Réessaye.",
+        "generic": "Le paiement n'a pas passé. Réessaye."
+      }
+    },
     "sections": {
       "pending": "En attente d'approbation",
       "members": "Membres",
@@ -4362,7 +4420,8 @@
     "seasonStatus": {
       "draft": "Brouillon",
       "open": "Ouverte",
-      "closed": "Fermée"
+      "closed": "Fermée",
+      "cancelled": "Annulée"
     },
     "sessionStatus": {
       "draft": "Brouillon",
@@ -4426,7 +4485,35 @@
       "startDate": "Début",
       "endDate": "Fin",
       "submit": "Créer la saison",
-      "creating": "Création..."
+      "creating": "Création...",
+      "payments": {
+        "entryFeeLabel": "Frais d'inscription",
+        "entryFeeHintFree": "Laisse vide pour une saison gratuite — les joueurs embarquent sans payer",
+        "entryFeeHintPaid": "Ce que chaque joueur paie pour la saison, avant les frais de service",
+        "whoPaysLabel": "Qui paie les frais de service?",
+        "playerPaysTitle": "Le joueur paie",
+        "playerPaysDescription": "Ajoutés par-dessus l'inscription. Tu reçois le plein montant.",
+        "organizerAbsorbsTitle": "Je les absorbe",
+        "organizerAbsorbsDescription": "Pris sur tes revenus. Les joueurs paient juste l'inscription.",
+        "previewPlayersPay": "Les joueurs paient",
+        "previewServiceFee": "Frais de service",
+        "previewFeeTax": "TPS + TVQ sur les frais de service",
+        "previewYouReceive": "Tu reçois",
+        "refundLabel": "Politique de remboursement",
+        "refundFeeNote": "Les frais de service ne sont jamais remboursables — ça s'applique juste à l'inscription.",
+        "refundFullTitle": "Remboursement complet",
+        "refundFullDescription": "Les joueurs ravoir le plein montant s'ils quittent la saison.",
+        "refundPartialTitle": "Remboursement partiel",
+        "refundPartialDescription": "Les joueurs ravoir une partie du montant s'ils quittent la saison.",
+        "refundNoneTitle": "Aucun remboursement",
+        "refundNoneDescription": "L'inscription n'est pas remboursable.",
+        "refundPctInvalid": "Entre un pourcentage de remboursement entre 1 et 99.",
+        "refundCutoffLabel": "Date limite de remboursement",
+        "refundCutoffPlaceholder": "Choisis une date",
+        "refundCutoffHint": "Aucun remboursement après cette date. Par défaut, la date de début de la saison.",
+        "payoutNote": "Les paiements sont gardés en sécurité, puis versés dans ton compte bancaire une fois la saison fermée.",
+        "lockedNote": "Les frais et la politique de remboursement se verrouillent dès l'ouverture de la saison."
+      }
     },
     "validation": {
       "seasonNameRequired": "Le nom de la saison est requis",
@@ -4521,12 +4608,15 @@
     "step": "Étape {current} sur {total}",
     "stepNames": {
       "details": "Détails",
-      "visibility": "Visibilité"
+      "visibility": "Visibilité",
+      "eligibility": "Admissibilité"
     },
     "step1Title": "Détails",
     "step1Description": "Nommez votre ligue et ajoutez une description (optionnel)",
     "visibilityStepTitle": "Visibilité",
     "visibilityStepDescription": "Qui peut trouver et rejoindre votre ligue?",
+    "eligibilityStepTitle": "Admissibilité",
+    "eligibilityStepDescription": "Restreignez l'accès selon le niveau, si vous le souhaitez",
     "next": "Suivant",
     "createLeague": "Créer la ligue",
     "creating": "Création...",
@@ -4535,6 +4625,10 @@
     "viewLeague": "Voir la ligue",
     "createAnother": "Créer une autre",
     "fields": {
+      "cover": "Image de couverture",
+      "coverAdd": "Ajouter une image de couverture",
+      "coverChange": "Changer l'image de couverture",
+      "coverRemove": "Retirer l'image de couverture",
       "name": "Nom",
       "namePlaceholder": "p. ex., Ligue d'été de Montréal",
       "description": "Description",
@@ -4550,16 +4644,25 @@
       "joinModeApproval": "Approbation",
       "joinModeApprovalDescription": "Vous approuvez chaque demande",
       "joinModeInviteOnly": "Sur invitation",
-      "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre"
+      "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre",
+      "minRating": "Niveau minimum",
+      "minRatingNone": "Aucun minimum",
+      "maxRating": "Niveau maximum",
+      "maxRatingNone": "Aucun maximum",
+      "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, vous n'avez rien à approuver.",
+      "ratingGateUnavailable": "L'admissibilité par niveau n'est pas encore offerte pour ce sport."
     },
     "validation": {
       "nameRequired": "Le nom de la ligue est requis",
-      "nameTooLong": "Le nom doit contenir 100 caractères ou moins"
+      "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
+      "ratingRangeInvalid": "Le niveau maximum doit être égal ou supérieur au minimum"
     },
     "errors": {
       "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",
       "rateLimited": "Vous pouvez créer jusqu'à 5 ligues par jour",
-      "generic": "Impossible de créer la ligue. Réessayez."
+      "generic": "Impossible de créer la ligue. Réessayez.",
+      "coverUploadFailedTitle": "Échec du téléversement",
+      "coverUploadFailed": "Impossible de téléverser l'image de couverture. Réessayez."
     }
   },
   "tournamentList": {
@@ -4572,6 +4675,7 @@
     "create": "Créer un tournoi",
     "createSubtitle": "Crée ton tableau et invite des joueurs",
     "roleOrganizer": "Organisateur",
+    "rankingPoints": "{points} pts",
     "registerBy": "Inscriptions jusqu'au {date}",
     "searchPlaceholder": "Rechercher des tournois...",
     "discoverFilters": {
@@ -4641,6 +4745,7 @@
       "onboardTypeIndividual": "Je suis un particulier",
       "onboardTypeBusiness": "Je suis une entreprise ou un club",
       "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
+      "manageError": "Impossible d'ouvrir ton compte de versement. Réessaie.",
       "payoutsConnectedToast": "Compte de versement connecté !",
       "refundIssued": "Retiré, {amount} remboursé.",
       "withdrawnNoRefund": "Tu t'es retiré. Aucun remboursement ne s'applique.",
@@ -4659,6 +4764,12 @@
         "organizerNotReady": "L'organisateur n'a pas terminé sa configuration de paiement.",
         "closed": "Les inscriptions sont fermées.",
         "generic": "Impossible de démarrer ton inscription. Réessaie."
+      },
+      "payoutRow": {
+        "label": "Versements",
+        "setup": "À configurer",
+        "actionNeeded": "Action requise",
+        "ready": "Prêt"
       }
     },
     "loading": "Chargement du tournoi...",
@@ -4685,7 +4796,35 @@
       "overview": "Aperçu",
       "bracket": "Tableau",
       "players": "Participants",
+      "points": "Points",
+      "rules": "Règles",
       "details": "Détails"
+    },
+    "points": {
+      "eligibleLabel": "Compte pour le Circuit Rallia",
+      "upTo": "jusqu'à",
+      "unit": "pts",
+      "heroCaption": "Ce que le champion remporte. Tous ceux qui se présentent repartent avec des points.",
+      "tableTitle": "Ce que chaque résultat rapporte",
+      "howTitle": "Comment ça marche",
+      "placement": {
+        "champion": "Champion",
+        "finalist": "Finaliste",
+        "semifinal": "Demi-finaliste",
+        "quarterfinal": "Quart-de-finaliste",
+        "round_of_16": "Huitièmes de finale",
+        "round_of_32": "Seizièmes de finale",
+        "round_of_64": "Trente-deuxièmes de finale",
+        "participated": "A joué le tournoi"
+      },
+      "notes": {
+        "projected": "Ce sont les montants pour un tableau complet. La valeur finale se fixe quand le tableau est publié, donc un tableau plus petit rapporte un peu moins.",
+        "firm": "Le tableau est fixé, donc ces montants sont finaux.",
+        "scale": "Plus le tableau est gros et plus le niveau exigé est élevé, plus ça rapporte.",
+        "zeroWinFloor": "Ça prend au moins une victoire pour dépasser les points de participation. Un laissez-passer ne compte pas comme une victoire.",
+        "doubles": "Les deux partenaires reçoivent le plein résultat de l'équipe. Les points ne sont pas divisés.",
+        "season": "Les points s'ajoutent à ton classement Circuit Rallia de la saison une fois que l'organisateur complète le tournoi."
+      }
     },
     "dashboard": {
       "details": "Détails",
@@ -4693,6 +4832,8 @@
       "feesTitle": "Inscription et remboursements",
       "organizedBy": "Organisé par {name}",
       "prizePool": "Bourse",
+      "rankingPoints": "Circuit Rallia · {points} pts",
+      "rankingPointsUpTo": "Circuit Rallia · jusqu'à {points} pts",
       "champion": "Champion",
       "steps": {
         "draft": "Brouillon",
@@ -4704,23 +4845,19 @@
         "registered": "Inscrits",
         "games": "Parties",
         "start": "Début",
-        "startsInDays": "Dans {n} jours",
         "startsToday": "Aujourd'hui",
         "live": "En cours",
-        "ended": "Terminé"
+        "ended": "Terminé",
+        "deadline": "Date limite"
       },
       "nextStep": {
-        "draftTitle": "Prêt à lancer?",
         "draftDescription": "Ouvrez les inscriptions pour que les joueurs puissent trouver et rejoindre votre tournoi.",
-        "openTitle": "Les inscriptions sont ouvertes",
         "openDescription": "{count} places sur {max} sont prises.",
-        "closedTitle": "Créez le tableau",
         "closedDescription": "{count} joueurs sont inscrits. Générez le tableau pour commencer.",
         "liveTitle": "Tournoi en cours",
         "liveDescription": "{done} parties jouées sur {total}. Touchez une partie en attente dans le tableau pour enregistrer son résultat."
       },
       "registerCta": {
-        "title": "Inscriptions ouvertes",
         "full": "Tournoi complet",
         "fullDescription": "Toutes les places sont prises.",
         "spotsLeft": "{n} places restantes",
@@ -4735,16 +4872,7 @@
         "description": "Ta place est réservée. Un changement de plan? Tu peux te retirer tant que les inscriptions sont ouvertes.",
         "descriptionTeam": "La place de ton équipe est réservée. Un changement de plan? Te retirer enlève les deux joueurs tant que les inscriptions sont ouvertes.",
         "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes.",
-        "descriptionInvited": "Accepte ci-dessus pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
-      },
-      "inviteCta": {
-        "title": "Tu es invité",
-        "description": "Accepte pour confirmer ta place dans le tournoi.",
-        "descriptionDoubles": "Choisis ton partenaire, puis accepte pour confirmer votre place."
-      },
-      "addMyselfCta": {
-        "title": "Tu joues aussi?",
-        "description": "Ajoute-toi à ce tournoi comme participant."
+        "descriptionInvited": "Accepte l'invitation pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
       },
       "pendingRequestsCta": {
         "title": "Demandes en attente",
@@ -4764,6 +4892,9 @@
       "participants": {
         "title": "Participants",
         "empty": "Aucun joueur inscrit pour le moment",
+        "emptyDescription": "Les joueurs apparaissent ici dès qu'ils s'inscrivent.",
+        "emptySpotsLabel": "places au tableau",
+        "emptyDeadlineLabel": "fin des inscriptions",
         "pending": "En attente",
         "removeLabel": "Retirer {name}"
       },
@@ -4782,7 +4913,8 @@
         "revokeConfirmMessage": "{name} ne sera plus invité. Tu peux le réinviter plus tard.",
         "revokeConfirm": "Retirer",
         "revokeCancel": "Garder"
-      }
+      },
+      "manageTitle": "Gérer"
     },
     "labels": {
       "bracketSize": "Taille du tableau",
@@ -4945,6 +5077,7 @@
       "bye": "EXEMPT",
       "tbd": "À déterminer",
       "phantom": "—",
+      "seed": "Tête de série {n}",
       "linkMatch": "Lier une partie jouée à ce slot",
       "overrideMatch": "Inscrire le résultat (organisateur)",
       "recordResult": "Inscrire le résultat",
@@ -4972,8 +5105,6 @@
     },
     "invitePlayers": {
       "title": "Inviter des joueurs",
-      "ctaTitle": "Inviter des joueurs",
-      "ctaDescription": "Remplis le tableau. Invite des joueurs dans l'app ou partage un lien.",
       "searchPlaceholder": "Chercher des joueurs",
       "searchHint": "Tape un nom pour trouver des joueurs à inviter.",
       "noResults": "Aucun joueur trouvé",
@@ -5029,8 +5160,16 @@
       "partnerRequired": "Choisis un partenaire pour t'inscrire à ce tournoi en double.",
       "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
       "partnerSportMismatch": "Ton partenaire n'a pas ce sport actif sur son profil.",
+      "ratingTooLow": "Ton niveau est sous le minimum de ce tournoi.",
+      "ratingRequired": "Ça te prend un niveau dans ce sport pour t'inscrire à ce tournoi.",
+      "partnerRatingTooLow": "Le niveau de ton partenaire est sous le minimum de ce tournoi.",
+      "partnerRatingRequired": "Ton partenaire a besoin d'un niveau dans ce sport pour être inscrit.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide."
+    },
+    "overview": {
+      "readMore": "Lire la suite",
+      "infoTitle": "Infos pratiques"
     }
   },
   "tournamentCreation": {
@@ -5286,6 +5425,7 @@
       "nav": {
         "home": "Accueil",
         "games": "Parties",
+        "courts": "Terrains",
         "communities": "Communautés",
         "guides": "Guides",
         "donate": "Soutenir"
@@ -5880,6 +6020,7 @@
     "about": "À propos",
     "guides": "Guides",
     "games": "Parties ouvertes",
+    "courts": "Terrains",
     "communities": "Communautés",
     "donate": "Soutenir Rallia",
     "legal": "Légal",
@@ -5895,6 +6036,7 @@
     "backHome": "Retour à l'accueil",
     "exploreHeading": "Ou explorez",
     "games": "Parties",
+    "courts": "Terrains",
     "communities": "Communautés",
     "guides": "Guides"
   },
@@ -10789,6 +10931,34 @@
       }
     }
   },
+  "courtsPage": {
+    "title": "Terrains près de chez vous",
+    "subtitle": "Trouve des terrains de tennis et pickleball près de toi pis vois ce qui est libre.",
+    "searchPlaceholder": "Cherche par nom ou par ville",
+    "allSports": "Tous les sports",
+    "kmAway": "à {distance} km",
+    "courtCount": "{count} terrains",
+    "courtCountSingular": "1 terrain",
+    "badgePublic": "Public",
+    "badgePrivate": "Privé",
+    "badgeFirstCome": "Premier arrivé, premier servi",
+    "badgeBookable": "Réservable",
+    "badgeMembership": "Membres seulement",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "noSlots": "Aucune plage libre pour l'instant",
+    "bookCta": "Réserver dans l'app",
+    "loadMore": "Voir plus",
+    "emptyTitle": "Aucun terrain trouvé",
+    "emptyDescription": "On n'a pas trouvé de terrains ici pour l'instant. Essaie une autre recherche ou télécharge l'app pour en voir plus.",
+    "emptyCta": "Télécharger l'app",
+    "bookDialog": {
+      "title": "Réserver sur Rallia",
+      "description": "Scanne pour ouvrir ce terrain dans l'app Rallia pis réserver une plage libre.",
+      "descriptionNamed": "Scanne pour ouvrir {name} dans l'app Rallia pis réserver une plage libre.",
+      "qrHint": "Scanne avec la caméra de ton téléphone, ou télécharge l'app ci-dessous."
+    }
+  },
   "gamesPage": {
     "title": "Parties à venir",
     "subtitle": "Trouvez des parties publiques près de chez vous et rejoignez l'action.",
@@ -11176,6 +11346,33 @@
         "title": "Porte-le avec fierté",
         "body": "Ça montre que tu fais partie de la gang des débuts, celle qui a bâti la communauté derrière chaque partie sur Rallia aujourd'hui."
       }
+    },
+    "circuitRanking": {
+      "title": "Comment marche le Circuit Rallia",
+      "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
+      "placement": {
+        "title": "Jusqu'où tu te rends",
+        "note": "Une victoire sur un bye compte pas."
+      },
+      "placements": {
+        "champion": "Champion 500",
+        "finalist": "Finaliste 300",
+        "semifinal": "Demi 180",
+        "quarterfinal": "Quart 90",
+        "roundOf16": "R16 50",
+        "roundOf32": "R32 30",
+        "roundOf64": "R64 25",
+        "played": "Participation 20"
+      },
+      "worth": {
+        "title": "Ce que vaut un tournoi",
+        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Chaque tournoi affiche sa valeur d'avance, comme « jusqu'à 1300 pts » sur la carte."
+      },
+      "season": {
+        "title": "Ton score de saison",
+        "body": "Tes 8 meilleurs résultats de la saison forment ton rang. Une mauvaise journée te fait jamais reculer."
+      },
+      "finePrint": "Seuls les tournois d'un organisateur certifié donnent des points. Deux saisons par année : printemps/été et automne/hiver."
     }
   },
   "profileCompletion": {
@@ -11280,6 +11477,11 @@
         "pickleball": "Pickleball"
       },
       "levelLabel": "Ton niveau ({scale})",
+      "levelInfo": {
+        "trigger": "Ça veut dire quoi, ces niveaux ?",
+        "title": "Comprendre les niveaux {scale}",
+        "subtitle": "Pas sûr de ton niveau ? Voici un petit guide pour chaque échelon."
+      },
       "natureLabel": "Type de partie",
       "natures": {
         "recreational": "Récréatif",
@@ -11296,11 +11498,17 @@
       "question": "Où veux-tu jouer ?",
       "hint": "Entre ton adresse, puis choisis un terrain proche.",
       "placeholder": "1234 Rue Saint-Denis, Montréal",
+      "placeholderWithCity": "Ton adresse à {city}",
       "resolving": "On cherche ton adresse…",
       "searching": "On trouve les terrains proches…",
       "openSlots": "{count} plages de terrain libres",
       "noOpenSlots": "Aucune plage en ligne",
       "noResults": "Aucun terrain trouvé à moins de 25 km.",
+      "distanceLabel": "Jusqu'où es-tu prêt à te déplacer ?",
+      "distanceOption": "{km} km",
+      "noResultsRadius": "Encore aucun terrain sur Rallia à moins de {km} km.",
+      "widenHint": "Élargis le rayon, ou continue et on te jumelle par secteur.",
+      "continueAnyway": "Continuer quand même",
       "errors": {
         "notFound": "On n'a pas trouvé cette adresse.",
         "searchFailed": "Impossible de charger les terrains. Réessaie."
@@ -11533,6 +11741,12 @@
       "description": "Parcourez les parties de tennis et pickleball ouvertes près de vous. Joignez-vous à une partie en quelques secondes — simples, doubles, tous niveaux, vrais terrains, vrais joueurs.",
       "ogTitle": "Parties ouvertes de tennis et pickleball — Joignez-vous maintenant",
       "ogDescription": "Liste en direct des parties ouvertes près de vous. Simples, doubles, tous niveaux. Joignez-vous en quelques secondes avec Rallia."
+    },
+    "courts": {
+      "title": "Terrains de tennis et pickleball près de chez vous",
+      "description": "Trouvez des terrains de tennis et pickleball près de vous et voyez les disponibilités en temps réel. Parcourez les parcs publics et les clubs, regardez les plages libres et réservez directement dans l'application Rallia.",
+      "ogTitle": "Terrains de tennis et pickleball — Disponibilités en temps réel",
+      "ogDescription": "Parcourez les terrains près de vous avec les plages libres en temps réel. Parcs publics, clubs et centres intérieurs. Réservez dans l'application Rallia."
     },
     "communities": {
       "title": "Communautés de tennis et pickleball",
