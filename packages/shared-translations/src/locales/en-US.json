@@ -11352,8 +11352,8 @@
       "intro": "A ranking per sport and season. You earn points by entering tournaments and winning games.",
       "placement": {
         "title": "How far you get",
-        "baseNote": "Base points. Every tournament multiplies them.",
-        "note": "Byes and walkovers aren't wins. If you win no games, you get participation points no matter how far the draw carried you."
+        "baseNote": "Base points. Every tournament multiplies them, except participation, which is a flat 20 everywhere.",
+        "note": "You score only if you play at least one game. Byes and walkovers aren't wins: win nothing and you get the participation points, no matter how far the draw carried you."
       },
       "placements": {
         "champion": "Champion 500",
