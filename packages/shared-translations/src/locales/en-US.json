@@ -11352,7 +11352,8 @@
       "intro": "A ranking per sport and season. You earn points by entering tournaments and winning games.",
       "placement": {
         "title": "How far you get",
-        "note": "A win against a bye doesn't count."
+        "baseNote": "Base points. Every tournament multiplies them.",
+        "note": "Byes and walkovers aren't wins. If you win no games, you get participation points no matter how far the draw carried you."
       },
       "placements": {
         "champion": "Champion 500",
@@ -11361,12 +11362,11 @@
         "quarterfinal": "Quarter 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
-        "roundOf64": "R64 25",
         "played": "Played 20"
       },
       "worth": {
         "title": "What a tournament is worth",
-        "body": "Bigger draws and higher minimum levels multiply the points above. Each tournament shows its value up front, like \"up to 1300 pts\" on the card."
+        "body": "Bigger draws and higher minimum levels multiply the points above, and moving up a category doubles what every result is worth. Each tournament shows its top prize up front, like \"up to 2000 pts\" on the card."
       },
       "season": {
         "title": "Your season score",
