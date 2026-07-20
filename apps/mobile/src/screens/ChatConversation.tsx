@@ -47,6 +47,7 @@ import {
   MessageInput,
   MatchOrganizerBanner,
   TypingIndicator,
+  AnnouncementNotice,
   ChatSearchBar,
   BlockedUserModal,
 } from '#/features/chat';
@@ -333,12 +334,19 @@ export default function ChatConversationScreen() {
     return t('chat.title');
   }, [routeTitle, conversation, playerId, t, derivedMatchTitle]);
 
+  const isAnnouncement = conversation?.conversation_type === 'announcement';
+
   const headerSubtitle = useMemo(() => {
     if (!conversation) return undefined;
 
+    // Announcement rosters are the whole user base and RLS only exposes your
+    // own participant row, so a count here would always read "1 participant".
+    if (conversation.conversation_type === 'announcement') {
+      return t('chat.announcement.subtitle');
+    }
+
     if (
       isGroupConversationType(conversation.conversation_type) ||
-      conversation.conversation_type === 'announcement' ||
       conversation.conversation_type === 'match' ||
       conversation.conversation_type === 'tournament'
     ) {
@@ -347,7 +355,7 @@ export default function ChatConversationScreen() {
     }
 
     return undefined;
-  }, [conversation, networkInfo]);
+  }, [conversation, networkInfo, t]);
 
   // Get group avatar (if it's a group conversation linked to a network)
   const headerImage = useMemo(() => {
@@ -898,6 +906,8 @@ export default function ChatConversationScreen() {
           onBack={handleBack}
           isUnblocking={isTogglingBlock}
         />
+      ) : isAnnouncement ? (
+        <AnnouncementNotice />
       ) : (
         <MessageInput
           onSend={handleSendMessage}
