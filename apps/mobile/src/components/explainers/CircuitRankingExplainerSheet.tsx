@@ -104,6 +104,9 @@ export function CircuitRankingExplainerActionSheet(
           textColor={textColor}
           mutedColor={mutedColor}
         >
+          <Text size="xs" color={mutedColor} style={styles.chipCaption}>
+            {t('explainers.circuitRanking.placement.baseNote')}
+          </Text>
           <View style={styles.chipRow}>
             {placements.map(p => (
               <PlacementChip
@@ -201,6 +204,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[5],
     marginBottom: spacingPixels[5],
     lineHeight: 20,
+  },
+  chipCaption: {
+    marginBottom: spacingPixels[2],
+    lineHeight: 18,
   },
   chipRow: {
     flexDirection: 'row',

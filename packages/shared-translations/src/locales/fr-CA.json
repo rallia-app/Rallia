@@ -11352,7 +11352,8 @@
       "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
       "placement": {
         "title": "Jusqu'où tu te rends",
-        "note": "Une victoire sur un bye compte pas."
+        "baseNote": "Points de base. Chaque tournoi les multiplie.",
+        "note": "Les byes et les forfaits comptent pas comme des victoires. Si tu gagnes aucune partie, tu reçois les points de participation, peu importe jusqu'où le tableau t'a amené."
       },
       "placements": {
         "champion": "Champion 500",
@@ -11361,12 +11362,11 @@
         "quarterfinal": "Quart 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
-        "roundOf64": "R64 25",
         "played": "Participation 20"
       },
       "worth": {
         "title": "Ce que vaut un tournoi",
-        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Chaque tournoi affiche sa valeur d'avance, comme « jusqu'à 1300 pts » sur la carte."
+        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie double la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 2000 pts » sur la carte."
       },
       "season": {
         "title": "Ton score de saison",
