@@ -4848,7 +4848,7 @@
       "rankingPoints": "Circuit Rallia · {points} pts",
       "rankingPointsUpTo": "Circuit Rallia · jusqu'à {points} pts",
       "rankingBanner": {
-        "label": "Circuit Rallia · au champion",
+        "label": "Circuit Rallia · points pour tous",
         "upTo": "jusqu'à",
         "unit": "pts"
       },

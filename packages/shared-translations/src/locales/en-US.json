@@ -4848,7 +4848,7 @@
       "rankingPoints": "Circuit Rallia · {points} pts",
       "rankingPointsUpTo": "Circuit Rallia · up to {points} pts",
       "rankingBanner": {
-        "label": "Circuit Rallia · for the champion",
+        "label": "Circuit Rallia · points for all",
         "upTo": "up to",
         "unit": "pts"
       },
