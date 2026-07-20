@@ -254,13 +254,14 @@ BEGIN
      WHERE tournament_id = v_tid AND placement = 'finalist';
     ASSERT v_count = 180, 'finalist should earn 300*0.6 = 180, got ' || v_count;
 
-    -- R1 losers won nothing → zero-win floor still applies, then ×0.5.
+    -- R1 losers won nothing → zero-win floor, flat 20 (participation never
+    -- takes the multiplier, not even the small-draw discount).
     SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 10;
-    ASSERT v_count = 2, 'expected 2 zero-win R1 losers at 10 pts, got ' || v_count;
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 20;
+    ASSERT v_count = 2, 'expected 2 zero-win R1 losers at flat 20 pts, got ' || v_count;
 
     SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_count = 500, 'expected total 300+180+10+10 = 500, got ' || v_count;
+    ASSERT v_count = 520, 'expected total 300+180+20+20 = 520, got ' || v_count;
 
     RAISE NOTICE 'PASS 2: 4-entry draw — ×0.6 snapped discount, placement ordering preserved (no local floor)';
 END $$;
@@ -750,11 +751,13 @@ END $$;
 
 -- --------------------------------------------------------------------------
 -- 9. lt_tournament_ranking_multiplier — the pricing function in isolation.
---    draw_mult is a smooth log2 curve (no cliffs); level_mult is CONTINUOUS in
---    the floor's rank on the sport's scale (×1.0 bottom → ×2.0 top, tennis rank
---    r of 10 → 1 + (r−1)/9); the product then SNAPS to the 0.2 grid so champion
---    points land on multiples of 100. Synthetic tournaments with no bracket, so
---    draw size falls back to the registered count and each case is exact.
+--    draw_mult is a smooth log2 curve (no cliffs); level_mult is the category-
+--    doubling ladder (20260720120000): ×1.0 at the scale's first intermediate
+--    rung (3.0 on tennis, rank 4), doubling every 2 rungs above, ×0.5 at the
+--    bottom rung joining the anchor geometrically; the product then SNAPS to
+--    the 0.2 grid so champion points land on multiples of 100. Synthetic
+--    tournaments with no bracket, so draw size falls back to the registered
+--    count and each case is exact.
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -771,13 +774,13 @@ BEGIN
     -- (registered entries, min_rating, expected multiplier)
     FOR r IN SELECT * FROM (VALUES
         --                          draw × level (rank)      → snapped to 0.2 grid
-        (8,  NULL::numeric, 1.000),   -- 1.0 × 1.0                 → 1.0
-        (8,  2.0,           1.200),   -- 1.0 × 1.111 (rank 2)      → 1.2
-        (8,  3.0,           1.400),   -- 1.0 × 1.333 (rank 4)      → 1.4
-        (8,  4.5,           1.600),   -- 1.0 × 1.667 (rank 7)      → 1.6
-        (8,  6.0,           2.000),   -- 1.0 × 2.0   (top rank)    → 2.0
-        (4,  4.5,           0.800),   -- 0.5 × 1.667 = 0.834       → 0.8
-        (16, 3.0,           2.000),   -- 1.5 × 1.333 = 2.0         → 2.0
+        (8,  NULL::numeric, 1.000),   -- 1.0 × 1.0 (open)          → 1.0
+        (8,  2.0,           0.600),   -- 1.0 × 0.630 (rank 2)      → 0.6
+        (8,  3.0,           1.000),   -- 1.0 × 1.0   (anchor)      → 1.0
+        (8,  4.5,           2.800),   -- 1.0 × 2.828 (rank 7)      → 2.8
+        (8,  6.0,           8.000),   -- 1.0 × 8.0   (top rank)    → 8.0
+        (4,  4.5,           1.400),   -- 0.5 × 2.828 = 1.414       → 1.4
+        (16, 3.0,           1.600),   -- 1.5 × 1.0, 7.5 half-up    → 1.6
         (64, NULL,          2.600),   -- 2.5 × 1.0, 12.5 half-up   → 2.6
         (4,  NULL,          0.600),   -- 0.5, 2.5 half-up          → 0.6
         (3,  NULL,          0.200),   -- log2 sub-4 field 0.292    → 0.2
@@ -900,10 +903,10 @@ BEGIN
     ASSERT v_count = 2, 'expected 2 round_of_16 rows at 80 pts, got ' || v_count;
 
     -- Every other R2 loser bye-advanced (zero real wins) → participation floor,
-    -- alongside the two R1 losers: 6 + 2 = 8 rows at round(20*1.6/10)*10 = 30.
+    -- alongside the two R1 losers: 6 + 2 = 8 rows at flat 20 (never multiplied).
     SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 30;
-    ASSERT v_count = 8, 'expected 8 participated rows at 30 pts, got ' || v_count;
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 20;
+    ASSERT v_count = 8, 'expected 8 participated rows at flat 20 pts, got ' || v_count;
 
     SELECT count(*) INTO v_count FROM tournament_ranking_points
      WHERE tournament_id = v_tid AND placement = 'quarterfinal' AND points = 140;
@@ -922,9 +925,113 @@ BEGIN
     ASSERT v_count = 480, 'finalist should earn 300×1.6 = 480, got ' || v_count;
 
     SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_count = 2820, 'expected total 800+480+580+560+160+240 = 2820, got ' || v_count;
+    ASSERT v_count = 2740, 'expected total 800+480+580+560+160+160 = 2740, got ' || v_count;
 
     RAISE NOTICE 'PASS 10: round-of-N placements — real R1 win pays a rung, bye-advance stays floored';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 11. Played gate: a walkover is not a played match. Retag one R1 match of a
+--     completed 4-draw as a walkover and re-award: the walkover loser never
+--     played → NO ledger row at all; everyone who contested a match keeps
+--     theirs. (Direct status UPDATE under replica role — nothing writes
+--     'walkover' through RPCs yet.)
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport   uuid;
+    v_players uuid[];
+    v_org     uuid;
+    v_t       tournaments;
+    v_tid     uuid;
+    v_ver     integer;
+    v_match   tournament_matches;
+    v_guard   integer := 0;
+    v_count   integer;
+    v_wo_loser uuid;
+    i         integer;
+BEGIN
+    SET LOCAL session_replication_role = origin;
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
+    SELECT array_agg(player_id) INTO v_players
+      FROM (SELECT player_id FROM player_sport
+             WHERE sport_id = v_sport AND is_active = true
+             ORDER BY player_id LIMIT 4) s;
+    v_org := v_players[1];
+    UPDATE player SET is_certified_organizer = true WHERE id = v_org;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_create(
+        p_name => 'Ranking Cup walkover', p_sport_id => v_sport,
+        p_max_participants => 4::smallint,
+        p_start_date => now() + interval '7 days',
+        p_end_date   => now() + interval '8 days',
+        p_visibility => 'public', p_registration_mode => 'open'
+    );
+    v_tid := v_t.id; v_ver := v_t.version;
+    SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+
+    FOR i IN 1..4 LOOP
+        PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[i]::text)::text, true);
+        IF NOT EXISTS (SELECT 1 FROM tournament_registrations
+                        WHERE tournament_id = v_tid AND user_id = v_players[i]
+                          AND status = 'registered') THEN
+            PERFORM tournament_register(v_tid);
+        END IF;
+    END LOOP;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    SELECT * INTO v_t FROM tournament_close_registration(v_tid, v_ver);
+    v_ver := v_t.version;
+    PERFORM tournament_generate_bracket(v_tid, v_ver);
+
+    LOOP
+        v_guard := v_guard + 1;
+        ASSERT v_guard < 50, 'override loop did not converge';
+        SELECT * INTO v_match FROM tournament_matches
+         WHERE tournament_id = v_tid AND status = 'pending'
+           AND player1_is_bye = false AND player2_is_bye = false
+           AND player1_registration_id IS NOT NULL
+           AND player2_registration_id IS NOT NULL
+         ORDER BY round_number, match_position LIMIT 1;
+        EXIT WHEN v_match.id IS NULL;
+        PERFORM tournament_override_score(v_match.id, v_match.player1_registration_id, '6-0 6-0');
+    END LOOP;
+
+    ASSERT (SELECT status FROM tournaments WHERE id = v_tid) = 'completed', 'expected completed';
+
+    -- Retag one R1 match as a walkover (its loser therefore never played).
+    SELECT * INTO v_match FROM tournament_matches
+     WHERE tournament_id = v_tid AND round_number = 1
+     ORDER BY match_position LIMIT 1;
+    SELECT r.user_id INTO v_wo_loser
+      FROM tournament_registrations r
+     WHERE r.id = CASE WHEN v_match.winner_registration_id = v_match.player1_registration_id
+                       THEN v_match.player2_registration_id
+                       ELSE v_match.player1_registration_id END;
+
+    SET LOCAL session_replication_role = replica;
+    UPDATE tournament_matches SET status = 'walkover' WHERE id = v_match.id;
+    SET LOCAL session_replication_role = origin;
+
+    PERFORM award_tournament_ranking_points(v_tid);
+
+    -- 3 rows, not 4: the walkover loser is gone entirely.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
+    ASSERT v_count = 3, 'expected 3 ledger rows after walkover re-award, got ' || v_count;
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND user_id = v_wo_loser;
+    ASSERT v_count = 0, 'walkover loser never played — expected no ledger row';
+
+    -- The champion beat the walkover in the final for their only real win;
+    -- the R1-m2 loser played and lost → flat 20.
+    SELECT count(*) INTO v_count FROM tournament_ranking_points
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 20;
+    ASSERT v_count = 1, 'expected 1 participated row at flat 20, got ' || v_count;
+
+    RAISE NOTICE 'PASS 11: played gate — walkover loser gets no row, contested losses keep flat 20';
 END $$;
 
 ROLLBACK;
