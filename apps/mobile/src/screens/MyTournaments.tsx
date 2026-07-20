@@ -198,7 +198,9 @@ export const MyTournaments: React.FC = () => {
   }, [isInitialLoad, isFetchingInitial]);
 
   const visibleTournaments = useMemo(() => {
-    const isMine = (tn: Tournament) => tn.organizer_id === userId;
+    // Co-organizers run the event just like the organizer, so they belong in
+    // the organizing/drafts buckets too.
+    const isMine = (tn: Tournament) => tn.organizer_id === userId || tn.is_co_organizer === true;
 
     const visible = tournaments.filter(tn => {
       const inTab =
@@ -350,7 +352,7 @@ export const MyTournaments: React.FC = () => {
               colors={colors}
               locale={locale}
               t={t}
-              isOrganizer={item.organizer_id === userId}
+              isOrganizer={item.organizer_id === userId || item.is_co_organizer === true}
               onPress={() => handlePress(item)}
             />
           )}
