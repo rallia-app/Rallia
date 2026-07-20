@@ -15,8 +15,13 @@
  *   4. `isSportSelectionComplete` (read from OverlayContext)
  *   5. `get_check_in_context().is_pending_check_in === true`
  *   6. `@rallia/availability-refresh-banner-cooldown` is absent or > 24h old
- *      (shared key with the home banner — wizard × dismissal also writes it)
- *   7. Per-session ref `autoOpenedThisSession` is false (fire at most once)
+ *      (shared key with the home banner — dismissing the banner writes it)
+ *   7. `@rallia/weekly-checkin-auto-open-at` is absent or > 24h old — stamped
+ *      every time we auto-open, so a pending check-in raises the wizard at most
+ *      once a day instead of on every cold start. The home banner deliberately
+ *      does NOT read this key: the player can still open the wizard themselves
+ *      as often as they like.
+ *   8. Per-session ref `autoOpenedThisSession` is false (fire at most once)
  */
 import React, { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,7 +34,11 @@ import { navigationRef } from '#/navigation';
 import { IS_E2E } from '#/utils/e2e';
 
 import { useCheckInContext } from './api';
-import { WEEKLY_CHECKIN_COOLDOWN_KEY } from './useWeeklyCheckInWizard';
+import { isWeeklyCheckInActive } from './isWizardActive';
+import {
+  WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY,
+  WEEKLY_CHECKIN_COOLDOWN_KEY,
+} from './useWeeklyCheckInWizard';
 // This component is rendered OUTSIDE the NavigationContainer (next to
 // WelcomeTourModal in AppContent), so we use the container-ref-based API
 // instead of the useNavigation() hook.
@@ -97,10 +106,21 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
     let cancelled = false;
     (async () => {
       try {
-        const cooldownRaw = await AsyncStorage.getItem(WEEKLY_CHECKIN_COOLDOWN_KEY);
+        const [cooldownRaw, lastAutoOpenRaw] = await Promise.all([
+          AsyncStorage.getItem(WEEKLY_CHECKIN_COOLDOWN_KEY),
+          AsyncStorage.getItem(WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY),
+        ]);
         if (cooldownRaw) {
           const dismissedAt = parseInt(cooldownRaw, 10);
           if (Number.isFinite(dismissedAt) && Date.now() - dismissedAt < COOLDOWN_MS) {
+            return;
+          }
+        }
+        // Already auto-opened within the last 24h — leave the player alone; the
+        // home banner is still there if they want it.
+        if (lastAutoOpenRaw) {
+          const openedAt = parseInt(lastAutoOpenRaw, 10);
+          if (Number.isFinite(openedAt) && Date.now() - openedAt < COOLDOWN_MS) {
             return;
           }
         }
@@ -117,7 +137,17 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
           return;
         }
         if (cancelled) return;
+        // The wizard is already up (or still animating out after a dismissal).
+        // Navigating into a modal route mid-transition strands a touch-eating
+        // layer on iOS and freezes the app — the same failure mode 1aa391a8
+        // fixed for the exit alert. Every other auto-opener guards on this;
+        // this one has to guard against re-entering its own route.
+        if (isWeeklyCheckInActive()) return;
         autoOpenedSportsRef.current.add(sportKey);
+        // Stamp before navigating so a crash mid-wizard still counts as shown.
+        AsyncStorage.setItem(WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY, Date.now().toString()).catch(err =>
+          Logger.error('Weekly check-in auto-open stamp failed', err as Error)
+        );
         // Dismiss any presenting bottom sheet BEFORE navigating, so the wizard
         // isn't presented behind a sheet (actions-sheets render in native
         // modals above the nav stack). The wizard also calls hideAll() on mount
