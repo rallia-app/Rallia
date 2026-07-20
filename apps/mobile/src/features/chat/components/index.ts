@@ -14,6 +14,7 @@ export { ChatAgreementActionSheet as ChatAgreementModal } from './ChatAgreementM
 
 // Enhanced chat components
 export { TypingIndicator } from './TypingIndicator';
+export { AnnouncementNotice } from './AnnouncementNotice';
 export { MessageActionsSheet } from './MessageActionsSheet';
 export { ReplyBanner } from './ReplyBanner';
 export { ConversationActionsSheet } from './ConversationActionsSheet';

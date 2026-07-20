@@ -721,6 +721,7 @@ export type Database = {
           id: string
           match_id: string | null
           picture_url: string | null
+          sport_id: string | null
           title: string | null
           tournament_id: string | null
           tournament_match_id: string | null
@@ -733,6 +734,7 @@ export type Database = {
           id?: string
           match_id?: string | null
           picture_url?: string | null
+          sport_id?: string | null
           title?: string | null
           tournament_id?: string | null
           tournament_match_id?: string | null
@@ -745,6 +747,7 @@ export type Database = {
           id?: string
           match_id?: string | null
           picture_url?: string | null
+          sport_id?: string | null
           title?: string | null
           tournament_id?: string | null
           tournament_match_id?: string | null
@@ -771,6 +774,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "qualifying_played_game"
             referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "conversation_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "conversation_tournament_id_fkey"
@@ -11585,6 +11595,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { check_uid?: string }; Returns: boolean }
+      is_announcement_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: boolean
+      }
       is_conversation_participant: {
         Args: { conversation_id_param: string; user_id_param: string }
         Returns: boolean
@@ -12357,6 +12371,10 @@ export type Database = {
           player_id: string
           player_last_week: string
         }[]
+      }
+      post_sport_announcement: {
+        Args: { p_content: string; p_sport_id: string }
+        Returns: string
       }
       propose_rebuttal_score: {
         Args: {

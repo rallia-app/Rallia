@@ -2296,6 +2296,10 @@
       "one": "{name} is typing",
       "two": "{name1} and {name2} are typing",
       "many": "{name} and {count} others are typing"
+    },
+    "announcement": {
+      "subtitle": "Official announcements",
+      "readOnly": "Only Rallia posts here"
     }
   },
   "map": {

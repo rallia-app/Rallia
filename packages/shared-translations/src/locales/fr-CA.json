@@ -2296,6 +2296,10 @@
       "one": "{name} écrit",
       "two": "{name1} et {name2} écrivent",
       "many": "{name} et {count} autres écrivent"
+    },
+    "announcement": {
+      "subtitle": "Annonces officielles",
+      "readOnly": "Seul Rallia publie ici"
     }
   },
   "map": {
