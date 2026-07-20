@@ -4676,7 +4676,6 @@
     "createSubtitle": "Crée ton tableau et invite des joueurs",
     "roleOrganizer": "Organisateur",
     "rankingPoints": "{points} pts",
-    "rankingPointsUpTo": "Jusqu'à {points} pts",
     "registerBy": "Inscriptions jusqu'au {date}",
     "searchPlaceholder": "Rechercher des tournois...",
     "discoverFilters": {
@@ -4747,18 +4746,6 @@
       "onboardTypeBusiness": "Je suis une entreprise ou un club",
       "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
       "manageError": "Impossible d'ouvrir ton compte de versement. Réessaie.",
-      "payoutCard": {
-        "setupTitle": "Configure tes paiements",
-        "setupDescription": "Connecte un compte bancaire pour que les frais d'inscription de cet événement te reviennent.",
-        "setupButton": "Configurer les paiements",
-        "actionNeededTitle": "Termine ta configuration",
-        "actionNeededDescription": "Stripe a encore besoin de quelques infos avant que tu puisses être payé.",
-        "finishButton": "Terminer la configuration",
-        "readyTitle": "Gère tes paiements",
-        "readyDescription": "Modifie tes infos bancaires ou consulte tes versements quand tu veux.",
-        "payoutsPendingDescription": "Tu peux collecter les frais d'inscription. Tes infos bancaires sont encore en vérification.",
-        "manageButton": "Ouvrir le tableau de bord"
-      },
       "payoutsConnectedToast": "Compte de versement connecté !",
       "refundIssued": "Retiré, {amount} remboursé.",
       "withdrawnNoRefund": "Tu t'es retiré. Aucun remboursement ne s'applique.",
@@ -4847,11 +4834,6 @@
       "prizePool": "Bourse",
       "rankingPoints": "Circuit Rallia · {points} pts",
       "rankingPointsUpTo": "Circuit Rallia · jusqu'à {points} pts",
-      "rankingBanner": {
-        "label": "Circuit Rallia · points pour tous",
-        "upTo": "jusqu'à",
-        "unit": "pts"
-      },
       "champion": "Champion",
       "steps": {
         "draft": "Brouillon",
@@ -4863,24 +4845,19 @@
         "registered": "Inscrits",
         "games": "Parties",
         "start": "Début",
-        "startsInDays": "Dans {n} jours",
         "startsToday": "Aujourd'hui",
         "live": "En cours",
         "ended": "Terminé",
         "deadline": "Date limite"
       },
       "nextStep": {
-        "draftTitle": "Prêt à lancer?",
         "draftDescription": "Ouvrez les inscriptions pour que les joueurs puissent trouver et rejoindre votre tournoi.",
-        "openTitle": "Les inscriptions sont ouvertes",
         "openDescription": "{count} places sur {max} sont prises.",
-        "closedTitle": "Créez le tableau",
         "closedDescription": "{count} joueurs sont inscrits. Générez le tableau pour commencer.",
         "liveTitle": "Tournoi en cours",
         "liveDescription": "{done} parties jouées sur {total}. Touchez une partie en attente dans le tableau pour enregistrer son résultat."
       },
       "registerCta": {
-        "title": "Inscriptions ouvertes",
         "full": "Tournoi complet",
         "fullDescription": "Toutes les places sont prises.",
         "spotsLeft": "{n} places restantes",
@@ -4895,16 +4872,7 @@
         "description": "Ta place est réservée. Un changement de plan? Tu peux te retirer tant que les inscriptions sont ouvertes.",
         "descriptionTeam": "La place de ton équipe est réservée. Un changement de plan? Te retirer enlève les deux joueurs tant que les inscriptions sont ouvertes.",
         "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes.",
-        "descriptionInvited": "Accepte ci-dessus pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
-      },
-      "inviteCta": {
-        "title": "Tu es invité",
-        "description": "Accepte pour confirmer ta place dans le tournoi.",
-        "descriptionDoubles": "Choisis ton partenaire, puis accepte pour confirmer votre place."
-      },
-      "addMyselfCta": {
-        "title": "Tu joues aussi?",
-        "description": "Ajoute-toi à ce tournoi comme participant."
+        "descriptionInvited": "Accepte l'invitation pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
       },
       "pendingRequestsCta": {
         "title": "Demandes en attente",
@@ -5137,8 +5105,6 @@
     },
     "invitePlayers": {
       "title": "Inviter des joueurs",
-      "ctaTitle": "Inviter des joueurs",
-      "ctaDescription": "Remplis le tableau. Invite des joueurs dans l'app ou partage un lien.",
       "searchPlaceholder": "Chercher des joueurs",
       "searchHint": "Tape un nom pour trouver des joueurs à inviter.",
       "noResults": "Aucun joueur trouvé",
@@ -5200,6 +5166,10 @@
       "partnerRatingRequired": "Ton partenaire a besoin d'un niveau dans ce sport pour être inscrit.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide."
+    },
+    "overview": {
+      "readMore": "Lire la suite",
+      "infoTitle": "Infos pratiques"
     }
   },
   "tournamentCreation": {

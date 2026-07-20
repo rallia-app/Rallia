@@ -2091,7 +2091,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   // abandoned/cancelled form never orphans an uploaded file. logoUrl holds the
   // local URI until then.
   const handlePickPoster = useCallback(async () => {
-    const { uri } = await pickImageWithCropper({ aspectRatio: [16, 9], quality: 0.85 });
+    // 12:5 == the 2.4:1 box banners render in (TOURNAMENT_BANNER_ASPECT), so
+    // what the organizer frames here is exactly what shows on the card and hero.
+    const { uri } = await pickImageWithCropper({ aspectRatio: [12, 5], quality: 0.85 });
     if (!uri) return;
     lightHaptic();
     setLogoUrl(uri);

@@ -26,8 +26,10 @@ import {
   Easing,
   Alert,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -53,7 +55,6 @@ import {
   warningHaptic,
   getHumanName,
   getProfilePictureUrl,
-  getTournamentLogoUrl,
   formatPrice,
   tournamentRankingHeadline,
   tournamentPointsLadder,
@@ -112,7 +113,10 @@ import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import PlayerCard from '../features/community/components/PlayerCard';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
-import { DEFAULT_TOURNAMENT_BANNER } from '../features/tournaments/defaultBanner';
+import {
+  TournamentBanner,
+  TOURNAMENT_BANNER_ASPECT,
+} from '../features/tournaments/components/TournamentBanner';
 import type { RootStackParamList } from '../navigation';
 
 type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
@@ -260,38 +264,22 @@ const LabeledBlock: React.FC<{
 
 /** Initial-load placeholder shaped like the hero + tab bar + first cards, so the
  *  screen keeps its silhouette while the tournament loads. */
-const TournamentDetailSkeleton: React.FC<{ colors: ScreenColors; isDark: boolean }> = ({
-  colors,
-  isDark,
-}) => {
+const TournamentDetailSkeleton: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const { width } = useWindowDimensions();
   const bg = isDark ? neutral[800] : neutral[200];
   const highlight = isDark ? neutral[700] : neutral[100];
   const shimmer = { backgroundColor: bg, highlightColor: highlight };
   return (
     <View>
-      <View style={styles.heroFixed}>
-        <View
-          style={[
-            styles.heroCard,
-            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-          ]}
-        >
-          <Skeleton {...shimmer} height={160} borderRadius={radiusPixels.lg} />
-          <View style={styles.skeletonHeroBody}>
-            <Skeleton {...shimmer} width="35%" height={22} borderRadius={radiusPixels.full} />
-            <Skeleton {...shimmer} width="80%" height={26} />
-            <Skeleton {...shimmer} width="60%" height={16} />
-          </View>
-          <View style={[styles.heroDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.heroMetaRows}>
-            {[0, 1, 2].map(i => (
-              <View key={i} style={styles.heroMetaRow}>
-                <Skeleton {...shimmer} width={28} height={28} borderRadius={radiusPixels.lg} />
-                <Skeleton {...shimmer} width={`${70 - i * 15}%`} height={14} />
-              </View>
-            ))}
-          </View>
-        </View>
+      <Skeleton
+        {...shimmer}
+        height={Math.round(width / TOURNAMENT_BANNER_ASPECT)}
+        borderRadius={0}
+      />
+      <View style={styles.heroChipRow}>
+        {[110, 88].map(w => (
+          <Skeleton key={w} {...shimmer} width={w} height={26} borderRadius={radiusPixels.full} />
+        ))}
       </View>
       <View style={styles.skeletonTabBar}>
         {[0, 1, 2].map(i => (
@@ -477,22 +465,34 @@ const Section: React.FC<{ title: string; children: React.ReactNode; colors: Scre
   </View>
 );
 
+// Fixed light-tone text colors for badges sitting on the hero banner: the pill
+// background is near-white there regardless of theme.
+const ON_IMAGE_TONE_TEXT: Record<'neutral' | 'positive' | 'active' | 'muted', string> = {
+  positive: '#15803d',
+  active: primary[700],
+  neutral: neutral[700],
+  muted: neutral[500],
+};
+
 const StatusBadge: React.FC<{
   status: Status;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
-}> = ({ status, colors, t }) => {
+  onImage?: boolean;
+}> = ({ status, colors, t, onImage }) => {
   const tone = STATUS_TONE[status];
-  const bg =
-    tone === 'positive'
+  const bg = onImage
+    ? 'rgba(255,255,255,0.94)'
+    : tone === 'positive'
       ? colors.statusPositiveBg
       : tone === 'active'
         ? colors.statusActiveBg
         : tone === 'muted'
           ? colors.statusMutedBg
           : colors.statusNeutralBg;
-  const fg =
-    tone === 'positive'
+  const fg = onImage
+    ? ON_IMAGE_TONE_TEXT[tone]
+    : tone === 'positive'
       ? colors.statusPositiveText
       : tone === 'active'
         ? colors.statusActiveText
@@ -513,9 +513,15 @@ const StatusBadge: React.FC<{
  * indicator in MatchCard (coral/red `secondary` palette, expanding ring +
  * core glow).
  */
-const LiveBadge: React.FC<{ label: string; isDark: boolean }> = ({ label, isDark }) => {
+const LiveBadge: React.FC<{ label: string; isDark: boolean; onImage?: boolean }> = ({
+  label,
+  isDark,
+  onImage,
+}) => {
   const pulse = useRef(new Animated.Value(0)).current;
-  const liveColor = isDark ? secondary[400] : secondary[500];
+  // On the banner the pill is near-white in both themes, so the dot and label
+  // take the darker coral that reads against it.
+  const liveColor = onImage ? secondary[600] : isDark ? secondary[400] : secondary[500];
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -544,7 +550,14 @@ const LiveBadge: React.FC<{ label: string; isDark: boolean }> = ({ label, isDark
 
   return (
     <View
-      style={[styles.liveBadge, { backgroundColor: `${secondary[500]}${isDark ? '30' : '1f'}` }]}
+      style={[
+        styles.liveBadge,
+        {
+          backgroundColor: onImage
+            ? 'rgba(255,255,255,0.94)'
+            : `${secondary[500]}${isDark ? '30' : '1f'}`,
+        },
+      ]}
     >
       <View style={styles.liveIndicatorContainer}>
         <Animated.View
@@ -633,26 +646,26 @@ const LifecycleStepper: React.FC<{
   );
 };
 
-const StatTile: React.FC<{
-  icon: keyof typeof Ionicons.glyphMap;
+/** One column of the segmented stats card. The card draws the single border;
+ *  segments stay flat with hairline dividers between them, mirroring the
+ *  Players empty-state stats strip. */
+const StatSegment: React.FC<{
   value: string;
   label: string;
   colors: ScreenColors;
-}> = ({ icon, value, label, colors }) => (
-  <View
-    style={[
-      styles.statTile,
-      { backgroundColor: colors.cardBackground, borderColor: colors.border },
-    ]}
-  >
-    <Ionicons name={icon} size={18} color={colors.primary} />
-    <Text size="lg" weight="bold" color={colors.text}>
-      {value}
-    </Text>
-    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
-      {label}
-    </Text>
-  </View>
+  showDivider?: boolean;
+}> = ({ value, label, colors, showDivider }) => (
+  <>
+    {showDivider && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
+    <View style={styles.statSegment}>
+      <Text size="lg" weight="bold" color={colors.text} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  </>
 );
 
 /**
@@ -751,6 +764,148 @@ const DashboardCtaCard: React.FC<{
     </View>
   );
 };
+
+/**
+ * Compact status chip sitting in the row under the hero banner. Replaces the
+ * full-width registered band / chat button / ranking banner stack — same
+ * information, one row instead of three blocks.
+ */
+const HeroChip: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  tone: 'positive' | 'outline';
+  colors: ScreenColors;
+  onPress?: () => void;
+  testID?: string;
+}> = ({ icon, label, tone, colors, onPress, testID }) => {
+  const bg = tone === 'positive' ? colors.statusPositiveBg : 'transparent';
+  const fg = tone === 'positive' ? colors.statusPositiveText : colors.primary;
+  const inner = (
+    <>
+      <Ionicons name={icon} size={14} color={fg} />
+      <Text size="xs" weight="semibold" color={fg} numberOfLines={1}>
+        {label}
+      </Text>
+      {onPress && <Ionicons name="chevron-forward" size={13} color={fg} />}
+    </>
+  );
+  const style = [
+    styles.heroChip,
+    { backgroundColor: bg, borderColor: tone === 'outline' ? colors.border : 'transparent' },
+  ];
+  if (!onPress) return <View style={style}>{inner}</View>;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={style}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+    >
+      {inner}
+    </TouchableOpacity>
+  );
+};
+
+/**
+ * Quiet grouped row for the organizer's utility actions (invite, payouts, edit,
+ * co-organizers). Deliberately lower-contrast than DashboardCtaCard so the one
+ * accent card and the docked bar stay the loudest things on the screen.
+ */
+const OverviewActionRow: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  colors: ScreenColors;
+  onPress: () => void;
+  badge?: { label: string; tone: 'positive' | 'warning' | 'muted' };
+  showDivider?: boolean;
+  testID?: string;
+}> = ({ icon, label, colors, onPress, badge, showDivider, testID }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.7}
+    testID={testID}
+    accessibilityRole="button"
+    style={[
+      styles.overviewActionRow,
+      showDivider && {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.border,
+      },
+    ]}
+  >
+    <Ionicons name={icon} size={18} color={colors.primary} />
+    <Text size="sm" weight="medium" color={colors.text} style={styles.overviewActionLabel}>
+      {label}
+    </Text>
+    {badge && (
+      <View
+        style={[
+          styles.overviewActionBadge,
+          {
+            backgroundColor:
+              badge.tone === 'positive'
+                ? colors.statusPositiveBg
+                : badge.tone === 'warning'
+                  ? colors.cancelledBg
+                  : colors.statusMutedBg,
+          },
+        ]}
+      >
+        <Text
+          size="xs"
+          weight="semibold"
+          color={
+            badge.tone === 'positive'
+              ? colors.statusPositiveText
+              : badge.tone === 'warning'
+                ? colors.cancelledText
+                : colors.textMuted
+          }
+        >
+          {badge.label}
+        </Text>
+      </View>
+    )}
+    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+  </TouchableOpacity>
+);
+
+/** Friendly icon row for the Overview's at-a-glance card: icon disc, primary
+ *  line, optional secondary line. Softer than the Details tab's spec-sheet
+ *  InfoRow on purpose. */
+const OverviewInfoRow: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  subText?: string;
+  colors: ScreenColors;
+  showDivider?: boolean;
+}> = ({ icon, text, subText, colors, showDivider }) => (
+  <View
+    style={[
+      styles.overviewInfoRow,
+      showDivider && {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.border,
+      },
+    ]}
+  >
+    <View style={[styles.overviewInfoIcon, { backgroundColor: colors.statusActiveBg }]}>
+      <Ionicons name={icon} size={15} color={colors.primary} />
+    </View>
+    <View style={styles.overviewInfoTexts}>
+      <Text size="sm" weight="medium" color={colors.text}>
+        {text}
+      </Text>
+      {subText ? (
+        <Text size="xs" color={colors.textMuted}>
+          {subText}
+        </Text>
+      ) : null}
+    </View>
+  </View>
+);
 
 // Mirror PlayerDirectory: derive reputation display straight from the row,
 // no extra API call. Hidden unless the player's reputation is public.
@@ -2292,7 +2447,7 @@ export const TournamentDetail: React.FC = () => {
   if (isLoading || (invitePreviewEnabled && invitePreviewLoading)) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-        <TournamentDetailSkeleton colors={colors} isDark={isDark} />
+        <TournamentDetailSkeleton isDark={isDark} />
       </SafeAreaView>
     );
   }
@@ -2356,18 +2511,18 @@ export const TournamentDetail: React.FC = () => {
         : isLive
           ? 2
           : 3;
+  // Kept short: this sits in a narrow stats segment, so an upcoming start shows
+  // the date ("Jul 26") rather than a countdown phrase that would wrap.
   const startTileValue = isLive
     ? t('tournamentDetail.dashboard.stats.live')
     : isFinished
       ? t('tournamentDetail.dashboard.stats.ended')
-      : daysToStart > 0
-        ? t('tournamentDetail.dashboard.stats.startsInDays').replace('{n}', String(daysToStart))
-        : daysToStart === 0
-          ? t('tournamentDetail.dashboard.stats.startsToday')
-          : new Date(tournament.start_date).toLocaleDateString(locale, {
-              month: 'short',
-              day: 'numeric',
-            });
+      : daysToStart === 0
+        ? t('tournamentDetail.dashboard.stats.startsToday')
+        : new Date(tournament.start_date).toLocaleDateString(locale, {
+            month: 'short',
+            day: 'numeric',
+          });
   const myMatchP1 = myNextMatch?.player1_registration_id ?? null;
   const myMatchP2 = myNextMatch?.player2_registration_id ?? null;
   const registerCloseHint = tournament.registration_closes_at
@@ -2385,11 +2540,212 @@ export const TournamentDetail: React.FC = () => {
   const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
 
+  // Late entry by share link: registration closed but the bracket isn't
+  // published, so a still-active invite link still gets a visitor in.
+  const canLateEnterViaInvite =
+    !isOrganizer &&
+    tournament.status === 'registration_closed' &&
+    !tournament.bracket_locked_at &&
+    !!params.inviteToken &&
+    !isPaidTournament &&
+    !myActiveRegistration &&
+    spotsLeft > 0;
+
+  const spotsLeftLabel =
+    spotsLeft > 0
+      ? t(
+          isDoubles
+            ? 'tournamentDetail.dashboard.registerCta.spotsLeftTeams'
+            : 'tournamentDetail.dashboard.registerCta.spotsLeft'
+        ).replace('{n}', String(spotsLeft))
+      : null;
+
+  /**
+   * The one state-advancing action for this viewer, docked to the bottom of the
+   * screen so the conversion moment is never below the fold. Everything else
+   * (utilities, withdraw, informational cards) stays in the Overview tab.
+   * Null once the tournament is cancelled, finished, or there's nothing to do.
+   */
+  const primaryAction: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    onPress: () => void;
+    disabled: boolean;
+    hint: string | null;
+    testID: string;
+  } | null = (() => {
+    if (wasCancelled || isFinished || isLive) return null;
+    const withFee = (base: string) => (feeTotalLabel ? `${base} · ${feeTotalLabel}` : base);
+    const registerHint = [spotsLeftLabel, registerCloseHint, refundSummary]
+      .filter(Boolean)
+      .join(' · ');
+
+    // Organizer-sent invite: accepted via tournament_accept_invite.
+    if (isInvitedPending) {
+      const busy = acceptInvite.isPending || createRegistrationPayment.isPending;
+      return {
+        label: busy
+          ? t('tournamentDetail.actions.accepting')
+          : withFee(t('tournamentDetail.actions.acceptInvite')),
+        icon: 'checkmark-circle-outline',
+        onPress: onAcceptInvite,
+        disabled: busy,
+        hint: refundSummary,
+        testID: 'cta-accept-tournament-invite',
+      };
+    }
+    // Invite-only invitee confirming their own pending row.
+    if (isInvitePending) {
+      return {
+        label: registerPending
+          ? t('tournamentDetail.actions.accepting')
+          : t('tournamentDetail.actions.acceptInvite'),
+        icon: 'checkmark-circle-outline',
+        onPress: onRegister,
+        disabled: registerPending,
+        hint: null,
+        testID: 'cta-accept-invite',
+      };
+    }
+    if (!isOrganizer && !myActiveRegistration) {
+      if (tournament.status === 'registration_open' && spotsLeft > 0) {
+        return {
+          label: registerBusy
+            ? t('tournamentDetail.actions.registering')
+            : withFee(t('tournamentDetail.actions.register')),
+          icon: 'person-add-outline',
+          onPress: onRegister,
+          disabled: registerBusy,
+          hint: registerHint || null,
+          testID: 'cta-register',
+        };
+      }
+      if (canLateEnterViaInvite) {
+        return {
+          label: registerBusy
+            ? t('tournamentDetail.actions.registering')
+            : t('tournamentDetail.actions.register'),
+          icon: 'person-add-outline',
+          onPress: onRegister,
+          disabled: registerBusy,
+          hint: t('tournamentDetail.dashboard.registerCta.inviteLateDescription'),
+          testID: 'cta-register-invite-late',
+        };
+      }
+    }
+    if (isOrganizer) {
+      if (tournament.status === 'draft') {
+        return {
+          label: open.isPending
+            ? t('tournamentDetail.actions.opening')
+            : t('tournamentDetail.actions.openRegistration'),
+          icon: 'lock-open-outline',
+          onPress: onOpen,
+          disabled: open.isPending,
+          hint: t('tournamentDetail.dashboard.nextStep.draftDescription'),
+          testID: 'cta-open-registration',
+        };
+      }
+      if (tournament.status === 'registration_open') {
+        return {
+          label: close.isPending
+            ? t('tournamentDetail.actions.closing')
+            : t('tournamentDetail.actions.closeRegistration'),
+          icon: 'lock-closed-outline',
+          onPress: onClose,
+          disabled: close.isPending,
+          hint: t('tournamentDetail.dashboard.nextStep.openDescription')
+            .replace('{count}', String(activeCount))
+            .replace('{max}', String(tournament.max_participants)),
+          testID: 'cta-close-registration',
+        };
+      }
+      if (tournament.status === 'registration_closed') {
+        return {
+          label: t('tournamentDetail.actions.setUpBracket'),
+          icon: 'git-network-outline',
+          onPress: onSetUpBracket,
+          disabled: false,
+          hint: t('tournamentDetail.dashboard.nextStep.closedDescription').replace(
+            '{count}',
+            String(activeCount)
+          ),
+          testID: 'cta-setup-bracket',
+        };
+      }
+    }
+    return null;
+  })();
+
+  /** Organizer utilities, rendered as one quiet grouped list in the Overview. */
+  const organizerRows: Array<{
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    onPress: () => void;
+    badge?: { label: string; tone: 'positive' | 'warning' | 'muted' };
+    testID: string;
+  }> = [];
+  if (isOrganizer) {
+    if (adminActions.canInvite) {
+      organizerRows.push({
+        icon: 'share-social-outline',
+        label: t('tournamentDetail.actions.invitePlayers'),
+        onPress: handleInvitePlayers,
+        testID: 'action-invite-players',
+      });
+    }
+    if (tournament.status === 'registration_open' && !myActiveRegistration) {
+      organizerRows.push({
+        icon: 'person-add-outline',
+        label: register.isPending
+          ? t('tournamentDetail.actions.registering')
+          : t('tournamentDetail.actions.addMyself'),
+        onPress: onRegister,
+        testID: 'cta-add-myself',
+      });
+    }
+    // undefined = still loading; the row appears once the status is known.
+    if (isPaidTournament && payoutAccount !== undefined) {
+      organizerRows.push({
+        icon: 'wallet-outline',
+        label: t('tournamentDetail.payments.payoutRow.label'),
+        onPress:
+          payoutAccount === null ? promptOnboardBusinessType : () => void handleManagePayouts(),
+        badge:
+          payoutAccount === null
+            ? { label: t('tournamentDetail.payments.payoutRow.setup'), tone: 'muted' }
+            : !payoutAccount.chargesEnabled
+              ? { label: t('tournamentDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }
+              : { label: t('tournamentDetail.payments.payoutRow.ready'), tone: 'positive' },
+        testID: 'action-payouts',
+      });
+    }
+    if (adminActions.canEdit) {
+      organizerRows.push({
+        icon: 'create-outline',
+        label: t('tournamentDetail.actions.editDetails'),
+        onPress: handleEditDetails,
+        testID: 'action-edit-details',
+      });
+    }
+    if (canManageCoOrganizers) {
+      organizerRows.push({
+        icon: 'people-circle-outline',
+        label: t('tournamentDetail.coOrganizers.ctaTitle'),
+        onPress: handleManageCoOrganizers,
+        testID: 'action-manage-co-organizers',
+      });
+    }
+  }
+
   // Details-tab spec-sheet values: level requirement, venue, and the money
   // (entry fee / what the player pays / prize) so every attribute set at
   // creation has a persistent home beyond the glanceable hero.
   const ratingRangeLabel = formatRatingRange(tournament.min_rating, tournament.max_rating);
   const rankingHeadline = tournamentRankingHeadline(tournament);
+  const showRegisteredChip =
+    !!myActiveRegistration && !wasCancelled && tournament.status !== 'archived';
+  const showRankingChip = !!rankingHeadline && awardsRankingPoints;
   const entryFeeLabel = isPaidTournament
     ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
     : null;
@@ -2429,18 +2785,21 @@ export const TournamentDetail: React.FC = () => {
     .split('\n')
     .map(l => l.trim())
     .filter(Boolean);
+  // Overview → Bracket → Rules → Points → Players → Details. Bracket sits up
+  // front because it's the tab that matters most once play starts; everything
+  // else follows the reading order of "what is this / what do I win / who's in".
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'overview', label: t('tournamentDetail.tabs.overview') },
     ...(showBracketTab
       ? [{ key: 'bracket' as const, label: t('tournamentDetail.tabs.bracket') }]
       : []),
-    ...(showPlayersTab
-      ? [{ key: 'players' as const, label: t('tournamentDetail.tabs.players') }]
-      : []),
+    ...(showRulesTab ? [{ key: 'rules' as const, label: t('tournamentDetail.tabs.rules') }] : []),
     ...(showPointsTab
       ? [{ key: 'points' as const, label: t('tournamentDetail.tabs.points') }]
       : []),
-    ...(showRulesTab ? [{ key: 'rules' as const, label: t('tournamentDetail.tabs.rules') }] : []),
+    ...(showPlayersTab
+      ? [{ key: 'players' as const, label: t('tournamentDetail.tabs.players') }]
+      : []),
     { key: 'details', label: t('tournamentDetail.tabs.details') },
   ];
   // The selected tab can vanish (bracket published, rules cleared) — fall back
@@ -2448,9 +2807,16 @@ export const TournamentDetail: React.FC = () => {
   const currentTabKey = tabs.some(tab => tab.key === activeTabKey) ? activeTabKey : 'overview';
   const hasPlayersTab = tabs.some(tab => tab.key === 'players');
 
-  const goToTab = (key: TabKey) => {
+  /** Tab-bar taps: switch panes and leave the scroll position alone. */
+  const selectTab = (key: TabKey) => {
     void lightHaptic();
     setActiveTabKey(key);
+  };
+
+  /** Jumping into a tab from elsewhere on the page (hero badge, a CTA) does
+   *  scroll, otherwise the pane you asked for opens off-screen. */
+  const goToTab = (key: TabKey) => {
+    selectTab(key);
     scrollRef.current?.scrollTo({ y: heroHeightRef.current, animated: true });
   };
 
@@ -2459,7 +2825,12 @@ export const TournamentDetail: React.FC = () => {
       <ScrollView
         ref={scrollRef}
         style={styles.screenScroll}
-        contentContainerStyle={styles.screenScrollContent}
+        contentContainerStyle={[
+          styles.screenScrollContent,
+          // Clear the docked bar (button + a two-line hint at worst) so the
+          // last card is never trapped behind it.
+          primaryAction ? { paddingBottom: 120 + insets.bottom } : null,
+        ]}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
         refreshControl={
@@ -2478,155 +2849,104 @@ export const TournamentDetail: React.FC = () => {
             heroHeightRef.current = e.nativeEvent.layout.height;
           }}
         >
-          <View
-            style={[
-              styles.heroCard,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            ]}
-          >
-            <Image
-              source={
-                tournament.logo_url
-                  ? { uri: getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url }
-                  : DEFAULT_TOURNAMENT_BANNER
-              }
-              style={styles.heroPoster}
-              resizeMode="cover"
-            />
-            <View style={styles.heroTopRow}>
+          {/* Full-bleed banner: status and prize float on the image, the scrim
+              carries the identity line. Mirrors the list card so tapping a card
+              reads as it expanding, and keeps the fold free for the tabs. The
+              description now lives at the top of the Details tab. */}
+          <View style={styles.heroBanner}>
+            <TournamentBanner logoUrl={tournament.logo_url} />
+            <View style={styles.heroBannerTopRow}>
               {isLive ? (
-                <LiveBadge label={t('tournamentDetail.status.in_progress')} isDark={isDark} />
+                <LiveBadge
+                  label={t('tournamentDetail.status.in_progress')}
+                  isDark={isDark}
+                  onImage
+                />
               ) : (
-                <StatusBadge status={tournament.status} colors={colors} t={t} />
+                <StatusBadge status={tournament.status} colors={colors} t={t} onImage />
               )}
+              {/* What the event is worth, both currencies together: cash in the
+                  solid gold pill, Circuit Rallia points in the lighter one. */}
+              <View style={styles.heroBannerBadges}>
+                {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
+                  <View style={styles.heroPrizeBadge}>
+                    <Ionicons name="trophy" size={13} color={accent[900]} />
+                    <Text size="xs" weight="semibold" color={accent[900]} numberOfLines={1}>
+                      {formatPrice(tournament.prize_money_cents, tournament.currency, {
+                        locale,
+                        trimZeroCents: true,
+                      })}
+                    </Text>
+                  </View>
+                ) : null}
+                {showRankingChip && rankingHeadline ? (
+                  <TouchableOpacity
+                    onPress={() => goToTab('points')}
+                    activeOpacity={0.7}
+                    style={styles.heroPointsBadge}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('tournamentDetail.tabs.points')}
+                    testID="hero-ranking-banner"
+                  >
+                    <Ionicons name="ribbon" size={13} color={accent[700]} />
+                    <Text size="xs" weight="semibold" color={accent[700]} numberOfLines={1}>
+                      {t('tournamentList.rankingPoints').replace(
+                        '{points}',
+                        String(rankingHeadline.points)
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
-
-            <Text size="2xl" weight="bold" color={colors.text} style={styles.heroTitle}>
-              {tournament.name}
-            </Text>
-            {tournament.description ? (
+            {/* Scrim is deliberately shallow and light: it only has to carry two
+                lines, and the text shadow does the rest of the legibility work,
+                so the artwork stays visible. */}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.68)']}
+              locations={[0, 0.42, 1]}
+              style={styles.heroScrim}
+            >
+              {/* One line: the 2.4:1 banner is a wide strip, so a two-line
+                  title left almost no artwork visible. */}
+              <Text
+                size="2xl"
+                weight="bold"
+                lineHeight="tight"
+                color="#ffffff"
+                numberOfLines={1}
+                style={styles.scrimText}
+              >
+                {tournament.name}
+              </Text>
               <Text
                 size="sm"
-                color={colors.textMuted}
-                style={styles.heroDescription}
-                numberOfLines={5}
+                color="rgba(255,255,255,0.92)"
+                numberOfLines={1}
+                style={styles.scrimText}
               >
-                {tournament.description}
+                {/* Dates + venue only: the organizer byline has its own row in
+                    the Overview's Event info card and overflowed this line. */}
+                {[
+                  `${formatDate(tournament.start_date)} – ${formatDate(tournament.end_date)}`,
+                  tournament.venue_name || tournament.city,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </Text>
-            ) : null}
+            </LinearGradient>
+          </View>
 
-            <View style={[styles.heroDivider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.heroMetaRows}>
-              <View style={styles.heroMetaRow}>
-                <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusActiveBg }]}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-                </View>
-                <Text size="sm" weight="medium" color={colors.text} style={styles.heroMetaText}>
-                  {formatDate(tournament.start_date)} – {formatDate(tournament.end_date)}
-                </Text>
-              </View>
-              {tournament.venue_name || tournament.city ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {tournament.venue_name || tournament.city}
-                  </Text>
-                </View>
-              ) : null}
-              {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {`${t('tournamentDetail.dashboard.prizePool')} ${formatPrice(
-                      tournament.prize_money_cents,
-                      tournament.currency,
-                      { locale, trimZeroCents: true }
-                    )}`}
-                  </Text>
-                </View>
-              ) : null}
-              {organizerName ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {t('tournamentDetail.dashboard.organizedBy').replace('{name}', organizerName)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-
-            {/* Circuit Rallia payout — pulled out of the meta rows and given a
-                tinted band, so the number a player competes for is the loudest
-                thing in the hero after the title. Gated on the same eligibility
-                as the Points tab: the ceiling is stamped on every tournament,
-                so an uncertified organizer's event would otherwise advertise
-                points the award never pays. Tapping opens the full breakdown. */}
-            {rankingHeadline && awardsRankingPoints ? (
-              <TouchableOpacity
-                onPress={() => goToTab('points')}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={t('tournamentDetail.tabs.points')}
-                testID="hero-ranking-banner"
-                style={[
-                  styles.rankingBanner,
-                  { backgroundColor: colors.championBg, borderColor: colors.championText },
-                ]}
-              >
-                <View style={[styles.rankingBannerIcon, { backgroundColor: colors.championText }]}>
-                  <Ionicons name="trophy" size={20} color={accent[900]} />
-                </View>
-                <View style={styles.rankingBannerTexts}>
-                  <Text size="xs" weight="semibold" color={colors.championText} numberOfLines={1}>
-                    {t('tournamentDetail.dashboard.rankingBanner.label')}
-                  </Text>
-                  <View style={styles.rankingBannerValueRow}>
-                    {rankingHeadline.projected ? (
-                      <Text size="sm" weight="medium" color={colors.textMuted}>
-                        {t('tournamentDetail.dashboard.rankingBanner.upTo')}
-                      </Text>
-                    ) : null}
-                    <Text size="2xl" weight="bold" lineHeight="tight" color={colors.championText}>
-                      {rankingHeadline.points}
-                    </Text>
-                    <Text size="sm" weight="medium" color={colors.textMuted}>
-                      {t('tournamentDetail.dashboard.rankingBanner.unit')}
-                    </Text>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.championText} />
-              </TouchableOpacity>
-            ) : null}
-
-            {myActiveRegistration &&
-              tournament.status !== 'cancelled' &&
-              tournament.status !== 'archived' && (
-                <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                    {myActiveRegistration.status === 'pending'
+          {/* One chip row replaces the registered band and the chat button. */}
+          {showRegisteredChip || !!chatConversationId ? (
+            <View style={styles.heroChipRow}>
+              {showRegisteredChip ? (
+                <HeroChip
+                  icon="checkmark-circle"
+                  tone="positive"
+                  colors={colors}
+                  label={
+                    myActiveRegistration.status === 'pending'
                       ? isInvitePending || isInvitedPending
                         ? t('tournamentDetail.actions.invitePendingLabel')
                         : t('tournamentDetail.actions.registrationPendingLabel')
@@ -2635,26 +2955,21 @@ export const TournamentDetail: React.FC = () => {
                             '{name}',
                             myPartnerName
                           )
-                        : t('tournamentDetail.actions.registeredLabel')}
-                  </Text>
-                </View>
-              )}
-
-            {chatConversationId && (
-              <TouchableOpacity
-                onPress={handleOpenChat}
-                activeOpacity={0.8}
-                style={[styles.heroChatButton, { borderColor: colors.border }]}
-                accessibilityRole="button"
-                accessibilityLabel={t('tournamentDetail.chat.open')}
-              >
-                <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
-                <Text size="sm" weight="semibold" color={colors.primary}>
-                  {t('tournamentDetail.chat.open')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                        : t('tournamentDetail.actions.registeredLabel')
+                  }
+                />
+              ) : null}
+              {chatConversationId ? (
+                <HeroChip
+                  icon="chatbubbles-outline"
+                  tone="outline"
+                  colors={colors}
+                  onPress={handleOpenChat}
+                  label={t('tournamentDetail.chat.open')}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {/* Sticky tab bar — scrollable underline tabs: each sized to its label
@@ -2675,7 +2990,7 @@ export const TournamentDetail: React.FC = () => {
               return (
                 <TouchableOpacity
                   key={tab.key}
-                  onPress={() => goToTab(tab.key)}
+                  onPress={() => selectTab(tab.key)}
                   activeOpacity={0.7}
                   style={styles.tabItem}
                   accessibilityRole="tab"
@@ -2731,8 +3046,50 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Lifecycle pipeline */}
-            {!wasCancelled && (
+            {/* Champion banner */}
+            {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
+
+            {/* Stats first: the numbers worth a glance, one segmented card */}
+            <View
+              style={[
+                styles.section,
+                styles.statsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <StatSegment
+                value={`${activeCount}/${tournament.max_participants}`}
+                label={t('tournamentDetail.dashboard.stats.registered')}
+                colors={colors}
+              />
+              {(isLive || isFinished) && !wasCancelled ? (
+                <StatSegment
+                  value={`${matchProgress.done}/${matchProgress.total}`}
+                  label={t('tournamentDetail.dashboard.stats.games')}
+                  colors={colors}
+                  showDivider
+                />
+              ) : tournament.status === 'registration_open' && tournament.registration_closes_at ? (
+                <StatSegment
+                  value={new Date(tournament.registration_closes_at).toLocaleDateString(locale, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                  label={t('tournamentDetail.dashboard.stats.deadline')}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              <StatSegment
+                value={startTileValue}
+                label={t('tournamentDetail.dashboard.stats.start')}
+                colors={colors}
+                showDivider
+              />
+            </View>
+
+            {/* Lifecycle pipeline — drops away once the event is over */}
+            {!wasCancelled && !isFinished && (
               <View
                 style={[
                   styles.section,
@@ -2744,68 +3101,8 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Champion banner */}
-            {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
-
-            {/* Organizer: edit & co-organizers up front (also in the header ⋯ menu) */}
-            {isOrganizer && (adminActions.canEdit || canManageCoOrganizers) && (
-              <View style={styles.organizerActionRow}>
-                {adminActions.canEdit && (
-                  <Pressable
-                    onPress={handleEditDetails}
-                    style={({ pressed }) => [
-                      styles.organizerActionBtn,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.cardBackground,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    testID="action-edit-details"
-                  >
-                    <Ionicons name="create-outline" size={18} color={colors.primary} />
-                    <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('tournamentDetail.actions.editDetails')}
-                    </Text>
-                  </Pressable>
-                )}
-                {canManageCoOrganizers && (
-                  <Pressable
-                    onPress={handleManageCoOrganizers}
-                    style={({ pressed }) => [
-                      styles.organizerActionBtn,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.cardBackground,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    testID="action-manage-co-organizers"
-                  >
-                    <Ionicons name="people-circle-outline" size={18} color={colors.primary} />
-                    <Text size="sm" weight="semibold" color={colors.text}>
-                      {t('tournamentDetail.coOrganizers.ctaTitle')}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-
-            {/* Invite players — prominent CTA, only once registration is open */}
-            {isOrganizer && tournament.status === 'registration_open' && (
-              <DashboardCtaCard
-                icon="share-social-outline"
-                title={t('tournamentDetail.invitePlayers.ctaTitle')}
-                description={t('tournamentDetail.invitePlayers.ctaDescription')}
-                buttonLabel={t('tournamentDetail.actions.invitePlayers')}
-                buttonIcon="share-social-outline"
-                onPress={handleInvitePlayers}
-                accent="secondary"
-                colors={colors}
-                testID="cta-invite-players"
-              />
-            )}
-
+            {/* At most one accent card: approvals waiting, or the live summary.
+                Everything state-advancing lives in the docked bar instead. */}
             {isOrganizer && pendingRequestRows.length > 0 && (
               <DashboardCtaCard
                 icon="hourglass-outline"
@@ -2822,107 +3119,6 @@ export const TournamentDetail: React.FC = () => {
                 testID="cta-pending-requests"
               />
             )}
-
-            {/* Organizer payouts: set up / finish / manage the Stripe account */}
-            {isOrganizer && isPaidTournament && payoutAccount === null && (
-              <DashboardCtaCard
-                icon="card-outline"
-                title={t('tournamentDetail.payments.payoutCard.setupTitle')}
-                description={t('tournamentDetail.payments.payoutCard.setupDescription')}
-                buttonLabel={t('tournamentDetail.payments.payoutCard.setupButton')}
-                buttonIcon="card-outline"
-                onPress={promptOnboardBusinessType}
-                accent="secondary"
-                colors={colors}
-                testID="cta-payout-setup"
-              />
-            )}
-            {isOrganizer &&
-              isPaidTournament &&
-              !!payoutAccount &&
-              !payoutAccount.chargesEnabled && (
-                <DashboardCtaCard
-                  icon="alert-circle-outline"
-                  title={t('tournamentDetail.payments.payoutCard.actionNeededTitle')}
-                  description={t('tournamentDetail.payments.payoutCard.actionNeededDescription')}
-                  buttonLabel={t('tournamentDetail.payments.payoutCard.finishButton')}
-                  buttonIcon="arrow-forward-outline"
-                  onPress={() => void handleManagePayouts()}
-                  accent="secondary"
-                  colors={colors}
-                  testID="cta-payout-finish"
-                />
-              )}
-            {isOrganizer && isPaidTournament && !!payoutAccount && payoutAccount.chargesEnabled && (
-              <DashboardCtaCard
-                icon="wallet-outline"
-                title={t('tournamentDetail.payments.payoutCard.readyTitle')}
-                description={
-                  payoutAccount.payoutsEnabled
-                    ? t('tournamentDetail.payments.payoutCard.readyDescription')
-                    : t('tournamentDetail.payments.payoutCard.payoutsPendingDescription')
-                }
-                buttonLabel={t('tournamentDetail.payments.payoutCard.manageButton')}
-                buttonIcon="open-outline"
-                onPress={() => void handleManagePayouts()}
-                accent="secondary"
-                colors={colors}
-                testID="cta-payout-manage"
-              />
-            )}
-
-            {/* Organizer: what's next */}
-            {isOrganizer && tournament.status === 'draft' && (
-              <DashboardCtaCard
-                icon="rocket-outline"
-                title={t('tournamentDetail.dashboard.nextStep.draftTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.draftDescription')}
-                buttonLabel={
-                  open.isPending
-                    ? t('tournamentDetail.actions.opening')
-                    : t('tournamentDetail.actions.openRegistration')
-                }
-                buttonIcon="lock-open-outline"
-                onPress={onOpen}
-                disabled={open.isPending}
-                colors={colors}
-                testID="cta-open-registration"
-              />
-            )}
-            {isOrganizer && tournament.status === 'registration_open' && (
-              <DashboardCtaCard
-                icon="people-outline"
-                title={t('tournamentDetail.dashboard.nextStep.openTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.openDescription')
-                  .replace('{count}', String(activeCount))
-                  .replace('{max}', String(tournament.max_participants))}
-                buttonLabel={
-                  close.isPending
-                    ? t('tournamentDetail.actions.closing')
-                    : t('tournamentDetail.actions.closeRegistration')
-                }
-                buttonIcon="lock-closed-outline"
-                onPress={onClose}
-                disabled={close.isPending}
-                colors={colors}
-                testID="cta-close-registration"
-              />
-            )}
-            {isOrganizer && tournament.status === 'registration_closed' && (
-              <DashboardCtaCard
-                icon="git-network-outline"
-                title={t('tournamentDetail.dashboard.nextStep.closedTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.closedDescription').replace(
-                  '{count}',
-                  String(activeCount)
-                )}
-                buttonLabel={t('tournamentDetail.actions.setUpBracket')}
-                buttonIcon="git-network-outline"
-                onPress={onSetUpBracket}
-                colors={colors}
-                testID="cta-setup-bracket"
-              />
-            )}
             {isOrganizer && isLive && (
               <DashboardCtaCard
                 icon="play-outline"
@@ -2934,144 +3130,18 @@ export const TournamentDetail: React.FC = () => {
               />
             )}
 
-            {/* Participant: register CTA */}
-            {!isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
-              <DashboardCtaCard
-                icon="person-add-outline"
-                title={
-                  spotsLeft > 0
-                    ? t('tournamentDetail.dashboard.registerCta.title')
-                    : t('tournamentDetail.dashboard.registerCta.full')
-                }
-                description={
-                  spotsLeft > 0
-                    ? [
-                        t(
-                          isDoubles
-                            ? 'tournamentDetail.dashboard.registerCta.spotsLeftTeams'
-                            : 'tournamentDetail.dashboard.registerCta.spotsLeft'
-                        ).replace('{n}', String(spotsLeft)),
-                        registerCloseHint,
-                        refundSummary,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    : t('tournamentDetail.dashboard.registerCta.fullDescription')
-                }
-                buttonLabel={
-                  spotsLeft > 0
-                    ? registerBusy
-                      ? t('tournamentDetail.actions.registering')
-                      : feeTotalLabel
-                        ? `${t('tournamentDetail.actions.register')} · ${feeTotalLabel}`
-                        : t('tournamentDetail.actions.register')
-                    : undefined
-                }
-                buttonIcon="person-add-outline"
-                onPress={spotsLeft > 0 ? onRegister : undefined}
-                disabled={registerBusy}
-                colors={colors}
-                testID="cta-register"
-              />
-            )}
-
-            {/* Late entry via shareable link: registration has closed but the
-                bracket isn't published yet, so a visitor who followed a still-active
-                invite link can still join. Free tournaments only (the paid flow
-                closes with registration). */}
+            {/* Full house: no docked action to show, so say so here instead. */}
             {!isOrganizer &&
-              tournament.status === 'registration_closed' &&
-              !tournament.bracket_locked_at &&
-              !!params.inviteToken &&
-              !isPaidTournament &&
+              tournament.status === 'registration_open' &&
               !myActiveRegistration &&
-              spotsLeft > 0 && (
+              spotsLeft === 0 && (
                 <DashboardCtaCard
                   icon="person-add-outline"
-                  title={t('tournamentDetail.dashboard.registerCta.title')}
-                  description={t('tournamentDetail.dashboard.registerCta.inviteLateDescription')}
-                  buttonLabel={
-                    registerBusy
-                      ? t('tournamentDetail.actions.registering')
-                      : t('tournamentDetail.actions.register')
-                  }
-                  buttonIcon="person-add-outline"
-                  onPress={onRegister}
-                  disabled={registerBusy}
+                  title={t('tournamentDetail.dashboard.registerCta.full')}
+                  description={t('tournamentDetail.dashboard.registerCta.fullDescription')}
                   colors={colors}
-                  testID="cta-register-invite-late"
                 />
               )}
-
-            {/* Organizer: add myself as a player */}
-            {isOrganizer && tournament.status === 'registration_open' && !myActiveRegistration && (
-              <DashboardCtaCard
-                icon="person-add-outline"
-                title={t('tournamentDetail.dashboard.addMyselfCta.title')}
-                description={t('tournamentDetail.dashboard.addMyselfCta.description')}
-                buttonLabel={
-                  register.isPending
-                    ? t('tournamentDetail.actions.registering')
-                    : t('tournamentDetail.actions.addMyself')
-                }
-                buttonIcon="person-add-outline"
-                onPress={onRegister}
-                disabled={register.isPending}
-                colors={colors}
-                testID="cta-add-myself"
-              />
-            )}
-
-            {/* Registered (any persona): withdraw card — only while registration is open */}
-            {/* Invite-only invitee: accept the pending invitation (organizer
-                never approves it — the invitee confirms it themselves). */}
-            {isInvitePending && !isInvitedPending && (
-              <DashboardCtaCard
-                icon="mail-open-outline"
-                title={t('tournamentDetail.dashboard.inviteCta.title')}
-                description={t(
-                  isDoubles
-                    ? 'tournamentDetail.dashboard.inviteCta.descriptionDoubles'
-                    : 'tournamentDetail.dashboard.inviteCta.description'
-                )}
-                buttonLabel={
-                  registerPending
-                    ? t('tournamentDetail.actions.accepting')
-                    : t('tournamentDetail.actions.acceptInvite')
-                }
-                buttonIcon="checkmark-circle-outline"
-                onPress={onRegister}
-                disabled={registerPending}
-                testID="cta-accept-invite"
-                colors={colors}
-              />
-            )}
-
-            {/* Organizer intra-app invite: accept via tournament_accept_invite
-                (doubles supplies a partner through the picker). */}
-            {isInvitedPending && (
-              <DashboardCtaCard
-                icon="mail-open-outline"
-                title={t('tournamentDetail.dashboard.inviteCta.title')}
-                description={t(
-                  isDoubles
-                    ? 'tournamentDetail.dashboard.inviteCta.descriptionDoubles'
-                    : 'tournamentDetail.dashboard.inviteCta.description'
-                )}
-                buttonLabel={
-                  acceptInvite.isPending || createRegistrationPayment.isPending
-                    ? t('tournamentDetail.actions.accepting')
-                    : feeTotalLabel
-                      ? `${t('tournamentDetail.actions.acceptInvite')} · ${feeTotalLabel}`
-                      : t('tournamentDetail.actions.acceptInvite')
-                }
-                buttonIcon="checkmark-circle-outline"
-                onPress={onAcceptInvite}
-                disabled={acceptInvite.isPending || createRegistrationPayment.isPending}
-                testID="cta-accept-tournament-invite"
-                colors={colors}
-              />
-            )}
 
             {myActiveRegistration && tournament.status === 'registration_open' && (
               <DashboardCtaCard
@@ -3202,29 +3272,170 @@ export const TournamentDetail: React.FC = () => {
               </View>
             )}
 
-            {/* Stats */}
-            <View style={[styles.section, styles.statsRow]}>
-              <StatTile
-                icon="people-outline"
-                value={`${activeCount}/${tournament.max_participants}`}
-                label={t('tournamentDetail.dashboard.stats.registered')}
-                colors={colors}
-              />
-              {(isLive || isFinished) && !wasCancelled && (
-                <StatTile
-                  icon="checkmark-done-outline"
-                  value={`${matchProgress.done}/${matchProgress.total}`}
-                  label={t('tournamentDetail.dashboard.stats.games')}
-                  colors={colors}
-                />
-              )}
-              <StatTile
+            {/* About: the organizer's pitch, clamped; the full text lives in
+                Details. The length check approximates "6 lines would clip". */}
+            {tournament.description?.trim() ? (
+              <Section title={t('tournamentDetail.labels.description')} colors={colors}>
+                <View style={styles.aboutBlock}>
+                  <Text size="sm" color={colors.text} style={styles.aboutText} numberOfLines={6}>
+                    {tournament.description}
+                  </Text>
+                  {tournament.description.length > 280 && (
+                    <TouchableOpacity
+                      onPress={() => goToTab('details')}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      style={styles.aboutMore}
+                    >
+                      <Text size="sm" weight="semibold" color={colors.primary}>
+                        {t('tournamentDetail.overview.readMore')}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </Section>
+            ) : null}
+
+            {/* Event info: the friendly at-a-glance card (Details keeps the
+                full spec sheet). Rows only render when they have something. */}
+            <Section title={t('tournamentDetail.overview.infoTitle')} colors={colors}>
+              <OverviewInfoRow
                 icon="calendar-outline"
-                value={startTileValue}
-                label={t('tournamentDetail.dashboard.stats.start')}
+                text={`${formatDate(tournament.start_date)} – ${formatDate(tournament.end_date)}`}
                 colors={colors}
               />
-            </View>
+              {tournament.venue_name || tournament.city ? (
+                <OverviewInfoRow
+                  icon="location-outline"
+                  text={tournament.venue_name || tournament.city || ''}
+                  subText={venueSecondaryLine || undefined}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {ratingRangeLabel ? (
+                <OverviewInfoRow
+                  icon="analytics-outline"
+                  text={`${t('tournamentDetail.labels.ratingRange')} · ${ratingRangeLabel}`}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {entryFeeLabel ? (
+                <OverviewInfoRow
+                  icon="card-outline"
+                  text={`${t('tournamentDetail.labels.entryFee')} · ${entryFeeLabel}`}
+                  subText={refundSummary ?? undefined}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {organizerName ? (
+                <OverviewInfoRow
+                  icon="person-outline"
+                  text={t('tournamentDetail.dashboard.organizedBy').replace(
+                    '{name}',
+                    organizerName
+                  )}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+            </Section>
+
+            {/* Who's in: social proof, tappable through to the Players tab */}
+            {hasPlayersTab && registeredParticipantPlayers.length > 0 && (
+              <Section title={t('tournamentDetail.dashboard.participants.title')} colors={colors}>
+                <TouchableOpacity
+                  onPress={() => goToTab('players')}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('tournamentDetail.tabs.players')}
+                  style={styles.playersPreviewRow}
+                  testID="overview-players-preview"
+                >
+                  <View style={styles.playersPreviewAvatars}>
+                    {registeredParticipantPlayers.slice(0, 6).map((p, i) => {
+                      const uri = getProfilePictureUrl(p.profile_picture_url);
+                      return (
+                        <View
+                          key={p.id}
+                          style={[
+                            styles.playersPreviewAvatar,
+                            i > 0 && styles.playersPreviewAvatarOverlap,
+                            {
+                              backgroundColor: colors.statusMutedBg,
+                              borderColor: colors.cardBackground,
+                            },
+                          ]}
+                        >
+                          {uri ? (
+                            <Image source={{ uri }} style={styles.playersPreviewAvatarImg} />
+                          ) : (
+                            <Ionicons name="person" size={14} color={colors.textMuted} />
+                          )}
+                        </View>
+                      );
+                    })}
+                    {registeredParticipantPlayers.length > 6 && (
+                      <View
+                        style={[
+                          styles.playersPreviewAvatar,
+                          styles.playersPreviewAvatarOverlap,
+                          {
+                            backgroundColor: colors.statusActiveBg,
+                            borderColor: colors.cardBackground,
+                          },
+                        ]}
+                      >
+                        <Text size="xs" weight="semibold" color={colors.primary}>
+                          +{registeredParticipantPlayers.length - 6}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text size="sm" weight="semibold" color={colors.textMuted}>
+                    {activeCount}/{tournament.max_participants}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </Section>
+            )}
+
+            {/* Organizer utilities: quiet grouped rows, not competing cards.
+                Edit and Invite also live in the header ⋯ menu. */}
+            {isOrganizer && organizerRows.length > 0 && (
+              <View style={styles.section}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionTitle}
+                >
+                  {t('tournamentDetail.dashboard.manageTitle').toUpperCase()}
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
+                >
+                  {organizerRows.map((row, i) => (
+                    <OverviewActionRow
+                      key={row.testID}
+                      icon={row.icon}
+                      label={row.label}
+                      badge={row.badge}
+                      onPress={row.onPress}
+                      showDivider={i > 0}
+                      colors={colors}
+                      testID={row.testID}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -3441,6 +3652,44 @@ export const TournamentDetail: React.FC = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Docked primary action — the one thing this viewer should do next, kept
+          out of the scroll so it's reachable from any tab at any position. */}
+      {primaryAction && (
+        <View
+          style={[
+            styles.dockedBar,
+            {
+              backgroundColor: colors.cardBackground,
+              borderTopColor: colors.border,
+              paddingBottom: spacingPixels[3] + insets.bottom,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={primaryAction.onPress}
+            disabled={primaryAction.disabled}
+            activeOpacity={0.7}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: colors.primary },
+              primaryAction.disabled && styles.buttonDisabled,
+            ]}
+            accessibilityRole="button"
+            testID={primaryAction.testID}
+          >
+            <Ionicons name={primaryAction.icon} size={20} color="#ffffff" />
+            <Text size="base" weight="semibold" color="#ffffff">
+              {primaryAction.label}
+            </Text>
+          </TouchableOpacity>
+          {primaryAction.hint ? (
+            <Text size="xs" color={colors.textMuted} numberOfLines={2} style={styles.dockedBarHint}>
+              {primaryAction.hint}
+            </Text>
+          ) : null}
+        </View>
+      )}
 
       {/* Organizer admin overflow menu (anchored under the header "⋯") */}
       <Modal
@@ -4245,22 +4494,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
   },
-  organizerActionRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[2],
-    marginBottom: spacingPixels[4],
-  },
-  organizerActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
   playersInviteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4275,21 +4508,162 @@ const styles = StyleSheet.create({
     marginHorizontal: spacingPixels[4],
   },
   heroFixed: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[5],
-    paddingBottom: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
-  heroCard: {
-    borderRadius: radiusPixels['2xl'],
+  heroBanner: {
+    position: 'relative',
+  },
+  heroBannerTopRow: {
+    position: 'absolute',
+    top: spacingPixels[3],
+    left: spacingPixels[4],
+    right: spacingPixels[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+  },
+  heroBannerBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    marginLeft: 'auto',
+    flexShrink: 1,
+  },
+  heroPrizeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    backgroundColor: accent[300],
+  },
+  heroPointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2.5],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+  },
+  heroScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[3],
+    gap: spacingPixels[1],
+  },
+  scrimText: {
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
+  heroChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+  },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
     borderWidth: 1,
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    flexShrink: 1,
+  },
+  overviewActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3.5],
+  },
+  overviewActionLabel: {
+    flex: 1,
+  },
+  overviewActionBadge: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
+  },
+  aboutBlock: {
+    padding: spacingPixels[4],
+    gap: spacingPixels[2],
+  },
+  aboutText: {
+    lineHeight: 20,
+  },
+  aboutMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    alignSelf: 'flex-start',
+  },
+  overviewInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  overviewInfoIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewInfoTexts: {
+    flex: 1,
+    gap: 1,
+  },
+  playersPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  playersPreviewAvatars: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  playersPreviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  playersPreviewAvatarOverlap: {
+    marginLeft: -10,
+  },
+  playersPreviewAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  dockedBar: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacingPixels[1.5],
+  },
+  dockedBarHint: {
+    textAlign: 'center',
+    lineHeight: 16,
   },
   screenScroll: {
     flex: 1,
@@ -4403,10 +4777,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  skeletonHeroBody: {
-    marginTop: spacingPixels[3],
-    gap: spacingPixels[2],
-  },
   skeletonTabBar: {
     flexDirection: 'row',
     gap: spacingPixels[5],
@@ -4415,17 +4785,6 @@ const styles = StyleSheet.create({
   },
   skeletonCardGap: {
     marginTop: spacingPixels[4],
-  },
-  heroPoster: {
-    width: '100%',
-    height: 160,
-    borderRadius: radiusPixels.lg,
-    marginBottom: spacingPixels[3],
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacingPixels[3],
   },
   statusBadge: {
     paddingHorizontal: spacingPixels[3],
@@ -4462,13 +4821,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  heroTitle: {
-    marginBottom: spacingPixels[1.5],
-    lineHeight: 30,
-  },
-  heroDescription: {
-    lineHeight: 20,
-  },
   stackedBlock: {
     padding: spacingPixels[4],
     gap: spacingPixels[1],
@@ -4492,11 +4844,6 @@ const styles = StyleSheet.create({
   stackedValue: {
     lineHeight: 20,
   },
-  heroDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-  },
   section: {
     marginBottom: spacingPixels[5],
   },
@@ -4516,49 +4863,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  heroMetaRows: {
-    gap: spacingPixels[2.5],
-  },
-  heroMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2.5],
-  },
-  heroMetaIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: radiusPixels.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroMetaText: {
-    flex: 1,
-  },
-  rankingBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    marginTop: spacingPixels[4],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
-  },
-  rankingBannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankingBannerTexts: {
-    flex: 1,
-    gap: 2,
-  },
-  rankingBannerValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacingPixels[1.5],
   },
   stepperCard: {
     borderRadius: radiusPixels.lg,
@@ -4616,18 +4920,24 @@ const styles = StyleSheet.create({
   ctaCardDescription: {
     lineHeight: 19,
   },
-  statsRow: {
+  statsCard: {
     flexDirection: 'row',
-    gap: spacingPixels[2],
-  },
-  statTile: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[2],
+    alignItems: 'stretch',
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
+    paddingVertical: spacingPixels[3.5],
+  },
+  statSegment: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: spacingPixels[2],
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: spacingPixels[0.5],
   },
   participantEmpty: {
     alignItems: 'center',
@@ -4725,27 +5035,6 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3.5],
-  },
-  heroChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginTop: spacingPixels[3],
-  },
-  heroRegistered: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    marginTop: spacingPixels[4],
   },
   bracketChipsRow: {
     flexDirection: 'row',

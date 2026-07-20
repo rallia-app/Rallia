@@ -4676,7 +4676,6 @@
     "createSubtitle": "Set up a bracket and invite players",
     "roleOrganizer": "Organizer",
     "rankingPoints": "{points} pts",
-    "rankingPointsUpTo": "Up to {points} pts",
     "registerBy": "Register by {date}",
     "searchPlaceholder": "Search tournaments...",
     "discoverFilters": {
@@ -4747,18 +4746,6 @@
       "onboardTypeBusiness": "I'm a business or club",
       "onboardingError": "Couldn't start payout setup. Please try again.",
       "manageError": "Couldn't open your payout account. Please try again.",
-      "payoutCard": {
-        "setupTitle": "Set up your payouts",
-        "setupDescription": "Connect a bank account so entry fees for this event land with you.",
-        "setupButton": "Set up payouts",
-        "actionNeededTitle": "Finish your payout setup",
-        "actionNeededDescription": "Stripe still needs a few details before you can get paid.",
-        "finishButton": "Finish setup",
-        "readyTitle": "Manage your payouts",
-        "readyDescription": "Update your bank details or check your payouts anytime.",
-        "payoutsPendingDescription": "You're set to collect entry fees. Your bank details are still being verified.",
-        "manageButton": "Open payout dashboard"
-      },
       "payoutsConnectedToast": "Payout account connected!",
       "refundIssued": "Withdrawn — {amount} refunded.",
       "withdrawnNoRefund": "You've withdrawn. No refund applies.",
@@ -4847,11 +4834,6 @@
       "prizePool": "Prize pool",
       "rankingPoints": "Circuit Rallia · {points} pts",
       "rankingPointsUpTo": "Circuit Rallia · up to {points} pts",
-      "rankingBanner": {
-        "label": "Circuit Rallia · points for all",
-        "upTo": "up to",
-        "unit": "pts"
-      },
       "champion": "Champion",
       "steps": {
         "draft": "Draft",
@@ -4863,24 +4845,19 @@
         "registered": "Registered",
         "games": "Games",
         "start": "Start",
-        "startsInDays": "In {n} days",
         "startsToday": "Today",
         "live": "Live",
         "ended": "Ended",
         "deadline": "Deadline"
       },
       "nextStep": {
-        "draftTitle": "Ready to launch?",
         "draftDescription": "Open registration so players can find and join your tournament.",
-        "openTitle": "Registration is live",
         "openDescription": "{count} of {max} spots filled.",
-        "closedTitle": "Build the bracket",
         "closedDescription": "{count} players are in. Generate the bracket to start play.",
         "liveTitle": "Tournament in progress",
         "liveDescription": "{done} of {total} games completed. Tap a pending game in the bracket to record its result."
       },
       "registerCta": {
-        "title": "Registration open",
         "full": "Tournament full",
         "fullDescription": "All spots are taken.",
         "spotsLeft": "{n} spots left",
@@ -4895,16 +4872,7 @@
         "description": "Your spot is locked in. Plans changed? You can withdraw while registration is open.",
         "descriptionTeam": "Your team's spot is locked in. Plans changed? Withdrawing pulls both of you while registration is open.",
         "descriptionPending": "The organizer still needs to approve your spot. You can withdraw while registration is open.",
-        "descriptionInvited": "Accept above to confirm your spot. You can also withdraw if you can't play."
-      },
-      "inviteCta": {
-        "title": "You're invited",
-        "description": "Accept to lock in your spot in the tournament.",
-        "descriptionDoubles": "Pick your partner, then accept to lock in your team's spot."
-      },
-      "addMyselfCta": {
-        "title": "Playing too?",
-        "description": "Add yourself to this tournament as a participant."
+        "descriptionInvited": "Accept the invitation to confirm your spot. You can also withdraw if you can't play."
       },
       "pendingRequestsCta": {
         "title": "Pending requests",
@@ -5137,8 +5105,6 @@
     },
     "invitePlayers": {
       "title": "Invite players",
-      "ctaTitle": "Invite players",
-      "ctaDescription": "Grow the field. Invite players in-app or share a link.",
       "searchPlaceholder": "Search players",
       "searchHint": "Type a name to find players to invite.",
       "noResults": "No players found",
@@ -5200,6 +5166,10 @@
       "partnerRatingRequired": "Your partner needs a rating in this sport to be entered.",
       "partnerInvalid": "That partner can't be registered. Pick someone else.",
       "inviteInvalid": "This invite link is no longer valid."
+    },
+    "overview": {
+      "readMore": "Read more",
+      "infoTitle": "Event info"
     }
   },
   "tournamentCreation": {
