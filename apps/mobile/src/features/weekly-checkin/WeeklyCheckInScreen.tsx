@@ -24,11 +24,13 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
+import { Logger } from '@rallia/shared-services';
 import { useThemeStyles, useAuth } from '@rallia/shared-hooks';
 import { lightHaptic } from '@rallia/shared-utils';
 import { accent, primary, spacingPixels } from '@rallia/design-system';
@@ -43,7 +45,11 @@ import { RecapGoalStep, deriveVariant } from './steps/RecapGoalStep';
 import { MatchOpportunitiesStep } from './steps/MatchOpportunitiesStep';
 import { MatchPlanStep } from './steps/MatchPlanStep';
 import { AllSetStep } from './steps/AllSetStep';
-import { PLAN_STEP_ENABLED, useWeeklyCheckInWizard } from './useWeeklyCheckInWizard';
+import {
+  PLAN_STEP_ENABLED,
+  WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY,
+  useWeeklyCheckInWizard,
+} from './useWeeklyCheckInWizard';
 import { useJoinOpportunity } from './useJoinOpportunity';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -173,6 +179,13 @@ export function WeeklyCheckInScreen() {
   // isWeeklyCheckInActive() before raising a competing surface.
   useEffect(() => {
     SheetManager.hideAll();
+    // Stamp the auto-open throttle on EVERY open, however the player got here.
+    // A banner open still means they saw the wizard today, so the auto-opener
+    // shouldn't raise it again for 24h. This also keeps the auto-opener from
+    // re-entering the route right after a banner-opened wizard is dismissed.
+    AsyncStorage.setItem(WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY, Date.now().toString()).catch(err =>
+      Logger.error('Weekly check-in auto-open stamp failed', err as Error)
+    );
   }, []);
 
   // Slide pager — single translateX animation across all 5 steps. A skip (recap

@@ -54,6 +54,12 @@ const STEP_NAMES: Record<WizardStep, string> = {
 // avoid nagging right after a dismissal.
 export const WEEKLY_CHECKIN_COOLDOWN_KEY = '@rallia/availability-refresh-banner-cooldown';
 
+// Auto-open throttle, written every time the wizard mounts (any entry point) and
+// read only by WeeklyCheckInAutoOpener. Deliberately separate from the cooldown
+// key above: this one never suppresses the home banner, so the player can still
+// open the wizard as often as they want.
+export const WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY = '@rallia/weekly-checkin-auto-open-at';
+
 // The rolling check-in only edits a 4-day window, so the floor is lower than
 // onboarding's 6/week — a few slots across the window is enough for the
 // match-creation logic to have something to work with.
