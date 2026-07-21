@@ -203,25 +203,36 @@ async function handleTerminal(
     row.status === 'partially_refunded'
   )
     return;
-  if (row.status === status) return;
+  // Write the ledger only if it isn't already there, but never return early on a
+  // re-delivery: the slot release below still has to run. Returning here is the
+  // same bug the succeeded path had — a delivery that died between the ledger
+  // write and the release left the slot reserved forever, and the reaper cannot
+  // recover it because it only scans 'pending' rows and this one is terminal.
+  // The status filter is a compare-and-set against what we just read.
+  if (row.status !== status) {
+    const { error } = await admin
+      .from('lt_registration_payment')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', row.id)
+      .eq('status', row.status);
+    if (error) throw error;
+  }
 
-  await admin
-    .from('lt_registration_payment')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', row.id);
-
-  // Free the reserved slot.
+  // Free the reserved slot. Errors throw so the request 500s and Stripe retries;
+  // swallowing them returned 200 and the retry never came.
   if (row.tournament_registration_id) {
-    await admin
+    const { error } = await admin
       .from('tournament_registrations')
       .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
       .eq('id', row.tournament_registration_id)
       .eq('status', 'payment_pending');
+    if (error) throw error;
   } else if (row.season_user_id) {
-    await admin
+    const { error } = await admin
       .from('season_members')
       .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
       .eq('id', row.season_user_id)
       .eq('status', 'payment_pending');
+    if (error) throw error;
   }
 }
