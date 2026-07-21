@@ -227,6 +227,32 @@ Deno.serve(async req => {
       return err('organizer_not_ready', 409);
     }
 
+    // Kill any PaymentIntent we've already given up on for this payer. The begin
+    // RPC supersedes a previous attempt by cancelling its ledger row, and the
+    // reaper cancels expired ones, but neither can reach Stripe — so the old
+    // intent stayed confirmable. If the player still had that sheet open, both
+    // could be confirmed and they'd be charged twice for one slot.
+    const { data: stale } = await admin
+      .from('lt_registration_payment')
+      .select('id, stripe_payment_intent_id')
+      .eq('payer_user_id', user.id)
+      .eq('status', 'cancelled')
+      .not('stripe_payment_intent_id', 'is', null)
+      .neq('id', reg.payment_id)
+      .eq(
+        tournamentId ? 'tournament_registration_id' : 'season_user_id',
+        tournamentId ? reg.registration_id : reg.season_user_id
+      );
+    for (const s of stale ?? []) {
+      try {
+        await stripe.paymentIntents.cancel(s.stripe_payment_intent_id);
+      } catch (e) {
+        // Already cancelled, already succeeded, or gone. A succeeded one is the
+        // orphan case the webhook logs; nothing to do from here.
+        console.warn('[lt-create-registration-payment] stale PI cancel skipped', s.id, e);
+      }
+    }
+
     const params: Stripe.PaymentIntentCreateParams = {
       amount: reg.amount_charged_cents,
       currency,
