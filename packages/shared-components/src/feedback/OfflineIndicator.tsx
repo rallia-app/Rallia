@@ -78,7 +78,7 @@ export function OfflineIndicator({
 // NETWORK STATUS HOOK
 // ============================================================================
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 
 export interface NetworkStatus {
@@ -94,47 +94,42 @@ export function useNetworkStatus() {
     type: 'unknown',
   });
 
-  // Keep object identity stable when values are unchanged — NetInfo can emit
-  // repeated events with identical payloads, and this state feeds a context
-  // consumed app-wide.
-  const applyState = useCallback((state: NetInfoState) => {
-    setNetworkStatus(prev => {
-      const next = {
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+      setNetworkStatus({
         isConnected: state.isConnected ?? true,
         isInternetReachable: state.isInternetReachable,
         type: state.type,
-      };
-      return prev.isConnected === next.isConnected &&
-        prev.isInternetReachable === next.isInternetReachable &&
-        prev.type === next.type
-        ? prev
-        : next;
+      });
     });
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(applyState);
 
     // Get initial state
-    NetInfo.fetch().then(applyState);
+    NetInfo.fetch().then((state: NetInfoState) => {
+      setNetworkStatus({
+        isConnected: state.isConnected ?? true,
+        isInternetReachable: state.isInternetReachable,
+        type: state.type,
+      });
+    });
 
     return () => unsubscribe();
-  }, [applyState]);
+  }, []);
 
   const checkConnection = useCallback(async () => {
     const state = await NetInfo.fetch();
-    applyState(state);
+    setNetworkStatus({
+      isConnected: state.isConnected ?? true,
+      isInternetReachable: state.isInternetReachable,
+      type: state.type,
+    });
     return state.isConnected ?? true;
-  }, [applyState]);
+  }, []);
 
-  return useMemo(
-    () => ({
-      ...networkStatus,
-      isOffline: !networkStatus.isConnected,
-      checkConnection,
-    }),
-    [networkStatus, checkConnection]
-  );
+  return {
+    ...networkStatus,
+    isOffline: !networkStatus.isConnected,
+    checkConnection,
+  };
 }
 
 // ============================================================================

@@ -12,7 +12,6 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useMemo,
   type ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -147,17 +146,14 @@ export function UserLocationProvider({ children }: UserLocationProviderProps) {
     [homeLocation]
   );
 
-  const value: UserLocationContextValue = useMemo(
-    () => ({
-      homeLocation,
-      isLoading,
-      setHomeLocation,
-      clearHomeLocation,
-      hasHomeLocation: homeLocation !== null,
-      syncToDatabase,
-    }),
-    [homeLocation, isLoading, setHomeLocation, clearHomeLocation, syncToDatabase]
-  );
+  const value: UserLocationContextValue = {
+    homeLocation,
+    isLoading,
+    setHomeLocation,
+    clearHomeLocation,
+    hasHomeLocation: homeLocation !== null,
+    syncToDatabase,
+  };
 
   return <UserLocationContext.Provider value={value}>{children}</UserLocationContext.Provider>;
 }

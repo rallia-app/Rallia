@@ -4,7 +4,6 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useMemo,
   useRef,
   type ReactNode,
 } from 'react';
@@ -231,19 +230,16 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
     }
   }, []);
 
-  const value: LocaleContextValue = useMemo(
-    () => ({
-      locale,
-      isManuallySet,
-      isReady,
-      setLocale,
-      resetToDeviceLocale,
-      availableLocales: locales,
-      localeConfigs,
-      syncLocaleToDatabase,
-    }),
-    [locale, isManuallySet, isReady, setLocale, resetToDeviceLocale, syncLocaleToDatabase]
-  );
+  const value: LocaleContextValue = {
+    locale,
+    isManuallySet,
+    isReady,
+    setLocale,
+    resetToDeviceLocale,
+    availableLocales: locales,
+    localeConfigs,
+    syncLocaleToDatabase,
+  };
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

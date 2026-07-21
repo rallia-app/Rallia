@@ -3,7 +3,7 @@
  * Works on both iOS and Android with animated entry/exit
  */
 
-import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { StyleSheet, Animated, TouchableOpacity, Platform, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { status } from '@rallia/design-system';
@@ -225,13 +225,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [showToast]
   );
 
-  const value: ToastContextType = useMemo(
-    () => ({ showToast, hideToast, success, error, warning, info, toastConfig, visible }),
-    [showToast, hideToast, success, error, warning, info, toastConfig, visible]
-  );
-
   return (
-    <ToastContext.Provider value={value}>
+    <ToastContext.Provider
+      value={{ showToast, hideToast, success, error, warning, info, toastConfig, visible }}
+    >
       {children}
       <ToastOverlay />
     </ToastContext.Provider>

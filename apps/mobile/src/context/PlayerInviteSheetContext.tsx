@@ -6,7 +6,7 @@
  * It wraps the PlayerInviteStep component in a modal presentation.
  */
 
-import React, { createContext, useContext, useCallback, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
 import { SheetManager } from 'react-native-actions-sheet';
 
 // =============================================================================
@@ -80,14 +80,11 @@ export const PlayerInviteSheetProvider: React.FC<PlayerInviteSheetProviderProps>
     }, 300);
   }, []);
 
-  const contextValue: PlayerInviteSheetContextType = useMemo(
-    () => ({
-      openSheet,
-      closeSheet,
-      inviteData,
-    }),
-    [openSheet, closeSheet, inviteData]
-  );
+  const contextValue: PlayerInviteSheetContextType = {
+    openSheet,
+    closeSheet,
+    inviteData,
+  };
 
   return (
     <PlayerInviteSheetContext.Provider value={contextValue}>

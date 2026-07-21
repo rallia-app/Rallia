@@ -223,17 +223,14 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   const availableSports = userId ? userSports : allSports;
   const isLoading = userId ? playerSportsLoading : guestSportsLoading;
 
-  const value: SportContextValue = useMemo(
-    () => ({
-      selectedSport,
-      userSports: availableSports,
-      isLoading,
-      setSelectedSport,
-      setSelectedSportsOrdered,
-      refetch,
-    }),
-    [selectedSport, availableSports, isLoading, setSelectedSport, setSelectedSportsOrdered, refetch]
-  );
+  const value: SportContextValue = {
+    selectedSport,
+    userSports: availableSports,
+    isLoading,
+    setSelectedSport,
+    setSelectedSportsOrdered,
+    refetch,
+  };
 
   return <SportContext.Provider value={value}>{children}</SportContext.Provider>;
 }
