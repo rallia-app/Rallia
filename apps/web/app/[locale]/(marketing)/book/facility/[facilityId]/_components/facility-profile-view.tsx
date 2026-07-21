@@ -140,7 +140,7 @@ export function FacilityProfileView({
               {formatGroup(selectedGroup, locale, facility.timezone).time}
               {' · '}
               {selectedGroup.courts.length === 1
-                ? (selectedGroup.courts[0].courtName ?? t('courtCountSingular'))
+                ? (selectedGroup.courts[0].shortCourtName ?? t('courtCountSingular'))
                 : t('courtCountLabel', { count: selectedGroup.courts.length })}
             </span>
           </CardContent>
