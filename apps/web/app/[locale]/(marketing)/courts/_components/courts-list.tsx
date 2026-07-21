@@ -4,7 +4,7 @@ import { Building2, Loader2, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import FacilityCard, { type PublicFacility } from './facility-card';
+import FacilityCard, { type PublicFacility, type SlotGroupRef } from './facility-card';
 import FacilityCardSkeleton from './facility-card-skeleton';
 
 import { Button } from '@/components/ui/button';
@@ -49,9 +49,11 @@ export default function CourtsList({ initialFacilities }: CourtsListProps) {
   // Booking runs through the signup gate, which redirects to the provider's
   // booking page once the visitor has an account — same pattern as /games.
   const openBook = useCallback(
-    (facility: PublicFacility, slotId?: string | null) => {
-      courtsBookClicked({ facility_id: facility.id, has_slot: Boolean(slotId) });
-      const query = slotId ? `?slot=${encodeURIComponent(slotId)}` : '';
+    (facility: PublicFacility, slot: SlotGroupRef | null) => {
+      courtsBookClicked({ facility_id: facility.id, has_slot: slot !== null });
+      const query = slot
+        ? `?start=${encodeURIComponent(slot.start)}&end=${encodeURIComponent(slot.end)}`
+        : '';
       router.push(`/book/facility/${facility.id}${query}`);
     },
     [router]

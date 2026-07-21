@@ -10947,6 +10947,9 @@
     "directions": "Itinéraire",
     "selectedSlot": "Ta plage horaire",
     "upcomingSlots": "Plages libres",
+    "courtCountSingular": "1 terrain",
+    "courtCountLabel": "{count} terrains",
+    "courtNumber": "Terrain {number}",
     "steps": {
       "account": "Compte",
       "consent": "Consentement",
@@ -10995,10 +10998,17 @@
     },
     "redirect": {
       "title": "Tout est prêt",
-      "description": "On ouvre la page de réservation de ce terrain. La réservation et le paiement se font chez l’installation.",
+      "description": "Ton compte est prêt. Va sur la page de réservation quand tu veux, la réservation et le paiement se font chez l’installation.",
+      "descriptionSlot": "Ton compte est prêt. Ouvre la page de réservation pour réserver cette plage exacte, le paiement se fait chez l’installation.",
+      "selectCourt": "Choisis ton terrain",
+      "selectCourtFirst": "Choisis un terrain pour continuer",
       "cta": "Aller à la page de réservation",
-      "preparing": "Préparation de ton lien de réservation...",
       "appHint": "Télécharge l’app pour réserver plus vite et trouver des joueurs"
+    },
+    "slotGone": {
+      "title": "Cette plage est partie",
+      "description": "Quelqu’un l’a réservée avant toi, ou elle est expirée. Regarde les autres plages libres de ce terrain.",
+      "cta": "Voir les plages libres"
     },
     "noBooking": {
       "title": "Pas de réservation en ligne ici",
@@ -11013,8 +11023,7 @@
       "invalidPostalCode": "Entre un code postal valide.",
       "ratingsLoadFailed": "Impossible de charger les niveaux. Rafraîchis la page pis réessaie.",
       "submitFailed": "Une erreur est survenue. Réessaie.",
-      "facilityUnavailable": "Ce terrain n’est plus disponible.",
-      "noBookingUrl": "On ne trouve pas de page de réservation pour ce terrain en ce moment."
+      "facilityUnavailable": "Ce terrain n’est plus disponible."
     }
   },
   "courtsPage": {

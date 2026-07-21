@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { meetsMinimumAge } from '@rallia/shared-utils';
 
-import { getFacilityForWebBooking } from '@/app/[locale]/(marketing)/book/facility/[facilityId]/_lib/facility-context';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import {
   DEFAULT_WEB_ONBOARDING_PREFERENCES,
@@ -16,39 +15,32 @@ const uuidLike = z
 
 const CompleteSchema = z.object({
   facilityId: uuidLike,
-  /** Provider slot id from the card the visitor clicked. Matched against our own rows. */
-  slotId: z.string().max(200).nullish(),
   locale: z.string().default('en-US'),
-  personal: z
-    .object({
-      firstName: z.string().min(1).max(80),
-      lastName: z.string().min(1).max(80),
-      gender: z.enum(['male', 'female', 'other']),
-      birthDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .refine(meetsMinimumAge, { message: 'MINIMUM_AGE' }),
-    })
-    .optional(),
-  sportId: uuidLike.optional(),
-  ratingScoreId: uuidLike.optional(),
-  location: z
-    .object({
-      postalCode: z.string().min(3).max(12),
-      city: z.string().min(1).max(120),
-      province: z.string().min(1).max(80),
-      latitude: z.number(),
-      longitude: z.number(),
-    })
-    .optional(),
+  personal: z.object({
+    firstName: z.string().min(1).max(80),
+    lastName: z.string().min(1).max(80),
+    gender: z.enum(['male', 'female', 'other']),
+    birthDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(meetsMinimumAge, { message: 'MINIMUM_AGE' }),
+  }),
+  sportId: uuidLike,
+  ratingScoreId: uuidLike,
+  location: z.object({
+    postalCode: z.string().min(3).max(12),
+    city: z.string().min(1).max(120),
+    province: z.string().min(1).max(80),
+    latitude: z.number(),
+    longitude: z.number(),
+  }),
 });
 
 /**
- * Finishes the /courts signup gate and hands back the external booking URL.
- *
- * The URL is always re-resolved server-side from the facility's own snapshot
- * rows or provider template — the client never supplies a destination, so this
- * route can't be used as an open redirect.
+ * Finishes the /courts signup gate for a brand-new account. The external
+ * booking destination is NOT handled here — the gate page resolves it
+ * server-side from our own snapshot rows (see _lib/facility-context.ts), so
+ * no redirect URL ever transits through the client.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -64,62 +56,41 @@ export async function POST(request: NextRequest) {
 
     const body = CompleteSchema.parse(await request.json());
 
-    const facility = await getFacilityForWebBooking(body.facilityId, body.slotId ?? null);
-    if (!facility) {
+    const admin = createServiceRoleClient();
+    const { data: facility } = await admin
+      .from('facility')
+      .select('id, is_active')
+      .eq('id', body.facilityId)
+      .maybeSingle();
+
+    if (!facility || facility.is_active === false) {
       return NextResponse.json({ error: 'FACILITY_UNAVAILABLE' }, { status: 404 });
     }
 
-    const admin = createServiceRoleClient();
-    const { data: profile } = await admin
-      .from('profile')
-      .select('onboarding_completed')
-      .eq('id', user.id)
-      .maybeSingle();
+    await writeWebOnboardingProfile(
+      admin,
+      user.id,
+      user.email,
+      {
+        firstName: body.personal.firstName,
+        lastName: body.personal.lastName,
+        gender: body.personal.gender,
+        birthDate: body.personal.birthDate,
+        sportId: body.sportId,
+        ratingScoreId: body.ratingScoreId,
+        postalCode: body.location.postalCode,
+        city: body.location.city,
+        province: body.location.province,
+        latitude: body.location.latitude,
+        longitude: body.location.longitude,
+        playingHand: DEFAULT_WEB_ONBOARDING_PREFERENCES.playingHand,
+        matchType: DEFAULT_WEB_ONBOARDING_PREFERENCES.matchType,
+        locale: body.locale,
+      },
+      { acquisitionChannel: 'web_book' }
+    );
 
-    const existingUser = Boolean(profile?.onboarding_completed);
-
-    if (!existingUser) {
-      if (!body.personal || !body.sportId || !body.ratingScoreId || !body.location) {
-        return NextResponse.json({ error: 'Incomplete profile data' }, { status: 400 });
-      }
-
-      await writeWebOnboardingProfile(
-        admin,
-        user.id,
-        user.email,
-        {
-          firstName: body.personal.firstName,
-          lastName: body.personal.lastName,
-          gender: body.personal.gender,
-          birthDate: body.personal.birthDate,
-          sportId: body.sportId,
-          ratingScoreId: body.ratingScoreId,
-          postalCode: body.location.postalCode,
-          city: body.location.city,
-          province: body.location.province,
-          latitude: body.location.latitude,
-          longitude: body.location.longitude,
-          playingHand: DEFAULT_WEB_ONBOARDING_PREFERENCES.playingHand,
-          matchType: DEFAULT_WEB_ONBOARDING_PREFERENCES.matchType,
-          locale: body.locale,
-        },
-        {
-          acquisitionChannel: 'web_book',
-          referralInvitationType: 'facility',
-          referralTargetId: facility.id,
-        }
-      );
-    }
-
-    if (!facility.bookingUrl) {
-      return NextResponse.json({ error: 'NO_BOOKING_URL' }, { status: 409 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      existingUser,
-      bookingUrl: facility.bookingUrl,
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       if (error.issues.some(issue => issue.message === 'MINIMUM_AGE')) {

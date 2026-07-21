@@ -1,14 +1,25 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
-export type WebBookSlot = {
-  externalSlotId: string | null;
+/** One bookable court inside a time group — carries its own exact provider URL. */
+export type WebBookCourtOption = {
   externalCourtId: string;
-  slotStart: string;
-  slotEnd: string;
+  externalSlotId: string | null;
   courtName: string | null;
+  courtNumber: number | null;
   priceCents: number | null;
   currency: string | null;
   bookingUrl: string | null;
+};
+
+/**
+ * All courts open at one start–end time. Mirrors the mobile FormattedSlot
+ * grouping (groupSlotsByTime keys on datetime+endDateTime), so a /courts chip
+ * maps 1:1 onto a group here.
+ */
+export type WebBookSlotGroup = {
+  slotStart: string;
+  slotEnd: string;
+  courts: WebBookCourtOption[];
 };
 
 export type WebBookFacilityContext = {
@@ -24,20 +35,23 @@ export type WebBookFacilityContext = {
   membership_required: boolean;
   /** Sport the rating step collects a level for (the facility's first active sport). */
   sport: { id: string; name: string; slug: string } | null;
-  /** The specific slot the visitor clicked, when `?slot=` resolved to one. */
-  selectedSlot: WebBookSlot | null;
-  /** Next few open slots, for the facility summary panel. */
-  upcomingSlots: WebBookSlot[];
+  /** The time group the visitor clicked, when `?start=` resolved to open rows. */
+  selectedGroup: WebBookSlotGroup | null;
+  /** A slot was requested but no longer has open rows (booked out or stale link). */
+  slotMissing: boolean;
+  /** Upcoming open time groups, for the facility summary panel. */
+  upcomingGroups: WebBookSlotGroup[];
   /**
-   * Where the visitor is sent once they're signed up. Resolved server-side from
-   * our own snapshot rows / provider template — never from a query parameter,
-   * so this endpoint can't be turned into an open redirect.
+   * Facility-level booking entry point rendered from the provider template.
+   * Used ONLY when no specific slot was clicked — a clicked slot redirects to
+   * its own court's URL, never to this. Resolved server-side from our own
+   * provider rows, so the page can't be turned into an open redirect.
    */
-  bookingUrl: string | null;
+  facilityBookingUrl: string | null;
 };
 
 const SNAPSHOT_HORIZON_DAYS = 14;
-const UPCOMING_SLOT_LIMIT = 8;
+const UPCOMING_GROUP_LIMIT = 8;
 
 type SnapshotRow = {
   external_court_id: string;
@@ -45,23 +59,11 @@ type SnapshotRow = {
   slot_start: string;
   slot_end: string;
   court_name: string | null;
+  court_number: number | null;
   price_cents: number | null;
   currency: string | null;
   booking_url: string | null;
 };
-
-function toSlot(row: SnapshotRow): WebBookSlot {
-  return {
-    externalSlotId: row.external_slot_id,
-    externalCourtId: row.external_court_id,
-    slotStart: row.slot_start,
-    slotEnd: row.slot_end,
-    courtName: row.court_name,
-    priceCents: row.price_cents,
-    currency: row.currency,
-    bookingUrl: normalizeBookingUrl(row.booking_url),
-  };
-}
 
 /**
  * Only ever hand back an absolute http(s) URL. Provider rows are ours, but a
@@ -78,11 +80,49 @@ function normalizeBookingUrl(url: string | null): string | null {
   }
 }
 
+function toCourtOption(row: SnapshotRow): WebBookCourtOption {
+  return {
+    externalCourtId: row.external_court_id,
+    externalSlotId: row.external_slot_id,
+    courtName: row.court_name,
+    courtNumber: row.court_number,
+    priceCents: row.price_cents,
+    currency: row.currency,
+    bookingUrl: normalizeBookingUrl(row.booking_url),
+  };
+}
+
 /**
- * Facility-level fallback when no slot carries a URL. IC3 templates need
- * per-slot placeholders we don't have here, so they collapse to the provider's
- * base URL; Activity Messenger templates only need org/package ids and render
- * in full. Mirrors buildBookingUrl in the refresh-facility-availability worker.
+ * Group rows into time groups the same way the mobile groupSlotsByTime does:
+ * key on start+end, dedupe courts within a group (by slot id, falling back to
+ * court id), keep chronological order.
+ */
+function groupRowsByTime(rows: SnapshotRow[]): WebBookSlotGroup[] {
+  const groups = new Map<string, WebBookSlotGroup & { _seen: Set<string> }>();
+
+  for (const row of rows) {
+    const key = `${row.slot_start}|${row.slot_end}`;
+    const courtKey = row.external_slot_id ?? row.external_court_id;
+    let group = groups.get(key);
+    if (!group) {
+      group = { slotStart: row.slot_start, slotEnd: row.slot_end, courts: [], _seen: new Set() };
+      groups.set(key, group);
+    }
+    if (!group._seen.has(courtKey)) {
+      group._seen.add(courtKey);
+      group.courts.push(toCourtOption(row));
+    }
+  }
+
+  return Array.from(groups.values()).map(({ _seen: _ignored, ...group }) => group);
+}
+
+/**
+ * Facility-level fallback for the "Book" button when no specific slot was
+ * clicked. IC3 templates need per-slot placeholders we don't have here, so
+ * they collapse to the provider's base URL; Activity Messenger templates only
+ * need org/package ids and render in full. Mirrors buildBookingUrl in the
+ * refresh-facility-availability worker.
  */
 function renderFacilityTemplate(
   providerType: string | null,
@@ -106,9 +146,17 @@ function renderFacilityTemplate(
   return normalizeBookingUrl(base.replace(/[#/?]+$/, ''));
 }
 
+/** Parse a `?start=` / `?end=` param into a comparable ISO instant, or null. */
+function parseInstant(value: string | null): string | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+}
+
 export async function getFacilityForWebBooking(
   facilityId: string,
-  slotId: string | null
+  slotStart: string | null,
+  slotEnd: string | null
 ): Promise<WebBookFacilityContext | null> {
   const supabase = createServiceRoleClient();
 
@@ -162,30 +210,28 @@ export async function getFacilityForWebBooking(
   const { data: snapshotRows } = await supabase
     .from('facility_availability_snapshot')
     .select(
-      'external_court_id, external_slot_id, slot_start, slot_end, court_name, price_cents, currency, booking_url'
+      'external_court_id, external_slot_id, slot_start, slot_end, court_name, court_number, price_cents, currency, booking_url'
     )
     .eq('facility_id', facilityId)
     .eq('is_available', true)
     .gte('slot_start', now.toISOString())
     .lte('slot_start', horizonEnd.toISOString())
     .order('slot_start')
-    .limit(200);
+    .limit(400);
 
-  const slots = ((snapshotRows ?? []) as SnapshotRow[]).map(toSlot);
+  const groups = groupRowsByTime((snapshotRows ?? []) as SnapshotRow[]);
 
-  // The slot id comes from the card the visitor clicked, so it's matched
-  // against our own rows rather than trusted as a destination.
-  const selectedSlot = slotId ? (slots.find(s => s.externalSlotId === slotId) ?? null) : null;
-
-  const bookingUrl =
-    selectedSlot?.bookingUrl ??
-    slots.find(s => s.bookingUrl)?.bookingUrl ??
-    renderFacilityTemplate(
-      providerType,
-      bookingUrlTemplate,
-      apiConfig,
-      facility.external_provider_id
-    );
+  // The clicked chip identifies its time group by start (+end when the chip
+  // sent one). Matched against our own rows — never trusted as a destination.
+  const wantedStart = parseInstant(slotStart);
+  const wantedEnd = parseInstant(slotEnd);
+  const selectedGroup = wantedStart
+    ? (groups.find(
+        g =>
+          new Date(g.slotStart).toISOString() === wantedStart &&
+          (!wantedEnd || new Date(g.slotEnd).toISOString() === wantedEnd)
+      ) ?? null)
+    : null;
 
   const sports = (facility.facility_sports ?? [])
     .map(fs => (Array.isArray(fs.sport) ? fs.sport[0] : fs.sport))
@@ -209,8 +255,14 @@ export async function getFacilityForWebBooking(
     is_first_come_first_serve: facility.is_first_come_first_serve ?? false,
     membership_required: facility.membership_required ?? false,
     sport: sport ? { id: sport.id, name: sport.name, slug: sport.slug } : null,
-    selectedSlot,
-    upcomingSlots: slots.slice(0, UPCOMING_SLOT_LIMIT),
-    bookingUrl,
+    selectedGroup,
+    slotMissing: wantedStart !== null && selectedGroup === null,
+    upcomingGroups: groups.slice(0, UPCOMING_GROUP_LIMIT),
+    facilityBookingUrl: renderFacilityTemplate(
+      providerType,
+      bookingUrlTemplate,
+      apiConfig,
+      facility.external_provider_id
+    ),
   };
 }

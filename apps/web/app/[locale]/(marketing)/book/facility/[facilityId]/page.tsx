@@ -10,12 +10,12 @@ import { WebBookWizard } from './web-book-wizard';
 
 type Props = {
   params: Promise<{ facilityId: string; locale: string }>;
-  searchParams: Promise<{ slot?: string }>;
+  searchParams: Promise<{ start?: string; end?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { facilityId, locale } = await params;
-  const facility = await getFacilityForWebBooking(facilityId, null);
+  const facility = await getFacilityForWebBooking(facilityId, null, null);
   const t = await getTranslations({ locale, namespace: 'webBook' });
 
   if (!facility) {
@@ -30,9 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function WebBookFacilityPage({ params, searchParams }: Props) {
   const { facilityId, locale } = await params;
-  const { slot } = await searchParams;
+  const { start, end } = await searchParams;
 
-  const facility = await getFacilityForWebBooking(facilityId, slot ?? null);
+  const facility = await getFacilityForWebBooking(facilityId, start ?? null, end ?? null);
 
   if (!facility) {
     notFound();
