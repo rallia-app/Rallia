@@ -5,6 +5,8 @@ export type WebBookCourtOption = {
   externalCourtId: string;
   externalSlotId: string | null;
   courtName: string | null;
+  /** `courtName` with the facility prefix/echo stripped, for use as a button label. */
+  shortCourtName: string | null;
   courtNumber: number | null;
   priceCents: number | null;
   currency: string | null;
@@ -80,11 +82,40 @@ function normalizeBookingUrl(url: string | null): string | null {
   }
 }
 
+/**
+ * Providers hand us fully-qualified court names, e.g. "Parc La Fontaine,
+ * terrains sportifs - Terrain de tennis #1, La Fontaine". Rendered as-is,
+ * a dozen of those are unreadable in a picker, and court_number alone is
+ * ambiguous (pickleball 9 Est and 9 Ouest are both number 9). So keep the
+ * court's own segment and drop the facility noise around it.
+ */
+function shortenCourtName(name: string): string {
+  const dash = name.lastIndexOf(' - ');
+  let label = name;
+
+  if (dash !== -1) {
+    const tail = name.slice(dash + 3);
+    // Only drop the prefix when the remainder still identifies the court,
+    // otherwise "Tennis Court 3 - North" would collapse to "North".
+    if (/\d/.test(tail)) {
+      const head = name.slice(0, dash);
+      const comma = tail.lastIndexOf(', ');
+      const suffix = comma > 0 ? tail.slice(comma + 2).trim() : '';
+      // A trailing segment echoing the facility name is noise.
+      label =
+        suffix && head.toLowerCase().includes(suffix.toLowerCase()) ? tail.slice(0, comma) : tail;
+    }
+  }
+
+  return label.trim();
+}
+
 function toCourtOption(row: SnapshotRow): WebBookCourtOption {
   return {
     externalCourtId: row.external_court_id,
     externalSlotId: row.external_slot_id,
     courtName: row.court_name,
+    shortCourtName: row.court_name ? shortenCourtName(row.court_name) : null,
     courtNumber: row.court_number,
     priceCents: row.price_cents,
     currency: row.currency,
