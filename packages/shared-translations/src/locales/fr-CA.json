@@ -5054,6 +5054,7 @@
     "removeModal": {
       "title": "Retirer ce joueur ?",
       "message": "Retirer {name} du tournoi ? Cette personne ne pourra plus s'inscrire à ce tournoi.",
+      "messagePaid": "Retirer {name} du tournoi ? Ses frais d'inscription lui sont remis, et cette personne ne pourra plus s'inscrire à ce tournoi.",
       "confirm": "Retirer",
       "keepIt": "Annuler",
       "success": "Joueur retiré"
@@ -5166,7 +5167,8 @@
       "partnerRatingTooLow": "Le niveau de ton partenaire est sous le minimum de ce tournoi.",
       "partnerRatingRequired": "Ton partenaire a besoin d'un niveau dans ce sport pour être inscrit.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
-      "inviteInvalid": "Ce lien d'invitation n'est plus valide."
+      "inviteInvalid": "Ce lien d'invitation n'est plus valide.",
+      "paidUseRefund": "Cette inscription a été payée. Passe par l'option de remboursement pour te retirer."
     },
     "overview": {
       "readMore": "Lire la suite",

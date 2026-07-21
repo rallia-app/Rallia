@@ -177,6 +177,9 @@ const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
   already_registered: 'tournamentDetail.payments.errors.alreadyRegistered',
   organizer_not_ready: 'tournamentDetail.payments.errors.organizerNotReady',
   tournament_reg_closed: 'tournamentDetail.payments.errors.closed',
+  // Reachable when a share-link holder tries to pay into a paid invite_only
+  // draw: begin_paid_registration only admits open mode or a standing invite.
+  paid_mode_unsupported: 'tournamentDetail.errors.notInvited',
   registration_removed: 'tournamentDetail.errors.registrationRemoved',
   rating_required: 'tournamentDetail.errors.ratingRequired',
   rating_too_low: 'tournamentDetail.errors.ratingTooLow',
@@ -1255,51 +1258,55 @@ export const TournamentDetail: React.FC = () => {
       const lower = errMsg.toLowerCase();
       // Partner codes come first: partner_already_registered and
       // partner_sport_mismatch contain the bare codes as substrings.
-      const key: TranslationKey = lower.includes('partner_already_registered')
-        ? 'tournamentDetail.errors.partnerAlreadyRegistered'
-        : lower.includes('partner_sport_mismatch')
-          ? 'tournamentDetail.errors.partnerSportMismatch'
-          : lower.includes('partner_required')
-            ? 'tournamentDetail.errors.partnerRequired'
-            : lower.includes('partner_invalid') || lower.includes('partner_not_allowed')
-              ? 'tournamentDetail.errors.partnerInvalid'
-              : lower.includes('invite_invalid')
-                ? 'tournamentDetail.errors.inviteInvalid'
-                : lower.includes('sport_mismatch')
-                  ? 'tournamentDetail.errors.sportMismatch'
-                  : lower.includes('tournament_full')
-                    ? 'tournamentDetail.errors.tournamentFull'
-                    : lower.includes('already_registered')
-                      ? 'tournamentDetail.errors.alreadyRegistered'
-                      : lower.includes('not_invited')
-                        ? 'tournamentDetail.errors.notInvited'
-                        : lower.includes('optimistic_lock')
-                          ? 'tournamentDetail.errors.lockConflict'
-                          : lower.includes('start_passed')
-                            ? 'tournamentDetail.errors.startPassed'
-                            : lower.includes('withdraw_not_allowed')
-                              ? 'tournamentDetail.errors.withdrawClosed'
-                              : lower.includes('registration_removed')
-                                ? 'tournamentDetail.errors.registrationRemoved'
-                                : lower.includes('approve_not_allowed')
-                                  ? 'tournamentDetail.errors.approveNotAllowed'
-                                  : lower.includes('remove_not_allowed')
-                                    ? 'tournamentDetail.errors.removeNotAllowed'
-                                    : lower.includes('registration_not_found')
-                                      ? 'tournamentDetail.errors.lockConflict'
-                                      : lower.includes('tournament_reg_closed') ||
-                                          lower.includes('reg_closed')
-                                        ? 'tournamentDetail.errors.regClosed'
-                                        : // partner_rating_* first: they contain the bare rating_* codes.
-                                          lower.includes('partner_rating_too_low')
-                                          ? 'tournamentDetail.errors.partnerRatingTooLow'
-                                          : lower.includes('partner_rating_required')
-                                            ? 'tournamentDetail.errors.partnerRatingRequired'
-                                            : lower.includes('rating_too_low')
-                                              ? 'tournamentDetail.errors.ratingTooLow'
-                                              : lower.includes('rating_required')
-                                                ? 'tournamentDetail.errors.ratingRequired'
-                                                : fallbackKey;
+      // paid_use_refund means the caller reached tournament_withdraw with a paid
+      // entry. The UI routes those to the refund flow, so this is a safety net.
+      const key: TranslationKey = lower.includes('paid_use_refund')
+        ? 'tournamentDetail.errors.paidUseRefund'
+        : lower.includes('partner_already_registered')
+          ? 'tournamentDetail.errors.partnerAlreadyRegistered'
+          : lower.includes('partner_sport_mismatch')
+            ? 'tournamentDetail.errors.partnerSportMismatch'
+            : lower.includes('partner_required')
+              ? 'tournamentDetail.errors.partnerRequired'
+              : lower.includes('partner_invalid') || lower.includes('partner_not_allowed')
+                ? 'tournamentDetail.errors.partnerInvalid'
+                : lower.includes('invite_invalid')
+                  ? 'tournamentDetail.errors.inviteInvalid'
+                  : lower.includes('sport_mismatch')
+                    ? 'tournamentDetail.errors.sportMismatch'
+                    : lower.includes('tournament_full')
+                      ? 'tournamentDetail.errors.tournamentFull'
+                      : lower.includes('already_registered')
+                        ? 'tournamentDetail.errors.alreadyRegistered'
+                        : lower.includes('not_invited')
+                          ? 'tournamentDetail.errors.notInvited'
+                          : lower.includes('optimistic_lock')
+                            ? 'tournamentDetail.errors.lockConflict'
+                            : lower.includes('start_passed')
+                              ? 'tournamentDetail.errors.startPassed'
+                              : lower.includes('withdraw_not_allowed')
+                                ? 'tournamentDetail.errors.withdrawClosed'
+                                : lower.includes('registration_removed')
+                                  ? 'tournamentDetail.errors.registrationRemoved'
+                                  : lower.includes('approve_not_allowed')
+                                    ? 'tournamentDetail.errors.approveNotAllowed'
+                                    : lower.includes('remove_not_allowed')
+                                      ? 'tournamentDetail.errors.removeNotAllowed'
+                                      : lower.includes('registration_not_found')
+                                        ? 'tournamentDetail.errors.lockConflict'
+                                        : lower.includes('tournament_reg_closed') ||
+                                            lower.includes('reg_closed')
+                                          ? 'tournamentDetail.errors.regClosed'
+                                          : // partner_rating_* first: they contain the bare rating_* codes.
+                                            lower.includes('partner_rating_too_low')
+                                            ? 'tournamentDetail.errors.partnerRatingTooLow'
+                                            : lower.includes('partner_rating_required')
+                                              ? 'tournamentDetail.errors.partnerRatingRequired'
+                                              : lower.includes('rating_too_low')
+                                                ? 'tournamentDetail.errors.ratingTooLow'
+                                                : lower.includes('rating_required')
+                                                  ? 'tournamentDetail.errors.ratingRequired'
+                                                  : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -1686,9 +1693,16 @@ export const TournamentDetail: React.FC = () => {
     // direct registrants take the normal path. Doubles routes through the
     // partner picker first in every case.
     const inviteToken = !isOrganizer && !isInvitePending ? params.inviteToken : undefined;
-    // Paid tournaments (open mode only in this slice) charge via Stripe before
-    // confirming the spot. No invite/accept path is paid, so those fall through.
-    if (isPaidTournament && !inviteToken && !isInvitePending) {
+    // Paid tournaments charge via Stripe before confirming the spot. Share-link
+    // holders included: redeeming a token used to skip this and call
+    // joinViaInvite, which the paid gate rejects with PAYMENT_REQUIRED and no
+    // route into payment, so the link just dead-ended. The token isn't needed to
+    // pay — begin_paid_registration takes it from here.
+    //
+    // isInvitePending (invite_only + pending, no invited_by) still falls through
+    // because that row can't exist on a paid tournament: the gate only admits a
+    // pending row when invited_by is set, and those take the accept-invite CTA.
+    if (isPaidTournament && !isInvitePending) {
       if (isDoubles) {
         void SheetManager.show('tournament-partner-picker', {
           payload: {
@@ -3877,7 +3891,11 @@ export const TournamentDetail: React.FC = () => {
         message={t(
           removeTargetIsPending
             ? 'tournamentDetail.declineModal.message'
-            : 'tournamentDetail.removeModal.message',
+            : isPaidTournament
+              ? // A confirmed registrant on a paid event has paid, and removal
+                // now queues their entry back. Say so before the organizer taps.
+                'tournamentDetail.removeModal.messagePaid'
+              : 'tournamentDetail.removeModal.message',
           { name: removeTarget ? getHumanName(removeTarget, '') : '' }
         )}
         confirmLabel={t(
