@@ -46,7 +46,7 @@ export function renderInvitationEmail(
   });
 
   const content = `
-                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${T.neutral900}; letter-spacing: -0.025em; line-height: 1.2;">
+                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 800; color: ${T.neutral900}; letter-spacing: -0.03em; line-height: 1.2;">
                   ${t(locale, 'invitation.heading')}
                 </h2>
 
