@@ -6,7 +6,7 @@
  * It wraps the MatchFeedbackWizard component in a modal presentation.
  */
 
-import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, ReactNode } from 'react';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { FeedbackSheetData, OpponentForFeedback } from '@rallia/shared-types';
 
@@ -89,11 +89,14 @@ export const FeedbackSheetProvider: React.FC<FeedbackSheetProviderProps> = ({ ch
     }, 300);
   }, []);
 
-  const contextValue: FeedbackSheetContextType = {
-    openSheet,
-    closeSheet,
-    feedbackData,
-  };
+  const contextValue: FeedbackSheetContextType = useMemo(
+    () => ({
+      openSheet,
+      closeSheet,
+      feedbackData,
+    }),
+    [openSheet, closeSheet, feedbackData]
+  );
 
   return (
     <FeedbackSheetContext.Provider value={contextValue}>{children}</FeedbackSheetContext.Provider>

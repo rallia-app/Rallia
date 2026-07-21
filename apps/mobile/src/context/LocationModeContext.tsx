@@ -14,6 +14,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,11 +90,14 @@ export function LocationModeProvider({ children }: LocationModeProviderProps) {
     }
   }, []);
 
-  const value: LocationModeContextValue = {
-    locationMode,
-    isLoading,
-    setLocationMode,
-  };
+  const value: LocationModeContextValue = useMemo(
+    () => ({
+      locationMode,
+      isLoading,
+      setLocationMode,
+    }),
+    [locationMode, isLoading, setLocationMode]
+  );
 
   return <LocationModeContext.Provider value={value}>{children}</LocationModeContext.Provider>;
 }
