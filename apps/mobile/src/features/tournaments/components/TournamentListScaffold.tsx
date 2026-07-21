@@ -211,7 +211,7 @@ function formatRatingRange(min: number | null, max: number | null): string | nul
   return null;
 }
 
-const AVATARS_SHOWN = 5;
+const AVATARS_SHOWN = 4;
 const AVATAR_SIZE = 24;
 
 /** Stacked registrant faces with a quiet fill count beside the stack. */

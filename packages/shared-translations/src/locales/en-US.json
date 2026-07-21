@@ -11089,6 +11089,10 @@
     "groupInviteHeading": "You're invited to join {group}!",
     "communityInviteTitle": "Join {community} on Rallia",
     "communityInviteHeading": "You're invited to join {community}!",
+    "tournamentInviteTitle": "{name} invited you to {tournament}!",
+    "tournamentInviteTitleGeneric": "You're invited to {tournament}!",
+    "tournamentInviteHeading": "{name} invited you to {tournament}!",
+    "tournamentInviteHeadingGeneric": "You're invited to {tournament}!",
     "at": "at",
     "scanQr": "Scan this QR code with your phone to get started.",
     "appStore": "Download on the App Store",
@@ -11109,6 +11113,18 @@
     "physicalTitle": "Welcome to Rallia",
     "physicalHeading": "Welcome to Rallia",
     "physicalDescription": "Download the app to find players, join matches, and play more."
+  },
+  "tournamentOg": {
+    "tournament": "Tournament",
+    "singles": "Singles",
+    "doubles": "Doubles",
+    "mixedDoubles": "Mixed Doubles",
+    "free": "Free entry",
+    "entryFee": "{amount} entry",
+    "prizePool": "{amount} in prizes",
+    "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
+    "full": "Full",
+    "registrationClosed": "Registration closed"
   },
   "feedback": {
     "title": "Feedback",
@@ -11352,7 +11368,7 @@
       "intro": "A ranking per sport and season. You earn points by entering tournaments and winning games.",
       "placement": {
         "title": "How far you get",
-        "baseNote": "Base points. Every tournament multiplies them, except participation, which is a flat 20 everywhere.",
+        "baseNote": "Base points. Every tournament multiplies them, except participation, which is a flat 10 everywhere.",
         "note": "You score only if you play at least one game. Byes and walkovers aren't wins: win nothing and you get the participation points, no matter how far the draw carried you."
       },
       "placements": {
@@ -11362,11 +11378,11 @@
         "quarterfinal": "Quarter 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
-        "played": "Played 20"
+        "played": "Played 10"
       },
       "worth": {
         "title": "What a tournament is worth",
-        "body": "Bigger draws and higher minimum levels multiply the points above, and moving up a category doubles what every result is worth. Each tournament shows its top prize up front, like \"up to 2000 pts\" on the card."
+        "body": "Bigger draws and higher minimum levels multiply the points above, and moving up a category multiplies what every result is worth by about five. Each tournament shows its top prize up front, like \"up to 5000 pts\" on the card."
       },
       "season": {
         "title": "Your season score",

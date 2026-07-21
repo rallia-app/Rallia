@@ -810,7 +810,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_partner_withdrew: { email: false, push: true, sms: false },
   // Tournament lifecycle — mirror the edge function DEFAULT_PREFERENCES
   tournament_registration_received: { email: false, push: true, sms: false },
-  tournament_invitation: { email: false, push: true, sms: false },
+  tournament_invitation: { email: true, push: true, sms: false },
   tournament_registration_approved: { email: false, push: true, sms: false },
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },

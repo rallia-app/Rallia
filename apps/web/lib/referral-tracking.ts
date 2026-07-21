@@ -16,7 +16,15 @@ import type { UtmParams } from '@rallia/shared-utils';
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
-type InvitationType = 'referral' | 'match' | 'group' | 'community' | 'flyer' | 'poster' | 'social';
+type InvitationType =
+  | 'referral'
+  | 'match'
+  | 'group'
+  | 'community'
+  | 'tournament'
+  | 'flyer'
+  | 'poster'
+  | 'social';
 
 export function detectPlatform(userAgent: string): 'ios' | 'android' | null {
   const ua = userAgent.toLowerCase();

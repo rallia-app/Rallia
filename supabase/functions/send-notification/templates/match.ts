@@ -36,6 +36,24 @@ function toUniversalLink(deepLink: string, siteUrl?: string, locale: string = 'e
 }
 
 /**
+ * CTA link for a destination that exists only in the app. Tournaments have no
+ * web page, so a universal link would 404 — the /api/go bouncer opens the
+ * rallia:// deep link on mobile (store fallback) and the website on desktop.
+ */
+function toGoLink(
+  target: string,
+  id: string | undefined,
+  siteUrl: string | undefined,
+  locale: string,
+  src: string
+): string {
+  if (!siteUrl) return id ? `rallia://${target}/${id}` : `rallia://${target}`;
+  const params = new URLSearchParams({ to: target, locale, src });
+  if (id) params.set('id', id);
+  return `${siteUrl}/api/go?${params.toString()}`;
+}
+
+/**
  * Generate email subject from the notification title.
  * Sport context belongs in the title/body itself, not as a bracketed tag.
  */
@@ -48,6 +66,7 @@ export function generateEmailSubject(notification: NotificationRecord): string {
  */
 function getPreheaderKey(type: string): string {
   const keyMap: Record<string, string> = {
+    tournament_invitation: 'preheader.tournamentInvitation',
     match_invitation: 'preheader.matchInvitation',
     match_join_request: 'preheader.matchJoinRequest',
     match_join_accepted: 'preheader.matchJoinAccepted',
@@ -243,8 +262,20 @@ function generateActionButton(
 ): string {
   let buttonKey = 'match.button.openRallia';
   let deepLink = 'rallia://';
+  // Set when the destination is app-only and must bypass toUniversalLink.
+  let href: string | null = null;
 
   switch (type) {
+    case 'tournament_invitation':
+      buttonKey = 'match.button.viewTournamentInvitation';
+      href = toGoLink(
+        'tournament',
+        typeof payload.tournamentId === 'string' ? payload.tournamentId : undefined,
+        siteUrl,
+        locale,
+        'tournament_invitation_email'
+      );
+      break;
     case 'match_invitation':
       buttonKey = 'match.button.viewInvitation';
       if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
@@ -295,7 +326,7 @@ function generateActionButton(
       deepLink = 'rallia://';
   }
 
-  return renderCtaButton(t(locale, buttonKey), toUniversalLink(deepLink, siteUrl, locale));
+  return renderCtaButton(t(locale, buttonKey), href ?? toUniversalLink(deepLink, siteUrl, locale));
 }
 
 /**

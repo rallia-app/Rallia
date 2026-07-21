@@ -27,6 +27,7 @@ export type InvitationKind =
   | 'match'
   | 'group'
   | 'community'
+  | 'tournament'
   | 'flyer'
   | 'poster'
   | 'social';

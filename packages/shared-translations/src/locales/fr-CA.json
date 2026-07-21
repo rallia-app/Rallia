@@ -11089,6 +11089,10 @@
     "groupInviteHeading": "Vous êtes invité à rejoindre {group}!",
     "communityInviteTitle": "Rejoignez {community} sur Rallia",
     "communityInviteHeading": "Vous êtes invité à rejoindre {community}!",
+    "tournamentInviteTitle": "{name} vous invite au tournoi {tournament}!",
+    "tournamentInviteTitleGeneric": "Vous êtes invité au tournoi {tournament}!",
+    "tournamentInviteHeading": "{name} vous invite au tournoi {tournament}!",
+    "tournamentInviteHeadingGeneric": "Vous êtes invité au tournoi {tournament}!",
     "at": "à",
     "scanQr": "Scannez ce code QR avec votre téléphone pour commencer.",
     "appStore": "Télécharger sur l'App Store",
@@ -11109,6 +11113,18 @@
     "physicalTitle": "Bienvenue sur Rallia",
     "physicalHeading": "Bienvenue sur Rallia",
     "physicalDescription": "Téléchargez l'app pour trouver des joueurs, rejoindre des parties et jouer plus."
+  },
+  "tournamentOg": {
+    "tournament": "Tournoi",
+    "singles": "Simple",
+    "doubles": "Double",
+    "mixedDoubles": "Double mixte",
+    "free": "Entrée gratuite",
+    "entryFee": "Entrée {amount}",
+    "prizePool": "{amount} en prix",
+    "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
+    "full": "Complet",
+    "registrationClosed": "Inscriptions fermées"
   },
   "feedback": {
     "title": "Commentaires",
@@ -11352,7 +11368,7 @@
       "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
       "placement": {
         "title": "Jusqu'où tu te rends",
-        "baseNote": "Points de base. Chaque tournoi les multiplie, sauf la participation qui reste à 20 partout.",
+        "baseNote": "Points de base. Chaque tournoi les multiplie, sauf la participation qui reste à 10 partout.",
         "note": "Tu marques seulement si tu joues au moins une partie. Les byes et les forfaits comptent pas comme des victoires : si tu gagnes aucune partie, tu reçois les points de participation, peu importe jusqu'où le tableau t'a amené."
       },
       "placements": {
@@ -11362,11 +11378,11 @@
         "quarterfinal": "Quart 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
-        "played": "Participation 20"
+        "played": "Participation 10"
       },
       "worth": {
         "title": "Ce que vaut un tournoi",
-        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie double la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 2000 pts » sur la carte."
+        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie multiplie par environ cinq la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 5000 pts » sur la carte."
       },
       "season": {
         "title": "Ton score de saison",
