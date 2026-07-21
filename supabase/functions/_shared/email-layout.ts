@@ -2,12 +2,14 @@
  * Shared Email Layout Module
  * Provides unified HTML shell, design tokens, and reusable components for all email templates.
  *
- * --- Redesign: "Editorial" ---
+ * --- Redesign: "Editorial white" ---
  * Same API and dark-mode classes; refreshed visuals:
- *   • compact teal header + slim gold accent rule
+ *   • white header with the colored logo chip (white pill baked into the PNG so
+ *     the black letters survive dark mode, incl. Gmail's forced inversion)
+ *   • short gold tick under the logo instead of a full-width rule
  *   • dark neutral headings (teal reserved for eyebrows/links)
- *   • neutral hairline cards instead of mint tints
- *   • flat coral CTA at 12px radius, quieter footer
+ *   • boxless hairline detail rows, warm off-white page background
+ *   • full-width flat coral CTA, quiet left-aligned footer
  *   • mobile padding step-down via media query
  */
 
@@ -35,7 +37,9 @@ export const EMAIL_TOKENS = {
   neutral50: '#fafafa',
   // Misc
   white: '#ffffff',
-  pageBg: '#f3f6f5',
+  pageBg: '#faf9f7',
+  hairline: '#eceae6',
+  hairlineSoft: '#f0eeea',
   // Dark mode
   darkPageBg: '#1a1a1a',
   darkContainerBg: '#262626',
@@ -92,14 +96,14 @@ function getDarkModeCss(): string {
       @media (prefers-color-scheme: dark) {
         .email-body { background-color: ${T.darkPageBg} !important; }
         .email-container { background-color: ${T.darkContainerBg} !important; border-color: #404040 !important; }
-        .email-header { background-color: ${T.darkHeaderBg} !important; }
+        .email-header { background-color: ${T.darkContainerBg} !important; }
         .email-content { background-color: ${T.darkContainerBg} !important; }
-        .email-footer { background-color: #1f1f1f !important; border-top-color: #404040 !important; }
+        .email-footer { background-color: ${T.darkContainerBg} !important; border-top-color: #404040 !important; }
         .email-text { color: ${T.darkText} !important; }
         .email-muted { color: ${T.darkMutedText} !important; }
         .email-eyebrow { color: #5eead4 !important; }
-        .email-detail-card { background-color: #2d2d2d !important; border-color: #404040 !important; }
-        .email-detail-card td { border-bottom-color: #404040 !important; }
+        .email-detail-card td { border-top-color: #3a3a3a !important; border-bottom-color: #3a3a3a !important; }
+        .email-game-card { background-color: #2d2d2d !important; border-color: #404040 !important; }
         .email-link-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
         .email-divider { border-top-color: #404040 !important; }
         /* Content text — override inline colors on elements without dark-mode classes */
@@ -119,13 +123,14 @@ function getDarkModeCss(): string {
       /* Outlook dark mode */
       [data-ogsc] .email-body { background-color: ${T.darkPageBg} !important; }
       [data-ogsc] .email-container { background-color: ${T.darkContainerBg} !important; }
-      [data-ogsc] .email-header { background-color: ${T.darkHeaderBg} !important; }
-      [data-ogsc] .email-footer { background-color: #1f1f1f !important; }
+      [data-ogsc] .email-header { background-color: ${T.darkContainerBg} !important; }
+      [data-ogsc] .email-footer { background-color: ${T.darkContainerBg} !important; }
       [data-ogsc] .email-text { color: ${T.darkText} !important; }
       [data-ogsc] .email-muted { color: ${T.darkMutedText} !important; }
       [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
       [data-ogsc] .email-content p { color: ${T.darkText} !important; }
       [data-ogsc] .email-content div { color: ${T.darkText} !important; }
+      [data-ogsc] .email-game-card { background-color: #2d2d2d !important; border-color: #404040 !important; }
       [data-ogsc] .email-content h2 { color: #fafafa !important; }
       [data-ogsc] .email-content td { color: ${T.darkText} !important; }
       [data-ogsc] .email-detail-label { color: ${T.darkMutedText} !important; }
@@ -134,9 +139,10 @@ function getDarkModeCss(): string {
       /* Responsive */
       @media (max-width: 620px) {
         .email-container { width: 100% !important; }
-        .email-header { padding: 22px 24px 20px 24px !important; }
-        .email-content { padding: 30px 24px 26px 24px !important; }
-        .email-footer { padding: 26px 24px 30px 24px !important; }
+        .email-header { padding: 26px 24px 0 24px !important; }
+        .email-tick { padding: 18px 24px 0 24px !important; }
+        .email-content { padding: 24px 24px 28px 24px !important; }
+        .email-footer { padding: 22px 24px 28px 24px !important; }
       }
     </style>`;
 }
@@ -156,18 +162,18 @@ function getAppStoreBadgesHtml(siteUrl: string, locale: string): string {
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td align="center" style="padding: 18px 0 0 0;">
-                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: ${T.primary600};">${downloadText}</p>
+                    <td align="left" style="padding: 16px 0 0 0;">
+                      <p class="email-muted" style="margin: 0; padding: 0 0 10px 0; font-size: 12px; font-weight: 600; color: ${T.neutral500};">${downloadText}</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                          <td style="padding: 0 6px 0 0;">
+                          <td style="padding: 0 8px 0 0;">
                             <a href="https://apps.apple.com/app/rallia/id6760482014" style="text-decoration: none;">
-                              <img src="${siteUrl}/app-store-badge.svg" alt="${appStoreAlt}" width="120" height="40" style="display: block; border: 0;" />
+                              <img src="${siteUrl}/app-store-badge.svg" alt="${appStoreAlt}" width="108" height="36" style="display: block; border: 0;" />
                             </a>
                           </td>
-                          <td style="padding: 0 0 0 6px;">
+                          <td>
                             <a href="https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp" style="text-decoration: none;">
-                              <img src="${siteUrl}/google-play-badge.svg" alt="${googlePlayAlt}" width="135" height="40" style="display: block; border: 0;" />
+                              <img src="${siteUrl}/google-play-badge.svg" alt="${googlePlayAlt}" width="122" height="36" style="display: block; border: 0;" />
                             </a>
                           </td>
                         </tr>
@@ -206,7 +212,7 @@ export function wrapInLayout(options: LayoutOptions): string {
   const rightsText = isFr ? 'Tous droits réservés.' : 'All rights reserved.';
 
   const subtitleHtml = headerSubtitle
-    ? `<p style="margin: 10px 0 0 0; padding: 0; font-size: 13px; font-weight: 600; color: ${T.primary100}; letter-spacing: 0.04em;">${escapeHtml(headerSubtitle)}</p>`
+    ? `<p class="email-muted" style="margin: 10px 0 0 0; padding: 0; font-size: 13px; font-weight: 600; color: ${T.neutral500}; letter-spacing: 0.02em;">${escapeHtml(headerSubtitle)}</p>`
     : '';
 
   const preheaderHtml = preheader ? getPreheaderHtml(preheader) : '';
@@ -266,36 +272,39 @@ export function wrapInLayout(options: LayoutOptions): string {
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-body" style="background-color: ${T.pageBg}; font-family: Inter, Arial, Helvetica, sans-serif;">
       <tr>
         <td align="center" style="padding: 40px 20px;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="background-color: ${T.white}; border: 1px solid ${T.neutral200}; border-radius: ${T.cardRadius}; overflow: hidden;">
-            <!-- Header -->
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="background-color: ${T.white}; border: 1px solid ${T.hairline}; border-radius: 20px; overflow: hidden;">
+            <!-- Header: colored logo chip on white -->
             <tr>
-              <td align="center" class="email-header" style="padding: 26px 40px 22px 40px; background-color: ${T.primary600}; border-radius: ${T.cardRadius} ${T.cardRadius} 0 0;">
-                <img src="${siteUrl}/logo-light.png" alt="Rallia" width="112" height="44" style="display: block; border: 0; max-width: 112px; height: auto;" />
+              <td align="left" class="email-header" style="padding: 32px 48px 0 48px; background-color: ${T.white};">
+                <img src="${siteUrl}/email-logo-chip.png" alt="Rallia" width="116" height="55" style="display: block; border: 0; max-width: 116px; height: auto; margin-left: -10px;" />
                 ${subtitleHtml}
               </td>
             </tr>
 
-            <!-- Gold accent rule -->
+            <!-- Gold tick -->
             <tr>
-              <td style="height: 3px; line-height: 3px; font-size: 3px; background-color: ${T.accent500};">&nbsp;</td>
+              <td align="left" class="email-tick" style="padding: 20px 48px 0 48px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="44">
+                  <tr><td height="3" style="height: 3px; line-height: 3px; font-size: 3px; background-color: ${T.accent500}; border-radius: 2px;">&nbsp;</td></tr>
+                </table>
+              </td>
             </tr>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 40px 44px 32px 44px;">
+              <td class="email-content" style="padding: 26px 48px 36px 48px;">
                 ${content}
               </td>
             </tr>
 
             <!-- Footer -->
             <tr>
-              <td align="center" class="email-footer" style="padding: 28px 40px 32px 40px; background-color: ${T.neutral50}; border-top: 1px solid ${T.neutral200}; border-radius: 0 0 ${T.cardRadius} ${T.cardRadius};">
-                <p class="email-text" style="margin: 0; padding: 0 0 4px 0; font-size: 13px; font-weight: 600; color: ${T.neutral900};">${needHelpText}</p>
-                <p class="email-muted" style="margin: 0; padding: 0; font-size: 13px; line-height: 1.5; color: ${T.neutral500};">
-                  ${supportText}
+              <td align="left" class="email-footer" style="padding: 24px 48px 30px 48px; background-color: ${T.white}; border-top: 1px solid ${T.hairlineSoft};">
+                <p class="email-muted" style="margin: 0; padding: 0; font-size: 13px; line-height: 1.6; color: ${T.neutral500};">
+                  <span class="email-text" style="font-weight: 600; color: ${T.neutral600};">${needHelpText}</span> ${supportText}
                 </p>
                 ${getAppStoreBadgesHtml(siteUrl, locale)}
-                <p class="email-muted" style="margin: 0; padding: 20px 0 0 0; font-size: 12px; line-height: 1.5; color: ${T.neutral500};">
+                <p class="email-muted" style="margin: 0; padding: 16px 0 0 0; font-size: 12px; line-height: 1.5; color: ${T.neutral500};">
                   &copy; ${new Date().getFullYear()} Rallia. ${rightsText}
                 </p>
               </td>
@@ -320,16 +329,10 @@ export function renderCtaButton(text: string, href: string): string {
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td align="center" style="padding: 4px 0 32px 0;">
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                        <tr>
-                          <td style="background-color: ${T.secondary500}; border-radius: ${T.buttonRadius};">
-                            <a href="${href}" class="email-cta" style="display: inline-block; padding: 15px 40px; font-family: Inter, Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: ${T.white}; text-decoration: none; letter-spacing: -0.01em;">
-                              ${escapeHtml(text)}
-                            </a>
-                          </td>
-                        </tr>
-                      </table>
+                    <td style="padding: 8px 0 28px 0;">
+                      <a href="${href}" class="email-cta" style="display: block; text-align: center; background-color: ${T.secondary500}; border-radius: ${T.buttonRadius}; padding: 16px 0; font-family: Inter, Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 700; color: ${T.white}; text-decoration: none; letter-spacing: -0.01em;">
+                      ${escapeHtml(text)}
+                      </a>
                     </td>
                   </tr>
                 </table>`;
@@ -340,8 +343,8 @@ export function renderSecondaryButton(text: string, href: string): string {
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td style="border: 2px solid ${T.primary600}; border-radius: ${T.buttonRadius};">
-                      <a href="${href}" style="display: inline-block; padding: 10px 20px; font-family: Inter, Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 600; color: ${T.primary600}; text-decoration: none;">
+                    <td>
+                      <a href="${href}" style="display: inline-block; padding: 8px 12px; font-family: Inter, Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 600; color: ${T.primary600}; text-decoration: none;">
                         ${escapeHtml(text)}
                       </a>
                     </td>
@@ -358,8 +361,8 @@ export function renderDetailCard(rows: Array<{ label: string; value: string }>):
     .map(
       (row, i) => `
                       <tr>
-                        <td class="email-detail-label" style="padding: 13px 0; ${i < lastIndex ? 'border-bottom: 1px solid #f0f0f0;' : ''} color: ${T.neutral500}; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 110px; vertical-align: middle;">${escapeHtml(row.label)}</td>
-                        <td class="email-detail-value" style="padding: 13px 0; ${i < lastIndex ? 'border-bottom: 1px solid #f0f0f0;' : ''} color: ${T.neutral900}; font-size: 15px; font-weight: 600; vertical-align: middle;">${row.value}</td>
+                        <td class="email-detail-label" style="padding: 14px 0; border-top: 1px solid ${T.hairlineSoft}; ${i === lastIndex ? `border-bottom: 1px solid ${T.hairlineSoft};` : ''} color: ${T.neutral500}; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; width: 110px; vertical-align: middle;">${escapeHtml(row.label)}</td>
+                        <td class="email-detail-value" style="padding: 14px 0; border-top: 1px solid ${T.hairlineSoft}; ${i === lastIndex ? `border-bottom: 1px solid ${T.hairlineSoft};` : ''} color: ${T.neutral900}; font-size: 15px; font-weight: 600; vertical-align: middle;">${row.value}</td>
                       </tr>`
     )
     .join('');
@@ -367,15 +370,9 @@ export function renderDetailCard(rows: Array<{ label: string; value: string }>):
   return `
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td style="padding: 0 0 24px 0;">
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-detail-card" style="background-color: ${T.white}; border: 1px solid ${T.neutral200}; border-radius: 14px; overflow: hidden;">
-                        <tr>
-                          <td style="padding: 8px 22px;">
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                              ${rowsHtml}
-                            </table>
-                          </td>
-                        </tr>
+                    <td style="padding: 4px 0 20px 0;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="email-detail-card">
+                        ${rowsHtml}
                       </table>
                     </td>
                   </tr>
@@ -388,7 +385,7 @@ export function renderLinkFallbackBox(label: string, url: string): string {
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
                     <td align="center" style="padding: 0 0 24px 0;">
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-link-box" style="background-color: ${T.neutral50}; border: 1px solid ${T.neutral200}; border-radius: 14px; overflow: hidden;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-link-box" style="background-color: ${T.pageBg}; border: 1px solid ${T.hairline}; border-radius: 14px; overflow: hidden;">
                         <tr>
                           <td style="padding: 20px 24px;">
                             <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold; color: ${T.primary600}; text-transform: uppercase; letter-spacing: 0.08em;">
@@ -410,7 +407,7 @@ export function renderDividerAndDisclaimer(text: string): string {
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td class="email-divider" style="padding: 16px 0; border-top: 1px solid ${T.neutral200};"></td>
+                    <td class="email-divider" style="padding: 16px 0; border-top: 1px solid ${T.hairlineSoft};"></td>
                   </tr>
                 </table>
 
