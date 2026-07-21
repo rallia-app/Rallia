@@ -2,7 +2,7 @@
 
 import { CalendarX, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
@@ -26,9 +26,6 @@ import type { WebBookFacilityContext } from './_lib/facility-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { webBookCompleted, webBookRedirected, webBookStarted } from '@/lib/analytics';
-
-/** How long the redirect card is visible before the browser leaves for the provider. */
-const REDIRECT_DELAY_MS = 1200;
 
 interface WebBookWizardProps {
   facility: WebBookFacilityContext;
@@ -68,7 +65,6 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
   const slotId = facility.selectedSlot?.externalSlotId ?? null;
 
   const [bookingUrl, setBookingUrl] = useState<string | null>(null);
-  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * An already-onboarded visitor has nothing left to fill in, so the gate is
@@ -159,20 +155,6 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
       cancelled = true;
     };
   }, [step, bookingUrl, facility.id, slotId, pageLocale, hasSlot, setErrorMessage, t]);
-
-  // Hand the visitor off to the provider once we have a destination.
-  useEffect(() => {
-    if (step !== 'redirect' || !bookingUrl) return;
-
-    redirectTimer.current = setTimeout(() => {
-      webBookRedirected({ facility_id: facility.id, has_slot: hasSlot });
-      window.location.assign(bookingUrl);
-    }, REDIRECT_DELAY_MS);
-
-    return () => {
-      if (redirectTimer.current) clearTimeout(redirectTimer.current);
-    };
-  }, [step, bookingUrl, facility.id, hasSlot]);
 
   if (!controller.isReady) {
     return (

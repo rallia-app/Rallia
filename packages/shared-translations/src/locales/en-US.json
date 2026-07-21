@@ -10995,7 +10995,7 @@
     },
     "redirect": {
       "title": "You are all set",
-      "description": "We are opening the booking page for this court. Reservations and payment are handled by the facility.",
+      "description": "Your account is ready. Head to the booking page when you want, reservations and payment are handled by the facility.",
       "cta": "Go to the booking page",
       "preparing": "Preparing your booking link...",
       "appHint": "Get the app to book faster and find players"
@@ -11604,7 +11604,7 @@
       "noResults": "No facilities found within 25 km.",
       "distanceLabel": "How far are you willing to travel?",
       "distanceOption": "{km} km",
-      "noResultsRadius": "No courts on Rallia within {km} km yet.",
+      "noResultsRadius": "No courts in our network within {km} km yet.",
       "widenHint": "Try a wider radius, or keep going and we'll match you by area.",
       "continueAnyway": "Continue anyway",
       "errors": {
@@ -11865,10 +11865,10 @@
       "ogDescription": "Help keep Rallia free for tennis and pickleball players everywhere."
     },
     "findAMatch": {
-      "title": "Find a Player Now — Rallia Preview",
-      "description": "AI-coordinated tennis and pickleball matchmaking — we handle the player outreach for you.",
-      "ogTitle": "Find a Player Now — Rallia Preview",
-      "ogDescription": "AI-coordinated tennis and pickleball matchmaking — we handle the player outreach for you."
+      "title": "Slice · Find your next tennis or pickleball game",
+      "description": "Tell us your level, your area and your schedule. Slice finds a compatible player and sets up the game for you.",
+      "ogTitle": "Slice · Find your next tennis or pickleball game",
+      "ogDescription": "Tell us your level, your area and your schedule. Slice finds a compatible player and sets up the game for you."
     },
     "privacy": {
       "title": "Privacy Policy",
