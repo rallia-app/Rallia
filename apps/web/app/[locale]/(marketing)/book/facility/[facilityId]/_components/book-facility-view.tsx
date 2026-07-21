@@ -66,7 +66,7 @@ export function BookFacilityView({ facility, locale }: BookFacilityViewProps) {
   }, [syncUrl]);
 
   return (
-    <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
+    <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-10">
       <FacilityProfileView
         facility={facility}
         selectedGroup={selectedGroup}

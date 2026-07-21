@@ -322,7 +322,7 @@ function RedirectCard({
         {hasMultipleCourts && (
           <div className="space-y-2">
             <span className="text-sm font-semibold">{t('redirect.selectCourt')}</span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {bookableCourts.map(court => {
                 const key = court.externalSlotId ?? court.externalCourtId;
                 return (
