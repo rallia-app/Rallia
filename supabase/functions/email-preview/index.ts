@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- dev-only preview gallery; chrome styles hand-rolled, not brand-token consumers */
 /**
  * Email Preview Gallery
  * Renders all email templates with mock data for visual testing.
@@ -49,13 +48,13 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       @media (prefers-color-scheme: dark) {
         .email-body { background-color: #1a1a1a !important; }
         .email-container { background-color: #262626 !important; border-color: #404040 !important; }
-        .email-header { background-color: #262626 !important; }
+        .email-header { background-color: #0f766e !important; }
         .email-content { background-color: #262626 !important; }
-        .email-footer { background-color: #262626 !important; border-top-color: #404040 !important; }
+        .email-footer { background-color: #1f1f1f !important; border-top-color: #404040 !important; }
         .email-text { color: #e5e5e5 !important; }
         .email-muted { color: #a3a3a3 !important; }
         .email-eyebrow { color: #5eead4 !important; }
-        .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
+        .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
         .email-otp-label { color: #5eead4 !important; }
         .email-otp-code { color: #5eead4 !important; }
         .email-expiry-pill { background-color: #3a2c10 !important; border-color: #5a4420 !important; color: #fbbf24 !important; }
@@ -68,12 +67,12 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       }
       [data-ogsc] .email-body { background-color: #1a1a1a !important; }
       [data-ogsc] .email-container { background-color: #262626 !important; }
-      [data-ogsc] .email-header { background-color: #262626 !important; }
-      [data-ogsc] .email-footer { background-color: #262626 !important; }
+      [data-ogsc] .email-header { background-color: #0f766e !important; }
+      [data-ogsc] .email-footer { background-color: #1f1f1f !important; }
       [data-ogsc] .email-text { color: #e5e5e5 !important; }
       [data-ogsc] .email-muted { color: #a3a3a3 !important; }
       [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
-      [data-ogsc] .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
+      [data-ogsc] .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
       [data-ogsc] .email-otp-label { color: #5eead4 !important; }
       [data-ogsc] .email-otp-code { color: #5eead4 !important; }
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
@@ -82,10 +81,6 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       /* Responsive */
       @media (max-width: 620px) {
         .email-container { width: 100% !important; }
-        .email-header { padding: 26px 24px 0 24px !important; }
-        .email-tick { padding: 18px 24px 0 24px !important; }
-        .email-content { padding: 24px 24px 28px 24px !important; }
-        .email-footer { padding: 22px 24px 28px 24px !important; }
       }
     </style>
   </head>
@@ -99,7 +94,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       border="0"
       width="100%"
       class="email-body"
-      style="background-color: #faf9f7; font-family: Inter, Arial, Helvetica, sans-serif"
+      style="background-color: #f0fdfa; font-family: Inter, Arial, Helvetica, sans-serif"
     >
       <tr>
         <td align="center" style="padding: 40px 20px">
@@ -110,35 +105,36 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
             border="0"
             width="600"
             class="email-container"
-            style="background-color: #ffffff; border-radius: 20px; border: 1px solid #eceae6; overflow: hidden"
+            style="background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e5e5; overflow: hidden"
           >
             <!-- Header -->
             <tr>
               <td
-                align="left"
+                align="center"
                 class="email-header"
                 style="
-                  padding: 32px 48px 0 48px;
-                  background-color: #ffffff;
+                  padding: 36px 40px 28px 40px;
+                  background-color: #0d9488;
+                  border-radius: 16px 16px 0 0;
                 "
               >
                 <img
-                  src="{{ .SiteURL }}/email-logo-chip.png"
+                  src="{{ .SiteURL }}/logo-light.png"
                   alt="Rallia"
-                  width="116"
+                  width="140"
                   height="55"
-                  style="display: block; border: 0; max-width: 116px; height: auto; margin-left: -10px"
+                  style="display: block; border: 0; max-width: 140px; height: auto"
                 />
               </td>
             </tr>
             <!-- Gold accent rule -->
             <tr>
-              <td align="left" class="email-tick" style="padding: 20px 48px 0 48px;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="44"><tr><td height="3" style="height: 3px; line-height: 3px; font-size: 3px; background-color: #f59e0b; border-radius: 2px;">&nbsp;</td></tr></table></td>
+              <td style="height: 3px; line-height: 3px; font-size: 3px; background-color: #f59e0b;">&nbsp;</td>
             </tr>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 26px 48px 36px 48px">
+              <td class="email-content" style="padding: 38px 40px 32px 40px">
                 <p
                   class="email-eyebrow"
                   style="
@@ -158,7 +154,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                     margin: 0;
                     padding: 0 0 16px 0;
                     font-family: Poppins, Arial, Helvetica, sans-serif;
-                    font-size: 28px;
+                    font-size: 25px;
                     font-weight: bold;
                     color: #171717;
                     letter-spacing: -0.02em;
@@ -199,8 +195,8 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                         width="100%"
                         class="email-otp-box"
                         style="
-                          background-color: #faf9f7;
-                          border: 1px solid #eceae6;
+                          background-color: #f0fdfa;
+                          border: 2px dashed #5eead4;
                           border-radius: 14px;
                         "
                       >
@@ -303,22 +299,22 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
             <!-- Footer -->
             <tr>
               <td
-                align="left"
+                align="center"
                 class="email-footer"
                 style="
-                  padding: 24px 48px 30px 48px;
-                  background-color: #ffffff;
-                  border-top: 1px solid #f0eeea;
-                  border-radius: 0 0 20px 20px;
+                  padding: 30px 40px 36px 40px;
+                  background-color: #fafafa;
+                  border-top: 1px solid #e5e5e5;
+                  border-radius: 0 0 16px 16px;
                 "
               >
                 <p
                   style="
                     margin: 0;
                     padding: 0 0 6px 0;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #171717;
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #0d9488;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Besoin d'aide ?{{ else }}Need help?{{ end }}
@@ -338,18 +334,18 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <!-- App Store Badges -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td align="left" style="padding: 16px 0 0 0;">
-                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #737373;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
+                    <td align="center" style="padding: 18px 0 0 0;">
+                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td style="padding: 0 6px 0 0;">
                             <a href="https://apps.apple.com/app/rallia/id6760482014" style="text-decoration: none;">
-                              <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="108" height="36" style="display: block; border: 0;" />
+                              <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="120" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                           <td style="padding: 0 0 0 6px;">
                             <a href="https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp" style="text-decoration: none;">
-                              <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="122" height="36" style="display: block; border: 0;" />
+                              <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="135" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                         </tr>
@@ -427,13 +423,13 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       @media (prefers-color-scheme: dark) {
         .email-body { background-color: #1a1a1a !important; }
         .email-container { background-color: #262626 !important; border-color: #404040 !important; }
-        .email-header { background-color: #262626 !important; }
+        .email-header { background-color: #0f766e !important; }
         .email-content { background-color: #262626 !important; }
-        .email-footer { background-color: #262626 !important; border-top-color: #404040 !important; }
+        .email-footer { background-color: #1f1f1f !important; border-top-color: #404040 !important; }
         .email-text { color: #e5e5e5 !important; }
         .email-muted { color: #a3a3a3 !important; }
         .email-eyebrow { color: #5eead4 !important; }
-        .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
+        .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
         .email-otp-label { color: #5eead4 !important; }
         .email-otp-code { color: #5eead4 !important; }
         .email-expiry-pill { background-color: #3a2c10 !important; border-color: #5a4420 !important; color: #fbbf24 !important; }
@@ -446,12 +442,12 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       }
       [data-ogsc] .email-body { background-color: #1a1a1a !important; }
       [data-ogsc] .email-container { background-color: #262626 !important; }
-      [data-ogsc] .email-header { background-color: #262626 !important; }
-      [data-ogsc] .email-footer { background-color: #262626 !important; }
+      [data-ogsc] .email-header { background-color: #0f766e !important; }
+      [data-ogsc] .email-footer { background-color: #1f1f1f !important; }
       [data-ogsc] .email-text { color: #e5e5e5 !important; }
       [data-ogsc] .email-muted { color: #a3a3a3 !important; }
       [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
-      [data-ogsc] .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
+      [data-ogsc] .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
       [data-ogsc] .email-otp-label { color: #5eead4 !important; }
       [data-ogsc] .email-otp-code { color: #5eead4 !important; }
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
@@ -460,10 +456,6 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       /* Responsive */
       @media (max-width: 620px) {
         .email-container { width: 100% !important; }
-        .email-header { padding: 26px 24px 0 24px !important; }
-        .email-tick { padding: 18px 24px 0 24px !important; }
-        .email-content { padding: 24px 24px 28px 24px !important; }
-        .email-footer { padding: 22px 24px 28px 24px !important; }
       }
     </style>
   </head>
@@ -477,7 +469,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       border="0"
       width="100%"
       class="email-body"
-      style="background-color: #faf9f7; font-family: Inter, Arial, Helvetica, sans-serif"
+      style="background-color: #f0fdfa; font-family: Inter, Arial, Helvetica, sans-serif"
     >
       <tr>
         <td align="center" style="padding: 40px 20px">
@@ -488,35 +480,36 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
             border="0"
             width="600"
             class="email-container"
-            style="background-color: #ffffff; border-radius: 20px; border: 1px solid #eceae6; overflow: hidden"
+            style="background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e5e5; overflow: hidden"
           >
             <!-- Header -->
             <tr>
               <td
-                align="left"
+                align="center"
                 class="email-header"
                 style="
-                  padding: 32px 48px 0 48px;
-                  background-color: #ffffff;
+                  padding: 36px 40px 28px 40px;
+                  background-color: #0d9488;
+                  border-radius: 16px 16px 0 0;
                 "
               >
                 <img
-                  src="{{ .SiteURL }}/email-logo-chip.png"
+                  src="{{ .SiteURL }}/logo-light.png"
                   alt="Rallia"
-                  width="116"
+                  width="140"
                   height="55"
-                  style="display: block; border: 0; max-width: 116px; height: auto; margin-left: -10px"
+                  style="display: block; border: 0; max-width: 140px; height: auto"
                 />
               </td>
             </tr>
             <!-- Gold accent rule -->
             <tr>
-              <td align="left" class="email-tick" style="padding: 20px 48px 0 48px;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="44"><tr><td height="3" style="height: 3px; line-height: 3px; font-size: 3px; background-color: #f59e0b; border-radius: 2px;">&nbsp;</td></tr></table></td>
+              <td style="height: 3px; line-height: 3px; font-size: 3px; background-color: #f59e0b;">&nbsp;</td>
             </tr>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 26px 48px 36px 48px">
+              <td class="email-content" style="padding: 38px 40px 32px 40px">
                 <p
                   class="email-eyebrow"
                   style="
@@ -536,7 +529,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                     margin: 0;
                     padding: 0 0 16px 0;
                     font-family: Poppins, Arial, Helvetica, sans-serif;
-                    font-size: 28px;
+                    font-size: 25px;
                     font-weight: bold;
                     color: #171717;
                     letter-spacing: -0.02em;
@@ -577,8 +570,8 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                         width="100%"
                         class="email-otp-box"
                         style="
-                          background-color: #faf9f7;
-                          border: 1px solid #eceae6;
+                          background-color: #f0fdfa;
+                          border: 2px dashed #5eead4;
                           border-radius: 14px;
                         "
                       >
@@ -681,22 +674,22 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
             <!-- Footer -->
             <tr>
               <td
-                align="left"
+                align="center"
                 class="email-footer"
                 style="
-                  padding: 24px 48px 30px 48px;
-                  background-color: #ffffff;
-                  border-top: 1px solid #f0eeea;
-                  border-radius: 0 0 20px 20px;
+                  padding: 30px 40px 36px 40px;
+                  background-color: #fafafa;
+                  border-top: 1px solid #e5e5e5;
+                  border-radius: 0 0 16px 16px;
                 "
               >
                 <p
                   style="
                     margin: 0;
                     padding: 0 0 6px 0;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #171717;
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #0d9488;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Besoin d'aide ?{{ else }}Need help?{{ end }}
@@ -716,18 +709,18 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <!-- App Store Badges -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
-                    <td align="left" style="padding: 16px 0 0 0;">
-                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #737373;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
+                    <td align="center" style="padding: 18px 0 0 0;">
+                      <p style="margin: 0; padding: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #0d9488;">{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Téléchargez l'application{{ else }}Download the app{{ end }}</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td style="padding: 0 6px 0 0;">
                             <a href="https://apps.apple.com/app/rallia/id6760482014" style="text-decoration: none;">
-                              <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="108" height="36" style="display: block; border: 0;" />
+                              <img src="{{ .SiteURL }}/app-store-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Télécharger dans l'App Store{{ else }}Download on the App Store{{ end }}" width="120" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                           <td style="padding: 0 0 0 6px;">
                             <a href="https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp" style="text-decoration: none;">
-                              <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="122" height="36" style="display: block; border: 0;" />
+                              <img src="{{ .SiteURL }}/google-play-badge.svg" alt="{{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Disponible sur Google Play{{ else }}Get it on Google Play{{ end }}" width="135" height="40" style="display: block; border: 0;" />
                             </a>
                           </td>
                         </tr>

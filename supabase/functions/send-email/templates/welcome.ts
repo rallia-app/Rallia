@@ -22,7 +22,7 @@ function renderStepRow(title: string, body: string, ctaText: string, ctaUrl: str
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tr>
                     <td style="padding: 0 0 20px 0;">
-                      <p style="margin: 0; padding: 0 0 6px 0; font-size: 15px; font-weight: 700; color: ${T.neutral900}; line-height: 1.3;">
+                      <p style="margin: 0; padding: 0 0 6px 0; font-size: 15px; font-weight: 700; color: ${T.primary600}; line-height: 1.3;">
                         ${escapeHtml(title)}
                       </p>
                       <p style="margin: 0; padding: 0 0 6px 0; font-size: 15px; line-height: 1.6; color: ${T.neutral600};">
@@ -74,7 +74,7 @@ export function renderWelcomeEmail(
   });
 
   const content = `
-                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 800; color: ${T.neutral900}; letter-spacing: -0.03em; line-height: 1.2;">
+                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${T.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
                   ${heading}
                 </h2>
 
@@ -86,7 +86,7 @@ export function renderWelcomeEmail(
                   ${escapeHtml(t(locale, 'welcome.mission'))}
                 </p>
 
-                <p style="margin: 0; padding: 0 0 6px 0; font-size: 18px; font-weight: 700; color: ${T.neutral900}; line-height: 1.3;">
+                <p style="margin: 0; padding: 0 0 6px 0; font-size: 18px; font-weight: 700; color: ${T.primary600}; line-height: 1.3;">
                   ${escapeHtml(t(locale, 'welcome.hero.title'))}
                 </p>
                 <p style="margin: 0; padding: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${T.neutral600};">

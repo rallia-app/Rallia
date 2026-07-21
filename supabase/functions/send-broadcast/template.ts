@@ -58,7 +58,7 @@ export function renderBroadcastEmail(params: BroadcastEmailParams): {
     : "You're receiving this email because you have a Rallia account.";
 
   const content = `
-                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 800; color: ${EMAIL_TOKENS.neutral900}; letter-spacing: -0.03em; line-height: 1.2;">
+                <h2 style="margin: 0; padding: 0 0 16px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${EMAIL_TOKENS.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
                   ${escapeHtml(subject)}
                 </h2>
                 ${greeting}

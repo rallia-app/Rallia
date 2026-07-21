@@ -71,14 +71,12 @@ export interface DigestEmailPayload {
   unsubscribeUrl: string;
 }
 
-/* eslint-disable no-restricted-syntax -- decorative tier palette, must not track brand-token changes */
 const TIER_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   platinum: { bg: '#F0FDFA', text: '#134E4A', label: 'Platinum' },
   gold: { bg: '#FEF9C3', text: '#713F12', label: 'Gold' },
   silver: { bg: '#E2E8F0', text: '#334155', label: 'Silver' },
   bronze: { bg: '#FEF0DF', text: '#92400E', label: 'Bronze' },
 };
-/* eslint-enable no-restricted-syntax */
 
 function formatDuration(startTime: string, endTime: string): string {
   const [sh, sm] = startTime.split(':').map(Number);
@@ -188,7 +186,7 @@ function renderMatchCard(match: DigestMatch, locale: string, appUrl: string): st
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 10px;">
                   <tr>
-                    <td class="email-game-card" style="background-color: ${T.white}; border: 1px solid ${T.hairline}; border-radius: 12px; padding: 14px 16px;">
+                    <td class="email-detail-card" style="background-color: ${T.primary50}; border: 1px solid ${T.primary100}; border-radius: 8px; padding: 14px 16px;">
 
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 4px;">
                         <tr>
@@ -250,7 +248,7 @@ function renderSuggestionCard(s: DigestSuggestion, locale: string, appUrl: strin
   return `
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 10px;">
                   <tr>
-                    <td class="email-game-card" style="background-color: ${T.white}; border: 1px solid ${T.hairline}; border-radius: 12px; padding: 14px 16px;">
+                    <td class="email-detail-card" style="background-color: ${T.primary50}; border: 1px solid ${T.primary100}; border-radius: 8px; padding: 14px 16px;">
 
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 4px;">
                         <tr>
@@ -350,7 +348,7 @@ export function renderMorningDigestEmail(payload: DigestEmailPayload): {
   }
 
   const content = `
-                <h2 style="margin: 0 0 8px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 800; color: ${T.neutral900}; letter-spacing: -0.03em; line-height: 1.2;">
+                <h2 style="margin: 0 0 8px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${T.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
                   ${heading}
                 </h2>
 
