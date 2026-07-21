@@ -154,6 +154,8 @@ BEGIN
     RAISE NOTICE '================ PASS=% FAIL=%', v_pass, v_fail;
     IF v_fail > 0 THEN RAISE EXCEPTION '% FAILURES', v_fail; END IF;
 
+    -- Ledger FKs are RESTRICT (20260721140000): drop payment history first.
+    DELETE FROM lt_registration_payment WHERE season_id IN (SELECT id FROM seasons WHERE league_id=v_league.id);
     DELETE FROM leagues WHERE id=v_league.id;
     DELETE FROM player_stripe_account WHERE player_id=v_org;
 END $$;
