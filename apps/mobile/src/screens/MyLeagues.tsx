@@ -15,7 +15,6 @@ import type { LeagueListItem } from '@rallia/shared-services';
 
 import { LeagueCard, LeagueCardSkeleton } from '../features/leagues/components/LeagueListScaffold';
 import { useTournamentListColors } from '../features/tournaments/components/TournamentListScaffold';
-import { SportIcon } from '../components/SportIcon';
 import { useTranslation } from '../hooks';
 import { useSport } from '../context';
 import { lightHaptic } from '../utils/haptics';
@@ -49,10 +48,6 @@ export const MyLeagues: React.FC = () => {
     [navigation]
   );
 
-  const cardWatermark = (
-    <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={96} color={colors.textMuted} />
-  );
-
   const empty = (
     <View style={styles.empty}>
       <Ionicons name="ribbon-outline" size={48} color={colors.textMuted} />
@@ -83,7 +78,6 @@ export const MyLeagues: React.FC = () => {
               colors={colors}
               t={t}
               isOrganizer={item.organizer_id === userId}
-              watermark={cardWatermark}
               onPress={() => handlePress(item)}
             />
           )}

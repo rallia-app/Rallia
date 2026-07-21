@@ -4222,7 +4222,6 @@
   },
   "leagueDetail": {
     "title": "League",
-    "loading": "Loading league...",
     "loadError": "Couldn't load league",
     "retry": "Try again",
     "notFound": "League not found",
@@ -4305,8 +4304,12 @@
       "venue": "Venue",
       "ratingRange": "Rating range"
     },
+    "overview": {
+      "infoTitle": "League info"
+    },
     "dashboard": {
       "organizedBy": "Organized by {name}",
+      "manageTitle": "Manage",
       "steps": {
         "setup": "Setup",
         "season": "Season",
@@ -4340,16 +4343,12 @@
         "reinstateLabel": "Reinstate {name}"
       },
       "joinCta": {
-        "title": "Join this league",
         "description": "Request membership and start competing in seasons"
       },
       "createSeasonCta": {
-        "title": "Create your first season",
-        "description": "Seasons organize play periods and standings for your league",
-        "button": "Create season"
+        "description": "Seasons organize play periods and standings for your league"
       },
       "openSeasonCta": {
-        "title": "Open {name}",
         "description": "Opening a season lets members register and sessions begin"
       }
     },
