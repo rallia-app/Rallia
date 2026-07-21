@@ -232,13 +232,18 @@ export function WebBookWizard({
 // Terminal cards
 // ---------------------------------------------------------------------------
 
+/**
+ * The shortened provider name wins over the number: real facilities reuse a
+ * number across courts (pickleball "9 Est" and "9 Ouest" are both 9), so the
+ * number alone would render two identical options.
+ */
 function courtLabel(
   court: WebBookCourtOption,
   t: ReturnType<typeof useTranslations<'webBook'>>
 ): string {
-  if (court.courtName) return court.courtName;
+  if (court.shortCourtName) return court.shortCourtName;
   if (court.courtNumber != null) return t('courtNumber', { number: court.courtNumber });
-  return t('courtCountSingular');
+  return court.courtName ?? t('courtFallback');
 }
 
 /**
@@ -322,7 +327,9 @@ function RedirectCard({
         {hasMultipleCourts && (
           <div className="space-y-2">
             <span className="text-sm font-semibold">{t('redirect.selectCourt')}</span>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {/* Busy parks open a dozen-plus courts at the same hour, so the
+                list scrolls rather than pushing the CTA off the card. */}
+            <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
               {bookableCourts.map(court => {
                 const key = court.externalSlotId ?? court.externalCourtId;
                 return (
@@ -332,8 +339,8 @@ function RedirectCard({
                     onClick={() => setSelectedCourtKey(key)}
                     ariaLabel={courtLabel(court, t)}
                   >
-                    <span className="flex flex-col items-center gap-0.5">
-                      <span>{courtLabel(court, t)}</span>
+                    <span className="flex min-w-0 flex-col items-center gap-0.5">
+                      <span className="w-full truncate">{courtLabel(court, t)}</span>
                       {court.priceCents != null && court.priceCents > 0 && (
                         <span className="text-xs text-muted-foreground">
                           {(court.priceCents / 100).toLocaleString(locale, {
