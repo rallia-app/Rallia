@@ -54,10 +54,11 @@ BEGIN
 
     -------------------------------------------------- fee quote math
     SELECT * INTO v_q FROM season_fee_quote(v_season.id);
-    -- 6% of 4000 = 240, +150 flat = 390, cap 2000 -> 390. tax = round(390*14975/100000)=58
-    IF v_q.entry_cents=4000 AND v_q.service_fee_cents=390 AND v_q.fee_tax_cents=58
-       AND v_q.total_cents=4448 AND v_q.organizer_receives_cents=4000 THEN
-        v_pass:=v_pass+1; RAISE NOTICE 'PASS fee quote: entry=4000 fee=390 tax=58 total=4448 organizer=4000';
+    -- 5% of 4000 = 200, +100 flat = 300, cap 2000 -> 300. tax = round(300*14975/100000)=45
+    -- Rate/flat come from platform_service_fee_default; update here on any fee change.
+    IF v_q.entry_cents=4000 AND v_q.service_fee_cents=300 AND v_q.fee_tax_cents=45
+       AND v_q.total_cents=4345 AND v_q.organizer_receives_cents=4000 THEN
+        v_pass:=v_pass+1; RAISE NOTICE 'PASS fee quote: entry=4000 fee=300 tax=45 total=4345 organizer=4000';
     ELSE v_fail:=v_fail+1; RAISE WARNING 'FAIL quote: %', to_jsonb(v_q); END IF;
 
     -------------------------------------------------- TRAP 1b: season_enroll must not bypass payment
@@ -72,9 +73,9 @@ BEGIN
 
     -------------------------------------------------- begin paid enrollment
     SELECT * INTO v_begin FROM season_begin_paid_enrollment(v_season.id);
-    IF v_begin.amount_charged_cents=4448 AND v_begin.organizer_amount_cents=4000
+    IF v_begin.amount_charged_cents=4345 AND v_begin.organizer_amount_cents=4000
        AND v_begin.organizer_onboarded AND v_begin.organizer_stripe_account_id='acct_test_l4' THEN
-        v_pass:=v_pass+1; RAISE NOTICE 'PASS begin_paid_enrollment: charge=4448 organizer=4000 onboarded';
+        v_pass:=v_pass+1; RAISE NOTICE 'PASS begin_paid_enrollment: charge=4345 organizer=4000 onboarded';
     ELSE v_fail:=v_fail+1; RAISE WARNING 'FAIL begin: %', to_jsonb(v_begin); END IF;
 
     SELECT * INTO v_member FROM season_members WHERE id=v_begin.season_user_id;
@@ -84,7 +85,7 @@ BEGIN
     SELECT * INTO v_pay FROM lt_registration_payment WHERE id=v_begin.payment_id;
     IF v_pay.season_id=v_season.id AND v_pay.season_user_id=v_member.id
        AND v_pay.tournament_registration_id IS NULL AND v_pay.status='pending'
-       AND v_pay.fee_tax_cents=58 AND v_pay.expires_at > now() THEN
+       AND v_pay.fee_tax_cents=45 AND v_pay.expires_at > now() THEN
         v_pass:=v_pass+1; RAISE NOTICE 'PASS ledger row is season-shaped (XOR satisfied, 15min TTL)';
     ELSE v_fail:=v_fail+1; RAISE WARNING 'FAIL ledger: %', to_jsonb(v_pay); END IF;
 
@@ -102,6 +103,36 @@ BEGIN
     SELECT count(*) INTO v_n FROM season_rankings WHERE season_id=v_season.id AND user_id=v_p1;
     IF v_n=1 THEN v_pass:=v_pass+1; RAISE NOTICE 'PASS enrolled -> ranking row seeded by trigger';
     ELSE v_fail:=v_fail+1; RAISE WARNING 'FAIL ranking rows for payer: %', v_n; END IF;
+
+    -------------------------------------------------- TRAP 1d: paid withdraw must go through the refund path
+    -- season_withdraw had no fee/ledger awareness, so a paid player could
+    -- withdraw for free. That also closed the refund door for good:
+    -- season_request_refund only accepts enrolled/pending, so every later
+    -- attempt raises OPTIMISTIC_LOCK_CONFLICT while the succeeded ledger row is
+    -- still released to the organizer at season close.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_p1::text)::text, true);
+    BEGIN
+        PERFORM season_withdraw(v_season.id);
+        v_fail:=v_fail+1; RAISE WARNING 'FAIL *** paid enrolment withdrew for free, refund now unreachable ***';
+    EXCEPTION WHEN others THEN
+        IF SQLERRM='REFUND_REQUIRED' THEN v_pass:=v_pass+1; RAISE NOTICE 'PASS [trap] paid withdraw blocked: REFUND_REQUIRED';
+        ELSE v_fail:=v_fail+1; RAISE WARNING 'FAIL paid withdraw got %', SQLERRM; END IF;
+    END;
+    SELECT * INTO v_member FROM season_members WHERE id=v_member.id;
+    IF v_member.status='enrolled' THEN v_pass:=v_pass+1; RAISE NOTICE 'PASS blocked withdraw left the payer enrolled';
+    ELSE v_fail:=v_fail+1; RAISE WARNING 'FAIL payer left at % after blocked withdraw', v_member.status; END IF;
+
+    -------------------------------------------------- TRAP 1e: payment history survives a league delete
+    -- leagues -> seasons -> season_members -> lt_registration_payment was
+    -- CASCADE the whole way, so deleting a league erased the Stripe intent and
+    -- charge ids, refund state and fee snapshot, and dropped the season out of
+    -- both settlement candidate sets. Ledger FKs are RESTRICT now.
+    BEGIN
+        DELETE FROM leagues WHERE id=v_league.id;
+        v_fail:=v_fail+1; RAISE WARNING 'FAIL *** league delete wiped live payment history ***';
+    EXCEPTION WHEN foreign_key_violation THEN
+        v_pass:=v_pass+1; RAISE NOTICE 'PASS [trap] league delete refused while payment history exists';
+    END;
 
     -------------------------------------------------- TRAP 1c: recalc must not re-add unpaid members
     PERFORM recalc_season_ranking(v_season.id);
@@ -162,6 +193,9 @@ BEGIN
     RAISE NOTICE '================ PASS=% FAIL=%', v_pass, v_fail;
     IF v_fail > 0 THEN RAISE EXCEPTION '% FAILURES', v_fail; END IF;
 
+    -- The ledger FKs are RESTRICT (20260721140000), so fixture teardown has to
+    -- drop payment history explicitly. That refusal is the point of TRAP 1e.
+    DELETE FROM lt_registration_payment WHERE season_id IN (SELECT id FROM seasons WHERE league_id=v_league.id);
     DELETE FROM leagues WHERE id=v_league.id;
     DELETE FROM player_stripe_account WHERE player_id=v_org;
 END $$;
