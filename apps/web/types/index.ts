@@ -1402,6 +1402,7 @@ export type Database = {
       };
       facility_availability_snapshot: {
         Row: {
+          booking_url: string | null;
           court_name: string | null;
           court_number: number | null;
           currency: string | null;
@@ -1414,8 +1415,10 @@ export type Database = {
           slot_end: string;
           slot_start: string;
           source: string;
+          sport_id: string | null;
         };
         Insert: {
+          booking_url?: string | null;
           court_name?: string | null;
           court_number?: number | null;
           currency?: string | null;
@@ -1428,8 +1431,10 @@ export type Database = {
           slot_end: string;
           slot_start: string;
           source: string;
+          sport_id?: string | null;
         };
         Update: {
+          booking_url?: string | null;
           court_name?: string | null;
           court_number?: number | null;
           currency?: string | null;
@@ -1442,6 +1447,7 @@ export type Database = {
           slot_end?: string;
           slot_start?: string;
           source?: string;
+          sport_id?: string | null;
         };
         Relationships: [
           {

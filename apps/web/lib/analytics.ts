@@ -39,12 +39,13 @@ export type AppStorePlacement =
   | 'match_page'
   | 'invite_page'
   | 'join_dialog'
-  | 'courts_book_dialog';
+  | 'web_book';
 
 export function appStoreClicked(props: {
   store: 'app_store' | 'play_store';
   placement: AppStorePlacement;
   match_id?: string;
+  facility_id?: string;
   invitation_code?: string;
 }): void {
   capture('app_store_clicked', props);
@@ -120,8 +121,8 @@ export function joinMatchDialogViewed(props: { match_id: string }): void {
 
 // ---- /courts public facility discovery ----
 
-export function courtsBookDialogViewed(props: { facility_id: string }): void {
-  capture('courts_book_dialog_viewed', props);
+export function courtsBookClicked(props: { facility_id: string; has_slot: boolean }): void {
+  capture('courts_book_clicked', props);
 }
 
 // ---- Web join onboarding funnel ----
@@ -136,4 +137,26 @@ export function webJoinCompleted(props: {
   existing_user?: boolean;
 }): void {
   capture('web_join_completed', props);
+}
+
+// ---- Web booking onboarding funnel ----
+//
+// Mirrors the web_join_* funnel so both gated surfaces are comparable:
+// started (gate opened) → completed (signup finished or already onboarded) →
+// redirected (the visitor actually left for the provider's booking page).
+
+export function webBookStarted(props: { facility_id: string; has_slot: boolean }): void {
+  capture('web_book_started', props);
+}
+
+export function webBookCompleted(props: {
+  facility_id: string;
+  existing_user: boolean;
+  has_slot: boolean;
+}): void {
+  capture('web_book_completed', props);
+}
+
+export function webBookRedirected(props: { facility_id: string; has_slot: boolean }): void {
+  capture('web_book_redirected', props);
 }

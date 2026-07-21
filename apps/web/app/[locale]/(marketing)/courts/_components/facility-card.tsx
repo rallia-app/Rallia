@@ -3,20 +3,21 @@
 import { Building2, CalendarClock, CalendarX, Footprints, Lock, MapPin } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
+import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
+import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import { getRelativeDateLabel } from '../../games/_components/utils';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
-import type { FacilitySearchResult } from '@rallia/shared-types';
 
 export type PublicFacility = FacilitySearchResult;
 
 interface FacilityCardProps {
   facility: PublicFacility;
-  onBook: (facility: PublicFacility) => void;
+  /** `slotId` targets a specific open slot; omitted means the facility's own booking page. */
+  onBook: (facility: PublicFacility, slotId?: string | null) => void;
 }
 
 export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
@@ -125,9 +126,12 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
                 </span>
                 <div className="flex gap-1.5">
                   {group.slots.slice(0, 4).map((slot, i) => (
-                    <span
+                    <button
                       key={`${slot.facilityScheduleId}-${i}`}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-1 text-xs font-medium text-primary"
+                      type="button"
+                      onClick={() => onBook(facility, slot.facilityScheduleId)}
+                      aria-label={t('bookSlotAria', { time: slot.time })}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:border-primary hover:bg-primary/10"
                     >
                       {slot.time}
                       {slot.courtCount > 1 && (
@@ -135,7 +139,7 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
                           {slot.courtCount}
                         </span>
                       )}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -153,8 +157,8 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
 
         <div className="flex-1" />
 
-        <Button className="w-full font-semibold" size="lg" onClick={() => onBook(facility)}>
-          {t('bookCta')}
+        <Button className="w-full font-semibold" size="lg" onClick={() => onBook(facility, null)}>
+          {showSlots ? t('bookCta') : t('viewCta')}
         </Button>
       </div>
     </div>

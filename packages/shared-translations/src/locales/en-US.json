@@ -10910,7 +10910,8 @@
       "matchUnavailable": "This game is no longer available. It may have been cancelled or already started.",
       "alreadyHost": "You're the host of this game, so you're already in it.",
       "eligibilityUnverified": "We couldn't verify your eligibility for this game. Please try again.",
-      "matchStarted": "This game has already started, so you can't leave it from here."
+      "matchStarted": "This game has already started, so you can't leave it from here.",
+      "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue."
     },
     "chat": {
       "title": "Game chat",
@@ -10931,6 +10932,91 @@
       }
     }
   },
+  "webBook": {
+    "pageTitle": "Book a court at {facility} on Rallia",
+    "notFound": "Court not found",
+    "progress": "Profile setup",
+    "continue": "Continue",
+    "back": "Back",
+    "finish": "Continue to booking",
+    "stepCounter": "Step {current} of {total}",
+    "badgePublic": "Public",
+    "badgePrivate": "Private",
+    "badgeFirstCome": "First come, first served",
+    "badgeMembership": "Members only",
+    "directions": "Directions",
+    "selectedSlot": "Your slot",
+    "upcomingSlots": "Open slots",
+    "steps": {
+      "account": "Account",
+      "consent": "Consent",
+      "profile": "Profile",
+      "level": "Level",
+      "location": "Location"
+    },
+    "auth": {
+      "title": "Sign in to book",
+      "description": "Create your account or sign in, and we will take you straight to the booking page.",
+      "descriptionSlot": "Create your account or sign in, and we will take you straight to this slot on the booking page.",
+      "google": "Continue with Google",
+      "orEmail": "or",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "otp": "Verification code",
+      "otpHint": "Enter the 6-digit code sent to {email}",
+      "continue": "Send code",
+      "verify": "Verify",
+      "resend": "Resend code",
+      "changeEmail": "Use a different email"
+    },
+    "personal": {
+      "title": "About you",
+      "description": "Tell us a bit about yourself so other players know who they are playing with.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "birthDate": "Date of birth",
+      "gender": "Gender",
+      "genderOptions": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other"
+      }
+    },
+    "rating": {
+      "title": "Your {sport} level",
+      "description": "Pick the level that best describes you. You can update this later in the app."
+    },
+    "location": {
+      "title": "Where do you play?",
+      "description": "Your postal code helps us find games near you.",
+      "postalCode": "Postal code",
+      "geocoding": "Looking up your area...",
+      "detected": "Area confirmed"
+    },
+    "redirect": {
+      "title": "You are all set",
+      "description": "We are opening the booking page for this court. Reservations and payment are handled by the facility.",
+      "cta": "Go to the booking page",
+      "preparing": "Preparing your booking link...",
+      "appHint": "Get the app to book faster and find players"
+    },
+    "noBooking": {
+      "title": "No online booking here",
+      "description": "This court does not take reservations online. Show up and play, or get the app to see who is playing there."
+    },
+    "errors": {
+      "authFailed": "Sign in failed. Please try again.",
+      "requiredFields": "Please fill in all required fields.",
+      "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue.",
+      "minimumAge": "You must be at least 18 years old to use this app.",
+      "selectRating": "Please select your skill level.",
+      "invalidPostalCode": "Enter a valid postal code.",
+      "ratingsLoadFailed": "Could not load skill levels. Please refresh and try again.",
+      "submitFailed": "Something went wrong. Please try again.",
+      "facilityUnavailable": "This court is no longer available.",
+      "noBookingUrl": "We could not find a booking page for this court right now."
+    }
+  },
   "courtsPage": {
     "title": "Courts Near You",
     "subtitle": "Find tennis and pickleball courts near you and see what's open.",
@@ -10947,17 +11033,13 @@
     "today": "Today",
     "tomorrow": "Tomorrow",
     "noSlots": "No open slots right now",
-    "bookCta": "Book in the app",
+    "bookCta": "Book this court",
     "loadMore": "Load more",
     "emptyTitle": "No courts found",
     "emptyDescription": "We couldn't find courts here yet. Try a different search, or get the app to explore more.",
     "emptyCta": "Get the app",
-    "bookDialog": {
-      "title": "Book on Rallia",
-      "description": "Scan to open this court in the Rallia app and book an open slot.",
-      "descriptionNamed": "Scan to open {name} in the Rallia app and book an open slot.",
-      "qrHint": "Scan with your phone's camera, or download the app below."
-    }
+    "viewCta": "See this court",
+    "bookSlotAria": "Book the {time} slot"
   },
   "gamesPage": {
     "title": "Upcoming Games",
