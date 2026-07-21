@@ -149,33 +149,92 @@ Deno.serve(async req => {
     const pi = plan.stripe_payment_intent_id;
     if (!pi) return err('refund_failed');
 
+    // The RPC has already committed the withdrawal. If the Stripe call now
+    // fails, the player is withdrawn and unrefunded with no way back: retrying
+    // hits OPTIMISTIC_LOCK_CONFLICT because the version was bumped, and even
+    // with the fresh version the RPC's status filter no longer matches a
+    // withdrawn row. So undo the withdrawal and let them try again.
+    //
+    // Safe if the refund actually went through and we only lost the response:
+    // the idempotency key below means the retry returns that same refund rather
+    // than issuing a second one, and the retry then withdraws and marks the
+    // ledger correctly.
+    const rollbackWithdrawal = async () => {
+      const at = new Date().toISOString();
+      const { error } = registrationId
+        ? await admin
+            .from('tournament_registrations')
+            .update({ status: 'registered', withdrawn_at: null, updated_at: at })
+            .eq('id', registrationId)
+            .eq('status', 'withdrawn')
+        : await admin
+            .from('season_members')
+            .update({ status: 'enrolled', withdrawn_at: null, updated_at: at })
+            .eq('id', seasonMemberId)
+            .eq('status', 'withdrawn');
+      if (error) {
+        console.error(
+          '[lt-refund-registration] CRITICAL: refund failed AND rollback failed. ' +
+            'Player is withdrawn with no refund. payment_id=%s',
+          plan.payment_id,
+          error
+        );
+      }
+    };
+
     // The entry sits in the organizer's connected balance; reverse_transfer
     // claws the exact refundable amount back to fund the refund, and
     // refund_application_fee:false keeps Rallia's service fee.
-    await stripe.refunds.create(
-      {
-        payment_intent: pi,
-        amount: refundable,
-        reverse_transfer: true,
-        refund_application_fee: false,
-        metadata: {
-          rallia_flow: 'lt_registration',
-          paymentId: plan.payment_id,
-          reason: 'withdraw',
+    try {
+      await stripe.refunds.create(
+        {
+          payment_intent: pi,
+          amount: refundable,
+          reverse_transfer: true,
+          refund_application_fee: false,
+          metadata: {
+            rallia_flow: 'lt_registration',
+            paymentId: plan.payment_id,
+            reason: 'withdraw',
+          },
         },
-      },
-      { idempotencyKey: `lt-refund-${plan.payment_id}` }
-    );
+        { idempotencyKey: `lt-refund-${plan.payment_id}` }
+      );
+    } catch (e) {
+      console.error('[lt-refund-registration] stripe refund failed, undoing withdrawal', e);
+      await rollbackWithdrawal();
+      return err('refund_failed', 502);
+    }
 
-    await admin
-      .from('lt_registration_payment')
-      .update({
-        status: refundable >= plan.entry_cents ? 'refunded' : 'partially_refunded',
-        refund_amount_cents: refundable,
-        refunded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', plan.payment_id);
+    // The money is back with the player. If this write is lost the ledger still
+    // reads 'succeeded', which makes the row a release candidate and would pay
+    // the organizer for a refund they already funded, so retry before giving up
+    // and make the failure loud rather than silent.
+    let ledgerError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error } = await admin
+        .from('lt_registration_payment')
+        .update({
+          status: refundable >= plan.entry_cents ? 'refunded' : 'partially_refunded',
+          refund_amount_cents: refundable,
+          refunded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', plan.payment_id);
+      ledgerError = error;
+      if (!error) break;
+      await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+    }
+    if (ledgerError) {
+      console.error(
+        '[lt-refund-registration] CRITICAL: refunded %d cents but could not mark the ledger. ' +
+          'This row will look like a payout candidate. payment_id=%s',
+        refundable,
+        plan.payment_id,
+        ledgerError
+      );
+      return err('refund_failed', 500);
+    }
 
     return json({ withdrawn: true, refundedCents: refundable });
   } catch (e) {
