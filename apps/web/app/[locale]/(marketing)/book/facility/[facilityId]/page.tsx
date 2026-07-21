@@ -7,12 +7,12 @@ import { getFacilityForWebBooking } from './_lib/facility-context';
 
 type Props = {
   params: Promise<{ facilityId: string; locale: string }>;
-  searchParams: Promise<{ start?: string; end?: string }>;
+  searchParams: Promise<{ sport?: string; start?: string; end?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { facilityId, locale } = await params;
-  const facility = await getFacilityForWebBooking(facilityId, null, null);
+  const facility = await getFacilityForWebBooking(facilityId, null, null, null);
   const t = await getTranslations({ locale, namespace: 'webBook' });
 
   if (!facility) {
@@ -27,9 +27,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function WebBookFacilityPage({ params, searchParams }: Props) {
   const { facilityId, locale } = await params;
-  const { start, end } = await searchParams;
+  const { sport, start, end } = await searchParams;
 
-  const facility = await getFacilityForWebBooking(facilityId, start ?? null, end ?? null);
+  const facility = await getFacilityForWebBooking(
+    facilityId,
+    sport ?? null,
+    start ?? null,
+    end ?? null
+  );
 
   if (!facility) {
     notFound();

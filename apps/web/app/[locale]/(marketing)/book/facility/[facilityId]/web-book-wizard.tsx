@@ -28,6 +28,7 @@ import type {
   WebBookCourtOption,
   WebBookFacilityContext,
   WebBookSlotGroup,
+  WebBookSport,
 } from './_lib/facility-context';
 
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,8 @@ import { webBookCompleted, webBookRedirected, webBookStarted } from '@/lib/analy
 
 interface WebBookWizardProps {
   facility: WebBookFacilityContext;
-  /** Live selection owned by BookFacilityView; switching it re-resolves the courts. */
+  /** Live selections owned by BookFacilityView; either one re-resolves the courts. */
+  selectedSport: WebBookSport | null;
   selectedGroup: WebBookSlotGroup | null;
   slotMissing: boolean;
   onClearSlot: () => void;
@@ -68,6 +70,7 @@ function bookErrorMessage(code: string, t: ReturnType<typeof useTranslations<'we
 
 export function WebBookWizard({
   facility,
+  selectedSport,
   selectedGroup,
   slotMissing,
   onClearSlot,
@@ -134,13 +137,18 @@ export function WebBookWizard({
 
   // Z-form for the same reason syncUrl uses it: this path survives an OAuth
   // round trip through `next=`, where a bare `+` offset would decode to a space.
-  const returnQuery = selectedGroup
-    ? `?start=${encodeURIComponent(new Date(selectedGroup.slotStart).toISOString())}` +
-      `&end=${encodeURIComponent(new Date(selectedGroup.slotEnd).toISOString())}`
-    : '';
+  const returnParams = new URLSearchParams();
+  if (selectedSport) returnParams.set('sport', selectedSport.slug);
+  if (selectedGroup) {
+    returnParams.set('start', new Date(selectedGroup.slotStart).toISOString());
+    returnParams.set('end', new Date(selectedGroup.slotEnd).toISOString());
+  }
+  const returnQuery = returnParams.size > 0 ? `?${returnParams.toString()}` : '';
 
   const controller = useWebOnboarding({
-    sportId: facility.sport?.id ?? null,
+    // The rating step must collect a level for the sport being booked, not
+    // whichever sport the facility happens to list first.
+    sportId: selectedSport?.id ?? null,
     returnPath: `/${pageLocale}/book/facility/${facility.id}${returnQuery}`,
     locale: pageLocale,
     t,
@@ -206,7 +214,7 @@ export function WebBookWizard({
         {step === 'consent' && <ConsentStep controller={controller} />}
         {step === 'personal' && <PersonalStep controller={controller} t={t} />}
         {step === 'rating' && (
-          <RatingStep controller={controller} t={t} sportName={facility.sport?.name ?? ''} />
+          <RatingStep controller={controller} t={t} sportName={selectedSport?.name ?? ''} />
         )}
         {step === 'location' && <LocationStep controller={controller} t={t} />}
 
