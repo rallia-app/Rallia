@@ -11368,7 +11368,7 @@
       "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
       "placement": {
         "title": "Jusqu'où tu te rends",
-        "baseNote": "Points de base. Chaque tournoi les multiplie, sauf la participation qui reste à 20 partout.",
+        "baseNote": "Points de base. Chaque tournoi les multiplie, sauf la participation qui reste à 10 partout.",
         "note": "Tu marques seulement si tu joues au moins une partie. Les byes et les forfaits comptent pas comme des victoires : si tu gagnes aucune partie, tu reçois les points de participation, peu importe jusqu'où le tableau t'a amené."
       },
       "placements": {
@@ -11378,7 +11378,7 @@
         "quarterfinal": "Quart 90",
         "roundOf16": "R16 50",
         "roundOf32": "R32 30",
-        "played": "Participation 20"
+        "played": "Participation 10"
       },
       "worth": {
         "title": "Ce que vaut un tournoi",

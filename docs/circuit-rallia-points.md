@@ -1,6 +1,6 @@
 # Circuit Rallia — how tournament points are awarded
 
-Reference for the scoring model as of 2026-07-20 (migration `20260720170000_lt_level_multiplier_x5_per_point.sql`).
+Reference for the scoring model as of 2026-07-20 (migrations `20260720170000_lt_level_multiplier_x5_per_point.sql`, `20260720180000_lt_award_participation_ten.sql`).
 Every number here was read out of the live functions, not hand-computed.
 
 ## The one formula
@@ -13,7 +13,7 @@ multiplier = snap( draw_multiplier(size) × level_multiplier(min_rating) )
 
 Two exceptions, both deliberate:
 
-- **Participation is flat 20.** It is never multiplied, in any category.
+- **Participation is flat 10.** It is never multiplied, in any category.
 - `snap()` rounds the combined multiplier to steps of 0.2, so a champion's points always land on a multiple of 100.
 
 Three functions own this and nothing else recomputes it: `lt_draw_multiplier`,
@@ -30,7 +30,7 @@ Three functions own this and nothing else recomputes it: `lt_draw_multiplier`,
 | Round of 16  | 50        |
 | Round of 32  | 30        |
 | Round of 64  | 25        |
-| Played       | 20 (flat) |
+| Played       | 10 (flat) |
 
 ## 2. Draw multiplier — how big the field is
 
@@ -62,12 +62,13 @@ A tournament with no floor is ×1.0.
 in an easy field beat real results in a hard one. ×5 makes any serious run in a
 hard field outrank a title in an easy one, by a wide margin.
 
-**Why not wider.** Participation is flat 20 and the combined multiplier bottoms
-out at the snap floor of ×0.2, so past roughly this width the low categories
-invert: at ×8 per point a Débutant R16 exit pays 10 while losing round one pays
-20, meaning winning two matches would cost you points. At ×5 the Débutant R16
-lands on exactly 20 — it ties participation and never dips under it. Going wider
-would require lowering participation or flooring every placement at 20 first.
+**What bounds the width.** The combined multiplier bottoms out at the snap floor
+of ×0.2, so the lowest category's win rungs stop shrinking while the flat
+participation rung stays put. Push the curve far enough and they sink beneath it,
+which would mean winning two matches pays less than losing your first. With
+participation at 10 the Débutant R16 exit pays 20 — double the floor — so there
+is roughly one more doubling of headroom before that becomes the constraint
+again.
 
 **Why the ×16 cap.** Uncapped, tennis 6.0 would reach ×125 and a single 6.0-floor
 32-draw would pay six figures — more than a perfect eight-event Avancé season,
@@ -78,16 +79,16 @@ pickleball 5.5, holding the largest possible event at 16,000.
 
 | Category      | Floor | Mult  | Champion | Finalist | Semi | Quarter | R16 | Played |
 | ------------- | ----- | ----- | -------- | -------- | ---- | ------- | --- | ------ |
-| Débutant      | 1.5   | ×0.4  | **200**  | 120      | 70   | 40      | 20  | 20     |
-| Intermédiaire | 3.0   | ×2.0  | **1000** | 600      | 360  | 180     | 100 | 20     |
-| Avancé        | 4.0   | ×10.0 | **5000** | 3000     | 1800 | 900     | 500 | 20     |
+| Débutant      | 1.5   | ×0.4  | **200**  | 120      | 70   | 40      | 20  | 10     |
+| Intermédiaire | 3.0   | ×2.0  | **1000** | 600      | 360  | 180     | 100 | 10     |
+| Avancé        | 4.0   | ×10.0 | **5000** | 3000     | 1800 | 900     | 500 | 10     |
 
 How to read the spread:
 
 - An Avancé player who wins two matches then loses (500) beats two Débutant titles (400).
 - An Avancé quarterfinal (900) beats a Débutant title and an Intermédiaire final combined.
-- A Débutant title (200) is worth ten show-ups in any category, since participation is flat at 20 everywhere.
-- The Débutant R16 exit ties participation at 20. That is the deliberate low-water mark: no result anywhere pays less than showing up.
+- A Débutant title (200) is worth twenty show-ups in any category, since participation is flat at 10 everywhere.
+- The Débutant R16 exit (20) is the lowest win anywhere, and still pays double the participation rung. No result ever pays less than showing up.
 
 Note that in a 32-draw the R32 rung is unreachable: losing your first match means
 zero wins, which the floor turns into participation. The lower placement rungs
@@ -96,7 +97,9 @@ only come into play in 64-draws and larger.
 ## 5. Season score
 
 Your season total is the **sum of your best 8 results** for that sport. Extra
-events beyond eight can only help you — a bad result never subtracts.
+events beyond eight can only help you — a bad result never subtracts. A season of
+pure attendance and no wins therefore tops out at 8 × 10 = 80, negligible against
+a single title.
 
 There is one board per sport, shared across all levels, with an optional filter
 by level bucket (beginner / intermediate / advanced) for reading your own tier.
@@ -109,7 +112,7 @@ by level bucket (beginner / intermediate / advanced) for reading your own tier.
   and the event does not count toward `events_played`.
 - **Byes and walkovers are not wins.** They advance you; they were never played.
   A retirement is a win for the other player.
-- **Zero-win floor.** If you won no real match, you get participation (20) no
+- **Zero-win floor.** If you won no real match, you get participation (10) no
   matter how far the draw carried you.
 - **Certified organizers only.** A tournament awards Points Rallia only if its
   organizer has `is_certified_organizer`. Otherwise no points are written.
