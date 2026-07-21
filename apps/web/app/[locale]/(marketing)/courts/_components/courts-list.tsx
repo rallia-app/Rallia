@@ -4,12 +4,12 @@ import { Building2, Loader2, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import BookFacilityDialog from './book-facility-dialog';
 import FacilityCard, { type PublicFacility } from './facility-card';
 import FacilityCardSkeleton from './facility-card-skeleton';
 
 import { Button } from '@/components/ui/button';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
+import { courtsBookClicked } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 24;
@@ -31,6 +31,7 @@ interface FacilitiesResponse {
 
 export default function CourtsList({ initialFacilities }: CourtsListProps) {
   const t = useTranslations('courtsPage');
+  const router = useRouter();
 
   const [facilities, setFacilities] = useState<PublicFacility[]>(initialFacilities);
   const [hasMore, setHasMore] = useState(initialFacilities.length >= PAGE_SIZE);
@@ -45,10 +46,16 @@ export default function CourtsList({ initialFacilities }: CourtsListProps) {
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState('');
 
-  // Booking dialog state
-  const [bookFacility, setBookFacility] = useState<PublicFacility | null>(null);
-
-  const openBook = useCallback((facility: PublicFacility) => setBookFacility(facility), []);
+  // Booking runs through the signup gate, which redirects to the provider's
+  // booking page once the visitor has an account — same pattern as /games.
+  const openBook = useCallback(
+    (facility: PublicFacility, slotId?: string | null) => {
+      courtsBookClicked({ facility_id: facility.id, has_slot: Boolean(slotId) });
+      const query = slotId ? `?slot=${encodeURIComponent(slotId)}` : '';
+      router.push(`/book/facility/${facility.id}${query}`);
+    },
+    [router]
+  );
 
   const fetchFacilities = useCallback(
     async (
@@ -239,7 +246,7 @@ export default function CourtsList({ initialFacilities }: CourtsListProps) {
         )}
       </div>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [searchInput, sports, activeSportId, t]
   );
 
@@ -286,15 +293,6 @@ export default function CourtsList({ initialFacilities }: CourtsListProps) {
           </Button>
         </div>
       )}
-
-      <BookFacilityDialog
-        facilityId={bookFacility?.id ?? null}
-        facilityName={bookFacility?.name ?? null}
-        open={bookFacility !== null}
-        onOpenChange={openState => {
-          if (!openState) setBookFacility(null);
-        }}
-      />
     </>
   );
 }

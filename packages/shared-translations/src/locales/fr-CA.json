@@ -10910,7 +10910,8 @@
       "matchUnavailable": "Cette partie n'est plus disponible. Elle a peut-être été annulée ou a déjà commencé.",
       "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
       "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
-      "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici."
+      "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici.",
+      "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer."
     },
     "chat": {
       "title": "Clavardage de la partie",
@@ -10931,6 +10932,91 @@
       }
     }
   },
+  "webBook": {
+    "pageTitle": "Réserver un terrain à {facility} sur Rallia",
+    "notFound": "Terrain introuvable",
+    "progress": "Configuration du profil",
+    "continue": "Continuer",
+    "back": "Retour",
+    "finish": "Aller à la réservation",
+    "stepCounter": "Étape {current} sur {total}",
+    "badgePublic": "Public",
+    "badgePrivate": "Privé",
+    "badgeFirstCome": "Premier arrivé, premier servi",
+    "badgeMembership": "Membres seulement",
+    "directions": "Itinéraire",
+    "selectedSlot": "Ta plage horaire",
+    "upcomingSlots": "Plages libres",
+    "steps": {
+      "account": "Compte",
+      "consent": "Consentement",
+      "profile": "Profil",
+      "level": "Niveau",
+      "location": "Endroit"
+    },
+    "auth": {
+      "title": "Connecte-toi pour réserver",
+      "description": "Crée ton compte ou connecte-toi, pis on t’amène directement à la page de réservation.",
+      "descriptionSlot": "Crée ton compte ou connecte-toi, et on t’amène directement à cette plage horaire sur la page de réservation.",
+      "google": "Continuer avec Google",
+      "orEmail": "ou",
+      "email": "Courriel",
+      "emailPlaceholder": "toi@exemple.com",
+      "otp": "Code de vérification",
+      "otpHint": "Entre le code à 6 chiffres envoyé à {email}",
+      "continue": "Envoyer le code",
+      "verify": "Vérifier",
+      "resend": "Renvoyer le code",
+      "changeEmail": "Utiliser un autre courriel"
+    },
+    "personal": {
+      "title": "À propos de toi",
+      "description": "Parle-nous un peu de toi pour que les autres joueurs sachent avec qui ils jouent.",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "birthDate": "Date de naissance",
+      "gender": "Genre",
+      "genderOptions": {
+        "male": "Homme",
+        "female": "Femme",
+        "other": "Autre"
+      }
+    },
+    "rating": {
+      "title": "Ton niveau au {sport}",
+      "description": "Choisis le niveau qui te décrit le mieux. Tu pourras le changer plus tard dans l’app."
+    },
+    "location": {
+      "title": "Où est-ce que tu joues?",
+      "description": "Ton code postal nous aide à trouver des parties proche de toi.",
+      "postalCode": "Code postal",
+      "geocoding": "Recherche de ton secteur...",
+      "detected": "Secteur confirmé"
+    },
+    "redirect": {
+      "title": "Tout est prêt",
+      "description": "On ouvre la page de réservation de ce terrain. La réservation et le paiement se font chez l’installation.",
+      "cta": "Aller à la page de réservation",
+      "preparing": "Préparation de ton lien de réservation...",
+      "appHint": "Télécharge l’app pour réserver plus vite et trouver des joueurs"
+    },
+    "noBooking": {
+      "title": "Pas de réservation en ligne ici",
+      "description": "Ce terrain ne prend pas de réservations en ligne. Présente-toi pis joue, ou télécharge l’app pour voir qui joue là."
+    },
+    "errors": {
+      "authFailed": "La connexion a échoué. Réessaie.",
+      "requiredFields": "Remplis tous les champs obligatoires.",
+      "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer.",
+      "minimumAge": "Tu dois avoir au moins 18 ans pour utiliser cette application.",
+      "selectRating": "Choisis ton niveau de jeu.",
+      "invalidPostalCode": "Entre un code postal valide.",
+      "ratingsLoadFailed": "Impossible de charger les niveaux. Rafraîchis la page pis réessaie.",
+      "submitFailed": "Une erreur est survenue. Réessaie.",
+      "facilityUnavailable": "Ce terrain n’est plus disponible.",
+      "noBookingUrl": "On ne trouve pas de page de réservation pour ce terrain en ce moment."
+    }
+  },
   "courtsPage": {
     "title": "Terrains près de chez vous",
     "subtitle": "Trouve des terrains de tennis et pickleball près de toi pis vois ce qui est libre.",
@@ -10947,17 +11033,13 @@
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
     "noSlots": "Aucune plage libre pour l'instant",
-    "bookCta": "Réserver dans l'app",
+    "bookCta": "Réserver ce terrain",
     "loadMore": "Voir plus",
     "emptyTitle": "Aucun terrain trouvé",
     "emptyDescription": "On n'a pas trouvé de terrains ici pour l'instant. Essaie une autre recherche ou télécharge l'app pour en voir plus.",
     "emptyCta": "Télécharger l'app",
-    "bookDialog": {
-      "title": "Réserver sur Rallia",
-      "description": "Scanne pour ouvrir ce terrain dans l'app Rallia pis réserver une plage libre.",
-      "descriptionNamed": "Scanne pour ouvrir {name} dans l'app Rallia pis réserver une plage libre.",
-      "qrHint": "Scanne avec la caméra de ton téléphone, ou télécharge l'app ci-dessous."
-    }
+    "viewCta": "Voir ce terrain",
+    "bookSlotAria": "Réserver la plage de {time}"
   },
   "gamesPage": {
     "title": "Parties à venir",
