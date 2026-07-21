@@ -22,7 +22,10 @@
  *       (→ 'withdrawn'). The reaper would catch it eventually, but freeing it
  *       immediately is friendlier.
  *
- * Idempotent: re-deliveries are no-ops once the ledger row is terminal.
+ * Idempotent by status filter rather than by early return: a re-delivery still
+ * re-attempts the registration flip, because an earlier delivery can die
+ * between marking the ledger succeeded and finalizing the slot. A ledger row
+ * that is already failed/cancelled is never promoted — see handleSucceeded.
  *
  * Configure in Stripe Dashboard:
  *   Endpoint: https://<project>.supabase.co/functions/v1/lt-payment-webhook
@@ -93,46 +96,90 @@ function isOurFlow(pi: Stripe.PaymentIntent): boolean {
 async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<void> {
   if (!isOurFlow(pi)) return;
 
-  const { data: row } = await admin
+  const { data: row, error: readError } = await admin
     .from('lt_registration_payment')
     .select('id, status, tournament_registration_id, season_user_id')
     .eq('stripe_payment_intent_id', pi.id)
     .maybeSingle();
+  if (readError) throw readError; // 500 → Stripe redelivers
   if (!row) {
     console.error('[lt-payment-webhook] no ledger row for PI', pi.id);
     return;
   }
-  if (row.status === 'succeeded') return; // idempotent re-delivery
 
   const chargeId =
     typeof pi.latest_charge === 'string' ? pi.latest_charge : (pi.latest_charge?.id ?? null);
 
-  await admin
-    .from('lt_registration_payment')
-    .update({
-      status: 'succeeded',
-      stripe_charge_id: chargeId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', row.id)
-    .neq('status', 'succeeded');
+  // A row we already gave up on must never be promoted. Two ways to get here:
+  // the 15-min reaper expired the reservation and released the slot, or a newer
+  // attempt superseded this one — in both cases the PaymentIntent stayed
+  // confirmable and the player has now paid for a slot that is gone. Promoting
+  // it would leave a succeeded payment against a withdrawn registration, which
+  // lt_release_candidates would happily pay out to the organizer (it filters on
+  // payment status, not registration status).
+  //
+  // Record the charge so the money is traceable, leave the status terminal so
+  // settlement ignores it, and shout: this needs a refund decision.
+  if (row.status === 'failed' || row.status === 'cancelled') {
+    const { error } = await admin
+      .from('lt_registration_payment')
+      .update({ stripe_charge_id: chargeId, updated_at: new Date().toISOString() })
+      .eq('id', row.id);
+    if (error) throw error;
+    console.error(
+      '[lt-payment-webhook] ORPHANED PAYMENT: succeeded on a %s ledger row. ' +
+        'Player charged, slot already released. Needs a refund. payment_id=%s pi=%s charge=%s',
+      row.status,
+      row.id,
+      pi.id,
+      chargeId
+    );
+    return;
+  }
 
-  // Finalize the reserved registration. Conditional so re-deliveries / manual
-  // edits don't clobber a withdrawn/disqualified state. The ledger's target
-  // CHECK guarantees exactly one of these legs is set.
+  // Already refunded: nothing to finalize, and the payer must not be re-seated.
+  if (row.status === 'refunded' || row.status === 'partially_refunded') {
+    console.warn('[lt-payment-webhook] succeeded event on a %s row, ignoring', row.status);
+    return;
+  }
+
+  if (row.status === 'pending') {
+    const { error } = await admin
+      .from('lt_registration_payment')
+      .update({
+        status: 'succeeded',
+        stripe_charge_id: chargeId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id)
+      .eq('status', 'pending');
+    if (error) throw error;
+  }
+
+  // Always attempt the flip, including on a re-delivery. An earlier delivery may
+  // have marked the ledger succeeded and then died before getting here; if we
+  // returned early on 'succeeded' the retry would skip this and the player would
+  // stay payment_pending forever, charged and unregistered. The status filter
+  // keeps it a no-op once the row is already finalized, and stops it clobbering
+  // a withdrawn/disqualified state.
+  //
+  // Order matters: the ledger is marked succeeded first, so the paid-gate
+  // trigger on tournament_registrations sees a succeeded payment for this row.
   if (row.tournament_registration_id) {
-    await admin
+    const { error } = await admin
       .from('tournament_registrations')
       .update({ status: 'registered', approved_at: new Date().toISOString() })
       .eq('id', row.tournament_registration_id)
       .eq('status', 'payment_pending');
+    if (error) throw error;
   } else if (row.season_user_id) {
     // 'enrolled' also fires the trigger that seeds this payer's ranking row.
-    await admin
+    const { error } = await admin
       .from('season_members')
       .update({ status: 'enrolled', enrolled_at: new Date().toISOString() })
       .eq('id', row.season_user_id)
       .eq('status', 'payment_pending');
+    if (error) throw error;
   }
 }
 
