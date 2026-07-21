@@ -5048,6 +5048,7 @@
       "keepIt": "Annuler",
       "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
       "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
+      "errorSettlementPending": "Les remboursements ou versements sont encore en traitement. Tu pourras archiver une fois que c'est fait.",
       "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
     },
     "removeModal": {
