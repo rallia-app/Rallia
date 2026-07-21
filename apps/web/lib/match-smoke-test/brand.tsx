@@ -1,16 +1,20 @@
 /**
- * PLACEHOLDER brand for the /find-a-match willingness-to-pay smoke test.
- *
- * The test runs under a neutral, non-Rallia identity so visitors evaluate the
- * offer on its own merits (and so results aren't skewed by Rallia recognition).
- * Everything here is a stand-in — swap SMOKE_BRAND_NAME and the mark below for
- * the final fictional brand once design signs off.
+ * "Slice" — the standalone brand for the /find-a-match willingness-to-pay
+ * smoke test. The test runs under a non-Rallia identity so visitors evaluate
+ * the offer on its own merits. Colors are hardcoded on purpose: the brand is
+ * self-contained and never reads Rallia theme tokens.
  */
 import type { CSSProperties } from 'react';
 
-export const SMOKE_BRAND_NAME = 'CourtMate';
+export const SMOKE_BRAND_NAME = 'Slice';
 
-/** Square app-style logo mark (self-contained SVG, theme-token colors). */
+export const SMOKE_BRAND_COLORS = {
+  ink: '#171a12',
+  lime: '#d6f437',
+  paper: '#f4f3ea',
+} as const;
+
+/** Square app-style logo mark: a ball sliced along the diagonal. */
 export function SmokeBrandMark({
   className,
   style,
@@ -26,29 +30,18 @@ export function SmokeBrandMark({
       className={className}
       style={style}
     >
-      <defs>
-        <linearGradient id="smokeBrandGradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--primary-500)" />
-          <stop offset="100%" stopColor="var(--secondary-500)" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="40" height="40" rx="11" fill="url(#smokeBrandGradient)" />
-      {/* Two rackets meeting — a "match" mark. */}
-      <circle
-        cx="20"
-        cy="20"
-        r="11.5"
-        fill="none"
-        stroke="white"
-        strokeWidth="2.4"
-        opacity="0.95"
-      />
+      <rect x="0" y="0" width="40" height="40" rx="11" fill={SMOKE_BRAND_COLORS.ink} />
+      {/* Upper-left half of the ball, nudged away from the cut. */}
       <path
-        d="M20 8.5 L20 31.5 M8.5 20 L31.5 20"
-        stroke="white"
-        strokeWidth="1.6"
-        opacity="0.7"
-        strokeLinecap="round"
+        d="M13.4 26.6 A10 10 0 0 1 27.5 12.5 Z"
+        fill={SMOKE_BRAND_COLORS.lime}
+        transform="translate(-1.4 -1.4)"
+      />
+      {/* Lower-right half, nudged the other way. */}
+      <path
+        d="M13.4 26.6 A10 10 0 0 0 27.5 12.5 Z"
+        fill={SMOKE_BRAND_COLORS.lime}
+        transform="translate(1.4 1.4)"
       />
     </svg>
   );
@@ -59,7 +52,13 @@ export function SmokeBrandLockup({ className }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className ?? ''}`}>
       <SmokeBrandMark className="h-7 w-7" />
-      <span className="text-base font-bold tracking-tight text-foreground">{SMOKE_BRAND_NAME}</span>
+      <span
+        className="text-lg font-bold lowercase tracking-tight"
+        style={{ fontFamily: 'var(--smk-font-display)', color: 'var(--smk-ink)' }}
+      >
+        {SMOKE_BRAND_NAME}
+        <span style={{ color: 'var(--smk-lime-deep)' }}>.</span>
+      </span>
     </span>
   );
 }

@@ -1,0 +1,416 @@
+/*
+ * Standalone design system for the /find-a-match smoke test ("Slice" brand).
+ * Fully scoped under .smk so nothing leaks in or out of the Rallia theme —
+ * lift this file as-is when the flow moves to its own Next.js app.
+ */
+
+/* Keep overscroll / rubber-banding on-brand while the flow is mounted
+   (the app shell otherwise paints its own light/dark background behind us). */
+body:has(.smk) {
+  background-color: #f4f3ea;
+}
+
+.smk {
+  --smk-ink: #171a12;
+  --smk-ink-soft: #3c4034;
+  --smk-paper: #f4f3ea;
+  --smk-card: #ffffff;
+  --smk-line: #dedcca;
+  --smk-line-strong: #c2c0ac;
+  --smk-muted: #6d7163;
+  --smk-lime: #d6f437;
+  --smk-lime-bright: #e2fb52;
+  --smk-lime-tint: #f2f9d3;
+  --smk-lime-deep: #90a812;
+  --smk-green: #2e6b4f;
+  --smk-clay: #bf4429;
+  --smk-font-display: var(--font-space-grotesk), 'Space Grotesk', sans-serif;
+  --smk-font-body: var(--font-inter), 'Inter', system-ui, sans-serif;
+
+  background-color: var(--smk-paper);
+  color: var(--smk-ink);
+  font-family: var(--smk-font-body);
+  color-scheme: light;
+}
+
+.smk :focus-visible {
+  outline: 2px solid var(--smk-ink);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.smk .smk-input:focus-visible {
+  outline: none;
+  box-shadow: 4px 4px 0 var(--smk-lime);
+}
+
+.smk ::selection {
+  background: var(--smk-lime);
+  color: var(--smk-ink);
+}
+
+/* ---- Typography ---- */
+
+.smk-display {
+  font-family: var(--smk-font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--smk-ink);
+  text-wrap: balance;
+}
+
+.smk-title {
+  font-family: var(--smk-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.smk-tag {
+  font-family: var(--smk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--smk-muted);
+}
+
+.smk-text-muted {
+  color: var(--smk-muted);
+}
+
+.smk-text-green {
+  color: var(--smk-green);
+}
+
+.smk-text-error {
+  color: var(--smk-clay);
+}
+
+/* ---- Primary button ---- */
+
+.smk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  padding: 0 2rem;
+  border-radius: 999px;
+  background: var(--smk-lime);
+  color: var(--smk-ink);
+  border: 2px solid var(--smk-ink);
+  box-shadow: 4px 4px 0 var(--smk-ink);
+  font-family: var(--smk-font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.smk-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--smk-ink);
+  background: var(--smk-lime-bright);
+}
+
+.smk-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--smk-ink);
+}
+
+.smk-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---- Option cards ---- */
+
+.smk-option {
+  width: 100%;
+  text-align: left;
+  border-radius: 1.25rem;
+  border: 2px solid var(--smk-line);
+  background: var(--smk-card);
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+@media (hover: hover) {
+  .smk-option:hover:not(:disabled):not(.smk-option--active) {
+    border-color: var(--smk-ink);
+    transform: translateY(-1px);
+  }
+}
+
+.smk-option--active {
+  border-color: var(--smk-ink);
+  background: var(--smk-lime-tint);
+  box-shadow: 4px 4px 0 var(--smk-ink);
+}
+
+.smk-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* ---- Chips (levels, distances, billing) ---- */
+
+.smk-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  border-radius: 0.9rem;
+  border: 2px solid var(--smk-line);
+  background: var(--smk-card);
+  color: var(--smk-ink);
+  font-family: var(--smk-font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+@media (hover: hover) {
+  .smk-chip:hover:not(:disabled):not(.smk-chip--active) {
+    border-color: var(--smk-ink);
+  }
+}
+
+.smk-chip--active {
+  background: var(--smk-ink);
+  border-color: var(--smk-ink);
+  color: var(--smk-paper);
+  box-shadow: 3px 3px 0 var(--smk-lime);
+}
+
+.smk-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+/* ---- Hour cells (time picker) ---- */
+
+.smk-hour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 3.4rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: 0.9rem;
+  border: 2px solid var(--smk-line);
+  background: var(--smk-card);
+  color: var(--smk-ink);
+  font-family: var(--smk-font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.smk-hour--high {
+  background: #e9f8b2;
+  border-color: var(--smk-lime-deep);
+}
+
+.smk-hour--medium {
+  background: var(--smk-lime-tint);
+  border-color: #bcca87;
+}
+
+.smk-hour--none {
+  border-style: dashed;
+  background: transparent;
+  color: var(--smk-muted);
+}
+
+@media (hover: hover) {
+  .smk-hour:hover:not(:disabled):not(.smk-hour--selected) {
+    border-color: var(--smk-ink);
+  }
+}
+
+.smk-hour--selected {
+  background: var(--smk-ink);
+  border-color: var(--smk-ink);
+  color: var(--smk-paper);
+  box-shadow: 3px 3px 0 var(--smk-lime);
+}
+
+.smk-hour:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+  border-style: solid;
+}
+
+/* ---- Inputs ---- */
+
+.smk-input {
+  width: 100%;
+  height: 3.5rem;
+  border-radius: 1rem;
+  border: 2px solid var(--smk-line-strong);
+  background: var(--smk-card);
+  padding: 0 1.25rem;
+  font-family: var(--smk-font-body);
+  font-size: 1.05rem;
+  color: var(--smk-ink);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.smk-input:focus {
+  outline: none;
+  border-color: var(--smk-ink);
+  box-shadow: 4px 4px 0 var(--smk-lime);
+}
+
+.smk-input::placeholder {
+  color: var(--smk-muted);
+  opacity: 0.7;
+}
+
+/* ---- Badges, notes, panels ---- */
+
+.smk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 2px solid var(--smk-ink);
+  background: var(--smk-card);
+  font-family: var(--smk-font-display);
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--smk-ink);
+}
+
+.smk-pill-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--smk-lime);
+  border: 1.5px solid var(--smk-ink);
+  flex-shrink: 0;
+}
+
+.smk-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  border: 1.5px dashed var(--smk-line-strong);
+  border-radius: 1rem;
+  background: #eeede0;
+  padding: 0.8rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--smk-ink-soft);
+}
+
+.smk-panel {
+  border: 2px solid var(--smk-ink);
+  border-radius: 1.25rem;
+  background: var(--smk-card);
+  box-shadow: 5px 5px 0 var(--smk-ink);
+}
+
+.smk-lang {
+  border-radius: 999px;
+  border: 1.5px solid var(--smk-line-strong);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  padding: 0.35rem 0.8rem;
+  font-family: var(--smk-font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--smk-muted);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.smk-lang:hover {
+  color: var(--smk-ink);
+  border-color: var(--smk-ink);
+}
+
+/* ---- Progress ---- */
+
+.smk-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 4px;
+  background: var(--smk-line);
+}
+
+.smk-progress-fill {
+  height: 100%;
+  background: var(--smk-ink);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---- Motion ---- */
+
+@keyframes smk-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.smk-step {
+  animation: smk-step-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes smk-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(4deg);
+  }
+}
+
+.smk-float {
+  animation: smk-float 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smk-step,
+  .smk-float {
+    animation: none;
+  }
+}

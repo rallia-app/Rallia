@@ -22,9 +22,6 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { trackSmokeEvent, type SmokeEventContext } from '@/lib/match-smoke-test/analytics';
 import { SmokeBrandLockup } from '@/lib/match-smoke-test/brand';
@@ -95,11 +92,11 @@ type QuestionStep = 'preferences' | 'location' | 'day' | 'time';
 const QUESTION_STEPS: QuestionStep[] = ['preferences', 'location', 'day', 'time'];
 
 function optionClass(active: boolean): string {
-  return `group w-full rounded-2xl border-2 px-5 py-4 text-left transition-all duration-200 ${
-    active
-      ? 'border-primary bg-primary/10 shadow-sm'
-      : 'border-border hover:border-primary/40 hover:bg-muted/50'
-  }`;
+  return `group smk-option${active ? ' smk-option--active' : ''}`;
+}
+
+function chipClass(active: boolean): string {
+  return `smk-chip${active ? ' smk-chip--active' : ''}`;
 }
 
 function formatTimeSlotLabel(
@@ -132,151 +129,89 @@ function getHourCellState(
   return 'default';
 }
 
-function ratingChipClass(active: boolean): string {
-  const base =
-    'flex h-11 items-center justify-center rounded-xl text-sm font-semibold transition-all duration-150';
-  return active
-    ? `${base} scale-[1.02] bg-primary text-primary-foreground shadow-sm`
-    : `${base} border border-border bg-card text-foreground hover:border-primary/40 hover:bg-muted/50`;
-}
-
 function hourChipClass(state: HourCellState, tier: HourAvailabilityTier): string {
-  const base =
-    'flex min-h-[3.25rem] flex-col items-center justify-center rounded-xl px-1 py-2 text-sm font-semibold transition-all duration-150';
-
-  switch (state) {
-    case 'disabled':
-      return `${base} cursor-not-allowed bg-muted/25 text-muted-foreground/45`;
-    case 'selected':
-      return `${base} scale-[1.02] bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/30`;
+  if (state === 'selected') return 'smk-hour smk-hour--selected';
+  if (state === 'disabled') return 'smk-hour';
+  switch (tier) {
+    case 'high':
+      return 'smk-hour smk-hour--high';
+    case 'medium':
+      return 'smk-hour smk-hour--medium';
+    case 'none':
+      return 'smk-hour smk-hour--none';
     default:
-      switch (tier) {
-        case 'high':
-          return `${base} border-2 border-primary/55 bg-primary/20 text-foreground hover:bg-primary/25`;
-        case 'medium':
-          return `${base} border border-primary/35 bg-primary/10 text-foreground hover:bg-primary/15`;
-        case 'low':
-          return `${base} border border-border bg-card text-foreground hover:border-primary/30 hover:bg-muted/40`;
-        case 'none':
-        default:
-          return `${base} border border-dashed border-muted-foreground/30 bg-muted/20 text-muted-foreground hover:border-muted-foreground/45`;
-      }
+      return 'smk-hour';
   }
 }
 
 function hourCountClass(state: HourCellState, tier: HourAvailabilityTier): string {
   const base = 'text-[10px] leading-none';
 
-  if (state === 'selected') return `${base} font-medium text-primary-foreground/90`;
+  if (state === 'selected') return `${base} font-medium opacity-80`;
   if (state === 'disabled') return `${base} font-normal opacity-50`;
 
   switch (tier) {
     case 'high':
-      return `${base} font-bold text-primary`;
+      return `${base} smk-text-green font-bold`;
     case 'medium':
-      return `${base} font-semibold text-[var(--primary-600)]`;
+      return `${base} smk-text-green font-semibold`;
     case 'low':
-      return `${base} font-medium text-muted-foreground`;
+      return `${base} smk-text-muted font-medium`;
     case 'none':
     default:
-      return `${base} font-normal text-muted-foreground/65`;
+      return `${base} smk-text-muted font-normal opacity-80`;
   }
 }
 
 const AVAILABILITY_LEGEND_SWATCH: Record<HourAvailabilityTier, string> = {
-  high: 'border-2 border-primary/55 bg-primary/20',
-  medium: 'border border-primary/35 bg-primary/10',
-  low: 'border border-border bg-card',
-  none: 'border border-dashed border-muted-foreground/30 bg-muted/20',
+  high: 'border-2 border-[color:var(--smk-lime-deep)] bg-[#e9f8b2]',
+  medium: 'border-2 border-[#bcca87] bg-[color:var(--smk-lime-tint)]',
+  low: 'border-2 border-[color:var(--smk-line)] bg-white',
+  none: 'border-2 border-dashed border-[color:var(--smk-line-strong)] bg-transparent',
 };
 
-interface TimePickerProps {
-  timeDay: TimeDayOption;
-  locale: string;
-  timezone: string;
-  availabilitySlots: FacilityAvailabilitySlotRow[];
-  selectedHour: number | null;
-  onSelectHour: (hour: number) => void;
-  showAvailability: boolean;
+/** Decorative sliced-ball, echoing the logo mark. */
+function SlicedBall({ size = 110, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 44 44" className={className} aria-hidden>
+      <path
+        d="M14.93 29.07 A10 10 0 0 1 29.07 14.93 Z"
+        fill="var(--smk-lime)"
+        stroke="var(--smk-ink)"
+        strokeWidth="1.6"
+        transform="translate(-1.4 -1.4)"
+      />
+      <path
+        d="M14.93 29.07 A10 10 0 0 0 29.07 14.93 Z"
+        fill="var(--smk-lime)"
+        stroke="var(--smk-ink)"
+        strokeWidth="1.6"
+        transform="translate(1.4 1.4)"
+      />
+    </svg>
+  );
 }
 
-function TimePicker({
-  timeDay,
-  locale,
-  timezone,
-  availabilitySlots,
-  selectedHour,
-  onSelectHour,
-  showAvailability,
-}: TimePickerProps) {
-  const tw = useTranslations('findAMatch.courts');
-  const allHours = TIME_HOUR_GROUPS.flatMap(group => group.hours);
-  const maxOpenCount = showAvailability
-    ? getMaxAvailabilityCountForHours(availabilitySlots, timeDay, allHours, timezone)
-    : 0;
-
+/** Faint court lines behind the intro landing. */
+function CourtBackdrop() {
   return (
-    <div className="space-y-5">
-      {showAvailability && (
-        <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
-          {(['high', 'medium', 'low', 'none'] as const).map(tier => (
-            <span
-              key={tier}
-              className="inline-flex items-center gap-2 text-xs text-muted-foreground"
-            >
-              <span
-                className={`h-3 w-5 shrink-0 rounded-sm ${AVAILABILITY_LEGEND_SWATCH[tier]}`}
-                aria-hidden
-              />
-              {tw(`availabilityLegend.${tier}`)}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {TIME_HOUR_GROUPS.map(group => (
-        <div key={group.id}>
-          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {tw(`periods.${group.id}`)}
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {group.hours.map(hour => {
-              const selectable = isHourSelectable(timeDay, hour);
-              const state = getHourCellState(hour, selectedHour, selectable);
-              const openCount = showAvailability
-                ? countAvailabilitySlotsForHour(availabilitySlots, timeDay, hour, timezone)
-                : 0;
-              const tier: HourAvailabilityTier = showAvailability
-                ? getHourAvailabilityTier(openCount, maxOpenCount)
-                : 'low';
-              const countLabel =
-                openCount > 0 ? tw('openCourts', { count: openCount }) : tw('noOpenCourts');
-
-              return (
-                <button
-                  key={hour}
-                  type="button"
-                  disabled={state === 'disabled'}
-                  onClick={() => onSelectHour(hour)}
-                  className={hourChipClass(state, tier)}
-                  aria-label={
-                    showAvailability
-                      ? `${formatHourLabel(hour, locale, true)}, ${countLabel}`
-                      : formatHourLabel(hour, locale, true)
-                  }
-                >
-                  <span className="flex flex-col items-center gap-0.5">
-                    <span>{formatHourLabel(hour, locale, true)}</span>
-                    {showAvailability && (
-                      <span className={hourCountClass(state, tier)}>{countLabel}</span>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <svg
+        className="absolute -bottom-40 -right-28 h-[78vh] w-auto rotate-[10deg] opacity-[0.06]"
+        viewBox="0 0 400 780"
+        fill="none"
+        stroke="var(--smk-ink)"
+        strokeWidth="5"
+      >
+        <rect x="10" y="10" width="380" height="760" rx="4" />
+        <line x1="10" y1="390" x2="390" y2="390" />
+        <rect x="55" y="130" width="290" height="520" />
+        <line x1="200" y1="130" x2="200" y2="650" />
+      </svg>
+      <SlicedBall
+        size={120}
+        className="smk-float absolute right-[7%] top-[14%] hidden opacity-90 sm:block"
+      />
     </div>
   );
 }
@@ -313,24 +248,27 @@ function LevelGuidePopover({ sport }: { sport: SportOption }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary-600)] transition-colors hover:text-[var(--primary-700)]"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--smk-ink)] underline decoration-[var(--smk-lime)] decoration-2 underline-offset-4 transition-opacity hover:opacity-70"
         >
           <Info className="h-3.5 w-3.5" />
           {tp('trigger')}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="max-h-[60vh] w-80 overflow-y-auto">
+      <PopoverContent
+        align="start"
+        className="max-h-[60vh] w-80 overflow-y-auto rounded-2xl border-2 border-[color:var(--smk-ink)] bg-white text-[color:var(--smk-ink)] shadow-[5px_5px_0_var(--smk-ink)]"
+      >
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold">{tp('title', { scale })}</p>
-          <p className="text-xs text-muted-foreground">{tp('subtitle')}</p>
+          <p className="smk-title text-sm">{tp('title', { scale })}</p>
+          <p className="smk-text-muted text-xs">{tp('subtitle')}</p>
         </div>
         <ul className="mt-3 flex flex-col gap-2.5">
           {keys.map(key => (
             <li key={key} className="flex gap-2.5 text-left">
-              <span className="mt-0.5 inline-flex h-6 min-w-[2.75rem] shrink-0 items-center justify-center rounded-md bg-primary/10 px-1 text-xs font-bold text-[var(--primary-700)] dark:text-[var(--primary-500)]">
+              <span className="smk-title mt-0.5 inline-flex h-6 min-w-[2.75rem] shrink-0 items-center justify-center rounded-md border border-[color:var(--smk-lime-deep)] bg-[color:var(--smk-lime-tint)] px-1 text-xs">
                 {key.replace('_', '.')}
               </span>
-              <span className="text-xs leading-snug text-muted-foreground">
+              <span className="smk-text-muted text-xs leading-snug">
                 {tr(`${descNamespace}.${key}`)}
               </span>
             </li>
@@ -348,7 +286,7 @@ interface WizardShellProps {
   questionStep?: QuestionStep;
   onSwitchLanguage: () => void;
   otherLangLabel: string;
-  /** Decorative gradient behind the content — used on the intro landing. */
+  /** Decorative court scene behind the content — used on the intro landing. */
   backdrop?: boolean;
   children: ReactNode;
 }
@@ -367,35 +305,23 @@ function WizardShell({
 
   return (
     <div className="relative flex min-h-[100svh] w-full flex-col overflow-hidden">
-      {backdrop && (
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-[15%] right-[-12%] h-[65vh] w-[65vh] rounded-full bg-[var(--primary-500)] opacity-[0.14] blur-3xl" />
-          <div className="absolute bottom-[-18%] left-[-12%] h-[55vh] w-[55vh] rounded-full bg-[var(--secondary-500)] opacity-[0.12] blur-3xl" />
-        </div>
-      )}
+      {backdrop && <CourtBackdrop />}
 
-      <div className="fixed inset-x-0 top-0 z-20 h-1 bg-muted/80">
-        <div
-          className="h-full bg-[var(--primary-500)] transition-all duration-500 ease-out"
-          style={{ width: `${stepProgress(step)}%` }}
-        />
+      <div className="smk-progress">
+        <div className="smk-progress-fill" style={{ width: `${stepProgress(step)}%` }} />
       </div>
 
-      <div className="fixed left-4 top-3.5 z-30 sm:left-6">
+      <div className="fixed left-4 top-4 z-30 sm:left-6">
         <SmokeBrandLockup />
       </div>
 
       <div className="fixed right-4 top-4 z-30">
-        <button
-          type="button"
-          onClick={onSwitchLanguage}
-          className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
-        >
+        <button type="button" onClick={onSwitchLanguage} className="smk-lang">
           {otherLangLabel}
         </button>
       </div>
 
-      <div className="relative z-10 flex flex-1 flex-col justify-center px-5 py-20 sm:px-8">
+      <div className="relative z-10 flex flex-1 flex-col justify-center px-5 py-24 sm:px-8">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
           {(showBack || questionStep) && (
             <div className="flex min-h-8 items-center justify-between gap-4">
@@ -403,7 +329,7 @@ function WizardShell({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="smk-text-muted inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-[color:var(--smk-ink)]"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   {t('back')}
@@ -412,17 +338,31 @@ function WizardShell({
                 <span />
               )}
               {questionStep && (
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('stepOf', {
-                    current: questionNumber(questionStep),
-                    total: QUESTION_STEPS.length,
-                  })}
-                </p>
+                <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5" aria-hidden>
+                    {QUESTION_STEPS.map((qs, index) => (
+                      <span
+                        key={qs}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          index < questionNumber(questionStep)
+                            ? 'w-6 bg-[var(--smk-ink)]'
+                            : 'w-2.5 bg-[var(--smk-line-strong)]'
+                        }`}
+                      />
+                    ))}
+                  </span>
+                  <span className="smk-title smk-text-muted text-xs">
+                    {t('stepOf', {
+                      current: questionNumber(questionStep),
+                      total: QUESTION_STEPS.length,
+                    })}
+                  </span>
+                </span>
               )}
             </div>
           )}
 
-          <div key={step} className="animate-fade-in flex flex-col gap-8">
+          <div key={step} className="smk-step flex flex-col gap-8">
             {children}
           </div>
         </div>
@@ -872,13 +812,20 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         ? t('recap.whereAddress', { address: homeAddress })
         : null;
     return (
-      <div className="rounded-2xl border bg-muted/30 p-4 text-sm">
-        <ul className="space-y-1.5 text-muted-foreground">
-          <li>{t('recap.sport', { sport: t(`preferences.sports.${sport}`) })}</li>
-          <li>{t('recap.level', { scale: ratingScaleLabel(sport), rating })}</li>
-          <li>{t('recap.nature', { nature: t(`preferences.natures.${matchNature}`) })}</li>
-          <li>{t('recap.when', { time: formatTimeSlotLabel(timeSlot, locale, t) })}</li>
-          {where && <li>{where}</li>}
+      <div className="smk-panel p-5 text-sm">
+        <ul className="flex flex-col gap-2.5">
+          {[
+            t('recap.sport', { sport: t(`preferences.sports.${sport}`) }),
+            t('recap.level', { scale: ratingScaleLabel(sport), rating }),
+            t('recap.nature', { nature: t(`preferences.natures.${matchNature}`) }),
+            t('recap.when', { time: formatTimeSlotLabel(timeSlot, locale, t) }),
+            ...(where ? [where] : []),
+          ].map(line => (
+            <li key={line} className="flex items-start gap-2.5">
+              <span className="smk-pill-dot mt-1.5" aria-hidden />
+              <span className="text-[color:var(--smk-ink-soft)]">{line}</span>
+            </li>
+          ))}
         </ul>
       </div>
     );
@@ -891,27 +838,29 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     return (
       <WizardShell step={step} backdrop {...shellProps}>
         <div className="flex flex-col gap-6">
-          <Badge className="w-fit bg-[var(--secondary-500)] px-3 py-1 text-white hover:bg-[var(--secondary-500)]">
+          <span className="smk-pill w-fit">
+            <span className="smk-pill-dot" aria-hidden />
             {t(`valueProp.${variant}.badge`)}
-          </Badge>
+          </span>
           <div className="flex flex-col gap-4">
-            <h1 className="text-3xl font-bold leading-tight text-balance sm:text-4xl md:text-5xl">
+            <h1 className="smk-display text-4xl leading-[1.05] sm:text-5xl md:text-6xl">
               {t(`valueProp.${variant}.headline`)}
             </h1>
-            <p className="text-lg text-muted-foreground text-balance sm:text-xl">
+            <p className="smk-text-muted text-lg text-balance leading-relaxed sm:text-xl">
               {t(`valueProp.${variant}.subheadline`)}
             </p>
           </div>
-          <Button
+          <button
+            type="button"
             onClick={() => {
               trackSmokeEvent('value_prop_click', eventContext(experiment));
               setStep('preferences');
             }}
-            className="mt-2 h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)] sm:w-fit sm:px-8"
+            className="smk-btn mt-2 w-full sm:w-fit"
           >
             {t(`valueProp.${variant}.cta`)}
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+            <ArrowRight className="h-5 w-5" />
+          </button>
         </div>
       </WizardShell>
     );
@@ -929,16 +878,14 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('preferences.title')}</h2>
-          <p className="text-muted-foreground">{t('preferences.subtitle')}</p>
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('preferences.title')}</h2>
+          <p className="smk-text-muted">{t('preferences.subtitle')}</p>
         </div>
 
         {/* Sport */}
         <div className="flex flex-col gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t('preferences.sportLabel')}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
+          <p className="smk-tag">{t('preferences.sportLabel')}</p>
+          <div className="grid grid-cols-2 gap-2.5">
             {SPORT_OPTIONS.map(option => (
               <button
                 key={option}
@@ -946,7 +893,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                 onClick={() => selectSport(option)}
                 className={optionClass(sport === option)}
               >
-                <span className="text-lg font-semibold">{t(`preferences.sports.${option}`)}</span>
+                <span className="smk-title text-lg">{t(`preferences.sports.${option}`)}</span>
               </button>
             ))}
           </div>
@@ -956,7 +903,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {sport && (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="smk-tag">
                 {t('preferences.levelLabel', { scale: ratingScaleLabel(sport) })}
               </p>
               <LevelGuidePopover sport={sport} />
@@ -970,7 +917,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                     setRating(option);
                     setError(null);
                   }}
-                  className={ratingChipClass(rating === option)}
+                  className={chipClass(rating === option)}
                 >
                   {option}
                 </button>
@@ -981,9 +928,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
         {/* Nature */}
         <div className="flex flex-col gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t('preferences.natureLabel')}
-          </p>
+          <p className="smk-tag">{t('preferences.natureLabel')}</p>
           <div className="flex flex-col gap-3">
             {MATCH_NATURE_OPTIONS.map(option => (
               <button
@@ -997,30 +942,29 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
               >
                 <span className="flex items-center justify-between gap-3">
                   <span className="flex flex-col gap-1 text-left">
-                    <span className="text-lg font-semibold">
-                      {t(`preferences.natures.${option}`)}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="smk-title text-lg">{t(`preferences.natures.${option}`)}</span>
+                    <span className="smk-text-muted text-sm">
                       {t(`preferences.natureHints.${option}`)}
                     </span>
                   </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  <ChevronRight className="smk-text-muted h-5 w-5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                 </span>
               </button>
             ))}
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">{t('preferences.singlesNote')}</p>
+        <p className="smk-text-muted text-xs">{t('preferences.singlesNote')}</p>
 
-        <Button
+        <button
+          type="button"
           onClick={() => setStep('location')}
           disabled={!canContinue}
-          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+          className="smk-btn w-full"
         >
           {t('preferences.continueCta')}
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
+          <ArrowRight className="h-5 w-5" />
+        </button>
       </WizardShell>
     );
   }
@@ -1039,12 +983,12 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('location.question')}</h2>
-          <p className="text-muted-foreground">{t('location.hint')}</p>
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('location.question')}</h2>
+          <p className="smk-text-muted">{t('location.hint')}</p>
         </div>
 
         <div className="relative">
-          <Input
+          <input
             value={addressQuery}
             onChange={e => handleAddressQueryChange(e.target.value)}
             placeholder={
@@ -1053,21 +997,21 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                 : t('location.placeholder')
             }
             autoFocus
-            className="h-14 rounded-2xl border-2 px-5 text-lg"
+            className="smk-input"
           />
 
           {predictions.length > 0 && homeCoordinates === null && (
-            <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-10 overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+            <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-10 overflow-hidden rounded-2xl border-2 border-[color:var(--smk-ink)] bg-white shadow-[5px_5px_0_var(--smk-ink)]">
               {predictions.map(prediction => (
                 <button
                   key={prediction.placeId}
                   type="button"
                   onClick={() => void handleSelectPlace(prediction)}
-                  className="flex w-full flex-col gap-0.5 border-b border-border px-4 py-3 text-left last:border-b-0 hover:bg-muted/50"
+                  className="flex w-full flex-col gap-0.5 border-b border-[color:var(--smk-line)] px-4 py-3 text-left last:border-b-0 hover:bg-[color:var(--smk-lime-tint)]"
                 >
                   <span className="font-medium">{prediction.name}</span>
                   {prediction.address && (
-                    <span className="text-sm text-muted-foreground">{prediction.address}</span>
+                    <span className="smk-text-muted text-sm">{prediction.address}</span>
                   )}
                 </button>
               ))}
@@ -1076,10 +1020,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         </div>
 
         {homeCoordinates && (
-          <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('location.distanceLabel')}
-            </p>
+          <div className="flex flex-col gap-2.5">
+            <p className="smk-tag">{t('location.distanceLabel')}</p>
             <div className="grid grid-cols-3 gap-2">
               {DISTANCE_OPTIONS_KM.map(km => (
                 <button
@@ -1087,7 +1029,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                   type="button"
                   onClick={() => handleSelectDistance(km)}
                   disabled={isSearchingFacilities}
-                  className={ratingChipClass(maxDistanceKm === km)}
+                  className={chipClass(maxDistanceKm === km)}
                 >
                   {t('location.distanceOption', { km: String(km) })}
                 </button>
@@ -1097,22 +1039,22 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         )}
 
         {isResolvingAddress && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="smk-text-muted flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
             {isSearchingFacilities ? t('location.searching') : t('location.resolving')}
           </div>
         )}
 
         {facilitySearchError && !isSearchingFacilities && (
-          <p className="text-sm text-muted-foreground">{facilitySearchError}</p>
+          <p className="smk-text-muted text-sm">{facilitySearchError}</p>
         )}
 
         {placesError && !isResolvingAddress && (
-          <p className="text-sm text-destructive">{placesError}</p>
+          <p className="smk-text-error text-sm font-medium">{placesError}</p>
         )}
 
         {nearbyFacilities.length > 0 && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {nearbyFacilities.map(facility => {
               const openSlots = countFutureOpenAvailabilities(facility);
               const address = [facility.address, facility.city].filter(Boolean).join(', ');
@@ -1125,19 +1067,19 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                 >
                   <span className="flex flex-col gap-1 text-left">
                     <span className="flex items-start justify-between gap-3">
-                      <span className="text-lg font-semibold">{facility.name}</span>
+                      <span className="smk-title text-lg">{facility.name}</span>
                       {facility.distance_meters != null && (
-                        <span className="shrink-0 text-sm text-muted-foreground">
+                        <span className="smk-text-muted shrink-0 text-sm">
                           {formatFacilityDistance(facility.distance_meters, locale)}
                         </span>
                       )}
                     </span>
-                    {address && <span className="text-sm text-muted-foreground">{address}</span>}
+                    {address && <span className="smk-text-muted text-sm">{address}</span>}
                     <span
                       className={
                         openSlots > 0
-                          ? 'text-sm font-medium text-[var(--primary-600)]'
-                          : 'text-sm text-muted-foreground'
+                          ? 'smk-text-green text-sm font-semibold'
+                          : 'smk-text-muted text-sm'
                       }
                     >
                       {openSlots > 0
@@ -1156,22 +1098,19 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           !isSearchingFacilities &&
           !facilitySearchError &&
           nearbyFacilities.length === 0 && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4">
-              <p className="text-sm font-medium text-foreground">
+            <div className="flex flex-col gap-3 rounded-2xl border-2 border-dashed border-[color:var(--smk-line-strong)] bg-white/60 p-5">
+              <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
                 {t('location.noResultsRadius', { km: String(maxDistanceKm) })}
               </p>
-              <p className="text-sm text-muted-foreground">{t('location.widenHint')}</p>
-              <Button
-                onClick={continueWithoutFacility}
-                className="h-12 w-full bg-[var(--primary-600)] text-sm font-semibold text-white hover:bg-[var(--primary-700)]"
-              >
+              <p className="smk-text-muted text-sm">{t('location.widenHint')}</p>
+              <button type="button" onClick={continueWithoutFacility} className="smk-btn w-full">
                 {t('location.continueAnyway')}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+                <ArrowRight className="h-5 w-5" />
+              </button>
             </div>
           )}
 
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
+        {error && <p className="smk-text-error text-sm font-medium">{error}</p>}
       </WizardShell>
     );
   }
@@ -1189,14 +1128,14 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('courts.dayQuestion')}</h2>
-          <p className="text-muted-foreground">
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('courts.dayQuestion')}</h2>
+          <p className="smk-text-muted">
             {t(selectedFacilityId ? 'courts.dayHint' : 'courts.dayHintNoFacility')}
           </p>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3 text-sm text-muted-foreground">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary-600)]" />
+        <div className="smk-note">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
           <span>{t('courts.bookingExcludedNote')}</span>
         </div>
 
@@ -1214,22 +1153,17 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                 type="button"
                 disabled={!selectable}
                 onClick={() => selectDay(day)}
-                className={
-                  optionClass(timeDay === day && selectable) +
-                  (!selectable
-                    ? ' cursor-not-allowed opacity-40 hover:border-border hover:bg-transparent'
-                    : '')
-                }
+                className={optionClass(timeDay === day && selectable)}
               >
                 <span className="flex items-center justify-between gap-3">
                   <span className="flex flex-col gap-1 text-left">
-                    <span className="text-lg font-semibold">{getDayLabel(day)}</span>
+                    <span className="smk-title text-lg">{getDayLabel(day)}</span>
                     {selectedFacilityId && (
                       <span
                         className={
                           openCount > 0
-                            ? 'text-sm font-medium text-[var(--primary-600)]'
-                            : 'text-sm text-muted-foreground'
+                            ? 'smk-text-green text-sm font-semibold'
+                            : 'smk-text-muted text-sm'
                         }
                       >
                         {isLoadingAvailability
@@ -1241,7 +1175,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                     )}
                   </span>
                   {selectable && (
-                    <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    <ChevronRight className="smk-text-muted h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100" />
                   )}
                 </span>
               </button>
@@ -1266,10 +1200,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">
-            {t('courts.timeQuestion')}
-          </h2>
-          <p className="text-muted-foreground">
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('courts.timeQuestion')}</h2>
+          <p className="smk-text-muted">
             {t(selectedFacilityId ? 'courts.timeHint' : 'courts.timeHintNoFacility', {
               day: getDayLabel(timeDay),
             })}
@@ -1286,7 +1218,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           showAvailability={Boolean(selectedFacilityId)}
         />
 
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
+        {error && <p className="smk-text-error text-sm font-medium">{error}</p>}
       </WizardShell>
     );
   }
@@ -1305,15 +1237,16 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <Badge className="w-fit bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
+          <span className="smk-pill w-fit">
+            <span className="smk-pill-dot" aria-hidden />
             {t('contact.badge')}
-          </Badge>
-          <h2 className="text-2xl font-bold sm:text-3xl">{t('contact.title')}</h2>
-          <p className="text-muted-foreground">{t('contact.subtitle')}</p>
+          </span>
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('contact.title')}</h2>
+          <p className="smk-text-muted">{t('contact.subtitle')}</p>
         </div>
 
         <div className="flex flex-col gap-3">
-          <Input
+          <input
             value={email}
             onChange={e => {
               setEmail(e.target.value);
@@ -1324,9 +1257,9 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
             inputMode="email"
             autoComplete="email"
             autoFocus
-            className="h-14 rounded-2xl border-2 px-5 text-lg"
+            className="smk-input"
           />
-          <Input
+          <input
             value={phoneDigits}
             onChange={e => {
               setPhoneDigits(formatPhoneInput(e.target.value));
@@ -1336,30 +1269,31 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            className="h-14 rounded-2xl border-2 px-5 text-lg"
+            className="smk-input"
           />
         </div>
 
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
+        {error && <p className="smk-text-error text-sm font-medium">{error}</p>}
 
-        <Button
+        <button
+          type="button"
           onClick={handleSubmitContact}
           disabled={isSubmitting || !emailValid || !phoneValid}
-          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+          className="smk-btn w-full"
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
               {t('contact.submitting')}
             </>
           ) : (
             <>
               {t('contact.continueCta')}
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="h-5 w-5" />
             </>
           )}
-        </Button>
-        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+        </button>
+        <p className="smk-text-muted flex items-center justify-center gap-1.5 text-center text-xs">
           <Lock className="h-3 w-3 shrink-0" />
           {t('contact.privacyNote')}
         </p>
@@ -1379,37 +1313,40 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('recap.title')}</h2>
-          <p className="text-muted-foreground">{t('recap.subtitle')}</p>
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('recap.title')}</h2>
+          <p className="smk-text-muted">{t('recap.subtitle')}</p>
         </div>
 
         {renderRecapSummary()}
 
         <ul className="flex flex-col gap-4">
-          <li className="flex gap-3">
-            <Users className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
-            <span className="text-sm">{t('recap.point1')}</span>
-          </li>
-          <li className="flex gap-3">
-            <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
-            <span className="text-sm">{t('recap.point2')}</span>
-          </li>
-          <li className="flex gap-3">
-            <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary-600)]" />
-            <span className="text-sm">{t('recap.point3')}</span>
-          </li>
+          {(
+            [
+              [Users, t('recap.point1')],
+              [MessageSquare, t('recap.point2')],
+              [CalendarClock, t('recap.point3')],
+            ] as const
+          ).map(([IconComponent, text]) => (
+            <li key={text} className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-[color:var(--smk-ink)] bg-[var(--smk-lime)]">
+                <IconComponent className="h-4 w-4 text-[color:var(--smk-ink)]" />
+              </span>
+              <span className="pt-1.5 text-sm text-[color:var(--smk-ink-soft)]">{text}</span>
+            </li>
+          ))}
         </ul>
 
-        <Button
+        <button
+          type="button"
           onClick={() => {
             setError(null);
             setStep('plan');
           }}
-          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+          className="smk-btn w-full"
         >
           {t('recap.continueCta')}
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
+          <ArrowRight className="h-5 w-5" />
+        </button>
       </WizardShell>
     );
   }
@@ -1426,8 +1363,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         {...shellProps}
       >
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl font-bold text-balance sm:text-3xl">{t('plans.title')}</h2>
-          <p className="text-muted-foreground">{t('plans.subtitle')}</p>
+          <h2 className="smk-display text-3xl sm:text-4xl">{t('plans.title')}</h2>
+          <p className="smk-text-muted">{t('plans.subtitle')}</p>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -1439,35 +1376,36 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           >
             <span className="flex items-start justify-between gap-4">
               <span className="flex flex-col gap-1 text-left">
-                <span className="text-lg font-semibold">{t('plans.single.title')}</span>
-                <span className="text-2xl font-bold text-[var(--primary-700)] dark:text-[var(--primary-500)]">
+                <span className="smk-title text-lg">{t('plans.single.title')}</span>
+                <span className="smk-display text-3xl">
                   {formatMatchPlanPrice(plans.single.amountCents, locale)}
                 </span>
-                <span className="text-sm text-muted-foreground">
-                  {t('plans.single.description')}
-                </span>
+                <span className="smk-text-muted text-sm">{t('plans.single.description')}</span>
               </span>
               <ChevronRight
-                className={`mt-1 h-5 w-5 shrink-0 ${selectedPlanTier === 'single' ? 'text-primary' : 'text-muted-foreground'}`}
+                className={`mt-1 h-5 w-5 shrink-0 ${
+                  selectedPlanTier === 'single'
+                    ? 'text-[color:var(--smk-ink)]'
+                    : 'text-[color:var(--smk-muted)]'
+                }`}
               />
             </span>
           </button>
 
           {/* Unlimited — one plan, choose how you pay */}
           <div
-            className={`rounded-2xl border-2 px-5 py-4 transition-all duration-200 ${
-              unlimitedSelected ? 'border-primary bg-primary/10 shadow-sm' : 'border-border'
+            className={`rounded-[1.25rem] border-2 p-5 transition-all duration-200 ${
+              unlimitedSelected
+                ? 'border-[color:var(--smk-ink)] bg-[color:var(--smk-lime-tint)] shadow-[4px_4px_0_var(--smk-ink)]'
+                : 'border-[color:var(--smk-line)] bg-white'
             }`}
           >
             <div className="flex flex-col gap-1 text-left">
-              <span className="text-lg font-semibold">{t('plans.unlimited.title')}</span>
-              <span className="text-sm text-muted-foreground">
-                {t('plans.unlimited.description')}
-              </span>
+              <span className="smk-title text-lg">{t('plans.unlimited.title')}</span>
+              <span className="smk-text-muted text-sm">{t('plans.unlimited.description')}</span>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {(['weekly', 'monthly'] as const).map(tier => {
-                const active = selectedPlanTier === tier;
                 const price =
                   tier === 'weekly'
                     ? t('plans.priceWeek', {
@@ -1481,16 +1419,10 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                     key={tier}
                     type="button"
                     onClick={() => handleSelectPlan(tier)}
-                    className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-3 py-2.5 text-center transition-all duration-150 ${
-                      active
-                        ? 'border-primary bg-primary/15'
-                        : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
-                    }`}
+                    className={`${chipClass(selectedPlanTier === tier)} h-auto flex-col gap-0.5 px-3 py-2.5`}
                   >
-                    <span className="text-sm font-semibold">{t(`plans.billing.${tier}`)}</span>
-                    <span className="text-base font-bold text-[var(--primary-700)] dark:text-[var(--primary-500)]">
-                      {price}
-                    </span>
+                    <span className="text-sm">{t(`plans.billing.${tier}`)}</span>
+                    <span className="text-base font-bold">{price}</span>
                   </button>
                 );
               })}
@@ -1498,21 +1430,22 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3 text-sm text-muted-foreground">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary-600)]" />
+        <div className="smk-note">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
           <span>{t('plans.bookingExcluded')}</span>
         </div>
 
-        {error && <p className="text-sm text-[var(--secondary-500)]">{error}</p>}
+        {error && <p className="smk-text-error text-sm font-medium">{error}</p>}
 
-        <Button
+        <button
+          type="button"
           onClick={handlePaymentIntent}
           disabled={!selectedPlanTier}
-          className="h-14 w-full bg-[var(--primary-600)] text-base font-semibold text-white hover:bg-[var(--primary-700)]"
+          className="smk-btn w-full"
         >
           {t('plans.proceedCta')}
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
+          <ArrowRight className="h-5 w-5" />
+        </button>
       </WizardShell>
     );
   }
@@ -1521,18 +1454,21 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     return (
       <WizardShell step={step} {...shellProps}>
         <div className="flex flex-col items-center gap-6 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
-            <Sparkles className="h-10 w-10 text-primary" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-[color:var(--smk-ink)] bg-[var(--smk-lime)] shadow-[4px_4px_0_var(--smk-ink)]">
+            <Sparkles className="h-9 w-9 text-[color:var(--smk-ink)]" />
           </div>
-          <Badge className="bg-[var(--primary-500)] text-white hover:bg-[var(--primary-500)]">
+          <span className="smk-pill">
+            <span className="smk-pill-dot" aria-hidden />
             {t('reveal.badge')}
-          </Badge>
+          </span>
           <div className="flex flex-col gap-3">
-            <h2 className="text-2xl font-bold sm:text-3xl">{t('reveal.headline')}</h2>
-            <p className="text-muted-foreground">{t('reveal.message')}</p>
-            <p className="text-sm font-medium text-foreground">{t('reveal.thanks')}</p>
-            <p className="text-sm text-muted-foreground">{t('reveal.purpose')}</p>
-            <p className="text-xs text-muted-foreground">{t('reveal.deletion')}</p>
+            <h2 className="smk-display text-3xl sm:text-4xl">{t('reveal.headline')}</h2>
+            <p className="smk-text-muted">{t('reveal.message')}</p>
+            <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
+              {t('reveal.thanks')}
+            </p>
+            <p className="smk-text-muted text-sm">{t('reveal.purpose')}</p>
+            <p className="smk-text-muted text-xs">{t('reveal.deletion')}</p>
           </div>
         </div>
       </WizardShell>
@@ -1540,4 +1476,90 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   }
 
   return null;
+}
+
+interface TimePickerProps {
+  timeDay: TimeDayOption;
+  locale: string;
+  timezone: string;
+  availabilitySlots: FacilityAvailabilitySlotRow[];
+  selectedHour: number | null;
+  onSelectHour: (hour: number) => void;
+  showAvailability: boolean;
+}
+
+function TimePicker({
+  timeDay,
+  locale,
+  timezone,
+  availabilitySlots,
+  selectedHour,
+  onSelectHour,
+  showAvailability,
+}: TimePickerProps) {
+  const tw = useTranslations('findAMatch.courts');
+  const allHours = TIME_HOUR_GROUPS.flatMap(group => group.hours);
+  const maxOpenCount = showAvailability
+    ? getMaxAvailabilityCountForHours(availabilitySlots, timeDay, allHours, timezone)
+    : 0;
+
+  return (
+    <div className="space-y-5">
+      {showAvailability && (
+        <div className="smk-note flex-wrap gap-x-4 gap-y-2">
+          {(['high', 'medium', 'low', 'none'] as const).map(tier => (
+            <span key={tier} className="smk-text-muted inline-flex items-center gap-2 text-xs">
+              <span
+                className={`h-3 w-5 shrink-0 rounded-sm ${AVAILABILITY_LEGEND_SWATCH[tier]}`}
+                aria-hidden
+              />
+              {tw(`availabilityLegend.${tier}`)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {TIME_HOUR_GROUPS.map(group => (
+        <div key={group.id}>
+          <p className="smk-tag mb-2.5">{tw(`periods.${group.id}`)}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {group.hours.map(hour => {
+              const selectable = isHourSelectable(timeDay, hour);
+              const state = getHourCellState(hour, selectedHour, selectable);
+              const openCount = showAvailability
+                ? countAvailabilitySlotsForHour(availabilitySlots, timeDay, hour, timezone)
+                : 0;
+              const tier: HourAvailabilityTier = showAvailability
+                ? getHourAvailabilityTier(openCount, maxOpenCount)
+                : 'low';
+              const countLabel =
+                openCount > 0 ? tw('openCourts', { count: openCount }) : tw('noOpenCourts');
+
+              return (
+                <button
+                  key={hour}
+                  type="button"
+                  disabled={state === 'disabled'}
+                  onClick={() => onSelectHour(hour)}
+                  className={hourChipClass(state, tier)}
+                  aria-label={
+                    showAvailability
+                      ? `${formatHourLabel(hour, locale, true)}, ${countLabel}`
+                      : formatHourLabel(hour, locale, true)
+                  }
+                >
+                  <span className="flex flex-col items-center gap-0.5">
+                    <span>{formatHourLabel(hour, locale, true)}</span>
+                    {showAvailability && (
+                      <span className={hourCountClass(state, tier)}>{countLabel}</span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

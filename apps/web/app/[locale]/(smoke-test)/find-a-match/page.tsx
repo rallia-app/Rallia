@@ -13,12 +13,17 @@ export async function generateMetadata({
   params: Promise<{ locale: Locale }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return buildPageMetadata({
+  const metadata = await buildPageMetadata({
     locale,
     path: '/find-a-match',
     namespace: 'seo.findAMatch',
     noindex: true,
   });
+  // The flow runs under its own brand — escape the "| Rallia" title template.
+  return {
+    ...metadata,
+    title: { absolute: typeof metadata.title === 'string' ? metadata.title : '' },
+  };
 }
 
 /** FR for Québec and France, EN everywhere else. */
