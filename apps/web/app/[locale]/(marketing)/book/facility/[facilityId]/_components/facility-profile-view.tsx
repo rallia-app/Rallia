@@ -3,7 +3,11 @@
 import { Building2, CalendarClock, Footprints, Lock, MapPin, Navigation } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import type { WebBookFacilityContext, WebBookSlotGroup } from '../_lib/facility-context';
+import type {
+  WebBookFacilityContext,
+  WebBookSlotGroup,
+  WebBookSport,
+} from '../_lib/facility-context';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,6 +43,12 @@ function isSameGroup(a: WebBookSlotGroup, b: WebBookSlotGroup) {
 
 interface FacilityProfileViewProps {
   facility: WebBookFacilityContext;
+  /** Sports with open slots. A toggle only appears when there's more than one. */
+  sports: WebBookSport[];
+  selectedSport: WebBookSport | null;
+  onSelectSport: (slug: string) => void;
+  /** Open groups for the selected sport only. */
+  groups: WebBookSlotGroup[];
   /** Live selection, owned by the parent so the wizard reacts to it too. */
   selectedGroup: WebBookSlotGroup | null;
   onSelectGroup: (group: WebBookSlotGroup) => void;
@@ -46,6 +56,10 @@ interface FacilityProfileViewProps {
 
 export function FacilityProfileView({
   facility,
+  sports,
+  selectedSport,
+  onSelectSport,
+  groups,
   selectedGroup,
   onSelectGroup,
 }: FacilityProfileViewProps) {
@@ -73,10 +87,11 @@ export function FacilityProfileView({
         )}
 
         <div className="flex flex-wrap gap-1.5">
-          {facility.sport && (
+          {/* One sport is a plain fact about the facility; several get a toggle below. */}
+          {sports.length === 1 && (
             <Badge variant="secondary" className="gap-1 font-medium capitalize">
               <Building2 className="size-3" />
-              {facility.sport.name}
+              {sports[0].name}
             </Badge>
           )}
           {facility.organization_nature === 'public' && (
@@ -147,14 +162,49 @@ export function FacilityProfileView({
         </Card>
       )}
 
-      {facility.upcomingGroups.length > 0 && (
+      {/* Sport toggle: courts are sport-specific, so the slot list is too. */}
+      {sports.length > 1 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('chooseSport')}
+          </h2>
+          <div
+            role="tablist"
+            aria-label={t('chooseSport')}
+            className="inline-flex rounded-full bg-muted p-0.5"
+          >
+            {sports.map(sport => {
+              const isActive = selectedSport?.slug === sport.slug;
+              return (
+                <button
+                  key={sport.slug}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => onSelectSport(sport.slug)}
+                  className={cn(
+                    'rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors',
+                    isActive
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {sport.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {groups.length > 0 && (
         <div className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <CalendarClock className="size-4" />
             {selectedGroup ? t('switchSlot') : t('upcomingSlots')}
           </h2>
           <div className="flex flex-wrap gap-2">
-            {facility.upcomingGroups.map(group => {
+            {groups.map(group => {
               const { day, time } = formatGroup(group, locale, facility.timezone);
               const isSelected = selectedGroup !== null && isSameGroup(group, selectedGroup);
 

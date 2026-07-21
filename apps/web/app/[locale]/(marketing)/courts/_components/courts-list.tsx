@@ -51,12 +51,20 @@ export default function CourtsList({ initialFacilities }: CourtsListProps) {
   const openBook = useCallback(
     (facility: PublicFacility, slot: SlotGroupRef | null) => {
       courtsBookClicked({ facility_id: facility.id, has_slot: slot !== null });
-      const query = slot
-        ? `?start=${encodeURIComponent(slot.start)}&end=${encodeURIComponent(slot.end)}`
-        : '';
+      const params = new URLSearchParams();
+      // Carry the active sport filter so a multi-sport facility opens on the
+      // tab the visitor was already browsing. With "all sports" the gate infers
+      // it from the clicked slot instead.
+      const activeSlug = sports.find(s => s.id === activeSportId)?.slug;
+      if (activeSlug) params.set('sport', activeSlug);
+      if (slot) {
+        params.set('start', slot.start);
+        params.set('end', slot.end);
+      }
+      const query = params.size > 0 ? `?${params.toString()}` : '';
       router.push(`/book/facility/${facility.id}${query}`);
     },
-    [router]
+    [router, sports, activeSportId]
   );
 
   const fetchFacilities = useCallback(

@@ -24,6 +24,8 @@ export type WebBookSlotGroup = {
   courts: WebBookCourtOption[];
 };
 
+export type WebBookSport = { id: string; name: string; slug: string };
+
 export type WebBookFacilityContext = {
   id: string;
   name: string;
@@ -35,14 +37,20 @@ export type WebBookFacilityContext = {
   organization_nature: string | null;
   is_first_come_first_serve: boolean;
   membership_required: boolean;
-  /** Sport the rating step collects a level for (the facility's first active sport). */
-  sport: { id: string; name: string; slug: string } | null;
+  /**
+   * Sports this facility actually has open slots for, in the order the toggle
+   * shows them. A facility can offer tennis and pickleball on the same courts
+   * at the same hour, so slots are never pooled across sports.
+   */
+  sports: WebBookSport[];
+  /** Open time groups per sport slug. Every sport in `sports` has an entry. */
+  groupsBySport: Record<string, WebBookSlotGroup[]>;
+  /** Sport the page opens on, resolved from `?sport=` or the clicked slot. */
+  initialSportSlug: string | null;
   /** The time group the visitor clicked, when `?start=` resolved to open rows. */
   selectedGroup: WebBookSlotGroup | null;
   /** A slot was requested but no longer has open rows (booked out or stale link). */
   slotMissing: boolean;
-  /** Upcoming open time groups, for the facility summary panel. */
-  upcomingGroups: WebBookSlotGroup[];
   /**
    * Facility-level booking entry point rendered from the provider template.
    * Used ONLY when no specific slot was clicked — a clicked slot redirects to
@@ -65,6 +73,7 @@ type SnapshotRow = {
   price_cents: number | null;
   currency: string | null;
   booking_url: string | null;
+  sport_id: string | null;
 };
 
 /**
@@ -189,6 +198,7 @@ function parseInstant(value: string | null): string | null {
 
 export async function getFacilityForWebBooking(
   facilityId: string,
+  sportSlug: string | null,
   slotStart: string | null,
   slotEnd: string | null
 ): Promise<WebBookFacilityContext | null> {
@@ -241,38 +251,68 @@ export async function getFacilityForWebBooking(
   const now = new Date();
   const horizonEnd = new Date(now.getTime() + SNAPSHOT_HORIZON_DAYS * 24 * 60 * 60 * 1000);
 
-  const { data: snapshotRows } = await supabase
-    .from('facility_availability_snapshot')
-    .select(
-      'external_court_id, external_slot_id, slot_start, slot_end, court_name, court_number, price_cents, currency, booking_url'
-    )
-    .eq('facility_id', facilityId)
-    .eq('is_available', true)
-    .gte('slot_start', now.toISOString())
-    .lte('slot_start', horizonEnd.toISOString())
-    .order('slot_start')
-    .limit(400);
-
-  const groups = groupRowsByTime((snapshotRows ?? []) as SnapshotRow[]);
-
-  // The clicked chip identifies its time group by start (+end when the chip
-  // sent one). Matched against our own rows — never trusted as a destination.
-  const wantedStart = parseInstant(slotStart);
-  const wantedEnd = parseInstant(slotEnd);
-  const selectedGroup = wantedStart
-    ? (groups.find(
-        g =>
-          new Date(g.slotStart).toISOString() === wantedStart &&
-          (!wantedEnd || new Date(g.slotEnd).toISOString() === wantedEnd)
-      ) ?? null)
-    : null;
-
-  const sports = (facility.facility_sports ?? [])
+  const declaredSports = (facility.facility_sports ?? [])
     .map(fs => (Array.isArray(fs.sport) ? fs.sport[0] : fs.sport))
     .filter((s): s is { id: string; name: string; slug: string; is_active: boolean | null } =>
       Boolean(s && s.is_active !== false)
     );
-  const sport = sports[0] ?? null;
+
+  // Scope rows to the sports this facility actually offers. That also drops
+  // rows with a null sport_id, which we can't attribute — La Fontaine's
+  // volleyball court comes through that way, and Rallia doesn't serve it.
+  const sportIds = declaredSports.map(s => s.id);
+
+  const { data: snapshotRows } = sportIds.length
+    ? await supabase
+        .from('facility_availability_snapshot')
+        .select(
+          'external_court_id, external_slot_id, slot_start, slot_end, court_name, court_number, price_cents, currency, booking_url, sport_id'
+        )
+        .eq('facility_id', facilityId)
+        .eq('is_available', true)
+        .in('sport_id', sportIds)
+        .gte('slot_start', now.toISOString())
+        .lte('slot_start', horizonEnd.toISOString())
+        .order('slot_start')
+        .limit(600)
+    : { data: [] };
+
+  const rows = (snapshotRows ?? []) as SnapshotRow[];
+
+  // Group per sport. Courts of different sports can share a start time, so
+  // pooling them would offer a pickleball court to someone booking tennis.
+  const groupsBySport: Record<string, WebBookSlotGroup[]> = {};
+  for (const sport of declaredSports) {
+    const sportRows = rows.filter(r => r.sport_id === sport.id);
+    if (sportRows.length > 0) {
+      groupsBySport[sport.slug] = groupRowsByTime(sportRows).slice(0, UPCOMING_GROUP_LIMIT);
+    }
+  }
+
+  // Only sports with something to book get a toggle entry.
+  const sports = declaredSports
+    .filter(s => groupsBySport[s.slug]?.length)
+    .map(s => ({ id: s.id, name: s.name, slug: s.slug }));
+
+  const wantedStart = parseInstant(slotStart);
+  const wantedEnd = parseInstant(slotEnd);
+  const matchesWanted = (g: WebBookSlotGroup) =>
+    wantedStart !== null &&
+    new Date(g.slotStart).toISOString() === wantedStart &&
+    (!wantedEnd || new Date(g.slotEnd).toISOString() === wantedEnd);
+
+  // An explicit `?sport=` wins. Otherwise fall back to whichever sport owns the
+  // clicked slot, so a chip from /courts lands on the right tab.
+  const requested = sportSlug && groupsBySport[sportSlug] ? sportSlug : null;
+  const owningSlot = wantedStart
+    ? (sports.find(s => groupsBySport[s.slug]?.some(matchesWanted))?.slug ?? null)
+    : null;
+  const initialSportSlug = requested ?? owningSlot ?? sports[0]?.slug ?? null;
+
+  const selectedGroup =
+    initialSportSlug && wantedStart
+      ? (groupsBySport[initialSportSlug]?.find(matchesWanted) ?? null)
+      : null;
 
   return {
     id: facility.id,
@@ -288,10 +328,11 @@ export async function getFacilityForWebBooking(
         : null,
     is_first_come_first_serve: facility.is_first_come_first_serve ?? false,
     membership_required: facility.membership_required ?? false,
-    sport: sport ? { id: sport.id, name: sport.name, slug: sport.slug } : null,
+    sports,
+    groupsBySport,
+    initialSportSlug,
     selectedGroup,
     slotMissing: wantedStart !== null && selectedGroup === null,
-    upcomingGroups: groups.slice(0, UPCOMING_GROUP_LIMIT),
     facilityBookingUrl: renderFacilityTemplate(
       providerType,
       bookingUrlTemplate,

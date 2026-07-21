@@ -130,6 +130,11 @@ export function courtsSlotSwitched(props: { facility_id: string; court_count: nu
   capture('courts_slot_switched', props);
 }
 
+/** Visitor toggled sports on a facility that offers more than one. */
+export function courtsSportSwitched(props: { facility_id: string; sport_slug: string }): void {
+  capture('courts_sport_switched', props);
+}
+
 // ---- Web join onboarding funnel ----
 
 export function webJoinStarted(props: { match_id: string; sport_slug?: string }): void {
