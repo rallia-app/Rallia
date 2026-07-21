@@ -11604,7 +11604,7 @@
       "noResults": "Aucun terrain trouvé à moins de 25 km.",
       "distanceLabel": "Jusqu'où es-tu prêt à te déplacer ?",
       "distanceOption": "{km} km",
-      "noResultsRadius": "Encore aucun terrain sur Rallia à moins de {km} km.",
+      "noResultsRadius": "Encore aucun terrain dans notre réseau à moins de {km} km.",
       "widenHint": "Élargis le rayon, ou continue et on te jumelle par secteur.",
       "continueAnyway": "Continuer quand même",
       "errors": {
@@ -11865,10 +11865,10 @@
       "ogDescription": "Aidez à garder Rallia gratuit pour les joueurs de tennis et pickleball partout."
     },
     "findAMatch": {
-      "title": "Trouver un joueur — Aperçu Rallia",
-      "description": "Jumelage tennis et pickleball coordonné par IA — on gère la prospection des joueurs pour vous.",
-      "ogTitle": "Trouver un joueur — Aperçu Rallia",
-      "ogDescription": "Jumelage tennis et pickleball coordonné par IA — on gère la prospection des joueurs pour vous."
+      "title": "Slice · Trouve ta prochaine partie de tennis ou pickleball",
+      "description": "Dis-nous ton niveau, ton coin et tes dispos. Slice trouve un joueur compatible et organise la partie pour toi.",
+      "ogTitle": "Slice · Trouve ta prochaine partie de tennis ou pickleball",
+      "ogDescription": "Dis-nous ton niveau, ton coin et tes dispos. Slice trouve un joueur compatible et organise la partie pour toi."
     },
     "privacy": {
       "title": "Politique de confidentialité",
