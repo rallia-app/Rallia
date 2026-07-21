@@ -25,11 +25,16 @@ export type WebOnboardingProfilePayload = {
   locale: string;
 };
 
-/** Where the account came from, recorded on the profile for attribution. */
+/**
+ * Where the account came from, recorded on the profile for attribution.
+ * The referral fields are constrained to real invitation types
+ * (profile_referral_invitation_type_check) — omit them for signups that
+ * aren't an invitation, like the courts booking gate.
+ */
 export type WebOnboardingAttribution = {
   acquisitionChannel: string;
-  referralInvitationType: string;
-  referralTargetId: string;
+  referralInvitationType?: string;
+  referralTargetId?: string;
 };
 
 /**
@@ -57,8 +62,12 @@ export async function writeWebOnboardingProfile(
       preferred_locale: payload.locale === 'fr-CA' ? 'fr-CA' : 'en-US',
       onboarding_completed: true,
       acquisition_channel: attribution.acquisitionChannel,
-      referral_invitation_type: attribution.referralInvitationType,
-      referral_target_id: attribution.referralTargetId,
+      ...(attribution.referralInvitationType
+        ? {
+            referral_invitation_type: attribution.referralInvitationType,
+            referral_target_id: attribution.referralTargetId,
+          }
+        : {}),
     },
     { onConflict: 'id' }
   );

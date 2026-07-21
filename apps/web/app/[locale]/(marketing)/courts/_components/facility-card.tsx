@@ -14,10 +14,16 @@ import { cn } from '@/lib/utils';
 
 export type PublicFacility = FacilitySearchResult;
 
+/** The time group a clicked chip identifies (mirrors mobile's FormattedSlot key). */
+export interface SlotGroupRef {
+  start: string;
+  end: string;
+}
+
 interface FacilityCardProps {
   facility: PublicFacility;
-  /** `slotId` targets a specific open slot; omitted means the facility's own booking page. */
-  onBook: (facility: PublicFacility, slotId?: string | null) => void;
+  /** `slot` targets a specific open time group; null means the facility's own booking page. */
+  onBook: (facility: PublicFacility, slot: SlotGroupRef | null) => void;
 }
 
 export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
@@ -129,7 +135,12 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
                     <button
                       key={`${slot.facilityScheduleId}-${i}`}
                       type="button"
-                      onClick={() => onBook(facility, slot.facilityScheduleId)}
+                      onClick={() =>
+                        onBook(facility, {
+                          start: slot.datetime.toISOString(),
+                          end: slot.endDateTime.toISOString(),
+                        })
+                      }
                       aria-label={t('bookSlotAria', { time: slot.time })}
                       className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:border-primary hover:bg-primary/10"
                     >

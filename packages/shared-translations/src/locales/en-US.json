@@ -10947,6 +10947,9 @@
     "directions": "Directions",
     "selectedSlot": "Your slot",
     "upcomingSlots": "Open slots",
+    "courtCountSingular": "1 court",
+    "courtCountLabel": "{count} courts",
+    "courtNumber": "Court {number}",
     "steps": {
       "account": "Account",
       "consent": "Consent",
@@ -10996,9 +10999,16 @@
     "redirect": {
       "title": "You are all set",
       "description": "Your account is ready. Head to the booking page when you want, reservations and payment are handled by the facility.",
+      "descriptionSlot": "Your account is ready. Open the booking page to reserve this exact slot, payment is handled by the facility.",
+      "selectCourt": "Pick your court",
+      "selectCourtFirst": "Pick a court to continue",
       "cta": "Go to the booking page",
-      "preparing": "Preparing your booking link...",
       "appHint": "Get the app to book faster and find players"
+    },
+    "slotGone": {
+      "title": "This slot is gone",
+      "description": "Someone booked it before you got here, or it expired. Check the other open slots for this court.",
+      "cta": "See open slots"
     },
     "noBooking": {
       "title": "No online booking here",
@@ -11013,8 +11023,7 @@
       "invalidPostalCode": "Enter a valid postal code.",
       "ratingsLoadFailed": "Could not load skill levels. Please refresh and try again.",
       "submitFailed": "Something went wrong. Please try again.",
-      "facilityUnavailable": "This court is no longer available.",
-      "noBookingUrl": "We could not find a booking page for this court right now."
+      "facilityUnavailable": "This court is no longer available."
     }
   },
   "courtsPage": {

@@ -3,15 +3,15 @@
 import { Building2, CalendarClock, Footprints, Lock, MapPin, Navigation } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import type { WebBookFacilityContext, WebBookSlot } from '../_lib/facility-context';
+import type { WebBookFacilityContext, WebBookSlotGroup } from '../_lib/facility-context';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-function formatSlot(slot: WebBookSlot, locale: string, timezone: string | null) {
-  const start = new Date(slot.slotStart);
-  const end = new Date(slot.slotEnd);
+function formatGroup(group: WebBookSlotGroup, locale: string, timezone: string | null) {
+  const start = new Date(group.slotStart);
+  const end = new Date(group.slotEnd);
   const zone = timezone ?? undefined;
 
   const day = start.toLocaleDateString(locale, {
@@ -31,6 +31,10 @@ function formatSlot(slot: WebBookSlot, locale: string, timezone: string | null) 
   })}`;
 
   return { day, time };
+}
+
+function isSameGroup(a: WebBookSlotGroup, b: WebBookSlotGroup) {
+  return a.slotStart === b.slotStart && a.slotEnd === b.slotEnd;
 }
 
 export function FacilityProfileView({ facility }: { facility: WebBookFacilityContext }) {
@@ -111,7 +115,7 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
         )}
       </div>
 
-      {facility.selectedSlot && (
+      {facility.selectedGroup && (
         <Card className="overflow-hidden border-primary/30">
           <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
           <CardContent className="flex flex-col gap-1 pt-5">
@@ -119,32 +123,34 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
               {t('selectedSlot')}
             </span>
             <span className="text-lg font-bold">
-              {formatSlot(facility.selectedSlot, locale, facility.timezone).day}
+              {formatGroup(facility.selectedGroup, locale, facility.timezone).day}
             </span>
             <span className="text-sm text-muted-foreground">
-              {formatSlot(facility.selectedSlot, locale, facility.timezone).time}
-              {facility.selectedSlot.courtName ? ` · ${facility.selectedSlot.courtName}` : ''}
+              {formatGroup(facility.selectedGroup, locale, facility.timezone).time}
+              {' · '}
+              {facility.selectedGroup.courts.length === 1
+                ? (facility.selectedGroup.courts[0].courtName ?? t('courtCountSingular'))
+                : t('courtCountLabel', { count: facility.selectedGroup.courts.length })}
             </span>
           </CardContent>
         </Card>
       )}
 
-      {facility.upcomingSlots.length > 0 && (
+      {facility.upcomingGroups.length > 0 && (
         <div className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <CalendarClock className="size-4" />
             {t('upcomingSlots')}
           </h2>
           <div className="flex flex-wrap gap-2">
-            {facility.upcomingSlots.map((slot, i) => {
-              const { day, time } = formatSlot(slot, locale, facility.timezone);
+            {facility.upcomingGroups.map(group => {
+              const { day, time } = formatGroup(group, locale, facility.timezone);
               const isSelected =
-                facility.selectedSlot?.externalSlotId != null &&
-                slot.externalSlotId === facility.selectedSlot.externalSlotId;
+                facility.selectedGroup !== null && isSameGroup(group, facility.selectedGroup);
 
               return (
                 <div
-                  key={`${slot.externalSlotId ?? slot.externalCourtId}-${i}`}
+                  key={`${group.slotStart}-${group.slotEnd}`}
                   className={cn(
                     'rounded-xl border px-3 py-2 text-xs',
                     isSelected
@@ -154,6 +160,11 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
                 >
                   <div className="font-semibold text-foreground">{day}</div>
                   <div>{time}</div>
+                  {group.courts.length > 1 && (
+                    <div className="mt-0.5 text-[10px] font-medium text-primary">
+                      {t('courtCountLabel', { count: group.courts.length })}
+                    </div>
+                  )}
                 </div>
               );
             })}
