@@ -13,16 +13,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Image,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -38,7 +39,7 @@ import {
   warningHaptic,
   getHumanName,
   formatPrice,
-  getLeagueLogoUrl,
+  getProfilePictureUrl,
 } from '@rallia/shared-utils';
 import {
   useTheme,
@@ -87,7 +88,7 @@ import type { Enums } from '@rallia/shared-types';
 
 import PlayerCard from '../features/community/components/PlayerCard';
 import type { LeagueEditData } from '../features/leagues';
-import { DEFAULT_LEAGUE_BANNER } from '../features/leagues/defaultBanner';
+import { LeagueBanner, LEAGUE_BANNER_ASPECT } from '../features/leagues/components/LeagueBanner';
 import { useTranslation, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -242,20 +243,31 @@ const Section: React.FC<{ title: string; children: React.ReactNode; colors: Scre
   </View>
 );
 
+// Fixed light-tone text colors for the badge sitting on the banner image: the
+// badge background is near-white there regardless of theme.
+const ON_IMAGE_TONE_TEXT: Record<'positive' | 'neutral' | 'muted', string> = {
+  positive: '#15803d',
+  neutral: neutral[700],
+  muted: neutral[500],
+};
+
 const LeagueStatusBadge: React.FC<{
   status: LeagueStatus;
   colors: ScreenColors;
   t: (k: TranslationKey) => string;
-}> = ({ status, colors, t }) => {
+  onImage?: boolean;
+}> = ({ status, colors, t, onImage }) => {
   const tone = LEAGUE_STATUS_TONE[status];
-  const bg =
-    tone === 'positive'
+  const bg = onImage
+    ? 'rgba(255,255,255,0.94)'
+    : tone === 'positive'
       ? colors.statusPositiveBg
       : tone === 'muted'
         ? colors.statusMutedBg
         : colors.statusNeutralBg;
-  const fg =
-    tone === 'positive'
+  const fg = onImage
+    ? ON_IMAGE_TONE_TEXT[tone]
+    : tone === 'positive'
       ? colors.statusPositiveText
       : tone === 'muted'
         ? colors.statusMutedText
@@ -268,6 +280,14 @@ const LeagueStatusBadge: React.FC<{
     </View>
   );
 };
+
+function formatRatingRange(min: number | null, max: number | null): string | null {
+  const fmt = (v: number) => Number(v).toFixed(1);
+  if (min != null && max != null) return min === max ? fmt(min) : `${fmt(min)}–${fmt(max)}`;
+  if (min != null) return `${fmt(min)}+`;
+  if (max != null) return `≤ ${fmt(max)}`;
+  return null;
+}
 
 const STEP_ICONS: ReadonlyArray<keyof typeof Ionicons.glyphMap> = [
   'create-outline',
@@ -333,25 +353,172 @@ const LifecycleStepper: React.FC<{
   );
 };
 
-const StatTile: React.FC<{
-  icon: keyof typeof Ionicons.glyphMap;
+/** Initial-load placeholder shaped like the hero + tab bar + first cards, so
+ *  the screen keeps its silhouette while the league loads. */
+const LeagueDetailSkeleton: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const { width } = useWindowDimensions();
+  const bg = isDark ? neutral[800] : neutral[200];
+  const highlight = isDark ? neutral[700] : neutral[100];
+  const shimmer = { backgroundColor: bg, highlightColor: highlight };
+  return (
+    <View>
+      <Skeleton {...shimmer} height={Math.round(width / LEAGUE_BANNER_ASPECT)} borderRadius={0} />
+      <View style={styles.heroChipRow}>
+        {[110, 88].map(w => (
+          <Skeleton key={w} {...shimmer} width={w} height={26} borderRadius={radiusPixels.full} />
+        ))}
+      </View>
+      <View style={styles.skeletonTabBar}>
+        {[0, 1, 2].map(i => (
+          <Skeleton key={i} {...shimmer} width={72} height={14} />
+        ))}
+      </View>
+      <View style={styles.tabContent}>
+        <Skeleton {...shimmer} height={72} borderRadius={radiusPixels.lg} />
+        <View style={styles.skeletonCardGap}>
+          <Skeleton {...shimmer} height={120} borderRadius={radiusPixels.xl} />
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const StatSegment: React.FC<{
   value: string;
   label: string;
   colors: ScreenColors;
-}> = ({ icon, value, label, colors }) => (
-  <View
+  showDivider?: boolean;
+}> = ({ value, label, colors, showDivider }) => (
+  <>
+    {showDivider && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
+    <View style={styles.statSegment}>
+      <Text size="lg" weight="bold" color={colors.text} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  </>
+);
+
+/**
+ * Compact status chip sitting in the row under the hero banner — same shape as
+ * TournamentDetail's HeroChip so the two heroes read identically.
+ */
+const HeroChip: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  tone: 'positive' | 'outline';
+  colors: ScreenColors;
+  onPress?: () => void;
+  testID?: string;
+}> = ({ icon, label, tone, colors, onPress, testID }) => {
+  const bg = tone === 'positive' ? colors.statusPositiveBg : 'transparent';
+  const fg = tone === 'positive' ? colors.statusPositiveText : colors.primary;
+  const inner = (
+    <>
+      <Ionicons name={icon} size={14} color={fg} />
+      <Text size="xs" weight="semibold" color={fg} numberOfLines={1}>
+        {label}
+      </Text>
+      {onPress && <Ionicons name="chevron-forward" size={13} color={fg} />}
+    </>
+  );
+  const style = [
+    styles.heroChip,
+    { backgroundColor: bg, borderColor: tone === 'outline' ? colors.border : 'transparent' },
+  ];
+  if (!onPress) return <View style={style}>{inner}</View>;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={style}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+    >
+      {inner}
+    </TouchableOpacity>
+  );
+};
+
+/**
+ * Quiet grouped row for the organizer's utility actions (invite, edit,
+ * lifecycle). Deliberately lower-contrast than DashboardCtaCard so the one
+ * accent card and the docked bar stay the loudest things on the screen.
+ */
+const OverviewActionRow: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  colors: ScreenColors;
+  onPress: () => void;
+  destructive?: boolean;
+  disabled?: boolean;
+  showDivider?: boolean;
+  testID?: string;
+}> = ({ icon, label, colors, onPress, destructive, disabled, showDivider, testID }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.7}
+    disabled={disabled}
+    testID={testID}
+    accessibilityRole="button"
     style={[
-      styles.statTile,
-      { backgroundColor: colors.cardBackground, borderColor: colors.border },
+      styles.overviewActionRow,
+      showDivider && {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.border,
+      },
+      disabled && styles.buttonDisabled,
     ]}
   >
-    <Ionicons name={icon} size={18} color={colors.primary} />
-    <Text size="lg" weight="bold" color={colors.text}>
-      {value}
-    </Text>
-    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+    <Ionicons name={icon} size={18} color={destructive ? colors.danger : colors.primary} />
+    <Text
+      size="sm"
+      weight="medium"
+      color={destructive ? colors.danger : colors.text}
+      style={styles.overviewActionLabel}
+    >
       {label}
     </Text>
+    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+  </TouchableOpacity>
+);
+
+/** Friendly icon row for the Overview's at-a-glance card: icon disc, primary
+ *  line, optional secondary line. Softer than the Details tab's spec-sheet
+ *  InfoRow on purpose. */
+const OverviewInfoRow: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  subText?: string;
+  colors: ScreenColors;
+  showDivider?: boolean;
+}> = ({ icon, text, subText, colors, showDivider }) => (
+  <View
+    style={[
+      styles.overviewInfoRow,
+      showDivider && {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.border,
+      },
+    ]}
+  >
+    <View style={[styles.overviewInfoIcon, { backgroundColor: colors.statusActiveBg }]}>
+      <Ionicons name={icon} size={15} color={colors.primary} />
+    </View>
+    <View style={styles.overviewInfoTexts}>
+      <Text size="sm" weight="medium" color={colors.text}>
+        {text}
+      </Text>
+      {subText ? (
+        <Text size="xs" color={colors.textMuted}>
+          {subText}
+        </Text>
+      ) : null}
+    </View>
   </View>
 );
 
@@ -634,6 +801,7 @@ const SuspendedMembersSection: React.FC<{
 
 export const LeagueDetail: React.FC = () => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
   const toast = useToast();
   const qc = useQueryClient();
@@ -1210,7 +1378,6 @@ export const LeagueDetail: React.FC = () => {
   const currentTabIdx = Math.min(activeTabIdx, tabs.length - 1);
   const currentTabKey = tabs[currentTabIdx].key;
   const membersTabIdx = tabs.findIndex(tab => tab.key === 'members');
-  const seasonsTabIdx = tabs.findIndex(tab => tab.key === 'seasons');
 
   const goToTab = useCallback((idx: number) => {
     void lightHaptic();
@@ -1512,12 +1679,7 @@ export const LeagueDetail: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text size="sm" color={colors.textMuted} style={styles.centeredText}>
-            {t('leagueDetail.loading')}
-          </Text>
-        </View>
+        <LeagueDetailSkeleton isDark={isDark} />
       </SafeAreaView>
     );
   }
@@ -1559,182 +1721,308 @@ export const LeagueDetail: React.FC = () => {
     );
   }
 
+  const ratingRangeLabel = formatRatingRange(league.min_rating, league.max_rating);
+
+  /** Organizer utilities, rendered as one quiet grouped list in the Overview. */
+  const organizerRows: Array<{
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    onPress: () => void;
+    destructive?: boolean;
+    disabled?: boolean;
+    testID: string;
+  }> = [];
+  if (isOrganizer) {
+    organizerRows.push({
+      icon: 'person-add-outline',
+      label: t('leagueDetail.invitePlayers.button'),
+      onPress: handleInvitePress,
+      testID: 'action-invite-players',
+    });
+    // A closed league is terminal server-side, so edit is hidden rather than
+    // offered and then refused.
+    if (league.status !== 'closed') {
+      organizerRows.push({
+        icon: 'create-outline',
+        label: t('leagueDetail.editModal.title'),
+        onPress: handleEditLeague,
+        testID: 'cta-edit-league',
+      });
+    }
+    // Lifecycle. Pause/resume are mutually exclusive on status; close is
+    // terminal so it's hidden once closed rather than shown and refused.
+    if (league.status === 'active') {
+      organizerRows.push({
+        icon: 'pause-circle-outline',
+        label: isPausing ? t('leagueDetail.lifecycle.pausing') : t('leagueDetail.lifecycle.pause'),
+        onPress: handlePauseLeague,
+        disabled: isPausing,
+        testID: 'cta-pause-league',
+      });
+    }
+    if (league.status === 'paused') {
+      organizerRows.push({
+        icon: 'play-circle-outline',
+        label: isResuming
+          ? t('leagueDetail.lifecycle.resuming')
+          : t('leagueDetail.lifecycle.resume'),
+        onPress: handleResumeLeague,
+        disabled: isResuming,
+        testID: 'cta-resume-league',
+      });
+    }
+    if (league.status !== 'closed') {
+      organizerRows.push({
+        icon: 'lock-closed-outline',
+        label: isClosing ? t('leagueDetail.lifecycle.closing') : t('leagueDetail.lifecycle.close'),
+        onPress: handleCloseLeague,
+        destructive: true,
+        disabled: isClosing,
+        testID: 'cta-close-league',
+      });
+    }
+  }
+
+  /**
+   * The one state-advancing action for this viewer, docked to the bottom of
+   * the screen so it's reachable from any tab at any position (the tournament
+   * pattern). Everything else stays quiet in the Overview.
+   */
+  const primaryAction: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    onPress: () => void;
+    disabled: boolean;
+    hint: string | null;
+    testID: string;
+  } | null = (() => {
+    if (league.status === 'closed') return null;
+    // Organizer-sent invite: accept is the conversion moment.
+    if (!isOrganizer && myMembership?.status === 'pending' && myMembership.invited_by) {
+      return {
+        label: isAccepting ? t('leagueDetail.accepting') : t('leagueDetail.acceptInvite'),
+        icon: 'mail-open-outline',
+        onPress: () => {
+          lightHaptic();
+          acceptInvite();
+        },
+        disabled: isAccepting,
+        hint: null,
+        testID: 'cta-accept-invite',
+      };
+    }
+    if (canJoin) {
+      return {
+        label: isJoining ? t('leagueDetail.actions.joining') : t('leagueDetail.actions.join'),
+        icon: 'person-add-outline',
+        onPress: () => {
+          lightHaptic();
+          joinLeague();
+        },
+        disabled: isJoining,
+        hint: t('leagueDetail.dashboard.joinCta.description'),
+        testID: 'cta-join-league',
+      };
+    }
+    // Active member with an open season they haven't enrolled in yet.
+    if (
+      !isOrganizer &&
+      league.status === 'active' &&
+      openSeason &&
+      canParticipateInSeason &&
+      !isEnrolledInSeason
+    ) {
+      const busy = isEnrollingSeason || isPayingSeason;
+      return {
+        label: busy
+          ? t('leagueDetail.roster.enrolling')
+          : isPaidSeason && seasonFeeQuote
+            ? t('leagueDetail.paid.enrollFor').replace(
+                '{amount}',
+                formatPrice(seasonFeeQuote.totalCents, seasonFeeQuote.currency, {
+                  locale,
+                  trimZeroCents: true,
+                })
+              )
+            : t('leagueDetail.roster.enroll'),
+        icon: 'person-add-outline',
+        onPress: () => {
+          lightHaptic();
+          if (isPaidSeason) void handlePaidEnroll();
+          else enrollSeasonMut();
+        },
+        disabled: busy,
+        hint: isPaidSeason ? seasonRefundPolicyLine(seasonFeeQuote, t, locale) : null,
+        testID: 'cta-enroll-season',
+      };
+    }
+    if (isOrganizer && league.status === 'active') {
+      if (seasons.length === 0) {
+        return {
+          label: t('leagueDetail.createSeason.submit'),
+          icon: 'add-outline',
+          onPress: handleOpenCreateSeason,
+          disabled: false,
+          hint: t('leagueDetail.dashboard.createSeasonCta.description'),
+          testID: 'cta-create-season-overview',
+        };
+      }
+      if (!openSeason && draftSeasons.length > 0) {
+        return {
+          label: isOpeningSeason
+            ? t('leagueDetail.actions.openingSeason')
+            : t('leagueDetail.actions.openSeason'),
+          icon: 'lock-open-outline',
+          onPress: () => {
+            lightHaptic();
+            openSeasonMut({ seasonId: draftSeasons[0].id, versionWas: draftSeasons[0].version });
+          },
+          disabled: isOpeningSeason,
+          hint: t('leagueDetail.dashboard.openSeasonCta.description').replace(
+            '{name}',
+            draftSeasons[0].name
+          ),
+          // Not 'cta-open-season': the Seasons tab keeps that id and Maestro
+          // taps it there — duplicate ids make the tap ambiguous.
+          testID: 'cta-open-season-docked',
+        };
+      }
+    }
+    return null;
+  })();
+
   return (
     <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.screenScroll}
-        contentContainerStyle={styles.screenScrollContent}
+        contentContainerStyle={[
+          styles.screenScrollContent,
+          // Clear the docked bar (button + a two-line hint at worst) so the
+          // last card is never trapped behind it.
+          primaryAction ? { paddingBottom: 120 + insets.bottom } : null,
+        ]}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
       >
         {/* Hero */}
         <View style={styles.heroFixed}>
-          <View
-            style={[
-              styles.heroCard,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            ]}
-          >
-            <Image
-              source={
-                league.logo_url
-                  ? { uri: getLeagueLogoUrl(league.logo_url) ?? league.logo_url }
-                  : DEFAULT_LEAGUE_BANNER
-              }
-              style={styles.heroPoster}
-              resizeMode="cover"
-            />
-            <View style={styles.heroTopRow}>
-              <LeagueStatusBadge status={league.status} colors={colors} t={t} />
+          {/* Full-bleed banner: status floats on the image, the scrim carries
+              the identity line. Mirrors the list card so tapping a card reads
+              as it expanding. The description lives in the Details tab. */}
+          <View style={styles.heroBanner}>
+            <LeagueBanner logoUrl={league.logo_url} />
+            <View style={styles.heroBannerTopRow}>
+              <LeagueStatusBadge status={league.status} colors={colors} t={t} onImage />
             </View>
-
-            <Text size="2xl" weight="bold" color={colors.text} style={styles.heroTitle}>
-              {league.name}
-            </Text>
-            {league.description ? (
+            {/* Scrim is deliberately shallow and light: it only has to carry
+                two lines, and the text shadow does the rest of the legibility
+                work, so the artwork stays visible. */}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.68)']}
+              locations={[0, 0.42, 1]}
+              style={styles.heroScrim}
+            >
+              <Text
+                size="2xl"
+                weight="bold"
+                lineHeight="tight"
+                color="#ffffff"
+                numberOfLines={1}
+                style={styles.scrimText}
+              >
+                {league.name}
+              </Text>
               <Text
                 size="sm"
-                color={colors.textMuted}
-                style={styles.heroDescription}
-                numberOfLines={2}
+                color="rgba(255,255,255,0.92)"
+                numberOfLines={1}
+                style={styles.scrimText}
               >
-                {league.description}
-              </Text>
-            ) : null}
-
-            <View style={[styles.heroDivider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.heroMetaRows}>
-              <View style={styles.heroMetaRow}>
-                <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusActiveBg }]}>
-                  <Ionicons name="eye-outline" size={14} color={colors.primary} />
-                </View>
-                <Text size="sm" weight="medium" color={colors.text} style={styles.heroMetaText}>
-                  {t(VISIBILITY_KEY[league.visibility] as TranslationKey)} ·{' '}
-                  {t(JOIN_MODE_KEY[league.join_mode] as TranslationKey)}
-                </Text>
-              </View>
-              <View style={styles.heroMetaRow}>
-                <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                  <Ionicons name="people-outline" size={14} color={colors.textMuted} />
-                </View>
-                <Text size="sm" color={colors.textMuted} style={styles.heroMetaText}>
-                  {t('leagueDetail.hero.membersCount').replace(
+                {[
+                  t('leagueDetail.hero.membersCount').replace(
                     '{count}',
                     String(activeMembers.length)
-                  )}
-                </Text>
-              </View>
-              {league.venue_name ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {league.venue_name}
-                  </Text>
-                </View>
-              ) : null}
-              {organizerName ? (
-                <View style={styles.heroMetaRow}>
-                  <View style={[styles.heroMetaIcon, { backgroundColor: colors.statusMutedBg }]}>
-                    <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                  </View>
-                  <Text
-                    size="sm"
-                    color={colors.textMuted}
-                    numberOfLines={1}
-                    style={styles.heroMetaText}
-                  >
-                    {t('leagueDetail.dashboard.organizedBy').replace('{name}', organizerName)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+                  ),
+                  league.venue_name,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+            </LinearGradient>
+          </View>
 
-            {!isOrganizer && myMembership?.status === 'pending' && myMembership.invited_by && (
-              <TouchableOpacity
-                onPress={() => {
-                  lightHaptic();
-                  acceptInvite();
-                }}
-                disabled={isAccepting}
-                style={[styles.heroRegistered, { backgroundColor: colors.primary }]}
-                testID="cta-accept-invite"
-              >
-                <Ionicons name="mail-open-outline" size={18} color="#ffffff" />
-                <Text size="sm" weight="semibold" color="#ffffff">
-                  {isAccepting ? t('leagueDetail.accepting') : t('leagueDetail.acceptInvite')}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {!isOrganizer && myMembership?.status === 'pending' && !myMembership.invited_by && (
-              <>
-                <View
-                  style={[styles.heroRegistered, { backgroundColor: colors.secondaryHighlightBg }]}
-                >
-                  <Ionicons name="hourglass-outline" size={18} color={colors.secondaryAccent} />
-                  <Text size="sm" weight="semibold" color={colors.secondaryAccent}>
-                    {t('leagueDetail.membershipPending')}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={handleCancelRequestPress}
-                  disabled={isLeaving}
-                  style={styles.heroTextAction}
-                  testID="cta-cancel-request"
-                >
-                  <Text size="sm" weight="semibold" color={colors.danger}>
-                    {t('leagueDetail.cancelRequest')}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-            {!isOrganizer && myMembership?.status === 'active' && (
-              <>
-                <View style={[styles.heroRegistered, { backgroundColor: colors.statusPositiveBg }]}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.statusPositiveText} />
-                  <Text size="sm" weight="semibold" color={colors.statusPositiveText}>
-                    {t('leagueDetail.memberActive')}
-                  </Text>
-                </View>
+          {/* One chip row carries the viewer's membership state; the quiet
+              leave/cancel text action sits beside it. */}
+          {!isOrganizer &&
+          (myMembership?.status === 'active' || myMembership?.status === 'pending') ? (
+            <View style={styles.heroChipRow}>
+              {myMembership.status === 'active' ? (
+                <HeroChip
+                  icon="checkmark-circle"
+                  tone="positive"
+                  colors={colors}
+                  label={t('leagueDetail.memberActive')}
+                />
+              ) : (
+                <HeroChip
+                  icon="hourglass-outline"
+                  tone="outline"
+                  colors={colors}
+                  label={
+                    myMembership.invited_by
+                      ? t('leagueDetail.acceptInvite')
+                      : t('leagueDetail.membershipPending')
+                  }
+                />
+              )}
+              {myMembership.status === 'active' ? (
                 <TouchableOpacity
                   onPress={handleLeavePress}
                   disabled={isLeaving}
                   style={styles.heroTextAction}
                   testID="cta-leave-league"
                 >
-                  <Text size="sm" weight="semibold" color={colors.danger}>
+                  <Text size="xs" weight="semibold" color={colors.danger}>
                     {t('leagueDetail.leaveLeague')}
                   </Text>
                 </TouchableOpacity>
-              </>
-            )}
-          </View>
+              ) : !myMembership.invited_by ? (
+                <TouchableOpacity
+                  onPress={handleCancelRequestPress}
+                  disabled={isLeaving}
+                  style={styles.heroTextAction}
+                  testID="cta-cancel-request"
+                >
+                  <Text size="xs" weight="semibold" color={colors.danger}>
+                    {t('leagueDetail.cancelRequest')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
-        {/* Sticky tab bar */}
-        <View style={[styles.tabTrackSticky, { backgroundColor: colors.background }]}>
-          <View style={[styles.tabTrack, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+        {/* Sticky tab bar — scrollable underline tabs, matching the
+            tournament detail screen. */}
+        <View
+          style={[
+            styles.tabBarSticky,
+            { backgroundColor: colors.background, borderBottomColor: colors.border },
+          ]}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
             {tabs.map((tab, i) => {
               const selected = i === currentTabIdx;
               return (
                 <TouchableOpacity
                   key={tab.key}
                   onPress={() => goToTab(i)}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.tabPill,
-                    selected && [
-                      styles.tabPillActive,
-                      { backgroundColor: isDark ? darkTheme.card : lightTheme.card },
-                    ],
-                  ]}
+                  activeOpacity={0.7}
+                  style={styles.tabItem}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
                   testID={`league-tab-${tab.key}`}
@@ -1743,13 +2031,20 @@ export const LeagueDetail: React.FC = () => {
                     size="sm"
                     weight={selected ? 'semibold' : 'medium'}
                     color={selected ? colors.primary : colors.textMuted}
+                    numberOfLines={1}
                   >
                     {tab.label}
                   </Text>
+                  <View
+                    style={[
+                      styles.tabUnderline,
+                      { backgroundColor: selected ? colors.primary : 'transparent' },
+                    ]}
+                  />
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Overview */}
@@ -1783,6 +2078,34 @@ export const LeagueDetail: React.FC = () => {
                 </Text>
               </View>
             )}
+            {/* Stats first: the numbers worth a glance, one segmented card */}
+            <View
+              style={[
+                styles.section,
+                styles.statsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <StatSegment
+                value={String(activeMembers.length)}
+                label={t('leagueDetail.dashboard.stats.members')}
+                colors={colors}
+              />
+              <StatSegment
+                value={String(seasons.length)}
+                label={t('leagueDetail.dashboard.stats.seasons')}
+                colors={colors}
+                showDivider
+              />
+              <StatSegment
+                value={currentSeasonLabel}
+                label={t('leagueDetail.dashboard.stats.currentSeason')}
+                colors={colors}
+                showDivider
+              />
+            </View>
+
+            {/* Lifecycle pipeline */}
             <View
               style={[
                 styles.section,
@@ -1793,6 +2116,8 @@ export const LeagueDetail: React.FC = () => {
               <LifecycleStepper stepIndex={stepIndex} colors={colors} t={t} />
             </View>
 
+            {/* At most one accent card: approvals waiting. Everything
+                state-advancing lives in the docked bar instead. */}
             {isOrganizer && pendingMemberRows.length > 0 && (
               <DashboardCtaCard
                 icon="hourglass-outline"
@@ -1809,89 +2134,6 @@ export const LeagueDetail: React.FC = () => {
                 testID="cta-pending-members"
               />
             )}
-
-            {canJoin && (
-              <DashboardCtaCard
-                icon="person-add-outline"
-                title={t('leagueDetail.dashboard.joinCta.title')}
-                description={t('leagueDetail.dashboard.joinCta.description')}
-                buttonLabel={
-                  isJoining ? t('leagueDetail.actions.joining') : t('leagueDetail.actions.join')
-                }
-                buttonIcon="person-add-outline"
-                onPress={() => {
-                  lightHaptic();
-                  joinLeague();
-                }}
-                disabled={isJoining}
-                colors={colors}
-                testID="cta-join-league"
-              />
-            )}
-
-            {isOrganizer && seasons.length === 0 && (
-              <DashboardCtaCard
-                icon="calendar-outline"
-                title={t('leagueDetail.dashboard.createSeasonCta.title')}
-                description={t('leagueDetail.dashboard.createSeasonCta.description')}
-                buttonLabel={t('leagueDetail.dashboard.createSeasonCta.button')}
-                buttonIcon="add-outline"
-                onPress={() => seasonsTabIdx >= 0 && goToTab(seasonsTabIdx)}
-                colors={colors}
-                testID="cta-create-season-overview"
-              />
-            )}
-
-            {isOrganizer && draftSeasons.length > 0 && !openSeason && (
-              <DashboardCtaCard
-                icon="lock-open-outline"
-                title={t('leagueDetail.dashboard.openSeasonCta.title').replace(
-                  '{name}',
-                  draftSeasons[0].name
-                )}
-                description={t('leagueDetail.dashboard.openSeasonCta.description').replace(
-                  '{name}',
-                  draftSeasons[0].name
-                )}
-                buttonLabel={
-                  isOpeningSeason
-                    ? t('leagueDetail.actions.openingSeason')
-                    : t('leagueDetail.actions.openSeason')
-                }
-                buttonIcon="lock-open-outline"
-                onPress={() => {
-                  lightHaptic();
-                  openSeasonMut({
-                    seasonId: draftSeasons[0].id,
-                    versionWas: draftSeasons[0].version,
-                  });
-                }}
-                disabled={isOpeningSeason}
-                colors={colors}
-                testID="cta-open-season"
-              />
-            )}
-
-            <View style={[styles.section, styles.statsRow]}>
-              <StatTile
-                icon="people-outline"
-                value={String(activeMembers.length)}
-                label={t('leagueDetail.dashboard.stats.members')}
-                colors={colors}
-              />
-              <StatTile
-                icon="calendar-outline"
-                value={String(seasons.length)}
-                label={t('leagueDetail.dashboard.stats.seasons')}
-                colors={colors}
-              />
-              <StatTile
-                icon="flag-outline"
-                value={currentSeasonLabel}
-                label={t('leagueDetail.dashboard.stats.currentSeason')}
-                colors={colors}
-              />
-            </View>
 
             {rankingSeason && rankings.length > 0 && (
               <Section
@@ -1977,6 +2219,133 @@ export const LeagueDetail: React.FC = () => {
                 ))}
               </Section>
             )}
+
+            {/* League info: the friendly at-a-glance card (Details keeps the
+                full spec sheet). Rows only render when they have something. */}
+            <Section title={t('leagueDetail.overview.infoTitle')} colors={colors}>
+              <OverviewInfoRow
+                icon="eye-outline"
+                text={`${t(VISIBILITY_KEY[league.visibility] as TranslationKey)} · ${t(JOIN_MODE_KEY[league.join_mode] as TranslationKey)}`}
+                colors={colors}
+              />
+              {league.venue_name ? (
+                <OverviewInfoRow
+                  icon="location-outline"
+                  text={league.venue_name}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {ratingRangeLabel ? (
+                <OverviewInfoRow
+                  icon="analytics-outline"
+                  text={`${t('leagueDetail.labels.ratingRange')} · ${ratingRangeLabel}`}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+              {organizerName ? (
+                <OverviewInfoRow
+                  icon="person-outline"
+                  text={t('leagueDetail.dashboard.organizedBy').replace('{name}', organizerName)}
+                  colors={colors}
+                  showDivider
+                />
+              ) : null}
+            </Section>
+
+            {/* Who's in: social proof, tappable through to the Members tab */}
+            {activeMembers.length > 0 && (
+              <Section title={t('leagueDetail.tabs.members')} colors={colors}>
+                <TouchableOpacity
+                  onPress={() => membersTabIdx >= 0 && goToTab(membersTabIdx)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('leagueDetail.tabs.members')}
+                  style={styles.membersPreviewRow}
+                  testID="overview-members-preview"
+                >
+                  <View style={styles.membersPreviewAvatars}>
+                    {activeMembers.slice(0, 6).map((m, i) => {
+                      const uri = getProfilePictureUrl(m.profile?.profile_picture_url ?? null);
+                      return (
+                        <View
+                          key={m.id}
+                          style={[
+                            styles.membersPreviewAvatar,
+                            i > 0 && styles.membersPreviewAvatarOverlap,
+                            {
+                              backgroundColor: colors.statusMutedBg,
+                              borderColor: colors.cardBackground,
+                            },
+                          ]}
+                        >
+                          {uri ? (
+                            <Image source={{ uri }} style={styles.membersPreviewAvatarImg} />
+                          ) : (
+                            <Ionicons name="person" size={14} color={colors.textMuted} />
+                          )}
+                        </View>
+                      );
+                    })}
+                    {activeMembers.length > 6 && (
+                      <View
+                        style={[
+                          styles.membersPreviewAvatar,
+                          styles.membersPreviewAvatarOverlap,
+                          {
+                            backgroundColor: colors.statusActiveBg,
+                            borderColor: colors.cardBackground,
+                          },
+                        ]}
+                      >
+                        <Text size="xs" weight="semibold" color={colors.primary}>
+                          +{activeMembers.length - 6}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text size="sm" weight="semibold" color={colors.textMuted}>
+                    {activeMembers.length}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </Section>
+            )}
+
+            {/* Organizer utilities: quiet grouped rows, not competing cards. */}
+            {isOrganizer && organizerRows.length > 0 && (
+              <View style={styles.section}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionTitle}
+                >
+                  {t('leagueDetail.dashboard.manageTitle').toUpperCase()}
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                  ]}
+                >
+                  {organizerRows.map((row, i) => (
+                    <OverviewActionRow
+                      key={row.testID}
+                      icon={row.icon}
+                      label={row.label}
+                      onPress={row.onPress}
+                      destructive={row.destructive}
+                      disabled={row.disabled}
+                      showDivider={i > 0}
+                      colors={colors}
+                      testID={row.testID}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -1999,100 +2368,7 @@ export const LeagueDetail: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
-            {/* A closed league is terminal server-side, so edit is hidden rather
-                than offered and then refused. */}
-            {isOrganizer && league.status !== 'closed' && (
-              <TouchableOpacity
-                onPress={handleEditLeague}
-                style={[
-                  styles.primaryButton,
-                  styles.inviteButton,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  },
-                ]}
-                testID="cta-edit-league"
-              >
-                <Ionicons name="create-outline" size={20} color={colors.primary} />
-                <Text size="base" weight="semibold" color={colors.primary}>
-                  {t('leagueDetail.editModal.title')}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Lifecycle. Pause/resume are mutually exclusive on status; close is
-                terminal so it's hidden once closed rather than shown and refused. */}
-            {isOrganizer && league.status === 'active' && (
-              <TouchableOpacity
-                onPress={handlePauseLeague}
-                disabled={isPausing}
-                style={[
-                  styles.primaryButton,
-                  styles.inviteButton,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  },
-                  isPausing && styles.buttonDisabled,
-                ]}
-                testID="cta-pause-league"
-              >
-                <Ionicons name="pause-circle-outline" size={20} color={colors.textMuted} />
-                <Text size="base" weight="semibold" color={colors.textMuted}>
-                  {isPausing
-                    ? t('leagueDetail.lifecycle.pausing')
-                    : t('leagueDetail.lifecycle.pause')}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {isOrganizer && league.status === 'paused' && (
-              <TouchableOpacity
-                onPress={handleResumeLeague}
-                disabled={isResuming}
-                style={[
-                  styles.primaryButton,
-                  styles.inviteButton,
-                  { backgroundColor: colors.primary },
-                  isResuming && styles.buttonDisabled,
-                ]}
-                testID="cta-resume-league"
-              >
-                <Ionicons name="play-circle-outline" size={20} color="#ffffff" />
-                <Text size="base" weight="semibold" color="#ffffff">
-                  {isResuming
-                    ? t('leagueDetail.lifecycle.resuming')
-                    : t('leagueDetail.lifecycle.resume')}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {isOrganizer && league.status !== 'closed' && (
-              <TouchableOpacity
-                onPress={handleCloseLeague}
-                disabled={isClosing}
-                style={[
-                  styles.primaryButton,
-                  styles.inviteButton,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderWidth: 1,
-                    borderColor: colors.danger,
-                  },
-                  isClosing && styles.buttonDisabled,
-                ]}
-                testID="cta-close-league"
-              >
-                <Ionicons name="lock-closed-outline" size={20} color={colors.danger} />
-                <Text size="base" weight="semibold" color={colors.danger}>
-                  {isClosing
-                    ? t('leagueDetail.lifecycle.closing')
-                    : t('leagueDetail.lifecycle.close')}
-                </Text>
-              </TouchableOpacity>
-            )}
-
+            {/* Edit and lifecycle controls live in the Overview's Manage list. */}
             <PendingMembersSection
               rows={pendingMemberRows}
               onPlayerPress={handlePlayerPress}
@@ -2412,16 +2688,10 @@ export const LeagueDetail: React.FC = () => {
                   colors={colors}
                 />
               ) : null}
-              {(league.min_rating != null || league.max_rating != null) && (
+              {ratingRangeLabel && (
                 <InfoRow
                   label={t('leagueDetail.labels.ratingRange')}
-                  value={
-                    league.min_rating != null && league.max_rating != null
-                      ? `${league.min_rating} – ${league.max_rating}`
-                      : league.min_rating != null
-                        ? `≥ ${league.min_rating}`
-                        : `≤ ${league.max_rating}`
-                  }
+                  value={ratingRangeLabel}
                   colors={colors}
                 />
               )}
@@ -2429,6 +2699,44 @@ export const LeagueDetail: React.FC = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Docked primary action — the one thing this viewer should do next, kept
+          out of the scroll so it's reachable from any tab at any position. */}
+      {primaryAction && (
+        <View
+          style={[
+            styles.dockedBar,
+            {
+              backgroundColor: colors.cardBackground,
+              borderTopColor: colors.border,
+              paddingBottom: spacingPixels[3] + insets.bottom,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={primaryAction.onPress}
+            disabled={primaryAction.disabled}
+            activeOpacity={0.7}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: colors.primary },
+              primaryAction.disabled && styles.buttonDisabled,
+            ]}
+            accessibilityRole="button"
+            testID={primaryAction.testID}
+          >
+            <Ionicons name={primaryAction.icon} size={20} color="#ffffff" />
+            <Text size="base" weight="semibold" color="#ffffff">
+              {primaryAction.label}
+            </Text>
+          </TouchableOpacity>
+          {primaryAction.hint ? (
+            <Text size="xs" color={colors.textMuted} numberOfLines={2} style={styles.dockedBarHint}>
+              {primaryAction.hint}
+            </Text>
+          ) : null}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -2450,47 +2758,79 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
   },
   heroFixed: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[5],
-    paddingBottom: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
-  heroCard: {
-    borderRadius: radiusPixels['2xl'],
+  heroBanner: {
+    position: 'relative',
+  },
+  heroBannerTopRow: {
+    position: 'absolute',
+    top: spacingPixels[3],
+    left: spacingPixels[4],
+    right: spacingPixels[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacingPixels[2],
+  },
+  heroScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    paddingBottom: spacingPixels[3],
+    gap: spacingPixels[1],
+  },
+  scrimText: {
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
+  heroChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+  },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
     borderWidth: 1,
-    paddingHorizontal: spacingPixels[5],
-    paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    flexShrink: 1,
+  },
+  heroTextAction: {
+    paddingVertical: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[1],
   },
   screenScroll: { flex: 1 },
   screenScrollContent: { flexGrow: 1 },
-  tabTrackSticky: {
-    paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[1],
-    paddingBottom: spacingPixels[2],
+  tabBarSticky: {
+    paddingTop: spacingPixels[2],
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  tabTrack: {
+  tabBarContent: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
+    alignItems: 'flex-end',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
   },
-  tabPill: {
-    flex: 1,
+  tabItem: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[2],
-    borderRadius: 10,
+    paddingTop: spacingPixels[2],
+    gap: spacingPixels[2],
   },
-  tabPillActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  tabUnderline: {
+    alignSelf: 'stretch',
+    height: 2,
+    borderRadius: 1,
   },
   tabContent: {
     padding: spacingPixels[4],
@@ -2500,60 +2840,10 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
-  heroPoster: {
-    width: '100%',
-    height: 160,
-    borderRadius: radiusPixels.lg,
-    marginBottom: spacingPixels[3],
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacingPixels[3],
-  },
   statusBadge: {
     paddingHorizontal: spacingPixels[3],
     paddingVertical: spacingPixels[1.5],
     borderRadius: radiusPixels.full,
-  },
-  heroTitle: {
-    marginBottom: spacingPixels[1.5],
-    lineHeight: 30,
-  },
-  heroDescription: { lineHeight: 20 },
-  heroDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-  },
-  heroMetaRows: { gap: spacingPixels[2.5] },
-  heroMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2.5],
-  },
-  heroMetaIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroMetaText: { flex: 1 },
-  heroRegistered: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingVertical: spacingPixels[2.5],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    marginTop: spacingPixels[4],
-  },
-  heroTextAction: {
-    alignSelf: 'center',
-    paddingVertical: spacingPixels[2],
-    marginTop: spacingPixels[2],
   },
   section: { marginBottom: spacingPixels[5] },
   sectionTitle: {
@@ -2636,18 +2926,97 @@ const styles = StyleSheet.create({
     gap: spacingPixels[0.5],
   },
   ctaCardDescription: { lineHeight: 19 },
-  statsRow: {
+  statsCard: {
     flexDirection: 'row',
-    gap: spacingPixels[2],
-  },
-  statTile: {
-    flex: 1,
     alignItems: 'center',
-    gap: spacingPixels[1],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[2],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
+    paddingVertical: spacingPixels[3],
+  },
+  statSegment: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: spacingPixels[2],
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+  },
+  overviewActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3.5],
+  },
+  overviewActionLabel: {
+    flex: 1,
+  },
+  overviewInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  overviewInfoIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewInfoTexts: {
+    flex: 1,
+    gap: 1,
+  },
+  membersPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+  },
+  membersPreviewAvatars: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  membersPreviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  membersPreviewAvatarOverlap: {
+    marginLeft: -10,
+  },
+  membersPreviewAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  dockedBar: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacingPixels[1.5],
+  },
+  dockedBarHint: {
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  skeletonTabBar: {
+    flexDirection: 'row',
+    gap: spacingPixels[5],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
+  },
+  skeletonCardGap: {
+    marginTop: spacingPixels[4],
   },
   participantEmpty: {
     padding: spacingPixels[4],

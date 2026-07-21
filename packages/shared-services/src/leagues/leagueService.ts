@@ -40,18 +40,56 @@ export interface SeasonMemberWithProfile extends SeasonMember {
   profile?: PlayerProfile | null;
 }
 
-export type LeagueListItem = League & { member_count: number };
+export type LeagueMemberPreview = { id: string; avatarUrl: string | null; name: string };
 
-const LIST_SELECT = '*, league_members(count)';
+/** List-surface row: league plus its active-member count and a small avatar
+ *  preview of the earliest members (mirrors TournamentListItem). */
+export type LeagueListItem = League & {
+  member_count: number;
+  member_preview: LeagueMemberPreview[];
+};
 
-function toListItem(row: Record<string, unknown>): LeagueListItem {
-  const { league_members, ...league } = row as League & {
-    league_members?: { count: number }[];
-  };
-  return {
-    ...(league as League),
-    member_count: league_members?.[0]?.count ?? 0,
-  };
+/** How many member avatars to surface on a list card. */
+const PREVIEW_LIMIT = 5;
+
+// Pull the member rows (not just a count) so we can both count them and show a
+// few faces. The status='active' filter is applied by the caller.
+const LIST_SELECT = '*, league_members(user_id, joined_at)';
+
+type ListRow = League & {
+  league_members?: { user_id: string; joined_at: string }[];
+};
+
+/** Shape raw list rows into list items, attaching an avatar preview. Avatars
+ *  live in `profile`, batch-fetched by id in one round trip across the list. */
+async function toListItems(rows: ListRow[]): Promise<LeagueListItem[]> {
+  const staged = rows.map(row => {
+    const { league_members, ...league } = row;
+    const members = (league_members ?? [])
+      .slice()
+      .sort((a, b) => a.joined_at.localeCompare(b.joined_at));
+    return {
+      league: league as League,
+      count: members.length,
+      previewIds: members.slice(0, PREVIEW_LIMIT).map(m => m.user_id),
+    };
+  });
+
+  const allIds = [...new Set(staged.flatMap(s => s.previewIds))];
+  const profiles = await getProfilesByIds(allIds);
+
+  return staged.map(s => ({
+    ...s.league,
+    member_count: s.count,
+    member_preview: s.previewIds.map(id => {
+      const p = profiles[id];
+      return {
+        id,
+        avatarUrl: p?.profile_picture_url ?? null,
+        name: p ? [p.first_name, p.last_name].filter(Boolean).join(' ') : '',
+      };
+    }),
+  }));
 }
 
 export interface CreateLeagueInput {
@@ -87,7 +125,7 @@ export async function listPublicLeagues(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Record<string, unknown>[]).map(toListItem);
+  return toListItems((data ?? []) as ListRow[]);
 }
 
 export async function listMyLeagues(
@@ -118,7 +156,7 @@ export async function listMyLeagues(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Record<string, unknown>[]).map(toListItem);
+  return toListItems((data ?? []) as ListRow[]);
 }
 
 export async function getLeague(leagueId: string): Promise<League | null> {

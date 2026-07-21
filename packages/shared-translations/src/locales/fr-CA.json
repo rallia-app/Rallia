@@ -4222,7 +4222,6 @@
   },
   "leagueDetail": {
     "title": "Ligue",
-    "loading": "Chargement de la ligue...",
     "loadError": "Impossible de charger la ligue",
     "retry": "Réessayer",
     "notFound": "Ligue introuvable",
@@ -4305,8 +4304,12 @@
       "venue": "Lieu",
       "ratingRange": "Plage de cote"
     },
+    "overview": {
+      "infoTitle": "Infos de la ligue"
+    },
     "dashboard": {
       "organizedBy": "Organisée par {name}",
+      "manageTitle": "Gérer",
       "steps": {
         "setup": "Config.",
         "season": "Saison",
@@ -4340,16 +4343,12 @@
         "reinstateLabel": "Réactiver {name}"
       },
       "joinCta": {
-        "title": "Rejoindre cette ligue",
         "description": "Demandez votre adhésion et participez aux saisons"
       },
       "createSeasonCta": {
-        "title": "Créez votre première saison",
-        "description": "Les saisons organisent les périodes de jeu et le classement",
-        "button": "Créer une saison"
+        "description": "Les saisons organisent les périodes de jeu et le classement"
       },
       "openSeasonCta": {
-        "title": "Ouvrir {name}",
         "description": "Ouvrir une saison permet aux membres de s'inscrire et aux sessions de commencer"
       }
     },

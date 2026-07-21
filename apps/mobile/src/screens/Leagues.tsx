@@ -33,7 +33,6 @@ import {
   type LeagueJoinModeFilter,
 } from '../features/leagues/components/LeagueFiltersBar';
 import { SearchBar } from '../features/matches/components';
-import { SportIcon } from '../components/SportIcon';
 import { useTournamentListColors } from '../features/tournaments/components/TournamentListScaffold';
 import { useTranslation } from '../hooks';
 import { useSport } from '../context';
@@ -177,9 +176,7 @@ export const Leagues: React.FC = () => {
         isFilteredView ? 'leagueList.emptySearch.description' : 'leagueList.emptyDescription'
       }
       header={header}
-      cardWatermark={
-        <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={96} color={colors.textMuted} />
-      }
+      currentUserId={userId}
       onPressLeague={handlePress}
     />
   );
