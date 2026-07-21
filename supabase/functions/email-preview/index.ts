@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- dev-only preview gallery; chrome styles hand-rolled, not brand-token consumers */
 /**
  * Email Preview Gallery
  * Renders all email templates with mock data for visual testing.
@@ -54,7 +55,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
         .email-text { color: #e5e5e5 !important; }
         .email-muted { color: #a3a3a3 !important; }
         .email-eyebrow { color: #5eead4 !important; }
-        .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+        .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
         .email-otp-label { color: #5eead4 !important; }
         .email-otp-code { color: #5eead4 !important; }
         .email-expiry-pill { background-color: #3a2c10 !important; border-color: #5a4420 !important; color: #fbbf24 !important; }
@@ -72,7 +73,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       [data-ogsc] .email-text { color: #e5e5e5 !important; }
       [data-ogsc] .email-muted { color: #a3a3a3 !important; }
       [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
-      [data-ogsc] .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+      [data-ogsc] .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
       [data-ogsc] .email-otp-label { color: #5eead4 !important; }
       [data-ogsc] .email-otp-code { color: #5eead4 !important; }
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
@@ -81,6 +82,9 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       /* Responsive */
       @media (max-width: 620px) {
         .email-container { width: 100% !important; }
+        .email-header { padding: 22px 24px 20px 24px !important; }
+        .email-content { padding: 30px 24px 26px 24px !important; }
+        .email-footer { padding: 26px 24px 30px 24px !important; }
       }
     </style>
   </head>
@@ -94,7 +98,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
       border="0"
       width="100%"
       class="email-body"
-      style="background-color: #f0fdfa; font-family: Inter, Arial, Helvetica, sans-serif"
+      style="background-color: #f3f6f5; font-family: Inter, Arial, Helvetica, sans-serif"
     >
       <tr>
         <td align="center" style="padding: 40px 20px">
@@ -113,7 +117,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-header"
                 style="
-                  padding: 36px 40px 28px 40px;
+                  padding: 26px 40px 22px 40px;
                   background-color: #0d9488;
                   border-radius: 16px 16px 0 0;
                 "
@@ -121,9 +125,9 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 <img
                   src="{{ .SiteURL }}/logo-light.png"
                   alt="Rallia"
-                  width="140"
-                  height="55"
-                  style="display: block; border: 0; max-width: 140px; height: auto"
+                  width="112"
+                  height="44"
+                  style="display: block; border: 0; max-width: 112px; height: auto"
                 />
               </td>
             </tr>
@@ -134,7 +138,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 38px 40px 32px 40px">
+              <td class="email-content" style="padding: 40px 44px 32px 44px">
                 <p
                   class="email-eyebrow"
                   style="
@@ -195,8 +199,8 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                         width="100%"
                         class="email-otp-box"
                         style="
-                          background-color: #f0fdfa;
-                          border: 2px dashed #5eead4;
+                          background-color: #fafafa;
+                          border: 1px solid #e5e5e5;
                           border-radius: 14px;
                         "
                       >
@@ -302,7 +306,7 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-footer"
                 style="
-                  padding: 30px 40px 36px 40px;
+                  padding: 28px 40px 32px 40px;
                   background-color: #fafafa;
                   border-top: 1px solid #e5e5e5;
                   border-radius: 0 0 16px 16px;
@@ -312,9 +316,9 @@ const CONFIRMATION_HTML = `<!DOCTYPE html>
                   style="
                     margin: 0;
                     padding: 0 0 6px 0;
-                    font-size: 14px;
-                    font-weight: bold;
-                    color: #0d9488;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #171717;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Besoin d'aide ?{{ else }}Need help?{{ end }}
@@ -429,7 +433,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
         .email-text { color: #e5e5e5 !important; }
         .email-muted { color: #a3a3a3 !important; }
         .email-eyebrow { color: #5eead4 !important; }
-        .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+        .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
         .email-otp-label { color: #5eead4 !important; }
         .email-otp-code { color: #5eead4 !important; }
         .email-expiry-pill { background-color: #3a2c10 !important; border-color: #5a4420 !important; color: #fbbf24 !important; }
@@ -447,7 +451,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       [data-ogsc] .email-text { color: #e5e5e5 !important; }
       [data-ogsc] .email-muted { color: #a3a3a3 !important; }
       [data-ogsc] .email-eyebrow { color: #5eead4 !important; }
-      [data-ogsc] .email-otp-box { background-color: #1a2e2b !important; border-color: #2d4a46 !important; }
+      [data-ogsc] .email-otp-box { background-color: #2d2d2d !important; border-color: #404040 !important; }
       [data-ogsc] .email-otp-label { color: #5eead4 !important; }
       [data-ogsc] .email-otp-code { color: #5eead4 !important; }
       [data-ogsc] .email-content h2 { color: #5eead4 !important; }
@@ -456,6 +460,9 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       /* Responsive */
       @media (max-width: 620px) {
         .email-container { width: 100% !important; }
+        .email-header { padding: 22px 24px 20px 24px !important; }
+        .email-content { padding: 30px 24px 26px 24px !important; }
+        .email-footer { padding: 26px 24px 30px 24px !important; }
       }
     </style>
   </head>
@@ -469,7 +476,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
       border="0"
       width="100%"
       class="email-body"
-      style="background-color: #f0fdfa; font-family: Inter, Arial, Helvetica, sans-serif"
+      style="background-color: #f3f6f5; font-family: Inter, Arial, Helvetica, sans-serif"
     >
       <tr>
         <td align="center" style="padding: 40px 20px">
@@ -488,7 +495,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-header"
                 style="
-                  padding: 36px 40px 28px 40px;
+                  padding: 26px 40px 22px 40px;
                   background-color: #0d9488;
                   border-radius: 16px 16px 0 0;
                 "
@@ -496,9 +503,9 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 <img
                   src="{{ .SiteURL }}/logo-light.png"
                   alt="Rallia"
-                  width="140"
-                  height="55"
-                  style="display: block; border: 0; max-width: 140px; height: auto"
+                  width="112"
+                  height="44"
+                  style="display: block; border: 0; max-width: 112px; height: auto"
                 />
               </td>
             </tr>
@@ -509,7 +516,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
 
             <!-- Content -->
             <tr>
-              <td class="email-content" style="padding: 38px 40px 32px 40px">
+              <td class="email-content" style="padding: 40px 44px 32px 44px">
                 <p
                   class="email-eyebrow"
                   style="
@@ -570,8 +577,8 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                         width="100%"
                         class="email-otp-box"
                         style="
-                          background-color: #f0fdfa;
-                          border: 2px dashed #5eead4;
+                          background-color: #fafafa;
+                          border: 1px solid #e5e5e5;
                           border-radius: 14px;
                         "
                       >
@@ -677,7 +684,7 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                 align="center"
                 class="email-footer"
                 style="
-                  padding: 30px 40px 36px 40px;
+                  padding: 28px 40px 32px 40px;
                   background-color: #fafafa;
                   border-top: 1px solid #e5e5e5;
                   border-radius: 0 0 16px 16px;
@@ -687,9 +694,9 @@ const MAGIC_LINK_HTML = `<!DOCTYPE html>
                   style="
                     margin: 0;
                     padding: 0 0 6px 0;
-                    font-size: 14px;
-                    font-weight: bold;
-                    color: #0d9488;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #171717;
                   "
                 >
                   {{ if or (eq .Data.locale "fr") (eq .Data.locale "fr-CA") }}Besoin d'aide ?{{ else }}Need help?{{ end }}
