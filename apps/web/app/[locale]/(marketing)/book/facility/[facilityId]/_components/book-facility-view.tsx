@@ -33,7 +33,7 @@ export function BookFacilityView({ facility, locale }: BookFacilityViewProps) {
   const [slotMissing, setSlotMissing] = useState(facility.slotMissing);
 
   const selectedSport: WebBookSport | null =
-    facility.sports.find(s => s.slug === sportSlug) ?? facility.sports[0] ?? null;
+    facility.sports.find(s => s.slug === sportSlug) ?? facility.sports[0] ?? facility.fallbackSport;
 
   const groups = useMemo(
     () => (selectedSport ? (facility.groupsBySport[selectedSport.slug] ?? []) : []),

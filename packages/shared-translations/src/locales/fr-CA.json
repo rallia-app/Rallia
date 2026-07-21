@@ -10935,6 +10935,7 @@
   },
   "webBook": {
     "pageTitle": "Réserver un terrain à {facility} sur Rallia",
+    "pageTitleInfo": "{facility} sur Rallia",
     "notFound": "Terrain introuvable",
     "progress": "Configuration du profil",
     "continue": "Continuer",
@@ -11052,8 +11053,9 @@
     "emptyTitle": "Aucun terrain trouvé",
     "emptyDescription": "On n'a pas trouvé de terrains ici pour l'instant. Essaie une autre recherche ou télécharge l'app pour en voir plus.",
     "emptyCta": "Télécharger l'app",
-    "viewCta": "Voir ce terrain",
-    "bookSlotAria": "Réserver la plage de {time}"
+    "bookSlotAria": "Réserver la plage de {time}",
+    "justShowUp": "Présente-toi pis joue",
+    "noOnlineBooking": "Pas de réservation en ligne pour ce terrain"
   },
   "gamesPage": {
     "title": "Parties à venir",

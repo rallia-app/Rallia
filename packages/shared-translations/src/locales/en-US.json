@@ -10935,6 +10935,7 @@
   },
   "webBook": {
     "pageTitle": "Book a court at {facility} on Rallia",
+    "pageTitleInfo": "{facility} on Rallia",
     "notFound": "Court not found",
     "progress": "Profile setup",
     "continue": "Continue",
@@ -11052,8 +11053,9 @@
     "emptyTitle": "No courts found",
     "emptyDescription": "We couldn't find courts here yet. Try a different search, or get the app to explore more.",
     "emptyCta": "Get the app",
-    "viewCta": "See this court",
-    "bookSlotAria": "Book the {time} slot"
+    "bookSlotAria": "Book the {time} slot",
+    "justShowUp": "Just show up and play",
+    "noOnlineBooking": "No online booking for this court"
   },
   "gamesPage": {
     "title": "Upcoming Games",
