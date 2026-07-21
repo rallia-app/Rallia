@@ -18,15 +18,7 @@
  *    re-renders the already-open match detail sheet in place.
  */
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -396,14 +388,11 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
     clearPendingBooking,
   ]);
 
-  const contextValue: PendingExternalBookingContextType = useMemo(
-    () => ({
-      setPendingBooking,
-      clearPendingBooking,
-      hasPendingBooking: pendingBooking !== null,
-    }),
-    [setPendingBooking, clearPendingBooking, pendingBooking]
-  );
+  const contextValue: PendingExternalBookingContextType = {
+    setPendingBooking,
+    clearPendingBooking,
+    hasPendingBooking: pendingBooking !== null,
+  };
 
   return (
     <PendingExternalBookingContext.Provider value={contextValue}>

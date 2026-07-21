@@ -4,7 +4,6 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useMemo,
   useRef,
   type PropsWithChildren,
 } from 'react';
@@ -179,28 +178,16 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const subscriptionStatus = deriveStatus(customerInfo, dbStatus);
   const isProActive = PRO_ENTITLEMENT_ID in (customerInfo?.entitlements.active ?? {});
 
-  const value: SubscriptionContextValue = useMemo(
-    () => ({
-      customerInfo,
-      isProActive,
-      subscriptionStatus,
-      isLoading,
-      error,
-      refreshSubscription,
-      presentPaywall,
-      restorePurchases,
-    }),
-    [
-      customerInfo,
-      isProActive,
-      subscriptionStatus,
-      isLoading,
-      error,
-      refreshSubscription,
-      presentPaywall,
-      restorePurchases,
-    ]
-  );
+  const value: SubscriptionContextValue = {
+    customerInfo,
+    isProActive,
+    subscriptionStatus,
+    isLoading,
+    error,
+    refreshSubscription,
+    presentPaywall,
+    restorePurchases,
+  };
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
 }

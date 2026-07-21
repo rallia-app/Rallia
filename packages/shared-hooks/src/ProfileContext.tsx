@@ -10,7 +10,6 @@ import React, {
   createContext,
   useContext,
   useCallback,
-  useMemo,
   useState,
   useEffect,
   ReactNode,
@@ -118,16 +117,13 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
     fetchProfile();
   }, [fetchProfile]);
 
-  const contextValue: ProfileContextType = useMemo(
-    () => ({
-      profile,
-      loading,
-      error,
-      refetch,
-      refetchForUser,
-    }),
-    [profile, loading, error, refetch, refetchForUser]
-  );
+  const contextValue: ProfileContextType = {
+    profile,
+    loading,
+    error,
+    refetch,
+    refetchForUser,
+  };
 
   return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;
 };
