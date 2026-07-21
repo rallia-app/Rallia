@@ -169,6 +169,26 @@ const STATUS_TONE: Record<Status, 'neutral' | 'positive' | 'active' | 'muted'> =
   archived: 'muted',
 };
 
+// Error codes from lt-create-registration-payment. The entry rules (rating,
+// partner, removal) are enforced before any charge, so these all mean "refused,
+// not billed" and reuse the same wording as the free register path.
+const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
+  tournament_full: 'tournamentDetail.payments.errors.full',
+  already_registered: 'tournamentDetail.payments.errors.alreadyRegistered',
+  organizer_not_ready: 'tournamentDetail.payments.errors.organizerNotReady',
+  tournament_reg_closed: 'tournamentDetail.payments.errors.closed',
+  registration_removed: 'tournamentDetail.errors.registrationRemoved',
+  rating_required: 'tournamentDetail.errors.ratingRequired',
+  rating_too_low: 'tournamentDetail.errors.ratingTooLow',
+  partner_required: 'tournamentDetail.errors.partnerRequired',
+  partner_not_allowed: 'tournamentDetail.errors.partnerInvalid',
+  partner_invalid: 'tournamentDetail.errors.partnerInvalid',
+  partner_sport_mismatch: 'tournamentDetail.errors.partnerSportMismatch',
+  partner_already_registered: 'tournamentDetail.errors.partnerAlreadyRegistered',
+  partner_rating_required: 'tournamentDetail.errors.partnerRatingRequired',
+  partner_rating_too_low: 'tournamentDetail.errors.partnerRatingTooLow',
+};
+
 interface ScreenColors {
   background: string;
   cardBackground: string;
@@ -1456,16 +1476,9 @@ export const TournamentDetail: React.FC = () => {
         } catch (e) {
           warningHaptic();
           const code = e instanceof TournamentPaymentError ? e.code : undefined;
-          const key =
-            code === 'tournament_full'
-              ? 'tournamentDetail.payments.errors.full'
-              : code === 'already_registered'
-                ? 'tournamentDetail.payments.errors.alreadyRegistered'
-                : code === 'organizer_not_ready'
-                  ? 'tournamentDetail.payments.errors.organizerNotReady'
-                  : code === 'tournament_reg_closed'
-                    ? 'tournamentDetail.payments.errors.closed'
-                    : 'tournamentDetail.payments.errors.generic';
+          const key = code
+            ? (PAID_REGISTER_ERROR_KEYS[code] ?? 'tournamentDetail.payments.errors.generic')
+            : 'tournamentDetail.payments.errors.generic';
           toast.error(t(key as TranslationKey));
         }
       };

@@ -50,6 +50,16 @@ type ErrorCode =
   | 'tournament_full'
   | 'already_registered'
   | 'paid_mode_unsupported'
+  | 'registration_removed'
+  | 'rating_required'
+  | 'rating_too_low'
+  | 'partner_required'
+  | 'partner_not_allowed'
+  | 'partner_invalid'
+  | 'partner_sport_mismatch'
+  | 'partner_already_registered'
+  | 'partner_rating_required'
+  | 'partner_rating_too_low'
   | 'season_not_found'
   | 'season_not_open'
   | 'season_not_paid'
@@ -84,6 +94,29 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'already_registered';
     case 'PAID_REG_MODE_UNSUPPORTED':
       return 'paid_mode_unsupported';
+    // Entry rules the paid path now enforces alongside tournament_register.
+    // Passed through rather than collapsed into registration_failed so the
+    // player is told why they were refused, before any charge.
+    case 'REGISTRATION_REMOVED':
+      return 'registration_removed';
+    case 'RATING_REQUIRED':
+      return 'rating_required';
+    case 'RATING_TOO_LOW':
+      return 'rating_too_low';
+    case 'PARTNER_REQUIRED':
+      return 'partner_required';
+    case 'PARTNER_NOT_ALLOWED':
+      return 'partner_not_allowed';
+    case 'PARTNER_INVALID':
+      return 'partner_invalid';
+    case 'PARTNER_SPORT_MISMATCH':
+      return 'partner_sport_mismatch';
+    case 'PARTNER_ALREADY_REGISTERED':
+      return 'partner_already_registered';
+    case 'PARTNER_RATING_REQUIRED':
+      return 'partner_rating_required';
+    case 'PARTNER_RATING_TOO_LOW':
+      return 'partner_rating_too_low';
     case 'SEASON_NOT_FOUND':
       return 'season_not_found';
     case 'SEASON_NOT_OPEN':
