@@ -20,7 +20,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: t('pageTitle', { facility: facility.name }),
+    // Don't promise booking for a facility that has no provider behind it.
+    title: facility.facilityBookingUrl
+      ? t('pageTitle', { facility: facility.name })
+      : t('pageTitleInfo', { facility: facility.name }),
     robots: { index: false, follow: false },
   };
 }

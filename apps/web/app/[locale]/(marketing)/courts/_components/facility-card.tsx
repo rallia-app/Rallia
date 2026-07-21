@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, CalendarClock, CalendarX, Footprints, Lock, MapPin } from 'lucide-react';
+import { Building2, CalendarClock, CalendarX, Footprints, Info, Lock, MapPin } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
@@ -41,7 +41,15 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
     [facility.availability_slots, facility.timezone]
   );
 
-  const showSlots = !facility.is_first_come_first_serve && !!facility.external_provider_id;
+  /**
+   * Only provider-backed facilities can show availability or be booked: the
+   * URL is built from the provider's template plus the facility's id at that
+   * provider, and snapshot rows only ever exist for them. Roughly 3 in 4 active
+   * facilities fail this, so anything gated on it has to be honest rather than
+   * offering a booking affordance that dead-ends.
+   */
+  const canBookOnline = !!facility.booking_url_template && !!facility.external_provider_id;
+  const showSlots = canBookOnline && !facility.is_first_come_first_serve;
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
@@ -168,9 +176,18 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
 
         <div className="flex-1" />
 
-        <Button className="w-full font-semibold" size="lg" onClick={() => onBook(facility, null)}>
-          {showSlots ? t('bookCta') : t('viewCta')}
-        </Button>
+        {/* A booking CTA only where booking actually exists. Everywhere else the
+            card stays a listing, with a line saying why there's nothing to click. */}
+        {canBookOnline ? (
+          <Button className="w-full font-semibold" size="lg" onClick={() => onBook(facility, null)}>
+            {t('bookCta')}
+          </Button>
+        ) : (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2.5 text-xs text-muted-foreground">
+            <Info className="size-3.5 shrink-0" />
+            {facility.is_first_come_first_serve ? t('justShowUp') : t('noOnlineBooking')}
+          </div>
+        )}
       </div>
     </div>
   );

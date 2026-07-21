@@ -43,6 +43,11 @@ export type WebBookFacilityContext = {
    * at the same hour, so slots are never pooled across sports.
    */
   sports: WebBookSport[];
+  /**
+   * First sport the facility declares, used for the rating step when nothing is
+   * currently open (a bookable facility can have no rows at all right now).
+   */
+  fallbackSport: WebBookSport | null;
   /** Open time groups per sport slug. Every sport in `sports` has an entry. */
   groupsBySport: Record<string, WebBookSlotGroup[]>;
   /** Sport the page opens on, resolved from `?sport=` or the clicked slot. */
@@ -289,10 +294,19 @@ export async function getFacilityForWebBooking(
     }
   }
 
+  const toSport = (s: { id: string; name: string; slug: string }): WebBookSport => ({
+    id: s.id,
+    name: s.name,
+    slug: s.slug,
+  });
+
   // Only sports with something to book get a toggle entry.
-  const sports = declaredSports
-    .filter(s => groupsBySport[s.slug]?.length)
-    .map(s => ({ id: s.id, name: s.name, slug: s.slug }));
+  const sports = declaredSports.filter(s => groupsBySport[s.slug]?.length).map(toSport);
+
+  // A provider-backed facility can be bookable while currently having no open
+  // rows at all. The signup wizard still needs a sport to collect a rating for,
+  // so fall back to what the facility declares.
+  const fallbackSport = declaredSports[0] ? toSport(declaredSports[0]) : null;
 
   const wantedStart = parseInstant(slotStart);
   const wantedEnd = parseInstant(slotEnd);
@@ -329,6 +343,7 @@ export async function getFacilityForWebBooking(
     is_first_come_first_serve: facility.is_first_come_first_serve ?? false,
     membership_required: facility.membership_required ?? false,
     sports,
+    fallbackSport,
     groupsBySport,
     initialSportSlug,
     selectedGroup,
