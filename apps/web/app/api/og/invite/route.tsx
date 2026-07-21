@@ -11,7 +11,7 @@
 import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { primary, neutral, accent, status } from '@rallia/design-system';
+import { primary, secondary, neutral, accent, status } from '@rallia/design-system';
 import { getTournamentLogoUrl } from '@rallia/shared-utils';
 import { locales, defaultLocale } from '@rallia/shared-translations';
 
@@ -492,7 +492,9 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
     );
   }
 
-  // Backdrop layout: custom branded art when the tournament rides the default banner.
+  // Backdrop layout: custom branded art when the tournament rides the default
+  // banner — same poster language as the Série 1 banners (deep teal, faint
+  // arcs, a coral bracket converging on a gold trophy node).
   return new ImageResponse(
     <div
       style={{
@@ -502,51 +504,83 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
         flexDirection: 'column',
         position: 'relative',
         fontFamily: 'Inter',
-        background: `linear-gradient(150deg, ${primary[900]} 0%, ${primary[700]} 55%, ${primary[500]} 100%)`,
+        background: `linear-gradient(140deg, ${primary[950]} 0%, #0a4340 55%, ${primary[800]} 100%)`,
       }}
     >
+      {/* Faint concentric arcs, bottom-left */}
       <div
         style={{
           position: 'absolute',
-          top: -220,
-          right: -160,
+          bottom: -200,
+          left: -160,
           width: 560,
           height: 560,
           borderRadius: 280,
+          border: '1.5px solid rgba(94,234,212,0.11)',
           display: 'flex',
-          background: 'rgba(94,234,212,0.10)',
         }}
       />
       <div
         style={{
           position: 'absolute',
-          bottom: -260,
-          left: -120,
-          width: 480,
-          height: 480,
-          borderRadius: 240,
+          bottom: -130,
+          left: -90,
+          width: 420,
+          height: 420,
+          borderRadius: 210,
+          border: '1.5px solid rgba(94,234,212,0.07)',
           display: 'flex',
-          background: 'rgba(4,47,46,0.35)',
         }}
       />
+      {/* Bracket motif: eight seeds funnel into a gold trophy */}
       <svg
-        width="330"
-        height="330"
-        viewBox="0 0 24 24"
+        width="410"
+        height="338"
+        viewBox="0 0 400 330"
         fill="none"
-        stroke={accent[400]}
-        strokeOpacity="0.22"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ position: 'absolute', top: 64, right: 56 }}
+        style={{ position: 'absolute', top: 72, right: 48 }}
       >
-        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-        <path d="M4 22h16" />
-        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+        <g
+          stroke={secondary[500]}
+          strokeOpacity="0.55"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        >
+          <path d="M0 10h55M0 50h55M55 10v40M55 30h75" />
+          <path d="M0 100h55M0 140h55M55 100v40M55 120h75" />
+          <path d="M0 190h55M0 230h55M55 190v40M55 210h75" />
+          <path d="M0 280h55M0 320h55M55 280v40M55 300h75" />
+          <path d="M130 30v90M130 75h75" />
+          <path d="M130 210v90M130 255h75" />
+          <path d="M205 75v180M205 165h61" />
+        </g>
+        <circle cx="300" cy="165" r="52" fill={accent[400]} fillOpacity="0.09" />
+        <circle
+          cx="300"
+          cy="165"
+          r="34"
+          fill="rgba(4,47,46,0.75)"
+          stroke={accent[400]}
+          strokeOpacity="0.85"
+          strokeWidth="2"
+        />
+        <g transform="translate(282,147) scale(1.5)">
+          <g
+            stroke={accent[400]}
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          >
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+            <path d="M4 22h16" />
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+          </g>
+        </g>
       </svg>
 
       {accentBar}
@@ -577,6 +611,36 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
           padding: '0 56px 44px 56px',
         }}
       >
+        {/* Tri-colour dashes — the Série 1 poster signature */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 46,
+              height: 6,
+              borderRadius: 3,
+              background: primary[300],
+              display: 'flex',
+            }}
+          />
+          <div
+            style={{
+              width: 46,
+              height: 6,
+              borderRadius: 3,
+              background: secondary[400],
+              display: 'flex',
+            }}
+          />
+          <div
+            style={{
+              width: 46,
+              height: 6,
+              borderRadius: 3,
+              background: accent[400],
+              display: 'flex',
+            }}
+          />
+        </div>
         <span
           style={{
             fontFamily: 'Poppins',
