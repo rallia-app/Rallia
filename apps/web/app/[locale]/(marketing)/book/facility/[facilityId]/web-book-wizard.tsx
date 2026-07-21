@@ -2,7 +2,7 @@
 
 import { CalendarX, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
@@ -24,15 +24,22 @@ import {
   OptionButton,
 } from '../../../_components/web-onboarding/wizard-primitives';
 
-import type { WebBookCourtOption, WebBookFacilityContext } from './_lib/facility-context';
+import type {
+  WebBookCourtOption,
+  WebBookFacilityContext,
+  WebBookSlotGroup,
+} from './_lib/facility-context';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Link } from '@/i18n/navigation';
 import { webBookCompleted, webBookRedirected, webBookStarted } from '@/lib/analytics';
 
 interface WebBookWizardProps {
   facility: WebBookFacilityContext;
+  /** Live selection owned by BookFacilityView; switching it re-resolves the courts. */
+  selectedGroup: WebBookSlotGroup | null;
+  slotMissing: boolean;
+  onClearSlot: () => void;
   locale: string;
 }
 
@@ -59,20 +66,28 @@ function bookErrorMessage(code: string, t: ReturnType<typeof useTranslations<'we
   }
 }
 
-export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardProps) {
+export function WebBookWizard({
+  facility,
+  selectedGroup,
+  slotMissing,
+  onClearSlot,
+  locale: pageLocale,
+}: WebBookWizardProps) {
   const t = useTranslations('webBook');
 
-  const hasSlot = facility.selectedGroup !== null;
+  const hasSlot = selectedGroup !== null;
 
   // Same rule as the mobile external-booking sheet: only courts that carry
   // their own provider URL are offered — the redirect always lands on the
   // exact court+slot page the user picked, never a generic fallback.
   const bookableCourts = useMemo(
-    () => facility.selectedGroup?.courts.filter(c => c.bookingUrl !== null) ?? [],
-    [facility.selectedGroup]
+    () => selectedGroup?.courts.filter(c => c.bookingUrl !== null) ?? [],
+    [selectedGroup]
   );
 
-  const [completedAsExisting, setCompletedAsExisting] = useState<boolean | null>(null);
+  // Funnel events are once-per-visit, so switching slots must not re-fire them.
+  const startedRef = useRef(false);
+  const completedRef = useRef(false);
 
   /**
    * An already-onboarded visitor has nothing left to fill in, so the gate is
@@ -105,10 +120,11 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
         ratingScoreId: payload.ratingScoreId,
         location: payload.location,
       });
-      setCompletedAsExisting(false);
+      completedRef.current = true;
+      webBookCompleted({ facility_id: facility.id, existing_user: false, has_slot: hasSlot });
       return 'redirect';
     },
-    [facility.id, pageLocale]
+    [facility.id, pageLocale, hasSlot]
   );
 
   const mapSubmitError = useCallback(
@@ -116,8 +132,11 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
     [t]
   );
 
-  const returnQuery = facility.selectedGroup
-    ? `?start=${encodeURIComponent(facility.selectedGroup.slotStart)}&end=${encodeURIComponent(facility.selectedGroup.slotEnd)}`
+  // Z-form for the same reason syncUrl uses it: this path survives an OAuth
+  // round trip through `next=`, where a bare `+` offset would decode to a space.
+  const returnQuery = selectedGroup
+    ? `?start=${encodeURIComponent(new Date(selectedGroup.slotStart).toISOString())}` +
+      `&end=${encodeURIComponent(new Date(selectedGroup.slotEnd).toISOString())}`
     : '';
 
   const controller = useWebOnboarding({
@@ -133,22 +152,18 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
   const { step } = controller;
 
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
     webBookStarted({ facility_id: facility.id, has_slot: hasSlot });
   }, [facility.id, hasSlot]);
 
   // An existing player reaches `redirect` without any API call — the gate was
-  // already satisfied — so the completion event fires here.
+  // already satisfied — so the completion event fires here instead.
   useEffect(() => {
-    if (step !== 'redirect' || completedAsExisting !== null) return;
-    setCompletedAsExisting(true);
+    if (step !== 'redirect' || completedRef.current) return;
+    completedRef.current = true;
     webBookCompleted({ facility_id: facility.id, existing_user: true, has_slot: hasSlot });
-  }, [step, completedAsExisting, facility.id, hasSlot]);
-
-  useEffect(() => {
-    if (completedAsExisting === false) {
-      webBookCompleted({ facility_id: facility.id, existing_user: false, has_slot: hasSlot });
-    }
-  }, [completedAsExisting, facility.id, hasSlot]);
+  }, [step, facility.id, hasSlot]);
 
   if (!controller.isReady) {
     return (
@@ -162,9 +177,10 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
   }
 
   // The clicked slot vanished (booked out or a stale link): say so instead of
-  // silently redirecting somewhere else.
-  if (facility.slotMissing) {
-    return <SlotGoneCard facility={facility} t={t} />;
+  // silently redirecting somewhere else. Picking another slot on the left
+  // clears this.
+  if (slotMissing) {
+    return <SlotGoneCard onClearSlot={onClearSlot} t={t} />;
   }
 
   // Nothing to redirect to at all (parks, first-come facilities).
@@ -195,7 +211,15 @@ export function WebBookWizard({ facility, locale: pageLocale }: WebBookWizardPro
         {step === 'location' && <LocationStep controller={controller} t={t} />}
 
         {step === 'redirect' && (
-          <RedirectCard facility={facility} bookableCourts={bookableCourts} t={t} />
+          // Keyed on the slot so switching resets the court picker rather than
+          // carrying a stale court selection across time groups.
+          <RedirectCard
+            key={selectedGroup ? `${selectedGroup.slotStart}-${selectedGroup.slotEnd}` : 'facility'}
+            facility={facility}
+            selectedGroup={selectedGroup}
+            bookableCourts={bookableCourts}
+            t={t}
+          />
         )}
       </div>
 
@@ -224,15 +248,17 @@ function courtLabel(
  */
 function RedirectCard({
   facility,
+  selectedGroup,
   bookableCourts,
   t,
 }: {
   facility: WebBookFacilityContext;
+  selectedGroup: WebBookSlotGroup | null;
   bookableCourts: WebBookCourtOption[];
   t: ReturnType<typeof useTranslations<'webBook'>>;
 }) {
   const locale = useLocale();
-  const group = facility.selectedGroup;
+  const group = selectedGroup;
   const hasMultipleCourts = bookableCourts.length > 1;
 
   const [selectedCourtKey, setSelectedCourtKey] = useState<string | null>(
@@ -304,6 +330,7 @@ function RedirectCard({
                     key={key}
                     selected={selectedCourtKey === key}
                     onClick={() => setSelectedCourtKey(key)}
+                    ariaLabel={courtLabel(court, t)}
                   >
                     <span className="flex flex-col items-center gap-0.5">
                       <span>{courtLabel(court, t)}</span>
@@ -357,12 +384,12 @@ function RedirectCard({
   );
 }
 
-/** The clicked slot no longer has open rows — offer the remaining slots instead. */
+/** The clicked slot no longer has open rows — point at the remaining slots. */
 function SlotGoneCard({
-  facility,
+  onClearSlot,
   t,
 }: {
-  facility: WebBookFacilityContext;
+  onClearSlot: () => void;
   t: ReturnType<typeof useTranslations<'webBook'>>;
 }) {
   return (
@@ -377,8 +404,8 @@ function SlotGoneCard({
             {t('slotGone.description')}
           </p>
         </div>
-        <Button asChild size="lg" className="w-full font-semibold">
-          <Link href={`/book/facility/${facility.id}`}>{t('slotGone.cta')}</Link>
+        <Button size="lg" className="w-full font-semibold" onClick={onClearSlot}>
+          {t('slotGone.cta')}
         </Button>
       </CardContent>
     </Card>

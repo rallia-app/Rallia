@@ -37,7 +37,18 @@ function isSameGroup(a: WebBookSlotGroup, b: WebBookSlotGroup) {
   return a.slotStart === b.slotStart && a.slotEnd === b.slotEnd;
 }
 
-export function FacilityProfileView({ facility }: { facility: WebBookFacilityContext }) {
+interface FacilityProfileViewProps {
+  facility: WebBookFacilityContext;
+  /** Live selection, owned by the parent so the wizard reacts to it too. */
+  selectedGroup: WebBookSlotGroup | null;
+  onSelectGroup: (group: WebBookSlotGroup) => void;
+}
+
+export function FacilityProfileView({
+  facility,
+  selectedGroup,
+  onSelectGroup,
+}: FacilityProfileViewProps) {
   const t = useTranslations('webBook');
   const locale = useLocale();
 
@@ -115,7 +126,7 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
         )}
       </div>
 
-      {facility.selectedGroup && (
+      {selectedGroup && (
         <Card className="overflow-hidden border-primary/30">
           <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
           <CardContent className="flex flex-col gap-1 pt-5">
@@ -123,14 +134,14 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
               {t('selectedSlot')}
             </span>
             <span className="text-lg font-bold">
-              {formatGroup(facility.selectedGroup, locale, facility.timezone).day}
+              {formatGroup(selectedGroup, locale, facility.timezone).day}
             </span>
             <span className="text-sm text-muted-foreground">
-              {formatGroup(facility.selectedGroup, locale, facility.timezone).time}
+              {formatGroup(selectedGroup, locale, facility.timezone).time}
               {' · '}
-              {facility.selectedGroup.courts.length === 1
-                ? (facility.selectedGroup.courts[0].courtName ?? t('courtCountSingular'))
-                : t('courtCountLabel', { count: facility.selectedGroup.courts.length })}
+              {selectedGroup.courts.length === 1
+                ? (selectedGroup.courts[0].courtName ?? t('courtCountSingular'))
+                : t('courtCountLabel', { count: selectedGroup.courts.length })}
             </span>
           </CardContent>
         </Card>
@@ -140,22 +151,26 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
         <div className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <CalendarClock className="size-4" />
-            {t('upcomingSlots')}
+            {selectedGroup ? t('switchSlot') : t('upcomingSlots')}
           </h2>
           <div className="flex flex-wrap gap-2">
             {facility.upcomingGroups.map(group => {
               const { day, time } = formatGroup(group, locale, facility.timezone);
-              const isSelected =
-                facility.selectedGroup !== null && isSameGroup(group, facility.selectedGroup);
+              const isSelected = selectedGroup !== null && isSameGroup(group, selectedGroup);
 
               return (
-                <div
+                <button
                   key={`${group.slotStart}-${group.slotEnd}`}
+                  type="button"
+                  onClick={() => onSelectGroup(group)}
+                  aria-pressed={isSelected}
+                  aria-label={t('selectSlotAria', { day, time })}
                   className={cn(
-                    'rounded-xl border px-3 py-2 text-xs',
+                    'rounded-xl border px-3 py-2 text-left text-xs transition-colors outline-none',
+                    'focus-visible:ring-[3px] focus-visible:ring-ring/50',
                     isSelected
                       ? 'border-primary bg-primary/5 text-foreground'
-                      : 'border-border text-muted-foreground'
+                      : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground'
                   )}
                 >
                   <div className="font-semibold text-foreground">{day}</div>
@@ -165,7 +180,7 @@ export function FacilityProfileView({ facility }: { facility: WebBookFacilityCon
                       {t('courtCountLabel', { count: group.courts.length })}
                     </div>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>

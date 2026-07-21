@@ -80,17 +80,21 @@ export function OptionButton({
   onClick,
   children,
   compact = false,
+  ariaLabel,
 }: {
   selected: boolean;
   onClick: () => void;
   children: React.ReactNode;
   compact?: boolean;
+  /** Needed when `children` is markup rather than a plain string. */
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={selected}
+      aria-label={ariaLabel}
       className={cn(
         'flex items-center justify-center rounded-xl border text-center font-medium transition-all duration-150 outline-none',
         'focus-visible:ring-[3px] focus-visible:ring-ring/50',

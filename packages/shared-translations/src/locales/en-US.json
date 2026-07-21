@@ -10947,6 +10947,8 @@
     "directions": "Directions",
     "selectedSlot": "Your slot",
     "upcomingSlots": "Open slots",
+    "switchSlot": "Switch slot",
+    "selectSlotAria": "Select the {day} {time} slot",
     "courtCountSingular": "1 court",
     "courtCountLabel": "{count} courts",
     "courtNumber": "Court {number}",

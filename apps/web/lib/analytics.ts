@@ -125,6 +125,11 @@ export function courtsBookClicked(props: { facility_id: string; has_slot: boolea
   capture('courts_book_clicked', props);
 }
 
+/** Visitor changed which time slot they're booking, from the gate page. */
+export function courtsSlotSwitched(props: { facility_id: string; court_count: number }): void {
+  capture('courts_slot_switched', props);
+}
+
 // ---- Web join onboarding funnel ----
 
 export function webJoinStarted(props: { match_id: string; sport_slug?: string }): void {
