@@ -17,6 +17,26 @@ const TARGETS_TAKING_ID = new Set(['tournament']);
 
 const LOCALES = ['en-US', 'fr-CA'];
 const DEFAULT_LOCALE = 'en-US';
+
+/**
+ * Escape for interpolation into HTML. The values reaching the markup below are
+ * already allowlisted, but this response is assembled by hand, so both sinks
+ * escape at the point of use rather than trusting a guard further up to stay
+ * correct through future edits.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Serialize for an inline <script>; `<` prevents a `</script>` breakout. */
+function toScriptLiteral(value: string): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Attribution tag; kept as the default for the welcome email that predates it. */
 const DEFAULT_SRC = 'welcome_email';
@@ -65,11 +85,11 @@ export function GET(request: NextRequest): NextResponse {
   </head>
   <body style="margin:0;padding:48px 24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#171717;background:#f0fdfa;">
     <p style="font-size:16px;">${isFr ? 'Ouverture de Rallia…' : 'Opening Rallia…'}</p>
-    <p style="font-size:14px;"><a href="${appUrl}" style="color:#0d9488;font-weight:600;text-decoration:none;">${isFr ? "Ouvrir l'application" : 'Open the app'}</a></p>
+    <p style="font-size:14px;"><a href="${escapeHtml(appUrl)}" style="color:#0d9488;font-weight:600;text-decoration:none;">${isFr ? "Ouvrir l'application" : 'Open the app'}</a></p>
     <script>
       (function () {
-        var app = ${JSON.stringify(appUrl)};
-        var store = ${JSON.stringify(storeUrl)};
+        var app = ${toScriptLiteral(appUrl)};
+        var store = ${toScriptLiteral(storeUrl)};
         window.location.href = app;
         setTimeout(function () { window.location.href = store; }, 1500);
       })();
