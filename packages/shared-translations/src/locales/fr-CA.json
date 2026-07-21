@@ -11382,7 +11382,7 @@
       },
       "worth": {
         "title": "Ce que vaut un tournoi",
-        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie multiplie par environ quatre la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 4000 pts » sur la carte."
+        "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie multiplie par environ cinq la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 5000 pts » sur la carte."
       },
       "season": {
         "title": "Ton score de saison",

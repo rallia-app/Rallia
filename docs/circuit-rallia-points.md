@@ -1,6 +1,6 @@
 # Circuit Rallia — how tournament points are awarded
 
-Reference for the scoring model as of 2026-07-20 (migration `20260720160000_lt_level_multiplier_wider_gap.sql`).
+Reference for the scoring model as of 2026-07-20 (migration `20260720170000_lt_level_multiplier_x5_per_point.sql`).
 Every number here was read out of the live functions, not hand-computed.
 
 ## The one formula
@@ -44,40 +44,50 @@ or `max_participants` for the "up to N pts" shown during registration.
 ## 3. Level multiplier — how strong the field is
 
 Driven by the tournament's `min_rating` floor. It is ×1.0 at the scale's first
-intermediate rung, doubles every rung above that, and is capped at ×16.
+intermediate rung, climbs ×5 per full rating point above that (√5 ≈ ×2.24 per
+half-point rung), and is capped at ×16.
 
-| Tennis floor | 1.5  | 2.0  | 2.5  | **3.0**  | 3.5  | 4.0  | 4.5  | 5.0+ |
-| ------------ | ---- | ---- | ---- | -------- | ---- | ---- | ---- | ---- |
-| ×            | 0.25 | 0.40 | 0.63 | **1.00** | 2.00 | 4.00 | 8.00 | 16.0 |
+| Tennis floor | 1.5  | 2.0  | 2.5  | **3.0**  | 3.5  | 4.0  | 4.5   | 5.0+ |
+| ------------ | ---- | ---- | ---- | -------- | ---- | ---- | ----- | ---- |
+| ×            | 0.20 | 0.34 | 0.59 | **1.00** | 2.24 | 5.00 | 11.18 | 16.0 |
 
-| Pickleball floor | 1.0  | 2.0  | 2.5  | 3.0  | **3.5**  | 4.0  | 4.5  | 5.0  | 5.5+ |
-| ---------------- | ---- | ---- | ---- | ---- | -------- | ---- | ---- | ---- | ---- |
-| ×                | 0.25 | 0.35 | 0.50 | 0.71 | **1.00** | 2.00 | 4.00 | 8.00 | 16.0 |
+| Pickleball floor | 1.0  | 2.0  | 2.5  | 3.0  | **3.5**  | 4.0  | 4.5  | 5.0   | 5.5+ |
+| ---------------- | ---- | ---- | ---- | ---- | -------- | ---- | ---- | ----- | ---- |
+| ×                | 0.20 | 0.30 | 0.45 | 0.67 | **1.00** | 2.24 | 5.00 | 11.18 | 16.0 |
 
 A tournament with no floor is ×1.0.
 
-**Why ×4 per full rating point.** The board is a shared, best-8 season sum. At the
-old ×2 rate, eight Débutant titles (4000) outscored eight Avancé quarterfinals
-(2880), so volume in an easy field beat real results in a hard one. At ×4, any
-serious run in a hard field outranks a title in an easy one.
+**Why ×5 per full rating point.** The board is a shared, best-8 season sum. At a
+×2 rate, eight Débutant titles outscored eight Avancé quarterfinals, so volume
+in an easy field beat real results in a hard one. ×5 makes any serious run in a
+hard field outrank a title in an easy one, by a wide margin.
 
-**Why the ×16 cap.** Uncapped, tennis 6.0 reached ×55.7 and a single 6.0-floor
-32-draw would have paid 27,900 — more than a perfect eight-event Avancé season.
-The cap lands on the 4th rung above the anchor (tennis 5.0, pickleball 5.5).
+**Why not wider.** Participation is flat 20 and the combined multiplier bottoms
+out at the snap floor of ×0.2, so past roughly this width the low categories
+invert: at ×8 per point a Débutant R16 exit pays 10 while losing round one pays
+20, meaning winning two matches would cost you points. At ×5 the Débutant R16
+lands on exactly 20 — it ties participation and never dips under it. Going wider
+would require lowering participation or flooring every placement at 20 first.
+
+**Why the ×16 cap.** Uncapped, tennis 6.0 would reach ×125 and a single 6.0-floor
+32-draw would pay six figures — more than a perfect eight-event Avancé season,
+which makes the season score meaningless. The cap binds at tennis 5.0 and
+pickleball 5.5, holding the largest possible event at 16,000.
 
 ## 4. Worked example — Série 1, 32-cap tennis
 
-| Category      | Floor | Mult | Champion | Finalist | Semi | Quarter | R16 | Played |
-| ------------- | ----- | ---- | -------- | -------- | ---- | ------- | --- | ------ |
-| Débutant      | 1.5   | ×0.6 | **300**  | 180      | 110  | 50      | 30  | 20     |
-| Intermédiaire | 3.0   | ×2.0 | **1000** | 600      | 360  | 180     | 100 | 20     |
-| Avancé        | 4.0   | ×8.0 | **4000** | 2400     | 1440 | 720     | 400 | 20     |
+| Category      | Floor | Mult  | Champion | Finalist | Semi | Quarter | R16 | Played |
+| ------------- | ----- | ----- | -------- | -------- | ---- | ------- | --- | ------ |
+| Débutant      | 1.5   | ×0.4  | **200**  | 120      | 70   | 40      | 20  | 20     |
+| Intermédiaire | 3.0   | ×2.0  | **1000** | 600      | 360  | 180     | 100 | 20     |
+| Avancé        | 4.0   | ×10.0 | **5000** | 3000     | 1800 | 900     | 500 | 20     |
 
 How to read the spread:
 
-- An Avancé player who wins two matches then loses (400) edges a Débutant champion (300).
-- An Avancé quarterfinal (720) beats two Débutant titles.
-- A Débutant title (300) is worth fifteen show-ups in any category, since participation is flat at 20 everywhere.
+- An Avancé player who wins two matches then loses (500) beats two Débutant titles (400).
+- An Avancé quarterfinal (900) beats a Débutant title and an Intermédiaire final combined.
+- A Débutant title (200) is worth ten show-ups in any category, since participation is flat at 20 everywhere.
+- The Débutant R16 exit ties participation at 20. That is the deliberate low-water mark: no result anywhere pays less than showing up.
 
 Note that in a 32-draw the R32 rung is unreachable: losing your first match means
 zero wins, which the floor turns into participation. The lower placement rungs
