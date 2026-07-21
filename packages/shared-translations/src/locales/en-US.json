@@ -5054,6 +5054,7 @@
     "removeModal": {
       "title": "Remove this player?",
       "message": "Remove {name} from the tournament? They won't be able to register for this tournament again.",
+      "messagePaid": "Remove {name} from the tournament? Their entry fee goes back to them, and they won't be able to register for this tournament again.",
       "confirm": "Remove",
       "keepIt": "Cancel",
       "success": "Player removed"
@@ -5166,7 +5167,8 @@
       "partnerRatingTooLow": "Your partner's rating is below this tournament's minimum level.",
       "partnerRatingRequired": "Your partner needs a rating in this sport to be entered.",
       "partnerInvalid": "That partner can't be registered. Pick someone else.",
-      "inviteInvalid": "This invite link is no longer valid."
+      "inviteInvalid": "This invite link is no longer valid.",
+      "paidUseRefund": "This entry was paid. Withdraw through the refund option instead."
     },
     "overview": {
       "readMore": "Read more",
