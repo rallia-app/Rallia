@@ -24,7 +24,7 @@ export function renderMatchInterestEmail(payload: MatchInterestEmailPayload): Em
   });
 
   const content = `
-                <h2 style="margin: 0; padding: 0 0 8px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${EMAIL_TOKENS.primary600}; letter-spacing: -0.025em; line-height: 1.2;">
+                <h2 style="margin: 0; padding: 0 0 8px 0; font-family: Poppins, Arial, Helvetica, sans-serif; font-size: 24px; font-weight: bold; color: ${EMAIL_TOKENS.neutral900}; letter-spacing: -0.025em; line-height: 1.2;">
                   ${t(locale, 'matchInterest.heading')}
                 </h2>
                 <p style="margin: 0; padding: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: ${EMAIL_TOKENS.neutral600};">
