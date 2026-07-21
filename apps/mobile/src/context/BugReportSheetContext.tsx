@@ -5,7 +5,7 @@
  * Can be triggered via FAB or settings menu.
  */
 
-import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, ReactNode } from 'react';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useProfile } from '@rallia/shared-hooks';
 
@@ -124,12 +124,15 @@ export const FeedbackReportSheetProvider: React.FC<FeedbackReportSheetProviderPr
     SheetManager.hide('feedback-report');
   }, []);
 
-  const contextValue: FeedbackReportSheetContextType = {
-    openFeedbackReport,
-    closeFeedbackReport,
-    isOpen,
-    trigger,
-  };
+  const contextValue: FeedbackReportSheetContextType = useMemo(
+    () => ({
+      openFeedbackReport,
+      closeFeedbackReport,
+      isOpen,
+      trigger,
+    }),
+    [openFeedbackReport, closeFeedbackReport, isOpen, trigger]
+  );
 
   return (
     <FeedbackReportSheetContext.Provider value={contextValue}>

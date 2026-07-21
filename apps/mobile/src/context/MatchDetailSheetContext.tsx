@@ -10,7 +10,7 @@
  * the match was opened from a list that doesn't include the result relation.
  */
 
-import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, ReactNode } from 'react';
 import { SheetManager } from 'react-native-actions-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { getMatchWithDetails } from '@rallia/shared-services';
@@ -148,15 +148,18 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     setSelectedMatch(match);
   }, []);
 
-  const contextValue: MatchDetailSheetContextType = {
-    openSheet,
-    closeSheet,
-    selectedMatch,
-    updateSelectedMatch,
-    handleSheetDismiss,
-    onMatchRemovedRef,
-    discoverySourceRef,
-  };
+  const contextValue: MatchDetailSheetContextType = useMemo(
+    () => ({
+      openSheet,
+      closeSheet,
+      selectedMatch,
+      updateSelectedMatch,
+      handleSheetDismiss,
+      onMatchRemovedRef,
+      discoverySourceRef,
+    }),
+    [openSheet, closeSheet, selectedMatch, updateSelectedMatch, handleSheetDismiss]
+  );
 
   return (
     <MatchDetailSheetContext.Provider value={contextValue}>

@@ -19,6 +19,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
   PropsWithChildren,
 } from 'react';
@@ -587,23 +588,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [queryClient]);
 
-  const value: AuthContextType = {
-    // State
-    session,
-    loading,
-    isAuthenticated: !!session,
-    user: session?.user ?? null,
-    sessionExpired,
-    clearSessionExpired,
-    accountSuspended,
-    clearAccountSuspended,
+  const value: AuthContextType = useMemo(
+    () => ({
+      // State
+      session,
+      loading,
+      isAuthenticated: !!session,
+      user: session?.user ?? null,
+      sessionExpired,
+      clearSessionExpired,
+      accountSuspended,
+      clearAccountSuspended,
 
-    // Auth methods
-    signInWithProvider,
-    signInWithEmail,
-    verifyOtp,
-    signOut,
-  };
+      // Auth methods
+      signInWithProvider,
+      signInWithEmail,
+      verifyOtp,
+      signOut,
+    }),
+    [
+      session,
+      loading,
+      sessionExpired,
+      clearSessionExpired,
+      accountSuspended,
+      clearAccountSuspended,
+      signInWithProvider,
+      signInWithEmail,
+      verifyOtp,
+      signOut,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

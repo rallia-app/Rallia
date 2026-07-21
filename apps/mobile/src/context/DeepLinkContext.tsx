@@ -13,7 +13,7 @@
  * 5. Deep link state is cleared
  */
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 // =============================================================================
 // TYPES
@@ -156,17 +156,30 @@ export const DeepLinkProvider: React.FC<DeepLinkProviderProps> = ({ children }) 
     setPendingCommunityInvite(null);
   }, []);
 
-  const contextValue: DeepLinkContextType = {
-    setPendingMatchId,
-    consumePendingMatchId,
-    hasPendingMatch,
-    pendingMatchId: pendingMatch?.value ?? null,
-    setPendingGroupInviteCode,
-    consumePendingGroupInviteCode,
-    setPendingCommunityInviteCode,
-    consumePendingCommunityInviteCode,
-    clearPendingDeepLink,
-  };
+  const contextValue: DeepLinkContextType = useMemo(
+    () => ({
+      setPendingMatchId,
+      consumePendingMatchId,
+      hasPendingMatch,
+      pendingMatchId: pendingMatch?.value ?? null,
+      setPendingGroupInviteCode,
+      consumePendingGroupInviteCode,
+      setPendingCommunityInviteCode,
+      consumePendingCommunityInviteCode,
+      clearPendingDeepLink,
+    }),
+    [
+      setPendingMatchId,
+      consumePendingMatchId,
+      hasPendingMatch,
+      pendingMatch,
+      setPendingGroupInviteCode,
+      consumePendingGroupInviteCode,
+      setPendingCommunityInviteCode,
+      consumePendingCommunityInviteCode,
+      clearPendingDeepLink,
+    ]
+  );
 
   return <DeepLinkContext.Provider value={contextValue}>{children}</DeepLinkContext.Provider>;
 };

@@ -17,6 +17,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -152,14 +153,24 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   // CONTEXT VALUE
   // ==========================================================================
 
-  const contextValue: OverlayContextType = {
-    setOnHomeScreen: handleSetOnHomeScreen,
-    setSplashComplete: handleSetSplashComplete,
-    isSplashComplete,
-    isSportSelectionComplete,
-    onSportSelectionComplete: handleSportSelectionComplete,
-    permissionsHandled,
-  };
+  const contextValue: OverlayContextType = useMemo(
+    () => ({
+      setOnHomeScreen: handleSetOnHomeScreen,
+      setSplashComplete: handleSetSplashComplete,
+      isSplashComplete,
+      isSportSelectionComplete,
+      onSportSelectionComplete: handleSportSelectionComplete,
+      permissionsHandled,
+    }),
+    [
+      handleSetOnHomeScreen,
+      handleSetSplashComplete,
+      isSplashComplete,
+      isSportSelectionComplete,
+      handleSportSelectionComplete,
+      permissionsHandled,
+    ]
+  );
 
   // ==========================================================================
   // RENDER
