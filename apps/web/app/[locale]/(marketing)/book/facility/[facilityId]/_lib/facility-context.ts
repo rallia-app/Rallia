@@ -95,10 +95,13 @@ function shortenCourtName(name: string): string {
 
   if (dash !== -1) {
     const tail = name.slice(dash + 3);
-    // Only drop the prefix when the remainder still identifies the court,
-    // otherwise "Tennis Court 3 - North" would collapse to "North".
-    if (/\d/.test(tail)) {
-      const head = name.slice(0, dash);
+    const head = name.slice(0, dash);
+    // Strip the prefix when the head reads like a qualified facility name
+    // ("Parc X, terrains sportifs") or the tail still carries a court number.
+    // Both signals are needed: La Fontaine's volleyball court has no number,
+    // and "Tennis Court 3 - North" has no qualified head, so requiring either
+    // one alone would mangle a real case.
+    if (head.includes(', ') || /\d/.test(tail)) {
       const comma = tail.lastIndexOf(', ');
       const suffix = comma > 0 ? tail.slice(comma + 2).trim() : '';
       // A trailing segment echoing the facility name is noise.
