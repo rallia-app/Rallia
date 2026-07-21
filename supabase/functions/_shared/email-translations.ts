@@ -20,6 +20,7 @@ const translations: Translations = {
     'preheader.confirmation': 'Your Rallia verification code is inside',
     'preheader.magicLink': 'Your one-time login code for Rallia',
     'preheader.invitation': "You've been invited to join {networkName} on Rallia",
+    'preheader.tournamentInvitation': "You've been invited to {tournamentName}",
     'preheader.matchInvitation': '{playerName} wants to play {sportName} with you',
     'preheader.matchJoinRequest': '{playerName} wants to join your game',
     'preheader.matchJoinAccepted': "You're in! Your game is confirmed",
@@ -80,6 +81,7 @@ const translations: Translations = {
 
     // Match action buttons
     'match.button.viewInvitation': 'View invitation',
+    'match.button.viewTournamentInvitation': 'View tournament',
     'match.button.reviewRequest': 'Review request',
     'match.button.browseGames': 'Browse games',
     'match.button.rateGame': 'Rate your game',
@@ -268,6 +270,7 @@ const translations: Translations = {
     'preheader.confirmation': "Ton code de vérification Rallia est à l'intérieur",
     'preheader.magicLink': 'Ton code de connexion à usage unique pour Rallia',
     'preheader.invitation': 'Tu as été invité à rejoindre {networkName} sur Rallia',
+    'preheader.tournamentInvitation': 'Tu es invité au tournoi {tournamentName}',
     'preheader.matchInvitation': '{playerName} veut jouer au {sportName} avec toi',
     'preheader.matchJoinRequest': '{playerName} veut rejoindre ta partie',
     'preheader.matchJoinAccepted': "C'est confirmé, ta partie est réservée",
@@ -328,6 +331,7 @@ const translations: Translations = {
 
     // Match action buttons
     'match.button.viewInvitation': "Voir l'invitation",
+    'match.button.viewTournamentInvitation': 'Voir le tournoi',
     'match.button.reviewRequest': 'Examiner la demande',
     'match.button.browseGames': 'Parcourir les parties',
     'match.button.rateGame': 'Évaluer ta partie',

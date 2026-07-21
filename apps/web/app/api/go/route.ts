@@ -9,10 +9,18 @@ const SCREEN_BY_TARGET: Record<string, string> = {
   profile: 'profile',
   courts: 'courts',
   games: 'home/public-matches',
+  tournament: 'tournament',
 };
+
+/** Targets whose screen path takes a trailing entity id (`?id=<uuid>`). */
+const TARGETS_TAKING_ID = new Set(['tournament']);
 
 const LOCALES = ['en-US', 'fr-CA'];
 const DEFAULT_LOCALE = 'en-US';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Attribution tag; kept as the default for the welcome email that predates it. */
+const DEFAULT_SRC = 'welcome_email';
+const SRC_RE = /^[a-z0-9_]{1,40}$/;
 
 /**
  * Deep-link bouncer for transactional emails (e.g. the welcome email CTAs).
@@ -26,15 +34,25 @@ export function GET(request: NextRequest): NextResponse {
   const localeParam = searchParams.get('locale') ?? '';
   const locale = LOCALES.includes(localeParam) ? localeParam : DEFAULT_LOCALE;
 
-  const screen = SCREEN_BY_TARGET[searchParams.get('to') ?? ''];
+  const target = searchParams.get('to') ?? '';
+  const screen = SCREEN_BY_TARGET[target];
   const platform = detectPlatform(request.headers.get('user-agent') ?? '');
 
-  // Unknown target or desktop visitor: send them to the website home page.
-  if (!screen || platform === null) {
+  // Entity id is required for targets that route to a specific record, and is
+  // uuid-checked so nothing arbitrary can be spliced into the deep link.
+  const id = searchParams.get('id') ?? '';
+  const needsId = TARGETS_TAKING_ID.has(target);
+  const hasValidId = UUID_RE.test(id);
+
+  // Unknown target, missing/invalid id, or desktop visitor: website home page.
+  if (!screen || (needsId && !hasValidId) || platform === null) {
     return NextResponse.redirect(new URL(`/${locale}`, request.url));
   }
 
-  const appUrl = `rallia://${screen}?src=welcome_email`;
+  const srcParam = searchParams.get('src') ?? '';
+  const src = SRC_RE.test(srcParam) ? srcParam : DEFAULT_SRC;
+  const path = needsId ? `${screen}/${id}` : screen;
+  const appUrl = `rallia://${path}?src=${src}`;
   const storeUrl = platform === 'ios' ? APP_STORE_URL : PLAY_STORE_URL;
   const isFr = locale.startsWith('fr');
 

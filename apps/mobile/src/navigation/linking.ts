@@ -192,6 +192,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ChatConversation: 'conversation/:conversationId',
       GroupDetail: 'group/:groupId',
       CommunityDetail: 'community/:communityId',
+      // Target of the tournament-invitation email CTA, via the /api/go bouncer.
+      TournamentDetail: 'tournament/:tournamentId',
       InviteReferral: 'invite-legacy/:referralCode',
 
       // Weekly check-in wizard — deep link from the Monday push reminder.
