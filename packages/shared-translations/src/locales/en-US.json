@@ -5048,6 +5048,7 @@
       "keepIt": "Cancel",
       "errorGeneric": "Couldn't archive the tournament. Please try again.",
       "errorNotArchivable": "This tournament can't be archived yet.",
+      "errorSettlementPending": "Refunds or payouts are still going through. You can archive once they're done.",
       "errorLockConflict": "Someone else made changes — please refresh and try again."
     },
     "removeModal": {

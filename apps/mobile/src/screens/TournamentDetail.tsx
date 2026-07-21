@@ -1616,11 +1616,13 @@ export const TournamentDetail: React.FC = () => {
     },
     onError: e => {
       const msg = e.message.toLowerCase();
-      const key: TranslationKey = msg.includes('not_archivable')
-        ? 'tournamentDetail.archiveModal.errorNotArchivable'
-        : msg.includes('optimistic_lock')
-          ? 'tournamentDetail.archiveModal.errorLockConflict'
-          : 'tournamentDetail.archiveModal.errorGeneric';
+      const key: TranslationKey = msg.includes('settlement_pending')
+        ? 'tournamentDetail.archiveModal.errorSettlementPending'
+        : msg.includes('not_archivable')
+          ? 'tournamentDetail.archiveModal.errorNotArchivable'
+          : msg.includes('optimistic_lock')
+            ? 'tournamentDetail.archiveModal.errorLockConflict'
+            : 'tournamentDetail.archiveModal.errorGeneric';
       warningHaptic();
       toast.error(t(key));
     },
