@@ -1,12 +1,9 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
 
-import { FacilityProfileView } from './_components/facility-profile-view';
+import { BookFacilityView } from './_components/book-facility-view';
 import { getFacilityForWebBooking } from './_lib/facility-context';
-import { WebBookWizard } from './web-book-wizard';
 
 type Props = {
   params: Promise<{ facilityId: string; locale: string }>;
@@ -40,21 +37,7 @@ export default async function WebBookFacilityPage({ params, searchParams }: Prop
 
   return (
     <div className="mx-auto w-full max-w-6xl animate-fade-in px-4 py-8 lg:py-10">
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
-        <FacilityProfileView facility={facility} />
-
-        <div className="w-full lg:sticky lg:top-8">
-          <Suspense
-            fallback={
-              <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card py-24">
-                <Loader2 className="size-7 animate-spin text-primary" />
-              </div>
-            }
-          >
-            <WebBookWizard facility={facility} locale={locale} />
-          </Suspense>
-        </div>
-      </div>
+      <BookFacilityView facility={facility} locale={locale} />
     </div>
   );
 }
