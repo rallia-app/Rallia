@@ -18,7 +18,7 @@ BEGIN;
 -- --------------------------------------------------------------------------
 -- 1. Full 8-entry bracket (no byes) → regional tier + zero-win floor.
 --    The four round-1 losers won zero real matches, so they must land on
---    'participated' (20 pts), NOT 'quarterfinal' (90 pts).
+--    'participated' (10 pts), NOT 'quarterfinal' (90 pts).
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -142,9 +142,9 @@ BEGIN
      WHERE tournament_id = v_tid AND placement = 'participated';
     ASSERT v_count = 4, 'expected 4 participated (R1 losers), got ' || v_count;
 
-    -- Points: 500 + 300 + 2*180 + 4*20 = 1240.
+    -- Points: 500 + 300 + 2*180 + 4*10 = 1200.
     SELECT sum(points) INTO v_total FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_total = 1240, 'expected total 1240 points, got ' || v_total;
+    ASSERT v_total = 1200, 'expected total 1200 points, got ' || v_total;
 
     SELECT points INTO v_count FROM tournament_ranking_points
      WHERE tournament_id = v_tid AND placement = 'champion';
@@ -155,7 +155,7 @@ BEGIN
     SELECT count(*) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
     ASSERT v_count = 8, 'recompute changed row count, got ' || v_count;
     SELECT sum(points) INTO v_total FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_total = 1240, 'recompute changed total, got ' || v_total;
+    ASSERT v_total = 1200, 'recompute changed total, got ' || v_total;
 
     -- Self-heal: an event whose bracket predates the stamp must not award at a
     -- NULL rate — award recomputes the multiplier from the bracket and stores it.
@@ -164,7 +164,7 @@ BEGIN
     ASSERT (SELECT ranking_multiplier FROM tournaments WHERE id = v_tid) = 1.0,
         'self-heal should have re-stamped multiplier 1.0';
     SELECT sum(points) INTO v_total FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_total = 1240, 'self-heal changed total, got ' || v_total;
+    ASSERT v_total = 1200, 'self-heal changed total, got ' || v_total;
 
     RAISE NOTICE 'PASS 1: 8-entry draw — zero-win floor, points, idempotency, stamp self-heal';
 END $$;
@@ -254,14 +254,14 @@ BEGIN
      WHERE tournament_id = v_tid AND placement = 'finalist';
     ASSERT v_count = 180, 'finalist should earn 300*0.6 = 180, got ' || v_count;
 
-    -- R1 losers won nothing → zero-win floor, flat 20 (participation never
+    -- R1 losers won nothing → zero-win floor, flat 10 (participation never
     -- takes the multiplier, not even the small-draw discount).
     SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 20;
-    ASSERT v_count = 2, 'expected 2 zero-win R1 losers at flat 20 pts, got ' || v_count;
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 10;
+    ASSERT v_count = 2, 'expected 2 zero-win R1 losers at flat 10 pts, got ' || v_count;
 
     SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_count = 520, 'expected total 300+180+20+20 = 520, got ' || v_count;
+    ASSERT v_count = 500, 'expected total 300+180+10+10 = 500, got ' || v_count;
 
     RAISE NOTICE 'PASS 2: 4-entry draw — ×0.6 snapped discount, placement ordering preserved (no local floor)';
 END $$;
@@ -372,9 +372,9 @@ BEGIN
      WHERE tournament_id = v_tid AND placement = 'participated';
     ASSERT v_count = 8, 'expected 8 participated rows (4 teams x 2), got ' || v_count;
 
-    -- Total = 1240 per player-set * 2 = 2480.
+    -- Total = 1200 per player-set * 2 = 2400.
     SELECT sum(points) INTO v_total FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_total = 2480, 'expected total 2480 points, got ' || v_total;
+    ASSERT v_total = 2400, 'expected total 2400 points, got ' || v_total;
 
     RAISE NOTICE 'PASS 3: doubles 8-team bracket — full (unsplit) points per partner + zero-win floor';
 END $$;
@@ -751,11 +751,12 @@ END $$;
 
 -- --------------------------------------------------------------------------
 -- 9. lt_tournament_ranking_multiplier — the pricing function in isolation.
---    draw_mult is a smooth log2 curve (no cliffs); level_mult is the category-
---    doubling ladder (20260720120000): ×1.0 at the scale's first intermediate
---    rung (3.0 on tennis, rank 4), doubling every 2 rungs above, ×0.5 at the
---    bottom rung joining the anchor geometrically; the product then SNAPS to
---    the 0.2 grid so champion points land on multiples of 100. Synthetic
+--    draw_mult is a smooth log2 curve (no cliffs); level_mult is the category
+--    ladder (20260720170000): ×1.0 at the scale's first intermediate rung
+--    (3.0 on tennis, rank 4), ×5 per full rating point above it up to a ×16
+--    cap, ×0.2 at the bottom rung joining the anchor geometrically; the product
+--    then SNAPS to the 0.2 grid so champion points land on multiples of 100.
+--    Synthetic
 --    tournaments with no bracket, so draw size falls back to the registered
 --    count and each case is exact.
 -- --------------------------------------------------------------------------
@@ -775,11 +776,11 @@ BEGIN
     FOR r IN SELECT * FROM (VALUES
         --                          draw × level (rank)      → snapped to 0.2 grid
         (8,  NULL::numeric, 1.000),   -- 1.0 × 1.0 (open)          → 1.0
-        (8,  2.0,           0.600),   -- 1.0 × 0.630 (rank 2)      → 0.6
+        (8,  2.0,           0.400),   -- 1.0 × 0.342 (rank 2)      → 0.4
         (8,  3.0,           1.000),   -- 1.0 × 1.0   (anchor)      → 1.0
-        (8,  4.5,           2.800),   -- 1.0 × 2.828 (rank 7)      → 2.8
-        (8,  6.0,           8.000),   -- 1.0 × 8.0   (top rank)    → 8.0
-        (4,  4.5,           1.400),   -- 0.5 × 2.828 = 1.414       → 1.4
+        (8,  4.5,          11.200),   -- 1.0 × 11.18 (rank 7)      → 11.2
+        (8,  6.0,          16.000),   -- 1.0 × 16.0  (at the cap)  → 16.0
+        (4,  4.5,           5.600),   -- 0.5 × 11.18 = 5.59        → 5.6
         (16, 3.0,           1.600),   -- 1.5 × 1.0, 7.5 half-up    → 1.6
         (64, NULL,          2.600),   -- 2.5 × 1.0, 12.5 half-up   → 2.6
         (4,  NULL,          0.600),   -- 0.5, 2.5 half-up          → 0.6
@@ -903,10 +904,10 @@ BEGIN
     ASSERT v_count = 2, 'expected 2 round_of_16 rows at 80 pts, got ' || v_count;
 
     -- Every other R2 loser bye-advanced (zero real wins) → participation floor,
-    -- alongside the two R1 losers: 6 + 2 = 8 rows at flat 20 (never multiplied).
+    -- alongside the two R1 losers: 6 + 2 = 8 rows at flat 10 (never multiplied).
     SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 20;
-    ASSERT v_count = 8, 'expected 8 participated rows at flat 20 pts, got ' || v_count;
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 10;
+    ASSERT v_count = 8, 'expected 8 participated rows at flat 10 pts, got ' || v_count;
 
     SELECT count(*) INTO v_count FROM tournament_ranking_points
      WHERE tournament_id = v_tid AND placement = 'quarterfinal' AND points = 140;
@@ -925,7 +926,7 @@ BEGIN
     ASSERT v_count = 480, 'finalist should earn 300×1.6 = 480, got ' || v_count;
 
     SELECT sum(points) INTO v_count FROM tournament_ranking_points WHERE tournament_id = v_tid;
-    ASSERT v_count = 2740, 'expected total 800+480+580+560+160+160 = 2740, got ' || v_count;
+    ASSERT v_count = 2660, 'expected total 800+480+580+560+160+80 = 2660, got ' || v_count;
 
     RAISE NOTICE 'PASS 10: round-of-N placements — real R1 win pays a rung, bye-advance stays floored';
 END $$;
@@ -1026,12 +1027,12 @@ BEGIN
     ASSERT v_count = 0, 'walkover loser never played — expected no ledger row';
 
     -- The champion beat the walkover in the final for their only real win;
-    -- the R1-m2 loser played and lost → flat 20.
+    -- the R1-m2 loser played and lost → flat 10.
     SELECT count(*) INTO v_count FROM tournament_ranking_points
-     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 20;
-    ASSERT v_count = 1, 'expected 1 participated row at flat 20, got ' || v_count;
+     WHERE tournament_id = v_tid AND placement = 'participated' AND points = 10;
+    ASSERT v_count = 1, 'expected 1 participated row at flat 10, got ' || v_count;
 
-    RAISE NOTICE 'PASS 11: played gate — walkover loser gets no row, contested losses keep flat 20';
+    RAISE NOTICE 'PASS 11: played gate — walkover loser gets no row, contested losses keep flat 10';
 END $$;
 
 ROLLBACK;
