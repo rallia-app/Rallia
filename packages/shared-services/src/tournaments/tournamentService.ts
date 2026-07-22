@@ -10,6 +10,7 @@ import type { UtmParams } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
 import type { PlayerSearchResult } from '../players/playerService';
+import { getPlayersRatingReputation } from '../players/playerService';
 import { generateInvitationLink } from '../invitation/invitationLinkService';
 
 export type Tournament = Tables<'tournaments'>;
@@ -431,56 +432,24 @@ export async function listTournamentParticipants(
   if (tErr) throw new Error(tErr.message);
   const sportId = tourney.sport_id;
 
-  const [profilesRes, playersRes, repRes, ratingRes] = await Promise.all([
+  const [profilesRes, playersRes, badgesById] = await Promise.all([
     supabase
       .from('profile')
       .select('id, first_name, last_name, profile_picture_url')
       .in('id', playerIds),
     supabase.from('player').select('id, last_seen_at').in('id', playerIds),
-    supabase
-      .from('player_reputation')
-      .select('player_id, reputation_tier, reputation_score, is_public')
-      .in('player_id', playerIds),
-    supabase
-      .from('player_sport')
-      .select(
-        'player_id, player_rating_score!active_rating_score_id ( is_certified, badge_status, rating_score!rating_score_id ( label, value ) )'
-      )
-      .in('player_id', playerIds)
-      .eq('sport_id', sportId),
+    getPlayersRatingReputation(playerIds, sportId),
   ]);
-  for (const res of [profilesRes, playersRes, repRes, ratingRes]) {
+  for (const res of [profilesRes, playersRes]) {
     if (res.error) throw new Error(res.error.message);
   }
 
   const profileById = new Map((profilesRes.data ?? []).map(p => [p.id, p]));
   const lastSeenById = new Map((playersRes.data ?? []).map(p => [p.id, p.last_seen_at]));
-  const repById = new Map((repRes.data ?? []).map(r => [r.player_id, r]));
-
-  type RatingRow = {
-    player_id: string;
-    player_rating_score: {
-      is_certified: boolean | null;
-      badge_status: Enums<'badge_status_enum'> | null;
-      rating_score: { label: string | null; value: number | null } | null;
-    } | null;
-  };
-  const ratingByPlayer = new Map<string, PlayerSearchResult['rating']>();
-  for (const row of (ratingRes.data ?? []) as unknown as RatingRow[]) {
-    const prs = row.player_rating_score;
-    const rs = prs?.rating_score;
-    if (!prs || !rs?.label) continue;
-    ratingByPlayer.set(row.player_id, {
-      label: rs.label,
-      value: rs.value,
-      is_certified: prs.is_certified ?? false,
-      badge_status: prs.badge_status ?? 'self_declared',
-    });
-  }
 
   return playerIds.map(playerId => {
     const prof = profileById.get(playerId);
-    const rep = repById.get(playerId);
+    const badges = badgesById[playerId];
     return {
       id: playerId,
       first_name: prof?.first_name ?? '',
@@ -489,13 +458,13 @@ export async function listTournamentParticipants(
       profile_picture_url: prof?.profile_picture_url ?? null,
       city: null,
       gender: null,
-      rating: ratingByPlayer.get(playerId) ?? null,
+      rating: badges?.rating ?? null,
       latitude: null,
       longitude: null,
       distance_meters: null,
-      reputation_tier: rep?.reputation_tier ?? null,
-      reputation_score: rep?.reputation_score ?? null,
-      reputation_is_public: rep?.is_public ?? false,
+      reputation_tier: badges?.reputation_tier ?? null,
+      reputation_score: badges?.reputation_score ?? null,
+      reputation_is_public: badges?.reputation_is_public ?? false,
       last_seen_at: lastSeenById.get(playerId) ?? null,
     };
   });

@@ -436,3 +436,80 @@ export async function getHomeLocation(playerId: string): Promise<HomeLocation | 
     return null;
   }
 }
+
+// =============================================================================
+// RATING & REPUTATION ENRICHMENT
+// =============================================================================
+
+/** Sport-scoped rating plus reputation for one player, as carried on
+ *  PlayerSearchResult rows. */
+export type PlayerRatingReputation = {
+  rating: PlayerSearchResult['rating'];
+  reputation_tier: string | null;
+  reputation_score: number | null;
+  reputation_is_public: boolean;
+};
+
+/**
+ * Batch-fetch rating + reputation for a set of players in one sport, keyed by
+ * player id. Rating reads through player_sport.active_rating_score_id — the
+ * canonical rating read path. Returns a Record (not a Map) so react-query
+ * persistence round-trips it cleanly as JSON.
+ */
+export async function getPlayersRatingReputation(
+  playerIds: string[],
+  sportId: string
+): Promise<Record<string, PlayerRatingReputation>> {
+  const ids = [...new Set(playerIds)];
+  if (ids.length === 0) return {};
+
+  const [repRes, ratingRes] = await Promise.all([
+    supabase
+      .from('player_reputation')
+      .select('player_id, reputation_tier, reputation_score, is_public')
+      .in('player_id', ids),
+    supabase
+      .from('player_sport')
+      .select(
+        'player_id, player_rating_score!active_rating_score_id ( is_certified, badge_status, rating_score!rating_score_id ( label, value ) )'
+      )
+      .in('player_id', ids)
+      .eq('sport_id', sportId),
+  ]);
+  if (repRes.error) throw new Error(repRes.error.message);
+  if (ratingRes.error) throw new Error(ratingRes.error.message);
+
+  type RatingRow = {
+    player_id: string;
+    player_rating_score: {
+      is_certified: boolean | null;
+      badge_status: 'self_declared' | 'certified' | 'disputed' | null;
+      rating_score: { label: string | null; value: number | null } | null;
+    } | null;
+  };
+  const ratingByPlayer = new Map<string, PlayerSearchResult['rating']>();
+  for (const row of (ratingRes.data ?? []) as unknown as RatingRow[]) {
+    const prs = row.player_rating_score;
+    const rs = prs?.rating_score;
+    if (!prs || !rs?.label) continue;
+    ratingByPlayer.set(row.player_id, {
+      label: rs.label,
+      value: rs.value,
+      is_certified: prs.is_certified ?? false,
+      badge_status: prs.badge_status ?? 'self_declared',
+    });
+  }
+  const repById = new Map((repRes.data ?? []).map(r => [r.player_id, r]));
+
+  const byId: Record<string, PlayerRatingReputation> = {};
+  for (const id of ids) {
+    const rep = repById.get(id);
+    byId[id] = {
+      rating: ratingByPlayer.get(id) ?? null,
+      reputation_tier: rep?.reputation_tier ?? null,
+      reputation_score: rep?.reputation_score ?? null,
+      reputation_is_public: rep?.is_public ?? false,
+    };
+  }
+  return byId;
+}

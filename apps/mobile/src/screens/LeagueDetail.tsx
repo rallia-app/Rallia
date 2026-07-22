@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonTextLine, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -76,6 +76,7 @@ import {
   useRemoveSeasonMember,
   usePublishSession,
   useProfilesByIds,
+  usePlayersRatingReputation,
   useMyPayoutAccount,
   tournamentKeys,
 } from '@rallia/shared-hooks';
@@ -86,16 +87,18 @@ import { isLeagueOrganizer, TournamentPaymentError, supabase } from '@rallia/sha
 import type {
   LeagueMemberWithProfile,
   PlayerProfile,
+  PlayerRatingReputation,
   PlayerSearchResult,
   Season,
   SeasonMemberWithProfile,
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import PlayerCard from '../features/community/components/PlayerCard';
+import ParticipantRow from '../components/ParticipantRow';
+import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
 import type { LeagueEditData } from '../features/leagues';
 import { LeagueBanner, LEAGUE_BANNER_ASPECT } from '../features/leagues/components/LeagueBanner';
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -103,6 +106,8 @@ type Route = RouteProp<RootStackParamList, 'LeagueDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type LeagueStatus = Enums<'league_status'>;
+/** Members-tab status segments (pill tabs). */
+type MembersSegment = 'confirmed' | 'requests' | 'invited' | 'suspended';
 type JoinMode = Enums<'tournament_registration_mode'>;
 type Visibility = Enums<'tournament_visibility'>;
 type SeasonStatus = Enums<'season_status'>;
@@ -388,30 +393,139 @@ const LifecycleStepper: React.FC<{
   );
 };
 
-/** Initial-load placeholder shaped like the hero + tab bar + first cards, so
- *  the screen keeps its silhouette while the league loads. */
-const LeagueDetailSkeleton: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+/** Initial-load placeholder mirroring the loaded Overview 1:1 — banner with the
+ *  scrim identity lines, sticky-tab geometry, then the stats, stepper and league
+ *  info cards — sharing the real StyleSheet so nothing jumps when data lands. */
+const LeagueDetailSkeleton: React.FC = () => {
   const { width } = useWindowDimensions();
-  const bg = isDark ? neutral[800] : neutral[200];
-  const highlight = isDark ? neutral[700] : neutral[100];
-  const shimmer = { backgroundColor: bg, highlightColor: highlight };
+  const { colors: themed } = useThemeStyles();
+  const shimmer = {
+    backgroundColor: themed.skeletonBackground,
+    highlightColor: themed.skeletonHighlight,
+  };
+  // The scrim lines sit on the banner artwork, so they shimmer in the same
+  // translucent white the real scrim text uses.
+  const onBanner = {
+    backgroundColor: 'rgba(255,255,255,0.40)',
+    highlightColor: 'rgba(255,255,255,0.60)',
+  };
   return (
     <View>
-      <Skeleton {...shimmer} height={Math.round(width / LEAGUE_BANNER_ASPECT)} borderRadius={0} />
-      <View style={styles.heroChipRow}>
-        {[110, 88].map(w => (
-          <Skeleton key={w} {...shimmer} width={w} height={26} borderRadius={radiusPixels.full} />
-        ))}
+      <View style={styles.heroFixed}>
+        <View style={styles.heroBanner}>
+          <Skeleton
+            {...shimmer}
+            height={Math.round(width / LEAGUE_BANNER_ASPECT)}
+            borderRadius={0}
+          />
+          {/* Status pill floats near-white on the image in both themes */}
+          <View style={styles.heroBannerTopRow}>
+            <View style={[styles.statusBadge, { backgroundColor: 'rgba(255,255,255,0.94)' }]}>
+              <SkeletonTextLine
+                size="xs"
+                width={72}
+                backgroundColor="rgba(0,0,0,0.10)"
+                highlightColor="rgba(0,0,0,0.18)"
+              />
+            </View>
+          </View>
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.68)']}
+            locations={[0, 0.42, 1]}
+            style={styles.heroScrim}
+          >
+            <SkeletonTextLine {...onBanner} size="2xl" lineHeight="tight" width="62%" />
+            <SkeletonTextLine {...onBanner} size="sm" width="46%" />
+          </LinearGradient>
+        </View>
       </View>
-      <View style={styles.skeletonTabBar}>
-        {[0, 1, 2].map(i => (
-          <Skeleton key={i} {...shimmer} width={72} height={14} />
-        ))}
+
+      <View
+        style={[
+          styles.tabBarSticky,
+          { backgroundColor: themed.background, borderBottomColor: themed.border },
+        ]}
+      >
+        <View style={styles.tabBarContent}>
+          {[64, 52, 58, 46].map((w, i) => (
+            <View key={i} style={styles.tabItem}>
+              <SkeletonTextLine {...shimmer} size="sm" width={w} />
+              <View style={styles.tabUnderline} />
+            </View>
+          ))}
+        </View>
       </View>
+
       <View style={styles.tabContent}>
-        <Skeleton {...shimmer} height={72} borderRadius={radiusPixels.lg} />
-        <View style={styles.skeletonCardGap}>
-          <Skeleton {...shimmer} height={120} borderRadius={radiusPixels.xl} />
+        {/* Stats: three value/label segments split by hairlines */}
+        <View
+          style={[
+            styles.section,
+            styles.statsCard,
+            { backgroundColor: themed.cardBackground, borderColor: themed.border },
+          ]}
+        >
+          {[0, 1, 2].map(i => (
+            <React.Fragment key={i}>
+              {i > 0 && <View style={[styles.statDivider, { backgroundColor: themed.border }]} />}
+              <View style={styles.statSegment}>
+                <SkeletonTextLine {...shimmer} size="lg" width={44} />
+                <SkeletonTextLine {...shimmer} size="xs" width={56} />
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Lifecycle stepper: four dots joined by connectors */}
+        <View
+          style={[
+            styles.section,
+            styles.stepperCard,
+            { backgroundColor: themed.cardBackground, borderColor: themed.border },
+          ]}
+        >
+          <View style={styles.stepperRow}>
+            {[0, 1, 2, 3].map(i => (
+              <React.Fragment key={i}>
+                {i > 0 && (
+                  <View style={[styles.stepperConnector, { backgroundColor: themed.border }]} />
+                )}
+                <View style={styles.stepperStep}>
+                  <Skeleton {...shimmer} width={32} height={32} circle />
+                  <SkeletonTextLine {...shimmer} size="xs" width={44} />
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+
+        {/* League info: icon-disc rows behind a section title */}
+        <View style={styles.section}>
+          <SkeletonTextLine {...shimmer} size="xs" width={88} style={styles.sectionTitle} />
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: themed.cardBackground, borderColor: themed.border },
+            ]}
+          >
+            {['58%', '72%', '44%', '64%'].map((w, i) => (
+              <View
+                key={w}
+                style={[
+                  styles.overviewInfoRow,
+                  i > 0 && {
+                    borderTopWidth: StyleSheet.hairlineWidth,
+                    borderTopColor: themed.border,
+                  },
+                ]}
+              >
+                <Skeleton {...shimmer} width={30} height={30} circle />
+                <View style={styles.overviewInfoTexts}>
+                  <SkeletonTextLine {...shimmer} size="sm" width={w} />
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
     </View>
@@ -657,10 +771,13 @@ const DashboardCtaCard: React.FC<{
   );
 };
 
-function memberToPlayer(member: {
-  user_id: string;
-  profile?: PlayerProfile | null;
-}): PlayerSearchResult {
+function memberToPlayer(
+  member: {
+    user_id: string;
+    profile?: PlayerProfile | null;
+  },
+  badges?: PlayerRatingReputation
+): PlayerSearchResult {
   const profile = member.profile;
   return {
     id: member.user_id,
@@ -670,13 +787,13 @@ function memberToPlayer(member: {
     profile_picture_url: profile?.profile_picture_url ?? null,
     city: null,
     gender: null,
-    rating: null,
+    rating: badges?.rating ?? null,
     latitude: null,
     longitude: null,
     distance_meters: null,
-    reputation_tier: null,
-    reputation_score: null,
-    reputation_is_public: false,
+    reputation_tier: badges?.reputation_tier ?? null,
+    reputation_score: badges?.reputation_score ?? null,
+    reputation_is_public: badges?.reputation_is_public ?? false,
     last_seen_at: null,
   };
 }
@@ -697,27 +814,32 @@ const PendingMembersSection: React.FC<{
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-        {t('leagueDetail.dashboard.pendingRequests.title', { count: String(rows.length) })}
-      </Text>
-      {rows.map(({ player, memberId, version }) => (
-        <PlayerCard
-          key={memberId}
-          player={player}
-          onPress={onPlayerPress}
-          showActivity={false}
-          trailingActions={[
-            {
-              icon: 'checkmark-circle',
-              color: colors.statusPositiveText,
-              accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.approveLabel', {
-                name: getHumanName(player, ''),
-              }),
-              onPress: () => onApprove(memberId, version),
-            },
-          ]}
-        />
-      ))}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {rows.map(({ player, memberId, version }, i) => (
+          <ParticipantRow
+            key={memberId}
+            player={player}
+            onPress={onPlayerPress}
+            colors={colors}
+            showDivider={i > 0}
+            trailingActions={[
+              {
+                icon: 'checkmark-circle',
+                color: colors.statusPositiveText,
+                accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.approveLabel', {
+                  name: getHumanName(player, ''),
+                }),
+                onPress: () => onApprove(memberId, version),
+              },
+            ]}
+          />
+        ))}
+      </View>
     </View>
   );
 };
@@ -732,27 +854,32 @@ const InvitedMembersSection: React.FC<{
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-        {t('leagueDetail.dashboard.invited.title', { count: String(rows.length) })}
-      </Text>
-      {rows.map(({ player, memberId, version }) => (
-        <PlayerCard
-          key={memberId}
-          player={player}
-          onPress={onPlayerPress}
-          showActivity={false}
-          trailingActions={[
-            {
-              icon: 'close-circle',
-              color: colors.danger,
-              accessibilityLabel: t('leagueDetail.dashboard.invited.revokeLabel', {
-                name: getHumanName(player, ''),
-              }),
-              onPress: () => onRevoke(memberId, version),
-            },
-          ]}
-        />
-      ))}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {rows.map(({ player, memberId, version }, i) => (
+          <ParticipantRow
+            key={memberId}
+            player={player}
+            onPress={onPlayerPress}
+            colors={colors}
+            showDivider={i > 0}
+            trailingActions={[
+              {
+                icon: 'close-circle',
+                color: colors.danger,
+                accessibilityLabel: t('leagueDetail.dashboard.invited.revokeLabel', {
+                  name: getHumanName(player, ''),
+                }),
+                onPress: () => onRevoke(memberId, version),
+              },
+            ]}
+          />
+        ))}
+      </View>
     </View>
   );
 };
@@ -776,48 +903,52 @@ const MembersSection: React.FC<{
   t: (k: TranslationKey, options?: Record<string, string>) => string;
 }> = ({ rows, ownerId, onPlayerPress, organizerActions, colors, t }) => (
   <View>
-    <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-      {t('leagueDetail.dashboard.members.title')}
-    </Text>
-    {rows.length === 0 ? (
-      <View style={styles.participantEmpty}>
-        <Text size="sm" color={colors.textMuted}>
-          {t('leagueDetail.noMembers')}
-        </Text>
-      </View>
-    ) : (
-      rows.map(({ player, memberId, version, userId }) => {
-        const name = getHumanName(player, '');
-        return (
-          <PlayerCard
-            key={memberId}
-            player={player}
-            onPress={onPlayerPress}
-            showActivity={false}
-            trailingActions={
-              organizerActions && userId !== ownerId
-                ? [
-                    {
-                      icon: 'pause-circle-outline',
-                      color: colors.textMuted,
-                      accessibilityLabel: t('leagueDetail.dashboard.members.suspendLabel', {
-                        name,
-                      }),
-                      onPress: () => organizerActions.onSuspend(memberId, version, name),
-                    },
-                    {
-                      icon: 'remove-circle-outline',
-                      color: colors.danger,
-                      accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
-                      onPress: () => organizerActions.onRemove(memberId, version, name),
-                    },
-                  ]
-                : undefined
-            }
-          />
-        );
-      })
-    )}
+    <View
+      style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+    >
+      {rows.length === 0 ? (
+        <View style={styles.participantEmpty}>
+          <Text size="sm" color={colors.textMuted}>
+            {t('leagueDetail.noMembers')}
+          </Text>
+        </View>
+      ) : (
+        rows.map(({ player, memberId, version, userId }, i) => {
+          const name = getHumanName(player, '');
+          return (
+            <ParticipantRow
+              key={memberId}
+              player={player}
+              onPress={onPlayerPress}
+              colors={colors}
+              showDivider={i > 0}
+              trailingActions={
+                organizerActions && userId !== ownerId
+                  ? [
+                      {
+                        icon: 'pause-circle-outline',
+                        color: colors.textMuted,
+                        accessibilityLabel: t('leagueDetail.dashboard.members.suspendLabel', {
+                          name,
+                        }),
+                        onPress: () => organizerActions.onSuspend(memberId, version, name),
+                      },
+                      {
+                        icon: 'remove-circle-outline',
+                        color: colors.danger,
+                        accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', {
+                          name,
+                        }),
+                        onPress: () => organizerActions.onRemove(memberId, version, name),
+                      },
+                    ]
+                  : undefined
+              }
+            />
+          );
+        })
+      )}
+    </View>
   </View>
 );
 
@@ -832,34 +963,39 @@ const SuspendedMembersSection: React.FC<{
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-        {t('leagueDetail.dashboard.members.suspendedTitle', { count: String(rows.length) })}
-      </Text>
-      {rows.map(({ player, memberId, version }) => {
-        const name = getHumanName(player, '');
-        return (
-          <PlayerCard
-            key={memberId}
-            player={player}
-            onPress={onPlayerPress}
-            showActivity={false}
-            trailingActions={[
-              {
-                icon: 'play-circle-outline',
-                color: colors.statusPositiveText,
-                accessibilityLabel: t('leagueDetail.dashboard.members.reinstateLabel', { name }),
-                onPress: () => onReinstate(memberId, version, name),
-              },
-              {
-                icon: 'remove-circle-outline',
-                color: colors.danger,
-                accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
-                onPress: () => onRemove(memberId, version, name),
-              },
-            ]}
-          />
-        );
-      })}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {rows.map(({ player, memberId, version }, i) => {
+          const name = getHumanName(player, '');
+          return (
+            <ParticipantRow
+              key={memberId}
+              player={player}
+              onPress={onPlayerPress}
+              colors={colors}
+              showDivider={i > 0}
+              trailingActions={[
+                {
+                  icon: 'play-circle-outline',
+                  color: colors.statusPositiveText,
+                  accessibilityLabel: t('leagueDetail.dashboard.members.reinstateLabel', { name }),
+                  onPress: () => onReinstate(memberId, version, name),
+                },
+                {
+                  icon: 'remove-circle-outline',
+                  color: colors.danger,
+                  accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
+                  onPress: () => onRemove(memberId, version, name),
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
     </View>
   );
 };
@@ -1160,58 +1296,119 @@ export const LeagueDetail: React.FC = () => {
   const activeMembers = useMemo(() => members.filter(m => m.status === 'active'), [members]);
   const suspendedMembers = useMemo(() => members.filter(m => m.status === 'suspended'), [members]);
 
+  const openSeason = useMemo(() => seasons.find(s => s.status === 'open'), [seasons]);
+  const openSeasonId = openSeason?.id;
+  const { data: seasonRoster = [] } = useSeasonMembers(openSeasonId);
+
+  // Sport-scoped rating + reputation for every member/roster row, batch-fetched
+  // once (league members lack the enrichment the tournament participants RPC
+  // bakes in).
+  const badgePlayerIds = useMemo(
+    () => [...members.map(m => m.user_id), ...seasonRoster.map(m => m.user_id)],
+    [members, seasonRoster]
+  );
+  const { data: memberBadges } = usePlayersRatingReputation(badgePlayerIds, league?.sport_id);
+
   const pendingMemberRows = useMemo<PendingMemberRow[]>(
     () =>
       isOrganizer
         ? pendingRequests.map(m => ({
-            player: memberToPlayer(m),
+            player: memberToPlayer(m, memberBadges?.[m.user_id]),
             memberId: m.id,
             version: m.version,
           }))
         : [],
-    [pendingRequests, isOrganizer]
+    [pendingRequests, isOrganizer, memberBadges]
   );
 
   const invitedMemberRows = useMemo<PendingMemberRow[]>(
     () =>
       isOrganizer
         ? invitedMembers.map(m => ({
-            player: memberToPlayer(m),
+            player: memberToPlayer(m, memberBadges?.[m.user_id]),
             memberId: m.id,
             version: m.version,
           }))
         : [],
-    [invitedMembers, isOrganizer]
+    [invitedMembers, isOrganizer, memberBadges]
   );
 
   const activeMemberRows = useMemo<ManageMemberRow[]>(
     () =>
       activeMembers.map(m => ({
-        player: memberToPlayer(m),
+        player: memberToPlayer(m, memberBadges?.[m.user_id]),
         memberId: m.id,
         version: m.version,
         userId: m.user_id,
       })),
-    [activeMembers]
+    [activeMembers, memberBadges]
   );
   const suspendedMemberRows = useMemo<ManageMemberRow[]>(
     () =>
       suspendedMembers.map(m => ({
-        player: memberToPlayer(m),
+        player: memberToPlayer(m, memberBadges?.[m.user_id]),
         memberId: m.id,
         version: m.version,
         userId: m.user_id,
       })),
-    [suspendedMembers]
+    [suspendedMembers, memberBadges]
   );
 
-  const openSeason = useMemo(() => seasons.find(s => s.status === 'open'), [seasons]);
+  // Members-tab status segments. Requests / Invited / Suspended only exist
+  // while they hold entries (all organizer-gated); the selection falls back to
+  // Confirmed when its segment empties out.
+  const [membersSegment, setMembersSegment] = useState<MembersSegment>('confirmed');
+  const membersSegmentTabs = useMemo<UnderlineTabItem<MembersSegment>[]>(() => {
+    const tabs: UnderlineTabItem<MembersSegment>[] = [
+      {
+        key: 'confirmed',
+        label: t('leagueDetail.dashboard.memberTabs.confirmed'),
+        count: activeMemberRows.length,
+        tone: 'positive',
+      },
+    ];
+    // Requests need the organizer to act, so they run warm; invites are just
+    // waiting on the invitee.
+    if (pendingMemberRows.length > 0)
+      tabs.push({
+        key: 'requests',
+        label: t('leagueDetail.dashboard.memberTabs.requests'),
+        count: pendingMemberRows.length,
+        tone: 'warning',
+      });
+    if (invitedMemberRows.length > 0)
+      tabs.push({
+        key: 'invited',
+        label: t('leagueDetail.dashboard.memberTabs.invited'),
+        count: invitedMemberRows.length,
+        tone: 'info',
+      });
+    if (isOrganizer && suspendedMemberRows.length > 0)
+      tabs.push({
+        key: 'suspended',
+        label: t('leagueDetail.dashboard.memberTabs.suspended'),
+        count: suspendedMemberRows.length,
+        tone: 'danger',
+      });
+    return tabs;
+  }, [
+    t,
+    activeMemberRows.length,
+    pendingMemberRows.length,
+    invitedMemberRows.length,
+    suspendedMemberRows.length,
+    isOrganizer,
+  ]);
+  const activeMembersSegment: MembersSegment = membersSegmentTabs.some(
+    tab => tab.key === membersSegment
+  )
+    ? membersSegment
+    : 'confirmed';
+
   const draftSeasons = useMemo(() => seasons.filter(s => s.status === 'draft'), [seasons]);
 
-  const { data: seasonSessions = [] } = useSeasonSessions(openSeason?.id);
+  const { data: seasonSessions = [] } = useSeasonSessions(openSeasonId);
 
-  const openSeasonId = openSeason?.id;
-  const { data: seasonRoster = [] } = useSeasonMembers(openSeasonId);
   const { data: mySeasonMembership } = useMySeasonMembership(openSeasonId, userId);
   const isEnrolledInSeason = mySeasonMembership?.status === 'enrolled';
   const canParticipateInSeason = isOrganizer || myMembership?.status === 'active';
@@ -1939,7 +2136,7 @@ export const LeagueDetail: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-        <LeagueDetailSkeleton isDark={isDark} />
+        <LeagueDetailSkeleton />
       </SafeAreaView>
     );
   }
@@ -2406,7 +2603,11 @@ export const LeagueDetail: React.FC = () => {
                 )}
                 buttonLabel={t('leagueDetail.dashboard.pendingRequestsCta.review')}
                 buttonIcon="people-outline"
-                onPress={() => membersTabIdx >= 0 && goToTab(membersTabIdx)}
+                onPress={() => {
+                  if (membersTabIdx < 0) return;
+                  setMembersSegment('requests');
+                  goToTab(membersTabIdx);
+                }}
                 accent="secondary"
                 colors={colors}
                 testID="cta-pending-members"
@@ -2536,7 +2737,11 @@ export const LeagueDetail: React.FC = () => {
             {activeMembers.length > 0 && (
               <Section title={t('leagueDetail.tabs.members')} colors={colors}>
                 <TouchableOpacity
-                  onPress={() => membersTabIdx >= 0 && goToTab(membersTabIdx)}
+                  onPress={() => {
+                    if (membersTabIdx < 0) return;
+                    setMembersSegment('confirmed');
+                    goToTab(membersTabIdx);
+                  }}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel={t('leagueDetail.tabs.members')}
@@ -2648,38 +2853,49 @@ export const LeagueDetail: React.FC = () => {
               </TouchableOpacity>
             )}
             {/* Edit and lifecycle controls live in the Overview's Manage list. */}
-            <PendingMembersSection
-              rows={pendingMemberRows}
-              onPlayerPress={handlePlayerPress}
-              onApprove={handleApprovePress}
-              colors={colors}
-              t={t}
-            />
-            <InvitedMembersSection
-              rows={invitedMemberRows}
-              onPlayerPress={handlePlayerPress}
-              onRevoke={handleRevokePress}
-              colors={colors}
-              t={t}
-            />
-            <MembersSection
-              rows={activeMemberRows}
-              ownerId={league.organizer_id}
-              onPlayerPress={handlePlayerPress}
-              organizerActions={
-                isOrganizer
-                  ? { onSuspend: handleSuspendMemberPress, onRemove: handleRemoveMemberPress }
-                  : undefined
-              }
-              colors={colors}
-              t={t}
-            />
-            {isOrganizer && (
+            {membersSegmentTabs.length > 1 && (
+              <UnderlineTabBar
+                tabs={membersSegmentTabs}
+                activeKey={activeMembersSegment}
+                onChange={setMembersSegment}
+                style={styles.segmentBar}
+              />
+            )}
+            {activeMembersSegment === 'requests' ? (
+              <PendingMembersSection
+                rows={pendingMemberRows}
+                onPlayerPress={handlePlayerPress}
+                onApprove={handleApprovePress}
+                colors={colors}
+                t={t}
+              />
+            ) : activeMembersSegment === 'invited' ? (
+              <InvitedMembersSection
+                rows={invitedMemberRows}
+                onPlayerPress={handlePlayerPress}
+                onRevoke={handleRevokePress}
+                colors={colors}
+                t={t}
+              />
+            ) : activeMembersSegment === 'suspended' && isOrganizer ? (
               <SuspendedMembersSection
                 rows={suspendedMemberRows}
                 onPlayerPress={handlePlayerPress}
                 onReinstate={handleReinstateMemberPress}
                 onRemove={handleRemoveMemberPress}
+                colors={colors}
+                t={t}
+              />
+            ) : (
+              <MembersSection
+                rows={activeMemberRows}
+                ownerId={league.organizer_id}
+                onPlayerPress={handlePlayerPress}
+                organizerActions={
+                  isOrganizer
+                    ? { onSuspend: handleSuspendMemberPress, onRemove: handleRemoveMemberPress }
+                    : undefined
+                }
                 colors={colors}
                 t={t}
               />
@@ -2800,26 +3016,29 @@ export const LeagueDetail: React.FC = () => {
                       size="xs"
                       weight="semibold"
                       color={colors.textMuted}
-                      style={styles.pendingSectionTitle}
+                      style={styles.rosterCountLabel}
                     >
                       {t('leagueDetail.roster.count', { count: String(seasonRoster.length) })}
                     </Text>
                     {seasonRoster.map(m => (
-                      <PlayerCard
+                      <ParticipantRow
                         key={m.id}
-                        player={memberToPlayer(m)}
+                        player={memberToPlayer(m, memberBadges?.[m.user_id])}
                         onPress={handlePlayerPress}
-                        showActivity={false}
-                        trailingAction={
+                        colors={colors}
+                        showDivider
+                        trailingActions={
                           isOrganizer && m.user_id !== userId && m.status === 'enrolled'
-                            ? {
-                                icon: 'person-remove-outline',
-                                color: colors.danger,
-                                accessibilityLabel: t('leagueDetail.roster.removeAccessibility', {
-                                  name: getHumanName(m.profile, t('leagueDetail.unknownMember')),
-                                }),
-                                onPress: () => handleRemoveSeasonMember(m),
-                              }
+                            ? [
+                                {
+                                  icon: 'person-remove-outline',
+                                  color: colors.danger,
+                                  accessibilityLabel: t('leagueDetail.roster.removeAccessibility', {
+                                    name: getHumanName(m.profile, t('leagueDetail.unknownMember')),
+                                  }),
+                                  onPress: () => handleRemoveSeasonMember(m),
+                                },
+                              ]
                             : undefined
                         }
                       />
@@ -3145,7 +3364,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[8],
   },
   playersTabContent: {
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
   statusBadge: {
@@ -3322,22 +3541,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-  skeletonTabBar: {
-    flexDirection: 'row',
-    gap: spacingPixels[5],
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[3],
-  },
-  skeletonCardGap: {
-    marginTop: spacingPixels[4],
-  },
   participantEmpty: {
     padding: spacingPixels[4],
     alignItems: 'center',
   },
   pendingSection: { marginBottom: spacingPixels[4] },
-  pendingSectionTitle: {
+  segmentBar: {
+    marginBottom: spacingPixels[4],
+  },
+  // Roster count sits inside the Section card, above the first row's divider.
+  rosterCountLabel: {
     marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[3],
     marginBottom: spacingPixels[2],
     letterSpacing: 0.5,
   },
@@ -3351,7 +3566,6 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   inviteButton: {
-    marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[3],
   },
   seasonRow: {

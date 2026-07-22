@@ -4378,6 +4378,12 @@
         "removeLabel": "Retirer {name}",
         "reinstateLabel": "Réactiver {name}"
       },
+      "memberTabs": {
+        "confirmed": "Confirmés",
+        "requests": "Demandes",
+        "invited": "Invités",
+        "suspended": "Suspendus"
+      },
       "joinCta": {
         "description": "Demandez votre adhésion et participez aux saisons"
       },
@@ -4977,6 +4983,11 @@
         "revokeConfirmMessage": "{name} ne sera plus invité. Tu peux le réinviter plus tard.",
         "revokeConfirm": "Retirer",
         "revokeCancel": "Garder"
+      },
+      "playerTabs": {
+        "confirmed": "Confirmés",
+        "requests": "Demandes",
+        "invited": "Invités"
       },
       "manageTitle": "Gérer"
     },
