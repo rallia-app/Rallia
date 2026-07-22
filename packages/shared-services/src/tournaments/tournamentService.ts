@@ -1419,7 +1419,8 @@ export async function joinTournamentViaInvite(
 ): Promise<TournamentRegistration> {
   const { data, error } = await supabase.rpc('tournament_join_via_invite', {
     p_token: token,
-    p_partner_id: partnerId,
+    // Send null (not undefined) so the key is never dropped from the JSON body.
+    p_partner_id: partnerId ?? null,
   });
   if (error) throw new Error(error.message);
   return data as TournamentRegistration;
