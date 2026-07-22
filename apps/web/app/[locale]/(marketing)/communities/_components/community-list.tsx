@@ -3,6 +3,9 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { APP_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
+import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
+import { readDistinctIdCookie, readUtmCookie } from '@/lib/utm-cookie';
 import { cn } from '@/lib/utils';
 import { Loader2, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -39,6 +42,7 @@ export default function CommunityList({ initialCommunities }: CommunityListProps
   // Join dialog
   const [joinCommunityId, setJoinCommunityId] = useState<string | null>(null);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const writeClipboard = useAttributionHandoff();
 
   // Fetch sports on mount
   useEffect(() => {
@@ -118,12 +122,17 @@ export default function CommunityList({ initialCommunities }: CommunityListProps
   const handleJoin = (communityId: string) => {
     const ua = navigator.userAgent.toLowerCase();
     if (/iphone|ipad|ipod/.test(ua)) {
-      window.location.href = 'https://apps.apple.com/app/rallia/id6760482014';
+      // Clipboard token (did + UTM) inside the click gesture so the install
+      // still attributes; iOS can't carry params through the App Store URL.
+      writeClipboard();
+      window.location.href = APP_STORE_URL;
       return;
     }
     if (/android/.test(ua)) {
-      window.location.href =
-        'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
+      window.location.href = buildPlayStoreUrl(undefined, 'community', communityId, {
+        webDistinctId: readDistinctIdCookie() ?? undefined,
+        utm: readUtmCookie() ?? undefined,
+      });
       return;
     }
     // Desktop: show QR code dialog

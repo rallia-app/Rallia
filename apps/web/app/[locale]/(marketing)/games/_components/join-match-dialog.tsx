@@ -12,9 +12,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { appStoreClicked, joinMatchDialogViewed } from '@/lib/analytics';
-
-const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
+import { APP_STORE_URL } from '@/lib/store-urls';
+import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
+import { useAttributedPlayStoreUrl } from '@/lib/use-play-store-url';
 
 interface JoinMatchDialogProps {
   matchId: string | null;
@@ -25,6 +25,11 @@ interface JoinMatchDialogProps {
 export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMatchDialogProps) {
   const t = useTranslations('gamesPage.joinDialog');
   const locale = useLocale();
+  const referral = matchId ? { type: 'match' as const, targetId: matchId } : undefined;
+  // iOS clipboard token + Android install-referrer URL both carry the match
+  // context so the install attributes on first launch.
+  const writeClipboard = useAttributionHandoff(referral ? { referral } : {});
+  const playStoreUrl = useAttributedPlayStoreUrl(referral);
 
   useEffect(() => {
     if (open && matchId) joinMatchDialogViewed({ match_id: matchId });
@@ -56,13 +61,14 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
               href={APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
+              onClick={() => {
+                writeClipboard();
                 appStoreClicked({
                   store: 'app_store',
                   placement: 'join_dialog',
                   ...(matchId ? { match_id: matchId } : {}),
-                })
-              }
+                });
+              }}
             >
               <img
                 src="/app-store-badge-light.svg"
@@ -72,16 +78,17 @@ export default function JoinMatchDialog({ matchId, open, onOpenChange }: JoinMat
               <img src="/app-store-badge.svg" alt="App Store" className="h-10 hidden dark:block" />
             </a>
             <a
-              href={PLAY_STORE_URL}
+              href={playStoreUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() =>
+              onClick={() => {
+                writeClipboard();
                 appStoreClicked({
                   store: 'play_store',
                   placement: 'join_dialog',
                   ...(matchId ? { match_id: matchId } : {}),
-                })
-              }
+                });
+              }}
             >
               <img
                 src="/google-play-badge-light.svg"

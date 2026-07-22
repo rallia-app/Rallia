@@ -1,5 +1,8 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
+
 import {
   Dialog,
   DialogContent,
@@ -7,11 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { QRCodeSVG } from 'qrcode.react';
-import { useTranslations } from 'next-intl';
-
-const APP_STORE_URL = 'https://apps.apple.com/app/rallia/id6760482014';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mathisl971.ralliaapp';
+import { APP_STORE_URL } from '@/lib/store-urls';
+import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
+import { useAttributedPlayStoreUrl } from '@/lib/use-play-store-url';
 
 interface JoinCommunityDialogProps {
   communityId: string | null;
@@ -25,6 +26,11 @@ export default function JoinCommunityDialog({
   onOpenChange,
 }: JoinCommunityDialogProps) {
   const t = useTranslations('communitiesPage.joinDialog');
+  const referral = communityId ? { type: 'community' as const, targetId: communityId } : undefined;
+  // iOS clipboard token + Android install-referrer URL both carry the
+  // community context so the install attributes on first launch.
+  const writeClipboard = useAttributionHandoff(referral ? { referral } : {});
+  const playStoreUrl = useAttributedPlayStoreUrl(referral);
 
   // QR code links to App Store (no community-specific deep link available)
   const qrUrl = communityId ? APP_STORE_URL : '';
@@ -44,7 +50,12 @@ export default function JoinCommunityDialog({
           )}
           <p className="text-sm text-muted-foreground text-center">{t('qrHint')}</p>
           <div className="flex items-center gap-3 pt-2">
-            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => writeClipboard()}
+            >
               <img
                 src="/app-store-badge-light.svg"
                 alt="App Store"
@@ -52,7 +63,12 @@ export default function JoinCommunityDialog({
               />
               <img src="/app-store-badge.svg" alt="App Store" className="h-10 hidden dark:block" />
             </a>
-            <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={playStoreUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => writeClipboard()}
+            >
               <img
                 src="/google-play-badge-light.svg"
                 alt="Google Play"

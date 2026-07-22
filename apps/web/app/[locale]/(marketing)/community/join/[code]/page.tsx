@@ -105,6 +105,7 @@ export default async function CommunityJoinPage({ params, searchParams }: Props)
           codeHint={t('iosCommunityCodeHint')}
           copyLabel={t('iosCopyCode')}
           copiedLabel={t('iosCommunityCodeCopied')}
+          referral={{ type: 'community', targetId: code }}
         />
       ) : (
         <>

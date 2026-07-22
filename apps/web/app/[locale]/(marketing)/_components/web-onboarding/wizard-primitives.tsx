@@ -3,7 +3,9 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Link } from '@/i18n/navigation';
 import { appStoreClicked, type AppStorePlacement } from '@/lib/analytics';
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
+import { APP_STORE_URL } from '@/lib/store-urls';
+import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
+import { useAttributedPlayStoreUrl } from '@/lib/use-play-store-url';
 import { cn } from '@/lib/utils';
 
 export function StepHeader({
@@ -156,6 +158,11 @@ export function AppStoreBadges({
     ...(matchId ? { match_id: matchId } : {}),
     ...(facilityId ? { facility_id: facilityId } : {}),
   };
+  const referral = matchId ? { type: 'match' as const, targetId: matchId } : undefined;
+  // Clipboard token (iOS) + install-referrer URL (Android) so the install
+  // still attributes; the match context rides along when we have one.
+  const writeClipboard = useAttributionHandoff(referral ? { referral } : {});
+  const playStoreUrl = useAttributedPlayStoreUrl(referral);
 
   return (
     <div className="flex items-center gap-3">
@@ -163,16 +170,22 @@ export function AppStoreBadges({
         href={APP_STORE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => appStoreClicked({ store: 'app_store', placement, ...extra })}
+        onClick={() => {
+          writeClipboard();
+          appStoreClicked({ store: 'app_store', placement, ...extra });
+        }}
       >
         <img src="/app-store-badge-light.svg" alt="App Store" className="block h-10 dark:hidden" />
         <img src="/app-store-badge.svg" alt="App Store" className="hidden h-10 dark:block" />
       </a>
       <a
-        href={PLAY_STORE_URL}
+        href={playStoreUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => appStoreClicked({ store: 'play_store', placement, ...extra })}
+        onClick={() => {
+          writeClipboard();
+          appStoreClicked({ store: 'play_store', placement, ...extra });
+        }}
       >
         <img
           src="/google-play-badge-light.svg"
