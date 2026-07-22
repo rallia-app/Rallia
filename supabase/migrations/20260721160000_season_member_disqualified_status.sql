@@ -1,0 +1,13 @@
+-- Add 'disqualified' to season_member_status so season removal can mirror the
+-- tournament pattern: an organizer removing a paid member marks them
+-- disqualified (involuntary exit), which the settle cron auto-refunds, exactly
+-- like tournament_remove_registration + lt_cancel_refund_candidates do
+-- (20260721130300). Every reader keys on status = 'enrolled'
+-- (is_enrolled_season_member, season_ranking_roster, listSeasonMembers), so a
+-- disqualified member drops off the roster, standings, and enrollment checks
+-- the same way 'withdrawn' does.
+--
+-- Own migration on purpose: ALTER TYPE ... ADD VALUE cannot be used in the same
+-- transaction that adds it, so the functions that reference 'disqualified' live
+-- in the next migration.
+ALTER TYPE season_member_status ADD VALUE IF NOT EXISTS 'disqualified';

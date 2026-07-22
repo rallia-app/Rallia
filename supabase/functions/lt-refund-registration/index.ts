@@ -16,10 +16,6 @@
  * Body:    { registrationId: string, versionWas: number }    -- tournament entry
  *      or  { seasonMemberId: string, versionWas: number }    -- league season entry
  *          (exactly one of registrationId / seasonMemberId)
- *      +   { asOrganizer: true }   -- season only: the organizer refunds and
- *          removes a member (season_refund_member) instead of the member
- *          withdrawing themselves (season_request_refund). Same 8-column plan,
- *          so everything downstream is identical.
  * Success: { withdrawn: true, refundedCents: number }
  * Errors:  { error: ErrorCode }
  *
@@ -39,7 +35,6 @@ type ErrorCode =
   | 'invalid_auth'
   | 'invalid_body'
   | 'not_owner'
-  | 'not_organizer'
   | 'registration_not_found'
   | 'withdraw_not_allowed'
   | 'no_paid_registration'
@@ -63,8 +58,6 @@ function mapRpcError(message: string | undefined): ErrorCode {
   switch (message) {
     case 'NOT_OWNER':
       return 'not_owner';
-    case 'NOT_ORGANIZER':
-      return 'not_organizer';
     case 'REGISTRATION_NOT_FOUND':
       return 'registration_not_found';
     case 'WITHDRAW_NOT_ALLOWED':
@@ -111,12 +104,9 @@ Deno.serve(async req => {
     if (authError || !user) return err('invalid_auth', 401);
 
     // Exactly one of registrationId (tournament) / seasonMemberId (season).
-    // All three RPCs return the same 8-column plan, so everything downstream is
-    // shared. asOrganizer (season only) swaps the owner-gated withdraw for the
-    // organizer-gated refund+remove.
+    // Both RPCs return the same 8-column plan, so everything downstream is shared.
     let registrationId: string | null = null;
     let seasonMemberId: string | null = null;
-    let asOrganizer = false;
     let versionWas: number;
     try {
       const body = await req.json();
@@ -126,11 +116,8 @@ Deno.serve(async req => {
       if (body?.seasonMemberId && typeof body.seasonMemberId === 'string') {
         seasonMemberId = body.seasonMemberId;
       }
-      asOrganizer = body?.asOrganizer === true;
       versionWas = body?.versionWas;
       if (!registrationId === !seasonMemberId) throw new Error();
-      // asOrganizer is a season-only mode.
-      if (asOrganizer && !seasonMemberId) throw new Error();
       if (typeof versionWas !== 'number') throw new Error();
     } catch {
       return err('invalid_body');
@@ -142,15 +129,10 @@ Deno.serve(async req => {
           p_registration_id: registrationId,
           p_version_was: versionWas,
         })
-      : asOrganizer
-        ? await userClient.rpc('season_refund_member', {
-            p_season_member_id: seasonMemberId,
-            p_version_was: versionWas,
-          })
-        : await userClient.rpc('season_request_refund', {
-            p_season_member_id: seasonMemberId,
-            p_version_was: versionWas,
-          });
+      : await userClient.rpc('season_request_refund', {
+          p_season_member_id: seasonMemberId,
+          p_version_was: versionWas,
+        });
     if (rpcError) return err(mapRpcError(rpcError.message), 400);
 
     const plan = (Array.isArray(rows) ? rows[0] : rows) as RefundPlan | undefined;

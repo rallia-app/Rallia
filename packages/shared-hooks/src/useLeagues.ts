@@ -53,7 +53,6 @@ import {
   getSeasonFeeQuote,
   createSeasonEnrollmentPayment,
   refundSeasonEnrollment,
-  refundSeasonMember,
   updateSeason,
   cancelSeason,
   type CreateLeagueInput,
@@ -886,33 +885,6 @@ export function useRefundSeasonEnrollment(
     onError: e => options.onError?.(e),
   });
   return { mutateAsync: mutation.mutateAsync, isPending: mutation.isPending };
-}
-
-/** Organizer refunds and removes a paid season member (season_refund_member via
- *  the shared refund edge function). Invalidates the roster, standings, and the
- *  target's membership so the removal shows immediately. */
-export function useRefundSeasonMember(
-  options: MutationOptions<{ withdrawn: boolean; refundedCents: number }> = {}
-) {
-  const qc = useQueryClient();
-  const mutation = useMutation<
-    { withdrawn: boolean; refundedCents: number },
-    Error,
-    { seasonMemberId: string; versionWas: number; seasonId: string; leagueId: string }
-  >({
-    mutationFn: ({ seasonMemberId, versionWas }) => refundSeasonMember(seasonMemberId, versionWas),
-    onSuccess: (r, vars) => {
-      qc.invalidateQueries({ queryKey: leagueKeys.seasons(vars.leagueId) });
-      qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(vars.seasonId) });
-      qc.invalidateQueries({ queryKey: leagueKeys.rankings(vars.seasonId) });
-      options.onSuccess?.(r);
-    },
-    onError: e => options.onError?.(e),
-  });
-  return {
-    refundSeasonMemberAsync: mutation.mutateAsync,
-    isRefundingSeasonMember: mutation.isPending,
-  };
 }
 
 export function useUpdateSeason(options: MutationOptions<Season> = {}) {
