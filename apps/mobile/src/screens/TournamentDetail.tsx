@@ -4688,7 +4688,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: spacingPixels[1.5],
+    gap: spacingPixels[3],
   },
   dockedBarHint: {
     textAlign: 'center',
