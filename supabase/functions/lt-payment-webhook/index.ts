@@ -39,6 +39,13 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
+import {
+  classifySucceeded,
+  classifyTerminal,
+  shouldFinalize,
+  type LedgerStatus,
+} from './webhook-logic.ts';
+
 // deno-lint-ignore no-explicit-any
 type Admin = SupabaseClient<any, any, any>;
 
@@ -110,17 +117,14 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
   const chargeId =
     typeof pi.latest_charge === 'string' ? pi.latest_charge : (pi.latest_charge?.id ?? null);
 
-  // A row we already gave up on must never be promoted. Two ways to get here:
-  // the 15-min reaper expired the reservation and released the slot, or a newer
-  // attempt superseded this one — in both cases the PaymentIntent stayed
-  // confirmable and the player has now paid for a slot that is gone. Promoting
-  // it would leave a succeeded payment against a withdrawn registration, which
-  // lt_release_candidates would happily pay out to the organizer (it filters on
-  // payment status, not registration status).
-  //
-  // Record the charge so the money is traceable, leave the status terminal so
-  // settlement ignores it, and shout: this needs a refund decision.
-  if (row.status === 'failed' || row.status === 'cancelled') {
+  const decision = classifySucceeded(row.status as LedgerStatus);
+
+  // orphan: the row is terminal (failed/cancelled) — the reaper released the
+  // slot or a newer attempt superseded this one, so the player paid for a slot
+  // that's gone. Record the charge for traceability, never promote it (that
+  // would make it a payout candidate against a withdrawn registration), and
+  // shout: this needs a refund decision.
+  if (decision === 'orphan') {
     const { error } = await admin
       .from('lt_registration_payment')
       .update({ stripe_charge_id: chargeId, updated_at: new Date().toISOString() })
@@ -137,13 +141,13 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
     return;
   }
 
-  // Already refunded: nothing to finalize, and the payer must not be re-seated.
-  if (row.status === 'refunded' || row.status === 'partially_refunded') {
+  // ignore: already refunded — do nothing, and never re-seat the payer.
+  if (decision === 'ignore') {
     console.warn('[lt-payment-webhook] succeeded event on a %s row, ignoring', row.status);
     return;
   }
 
-  if (row.status === 'pending') {
+  if (decision === 'promote') {
     const { error } = await admin
       .from('lt_registration_payment')
       .update({
@@ -156,15 +160,15 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
     if (error) throw error;
   }
 
-  // Always attempt the flip, including on a re-delivery. An earlier delivery may
-  // have marked the ledger succeeded and then died before getting here; if we
-  // returned early on 'succeeded' the retry would skip this and the player would
-  // stay payment_pending forever, charged and unregistered. The status filter
-  // keeps it a no-op once the row is already finalized, and stops it clobbering
-  // a withdrawn/disqualified state.
+  // Both 'promote' and 'finalize' attempt the slot flip, including on a
+  // re-delivery: an earlier delivery may have marked the ledger succeeded and
+  // died before getting here, and returning early on 'succeeded' would leave the
+  // player payment_pending forever, charged and unregistered. The status filter
+  // keeps it a no-op once finalized, and stops it clobbering a withdrawn state.
   //
   // Order matters: the ledger is marked succeeded first, so the paid-gate
   // trigger on tournament_registrations sees a succeeded payment for this row.
+  if (!shouldFinalize(decision)) return;
   if (row.tournament_registration_id) {
     const { error } = await admin
       .from('tournament_registrations')
@@ -196,20 +200,17 @@ async function handleTerminal(
     .eq('stripe_payment_intent_id', pi.id)
     .maybeSingle();
   if (!row) return;
-  // Don't override a row that already succeeded (a late failure on a retried PI).
-  if (
-    row.status === 'succeeded' ||
-    row.status === 'refunded' ||
-    row.status === 'partially_refunded'
-  )
-    return;
-  // Write the ledger only if it isn't already there, but never return early on a
-  // re-delivery: the slot release below still has to run. Returning here is the
-  // same bug the succeeded path had — a delivery that died between the ledger
-  // write and the release left the slot reserved forever, and the reaper cannot
-  // recover it because it only scans 'pending' rows and this one is terminal.
-  // The status filter is a compare-and-set against what we just read.
-  if (row.status !== status) {
+
+  // Don't override a row that already succeeded/refunded (a late failure on a
+  // retried PI), but never return early otherwise: the slot release below still
+  // has to run. Skipping it is the same bug the succeeded path had — a delivery
+  // that died between the ledger write and the release left the slot reserved
+  // forever, and the reaper can't recover a terminal row (it only scans pending).
+  const decision = classifyTerminal(row.status as LedgerStatus, status);
+  if (!decision.writeLedger && !decision.releaseSlot) return;
+
+  if (decision.writeLedger) {
+    // The status filter is a compare-and-set against what we just read.
     const { error } = await admin
       .from('lt_registration_payment')
       .update({ status, updated_at: new Date().toISOString() })
@@ -220,19 +221,21 @@ async function handleTerminal(
 
   // Free the reserved slot. Errors throw so the request 500s and Stripe retries;
   // swallowing them returned 200 and the retry never came.
-  if (row.tournament_registration_id) {
-    const { error } = await admin
-      .from('tournament_registrations')
-      .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
-      .eq('id', row.tournament_registration_id)
-      .eq('status', 'payment_pending');
-    if (error) throw error;
-  } else if (row.season_user_id) {
-    const { error } = await admin
-      .from('season_members')
-      .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
-      .eq('id', row.season_user_id)
-      .eq('status', 'payment_pending');
-    if (error) throw error;
+  if (decision.releaseSlot) {
+    if (row.tournament_registration_id) {
+      const { error } = await admin
+        .from('tournament_registrations')
+        .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
+        .eq('id', row.tournament_registration_id)
+        .eq('status', 'payment_pending');
+      if (error) throw error;
+    } else if (row.season_user_id) {
+      const { error } = await admin
+        .from('season_members')
+        .update({ status: 'withdrawn', withdrawn_at: new Date().toISOString() })
+        .eq('id', row.season_user_id)
+        .eq('status', 'payment_pending');
+      if (error) throw error;
+    }
   }
 }
