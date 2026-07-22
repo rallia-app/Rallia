@@ -22,6 +22,50 @@ export interface RealtimeUserStats {
   newWeek: number;
 }
 
+/** A single labelled count row used across demographic breakdowns. */
+export interface DemographicCount {
+  label: string;
+  count: number;
+}
+
+/** Aggregate persona/demographics snapshot powering the Users analytics tab. */
+export interface UserDemographics {
+  totals: {
+    profiles: number;
+    players: number;
+    onboarded: number;
+    activeToday: number;
+    activeWeek: number;
+    activeMonth: number;
+    newWeek: number;
+    newMonth: number;
+  };
+  signupsByWeek: { week: string; count: number }[];
+  ageBands: DemographicCount[];
+  gender: DemographicCount[];
+  locale: DemographicCount[];
+  geography: DemographicCount[];
+  topCities: DemographicCount[];
+  sports: DemographicCount[];
+  skillLevels: { sport: string; skill: string; count: number }[];
+  ratingHistogram: { sport: string; label: string; value: number; count: number }[];
+  matchType: DemographicCount[];
+  matchDuration: DemographicCount[];
+  playingHand: DemographicCount[];
+  gamesPlayed: DemographicCount[];
+  engagement: {
+    everCheckedIn: number;
+    activeStreaks: number;
+    avgActiveStreak: number;
+    maxStreak: number;
+    haveFavFacility: number;
+    haveAvailability: number;
+    autoInviteOn: number;
+  };
+  acquisition: DemographicCount[];
+  referred: { referred: number; notReferred: number };
+}
+
 /** Match statistics */
 export interface MatchStatistics {
   totalMatches: number;
@@ -1675,6 +1719,97 @@ export interface FeedbackSentiment {
 /**
  * Get rating distribution per sport
  */
+/**
+ * Aggregate persona/demographics snapshot for the admin Users tab.
+ * One `get_user_demographics` RPC returns a jsonb payload of aggregate-only
+ * counts; we normalise the snake_case keys to the camelCase shape above.
+ */
+export async function getUserDemographics(): Promise<UserDemographics | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_user_demographics');
+    if (error) {
+      console.error('Error in getUserDemographics:', error);
+      return null;
+    }
+    if (!data) return null;
+
+    const raw = data as Record<string, unknown>;
+    const num = (v: unknown): number => Number(v) || 0;
+    const counts = (arr: unknown, labelKey: string): DemographicCount[] =>
+      Array.isArray(arr)
+        ? arr.map(r => {
+            const row = r as Record<string, unknown>;
+            return { label: String(row[labelKey] ?? ''), count: num(row.count) };
+          })
+        : [];
+
+    const t = (raw.totals ?? {}) as Record<string, unknown>;
+    const eng = (raw.engagement ?? {}) as Record<string, unknown>;
+    const ref = (raw.referred ?? {}) as Record<string, unknown>;
+
+    return {
+      totals: {
+        profiles: num(t.profiles),
+        players: num(t.players),
+        onboarded: num(t.onboarded),
+        activeToday: num(t.active_today),
+        activeWeek: num(t.active_week),
+        activeMonth: num(t.active_month),
+        newWeek: num(t.new_week),
+        newMonth: num(t.new_month),
+      },
+      signupsByWeek: Array.isArray(raw.signups_by_week)
+        ? (raw.signups_by_week as Record<string, unknown>[]).map(r => ({
+            week: String(r.week ?? ''),
+            count: num(r.count),
+          }))
+        : [],
+      ageBands: counts(raw.age_bands, 'bucket'),
+      gender: counts(raw.gender, 'bucket'),
+      locale: counts(raw.locale, 'bucket'),
+      geography: counts(raw.geography, 'zone'),
+      topCities: counts(raw.top_cities, 'city'),
+      sports: counts(raw.sports, 'sport'),
+      skillLevels: Array.isArray(raw.skill_levels)
+        ? (raw.skill_levels as Record<string, unknown>[]).map(r => ({
+            sport: String(r.sport ?? ''),
+            skill: String(r.skill ?? ''),
+            count: num(r.count),
+          }))
+        : [],
+      ratingHistogram: Array.isArray(raw.rating_histogram)
+        ? (raw.rating_histogram as Record<string, unknown>[]).map(r => ({
+            sport: String(r.sport ?? ''),
+            label: String(r.label ?? ''),
+            value: num(r.value),
+            count: num(r.count),
+          }))
+        : [],
+      matchType: counts(raw.match_type, 'bucket'),
+      matchDuration: counts(raw.match_duration, 'bucket'),
+      playingHand: counts(raw.playing_hand, 'bucket'),
+      gamesPlayed: counts(raw.games_played, 'bucket'),
+      engagement: {
+        everCheckedIn: num(eng.ever_checked_in),
+        activeStreaks: num(eng.active_streaks),
+        avgActiveStreak: num(eng.avg_active_streak),
+        maxStreak: num(eng.max_streak),
+        haveFavFacility: num(eng.have_fav_facility),
+        haveAvailability: num(eng.have_availability),
+        autoInviteOn: num(eng.auto_invite_on),
+      },
+      acquisition: counts(raw.acquisition, 'channel'),
+      referred: {
+        referred: num(ref.referred),
+        notReferred: num(ref.not_referred),
+      },
+    };
+  } catch (error) {
+    console.error('Error in getUserDemographics:', error);
+    return null;
+  }
+}
+
 export async function getRatingDistribution(sportId?: string): Promise<RatingDistribution[]> {
   try {
     const { data, error } = await supabase.rpc('get_rating_distribution', {

@@ -11181,6 +11181,10 @@ export type Database = {
           total_users: number
         }[]
       }
+      get_user_demographics: {
+        Args: never
+        Returns: Json
+      }
       get_referral_leaderboard: {
         Args: { p_contest_id: string; p_limit?: number }
         Returns: {

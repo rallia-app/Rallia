@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getKPISummary,
   getRealtimeUserStats,
+  getUserDemographics,
   getMatchStatistics,
   getMatchesTodayCount,
   getSportStatistics,
@@ -38,6 +39,8 @@ import {
   getAnalyticsSnapshots,
   type KPISummary,
   type RealtimeUserStats,
+  type UserDemographics,
+  type DemographicCount,
   type MatchStatistics,
   type SportStatistics,
   type OnboardingFunnelStep,
@@ -433,6 +436,60 @@ export function useUserStats(autoFetch = true): UseUserStatsResult {
     error,
     refetch: fetchData,
   };
+}
+
+export interface UseUserDemographicsResult {
+  /** Aggregate persona snapshot */
+  data: UserDemographics | null;
+  /** Loading state */
+  loading: boolean;
+  /** Error state */
+  error: Error | null;
+  /** Refetch data */
+  refetch: () => Promise<void>;
+}
+
+/**
+ * Hook for the aggregate user/persona demographics snapshot (Users tab).
+ */
+export function useUserDemographics(autoFetch = true): UseUserDemographicsResult {
+  const [data, setData] = useState<UserDemographics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getUserDemographics();
+      if (isMounted.current) {
+        setData(result);
+      }
+    } catch (err) {
+      console.error('Error fetching user demographics:', err);
+      if (isMounted.current) {
+        setError(err as Error);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    isMounted.current = true;
+    if (autoFetch) {
+      fetchData();
+    }
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return { data, loading, error, refetch: fetchData };
 }
 
 /**
@@ -1399,6 +1456,8 @@ export function useCompatSupplyTrend(days: number = 90): {
 export type {
   KPISummary,
   RealtimeUserStats,
+  UserDemographics,
+  DemographicCount,
   MatchStatistics,
   SportStatistics,
   OnboardingFunnelStep,
