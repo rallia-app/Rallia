@@ -8,9 +8,10 @@
  * is never refunded.
  *
  * v0 model: the entry sits in the organizer's connected balance (destination
- * charge). This function refunds the player with `reverse_transfer:true`, which
- * claws the exact refundable entry back from the organizer's balance to fund
- * the refund, and `refund_application_fee:false`, which keeps Rallia's fee.
+ * charge). This function claws the refundable entry back with an explicit
+ * transfer reversal, then refunds the player with `reverse_transfer:false` and
+ * `refund_application_fee:false` (Rallia keeps its fee). Two calls, not one
+ * reverse_transfer:true refund — see _shared/lt-refund-logic.ts for why.
  *
  * POST /lt-refund-registration   (authenticated — JWT validated internally)
  * Body:    { registrationId: string, versionWas: number }    -- tournament entry
@@ -24,6 +25,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+
+import { executeEntryRefund } from '../_shared/lt-entry-refund.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,6 +81,7 @@ function mapRpcError(message: string | undefined): ErrorCode {
 interface RefundPlan {
   payment_id: string;
   stripe_payment_intent_id: string | null;
+  stripe_charge_id: string | null;
   entry_cents: number;
   refundable_entry_cents: number;
 }
@@ -155,10 +159,11 @@ Deno.serve(async req => {
     // with the fresh version the RPC's status filter no longer matches a
     // withdrawn row. So undo the withdrawal and let them try again.
     //
-    // Safe if the refund actually went through and we only lost the response:
-    // the idempotency key below means the retry returns that same refund rather
-    // than issuing a second one, and the retry then withdraws and marks the
-    // ledger correctly.
+    // Safe if the money actually moved and we only lost the response: the
+    // executor derives both amounts from live Stripe state (plus idempotency
+    // keys), so a retry skips whatever already went through — including a
+    // reversal that succeeded before the refund failed — and the retry then
+    // withdraws and marks the ledger correctly.
     const rollbackWithdrawal = async () => {
       const at = new Date().toISOString();
       const { error } = registrationId
@@ -182,24 +187,18 @@ Deno.serve(async req => {
       }
     };
 
-    // The entry sits in the organizer's connected balance; reverse_transfer
-    // claws the exact refundable amount back to fund the refund, and
-    // refund_application_fee:false keeps Rallia's service fee.
+    // The entry sits in the organizer's connected balance; the executor claws
+    // the refundable amount back with an explicit transfer reversal, then
+    // refunds the player. Rallia's service fee is kept either way.
     try {
-      await stripe.refunds.create(
-        {
-          payment_intent: pi,
-          amount: refundable,
-          reverse_transfer: true,
-          refund_application_fee: false,
-          metadata: {
-            rallia_flow: 'lt_registration',
-            paymentId: plan.payment_id,
-            reason: 'withdraw',
-          },
-        },
-        { idempotencyKey: `lt-refund-${plan.payment_id}` }
-      );
+      await executeEntryRefund(stripe, {
+        paymentId: plan.payment_id,
+        paymentIntentId: pi,
+        chargeId: plan.stripe_charge_id,
+        refundableEntryCents: refundable,
+        reason: 'withdraw',
+        idempotencyPrefix: 'lt-refund',
+      });
     } catch (e) {
       console.error('[lt-refund-registration] stripe refund failed, undoing withdrawal', e);
       await rollbackWithdrawal();

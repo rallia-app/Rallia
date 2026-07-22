@@ -46,6 +46,7 @@ import {
   archiveTournament,
   updateTournament,
   getProfilesByIds,
+  getPlayersRatingReputation,
   listTournamentParticipants,
   getOrCreateTournamentInvite,
   resetTournamentInvite,
@@ -66,6 +67,7 @@ import {
   type TournamentCoOrganizer,
   type LinkableMatch,
   type PlayerProfile,
+  type PlayerRatingReputation,
   type PlayerSearchResult,
   type TournamentFeeQuote,
   type PayoutAccountStatus,
@@ -121,8 +123,23 @@ export function useProfilesByIds(ids: string[]) {
 }
 
 /**
+ * Batch-fetch sport-scoped rating + reputation for a set of players, keyed by
+ * player id. Feeds roster rows whose base data lacks badges (e.g. league
+ * members, season rosters).
+ */
+export function usePlayersRatingReputation(playerIds: string[], sportId: string | undefined) {
+  // Stable key: sorted unique ids joined.
+  const sortedIds = [...new Set(playerIds)].sort();
+  return useQuery<Record<string, PlayerRatingReputation>>({
+    queryKey: ['players', 'ratingReputation', sportId ?? '', sortedIds.join(',')],
+    queryFn: () => getPlayersRatingReputation(sortedIds, sportId!),
+    enabled: !!sportId && sortedIds.length > 0,
+  });
+}
+
+/**
  * Visible tournament participants enriched with rating/reputation/online so the
- * Players tab can render them with the shared community PlayerCard. Seed-ordered.
+ * Players tab can render them as roster rows. Seed-ordered.
  */
 export function useTournamentParticipants(tournamentId: string | undefined) {
   return useQuery<PlayerSearchResult[]>({

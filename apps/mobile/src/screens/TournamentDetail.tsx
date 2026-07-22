@@ -35,7 +35,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, SkeletonTextLine, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -95,23 +95,15 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import type { Enums, Tables } from '@rallia/shared-types';
 import * as WebBrowser from 'expo-web-browser';
-import {
-  getTierConfig,
-  getTournamentChat,
-  TournamentPaymentError,
-  supabase,
-} from '@rallia/shared-services';
-import type {
-  PlayerSearchResult,
-  ReputationDisplay,
-  ReputationTier,
-} from '@rallia/shared-services';
+import { getTournamentChat, TournamentPaymentError, supabase } from '@rallia/shared-services';
+import type { PlayerSearchResult } from '@rallia/shared-services';
 
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
-import PlayerCard from '../features/community/components/PlayerCard';
+import ParticipantRow from '../components/ParticipantRow';
+import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import {
   TournamentBanner,
@@ -123,6 +115,8 @@ type TournamentDetailRoute = RouteProp<RootStackParamList, 'TournamentDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type TabKey = 'overview' | 'bracket' | 'players' | 'points' | 'rules' | 'details';
+/** Players-tab status segments (pill tabs). */
+type PlayersSegment = 'confirmed' | 'requests' | 'invited';
 
 type Status = Enums<'tournament_status'>;
 type Visibility = Enums<'tournament_visibility'>;
@@ -285,34 +279,139 @@ const LabeledBlock: React.FC<{
   </View>
 );
 
-/** Initial-load placeholder shaped like the hero + tab bar + first cards, so the
- *  screen keeps its silhouette while the tournament loads. */
-const TournamentDetailSkeleton: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+/** Initial-load placeholder mirroring the loaded Overview 1:1 — banner with the
+ *  scrim identity lines, sticky-tab geometry, then the stats, stepper and event
+ *  info cards — sharing the real StyleSheet so nothing jumps when data lands. */
+const TournamentDetailSkeleton: React.FC = () => {
   const { width } = useWindowDimensions();
-  const bg = isDark ? neutral[800] : neutral[200];
-  const highlight = isDark ? neutral[700] : neutral[100];
-  const shimmer = { backgroundColor: bg, highlightColor: highlight };
+  const { colors: themed } = useThemeStyles();
+  const shimmer = {
+    backgroundColor: themed.skeletonBackground,
+    highlightColor: themed.skeletonHighlight,
+  };
+  // The scrim lines sit on the banner artwork, so they shimmer in the same
+  // translucent white the real scrim text uses.
+  const onBanner = {
+    backgroundColor: 'rgba(255,255,255,0.40)',
+    highlightColor: 'rgba(255,255,255,0.60)',
+  };
   return (
     <View>
-      <Skeleton
-        {...shimmer}
-        height={Math.round(width / TOURNAMENT_BANNER_ASPECT)}
-        borderRadius={0}
-      />
-      <View style={styles.heroChipRow}>
-        {[110, 88].map(w => (
-          <Skeleton key={w} {...shimmer} width={w} height={26} borderRadius={radiusPixels.full} />
-        ))}
+      <View style={styles.heroFixed}>
+        <View style={styles.heroBanner}>
+          <Skeleton
+            {...shimmer}
+            height={Math.round(width / TOURNAMENT_BANNER_ASPECT)}
+            borderRadius={0}
+          />
+          {/* Status pill floats near-white on the image in both themes */}
+          <View style={styles.heroBannerTopRow}>
+            <View style={[styles.statusBadge, { backgroundColor: 'rgba(255,255,255,0.94)' }]}>
+              <SkeletonTextLine
+                size="xs"
+                width={72}
+                backgroundColor="rgba(0,0,0,0.10)"
+                highlightColor="rgba(0,0,0,0.18)"
+              />
+            </View>
+          </View>
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.68)']}
+            locations={[0, 0.42, 1]}
+            style={styles.heroScrim}
+          >
+            <SkeletonTextLine {...onBanner} size="2xl" lineHeight="tight" width="62%" />
+            <SkeletonTextLine {...onBanner} size="sm" width="46%" />
+          </LinearGradient>
+        </View>
       </View>
-      <View style={styles.skeletonTabBar}>
-        {[0, 1, 2].map(i => (
-          <Skeleton key={i} {...shimmer} width={72} height={14} />
-        ))}
+
+      <View
+        style={[
+          styles.tabBarSticky,
+          { backgroundColor: themed.background, borderBottomColor: themed.border },
+        ]}
+      >
+        <View style={styles.tabBarContent}>
+          {[64, 52, 58, 46].map((w, i) => (
+            <View key={i} style={styles.tabItem}>
+              <SkeletonTextLine {...shimmer} size="sm" width={w} />
+              <View style={styles.tabUnderline} />
+            </View>
+          ))}
+        </View>
       </View>
+
       <View style={styles.tabContent}>
-        <Skeleton {...shimmer} height={72} borderRadius={radiusPixels.lg} />
-        <View style={styles.skeletonCardGap}>
-          <Skeleton {...shimmer} height={120} borderRadius={radiusPixels.xl} />
+        {/* Stats: three value/label segments split by hairlines */}
+        <View
+          style={[
+            styles.section,
+            styles.statsCard,
+            { backgroundColor: themed.cardBackground, borderColor: themed.border },
+          ]}
+        >
+          {[0, 1, 2].map(i => (
+            <React.Fragment key={i}>
+              {i > 0 && <View style={[styles.statDivider, { backgroundColor: themed.border }]} />}
+              <View style={styles.statSegment}>
+                <SkeletonTextLine {...shimmer} size="lg" width={44} />
+                <SkeletonTextLine {...shimmer} size="xs" width={56} />
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Lifecycle stepper: four dots joined by connectors */}
+        <View
+          style={[
+            styles.section,
+            styles.stepperCard,
+            { backgroundColor: themed.cardBackground, borderColor: themed.border },
+          ]}
+        >
+          <View style={styles.stepperRow}>
+            {[0, 1, 2, 3].map(i => (
+              <React.Fragment key={i}>
+                {i > 0 && (
+                  <View style={[styles.stepperConnector, { backgroundColor: themed.border }]} />
+                )}
+                <View style={styles.stepperStep}>
+                  <Skeleton {...shimmer} width={32} height={32} circle />
+                  <SkeletonTextLine {...shimmer} size="xs" width={44} />
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+
+        {/* Event info: icon-disc rows behind a section title */}
+        <View style={styles.section}>
+          <SkeletonTextLine {...shimmer} size="xs" width={88} style={styles.sectionTitle} />
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: themed.cardBackground, borderColor: themed.border },
+            ]}
+          >
+            {['58%', '72%', '44%', '64%'].map((w, i) => (
+              <View
+                key={w}
+                style={[
+                  styles.overviewInfoRow,
+                  i > 0 && {
+                    borderTopWidth: StyleSheet.hairlineWidth,
+                    borderTopColor: themed.border,
+                  },
+                ]}
+              >
+                <Skeleton {...shimmer} width={30} height={30} circle />
+                <View style={styles.overviewInfoTexts}>
+                  <SkeletonTextLine {...shimmer} size="sm" width={w} />
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
     </View>
@@ -930,22 +1029,6 @@ const OverviewInfoRow: React.FC<{
   </View>
 );
 
-// Mirror PlayerDirectory: derive reputation display straight from the row,
-// no extra API call. Hidden unless the player's reputation is public.
-function reputationDisplayFor(player: PlayerSearchResult): ReputationDisplay | undefined {
-  if (!player.reputation_tier || !player.reputation_is_public) return undefined;
-  const tier = player.reputation_tier as ReputationTier;
-  const cfg = getTierConfig(tier);
-  return {
-    tier,
-    score: player.reputation_score ?? 100,
-    isVisible: player.reputation_is_public,
-    tierLabel: cfg.label,
-    tierColor: cfg.color,
-    tierIcon: cfg.icon,
-  };
-}
-
 /** One-line, player-facing summary of a tournament's refund policy. Shared by
  *  the register CTA and the pre-payment confirmation so the wording can't drift. */
 function refundPolicyLine(
@@ -981,7 +1064,7 @@ function refundPolicyLine(
     : t('tournamentDetail.payments.refundPartial').replace('{pct}', pct);
 }
 
-/** Registered players rendered with the shared community PlayerCard.
+/** Registered players as compact rows inside a Section-style card.
  *  onRemovePress is set only when the caller may remove registrants
  *  (organizer, pre-bracket); the organizer's own row never shows it. */
 const ParticipantsSection: React.FC<{
@@ -1008,68 +1091,75 @@ const ParticipantsSection: React.FC<{
 }) => {
   return (
     <View>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-        {t('tournamentDetail.dashboard.participants.title')}
-      </Text>
-      {players.length === 0 ? (
-        <View style={styles.participantEmpty}>
-          <View style={[styles.participantEmptyDisc, { backgroundColor: colors.statusActiveBg }]}>
-            <Ionicons name="people-outline" size={34} color={colors.primary} />
-          </View>
-          <Text size="base" weight="semibold" color={colors.text}>
-            {t('tournamentDetail.dashboard.participants.empty')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.participantEmptyText}>
-            {t('tournamentDetail.dashboard.participants.emptyDescription')}
-          </Text>
-          <View style={[styles.participantEmptyStats, { borderTopColor: colors.border }]}>
-            <View style={styles.participantEmptyStat}>
-              <Text size="base" weight="bold" color={colors.text}>
-                {maxParticipants}
-              </Text>
-              <Text size="xs" color={colors.textMuted}>
-                {t('tournamentDetail.dashboard.participants.emptySpotsLabel')}
-              </Text>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {players.length === 0 ? (
+          <View style={styles.participantEmpty}>
+            <View style={[styles.participantEmptyDisc, { backgroundColor: colors.statusActiveBg }]}>
+              <Ionicons name="people-outline" size={34} color={colors.primary} />
             </View>
-            {deadlineLabel ? (
-              <>
-                <View
-                  style={[styles.participantEmptyStatDivider, { backgroundColor: colors.border }]}
-                />
-                <View style={styles.participantEmptyStat}>
-                  <Text size="base" weight="bold" color={colors.text} numberOfLines={1}>
-                    {deadlineLabel}
-                  </Text>
-                  <Text size="xs" color={colors.textMuted}>
-                    {t('tournamentDetail.dashboard.participants.emptyDeadlineLabel')}
-                  </Text>
-                </View>
-              </>
-            ) : null}
+            <Text size="base" weight="semibold" color={colors.text}>
+              {t('tournamentDetail.dashboard.participants.empty')}
+            </Text>
+            <Text size="sm" color={colors.textMuted} style={styles.participantEmptyText}>
+              {t('tournamentDetail.dashboard.participants.emptyDescription')}
+            </Text>
+            <View style={[styles.participantEmptyStats, { borderTopColor: colors.border }]}>
+              <View style={styles.participantEmptyStat}>
+                <Text size="base" weight="bold" color={colors.text}>
+                  {maxParticipants}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('tournamentDetail.dashboard.participants.emptySpotsLabel')}
+                </Text>
+              </View>
+              {deadlineLabel ? (
+                <>
+                  <View
+                    style={[styles.participantEmptyStatDivider, { backgroundColor: colors.border }]}
+                  />
+                  <View style={styles.participantEmptyStat}>
+                    <Text size="base" weight="bold" color={colors.text} numberOfLines={1}>
+                      {deadlineLabel}
+                    </Text>
+                    <Text size="xs" color={colors.textMuted}>
+                      {t('tournamentDetail.dashboard.participants.emptyDeadlineLabel')}
+                    </Text>
+                  </View>
+                </>
+              ) : null}
+            </View>
           </View>
-        </View>
-      ) : (
-        players.map(player => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            onPress={onPlayerPress}
-            reputationDisplay={reputationDisplayFor(player)}
-            showActivity={false}
-            trailingAction={
-              onRemovePress && player.id !== currentUserId
-                ? {
-                    icon: 'person-remove-outline',
-                    accessibilityLabel: t('tournamentDetail.dashboard.participants.removeLabel', {
-                      name: getHumanName(player, ''),
-                    }),
-                    onPress: onRemovePress,
-                  }
-                : undefined
-            }
-          />
-        ))
-      )}
+        ) : (
+          players.map((player, i) => (
+            <ParticipantRow
+              key={player.id}
+              player={player}
+              onPress={onPlayerPress}
+              colors={colors}
+              showDivider={i > 0}
+              trailingActions={
+                onRemovePress && player.id !== currentUserId
+                  ? [
+                      {
+                        icon: 'person-remove-outline',
+                        accessibilityLabel: t(
+                          'tournamentDetail.dashboard.participants.removeLabel',
+                          { name: getHumanName(player, '') }
+                        ),
+                        onPress: onRemovePress,
+                      },
+                    ]
+                  : undefined
+              }
+            />
+          ))
+        )}
+      </View>
     </View>
   );
 };
@@ -1081,7 +1171,7 @@ type PendingRequestRow = {
 };
 
 /** Organizer-only approval queue (approval-mode tournaments, pre-bracket).
- *  One PlayerCard per pending registration with Approve / Decline actions.
+ *  One row per pending registration with Approve / Decline actions.
  *  Display data is reused from the enriched participants list; the registration
  *  row supplies id + version for the optimistic-locked RPCs. */
 const PendingRequestsSection: React.FC<{
@@ -1095,38 +1185,40 @@ const PendingRequestsSection: React.FC<{
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-        {t('tournamentDetail.dashboard.pendingRequests.title', {
-          count: String(rows.length),
-        })}
-      </Text>
-      {rows.map(({ player, registrationId, version }) => (
-        <PlayerCard
-          key={registrationId}
-          player={player}
-          onPress={onPlayerPress}
-          reputationDisplay={reputationDisplayFor(player)}
-          showActivity={false}
-          trailingActions={[
-            {
-              icon: 'checkmark-circle',
-              color: colors.statusPositiveText,
-              accessibilityLabel: t('tournamentDetail.dashboard.pendingRequests.approveLabel', {
-                name: getHumanName(player, ''),
-              }),
-              onPress: () => onApprove(registrationId, version),
-            },
-            {
-              icon: 'close-circle',
-              color: colors.danger,
-              accessibilityLabel: t('tournamentDetail.dashboard.pendingRequests.declineLabel', {
-                name: getHumanName(player, ''),
-              }),
-              onPress: () => onDecline(player),
-            },
-          ]}
-        />
-      ))}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {rows.map(({ player, registrationId, version }, i) => (
+          <ParticipantRow
+            key={registrationId}
+            player={player}
+            onPress={onPlayerPress}
+            colors={colors}
+            showDivider={i > 0}
+            trailingActions={[
+              {
+                icon: 'checkmark-circle',
+                color: colors.statusPositiveText,
+                accessibilityLabel: t('tournamentDetail.dashboard.pendingRequests.approveLabel', {
+                  name: getHumanName(player, ''),
+                }),
+                onPress: () => onApprove(registrationId, version),
+              },
+              {
+                icon: 'close-circle',
+                color: colors.danger,
+                accessibilityLabel: t('tournamentDetail.dashboard.pendingRequests.declineLabel', {
+                  name: getHumanName(player, ''),
+                }),
+                onPress: () => onDecline(player),
+              },
+            ]}
+          />
+        ))}
+      </View>
     </View>
   );
 };
@@ -1143,28 +1235,32 @@ const InvitedSection: React.FC<{
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
-      <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.pendingSectionTitle}>
-        {t('tournamentDetail.dashboard.invited.title', { count: String(rows.length) })}
-      </Text>
-      {rows.map(row => (
-        <PlayerCard
-          key={row.registrationId}
-          player={row.player}
-          onPress={onPlayerPress}
-          reputationDisplay={reputationDisplayFor(row.player)}
-          showActivity={false}
-          trailingActions={[
-            {
-              icon: 'close-circle',
-              color: colors.danger,
-              accessibilityLabel: t('tournamentDetail.dashboard.invited.revokeLabel', {
-                name: getHumanName(row.player, ''),
-              }),
-              onPress: () => onRevoke(row),
-            },
-          ]}
-        />
-      ))}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        ]}
+      >
+        {rows.map((row, i) => (
+          <ParticipantRow
+            key={row.registrationId}
+            player={row.player}
+            onPress={onPlayerPress}
+            colors={colors}
+            showDivider={i > 0}
+            trailingActions={[
+              {
+                icon: 'close-circle',
+                color: colors.danger,
+                accessibilityLabel: t('tournamentDetail.dashboard.invited.revokeLabel', {
+                  name: getHumanName(row.player, ''),
+                }),
+                onPress: () => onRevoke(row),
+              },
+            ]}
+          />
+        ))}
+      </View>
     </View>
   );
 };
@@ -1994,6 +2090,48 @@ export const TournamentDetail: React.FC = () => {
     return rows;
   }, [registrations, participantById, isOrganizer]);
 
+  // Players-tab status segments. Requests / Invited only exist while they hold
+  // entries (both are organizer-gated upstream); the selection falls back to
+  // Confirmed when its segment empties out.
+  const [playersSegment, setPlayersSegment] = useState<PlayersSegment>('confirmed');
+  const playersSegmentTabs = useMemo<UnderlineTabItem<PlayersSegment>[]>(() => {
+    const tabs: UnderlineTabItem<PlayersSegment>[] = [
+      {
+        key: 'confirmed',
+        label: t('tournamentDetail.dashboard.playerTabs.confirmed'),
+        count: registeredParticipantPlayers.length,
+        tone: 'positive',
+      },
+    ];
+    // Requests need the organizer to act, so they run warm; invites are just
+    // waiting on the invitee.
+    if (pendingRequestRows.length > 0)
+      tabs.push({
+        key: 'requests',
+        label: t('tournamentDetail.dashboard.playerTabs.requests'),
+        count: pendingRequestRows.length,
+        tone: 'warning',
+      });
+    if (invitedPendingRows.length > 0)
+      tabs.push({
+        key: 'invited',
+        label: t('tournamentDetail.dashboard.playerTabs.invited'),
+        count: invitedPendingRows.length,
+        tone: 'info',
+      });
+    return tabs;
+  }, [
+    t,
+    registeredParticipantPlayers.length,
+    pendingRequestRows.length,
+    invitedPendingRows.length,
+  ]);
+  const activePlayersSegment: PlayersSegment = playersSegmentTabs.some(
+    tab => tab.key === playersSegment
+  )
+    ? playersSegment
+    : 'confirmed';
+
   const handleRemovePress = useCallback((player: PlayerSearchResult) => {
     lightHaptic();
     setRemoveTarget(player);
@@ -2473,7 +2611,7 @@ export const TournamentDetail: React.FC = () => {
   if (isLoading || (invitePreviewEnabled && invitePreviewLoading)) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-        <TournamentDetailSkeleton isDark={isDark} />
+        <TournamentDetailSkeleton />
       </SafeAreaView>
     );
   }
@@ -3138,7 +3276,11 @@ export const TournamentDetail: React.FC = () => {
                 )}
                 buttonLabel={t('tournamentDetail.dashboard.pendingRequestsCta.review')}
                 buttonIcon="people-outline"
-                onPress={() => hasPlayersTab && goToTab('players')}
+                onPress={() => {
+                  if (!hasPlayersTab) return;
+                  setPlayersSegment('requests');
+                  goToTab('players');
+                }}
                 accent="secondary"
                 colors={colors}
                 testID="cta-pending-requests"
@@ -3373,7 +3515,10 @@ export const TournamentDetail: React.FC = () => {
             {hasPlayersTab && registeredParticipantPlayers.length > 0 && (
               <Section title={t('tournamentDetail.dashboard.participants.title')} colors={colors}>
                 <TouchableOpacity
-                  onPress={() => goToTab('players')}
+                  onPress={() => {
+                    setPlayersSegment('confirmed');
+                    goToTab('players');
+                  }}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel={t('tournamentDetail.tabs.players')}
@@ -3503,35 +3648,47 @@ export const TournamentDetail: React.FC = () => {
                 </Text>
               </Pressable>
             )}
-            <PendingRequestsSection
-              rows={pendingRequestRows}
-              onPlayerPress={handlePlayerPress}
-              onApprove={handleApprovePress}
-              onDecline={handleRemovePress}
-              colors={colors}
-              t={t}
-            />
-            <InvitedSection
-              rows={invitedPendingRows}
-              onPlayerPress={handlePlayerPress}
-              onRevoke={handleRevokeInvite}
-              colors={colors}
-              t={t}
-            />
-            <ParticipantsSection
-              players={registeredParticipantPlayers}
-              onPlayerPress={handlePlayerPress}
-              onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
-              currentUserId={userId}
-              maxParticipants={tournament.max_participants}
-              deadlineLabel={
-                tournament.registration_closes_at && tournament.status === 'registration_open'
-                  ? formatDate(tournament.registration_closes_at)
-                  : null
-              }
-              colors={colors}
-              t={t}
-            />
+            {playersSegmentTabs.length > 1 && (
+              <UnderlineTabBar
+                tabs={playersSegmentTabs}
+                activeKey={activePlayersSegment}
+                onChange={setPlayersSegment}
+                style={styles.segmentBar}
+              />
+            )}
+            {activePlayersSegment === 'requests' ? (
+              <PendingRequestsSection
+                rows={pendingRequestRows}
+                onPlayerPress={handlePlayerPress}
+                onApprove={handleApprovePress}
+                onDecline={handleRemovePress}
+                colors={colors}
+                t={t}
+              />
+            ) : activePlayersSegment === 'invited' ? (
+              <InvitedSection
+                rows={invitedPendingRows}
+                onPlayerPress={handlePlayerPress}
+                onRevoke={handleRevokeInvite}
+                colors={colors}
+                t={t}
+              />
+            ) : (
+              <ParticipantsSection
+                players={registeredParticipantPlayers}
+                onPlayerPress={handlePlayerPress}
+                onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
+                currentUserId={userId}
+                maxParticipants={tournament.max_participants}
+                deadlineLabel={
+                  tournament.registration_closes_at && tournament.status === 'registration_open'
+                    ? formatDate(tournament.registration_closes_at)
+                    : null
+                }
+                colors={colors}
+                t={t}
+              />
+            )}
           </View>
         )}
 
@@ -4532,9 +4689,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     marginBottom: spacingPixels[4],
-    // playersTabContent has no horizontal padding; match the PlayerCards'
-    // 16px side margins so the button aligns with the rows below it.
-    marginHorizontal: spacingPixels[4],
   },
   heroFixed: {
     paddingBottom: spacingPixels[2],
@@ -4688,7 +4842,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: spacingPixels[1.5],
+    gap: spacingPixels[3],
   },
   dockedBarHint: {
     textAlign: 'center',
@@ -4744,10 +4898,8 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
-  // Players tab: no horizontal padding — PlayerCard supplies its own 16px
-  // side margins so the cards align with the rest of the app.
   playersTabContent: {
-    paddingTop: spacingPixels[4],
+    padding: spacingPixels[4],
     paddingBottom: spacingPixels[8],
   },
   pointsHero: {
@@ -4805,15 +4957,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  skeletonTabBar: {
-    flexDirection: 'row',
-    gap: spacingPixels[5],
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[3],
-  },
-  skeletonCardGap: {
-    marginTop: spacingPixels[4],
   },
   statusBadge: {
     paddingHorizontal: spacingPixels[3],
@@ -5006,10 +5149,8 @@ const styles = StyleSheet.create({
   pendingSection: {
     marginBottom: spacingPixels[4],
   },
-  pendingSectionTitle: {
-    marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-    letterSpacing: 0.5,
+  segmentBar: {
+    marginBottom: spacingPixels[4],
   },
   myMatchCard: {
     flexDirection: 'row',

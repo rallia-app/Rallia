@@ -13,9 +13,9 @@
  * the service fee. The entry settles into the ORGANIZER's connected balance
  * (held there via their manual payout schedule until the event ends, then paid
  * out by lt-settle-event-payments); the fee settles to Rallia. Rallia never
- * holds the entry. Refunds reverse the entry back from the organizer's balance
- * (reverse_transfer) and keep the fee. Requires the organizer's connected
- * account to carry the card_payments capability.
+ * holds the entry. Refunds claw the entry back from the organizer's balance
+ * (explicit transfer reversal) and keep the fee. Requires the organizer's
+ * connected account to carry the card_payments capability.
  *
  * The webhook (lt-payment-webhook) finalizes the registration to 'registered'
  * on payment_intent.succeeded. Abandoned reservations are freed by the
@@ -65,6 +65,7 @@ type ErrorCode =
   | 'season_not_paid'
   | 'not_league_member'
   | 'already_enrolled'
+  | 'enrollment_removed'
   | 'organizer_not_ready'
   | 'registration_failed'
   | 'internal_error';
@@ -127,6 +128,9 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'not_league_member';
     case 'ALREADY_ENROLLED':
       return 'already_enrolled';
+    // Season twin of REGISTRATION_REMOVED: an organizer-removed member.
+    case 'ENROLLMENT_REMOVED':
+      return 'enrollment_removed';
     default:
       return 'registration_failed';
   }

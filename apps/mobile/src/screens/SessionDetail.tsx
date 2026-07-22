@@ -176,7 +176,11 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        e.message === 'ENROLLMENT_REMOVED'
+          ? t('leagueDetail.paid.errors.enrollmentRemoved')
+          : e.message || t('sessionDetail.errors.generic')
+      );
     },
   });
 

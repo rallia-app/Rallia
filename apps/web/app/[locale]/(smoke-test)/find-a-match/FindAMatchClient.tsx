@@ -16,6 +16,7 @@ import {
   Loader2,
   Lock,
   MessageSquare,
+  ShieldCheck,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -1325,6 +1326,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
               [Users, t('recap.point1')],
               [MessageSquare, t('recap.point2')],
               [CalendarClock, t('recap.point3')],
+              [ShieldCheck, t('recap.point4')],
             ] as const
           ).map(([IconComponent, text]) => (
             <li key={text} className="flex items-start gap-3">
@@ -1433,6 +1435,11 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         <div className="smk-note">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
           <span>{t('plans.bookingExcluded')}</span>
+        </div>
+
+        <div className="smk-note">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
+          <span>{t('plans.refundNote')}</span>
         </div>
 
         {error && <p className="smk-text-error text-sm font-medium">{error}</p>}

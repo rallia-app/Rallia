@@ -4195,6 +4195,8 @@
   "leagueList": {
     "title": "Leagues",
     "myLeagues": "My leagues",
+    "create": "Create a league",
+    "createSubtitle": "Set up a season and invite players",
     "loadError": "Couldn't load leagues",
     "retry": "Try again",
     "empty": "No public leagues right now",
@@ -4376,6 +4378,12 @@
         "removeLabel": "Remove {name}",
         "reinstateLabel": "Reinstate {name}"
       },
+      "memberTabs": {
+        "confirmed": "Confirmed",
+        "requests": "Requests",
+        "invited": "Invited",
+        "suspended": "Suspended"
+      },
       "joinCta": {
         "description": "Request membership and start competing in seasons"
       },
@@ -4439,6 +4447,7 @@
       "errors": {
         "seasonNotOpen": "This season isn't open for sign-ups.",
         "alreadyEnrolled": "You're already in this season.",
+        "enrollmentRemoved": "The organizer removed you from this season. You can't sign up again.",
         "organizerNotReady": "The organizer can't take payments yet. Try again later.",
         "notMember": "Join the league before signing up for a season.",
         "refundFailed": "Couldn't process the refund. Please try again.",
@@ -4974,6 +4983,11 @@
         "revokeConfirmMessage": "{name} will be un-invited. You can re-invite them later.",
         "revokeConfirm": "Revoke",
         "revokeCancel": "Keep"
+      },
+      "playerTabs": {
+        "confirmed": "Confirmed",
+        "requests": "Requests",
+        "invited": "Invited"
       },
       "manageTitle": "Manage"
     },
@@ -11799,6 +11813,7 @@
       "point1": "We reach out to compatible players and handle the back-and-forth.",
       "point2": "Once someone's confirmed, we text and email you the details.",
       "point3": "You book the court after your game is confirmed.",
+      "point4": "If we don't send you a game proposal within 1 hour, you're automatically refunded 100%. No questions asked.",
       "continueCta": "See the plans"
     },
     "plans": {
@@ -11819,6 +11834,7 @@
       "priceWeek": "{price} / week",
       "priceMonth": "{price} / month",
       "bookingExcluded": "Court booking isn't included. You book your court once your game is confirmed.",
+      "refundNote": "No game proposal within 1 hour? You're automatically refunded 100%.",
       "proceedCta": "Proceed to payment"
     },
     "reveal": {
