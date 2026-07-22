@@ -65,6 +65,7 @@ type ErrorCode =
   | 'season_not_paid'
   | 'not_league_member'
   | 'already_enrolled'
+  | 'enrollment_removed'
   | 'organizer_not_ready'
   | 'registration_failed'
   | 'internal_error';
@@ -127,6 +128,9 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'not_league_member';
     case 'ALREADY_ENROLLED':
       return 'already_enrolled';
+    // Season twin of REGISTRATION_REMOVED: an organizer-removed member.
+    case 'ENROLLMENT_REMOVED':
+      return 'enrollment_removed';
     default:
       return 'registration_failed';
   }

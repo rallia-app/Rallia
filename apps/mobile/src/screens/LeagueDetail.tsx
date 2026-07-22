@@ -1326,11 +1326,13 @@ export const LeagueDetail: React.FC = () => {
           ? 'leagueDetail.paid.errors.seasonNotOpen'
           : code === 'already_enrolled'
             ? 'leagueDetail.paid.errors.alreadyEnrolled'
-            : code === 'organizer_not_ready'
-              ? 'leagueDetail.paid.errors.organizerNotReady'
-              : code === 'not_league_member'
-                ? 'leagueDetail.paid.errors.notMember'
-                : 'leagueDetail.paid.errors.generic';
+            : code === 'enrollment_removed'
+              ? 'leagueDetail.paid.errors.enrollmentRemoved'
+              : code === 'organizer_not_ready'
+                ? 'leagueDetail.paid.errors.organizerNotReady'
+                : code === 'not_league_member'
+                  ? 'leagueDetail.paid.errors.notMember'
+                  : 'leagueDetail.paid.errors.generic';
       toast.error(t(key as TranslationKey));
     }
   }, [
