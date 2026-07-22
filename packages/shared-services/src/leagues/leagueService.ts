@@ -402,37 +402,6 @@ export async function refundSeasonEnrollment(
   return { withdrawn: !!data?.withdrawn, refundedCents: data?.refundedCents ?? 0 };
 }
 
-/**
- * Organizer refunds and removes a paid season member. Same edge function as the
- * player withdraw, with asOrganizer:true so it runs season_refund_member
- * (organizer-gated) instead of season_request_refund (owner-gated). Returns the
- * refunded amount so the UI can confirm what the player got back.
- */
-export async function refundSeasonMember(
-  seasonMemberId: string,
-  versionWas: number
-): Promise<{ withdrawn: boolean; refundedCents: number }> {
-  const { data, error } = await supabase.functions.invoke('lt-refund-registration', {
-    body: { seasonMemberId, versionWas, asOrganizer: true },
-  });
-
-  let code: string | undefined = (data as { error?: string } | null)?.error;
-  if (!code && error) {
-    const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
-    if (ctx?.json) {
-      try {
-        code = (await ctx.json())?.error;
-      } catch {
-        // non-JSON body — fall through
-      }
-    }
-  }
-  if (code) throw new TournamentPaymentError(code);
-  if (error) throw new Error(error.message);
-
-  return { withdrawn: !!data?.withdrawn, refundedCents: data?.refundedCents ?? 0 };
-}
-
 export interface SeasonUpdatePatch {
   name?: string;
   startDate?: string;

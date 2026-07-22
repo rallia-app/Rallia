@@ -4528,16 +4528,14 @@
       "removeAccessibility": "Remove {name}",
       "removeConfirmTitle": "Remove {name}?",
       "removeConfirmFree": "They'll be removed from the season roster.",
-      "removeConfirmRefund": "They'll be refunded {amount} and removed. The Rallia service fee isn't refunded.",
+      "removeConfirmRefund": "They'll be removed and refunded {amount} per the season's policy (the Rallia service fee isn't refunded). It can take a few days to land on their card.",
       "removeConfirmNoRefund": "They'll be removed. This season's refund window has closed, so no money goes back.",
       "keepMember": "Keep",
       "removeConfirm": "Remove",
       "removed": "Removed from the season",
-      "refundedAndRemoved": "Removed. {amount} refunded.",
       "removeErrors": {
         "notOrganizer": "Only the organizer can remove members.",
-        "noPaidEnrollment": "No payment on file for this member.",
-        "notAllowed": "Members can only be removed while the season is open.",
+        "notRemovable": "This member can't be removed anymore.",
         "stale": "Something changed. Refresh and try again.",
         "generic": "Couldn't remove the member. Please try again."
       }

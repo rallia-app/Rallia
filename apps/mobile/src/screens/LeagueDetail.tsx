@@ -73,7 +73,6 @@ import {
   useMySeasonMembership,
   useEnrollInSeason,
   useWithdrawFromSeason,
-  useRefundSeasonMember,
   useRemoveSeasonMember,
   usePublishSession,
   useProfilesByIds,
@@ -1423,43 +1422,11 @@ export const LeagueDetail: React.FC = () => {
     withdrawSeasonMut,
   ]);
 
-  // Organizer removes a roster member. On a paid season this must refund (the
-  // server refuses a plain remove that would strand money — REFUND_REQUIRED),
-  // so route paid removals through the organizer refund path and free ones
-  // through the plain remove.
-  const refundErrorHandler = useCallback(
-    (e: Error) => {
-      const code = e instanceof TournamentPaymentError ? e.code : null;
-      const key =
-        code === 'not_organizer'
-          ? 'leagueDetail.roster.removeErrors.notOrganizer'
-          : code === 'no_paid_enrollment' || code === 'enrollment_not_found'
-            ? 'leagueDetail.roster.removeErrors.noPaidEnrollment'
-            : code === 'withdraw_not_allowed'
-              ? 'leagueDetail.roster.removeErrors.notAllowed'
-              : code === 'lock_conflict'
-                ? 'leagueDetail.roster.removeErrors.stale'
-                : 'leagueDetail.roster.removeErrors.generic';
-      warningHaptic();
-      toast.error(t(key as TranslationKey));
-    },
-    [t, toast]
-  );
-
-  const { refundSeasonMemberAsync, isRefundingSeasonMember } = useRefundSeasonMember({
-    onSuccess: r => {
-      successHaptic();
-      toast.success(
-        r.refundedCents > 0
-          ? t('leagueDetail.roster.refundedAndRemoved', {
-              amount: formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', { locale }),
-            })
-          : t('leagueDetail.roster.removed')
-      );
-    },
-    onError: refundErrorHandler,
-  });
-
+  // Organizer removes a roster member. Removal marks the member disqualified;
+  // on a paid season that queues an automatic refund through the settle cron
+  // (the same path a cancellation uses), so the confirmation tells the player
+  // their entry comes back per the season's policy. Mirrors how tournaments
+  // treat an organizer removal.
   const { mutate: removeSeasonMemberMut, isPending: isRemovingSeasonMember } =
     useRemoveSeasonMember(openSeasonId ?? '', {
       onSuccess: () => {
@@ -1472,7 +1439,9 @@ export const LeagueDetail: React.FC = () => {
           ? 'leagueDetail.roster.removeErrors.stale'
           : msg.includes('NOT_ORGANIZER')
             ? 'leagueDetail.roster.removeErrors.notOrganizer'
-            : 'leagueDetail.roster.removeErrors.generic';
+            : msg.includes('NOT_REMOVABLE')
+              ? 'leagueDetail.roster.removeErrors.notRemovable'
+              : 'leagueDetail.roster.removeErrors.generic';
         warningHaptic();
         toast.error(t(key as TranslationKey));
       },
@@ -1480,63 +1449,31 @@ export const LeagueDetail: React.FC = () => {
 
   const handleRemoveSeasonMember = useCallback(
     (member: SeasonMemberWithProfile) => {
-      if (isRefundingSeasonMember || isRemovingSeasonMember) return;
+      if (isRemovingSeasonMember) return;
       const name = getHumanName(member.profile, t('leagueDetail.unknownMember'));
-      if (isPaidSeason) {
-        const estimate = estimateSeasonRefundCents(seasonFeeQuote);
-        Alert.alert(
-          t('leagueDetail.roster.removeConfirmTitle', { name }),
-          estimate > 0
-            ? t('leagueDetail.roster.removeConfirmRefund', {
-                amount: formatPrice(estimate, seasonFeeQuote?.currency ?? 'CAD', { locale }),
-              })
-            : t('leagueDetail.roster.removeConfirmNoRefund'),
-          [
-            { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
-            {
-              text: t('leagueDetail.roster.removeConfirm'),
-              style: 'destructive',
-              onPress: () => {
-                warningHaptic();
-                void refundSeasonMemberAsync({
-                  seasonMemberId: member.id,
-                  versionWas: member.version,
-                  seasonId: member.season_id,
-                  leagueId,
-                });
-              },
-            },
-          ]
-        );
-      } else {
-        Alert.alert(
-          t('leagueDetail.roster.removeConfirmTitle', { name }),
-          t('leagueDetail.roster.removeConfirmFree'),
-          [
-            { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
-            {
-              text: t('leagueDetail.roster.removeConfirm'),
-              style: 'destructive',
-              onPress: () => {
-                warningHaptic();
-                removeSeasonMemberMut({ seasonMemberId: member.id, versionWas: member.version });
-              },
-            },
-          ]
-        );
-      }
+      const doRemove = () => {
+        warningHaptic();
+        removeSeasonMemberMut({ seasonMemberId: member.id, versionWas: member.version });
+      };
+      const body = isPaidSeason
+        ? estimateSeasonRefundCents(seasonFeeQuote) > 0
+          ? t('leagueDetail.roster.removeConfirmRefund', {
+              amount: formatPrice(
+                estimateSeasonRefundCents(seasonFeeQuote),
+                seasonFeeQuote?.currency ?? 'CAD',
+                {
+                  locale,
+                }
+              ),
+            })
+          : t('leagueDetail.roster.removeConfirmNoRefund')
+        : t('leagueDetail.roster.removeConfirmFree');
+      Alert.alert(t('leagueDetail.roster.removeConfirmTitle', { name }), body, [
+        { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
+        { text: t('leagueDetail.roster.removeConfirm'), style: 'destructive', onPress: doRemove },
+      ]);
     },
-    [
-      isPaidSeason,
-      isRefundingSeasonMember,
-      isRemovingSeasonMember,
-      leagueId,
-      locale,
-      refundSeasonMemberAsync,
-      removeSeasonMemberMut,
-      seasonFeeQuote,
-      t,
-    ]
+    [isPaidSeason, isRemovingSeasonMember, locale, removeSeasonMemberMut, seasonFeeQuote, t]
   );
 
   // Standings come from the open season, else the most recent closed one.
