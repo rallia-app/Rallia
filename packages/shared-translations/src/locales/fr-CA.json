@@ -4273,6 +4273,21 @@
     "seasonCreated": "Saison créée",
     "seasonOpened": "La saison est maintenant ouverte",
     "seasonClosed": "Saison fermée — le classement final est prêt",
+    "seasonCancelled": "Saison annulée",
+    "seasonLifecycle": {
+      "cancel": "Annuler la saison",
+      "cancelling": "Annulation...",
+      "keepSeason": "Garder la saison",
+      "cancelConfirm": "Annuler la saison",
+      "cancelConfirmTitle": "Annuler {name} ?",
+      "cancelConfirmBody": "Ça met fin à la saison pour tout le monde et c'est irréversible.",
+      "cancelConfirmBodyPaid": "Ça rembourse chaque joueur inscrit selon la politique de la saison et c'est irréversible. Les frais de service Rallia ne sont pas remboursés.",
+      "errors": {
+        "notCancellable": "Cette saison ne peut plus être annulée.",
+        "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
+        "cancelFailed": "Impossible d'annuler la saison. Réessaie."
+      }
+    },
     "standings": {
       "title": "Classement — {name}",
       "player": "Joueur",

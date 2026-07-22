@@ -4273,6 +4273,21 @@
     "seasonCreated": "Season created",
     "seasonOpened": "Season is now open",
     "seasonClosed": "Season closed — final standings are in",
+    "seasonCancelled": "Season cancelled",
+    "seasonLifecycle": {
+      "cancel": "Cancel season",
+      "cancelling": "Cancelling...",
+      "keepSeason": "Keep season",
+      "cancelConfirm": "Cancel season",
+      "cancelConfirmTitle": "Cancel {name}?",
+      "cancelConfirmBody": "This ends the season for everyone and can't be undone.",
+      "cancelConfirmBodyPaid": "This refunds every enrolled player per the season's refund policy and can't be undone. The Rallia service fee isn't refunded.",
+      "errors": {
+        "notCancellable": "This season can't be cancelled anymore.",
+        "stale": "Something changed. Refresh and try again.",
+        "cancelFailed": "Couldn't cancel the season. Please try again."
+      }
+    },
     "standings": {
       "title": "{name} standings",
       "player": "Player",
