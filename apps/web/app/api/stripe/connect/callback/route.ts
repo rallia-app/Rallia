@@ -5,9 +5,11 @@
  * This is the refresh URL - called when the user needs to restart onboarding.
  */
 
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getSiteOrigin } from '@/lib/site-origin';
 import { createClient } from '@/lib/supabase/server';
 import { createAccountLink, getAccountStatus } from '@/lib/stripe';
-import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,7 +88,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Onboarding not complete, create a new account link
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const baseUrl = getSiteOrigin(request);
     const returnUrl = `${baseUrl}/dashboard/settings/payments?stripe_connected=true`;
     const refreshUrl = `${baseUrl}/api/stripe/connect/callback?organization_id=${organizationId}`;
 

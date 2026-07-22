@@ -5,9 +5,11 @@
  * and returns the onboarding URL.
  */
 
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getSiteOrigin } from '@/lib/site-origin';
 import { createClient } from '@/lib/supabase/server';
 import { createConnectAccount, createAccountLink } from '@/lib/stripe';
-import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
       .eq('organization_id', organizationId)
       .single();
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const baseUrl = getSiteOrigin(request);
     const returnUrl = `${baseUrl}/dashboard/settings/payments?stripe_connected=true`;
     const refreshUrl = `${baseUrl}/api/stripe/connect/callback?organization_id=${organizationId}`;
 
