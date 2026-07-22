@@ -238,6 +238,8 @@ export const ActionsBottomSheet: React.FC = () => {
     clearMatchCreationFlag,
     shouldOpenTournamentCreation,
     clearTournamentCreationFlag,
+    shouldOpenLeagueCreation,
+    clearLeagueCreationFlag,
     shouldOpenInvitePlayers,
     clearInvitePlayersFlag,
     initialBookingForWizard,
@@ -332,6 +334,33 @@ export const ActionsBottomSheet: React.FC = () => {
     showTournamentWizard,
     isEditMode,
     clearTournamentCreationFlag,
+    slideIn,
+  ]);
+
+  // Effect to automatically open league creation wizard when flag is set.
+  // showCreateLeague keeps the admin gate: a non-admin who somehow sets the flag
+  // lands on the actions menu instead of the wizard.
+  useEffect(() => {
+    if (
+      showCreateLeague &&
+      shouldOpenLeagueCreation &&
+      contentMode === 'actions' &&
+      !showLeagueWizard &&
+      !isEditMode
+    ) {
+      clearLeagueCreationFlag();
+      setTimeout(() => {
+        setShowLeagueWizard(true);
+        slideIn();
+      }, 100);
+    }
+  }, [
+    showCreateLeague,
+    shouldOpenLeagueCreation,
+    contentMode,
+    showLeagueWizard,
+    isEditMode,
+    clearLeagueCreationFlag,
     slideIn,
   ]);
 

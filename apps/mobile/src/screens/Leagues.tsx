@@ -14,13 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import {
   useAuth,
   useDebounce,
   usePublicLeagues,
   useMyLeagues,
   useRatingScoresForSport,
+  useAdminStatus,
 } from '@rallia/shared-hooks';
 import type { LeagueListItem } from '@rallia/shared-services';
 
@@ -34,8 +35,8 @@ import {
 } from '../features/leagues/components/LeagueFiltersBar';
 import { SearchBar } from '../features/matches/components';
 import { useTournamentListColors } from '../features/tournaments/components/TournamentListScaffold';
-import { useTranslation } from '../hooks';
-import { useSport } from '../context';
+import { useTranslation, useRequireOnboarding } from '../hooks';
+import { useSport, useActionsSheet } from '../context';
 import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
 
@@ -47,6 +48,17 @@ export const Leagues: React.FC = () => {
   const { session } = useAuth();
   const colors = useTournamentListColors();
   const userId = session?.user?.id;
+  const { guardAction } = useRequireOnboarding();
+  const { openSheetForLeagueCreation } = useActionsSheet();
+  // Leagues are admin-gated during rollout (ActionsBottomSheet gates the wizard
+  // the same way), so only admins see the create button.
+  const { isAdmin } = useAdminStatus();
+
+  const handleCreate = useCallback(() => {
+    void lightHaptic();
+    if (!guardAction()) return;
+    openSheetForLeagueCreation();
+  }, [guardAction, openSheetForLeagueCreation]);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: leagues = [], isLoading, isError, refetch } = usePublicLeagues(selectedSport?.id);
@@ -124,20 +136,48 @@ export const Leagues: React.FC = () => {
 
   const header = (
     <View style={styles.headerContainer}>
+      {isAdmin && (
+        <TouchableOpacity
+          onPress={handleCreate}
+          activeOpacity={0.85}
+          style={styles.createButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('leagueList.create')}
+          testID="cta-create-league"
+        >
+          <View style={styles.createIcon}>
+            <Ionicons name="add" size={26} color="#ffffff" />
+          </View>
+          <View style={styles.createTextWrap}>
+            <Text size="base" weight="semibold" color="#ffffff">
+              {t('leagueList.create')}
+            </Text>
+            <Text size="xs" color="rgba(255,255,255,0.85)">
+              {t('leagueList.createSubtitle')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity
         onPress={() => {
           void lightHaptic();
           navigation.navigate('MyLeagues');
         }}
         activeOpacity={0.85}
-        style={styles.myLeaguesButton}
+        style={[
+          styles.myLeaguesButton,
+          { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+        ]}
       >
-        <View style={styles.myLeaguesIcon}>
-          <Ionicons name="ribbon-outline" size={24} color="#ffffff" />
+        <View style={[styles.myLeaguesIcon, { backgroundColor: colors.chipPrimaryBg }]}>
+          <Ionicons name="ribbon" size={18} color={colors.primary} />
         </View>
-        <Text size="base" weight="semibold" color="#ffffff" style={styles.myLeaguesLabel}>
+        <Text size="sm" weight="semibold" color={colors.text} style={styles.myLeaguesLabel}>
           {t('leagueList.myLeagues')}
         </Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </TouchableOpacity>
 
       <View style={styles.searchRow}>
@@ -184,23 +224,29 @@ export const Leagues: React.FC = () => {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingTop: spacingPixels[5],
+    // List's own paddingTop (spacingPixels[2]) sits above this header, so keep
+    // this smaller to match the ~20px top spacing on sibling screens.
+    paddingTop: spacingPixels[3],
   },
-  myLeaguesButton: {
+  createButton: {
     flexDirection: 'row',
     marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[3],
     borderRadius: radiusPixels.xl,
     borderWidth: 1.5,
-    borderColor: accent[500],
-    backgroundColor: accent[400],
+    borderColor: primary[600],
+    backgroundColor: primary[500],
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacingPixels[3],
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[3],
+    shadowColor: primary[900],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  myLeaguesIcon: {
+  createIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -210,8 +256,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  createTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  myLeaguesButton: {
+    flexDirection: 'row',
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[4],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[3],
+  },
+  myLeaguesIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   myLeaguesLabel: {
-    textAlign: 'center',
+    flex: 1,
   },
   searchRow: {
     flexDirection: 'row',

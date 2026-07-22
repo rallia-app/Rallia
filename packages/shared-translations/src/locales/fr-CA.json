@@ -4195,6 +4195,8 @@
   "leagueList": {
     "title": "Ligues",
     "myLeagues": "Mes ligues",
+    "create": "Créer une ligue",
+    "createSubtitle": "Pars ta saison pis invite des joueurs",
     "loadError": "Impossible de charger les ligues",
     "retry": "Réessayer",
     "empty": "Aucune ligue publique pour l'instant",

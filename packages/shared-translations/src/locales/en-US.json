@@ -4195,6 +4195,8 @@
   "leagueList": {
     "title": "Leagues",
     "myLeagues": "My leagues",
+    "create": "Create a league",
+    "createSubtitle": "Set up a season and invite players",
     "loadError": "Couldn't load leagues",
     "retry": "Try again",
     "empty": "No public leagues right now",
