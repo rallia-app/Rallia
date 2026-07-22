@@ -192,6 +192,34 @@ function estimateSeasonRefundCents(
   return Math.round((quote.entryCents * (quote.refundPartialBps ?? 0)) / 10000);
 }
 
+/**
+ * Map the raw server error codes from the season + session lifecycle RPCs
+ * (season_open/close/enroll/withdraw, session_publish) to user-facing copy.
+ * Codes are matched by substring since Supabase can wrap the message. Ordered
+ * most-specific first. PAYOUTS_SETUP_REQUIRED is deliberately absent: the open
+ * handler intercepts it to launch onboarding before falling through here.
+ */
+function mapSeasonError(message: string | undefined): TranslationKey {
+  const m = message || '';
+  if (m.includes('PAYMENT_REQUIRED')) return 'leagueDetail.seasonErrors.paymentRequired';
+  if (m.includes('REFUND_REQUIRED')) return 'leagueDetail.seasonErrors.refundRequired';
+  if (m.includes('SEASON_HAS_OPEN_SESSIONS')) return 'leagueDetail.seasonErrors.hasOpenSessions';
+  if (m.includes('SEASON_NOT_DRAFT')) return 'leagueDetail.seasonErrors.seasonNotDraft';
+  if (m.includes('SEASON_NOT_OPEN')) return 'leagueDetail.seasonErrors.seasonNotOpen';
+  if (m.includes('SEASON_ENDED')) return 'leagueDetail.seasonErrors.seasonEnded';
+  if (m.includes('SEASON_NOT_FOUND')) return 'leagueDetail.seasonErrors.seasonNotFound';
+  if (m.includes('NOT_LEAGUE_MEMBER')) return 'leagueDetail.seasonErrors.notMember';
+  if (m.includes('NOT_ENROLLED')) return 'leagueDetail.seasonErrors.notEnrolled';
+  if (m.includes('LEAGUE_NOT_ACTIVE')) return 'leagueDetail.seasonErrors.leagueNotActive';
+  if (m.includes('INVALID_DEADLINE')) return 'leagueDetail.seasonErrors.invalidDeadline';
+  if (m.includes('SESSION_NOT_DRAFT')) return 'leagueDetail.seasonErrors.sessionNotDraft';
+  if (m.includes('SESSION_START_PASSED')) return 'leagueDetail.seasonErrors.sessionStartPassed';
+  if (m.includes('SESSION_NOT_FOUND')) return 'leagueDetail.seasonErrors.sessionNotFound';
+  if (m.includes('NOT_ORGANIZER')) return 'leagueDetail.seasonErrors.notOrganizer';
+  if (m.includes('OPTIMISTIC_LOCK_CONFLICT')) return 'leagueDetail.seasonErrors.stale';
+  return 'leagueDetail.seasonErrors.generic';
+}
+
 interface ScreenColors {
   background: string;
   cardBackground: string;
@@ -1115,7 +1143,7 @@ export const LeagueDetail: React.FC = () => {
         return;
       }
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(t(mapSeasonError(e.message)));
     },
   });
 
@@ -1197,7 +1225,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(e.message || t('leagueDetail.errors.generic'));
+        toast.error(t(mapSeasonError(e.message)));
       },
     }
   );
@@ -1211,7 +1239,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(e.message || t('leagueDetail.errors.generic'));
+        toast.error(t(mapSeasonError(e.message)));
       },
     }
   );
@@ -1527,7 +1555,7 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(t(mapSeasonError(e.message)));
     },
   });
 
@@ -1593,7 +1621,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(e.message || t('leagueDetail.errors.generic'));
+        toast.error(t(mapSeasonError(e.message)));
       },
     }
   );

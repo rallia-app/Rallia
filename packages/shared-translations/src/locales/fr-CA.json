@@ -4288,6 +4288,25 @@
         "cancelFailed": "Impossible d'annuler la saison. Réessaie."
       }
     },
+    "seasonErrors": {
+      "notOrganizer": "Seul l'organisateur peut faire ça.",
+      "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
+      "leagueNotActive": "Cette ligue n'est pas active en ce moment.",
+      "seasonEnded": "Les dates de cette saison sont déjà passées.",
+      "seasonNotDraft": "Cette saison est déjà ouverte.",
+      "seasonNotFound": "Cette saison n'existe plus.",
+      "hasOpenSessions": "Termine ou annule les sessions ouvertes avant de fermer la saison.",
+      "seasonNotOpen": "Cette saison n'est pas ouverte en ce moment.",
+      "notMember": "Rejoins la ligue avant de t'inscrire à une saison.",
+      "paymentRequired": "Cette saison demande des frais d'inscription. Rafraîchis, puis touche Rejoindre pour payer.",
+      "notEnrolled": "Tu n'es pas dans cette saison.",
+      "refundRequired": "Une place payée doit être quittée via l'option de remboursement.",
+      "invalidDeadline": "Choisis une date limite de confirmation avant le début de la session.",
+      "sessionNotDraft": "Cette session est déjà publiée.",
+      "sessionStartPassed": "L'heure de début de cette session est déjà passée.",
+      "sessionNotFound": "Cette session n'existe plus.",
+      "generic": "Une erreur est survenue. Réessaie."
+    },
     "standings": {
       "title": "Classement — {name}",
       "player": "Joueur",
