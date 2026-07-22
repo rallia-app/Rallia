@@ -11813,6 +11813,7 @@
       "point1": "On contacte les joueurs compatibles et on gère les échanges.",
       "point2": "Dès qu'un joueur est confirmé, on t'envoie les détails par texto et courriel.",
       "point3": "Tu réserves le terrain une fois ta partie confirmée.",
+      "point4": "Si tu ne reçois pas de proposition de partie en moins d'une heure, on te rembourse à 100 %, automatiquement. Sans question.",
       "continueCta": "Voir les forfaits"
     },
     "plans": {
@@ -11833,6 +11834,7 @@
       "priceWeek": "{price} / semaine",
       "priceMonth": "{price} / mois",
       "bookingExcluded": "La réservation du terrain n'est pas incluse. Tu réserves ton terrain une fois ta partie confirmée.",
+      "refundNote": "Pas de proposition de partie en moins d'une heure? Remboursement automatique à 100 %.",
       "proceedCta": "Procéder au paiement"
     },
     "reveal": {

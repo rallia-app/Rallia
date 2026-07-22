@@ -11813,6 +11813,7 @@
       "point1": "We reach out to compatible players and handle the back-and-forth.",
       "point2": "Once someone's confirmed, we text and email you the details.",
       "point3": "You book the court after your game is confirmed.",
+      "point4": "If we don't send you a game proposal within 1 hour, you're automatically refunded 100%. No questions asked.",
       "continueCta": "See the plans"
     },
     "plans": {
@@ -11833,6 +11834,7 @@
       "priceWeek": "{price} / week",
       "priceMonth": "{price} / month",
       "bookingExcluded": "Court booking isn't included. You book your court once your game is confirmed.",
+      "refundNote": "No game proposal within 1 hour? You're automatically refunded 100%.",
       "proceedCta": "Proceed to payment"
     },
     "reveal": {
