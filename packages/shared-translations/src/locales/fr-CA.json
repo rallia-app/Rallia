@@ -4411,6 +4411,20 @@
         "generic": "Le paiement n'a pas passé. Réessaye."
       }
     },
+    "payments": {
+      "payoutsSetupTitle": "Configure tes paiements d'abord",
+      "payoutsSetupBody": "Avant d'ouvrir une saison payante, termine la configuration pour recevoir ton argent.",
+      "onboardTypeIndividual": "Je suis un particulier",
+      "onboardTypeBusiness": "Je suis une entreprise ou un club",
+      "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
+      "manageError": "Impossible d'ouvrir ton compte de versement. Réessaie.",
+      "payoutRow": {
+        "label": "Versements",
+        "setup": "À configurer",
+        "actionNeeded": "Action requise",
+        "ready": "Prêt"
+      }
+    },
     "sections": {
       "pending": "En attente d'approbation",
       "members": "Membres",
