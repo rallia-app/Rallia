@@ -1,7 +1,9 @@
-import { createServiceRoleClient } from '@/lib/supabase/server';
-import { getUnsubscribeTokenSecret } from '@/lib/unsubscribe-token';
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { getSiteOrigin } from '@/lib/site-origin';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getUnsubscribeTokenSecret } from '@/lib/unsubscribe-token';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,10 +33,6 @@ async function unsubscribe(userId: string): Promise<{ ok: true } | { ok: false; 
     return { ok: false, error: error.message };
   }
   return { ok: true };
-}
-
-function getSiteOrigin(req: NextRequest): string {
-  return process.env.NEXT_PUBLIC_BASE_URL ?? new URL(req.url).origin;
 }
 
 /**
