@@ -15,16 +15,7 @@
 import type { UtmParams } from '@rallia/shared-utils';
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
-
-type InvitationType =
-  | 'referral'
-  | 'match'
-  | 'group'
-  | 'community'
-  | 'tournament'
-  | 'flyer'
-  | 'poster'
-  | 'social';
+import type { InvitationType } from '@/lib/store-urls';
 
 export function detectPlatform(userAgent: string): 'ios' | 'android' | null {
   const ua = userAgent.toLowerCase();
@@ -60,32 +51,6 @@ export async function logReferralClick(
   });
 }
 
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
-export { APP_STORE_URL, PLAY_STORE_URL };
-
-/**
- * Build the Android Play Store URL with referrer parameters for the Install
- * Referrer API. `referralCode` is optional — non-referral invite links
- * (e.g. /join/{code}) don't have one. UTM and PostHog distinct_id are
- * passed through so the Android cold-launch can recover full attribution.
- */
-export function buildPlayStoreUrl(
-  referralCode?: string,
-  invitationType: InvitationType = 'referral',
-  targetId?: string,
-  extras?: { webDistinctId?: string; utm?: UtmParams }
-): string {
-  const parts: string[] = [];
-  if (referralCode) parts.push(`referral_code=${referralCode.toUpperCase()}`);
-  if (invitationType !== 'referral') parts.push(`invitation_type=${invitationType}`);
-  if (targetId) parts.push(`target_id=${targetId}`);
-  if (extras?.webDistinctId) parts.push(`ph_did=${encodeURIComponent(extras.webDistinctId)}`);
-  if (extras?.utm) {
-    for (const [key, value] of Object.entries(extras.utm)) {
-      if (value) parts.push(`${key}=${encodeURIComponent(value)}`);
-    }
-  }
-  if (parts.length === 0) return PLAY_STORE_URL;
-  const referrerParam = encodeURIComponent(parts.join('&'));
-  return `${PLAY_STORE_URL}&referrer=${referrerParam}`;
-}
+// buildPlayStoreUrl moved to store-urls.ts (client-safe); re-exported here
+// so existing server-side callers keep working.
+export { APP_STORE_URL, PLAY_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';

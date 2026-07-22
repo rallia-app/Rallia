@@ -2,9 +2,10 @@
 
 import Image from 'next/image';
 
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
+import { APP_STORE_URL } from '@/lib/store-urls';
 import { appStoreClicked, type AppStorePlacement } from '@/lib/analytics';
 import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
+import { useAttributedPlayStoreUrl } from '@/lib/use-play-store-url';
 import { cn } from '@/lib/utils';
 
 interface AppStoreButtonsProps {
@@ -21,13 +22,17 @@ export function AppStoreButtons({
   className,
   badgeHeight = 40,
   appStoreUrl = APP_STORE_URL,
-  playStoreUrl = PLAY_STORE_URL,
+  playStoreUrl,
   placement = 'hero',
   matchId,
   invitationCode,
 }: AppStoreButtonsProps) {
   const badgeWidth = Math.round(badgeHeight * 3);
   const writeClipboard = useAttributionHandoff();
+  // Default Play URL carries ph_did + first-touch UTM in the install
+  // referrer; callers with richer context (landing pages) still override.
+  const attributedPlayStoreUrl = useAttributedPlayStoreUrl();
+  const resolvedPlayStoreUrl = playStoreUrl ?? attributedPlayStoreUrl;
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
@@ -61,7 +66,7 @@ export function AppStoreButtons({
         />
       </a>
       <a
-        href={playStoreUrl}
+        href={resolvedPlayStoreUrl}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {

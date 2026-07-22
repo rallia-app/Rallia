@@ -10,8 +10,9 @@ import {
   downloadDialogViewed,
   type DownloadDialogPlacement,
 } from '@/lib/analytics';
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
+import { APP_STORE_URL } from '@/lib/store-urls';
 import { useAttributionHandoff } from '@/lib/use-attribution-handoff';
+import { useAttributedPlayStoreUrl } from '@/lib/use-play-store-url';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ interface DownloadDialogProps {
 export default function DownloadDialog({ open, onOpenChange, placement }: DownloadDialogProps) {
   const t = useTranslations('home.landing.downloadDialog');
   const writeClipboard = useAttributionHandoff();
+  const playStoreUrl = useAttributedPlayStoreUrl();
 
   useEffect(() => {
     if (open) downloadDialogViewed({ placement });
@@ -81,7 +83,7 @@ export default function DownloadDialog({ open, onOpenChange, placement }: Downlo
               />
             </a>
             <a
-              href={PLAY_STORE_URL}
+              href={playStoreUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {

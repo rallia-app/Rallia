@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { detectPlatform } from '@/lib/referral-tracking';
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/store-urls';
+import { APP_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
 
 // Maps an email CTA `?to=` value to an in-app screen path (React Navigation
 // linking config in apps/mobile) used to build the `rallia://` deep link.
@@ -73,7 +73,15 @@ export function GET(request: NextRequest): NextResponse {
   const src = SRC_RE.test(srcParam) ? srcParam : DEFAULT_SRC;
   const path = needsId ? `${screen}/${id}` : screen;
   const appUrl = `rallia://${path}?src=${src}`;
-  const storeUrl = platform === 'ios' ? APP_STORE_URL : PLAY_STORE_URL;
+  // Store fallback fires when the recipient no longer has the app. The
+  // Android leg carries the email context in the install referrer so the
+  // reinstall still attributes; iOS has no store-URL equivalent.
+  const storeUrl =
+    platform === 'ios'
+      ? APP_STORE_URL
+      : buildPlayStoreUrl(undefined, 'referral', undefined, {
+          utm: { utm_source: 'email', utm_medium: 'email', utm_campaign: src },
+        });
   const isFr = locale.startsWith('fr');
 
   const html = `<!doctype html>
