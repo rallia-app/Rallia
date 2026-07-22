@@ -103,6 +103,13 @@ function LoadingSkeleton() {
 
 const keyExtractor = (item: FacilitySearchResult) => item.id;
 
+// The directory leads with facilities you can actually book, so "Slots open"
+// starts on. Reset still clears it, like any other chip.
+const DIRECTORY_DEFAULT_FILTERS: FacilityFilters = {
+  ...DEFAULT_FACILITY_FILTERS,
+  hasOpenSlots: true,
+};
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -140,7 +147,7 @@ export default function FacilitiesDirectory() {
   const hasActiveSearch = debouncedSearchQuery.length > 0;
 
   // Filter state
-  const [filters, setFilters] = useState<FacilityFilters>(DEFAULT_FACILITY_FILTERS);
+  const [filters, setFilters] = useState<FacilityFilters>(DIRECTORY_DEFAULT_FILTERS);
 
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
