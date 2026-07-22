@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -73,11 +74,13 @@ import {
   useWithdrawFromSeason,
   usePublishSession,
   useProfilesByIds,
+  useMyPayoutAccount,
+  tournamentKeys,
 } from '@rallia/shared-hooks';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { isLeagueOrganizer, TournamentPaymentError } from '@rallia/shared-services';
+import { isLeagueOrganizer, TournamentPaymentError, supabase } from '@rallia/shared-services';
 import type {
   LeagueMemberWithProfile,
   PlayerProfile,
@@ -456,9 +459,10 @@ const OverviewActionRow: React.FC<{
   onPress: () => void;
   destructive?: boolean;
   disabled?: boolean;
+  badge?: { label: string; tone: 'positive' | 'warning' | 'muted' };
   showDivider?: boolean;
   testID?: string;
-}> = ({ icon, label, colors, onPress, destructive, disabled, showDivider, testID }) => (
+}> = ({ icon, label, colors, onPress, destructive, disabled, badge, showDivider, testID }) => (
   <TouchableOpacity
     onPress={onPress}
     activeOpacity={0.7}
@@ -483,6 +487,35 @@ const OverviewActionRow: React.FC<{
     >
       {label}
     </Text>
+    {badge && (
+      <View
+        style={[
+          styles.overviewActionBadge,
+          {
+            backgroundColor:
+              badge.tone === 'positive'
+                ? colors.statusPositiveBg
+                : badge.tone === 'warning'
+                  ? colors.secondaryAccentBg
+                  : colors.statusMutedBg,
+          },
+        ]}
+      >
+        <Text
+          size="xs"
+          weight="semibold"
+          color={
+            badge.tone === 'positive'
+              ? colors.statusPositiveText
+              : badge.tone === 'warning'
+                ? colors.secondaryAccent
+                : colors.textMuted
+          }
+        >
+          {badge.label}
+        </Text>
+      </View>
+    )}
     <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
   </TouchableOpacity>
 );
@@ -983,6 +1016,85 @@ export const LeagueDetail: React.FC = () => {
     }
   );
 
+  // Organizer payout onboarding. The paid unit is the season, so an organizer
+  // needs a card-capable Stripe Express account before a paid season can open.
+  // Surface the row whenever any season carries a fee — including a draft the
+  // organizer set a price on but hasn't opened yet, which is exactly when they
+  // need to onboard (season_open raises PAYOUTS_SETUP_REQUIRED otherwise). The
+  // account, and both edge functions, are per-organizer not per-event, so this
+  // is the same flow tournaments use.
+  const hasPaidSeason = useMemo(() => seasons.some(s => (s.entry_fee_cents ?? 0) > 0), [seasons]);
+  const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && hasPaidSeason);
+
+  const handleStripeOnboard = useCallback(
+    async (businessType: 'individual' | 'company') => {
+      try {
+        const { data, error } = await supabase.functions.invoke('player-stripe-onboard', {
+          body: { businessType },
+        });
+        if (error || !data?.url) throw new Error(error?.message);
+        // Custom scheme (not the https return_url) so ASWebAuthenticationSession
+        // auto-dismisses on the callback — the web /stripe-connect-return page
+        // bounces Stripe's https return to this scheme.
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          'rallia://stripe-connect-return'
+        );
+        if (result.type === 'success' && userId) {
+          // stripe-connect-webhook flips onboarding_completed once charges are
+          // enabled; invalidate to clear the gate. It settles asynchronously, so
+          // refetch again shortly after.
+          successHaptic();
+          const refresh = () =>
+            void qc.invalidateQueries({ queryKey: tournamentKeys.myPayoutAccount(userId) });
+          refresh();
+          setTimeout(refresh, 2500);
+        }
+      } catch {
+        warningHaptic();
+        toast.error(t('leagueDetail.payments.onboardingError'));
+      }
+    },
+    [qc, t, toast, userId]
+  );
+
+  // Ask individual vs company, then kick off onboarding. Shared by the payout
+  // row and the season-open guard error path.
+  const promptOnboardBusinessType = useCallback(() => {
+    Alert.alert(
+      t('leagueDetail.payments.payoutsSetupTitle'),
+      t('leagueDetail.payments.payoutsSetupBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.payments.onboardTypeIndividual'),
+          onPress: () => void handleStripeOnboard('individual'),
+        },
+        {
+          text: t('leagueDetail.payments.onboardTypeBusiness'),
+          onPress: () => void handleStripeOnboard('company'),
+        },
+      ]
+    );
+  }, [t, handleStripeOnboard]);
+
+  // Post-onboarding: open the Stripe Express dashboard when ready, or resume
+  // onboarding when unfinished. The webhook refreshes status, so invalidate on
+  // return.
+  const handleManagePayouts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('player-stripe-manage');
+      if (error || !data?.url) throw new Error(error?.message);
+      await WebBrowser.openAuthSessionAsync(data.url, 'rallia://stripe-connect-return');
+      if (userId) {
+        void qc.invalidateQueries({ queryKey: tournamentKeys.myPayoutAccount(userId) });
+      }
+    } catch {
+      warningHaptic();
+      toast.error(t('leagueDetail.payments.manageError'));
+    }
+  }, [qc, t, toast, userId]);
+
   const { mutate: openSeasonMut, isPending: isOpeningSeason } = useOpenSeason(leagueId, {
     onSuccess: season => {
       successHaptic();
@@ -991,6 +1103,13 @@ export const LeagueDetail: React.FC = () => {
       invalidateAll();
     },
     onError: e => {
+      // Paid season without completed payout setup: prompt the organizer to
+      // finish Stripe onboarding instead of surfacing the raw gate code.
+      if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
+        warningHaptic();
+        promptOnboardBusinessType();
+        return;
+      }
       warningHaptic();
       toast.error(e.message || t('leagueDetail.errors.generic'));
     },
@@ -1730,6 +1849,7 @@ export const LeagueDetail: React.FC = () => {
     onPress: () => void;
     destructive?: boolean;
     disabled?: boolean;
+    badge?: { label: string; tone: 'positive' | 'warning' | 'muted' };
     testID: string;
   }> = [];
   if (isOrganizer) {
@@ -1739,6 +1859,23 @@ export const LeagueDetail: React.FC = () => {
       onPress: handleInvitePress,
       testID: 'action-invite-players',
     });
+    // undefined = still loading (or no paid season, query disabled); the row
+    // appears once payout status is known.
+    if (hasPaidSeason && payoutAccount !== undefined) {
+      organizerRows.push({
+        icon: 'wallet-outline',
+        label: t('leagueDetail.payments.payoutRow.label'),
+        onPress:
+          payoutAccount === null ? promptOnboardBusinessType : () => void handleManagePayouts(),
+        badge:
+          payoutAccount === null
+            ? { label: t('leagueDetail.payments.payoutRow.setup'), tone: 'muted' }
+            : !payoutAccount.chargesEnabled
+              ? { label: t('leagueDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }
+              : { label: t('leagueDetail.payments.payoutRow.ready'), tone: 'positive' },
+        testID: 'action-payouts',
+      });
+    }
     // A closed league is terminal server-side, so edit is hidden rather than
     // offered and then refused.
     if (league.status !== 'closed') {
@@ -2338,6 +2475,7 @@ export const LeagueDetail: React.FC = () => {
                       onPress={row.onPress}
                       destructive={row.destructive}
                       disabled={row.disabled}
+                      badge={row.badge}
                       showDivider={i > 0}
                       colors={colors}
                       testID={row.testID}
@@ -2952,6 +3090,11 @@ const styles = StyleSheet.create({
   },
   overviewActionLabel: {
     flex: 1,
+  },
+  overviewActionBadge: {
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[0.5],
+    borderRadius: radiusPixels.full,
   },
   overviewInfoRow: {
     flexDirection: 'row',

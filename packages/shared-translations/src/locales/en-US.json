@@ -4411,6 +4411,20 @@
         "generic": "The payment didn't go through. Please try again."
       }
     },
+    "payments": {
+      "payoutsSetupTitle": "Set up payouts first",
+      "payoutsSetupBody": "Before opening a paid season, finish setting up how you get paid.",
+      "onboardTypeIndividual": "I'm an individual",
+      "onboardTypeBusiness": "I'm a business or club",
+      "onboardingError": "Couldn't start payout setup. Please try again.",
+      "manageError": "Couldn't open your payout account. Please try again.",
+      "payoutRow": {
+        "label": "Payouts",
+        "setup": "Set up",
+        "actionNeeded": "Action needed",
+        "ready": "Ready"
+      }
+    },
     "sections": {
       "pending": "Pending approval",
       "members": "Members",
