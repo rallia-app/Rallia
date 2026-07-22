@@ -13956,65 +13956,35 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
-      tournament_join_via_invite:
-        | {
-            Args: { p_token: string }
-            Returns: {
-              approved_at: string | null
-              approved_by: string | null
-              bracket_position: number | null
-              created_at: string
-              id: string
-              invited_by: string | null
-              notes: string | null
-              partner_user_id: string | null
-              partnership_id: string | null
-              registered_at: string
-              seed_rank: number | null
-              self_declared_rank: number | null
-              status: Database["public"]["Enums"]["registration_status"]
-              tournament_id: string
-              updated_at: string
-              user_id: string
-              version: number
-              withdrawn_at: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "tournament_registrations"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: { p_partner_id?: string; p_token: string }
-            Returns: {
-              approved_at: string | null
-              approved_by: string | null
-              bracket_position: number | null
-              created_at: string
-              id: string
-              invited_by: string | null
-              notes: string | null
-              partner_user_id: string | null
-              partnership_id: string | null
-              registered_at: string
-              seed_rank: number | null
-              self_declared_rank: number | null
-              status: Database["public"]["Enums"]["registration_status"]
-              tournament_id: string
-              updated_at: string
-              user_id: string
-              version: number
-              withdrawn_at: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "tournament_registrations"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      tournament_join_via_invite: {
+        Args: { p_partner_id?: string; p_token: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          bracket_position: number | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          notes: string | null
+          partner_user_id: string | null
+          partnership_id: string | null
+          registered_at: string
+          seed_rank: number | null
+          self_declared_rank: number | null
+          status: Database["public"]["Enums"]["registration_status"]
+          tournament_id: string
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_registrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_open_registration: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {

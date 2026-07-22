@@ -1,0 +1,38 @@
+-- ============================================
+-- Leagues & Tournaments — drop the resurrected tournament_join_via_invite(text) overload
+-- ============================================
+-- Bug: the shareable-link join path has two live overloads of
+-- public.tournament_join_via_invite:
+--
+--     tournament_join_via_invite(p_token text)
+--     tournament_join_via_invite(p_token text, p_partner_id uuid DEFAULT NULL)
+--
+-- History: 20260612150000 created the 1-arg version; 20260612160200 DROPped it
+-- and replaced it with the partner-aware 2-arg version; then
+-- 20260710130000_lt_tournament_invite_link_after_close.sql re-created the 1-arg
+-- signature, resurrecting the dropped overload alongside the 2-arg one.
+--
+-- Impact: a token-only call (every SINGLES share-link join — the client omits
+-- p_partner_id, so PostgREST receives just {p_token}) matches BOTH candidates.
+-- PostgREST fails it with PGRST203, and plpgsql/SQL callers fail it with
+-- SQLSTATE 42725 (function is not unique) — the call never runs. Singles
+-- share-link joins have been broken since 2026-07-10. Doubles joins keep
+-- working because passing p_partner_id disambiguates to the 2-arg version.
+--
+-- Fix: drop the 1-arg overload so only the partner-aware version remains. The
+-- 2-arg body is the one to keep — it carries the disqualified-terminal gate
+-- (REGISTRATION_REMOVED, blocking the removal backdoor) and full partner
+-- validation that the 1-arg body lacks. A token-only call then binds to it with
+-- p_partner_id defaulting to NULL, which is exactly the singles path.
+--
+-- Deliberately abandoned here: the "join after registration closes, until the
+-- bracket is published" widening that 20260710130000 was written to add lived
+-- ONLY in the 1-arg body, so it was never reachable (the overload ambiguity
+-- blocked it before it could run). We are dropping that body rather than porting
+-- the widening — the 2-arg version keeps the stricter `status =
+-- 'registration_open'` gate. If the after-close admission window is wanted later,
+-- re-add it to the 2-arg body (status IN ('registration_open',
+-- 'registration_closed') AND bracket_locked_at IS NULL), not as a second overload.
+-- ============================================
+
+DROP FUNCTION IF EXISTS public.tournament_join_via_invite(text);
