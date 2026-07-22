@@ -4505,7 +4505,23 @@
       "leaving": "Leaving...",
       "withdrew": "You've left the season",
       "leaveConfirmTitle": "Leave this season?",
-      "leaveConfirmBody": "You'll drop off the season roster. You can join again while the season is open."
+      "leaveConfirmBody": "You'll drop off the season roster. You can join again while the season is open.",
+      "removeAccessibility": "Remove {name}",
+      "removeConfirmTitle": "Remove {name}?",
+      "removeConfirmFree": "They'll be removed from the season roster.",
+      "removeConfirmRefund": "They'll be refunded {amount} and removed. The Rallia service fee isn't refunded.",
+      "removeConfirmNoRefund": "They'll be removed. This season's refund window has closed, so no money goes back.",
+      "keepMember": "Keep",
+      "removeConfirm": "Remove",
+      "removed": "Removed from the season",
+      "refundedAndRemoved": "Removed. {amount} refunded.",
+      "removeErrors": {
+        "notOrganizer": "Only the organizer can remove members.",
+        "noPaidEnrollment": "No payment on file for this member.",
+        "notAllowed": "Members can only be removed while the season is open.",
+        "stale": "Something changed. Refresh and try again.",
+        "generic": "Couldn't remove the member. Please try again."
+      }
     },
     "createSeason": {
       "title": "Create a season",
