@@ -4288,6 +4288,25 @@
         "cancelFailed": "Couldn't cancel the season. Please try again."
       }
     },
+    "seasonErrors": {
+      "notOrganizer": "Only the organizer can do that.",
+      "stale": "Something changed. Refresh and try again.",
+      "leagueNotActive": "This league isn't active right now.",
+      "seasonEnded": "This season's dates have already passed.",
+      "seasonNotDraft": "This season has already opened.",
+      "seasonNotFound": "This season no longer exists.",
+      "hasOpenSessions": "Finish or cancel the open sessions before closing the season.",
+      "seasonNotOpen": "This season isn't open right now.",
+      "notMember": "Join the league before signing up for a season.",
+      "paymentRequired": "This season charges an entry fee. Refresh, then tap Join to pay.",
+      "notEnrolled": "You're not in this season.",
+      "refundRequired": "A paid spot has to leave through the refund option.",
+      "invalidDeadline": "Pick a check-in deadline before the session starts.",
+      "sessionNotDraft": "This session has already been published.",
+      "sessionStartPassed": "This session's start time has already passed.",
+      "sessionNotFound": "This session no longer exists.",
+      "generic": "Something went wrong. Please try again."
+    },
     "standings": {
       "title": "{name} standings",
       "player": "Player",
