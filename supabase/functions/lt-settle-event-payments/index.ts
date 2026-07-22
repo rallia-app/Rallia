@@ -9,12 +9,15 @@
  *     (organizer_amount_cents) from their connected balance to their bank.
  *     Rallia only decides the timing — it never held the money.
  *
- *   CANCELLED  → full ENTRY refund to every paid player (service fee retained).
- *     reverse_transfer claws the entry back from the organizer's balance to
- *     fund the refund.
+ *   CANCELLED (or a player removed by the organizer) → full ENTRY refund to
+ *     every affected paid player (service fee retained). An explicit transfer
+ *     reversal claws the entry back from the organizer's balance, then the
+ *     player is refunded with reverse_transfer:false — two calls, not one
+ *     reverse_transfer:true refund; see _shared/lt-refund-logic.ts for why.
  *
- * Idempotent: candidate RPCs only return un-paid-out / un-refunded rows, and
- * every Stripe call is keyed by payment id.
+ * Idempotent: candidate RPCs only return un-paid-out / un-refunded rows, every
+ * Stripe call is keyed by payment id, and refund/reversal amounts are derived
+ * from live Stripe state so a partially-executed row converges on the next run.
  *
  * Invoked by pg_cron (see the companion migration). Env: STRIPE_SECRET_KEY,
  * SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
@@ -24,6 +27,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
 import { requireSecretApikey } from '../_shared/auth.ts';
+import { executeEntryRefund } from '../_shared/lt-entry-refund.ts';
 
 // deno-lint-ignore no-explicit-any
 type Admin = SupabaseClient<any, any, any>;
@@ -40,6 +44,7 @@ interface ReleaseRow {
 interface CancelRow {
   payment_id: string;
   stripe_payment_intent_id: string | null;
+  stripe_charge_id: string | null;
   entry_cents: number;
 }
 
@@ -93,23 +98,17 @@ async function refundCancelled(admin: Admin, stripe: Stripe): Promise<number> {
   for (const row of candidates) {
     if (!row.stripe_payment_intent_id || row.entry_cents <= 0) continue;
     try {
-      // The entry sits in the organizer's connected balance; reverse_transfer
-      // claws it back to fund the player's refund, and refund_application_fee:
-      // false keeps Rallia's service fee.
-      await stripe.refunds.create(
-        {
-          payment_intent: row.stripe_payment_intent_id,
-          amount: row.entry_cents,
-          reverse_transfer: true,
-          refund_application_fee: false,
-          metadata: {
-            rallia_flow: 'lt_registration',
-            paymentId: row.payment_id,
-            reason: 'event_cancelled',
-          },
-        },
-        { idempotencyKey: `lt-cancel-refund-${row.payment_id}` }
-      );
+      // The entry sits in the organizer's connected balance; the executor claws
+      // it back with an explicit transfer reversal, then refunds the player.
+      // Rallia's service fee is kept either way.
+      await executeEntryRefund(stripe, {
+        paymentId: row.payment_id,
+        paymentIntentId: row.stripe_payment_intent_id,
+        chargeId: row.stripe_charge_id,
+        refundableEntryCents: row.entry_cents,
+        reason: 'event_cancelled',
+        idempotencyPrefix: 'lt-cancel-refund',
+      });
 
       await admin
         .from('lt_registration_payment')
