@@ -66,6 +66,7 @@ import {
   leagueKeys,
   useOpenSeason,
   useCloseSeason,
+  useCancelSeason,
   useSeasonSessions,
   useSeasonRankings,
   useSeasonMembers,
@@ -85,6 +86,7 @@ import type {
   LeagueMemberWithProfile,
   PlayerProfile,
   PlayerSearchResult,
+  Season,
   SeasonMemberWithProfile,
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
@@ -1411,6 +1413,59 @@ export const LeagueDetail: React.FC = () => {
     },
   });
 
+  const { cancelSeasonAsync, isCancellingSeason } = useCancelSeason({
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('leagueDetail.seasonCancelled'));
+      invalidateAll();
+    },
+    onError: e => {
+      const msg = e.message || '';
+      const key = msg.includes('SEASON_NOT_CANCELLABLE')
+        ? 'leagueDetail.seasonLifecycle.errors.notCancellable'
+        : msg.includes('OPTIMISTIC_LOCK_CONFLICT') || msg.includes('NOT_ORGANIZER')
+          ? 'leagueDetail.seasonLifecycle.errors.stale'
+          : 'leagueDetail.seasonLifecycle.errors.cancelFailed';
+      warningHaptic();
+      toast.error(t(key as TranslationKey));
+    },
+  });
+
+  // Cancel is the abort path, distinct from close: it flips the season to
+  // 'cancelled', which is the only status that feeds paid enrolments into the
+  // refund cron (lt_cancel_refund_candidates). A paid open season is where the
+  // money warning matters — cancel refunds everyone per policy, close pays the
+  // organizer instead. Draft seasons have no enrolments so the copy is plainer.
+  const handleCancelSeason = useCallback(
+    (season: Season) => {
+      if (isCancellingSeason) return;
+      const paidWithEnrolments = (season.entry_fee_cents ?? 0) > 0 && season.status === 'open';
+      Alert.alert(
+        t('leagueDetail.seasonLifecycle.cancelConfirmTitle', { name: season.name }),
+        paidWithEnrolments
+          ? t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
+          : t('leagueDetail.seasonLifecycle.cancelConfirmBody'),
+        [
+          { text: t('leagueDetail.seasonLifecycle.keepSeason'), style: 'cancel' },
+          {
+            text: t('leagueDetail.seasonLifecycle.cancelConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              warningHaptic();
+              void cancelSeasonAsync({
+                seasonId: season.id,
+                reason: null,
+                versionWas: season.version,
+                leagueId,
+              });
+            },
+          },
+        ]
+      );
+    },
+    [cancelSeasonAsync, isCancellingSeason, leagueId, t]
+  );
+
   const { mutate: publishSessionMut, isPending: isPublishingSession } = usePublishSession(
     openSeason?.id ?? '',
     {
@@ -2622,6 +2677,23 @@ export const LeagueDetail: React.FC = () => {
                           </Text>
                         </TouchableOpacity>
                       )}
+                      {/* Cancel (abort + refund) is offered on draft and open
+                          seasons, quieter than close since close is the normal
+                          end and cancel triggers refunds. */}
+                      {isOrganizer && (s.status === 'draft' || s.status === 'open') && (
+                        <TouchableOpacity
+                          onPress={() => handleCancelSeason(s)}
+                          disabled={isCancellingSeason}
+                          testID="cta-cancel-season"
+                          style={styles.seasonCancelAction}
+                        >
+                          <Text size="sm" weight="semibold" color={colors.danger}>
+                            {isCancellingSeason
+                              ? t('leagueDetail.seasonLifecycle.cancelling')
+                              : t('leagueDetail.seasonLifecycle.cancel')}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   );
                 })
@@ -3227,6 +3299,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2.5],
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  seasonCancelAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[2],
   },
   standingRow: {
     flexDirection: 'row',
