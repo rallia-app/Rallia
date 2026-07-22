@@ -415,4 +415,78 @@ BEGIN
     RAISE NOTICE 'PASS 4: paid exits protected; normal payouts intact';
 END $$;
 
+-- ==========================================================================
+-- 5. Doubles paid exit — only the captain can refund the team, and the paid
+--    guard still routes both members through the refund path.
+-- ==========================================================================
+DO $$
+DECLARE v_org uuid; v_players uuid[]; v_tid uuid; v_reg uuid; v_v int; v_ok boolean; v_st text;
+BEGIN
+    SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
+      FROM pg_temp.mk_paid_draft('Sec 5', 'open', 'doubles');
+    PERFORM pg_temp.open_paid(v_org, v_tid);
+    -- captain = players[2], partner = players[3]
+    v_reg := pg_temp.reserve(v_tid, v_players[2], v_players[3]);
+    PERFORM pg_temp.mark_paid(v_reg);
+
+    -- 5a. the partner is not the payer; they cannot refund the team's entry.
+    v_ok := false;
+    PERFORM pg_temp.as_player(v_players[3]);
+    SELECT version INTO v_v FROM tournament_registrations WHERE id = v_reg;
+    BEGIN PERFORM tournament_request_refund(v_reg, v_v);
+    EXCEPTION WHEN OTHERS THEN v_ok := (SQLERRM = 'NOT_OWNER'); END;
+    ASSERT v_ok, '5a: a doubles partner refunding must raise NOT_OWNER';
+
+    -- 5b. neither member may silently forfeit via tournament_withdraw.
+    v_ok := false;
+    PERFORM pg_temp.as_player(v_players[3]);
+    BEGIN PERFORM tournament_withdraw(v_reg, v_v);
+    EXCEPTION WHEN OTHERS THEN v_ok := (SQLERRM = 'PAID_USE_REFUND'); END;
+    ASSERT v_ok, '5b: partner withdraw of a paid team must raise PAID_USE_REFUND';
+
+    -- 5c. the captain refunds; the whole team's entry is withdrawn.
+    PERFORM pg_temp.as_player(v_players[2]);
+    SELECT version INTO v_v FROM tournament_registrations WHERE id = v_reg;
+    PERFORM tournament_request_refund(v_reg, v_v);
+    SELECT status INTO v_st FROM tournament_registrations WHERE id = v_reg;
+    ASSERT v_st = 'withdrawn', '5c: captain refund must withdraw the team, got ' || v_st;
+
+    RAISE NOTICE 'PASS 5: doubles paid exit is captain-only and routed through refund';
+END $$;
+
+-- ==========================================================================
+-- 6. Co-organizers act on the event but can never redirect the money: every
+--    refund/payout targets the PRIMARY organizer, whoever triggered it.
+-- ==========================================================================
+DO $$
+DECLARE v_org uuid; v_players uuid[]; v_tid uuid; v_reg uuid; v_v int; v_ledger_org uuid;
+BEGIN
+    SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid FROM pg_temp.mk_paid_draft('Sec 6');
+    -- primary organizer adds a co-organizer, then opens and takes a payment.
+    PERFORM pg_temp.as_player(v_org);
+    PERFORM tournament_add_co_organizer(v_tid, v_players[2]);
+    PERFORM pg_temp.open_paid(v_org, v_tid);
+    v_reg := pg_temp.reserve(v_tid, v_players[3]);
+    PERFORM pg_temp.mark_paid(v_reg);
+
+    -- the ledger always books the money to the primary organizer.
+    SELECT organizer_id INTO v_ledger_org FROM lt_registration_payment WHERE tournament_registration_id = v_reg;
+    ASSERT v_ledger_org = v_org, '6: ledger organizer must be the primary, not the co-organizer';
+
+    -- the co-organizer can cancel (allowed), which queues the refund...
+    PERFORM pg_temp.as_player(v_players[2]);
+    SELECT version INTO v_v FROM tournaments WHERE id = v_tid;
+    PERFORM tournament_cancel(v_tid, 'co-org cancel', v_v);
+    ASSERT EXISTS (SELECT 1 FROM lt_cancel_refund_candidates() c
+                    JOIN lt_registration_payment p ON p.id = c.payment_id
+                   WHERE p.tournament_registration_id = v_reg),
+        '6: co-organizer cancel must queue the refund';
+    -- ...but the refund still comes out of the primary organizer's ledger row,
+    -- never the co-organizer's — a co-organizer cannot point the money at themselves.
+    SELECT organizer_id INTO v_ledger_org FROM lt_registration_payment WHERE tournament_registration_id = v_reg;
+    ASSERT v_ledger_org = v_org, '6: refund must still target the primary organizer';
+
+    RAISE NOTICE 'PASS 6: co-organizer acts on the event but money routes to the primary organizer';
+END $$;
+
 ROLLBACK;

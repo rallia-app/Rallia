@@ -126,7 +126,25 @@ BEGIN
     ASSERT v_q.total_cents = 5000,              'organizer_absorbs total should be 5000, got ' || v_q.total_cents;
     ASSERT v_q.organizer_receives_cents = 4598, 'organizer should net 4598, got ' || v_q.organizer_receives_cents;
 
-    RAISE NOTICE 'PASS 1: fee_quote math correct for both payer modes';
+    -- cap boundary: 5% of $500 (2500) + $1 would be 2600, but the fee is capped
+    -- at $20 (2000). Tax rides on the capped fee: round(2000 * 14975/100000) = 300.
+    SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
+      FROM pg_temp.mk_paid_draft('Paid Quote — cap', 50000, 'player_pays');
+    SELECT * INTO v_q FROM tournament_fee_quote(v_tid);
+    ASSERT v_q.service_fee_cents = 2000,          'fee should cap at 2000, got ' || v_q.service_fee_cents;
+    ASSERT v_q.fee_tax_cents = 300,               'tax on capped fee should be 300, got ' || v_q.fee_tax_cents;
+    ASSERT v_q.total_cents = 52300,               'player_pays total should be 52300, got ' || v_q.total_cents;
+
+    -- floor boundary: on a $1 entry the fee+tax (105+16) exceeds the entry, so an
+    -- organizer_absorbs organizer nets GREATEST(entry - fee - tax, 0) = 0, never negative.
+    SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
+      FROM pg_temp.mk_paid_draft('Paid Quote — floor', 100, 'organizer_absorbs');
+    SELECT * INTO v_q FROM tournament_fee_quote(v_tid);
+    ASSERT v_q.service_fee_cents = 105,           'fee should be 105, got ' || v_q.service_fee_cents;
+    ASSERT v_q.organizer_receives_cents = 0,      'organizer net should floor at 0, got ' || v_q.organizer_receives_cents;
+    ASSERT v_q.total_cents = 100,                 'organizer_absorbs total should be the entry (100), got ' || v_q.total_cents;
+
+    RAISE NOTICE 'PASS 1: fee_quote math correct (both modes, cap and floor boundaries)';
 END $$;
 
 -- --------------------------------------------------------------------------
