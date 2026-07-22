@@ -1347,21 +1347,18 @@ export const TournamentDetail: React.FC = () => {
     [toast, t, refetch]
   );
 
-  // Ask individual vs company, then kick off Stripe onboarding. Shared by the
-  // registration-guard error path and the organizer's payout setup card.
-  const promptOnboardBusinessType = useCallback(() => {
+  // Confirm, then kick off Stripe onboarding. Everyone onboards as an individual
+  // for now — the club/business path is hidden here but still supported
+  // server-side. Shared by the registration-guard error path and the payout card.
+  const promptOnboardPayouts = useCallback(() => {
     Alert.alert(
       t('tournamentDetail.payments.payoutsSetupTitle'),
       t('tournamentDetail.payments.payoutsSetupBody'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('tournamentDetail.payments.onboardTypeIndividual'),
+          text: t('common.continue'),
           onPress: () => void handleStripeOnboard('individual'),
-        },
-        {
-          text: t('tournamentDetail.payments.onboardTypeBusiness'),
-          onPress: () => void handleStripeOnboard('company'),
         },
       ]
     );
@@ -1374,7 +1371,7 @@ export const TournamentDetail: React.FC = () => {
       // finish Stripe onboarding instead of a generic error.
       if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
         warningHaptic();
-        promptOnboardBusinessType();
+        promptOnboardPayouts();
         return;
       }
       showError(e.message, 'tournamentDetail.errors.openFailed');
@@ -2738,8 +2735,7 @@ export const TournamentDetail: React.FC = () => {
       organizerRows.push({
         icon: 'wallet-outline',
         label: t('tournamentDetail.payments.payoutRow.label'),
-        onPress:
-          payoutAccount === null ? promptOnboardBusinessType : () => void handleManagePayouts(),
+        onPress: payoutAccount === null ? promptOnboardPayouts : () => void handleManagePayouts(),
         badge:
           payoutAccount === null
             ? { label: t('tournamentDetail.payments.payoutRow.setup'), tone: 'muted' }
