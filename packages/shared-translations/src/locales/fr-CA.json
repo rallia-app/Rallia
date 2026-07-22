@@ -4441,6 +4441,7 @@
       "errors": {
         "seasonNotOpen": "Cette saison n'est pas ouverte aux inscriptions.",
         "alreadyEnrolled": "T'es déjà inscrit à cette saison.",
+        "enrollmentRemoved": "L'organisateur t'a retiré de cette saison. Tu peux plus t'y inscrire.",
         "organizerNotReady": "L'organisateur ne peut pas encore recevoir de paiements. Réessaye plus tard.",
         "notMember": "Rejoins la ligue avant de t'inscrire à une saison.",
         "refundFailed": "Impossible de traiter le remboursement. Réessaye.",

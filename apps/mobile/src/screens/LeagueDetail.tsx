@@ -201,6 +201,7 @@ function estimateSeasonRefundCents(
 function mapSeasonError(message: string | undefined): TranslationKey {
   const m = message || '';
   if (m.includes('PAYMENT_REQUIRED')) return 'leagueDetail.seasonErrors.paymentRequired';
+  if (m.includes('ENROLLMENT_REMOVED')) return 'leagueDetail.paid.errors.enrollmentRemoved';
   if (m.includes('REFUND_REQUIRED')) return 'leagueDetail.seasonErrors.refundRequired';
   if (m.includes('SEASON_HAS_OPEN_SESSIONS')) return 'leagueDetail.seasonErrors.hasOpenSessions';
   if (m.includes('SEASON_NOT_DRAFT')) return 'leagueDetail.seasonErrors.seasonNotDraft';

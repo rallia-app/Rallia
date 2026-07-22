@@ -4441,6 +4441,7 @@
       "errors": {
         "seasonNotOpen": "This season isn't open for sign-ups.",
         "alreadyEnrolled": "You're already in this season.",
+        "enrollmentRemoved": "The organizer removed you from this season. You can't sign up again.",
         "organizerNotReady": "The organizer can't take payments yet. Try again later.",
         "notMember": "Join the league before signing up for a season.",
         "refundFailed": "Couldn't process the refund. Please try again.",
