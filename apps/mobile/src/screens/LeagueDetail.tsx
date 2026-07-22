@@ -73,6 +73,8 @@ import {
   useMySeasonMembership,
   useEnrollInSeason,
   useWithdrawFromSeason,
+  useRefundSeasonMember,
+  useRemoveSeasonMember,
   usePublishSession,
   useProfilesByIds,
   useMyPayoutAccount,
@@ -1392,6 +1394,122 @@ export const LeagueDetail: React.FC = () => {
     toast,
     withdrawSeasonMut,
   ]);
+
+  // Organizer removes a roster member. On a paid season this must refund (the
+  // server refuses a plain remove that would strand money — REFUND_REQUIRED),
+  // so route paid removals through the organizer refund path and free ones
+  // through the plain remove.
+  const refundErrorHandler = useCallback(
+    (e: Error) => {
+      const code = e instanceof TournamentPaymentError ? e.code : null;
+      const key =
+        code === 'not_organizer'
+          ? 'leagueDetail.roster.removeErrors.notOrganizer'
+          : code === 'no_paid_enrollment' || code === 'enrollment_not_found'
+            ? 'leagueDetail.roster.removeErrors.noPaidEnrollment'
+            : code === 'withdraw_not_allowed'
+              ? 'leagueDetail.roster.removeErrors.notAllowed'
+              : code === 'lock_conflict'
+                ? 'leagueDetail.roster.removeErrors.stale'
+                : 'leagueDetail.roster.removeErrors.generic';
+      warningHaptic();
+      toast.error(t(key as TranslationKey));
+    },
+    [t, toast]
+  );
+
+  const { refundSeasonMemberAsync, isRefundingSeasonMember } = useRefundSeasonMember({
+    onSuccess: r => {
+      successHaptic();
+      toast.success(
+        r.refundedCents > 0
+          ? t('leagueDetail.roster.refundedAndRemoved', {
+              amount: formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', { locale }),
+            })
+          : t('leagueDetail.roster.removed')
+      );
+    },
+    onError: refundErrorHandler,
+  });
+
+  const { mutate: removeSeasonMemberMut, isPending: isRemovingSeasonMember } =
+    useRemoveSeasonMember(openSeasonId ?? '', {
+      onSuccess: () => {
+        successHaptic();
+        toast.success(t('leagueDetail.roster.removed'));
+      },
+      onError: e => {
+        const msg = e.message || '';
+        const key = msg.includes('OPTIMISTIC_LOCK_CONFLICT')
+          ? 'leagueDetail.roster.removeErrors.stale'
+          : msg.includes('NOT_ORGANIZER')
+            ? 'leagueDetail.roster.removeErrors.notOrganizer'
+            : 'leagueDetail.roster.removeErrors.generic';
+        warningHaptic();
+        toast.error(t(key as TranslationKey));
+      },
+    });
+
+  const handleRemoveSeasonMember = useCallback(
+    (member: SeasonMemberWithProfile) => {
+      if (isRefundingSeasonMember || isRemovingSeasonMember) return;
+      const name = getHumanName(member.profile, t('leagueDetail.unknownMember'));
+      if (isPaidSeason) {
+        const estimate = estimateSeasonRefundCents(seasonFeeQuote);
+        Alert.alert(
+          t('leagueDetail.roster.removeConfirmTitle', { name }),
+          estimate > 0
+            ? t('leagueDetail.roster.removeConfirmRefund', {
+                amount: formatPrice(estimate, seasonFeeQuote?.currency ?? 'CAD', { locale }),
+              })
+            : t('leagueDetail.roster.removeConfirmNoRefund'),
+          [
+            { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
+            {
+              text: t('leagueDetail.roster.removeConfirm'),
+              style: 'destructive',
+              onPress: () => {
+                warningHaptic();
+                void refundSeasonMemberAsync({
+                  seasonMemberId: member.id,
+                  versionWas: member.version,
+                  seasonId: member.season_id,
+                  leagueId,
+                });
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          t('leagueDetail.roster.removeConfirmTitle', { name }),
+          t('leagueDetail.roster.removeConfirmFree'),
+          [
+            { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
+            {
+              text: t('leagueDetail.roster.removeConfirm'),
+              style: 'destructive',
+              onPress: () => {
+                warningHaptic();
+                removeSeasonMemberMut({ seasonMemberId: member.id, versionWas: member.version });
+              },
+            },
+          ]
+        );
+      }
+    },
+    [
+      isPaidSeason,
+      isRefundingSeasonMember,
+      isRemovingSeasonMember,
+      leagueId,
+      locale,
+      refundSeasonMemberAsync,
+      removeSeasonMemberMut,
+      seasonFeeQuote,
+      t,
+    ]
+  );
 
   // Standings come from the open season, else the most recent closed one.
   const rankingSeason = useMemo(
@@ -2724,6 +2842,18 @@ export const LeagueDetail: React.FC = () => {
                         player={memberToPlayer(m)}
                         onPress={handlePlayerPress}
                         showActivity={false}
+                        trailingAction={
+                          isOrganizer && m.user_id !== userId && m.status === 'enrolled'
+                            ? {
+                                icon: 'person-remove-outline',
+                                color: colors.danger,
+                                accessibilityLabel: t('leagueDetail.roster.removeAccessibility', {
+                                  name: getHumanName(m.profile, t('leagueDetail.unknownMember')),
+                                }),
+                                onPress: () => handleRemoveSeasonMember(m),
+                              }
+                            : undefined
+                        }
                       />
                     ))}
                   </>

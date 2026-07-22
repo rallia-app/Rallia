@@ -4505,7 +4505,23 @@
       "leaving": "Retrait...",
       "withdrew": "Tu as quitté la saison",
       "leaveConfirmTitle": "Quitter la saison ?",
-      "leaveConfirmBody": "Tu seras retiré de la liste des joueurs. Tu pourras revenir tant que la saison est ouverte."
+      "leaveConfirmBody": "Tu seras retiré de la liste des joueurs. Tu pourras revenir tant que la saison est ouverte.",
+      "removeAccessibility": "Retirer {name}",
+      "removeConfirmTitle": "Retirer {name} ?",
+      "removeConfirmFree": "La personne sera retirée de la liste des joueurs.",
+      "removeConfirmRefund": "La personne sera remboursée de {amount} et retirée. Les frais de service Rallia ne sont pas remboursés.",
+      "removeConfirmNoRefund": "La personne sera retirée. La fenêtre de remboursement est fermée, donc aucun montant n'est remis.",
+      "keepMember": "Garder",
+      "removeConfirm": "Retirer",
+      "removed": "Retiré de la saison",
+      "refundedAndRemoved": "Retiré. {amount} remboursé.",
+      "removeErrors": {
+        "notOrganizer": "Seul l'organisateur peut retirer des membres.",
+        "noPaidEnrollment": "Aucun paiement enregistré pour ce membre.",
+        "notAllowed": "On peut retirer des membres seulement quand la saison est ouverte.",
+        "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
+        "generic": "Impossible de retirer le membre. Réessaie."
+      }
     },
     "createSeason": {
       "title": "Créer une saison",
