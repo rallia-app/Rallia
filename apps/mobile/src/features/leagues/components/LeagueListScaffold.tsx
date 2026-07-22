@@ -383,9 +383,22 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
     }
   }, [refetch]);
 
-  let body: React.ReactNode;
+  type Item =
+    | { kind: 'header'; title: string; key: string }
+    | { kind: 'row'; league: LeagueListItem; key: string };
+  const data = useMemo<Item[]>(() => {
+    if (isLoading || isError) return [];
+    const out: Item[] = [];
+    for (const s of sections) {
+      out.push({ kind: 'header', title: t(s.titleKey), key: `h-${s.titleKey}` });
+      for (const league of s.items) out.push({ kind: 'row', league, key: `r-${league.id}` });
+    }
+    return out;
+  }, [isLoading, isError, sections, t]);
+
+  let emptyComponent: React.ReactNode;
   if (isLoading) {
-    body = (
+    emptyComponent = (
       <View style={styles.skeletonList}>
         {[1, 2, 3, 4, 5].map(i => (
           <LeagueCardSkeleton key={i} />
@@ -393,7 +406,7 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
       </View>
     );
   } else if (isError) {
-    body = (
+    emptyComponent = (
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
         <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
@@ -409,8 +422,8 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
         </TouchableOpacity>
       </View>
     );
-  } else if (sections.length === 0) {
-    body = (
+  } else {
+    emptyComponent = (
       <View style={styles.centered}>
         <Ionicons name={emptyIcon} size={48} color={colors.textMuted} />
         <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
@@ -421,22 +434,22 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
         </Text>
       </View>
     );
-  } else {
-    type Item =
-      | { kind: 'header'; title: string; key: string }
-      | { kind: 'row'; league: LeagueListItem; key: string };
-    const data: Item[] = [];
-    for (const s of sections) {
-      data.push({ kind: 'header', title: t(s.titleKey), key: `h-${s.titleKey}` });
-      for (const league of s.items) data.push({ kind: 'row', league, key: `r-${league.id}` });
-    }
+  }
 
-    body = (
+  // One list in every state, with the header inside it: pull-to-refresh stays
+  // live while loading, erroring and empty, not just once rows exist.
+  return (
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={data}
         keyExtractor={item => item.key}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          data.length === 0 && !isLoading && styles.emptyListContent,
+        ]}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={header ? <>{header}</> : null}
+        ListEmptyComponent={emptyComponent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -465,13 +478,6 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
           );
         }}
       />
-    );
-  }
-
-  return (
-    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
-      {header}
-      {body}
     </SafeAreaView>
   );
 };
@@ -495,6 +501,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: spacingPixels[2],
     paddingBottom: spacingPixels[5],
+    // Lets the empty/error state fill the screen so it centres and the whole
+    // surface stays pullable.
+    flexGrow: 1,
+  },
+  emptyListContent: {
+    justifyContent: 'center',
+    minHeight: '100%',
   },
   sectionHeader: {
     paddingHorizontal: spacingPixels[4],
@@ -502,7 +515,6 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[1],
   },
   skeletonList: {
-    flex: 1,
     paddingTop: spacingPixels[2],
   },
   card: {
