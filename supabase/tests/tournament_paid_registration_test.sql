@@ -13,12 +13,12 @@
 --   * tournament_request_refund    — refundable ENTRY per policy + cutoff (never the fee),
 --     ownership + double-refund guards
 --
--- Fee model under test: 5% + $1.00, $20 cap, plus 14.975% GST/QST on the fee.
--- For entry $50.00 (5000c):
---   service fee = round(5000 * 500 / 10000) + 100 = 250 + 100 = 350c  (< 2000 cap)
---   fee tax     = round(350 * 14975 / 100000)     = 52c
---   player_pays:       player charged 5402c (entry+fee+tax), organizer receives 5000c
---   organizer_absorbs: player charged 5000c,                 organizer receives 4598c (entry-fee-tax)
+-- Fee model under test: straight 5% (no flat add-on), $20 cap, plus 14.975%
+-- GST/QST on the fee. For entry $50.00 (5000c):
+--   service fee = round(5000 * 500 / 10000) = 250c  (< 2000 cap)
+--   fee tax     = round(250 * 14975 / 100000) = 37c
+--   player_pays:       player charged 5287c (entry+fee+tax), organizer receives 5000c
+--   organizer_absorbs: player charged 5000c,                 organizer receives 4713c (entry-fee-tax)
 --
 -- Run against a fresh local stack:
 --   npm run db:reset && npm run db:seed          # seeds 100 players w/ sports
@@ -112,22 +112,22 @@ BEGIN
       FROM pg_temp.mk_paid_draft('Paid Quote — player_pays', 5000, 'player_pays');
     SELECT * INTO v_q FROM tournament_fee_quote(v_tid);
     ASSERT v_q.entry_cents = 5000,              'entry should be 5000, got ' || v_q.entry_cents;
-    ASSERT v_q.service_fee_cents = 350,         'fee should be 350, got ' || v_q.service_fee_cents;
-    ASSERT v_q.fee_tax_cents = 52,              'fee tax should be 52, got ' || v_q.fee_tax_cents;
-    ASSERT v_q.total_cents = 5402,              'player_pays total should be 5402, got ' || v_q.total_cents;
+    ASSERT v_q.service_fee_cents = 250,         'fee should be 250, got ' || v_q.service_fee_cents;
+    ASSERT v_q.fee_tax_cents = 37,              'fee tax should be 37, got ' || v_q.fee_tax_cents;
+    ASSERT v_q.total_cents = 5287,              'player_pays total should be 5287, got ' || v_q.total_cents;
     ASSERT v_q.organizer_receives_cents = 5000, 'organizer should receive 5000, got ' || v_q.organizer_receives_cents;
 
     -- organizer_absorbs
     SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
       FROM pg_temp.mk_paid_draft('Paid Quote — organizer_absorbs', 5000, 'organizer_absorbs');
     SELECT * INTO v_q FROM tournament_fee_quote(v_tid);
-    ASSERT v_q.service_fee_cents = 350,         'fee should be 350, got ' || v_q.service_fee_cents;
-    ASSERT v_q.fee_tax_cents = 52,              'fee tax should be 52, got ' || v_q.fee_tax_cents;
+    ASSERT v_q.service_fee_cents = 250,         'fee should be 250, got ' || v_q.service_fee_cents;
+    ASSERT v_q.fee_tax_cents = 37,              'fee tax should be 37, got ' || v_q.fee_tax_cents;
     ASSERT v_q.total_cents = 5000,              'organizer_absorbs total should be 5000, got ' || v_q.total_cents;
-    ASSERT v_q.organizer_receives_cents = 4598, 'organizer should net 4598, got ' || v_q.organizer_receives_cents;
+    ASSERT v_q.organizer_receives_cents = 4713, 'organizer should net 4713, got ' || v_q.organizer_receives_cents;
 
-    -- cap boundary: 5% of $500 (2500) + $1 would be 2600, but the fee is capped
-    -- at $20 (2000). Tax rides on the capped fee: round(2000 * 14975/100000) = 300.
+    -- cap boundary: 5% of $500 is 2500, but the fee is capped at $20 (2000).
+    -- Tax rides on the capped fee: round(2000 * 14975/100000) = 300.
     SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
       FROM pg_temp.mk_paid_draft('Paid Quote — cap', 50000, 'player_pays');
     SELECT * INTO v_q FROM tournament_fee_quote(v_tid);
@@ -135,10 +135,13 @@ BEGIN
     ASSERT v_q.fee_tax_cents = 300,               'tax on capped fee should be 300, got ' || v_q.fee_tax_cents;
     ASSERT v_q.total_cents = 52300,               'player_pays total should be 52300, got ' || v_q.total_cents;
 
-    -- floor boundary: on a $1 entry the fee+tax (105+16) exceeds the entry, so an
-    -- organizer_absorbs organizer nets GREATEST(entry - fee - tax, 0) = 0, never negative.
+    -- floor boundary: the straight-5% default can never exceed the entry, so
+    -- force fee > entry with an event-level $1 flat override. On a $1 entry the
+    -- fee+tax (105+16) exceeds the entry, so an organizer_absorbs organizer nets
+    -- GREATEST(entry - fee - tax, 0) = 0, never negative.
     SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
       FROM pg_temp.mk_paid_draft('Paid Quote — floor', 100, 'organizer_absorbs');
+    UPDATE tournaments SET fee_flat_cents_override = 100 WHERE id = v_tid;
     SELECT * INTO v_q FROM tournament_fee_quote(v_tid);
     ASSERT v_q.service_fee_cents = 105,           'fee should be 105, got ' || v_q.service_fee_cents;
     ASSERT v_q.organizer_receives_cents = 0,      'organizer net should floor at 0, got ' || v_q.organizer_receives_cents;
@@ -225,10 +228,10 @@ BEGIN
     SELECT * INTO v_res FROM tournament_begin_paid_registration(v_tid);
 
     -- Returned breakdown.
-    ASSERT v_res.amount_charged_cents = 5402,   'charge should be 5402, got ' || v_res.amount_charged_cents;
+    ASSERT v_res.amount_charged_cents = 5287,   'charge should be 5287, got ' || v_res.amount_charged_cents;
     ASSERT v_res.organizer_amount_cents = 5000, 'organizer amount should be 5000, got ' || v_res.organizer_amount_cents;
-    ASSERT v_res.service_fee_cents = 350,       'fee should be 350, got ' || v_res.service_fee_cents;
-    ASSERT v_res.fee_tax_cents = 52,            'fee tax should be 52, got ' || v_res.fee_tax_cents;
+    ASSERT v_res.service_fee_cents = 250,       'fee should be 250, got ' || v_res.service_fee_cents;
+    ASSERT v_res.fee_tax_cents = 37,            'fee tax should be 37, got ' || v_res.fee_tax_cents;
     ASSERT v_res.organizer_onboarded = true,    'organizer should be reported onboarded';
     ASSERT v_res.organizer_stripe_account_id IS NOT NULL, 'organizer stripe account id should be returned';
 
@@ -241,9 +244,9 @@ BEGIN
     SELECT * INTO v_pay FROM lt_registration_payment WHERE id = v_res.payment_id;
     ASSERT v_pay.status = 'pending',                 'ledger should be pending, got ' || v_pay.status;
     ASSERT v_pay.entry_cents = 5000,                 'ledger entry should be 5000';
-    ASSERT v_pay.service_fee_cents = 350,            'ledger fee should be 350';
-    ASSERT v_pay.fee_tax_cents = 52,                 'ledger fee tax should be 52';
-    ASSERT v_pay.amount_charged_cents = 5402,        'ledger charge should be 5402';
+    ASSERT v_pay.service_fee_cents = 250,            'ledger fee should be 250';
+    ASSERT v_pay.fee_tax_cents = 37,                 'ledger fee tax should be 37';
+    ASSERT v_pay.amount_charged_cents = 5287,        'ledger charge should be 5287';
     ASSERT v_pay.organizer_amount_cents = 5000,      'ledger organizer amount should be 5000';
     ASSERT v_pay.payer_user_id = v_players[2],       'ledger payer should be the caller';
     ASSERT v_pay.organizer_id = v_org,               'ledger organizer should be the organizer';

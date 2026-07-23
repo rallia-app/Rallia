@@ -102,7 +102,7 @@ END; $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION pg_temp.seed_pay(p_season uuid, p_user uuid, p_entry int, p_org uuid) RETURNS void AS $$
 DECLARE v_mid uuid; v_fee int; v_tax int;
 BEGIN
-  v_fee := round(p_entry * 0.05) + 100;         -- 5% + $1
+  v_fee := round(p_entry * 0.05);               -- straight 5%, no flat add-on
   v_tax := round(v_fee * 0.14975);              -- GST + QST on the fee
   INSERT INTO season_members(season_id, user_id, status)
   VALUES (p_season, p_user, 'payment_pending')
