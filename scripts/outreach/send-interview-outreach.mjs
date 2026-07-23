@@ -47,6 +47,8 @@ const VALID_SEGMENTS = new Set([
   'test_casual', 'test_link', 'test_nolink',
   // Winner rollout: warm direct ask, no link
   'active_warm',
+  // Active-window (14-60d signup) waves — differentiated by games played
+  'aw_never', 'aw_tried', 'aw_regular',
 ]);
 const CALENDLY = 'https://calendly.com/apprallia/15min';
 
@@ -129,6 +131,43 @@ const MESSAGES = {
       'Hey {{name}}!',
       "We're Mathis and Jean, the two behind Rallia. You've been using the app for a bit and we really wanted to know how it's been going for you.",
       "Have you managed to get some games in? If you have 15 min to chat on a call this week, we'd really love that.",
+    ],
+  },
+  // Active-window waves (14-60d signup), differentiated by games played
+  aw_never: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. Tu as rejoint l'app il y a quelques semaines et on voulait vraiment prendre de tes nouvelles.",
+      "T'as eu la chance d'essayer? Si t'as 15 min pour jaser sur appel cette semaine, on serait preneurs.",
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. You joined a few weeks back and we really wanted to check in.",
+      "Have you had a chance to try it out? If you have 15 min for a call this week, we'd love that.",
+    ],
+  },
+  aw_tried: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. On a vu que t'as joué tes premières parties pis on voulait vraiment savoir comment ça s'est passé.",
+      "Si t'as 15 min pour en jaser sur appel cette semaine, on serait vraiment preneurs.",
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. We saw you played your first game(s) on Rallia and we really wanted to know how it went.",
+      "If you have 15 min to chat on a call this week, we'd really love that.",
+    ],
+  },
+  aw_regular: {
+    fr: [
+      'Salut {{name}}!',
+      "Nous c'est Mathis et Jean, les deux derrière Rallia. On voit que tu joues régulièrement, t'es exactement le genre de joueur dont on a besoin pour mieux comprendre ce qui marche.",
+      "T'aurais 15 min pour jaser sur appel cette semaine? Ton feedback compte vraiment pour nous.",
+    ],
+    en: [
+      'Hey {{name}}!',
+      "We're Mathis and Jean, the two behind Rallia. We can see you've been playing regularly, so you're exactly the kind of player we need to hear from.",
+      "Would you have 15 min for a call this week? Your feedback really matters to us.",
     ],
   },
   one_session: {
@@ -425,7 +464,7 @@ async function main() {
   console.log(`Founders: ${FOUNDER_EMAILS.map(e => `${founders[e].first_name} <${e}>`).join(', ')}`);
   console.log(`Sender:   ${sender.first_name} <${sender.email}>\n`);
 
-  const summary = { created: 0, reused: 0, alreadySent: 0, notFound: 0, skippedNoName: 0, errors: 0 };
+  const summary = { created: 0, reused: 0, alreadySent: 0, notFound: 0, skippedNoName: 0, skippedNoPlayer: 0, errors: 0 };
 
   for (const r of recipients) {
     try {
@@ -437,6 +476,17 @@ async function main() {
       }
       if (founderIds.includes(profile.id)) {
         console.log(`SKIP  ${r.email}  -> that's a founder account`);
+        continue;
+      }
+      // A profile with no matching player row can't be added to a conversation
+      // (conversation_participant.player_id FKs to player). This happens when someone
+      // creates an account but abandons onboarding. Skip cleanly instead of erroring.
+      const { data: playerRow, error: plErr } = await supabase
+        .from('player').select('id').eq('id', profile.id).maybeSingle();
+      if (plErr) throw plErr;
+      if (!playerRow) {
+        console.log(`SKIP  ${r.email}  -> profile has no player row (never onboarded)`);
+        summary.skippedNoPlayer++;
         continue;
       }
       const lang = localeToLang(r.locale || profile.preferred_locale);
@@ -497,6 +547,7 @@ async function main() {
   console.log(`   already sent (skipped): ${summary.alreadySent}`);
   console.log(`   not found (skipped)   : ${summary.notFound}`);
   console.log(`   no name (skipped)     : ${summary.skippedNoName}`);
+  console.log(`   no player (skipped)   : ${summary.skippedNoPlayer}`);
   console.log(`   errors                : ${summary.errors}`);
   if (!opts.execute) console.log('\n   DRY RUN: nothing was written. Re-run with --execute to send.');
   console.log('------------------------------------------------------------');

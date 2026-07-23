@@ -66,7 +66,7 @@ async function main() {
 
   let q = supabase
     .from('profile')
-    .select('email, first_name, created_at, last_active_at')
+    .select('id, email, first_name, created_at, last_active_at')
     .eq('account_status', 'active')
     .not('first_name', 'is', null)
     .neq('first_name', '');
@@ -86,18 +86,37 @@ async function main() {
   const { data, error } = await q;
   if (error) { console.error('Query failed:', error.message); process.exit(1); }
 
+  // Guard: exclude profile-only accounts (a profile with no matching player row).
+  // These abandoned onboarding before a player record was created; they can't be
+  // added to a conversation (conversation_participant.player_id FKs to player), so
+  // the sender would error on them. Drop them here up front. player.id == profile.id.
+  const profileIds = [...new Set((data || []).map(r => r.id).filter(Boolean))];
+  const playerIds = new Set();
+  for (let i = 0; i < profileIds.length; i += 500) {
+    const chunk = profileIds.slice(i, i + 500);
+    const { data: players, error: pErr } = await supabase
+      .from('player')
+      .select('id')
+      .in('id', chunk);
+    if (pErr) { console.error('Player lookup failed:', pErr.message); process.exit(1); }
+    for (const p of players || []) playerIds.add(p.id);
+  }
+
   const founders = new Set(FOUNDER_EMAILS);
   const seen = new Set();
   const rows = [];
+  let droppedNoPlayer = 0;
   for (const r of data || []) {
     const email = (r.email || '').trim().toLowerCase();
     if (!email || founders.has(email) || seen.has(email)) continue;
+    if (!playerIds.has(r.id)) { droppedNoPlayer++; continue; }
     seen.add(email);
     rows.push(`${email},${o.cohort}`);
   }
 
   console.log(`Project ref: ${refFromUrl(url)}`);
   console.log(`Cohort: ${o.cohort}  |  rows: ${rows.length}${o.limit ? ` (capped at ${o.limit})` : ''}`);
+  if (droppedNoPlayer) console.log(`Excluded ${droppedNoPlayer} profile-only account(s) with no player row.`);
   if (o.cohort === 'active') {
     console.log('Note: this is the last_active_at-based slice and undersamples true active users. Fine for sampling a few to interview; not a true active total.');
   }

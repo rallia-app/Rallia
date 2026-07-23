@@ -1,3 +1,6 @@
 # Real recipient lists contain user PII. Never commit them.
 *.csv
 !recipients.sample.csv
+
+# Reply payloads reference real conversations. Never commit them.
+*.json
