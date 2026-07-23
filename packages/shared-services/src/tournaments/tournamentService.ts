@@ -25,6 +25,9 @@ export type RegistrantPreview = { id: string; avatarUrl: string | null; name: st
 export type TournamentListItem = Tournament & {
   registration_count: number;
   registrant_preview: RegistrantPreview[];
+  /** Only a certified organizer's tournament awards Circuit Rallia points —
+   *  cards must not advertise points otherwise (mirrors the detail screen). */
+  organizer_is_certified: boolean;
   /** True when the caller co-organizes this tournament (they are not the
    *  primary organizer_id, but hold the same powers). Only set by
    *  listMyTournaments — undefined on caller-agnostic surfaces like discovery. */
@@ -36,9 +39,13 @@ const PREVIEW_LIMIT = 5;
 
 // Pull the registrant rows (not just a count) so we can both count them and
 // show a few faces. The status='registered' filter is applied by the caller.
-const LIST_SELECT = '*, tournament_registrations(user_id, registered_at)';
+// The organizer embed (FK-hinted — tournaments has other player FKs) carries
+// the certification flag that gates the ranking-points badge.
+const LIST_SELECT =
+  '*, organizer:player!tournaments_organizer_id_fkey(is_certified_organizer), tournament_registrations(user_id, registered_at)';
 
 type ListRow = Tournament & {
+  organizer?: { is_certified_organizer: boolean } | null;
   tournament_registrations?: { user_id: string; registered_at: string }[];
 };
 
@@ -49,12 +56,13 @@ type ListRow = Tournament & {
  */
 async function toListItems(rows: ListRow[]): Promise<TournamentListItem[]> {
   const staged = rows.map(row => {
-    const { tournament_registrations, ...tournament } = row;
+    const { tournament_registrations, organizer, ...tournament } = row;
     const regs = (tournament_registrations ?? [])
       .slice()
       .sort((a, b) => a.registered_at.localeCompare(b.registered_at));
     return {
       tournament: tournament as Tournament,
+      organizerIsCertified: organizer?.is_certified_organizer === true,
       count: regs.length,
       previewIds: regs.slice(0, PREVIEW_LIMIT).map(r => r.user_id),
     };
@@ -65,6 +73,7 @@ async function toListItems(rows: ListRow[]): Promise<TournamentListItem[]> {
 
   return staged.map(s => ({
     ...s.tournament,
+    organizer_is_certified: s.organizerIsCertified,
     registration_count: s.count,
     registrant_preview: s.previewIds.map(id => {
       const p = profiles[id];

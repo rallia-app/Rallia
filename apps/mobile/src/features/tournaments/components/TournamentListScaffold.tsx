@@ -302,7 +302,11 @@ export const TournamentCard: React.FC<{
     new Date(tournament.registration_closes_at).getTime() - mountedAt < 48 * 3600 * 1000;
 
   const ratingRange = formatRatingRange(tournament.min_rating, tournament.max_rating);
-  const rankingHeadline = tournamentRankingHeadline(tournament);
+  // Only a certified organizer's tournament awards points (same gate as the
+  // detail screen) — never advertise points the event can't pay.
+  const rankingHeadline = tournament.organizer_is_certified
+    ? tournamentRankingHeadline(tournament)
+    : null;
   // Always the champion figure, projected or not: the chip is a headline, and
   // the Points tab carries the "up to" nuance.
   const rankingLabel = rankingHeadline

@@ -83,6 +83,7 @@ describe('listPublicTournaments', () => {
     const rows = [
       {
         id: 't1',
+        organizer: { is_certified_organizer: true },
         tournament_registrations: [
           { user_id: 'u1', registered_at: '2026-06-01' },
           { user_id: 'u2', registered_at: '2026-06-02' },
@@ -106,6 +107,7 @@ describe('listPublicTournaments', () => {
     expect(out).toEqual([
       {
         id: 't1',
+        organizer_is_certified: true,
         registration_count: 3,
         registrant_preview: [
           { id: 'u1', avatarUrl: null, name: 'Ada L' },
@@ -113,7 +115,7 @@ describe('listPublicTournaments', () => {
           { id: 'u3', avatarUrl: null, name: 'Cy Z' },
         ],
       },
-      { id: 't2', registration_count: 0, registrant_preview: [] },
+      { id: 't2', organizer_is_certified: false, registration_count: 0, registrant_preview: [] },
     ]);
     expect(mockFrom).toHaveBeenNthCalledWith(1, 'tournaments');
     expect(mockFrom).toHaveBeenNthCalledWith(2, 'profile');
@@ -188,6 +190,7 @@ describe('listMyTournaments', () => {
     expect(out).toEqual([
       {
         id: 't1',
+        organizer_is_certified: false,
         registration_count: 2,
         registrant_preview: [
           { id: 'u1', avatarUrl: null, name: 'Ada L' },
