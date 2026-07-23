@@ -2,11 +2,11 @@ import { assertEquals } from 'jsr:@std/assert';
 
 import { planEntryRefund } from '../_shared/lt-refund-logic.ts';
 
-// Running example at current fees (5% + $1, cap $20; 14.975% GST/QST on the
-// fee): $50.00 entry → $3.50 fee, $0.52 tax.
+// Running example at current fees (straight 5%, cap $20; 14.975% GST/QST on
+// the fee): $50.00 entry → $2.50 fee, $0.37 tax.
 const ENTRY = 5000;
-const FEE = 350;
-const TAX = 52;
+const FEE = 250;
+const TAX = 37;
 
 // =============================================================================
 // player_pays — charge = entry + fee + tax, transfer = entry
@@ -14,7 +14,7 @@ const TAX = 52;
 
 Deno.test('player_pays full refund: reverse exactly the entry, refund exactly the entry', () => {
   // The bug this replaces: reverse_transfer:true reversed only
-  // entry × entry/(entry+fee+tax) ≈ $46.28, leaving the organizer ~$3.72 and
+  // entry × entry/(entry+fee+tax) ≈ $47.29, leaving the organizer ~$2.71 and
   // Rallia funding the gap. The explicit split reverses the full $50.00.
   assertEquals(
     planEntryRefund({
@@ -70,8 +70,8 @@ Deno.test(
   'legacy proportional reversal repair: claw back only what the organizer still holds',
   () => {
     // Old-code refund went through (player got $50.00, organizer gave back
-    // ~$46.28) but the ledger write failed, so the row is retried by new code.
-    const legacyReversed = 4628;
+    // ~$47.29) but the ledger write failed, so the row is retried by new code.
+    const legacyReversed = 4729;
     assertEquals(
       planEntryRefund({
         refundableEntryCents: ENTRY,
