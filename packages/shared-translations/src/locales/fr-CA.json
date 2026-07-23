@@ -10428,6 +10428,16 @@
       "matches": "Parties"
     },
     "about": "À propos",
+    "accessBooking": {
+      "title": "Accès et réservation",
+      "booking": "Comment réserver",
+      "fees": "Tarifs",
+      "season": "Saison et horaire",
+      "cancellation": "Annulation",
+      "notes": "Bon à savoir",
+      "officialPage": "Voir la page officielle",
+      "sourceNote": "Tiré de la page officielle du gestionnaire, vérifié le {date}."
+    },
     "locationContact": "Emplacement",
     "courts": "Terrains",
     "noCourts": "Aucun terrain disponible pour ce sport",

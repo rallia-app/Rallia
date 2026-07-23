@@ -10428,6 +10428,16 @@
       "matches": "Matches"
     },
     "about": "About",
+    "accessBooking": {
+      "title": "Access & booking",
+      "booking": "How to book",
+      "fees": "Fees",
+      "season": "Season & hours",
+      "cancellation": "Cancellation",
+      "notes": "Good to know",
+      "officialPage": "View official page",
+      "sourceNote": "From the operator's official page, checked {date}."
+    },
     "locationContact": "Location",
     "courts": "Courts",
     "noCourts": "No courts available for this sport",

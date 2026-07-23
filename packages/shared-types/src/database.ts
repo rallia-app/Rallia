@@ -213,6 +213,35 @@ export type Organization = TableRow<'organization'>;
 export type OrganizationMember = TableRow<'organization_member'>;
 export type Facility = TableRow<'facility'>;
 export type FacilityContact = TableRow<'facility_contact'>;
+
+/**
+ * Shape of `facility.attributes.official_info`: access rules transcribed from the
+ * operator's own page. Every field is optional — only what the source states is stored.
+ */
+export interface FacilityOfficialInfo {
+  borough?: string;
+  operator?: string;
+  page_fr?: string;
+  page_en?: string;
+  phone?: string;
+  email?: string;
+  booking?: string;
+  fees?: string;
+  season?: string;
+  cancellation?: string;
+  notes?: string;
+  source?: string;
+  checked_at?: string;
+}
+
+export function getFacilityOfficialInfo(
+  attributes: Facility['attributes']
+): FacilityOfficialInfo | null {
+  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) return null;
+  const info = (attributes as Record<string, unknown>).official_info;
+  if (!info || typeof info !== 'object' || Array.isArray(info)) return null;
+  return info as FacilityOfficialInfo;
+}
 export type FacilityImage = TableRow<'facility_image'>;
 export type FacilitySport = TableRow<'facility_sport'>;
 export type FacilityFile = TableRow<'facility_file'>;
