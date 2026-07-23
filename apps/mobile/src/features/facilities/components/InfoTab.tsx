@@ -4,12 +4,13 @@
  * Uses a flat, badge-driven layout matching the app's modern design language.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   LayoutAnimation,
+  Linking,
   Platform,
   UIManager,
 } from 'react-native';
@@ -27,12 +28,13 @@ import {
   primary,
   base,
 } from '@rallia/design-system';
-import type { Court, Facility } from '@rallia/shared-types';
+import type { Court, Facility, FacilityOfficialInfo } from '@rallia/shared-types';
+import { getFacilityOfficialInfo } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useCommunitiesForFacility } from '@rallia/shared-hooks';
 
-import type { TranslationKey, TranslationOptions } from '#/hooks';
+import { useTranslation, type TranslationKey, type TranslationOptions } from '#/hooks';
 import { useSport } from '#/context';
 import { SportIcon } from '#/components/SportIcon';
 import { navigationRef } from '#/navigation/navigationRef';
@@ -77,6 +79,17 @@ function formatFacilityType(type: Facility['facility_type'], t: InfoTabProps['t'
   const key = `facilityDetail.facilityTypes.${type}` as Parameters<typeof t>[0];
   return t(key);
 }
+
+const ACCESS_ROWS = [
+  { key: 'booking', icon: 'calendar-outline' },
+  { key: 'fees', icon: 'pricetag-outline' },
+  { key: 'season', icon: 'time-outline' },
+  { key: 'cancellation', icon: 'close-circle-outline' },
+  { key: 'notes', icon: 'information-circle-outline' },
+] as const satisfies readonly {
+  key: keyof FacilityOfficialInfo;
+  icon: keyof typeof Ionicons.glyphMap;
+}[];
 
 function buildFullAddress(facility: FacilityWithDetails): string | null {
   const parts: string[] = [];
@@ -201,6 +214,7 @@ export default function InfoTab({
 }: InfoTabProps) {
   const toast = useToast();
   const { selectedSport } = useSport();
+  const { locale } = useTranslation();
   const [showAllCourts, setShowAllCourts] = useState(false);
   const [showAllCommunities, setShowAllCommunities] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
@@ -212,6 +226,18 @@ export default function InfoTab({
   const facilityType = formatFacilityType(facilityData?.facility_type, t);
   const membershipRequired = facilityData?.membership_required;
   const description = facilityData?.description;
+
+  const officialInfo = getFacilityOfficialInfo(facilityData?.attributes);
+  const officialPage = officialInfo?.[locale === 'fr-CA' ? 'page_fr' : 'page_en'] ?? null;
+  const accessRows = useMemo(
+    () =>
+      officialInfo
+        ? ACCESS_ROWS.map(row => ({ ...row, value: officialInfo[row.key] })).filter(
+            (row): row is (typeof ACCESS_ROWS)[number] & { value: string } => !!row.value
+          )
+        : [],
+    [officialInfo]
+  );
 
   const facilityLatitude = facilityData?.latitude;
   const facilityLongitude = facilityData?.longitude;
@@ -243,6 +269,12 @@ export default function InfoTab({
       // Silently fail
     }
   }, [fullAddress, t, toast]);
+
+  const handleOpenOfficialPage = useCallback(() => {
+    if (!officialPage) return;
+    lightHaptic();
+    void Linking.openURL(officialPage);
+  }, [officialPage]);
 
   const handleToggleShowAllCourts = useCallback(() => {
     lightHaptic();
@@ -340,6 +372,69 @@ export default function InfoTab({
           {description && (
             <Text size="sm" color={colors.text} style={styles.descriptionText} numberOfLines={5}>
               {description}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Access & booking (operator-published rules) */}
+      {accessRows.length > 0 && (
+        <View style={styles.section}>
+          <Text size="lg" weight="bold" color={colors.text}>
+            {t('facilityDetail.accessBooking.title')}
+          </Text>
+
+          <View
+            style={[
+              styles.accessCard,
+              { backgroundColor: isDark ? neutral[800] : neutral[50], borderColor: colors.border },
+            ]}
+          >
+            {accessRows.map((row, index) => (
+              <View
+                key={row.key}
+                style={[
+                  styles.accessRow,
+                  index > 0 && {
+                    borderTopWidth: StyleSheet.hairlineWidth,
+                    borderTopColor: colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={row.icon}
+                  size={16}
+                  color={colors.primary}
+                  style={styles.accessIcon}
+                />
+                <View style={styles.accessTextGroup}>
+                  <Text size="xs" weight="semibold" color={colors.textMuted}>
+                    {t(`facilityDetail.accessBooking.${row.key}`)}
+                  </Text>
+                  <Text size="sm" color={colors.text} style={styles.accessValue}>
+                    {row.value}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {officialPage && (
+            <TouchableOpacity
+              onPress={handleOpenOfficialPage}
+              style={[styles.showAllButton, { backgroundColor: colors.primary + '15' }]}
+              activeOpacity={0.7}
+            >
+              <Text size="sm" weight="medium" color={colors.primary}>
+                {t('facilityDetail.accessBooking.officialPage')}
+              </Text>
+              <Ionicons name="open-outline" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+
+          {officialInfo?.checked_at && (
+            <Text size="xs" color={colors.textMuted}>
+              {t('facilityDetail.accessBooking.sourceNote', { date: officialInfo.checked_at })}
             </Text>
           )}
         </View>
@@ -639,6 +734,29 @@ const styles = StyleSheet.create({
   // About Section
   descriptionText: {
     lineHeight: 22,
+  },
+
+  // Access & booking Section
+  accessCard: {
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    paddingHorizontal: spacingPixels[3],
+  },
+  accessRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacingPixels[3],
+  },
+  accessIcon: {
+    marginTop: 2,
+    marginRight: spacingPixels[2.5],
+  },
+  accessTextGroup: {
+    flex: 1,
+    gap: spacingPixels[0.5],
+  },
+  accessValue: {
+    lineHeight: 20,
   },
 
   // Location Section
