@@ -403,6 +403,133 @@ async function fetchActivityMessenger(
 }
 
 // =============================================================================
+// ActiveNet (Active Network / activecommunities.com — City of Toronto courts)
+// =============================================================================
+
+interface ANDailyTime {
+  id?: number | string;
+  start_time?: string;
+  end_time?: string;
+  available?: boolean;
+}
+
+interface ANDailyDetail {
+  date?: string;
+  /** Observed values: 5 = closed for the day (times empty), 7 = open. Treat
+   *  the `times` array as the source of truth rather than the status code. */
+  status?: number;
+  times?: ANDailyTime[];
+}
+
+interface ANDailyResponse {
+  headers?: { response_code?: string; response_message?: string };
+  body?: { details?: { resource_id?: number; daily_details?: ANDailyDetail[] } };
+}
+
+/** ISO instant for a provider-local wall time. ActiveNet returns naive
+ *  date + time strings in the facility's local zone, so the UTC offset must be
+ *  resolved per-date (DST) before composing an instant. */
+function localWallTimeToIso(dateStr: string, timeStr: string, tz: string): string | null {
+  const probe = new Date(`${dateStr}T12:00:00Z`);
+  if (isNaN(probe.getTime())) return null;
+  const offsetName = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(probe)
+    .find(p => p.type === 'timeZoneName')?.value; // e.g. "GMT-04:00"
+  const offset = offsetName && offsetName !== 'GMT' ? offsetName.replace('GMT', '') : '+00:00';
+  const d = new Date(`${dateStr}T${timeStr}${offset}`);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/**
+ * ActiveNet per-resource daily availability.
+ *
+ * `external_provider_id` is the ActiveNet reservation resource id (one court),
+ * or a comma-separated list for multi-court parks. The endpoint is public
+ * (no session/CSRF — unlike the bulk quick-reservation POST) and returns an
+ * hourly grid per date.
+ *
+ * Caveats baked into the data (documented in
+ * rallia-business/data-and-material/market-research/integration/):
+ * - Toronto public courts allow walk-up play even when reservable, so an
+ *   `available` slot means "not booked", not "empty court".
+ * - Pre-login the API reflects the anonymous view; accuracy improves with an
+ *   authenticated session but the anonymous grid is what we poll.
+ */
+async function fetchActiveNet(config: ProviderConfig, params: FetchParams): Promise<FetchResult> {
+  const dailyPath =
+    (config.apiConfig.dailyPath as string | undefined) ??
+    '/rest/reservation/resource/availability/daily';
+  const tz = params.timezone || (config.apiConfig.timezone as string | undefined) || 'UTC';
+
+  const resourceIds = params.externalProviderId
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const sortedDates = [...params.dates].sort();
+  const start = sortedDates[0];
+  const end = sortedDates[sortedDates.length - 1];
+  const wantedDates = new Set(params.dates);
+
+  const perResource = await Promise.all(
+    resourceIds.map(async resourceId => {
+      const url =
+        `${config.apiBaseUrl}${dailyPath}/${encodeURIComponent(resourceId)}` +
+        `?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}` +
+        `&customer_id=0&company_id=0&locale=en-US`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: fetchSignal(params.signal),
+      });
+      if (!res.ok) throw new Error(`ActiveNet HTTP ${res.status}`);
+      const json: ANDailyResponse = await res.json();
+      if (json.headers?.response_code && json.headers.response_code !== '0000') {
+        throw new Error(
+          `ActiveNet API ${json.headers.response_code}: ${json.headers.response_message ?? 'unknown'}`
+        );
+      }
+      return { resourceId, details: json.body?.details?.daily_details ?? [] };
+    })
+  );
+
+  const rows: SnapshotRow[] = [];
+  for (const { resourceId, details } of perResource) {
+    for (const day of details) {
+      if (!day.date || !wantedDates.has(day.date)) continue;
+      for (const t of day.times ?? []) {
+        // Snapshot rows are the *open* inventory — mirror IC3/AM, which only
+        // emit reservable slots.
+        if (t.available !== true || !t.start_time || !t.end_time) continue;
+        const slotStart = localWallTimeToIso(day.date, t.start_time, tz);
+        const slotEnd = localWallTimeToIso(day.date, t.end_time, tz);
+        if (!slotStart || !slotEnd) continue;
+        rows.push({
+          external_court_id: resourceId,
+          slot_start: slotStart,
+          slot_end: slotEnd,
+          is_available: true,
+          // Slot-template ids repeat across dates, so namespace by date (and
+          // resource, for multi-court parks) to keep the snapshot PK unique.
+          external_slot_id: `${resourceId}-${day.date}-${t.id ?? t.start_time}`,
+          court_name: null, // daily endpoint carries no resource name
+          court_number: null,
+          price_cents: null, // fees not exposed pre-auth ($5/hr city insurance applies at booking)
+          currency: 'CAD',
+          sport_id: null,
+          booking_url: null,
+        });
+      }
+    }
+  }
+
+  return { rows, source: 'active_net' };
+}
+
+// =============================================================================
 // Dispatcher
 // =============================================================================
 
@@ -415,6 +542,8 @@ export async function fetchProviderAvailability(
       return fetchIC3(config, params);
     case 'activity_messenger':
       return fetchActivityMessenger(config, params);
+    case 'active_net':
+      return fetchActiveNet(config, params);
     default:
       throw new Error(`Unsupported provider_type: ${config.providerType}`);
   }

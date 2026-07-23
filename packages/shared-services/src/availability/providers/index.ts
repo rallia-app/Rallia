@@ -9,6 +9,7 @@ import type { ProviderConfig } from '../types';
 import { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
 import { IC3OtiumProvider } from './IC3OtiumProvider';
 import { ActivityMessengerProvider } from './ActivityMessengerProvider';
+import { ActiveNetProvider } from './ActiveNetProvider';
 
 // =============================================================================
 // PROVIDER REGISTRY
@@ -23,6 +24,7 @@ type ProviderConstructor = new (config: ProviderConfig) => BaseAvailabilityProvi
 const providerRegistry: Record<string, ProviderConstructor> = {
   ic3_otium: IC3OtiumProvider,
   activity_messenger: ActivityMessengerProvider,
+  active_net: ActiveNetProvider,
   // Backward compatibility alias for existing data_provider rows
   loisir_montreal: IC3OtiumProvider,
 };
@@ -71,3 +73,4 @@ export { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
 export { IC3OtiumProvider } from './IC3OtiumProvider';
 export { IC3OtiumProvider as LoisirMontrealProvider } from './IC3OtiumProvider';
 export { ActivityMessengerProvider } from './ActivityMessengerProvider';
+export { ActiveNetProvider } from './ActiveNetProvider';
