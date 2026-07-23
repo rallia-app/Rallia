@@ -29,10 +29,10 @@ export interface SnapshotRow {
    *  fetch. Stored on the snapshot row so the client can use it directly
    *  without any template knowledge. */
   booking_url: string | null;
-  /** Provider's facility-type identifier (IC3 `facility.facilityType.id`).
-   *  Transient: consumed by the orchestrator's sport-resolution step and
-   *  not persisted to the snapshot table. Null for providers that don't
-   *  expose a facility-type concept (e.g. ActivityMessenger). */
+  /** Provider's facility-type identifier (IC3 `facility.facilityType.id`,
+   *  ActivityMessenger package id). Transient: consumed by the orchestrator's
+   *  sport-resolution step and by buildBookingUrl, not persisted to the
+   *  snapshot table. */
   external_facility_type_id?: string | null;
   /** Human-readable label for the facility type (e.g. "Terrain tennis ext").
    *  Used as a substring fallback when no id-based mapping exists. */
@@ -50,7 +50,8 @@ export interface ProviderConfig {
 }
 
 export interface FetchParams {
-  /** External facility ID (IC3 siteId or ActivityMessenger packageId). */
+  /** External facility ID (IC3 siteId, or ActivityMessenger packageId —
+   *  possibly a comma-separated list for multi-package facilities). */
   externalProviderId: string;
   /** ISO date strings (YYYY-MM-DD), inclusive. Computed in `timezone`. */
   dates: string[];
@@ -116,7 +117,12 @@ export function buildBookingUrl(config: ProviderConfig, row: SnapshotRow): strin
 
   if (config.providerType === 'activity_messenger') {
     const orgId = config.apiConfig.orgId as string | undefined;
-    const packageId = config.externalProviderId;
+    // Rows carry the package they came from (multi-package facilities store a
+    // comma-separated list in external_provider_id, so the config-level id is
+    // only a single-package fallback).
+    const packageId =
+      row.external_facility_type_id ??
+      (config.externalProviderId?.includes(',') ? null : config.externalProviderId);
     if (!packageId) return null;
     let url = template.replace('{packageId}', packageId);
     if (orgId) url = url.replace('{orgId}', orgId);
@@ -253,6 +259,7 @@ interface AMAvailability {
 interface AMExtendedProps {
   disabled?: boolean;
   price?: string;
+  package_name?: string;
   availability?: AMAvailability[];
 }
 
@@ -272,20 +279,39 @@ async function fetchActivityMessenger(
   const orgId = config.apiConfig.orgId as string | undefined;
   if (!orgId) throw new Error('ActivityMessenger: missing api_config.orgId');
 
+  // A facility may span several AM packages (e.g. ATSOM parks run separate
+  // tennis and pickleball packages on the same courts) — external_provider_id
+  // is then a comma-separated package-id list.
+  const packageIds = params.externalProviderId
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  // Membership-gated orgs (e.g. ATSOM, org 4866) return every slot with
+  // disabled=true for anonymous sessions even when courts are free — the
+  // flag tracks purchasability for the current session, not occupancy.
+  // Such providers opt in to keeping those slots via api_config.
+  const includeDisabled = config.apiConfig.includeDisabledSlots === true;
+
   const sortedDates = [...params.dates].sort();
   const start = sortedDates[0];
   const end = sortedDates[sortedDates.length - 1];
-  const url =
-    `${config.apiBaseUrl}/org/${orgId}/package/${params.externalProviderId}/availability` +
-    `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    signal: fetchSignal(params.signal),
-  });
-  if (!res.ok) throw new Error(`ActivityMessenger HTTP ${res.status}`);
-  const events: AMEvent[] = await res.json();
+  const perPackage = await Promise.all(
+    packageIds.map(async packageId => {
+      const url =
+        `${config.apiBaseUrl}/org/${orgId}/package/${packageId}/availability` +
+        `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: fetchSignal(params.signal),
+      });
+      if (!res.ok) throw new Error(`ActivityMessenger HTTP ${res.status}`);
+      const events: AMEvent[] = await res.json();
+      return { packageId, events };
+    })
+  );
 
   const rows: SnapshotRow[] = [];
   const wantedDates = new Set(params.dates);
@@ -300,53 +326,75 @@ async function fetchActivityMessenger(
     month: '2-digit',
     day: '2-digit',
   });
-  for (const event of events ?? []) {
-    if (event.extendedProps?.disabled) continue;
-    const slotStart = new Date(event.start);
-    const slotEnd = new Date(event.end);
-    if (isNaN(slotStart.getTime()) || isNaN(slotEnd.getTime())) continue;
+  for (const { packageId, events } of perPackage) {
+    for (const event of events ?? []) {
+      if (event.extendedProps?.disabled && !includeDisabled) continue;
+      const slotStart = new Date(event.start);
+      const slotEnd = new Date(event.end);
+      if (isNaN(slotStart.getTime()) || isNaN(slotEnd.getTime())) continue;
 
-    // Only keep events whose local date falls in the requested window.
-    const dateKey = localDateFmt.format(slotStart);
-    if (!wantedDates.has(dateKey)) continue;
+      // Only keep events whose local date falls in the requested window.
+      const dateKey = localDateFmt.format(slotStart);
+      if (!wantedDates.has(dateKey)) continue;
 
-    const availability = event.extendedProps?.availability?.[0];
-    if (!availability) continue;
-    const priceCents = priceToCents(
-      event.extendedProps?.price != null ? parseFloat(event.extendedProps.price) : undefined
-    );
+      const availability = event.extendedProps?.availability?.[0];
+      if (!availability) continue;
+      const priceCents = priceToCents(
+        event.extendedProps?.price != null ? parseFloat(event.extendedProps.price) : undefined
+      );
+      // The package doubles as AM's facility-type: sport resolution can
+      // substring-match the package name ("… Tennis 1h …" / "… Terrain
+      // Pickleball 1h …"), and buildBookingUrl reads the id so multi-package
+      // facilities link each row to the package it came from.
+      const packageName = event.extendedProps?.package_name ?? null;
+      // Dual-lined courts share one AM location id across the sport packages
+      // (SJM "Terrain 1" is location 9417 in both the tennis and pickleball
+      // feeds), and event ids are only unique within a package feed. The
+      // snapshot PK is (facility, external_court_id, slot_start), so
+      // multi-package facilities must namespace both ids by package or the
+      // batch upsert dies on a same-row double-update. Single-package
+      // facilities keep the legacy format to avoid churning existing ids.
+      const courtId = (locId: string | number) =>
+        packageIds.length > 1 ? `${packageId}-${locId}` : String(locId);
+      const slotId = (locId: string | number) =>
+        packageIds.length > 1 ? `${packageId}-${event.id}-${locId}` : `${event.id}-${locId}`;
 
-    if (availability.locations && availability.locations.length > 0) {
-      for (const loc of availability.locations) {
-        rows.push({
-          external_court_id: String(loc.id),
-          slot_start: slotStart.toISOString(),
-          slot_end: slotEnd.toISOString(),
-          is_available: true,
-          external_slot_id: `${event.id}-${loc.id}`,
-          court_name: loc.name ?? null,
-          court_number: loc.number ?? extractCourtNumber(loc.name) ?? null,
-          price_cents: priceCents,
-          currency: 'CAD',
-          sport_id: null,
-          booking_url: null,
-        });
-      }
-    } else if (availability.location_ids && availability.location_ids.length > 0) {
-      for (const locId of availability.location_ids) {
-        rows.push({
-          external_court_id: String(locId),
-          slot_start: slotStart.toISOString(),
-          slot_end: slotEnd.toISOString(),
-          is_available: true,
-          external_slot_id: `${event.id}-${locId}`,
-          court_name: null,
-          court_number: null,
-          price_cents: priceCents,
-          currency: 'CAD',
-          sport_id: null,
-          booking_url: null,
-        });
+      if (availability.locations && availability.locations.length > 0) {
+        for (const loc of availability.locations) {
+          rows.push({
+            external_court_id: courtId(loc.id),
+            slot_start: slotStart.toISOString(),
+            slot_end: slotEnd.toISOString(),
+            is_available: true,
+            external_slot_id: slotId(loc.id),
+            court_name: loc.name ?? null,
+            court_number: loc.number ?? extractCourtNumber(loc.name) ?? null,
+            price_cents: priceCents,
+            currency: 'CAD',
+            sport_id: null,
+            booking_url: null,
+            external_facility_type_id: packageId,
+            external_facility_type_name: packageName,
+          });
+        }
+      } else if (availability.location_ids && availability.location_ids.length > 0) {
+        for (const locId of availability.location_ids) {
+          rows.push({
+            external_court_id: courtId(locId),
+            slot_start: slotStart.toISOString(),
+            slot_end: slotEnd.toISOString(),
+            is_available: true,
+            external_slot_id: slotId(locId),
+            court_name: null,
+            court_number: null,
+            price_cents: priceCents,
+            currency: 'CAD',
+            sport_id: null,
+            booking_url: null,
+            external_facility_type_id: packageId,
+            external_facility_type_name: packageName,
+          });
+        }
       }
     }
   }

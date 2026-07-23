@@ -8,8 +8,16 @@
  * API format:
  *   GET https://activitymessenger.com/org/{orgId}/package/{packageId}/availability?start=YYYY-MM-DD&end=YYYY-MM-DD
  *
- * Each facility maps to a specific package ID (stored as external_provider_id).
+ * Each facility maps to one or more package IDs (stored as external_provider_id,
+ * comma-separated when a facility spans several packages — e.g. ATSOM parks run
+ * separate tennis and pickleball packages on the same courts).
  * The org ID is shared across all facilities for the venue (stored in api_config.orgId).
+ *
+ * Membership-gated orgs (e.g. ATSOM) return every slot with disabled=true for
+ * anonymous sessions even when courts are free; they opt in to keeping those
+ * slots via api_config.includeDisabledSlots.
+ *
+ * Keep in sync with supabase/functions/refresh-facility-availability/providers.ts.
  */
 
 import { BaseAvailabilityProvider } from './BaseAvailabilityProvider';
@@ -49,9 +57,12 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
    */
   async fetchAvailability(params: FetchAvailabilityParams): Promise<AvailabilitySlot[]> {
     const orgId = this.getConfigValue('orgId', '');
-    const packageId = params.facilityExternalId;
+    const packageIds = (params.facilityExternalId ?? '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
 
-    if (!orgId || !packageId) {
+    if (!orgId || packageIds.length === 0) {
       console.error('[ActivityMessengerProvider] Missing orgId or packageId (facilityExternalId)');
       return [];
     }
@@ -62,48 +73,60 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
     // Use last date or default to 7 days after start
     const endDate = dates.length > 1 ? dates[dates.length - 1] : this.addDays(startDate, 7);
 
-    const url = `${this.config.apiBaseUrl}/org/${orgId}/package/${packageId}/availability`;
+    const perPackage = await Promise.all(
+      packageIds.map(async packageId => {
+        const url = `${this.config.apiBaseUrl}/org/${orgId}/package/${packageId}/availability`;
+        try {
+          const events = await this.makeRequest<ActivityMessengerEvent[]>(url, {
+            method: 'GET',
+            queryParams: {
+              start: startDate,
+              end: endDate,
+            },
+            headers: {},
+            timeout: 30000,
+          });
 
-    try {
-      const events = await this.makeRequest<ActivityMessengerEvent[]>(url, {
-        method: 'GET',
-        queryParams: {
-          start: startDate,
-          end: endDate,
-        },
-        headers: {},
-        timeout: 30000,
-      });
+          return this.parseResponse(events, packageId, packageIds.length > 1);
+        } catch (error) {
+          console.error('[ActivityMessengerProvider] Failed to fetch availability:', error);
+          if (error instanceof Error) {
+            console.error('[ActivityMessengerProvider] Error details:', error.message, error.name);
+          }
+          return [];
+        }
+      })
+    );
 
-      return this.parseResponse(events, packageId);
-    } catch (error) {
-      console.error('[ActivityMessengerProvider] Failed to fetch availability:', error);
-      if (error instanceof Error) {
-        console.error('[ActivityMessengerProvider] Error details:', error.message, error.name);
-      }
-      return [];
-    }
+    return perPackage.flat();
   }
 
   /**
    * Parse ActivityMessenger events into normalized availability slots.
    * Each event is expanded into individual per-court slots to match the IC3 model.
    */
-  private parseResponse(events: ActivityMessengerEvent[], packageId: string): AvailabilitySlot[] {
+  private parseResponse(
+    events: ActivityMessengerEvent[],
+    packageId: string,
+    namespaceIds: boolean
+  ): AvailabilitySlot[] {
     if (!Array.isArray(events)) {
       return [];
     }
 
     const slots: AvailabilitySlot[] = [];
+    // Membership-gated orgs mark every anonymous-session slot disabled even
+    // when courts are free — the flag tracks purchasability, not occupancy.
+    const includeDisabled = this.getConfigValue<boolean>('includeDisabledSlots', false) === true;
 
     for (const event of events) {
       try {
-        // Skip disabled events
-        if (event.extendedProps?.disabled) {
+        // Skip disabled events (unless the org opted in via api_config)
+        if (event.extendedProps?.disabled && !includeDisabled) {
           continue;
         }
 
-        const parsed = this.parseEvent(event, packageId);
+        const parsed = this.parseEvent(event, packageId, namespaceIds);
         slots.push(...parsed);
       } catch (error) {
         console.warn('[ActivityMessengerProvider] Failed to parse event:', event, error);
@@ -117,7 +140,11 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
    * Parse a single ActivityMessenger event into one or more availability slots.
    * Expands per-court: each available location becomes its own slot.
    */
-  private parseEvent(event: ActivityMessengerEvent, packageId: string): AvailabilitySlot[] {
+  private parseEvent(
+    event: ActivityMessengerEvent,
+    packageId: string,
+    namespaceIds: boolean
+  ): AvailabilitySlot[] {
     const datetime = new Date(event.start);
     const endDateTime = new Date(event.end);
 
@@ -134,6 +161,14 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
     }
 
     const slots: AvailabilitySlot[] = [];
+    // Dual-lined courts share one AM location id across the sport packages,
+    // and event ids are only unique within a package feed — namespace both by
+    // package for multi-package facilities so per-court identities stay
+    // unique. Single-package facilities keep the legacy format.
+    const courtId = (locId: string | number) =>
+      namespaceIds ? `${packageId}-${locId}` : String(locId);
+    const slotId = (locId: string | number) =>
+      namespaceIds ? `${packageId}-${event.id}-${locId}` : `${event.id}-${locId}`;
 
     // If locations have names, expand into individual court slots
     if (availability.locations && availability.locations.length > 0) {
@@ -142,8 +177,8 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
           datetime,
           endDateTime,
           courtCount: 1,
-          facilityId: String(location.id),
-          facilityScheduleId: `${event.id}-${location.id}`,
+          facilityId: courtId(location.id),
+          facilityScheduleId: slotId(location.id),
           courtName: location.name,
           shortCourtName: location.name,
           courtNumber: location.number ?? extractCourtNumber(location.name),
@@ -153,7 +188,7 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
               endDateTime,
               courtCount: 1,
               facilityId: packageId,
-              facilityScheduleId: `${event.id}-${location.id}`,
+              facilityScheduleId: slotId(location.id),
             }) ?? undefined,
           price: !isNaN(price ?? NaN) ? price : undefined,
           currency: 'CAD',
@@ -166,15 +201,15 @@ export class ActivityMessengerProvider extends BaseAvailabilityProvider {
           datetime,
           endDateTime,
           courtCount: 1,
-          facilityId: String(locationId),
-          facilityScheduleId: `${event.id}-${locationId}`,
+          facilityId: courtId(locationId),
+          facilityScheduleId: slotId(locationId),
           bookingUrl:
             this.buildBookingUrl({
               datetime,
               endDateTime,
               courtCount: 1,
               facilityId: packageId,
-              facilityScheduleId: `${event.id}-${locationId}`,
+              facilityScheduleId: slotId(locationId),
             }) ?? undefined,
           price: !isNaN(price ?? NaN) ? price : undefined,
           currency: 'CAD',
