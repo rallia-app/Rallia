@@ -1347,7 +1347,19 @@ export const TournamentDetail: React.FC = () => {
   }, [chatConversationId, tournament, navigation]);
   // RLS hides other players' registrations on private tournaments, so the
   // token preview supplies the count until the caller registers.
+  //
+  // activeCount = registered + pending (self-requests AND unaccepted invites).
+  // It reflects reserved capacity, so it drives spotsLeft — the DB counts the
+  // same set against max_participants, and showing pending slots as "free"
+  // would let the register CTA offer spots the RPC then rejects.
   const activeCount = directTournament ? registrations.length : (invitePreview?.activeCount ?? 0);
+  // registeredCount = confirmed entries only. Pending rows (approval requests
+  // and unaccepted organizer invites) are neither in the Confirmed tab nor the
+  // bracket, so they must not inflate any "registered / players in" display.
+  // The private-tournament viewer can't see the breakdown; fall back to active.
+  const registeredCount = directTournament
+    ? registrations.filter(r => r.status === 'registered').length
+    : (invitePreview?.activeCount ?? 0);
 
   const showError = useCallback(
     (errMsg: string, fallbackKey: TranslationKey) => {
@@ -2819,7 +2831,7 @@ export const TournamentDetail: React.FC = () => {
           onPress: onClose,
           disabled: close.isPending,
           hint: t('tournamentDetail.dashboard.nextStep.openDescription')
-            .replace('{count}', String(activeCount))
+            .replace('{count}', String(registeredCount))
             .replace('{max}', String(tournament.max_participants)),
           testID: 'cta-close-registration',
         };
@@ -2832,7 +2844,7 @@ export const TournamentDetail: React.FC = () => {
           disabled: false,
           hint: t('tournamentDetail.dashboard.nextStep.closedDescription').replace(
             '{count}',
-            String(activeCount)
+            String(registeredCount)
           ),
           testID: 'cta-setup-bracket',
         };
@@ -3221,7 +3233,7 @@ export const TournamentDetail: React.FC = () => {
               ]}
             >
               <StatSegment
-                value={`${activeCount}/${tournament.max_participants}`}
+                value={`${registeredCount}/${tournament.max_participants}`}
                 label={t('tournamentDetail.dashboard.stats.registered')}
                 colors={colors}
               />
@@ -3566,7 +3578,7 @@ export const TournamentDetail: React.FC = () => {
                     )}
                   </View>
                   <Text size="sm" weight="semibold" color={colors.textMuted}>
-                    {activeCount}/{tournament.max_participants}
+                    {registeredCount}/{tournament.max_participants}
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
