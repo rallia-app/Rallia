@@ -1283,12 +1283,18 @@ const Home = () => {
   const [homeFocusNonce, setHomeFocusNonce] = useState(0);
   useFocusEffect(
     useCallback(() => {
-      setHomeFocusNonce(n => n + 1);
-      for (const token of lastJfyViewableRef.current) {
-        fireJfyImpression(token.item, token.index);
-      }
-      recomputeJfyGate();
-      return () => setJfyGate(false);
+      // Deferred so the tab-switch frame paints before Home's full re-render.
+      const handle = runWhenIdle(() => {
+        setHomeFocusNonce(n => n + 1);
+        for (const token of lastJfyViewableRef.current) {
+          fireJfyImpression(token.item, token.index);
+        }
+        recomputeJfyGate();
+      });
+      return () => {
+        handle.cancel();
+        setJfyGate(false);
+      };
     }, [fireJfyImpression, recomputeJfyGate, setJfyGate])
   );
 
