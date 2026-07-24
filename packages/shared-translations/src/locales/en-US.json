@@ -7215,7 +7215,12 @@
         "ctaTextLabel": "Button label",
         "ctaTextPlaceholder": "e.g. Open Rallia",
         "ctaUrlLabel": "Button link",
-        "ctaUrlPlaceholder": "https://rallia.app/…"
+        "ctaUrlPlaceholder": "https://rallia.app/…",
+        "formatBold": "Bold",
+        "formatItalic": "Italic",
+        "formatLink": "Link",
+        "formatList": "Bulleted list",
+        "formattingHint": "Formatting: **bold**, *italic*, [link](https://…), - list"
       },
       "recipients": {
         "heading": "Recipients",
@@ -7516,6 +7521,15 @@
         "confirmWarning": "This posts to every {sport} player and sends them a push notification. Continue?",
         "confirm": "Post it",
         "cancel": "Cancel"
+      },
+      "preview": {
+        "heading": "Preview",
+        "language": "Language",
+        "pushLabel": "Push notification",
+        "inAppLabel": "In the announcement channel",
+        "empty": "Pick a sport and write a message to see the preview.",
+        "now": "now",
+        "truncatedBadge": "Truncated at {limit} characters"
       },
       "feedback": {
         "success": "Announcement posted."
