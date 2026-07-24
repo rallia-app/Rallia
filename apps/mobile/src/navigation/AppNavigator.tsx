@@ -1138,6 +1138,8 @@ function BottomTabs() {
       }}
       screenOptions={{
         headerShown: false,
+        // Blurred tabs stay mounted (preload warmth) but skip re-renders.
+        freezeOnBlur: true,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarShowLabel: true,
