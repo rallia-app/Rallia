@@ -13,6 +13,7 @@ import { TrackedStoreBadges } from '@/components/tracked-store-badges';
 import { InviteLandingTracker } from '@/components/invite-landing-tracker';
 import ThemeLogo from '@/components/theme-logo';
 import { formatDateRange } from '@/lib/format-date-range';
+import { SITE_URL } from '@/lib/seo';
 
 type InvitationType =
   | 'referral'
@@ -121,6 +122,24 @@ function parseInvitationType(type?: string): InvitationType {
   return 'referral';
 }
 
+/** Self-referential canonical for this invite. Without it the page inherits the
+ *  locale layout's homepage canonical (buildAlternates('')), which makes social
+ *  scrapers (Facebook obeys rel="canonical") drop the invite URL and preview the
+ *  homepage instead, losing the tournament OG image. type/id stay in the URL so
+ *  each tournament remains a distinct canonical. */
+function buildInviteCanonical(
+  code: string,
+  locale: string,
+  invitationType: InvitationType,
+  targetId?: string
+): string {
+  const params = new URLSearchParams();
+  if (invitationType !== 'referral') params.set('type', invitationType);
+  if (targetId) params.set('id', targetId);
+  const qs = params.toString();
+  return `${SITE_URL}/${locale}/invite/${code}${qs ? `?${qs}` : ''}`;
+}
+
 /** OG image URL for this invite — /api/og/invite branches on type/id (query params
  *  the file-convention opengraph-image can't see). */
 function buildOgImageUrl(
@@ -142,12 +161,14 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const t = await getTranslations({ locale, namespace: 'invitePage' });
   const ogImage = buildOgImageUrl(code, locale, invitationType, query.id);
   const ogImages = [{ url: ogImage, width: 1200, height: 630 }];
+  const canonical = buildInviteCanonical(code, locale, invitationType, query.id);
 
   if (isChannelType(invitationType)) {
     const title = t('physicalTitle');
     return {
       title,
       description: t('physicalDescription'),
+      alternates: { canonical },
       robots: { index: false, follow: false },
       openGraph: {
         title,
@@ -201,6 +222,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
+    alternates: { canonical },
     robots: { index: false, follow: false },
     openGraph: { title, description, type: 'website', images: ogImages },
     twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
