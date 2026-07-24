@@ -51,12 +51,8 @@ Sentry.init({
   enabled: !__DEV__,
   environment: process.env.EXPO_PUBLIC_APP_ENV,
   tracesSampleRate: 0.2,
-  replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
-  integrations: [
-    sentryNavigationIntegration,
-    ...(!__DEV__ ? [Sentry.mobileReplayIntegration()] : []),
-  ],
+  // No session replay: its buffer-mode capture caused app-wide jank in prod.
+  integrations: [sentryNavigationIntegration],
   enableNativeFramesTracking: !__DEV__ && !isRunningInExpoGo(),
   sendDefaultPii: true,
   beforeSend: dropTransientNetworkNoise,
