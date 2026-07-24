@@ -11191,10 +11191,6 @@ export type Database = {
           total_users: number
         }[]
       }
-      get_user_demographics: {
-        Args: never
-        Returns: Json
-      }
       get_referral_leaderboard: {
         Args: { p_contest_id: string; p_limit?: number }
         Returns: {
@@ -11448,6 +11444,7 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: string[]
       }
+      get_user_demographics: { Args: never; Returns: Json }
       get_user_growth_trend: {
         Args: { p_end_date: string; p_interval?: string; p_start_date: string }
         Returns: {
@@ -12372,10 +12369,7 @@ export type Database = {
           player_last_week: string
         }[]
       }
-      post_sport_announcement: {
-        Args: { p_content: string; p_sport_id: string }
-        Returns: string
-      }
+      post_global_announcement: { Args: { p_content: string }; Returns: string }
       propose_rebuttal_score: {
         Args: {
           p_match_result_id: string
@@ -14942,6 +14936,7 @@ export type Database = {
         | "enrolled"
         | "withdrawn"
         | "payment_pending"
+        | "disqualified"
       season_status: "draft" | "open" | "closed" | "cancelled"
       session_match_status:
         | "pending"
@@ -15635,6 +15630,7 @@ export const Constants = {
         "enrolled",
         "withdrawn",
         "payment_pending",
+        "disqualified",
       ],
       season_status: ["draft", "open", "closed", "cancelled"],
       session_match_status: [

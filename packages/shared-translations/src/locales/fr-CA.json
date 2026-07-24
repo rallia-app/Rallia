@@ -7195,9 +7195,7 @@
       "analytics": "Analytique",
       "settings": "Paramètres",
       "map": "Carte",
-      "communications": "Communications",
-      "emails": "Courriels",
-      "announcements": "Annonces",
+      "broadcasts": "Diffusions",
       "referralContests": "Concours de parrainage"
     },
     "emails": {
@@ -7508,26 +7506,23 @@
     },
     "announcements": {
       "titleMeta": "Annonces - Admin - Rallia",
-      "title": "Annonces par sport",
-      "description": "Publie une annonce à tous les joueurs d'un sport. Elle apparaît dans leur clavardage et envoie une notification push.",
+      "title": "Annonces",
+      "description": "Publie une annonce à tous les joueurs de Rallia. Elle apparaît dans leur clavardage et envoie une notification push.",
       "form": {
-        "sportLabel": "Sport",
-        "sportPlaceholder": "Choisis un sport",
         "messageLabel": "Annonce",
         "messagePlaceholder": "Qu'est-ce que tu veux dire aux joueurs?",
         "charCount": "{count} caractères",
         "pushHint": "La notification push montre les 178 premiers caractères environ.",
         "submit": "Publier l'annonce",
-        "confirmWarning": "Ceci publie à tous les joueurs de {sport} et leur envoie une notification push. Continuer?",
+        "confirmWarning": "Ceci publie à tous les joueurs de Rallia et leur envoie une notification push. Continuer?",
         "confirm": "Publier",
         "cancel": "Annuler"
       },
       "preview": {
         "heading": "Aperçu",
-        "language": "Langue",
         "pushLabel": "Notification push",
         "inAppLabel": "Dans le canal d'annonces",
-        "empty": "Choisis un sport et écris un message pour voir l'aperçu.",
+        "empty": "Écris un message pour voir l'aperçu.",
         "now": "maintenant",
         "truncatedBadge": "Tronquée à {limit} caractères"
       },
@@ -7537,8 +7532,19 @@
       "errors": {
         "EMPTY_CONTENT": "Écris un message avant de publier.",
         "NOT_AUTHORIZED": "Tu n'as pas la permission de publier des annonces.",
-        "CHANNEL_NOT_FOUND": "Aucun canal d'annonce n'existe pour ce sport.",
+        "CHANNEL_NOT_FOUND": "Le canal d'annonces est introuvable.",
         "generic": "Une erreur est survenue. Réessaie."
+      }
+    },
+    "broadcasts": {
+      "titleMeta": "Diffusions - Admin - Rallia",
+      "descriptionMeta": "Rejoins les utilisateurs par courriel, par annonce push ou prévisualise les gabarits",
+      "title": "Diffusions",
+      "description": "Rejoins les utilisateurs par courriel ou avec une annonce dans l'app, et prévisualise les gabarits de notifications.",
+      "tabs": {
+        "email": "Courriel",
+        "announcement": "Annonce",
+        "templates": "Gabarits"
       }
     },
     "organizations": {

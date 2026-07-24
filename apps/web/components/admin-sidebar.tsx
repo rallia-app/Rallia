@@ -1,5 +1,31 @@
 'use client';
 
+import { useAuth } from '@rallia/shared-hooks';
+import {
+  BarChart3,
+  Bell,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  Globe,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Network,
+  Radio,
+  ScrollText,
+  Settings,
+  Shield,
+  Trophy,
+  Users,
+} from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useTransition } from 'react';
+
+import { useSidebar } from './sidebar-context';
+
 import { useAdminRole } from '@/components/admin-role-context';
 import { ModeToggle } from '@/components/mode-toggle';
 import ThemeLogo from '@/components/theme-logo';
@@ -17,32 +43,6 @@ import { canAccessRoute } from '@/lib/admin-rbac';
 import { createClient } from '@/lib/supabase/client';
 import { syncLocaleToBackend } from '@/lib/sync-locale';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@rallia/shared-hooks';
-import {
-  BarChart3,
-  Bell,
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Flag,
-  Globe,
-  LayoutDashboard,
-  LogOut,
-  Mail,
-  MapPin,
-  Megaphone,
-  Network,
-  ScrollText,
-  Send,
-  Settings,
-  Shield,
-  Trophy,
-  Users,
-} from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
-import { useSearchParams } from 'next/navigation';
-import { useMemo, useTransition } from 'react';
-import { useSidebar } from './sidebar-context';
 
 const locales = [
   { code: 'en-US', name: 'English', short: 'EN' },
@@ -139,21 +139,9 @@ export function AdminSidebar() {
       exactMatch: false,
     },
     {
-      href: '/admin/communications',
-      label: t('communications'),
-      icon: Mail,
-      exactMatch: false,
-    },
-    {
-      href: '/admin/emails',
-      label: t('emails'),
-      icon: Send,
-      exactMatch: false,
-    },
-    {
-      href: '/admin/announcements',
-      label: t('announcements'),
-      icon: Megaphone,
+      href: '/admin/broadcasts',
+      label: t('broadcasts'),
+      icon: Radio,
       exactMatch: false,
     },
     {

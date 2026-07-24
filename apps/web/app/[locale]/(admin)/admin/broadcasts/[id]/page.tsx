@@ -1,3 +1,8 @@
+import { ArrowLeft } from 'lucide-react';
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+
 import { ResendFailedButton } from '@/components/resend-failed-button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,11 +10,6 @@ import { Link } from '@/i18n/navigation';
 import { requireAdminRole } from '@/lib/admin-rbac.server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
-import type { Tables } from '@/types';
-import { ArrowLeft } from 'lucide-react';
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
 
 const PAGE_SIZE = 50;
 
@@ -69,7 +69,7 @@ export default async function AdminEmailDetailPage({
     .maybeSingle();
   if (!broadcast) notFound();
 
-  const b = broadcast as Tables<'email_broadcast'>;
+  const b = broadcast;
   const audience = (b.audience ?? {}) as AudienceMeta;
 
   // Per-status counts (indexed by broadcast_id) + this page of recipients.
@@ -193,7 +193,7 @@ export default async function AdminEmailDetailPage({
     <div className="flex flex-col w-full gap-8">
       <div className="flex flex-col gap-2">
         <Link
-          href="/admin/emails"
+          href="/admin/broadcasts?tab=email"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground w-fit"
         >
           <ArrowLeft className="size-4" />
@@ -314,7 +314,7 @@ export default async function AdminEmailDetailPage({
                   <div className="flex gap-2">
                     {page > 1 && (
                       <Link
-                        href={`/admin/emails/${id}?page=${page - 1}`}
+                        href={`/admin/broadcasts/${id}?page=${page - 1}`}
                         className="rounded-md border px-3 py-1.5 hover:bg-muted"
                       >
                         {t('detail.pagination.prev')}
@@ -322,7 +322,7 @@ export default async function AdminEmailDetailPage({
                     )}
                     {page < totalPages && (
                       <Link
-                        href={`/admin/emails/${id}?page=${page + 1}`}
+                        href={`/admin/broadcasts/${id}?page=${page + 1}`}
                         className="rounded-md border px-3 py-1.5 hover:bg-muted"
                       >
                         {t('detail.pagination.next')}

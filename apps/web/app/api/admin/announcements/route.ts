@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
-// Map the domain errors raised by post_sport_announcement to HTTP statuses.
+// Map the domain errors raised by post_global_announcement to HTTP statuses.
 const RPC_ERROR_STATUS: Record<string, number> = {
   NOT_AUTHORIZED: 403,
   EMPTY_CONTENT: 400,
@@ -12,7 +12,7 @@ const RPC_ERROR_STATUS: Record<string, number> = {
 
 export async function POST(request: NextRequest) {
   try {
-    // User-scoped client on purpose: post_sport_announcement is SECURITY DEFINER
+    // User-scoped client on purpose: post_global_announcement is SECURITY DEFINER
     // and gates on is_admin()/auth.uid() and stamps metadata.posted_by = auth.uid().
     // The service-role client has no auth.uid(), so it would fail the DB gate.
     const supabase = await createClient();
@@ -30,17 +30,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { sportId, content } = await request.json();
+    const { content } = await request.json();
 
-    if (!sportId || typeof sportId !== 'string') {
-      return NextResponse.json({ error: 'Missing sportId' }, { status: 400 });
-    }
     if (!content || typeof content !== 'string' || content.trim() === '') {
       return NextResponse.json({ error: 'EMPTY_CONTENT' }, { status: 400 });
     }
 
-    const { data: messageId, error } = await supabase.rpc('post_sport_announcement', {
-      p_sport_id: sportId,
+    const { data: messageId, error } = await supabase.rpc('post_global_announcement', {
       p_content: content.trim(),
     });
 
@@ -58,11 +54,10 @@ export async function POST(request: NextRequest) {
         admin_id: user.id,
         action_type: 'create',
         entity_type: 'system',
-        entity_id: sportId,
+        entity_id: messageId,
         new_data: {
-          kind: 'sport_announcement',
+          kind: 'global_announcement',
           messageId,
-          sportId,
           contentLength: content.trim().length,
         },
       });

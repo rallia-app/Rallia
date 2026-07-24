@@ -8615,8 +8615,8 @@ export type Database = {
         Args: { p_player_id: string; p_window_days?: number };
         Returns: number;
       };
-      post_sport_announcement: {
-        Args: { p_content: string; p_sport_id: string };
+      post_global_announcement: {
+        Args: { p_content: string };
         Returns: string;
       };
       propose_rebuttal_score: {

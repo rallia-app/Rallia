@@ -7195,9 +7195,7 @@
       "analytics": "Analytics",
       "settings": "Settings",
       "map": "Map",
-      "communications": "Communications",
-      "emails": "Emails",
-      "announcements": "Announcements",
+      "broadcasts": "Broadcasts",
       "referralContests": "Referral Contests"
     },
     "emails": {
@@ -7508,26 +7506,23 @@
     },
     "announcements": {
       "titleMeta": "Announcements - Admin - Rallia",
-      "title": "Sport announcements",
-      "description": "Post an announcement to every player of a sport. It appears in their chat and sends a push notification.",
+      "title": "Announcements",
+      "description": "Post an announcement to every Rallia player. It appears in their chat and sends a push notification.",
       "form": {
-        "sportLabel": "Sport",
-        "sportPlaceholder": "Select a sport",
         "messageLabel": "Announcement",
         "messagePlaceholder": "What do you want to tell players?",
         "charCount": "{count} characters",
         "pushHint": "The push notification shows the first ~178 characters.",
         "submit": "Post announcement",
-        "confirmWarning": "This posts to every {sport} player and sends them a push notification. Continue?",
+        "confirmWarning": "This posts to every Rallia player and sends them a push notification. Continue?",
         "confirm": "Post it",
         "cancel": "Cancel"
       },
       "preview": {
         "heading": "Preview",
-        "language": "Language",
         "pushLabel": "Push notification",
         "inAppLabel": "In the announcement channel",
-        "empty": "Pick a sport and write a message to see the preview.",
+        "empty": "Write a message to see the preview.",
         "now": "now",
         "truncatedBadge": "Truncated at {limit} characters"
       },
@@ -7537,8 +7532,19 @@
       "errors": {
         "EMPTY_CONTENT": "Write a message before posting.",
         "NOT_AUTHORIZED": "You don't have permission to post announcements.",
-        "CHANNEL_NOT_FOUND": "No announcement channel exists for that sport.",
+        "CHANNEL_NOT_FOUND": "The announcement channel is missing.",
         "generic": "Something went wrong. Try again."
+      }
+    },
+    "broadcasts": {
+      "titleMeta": "Broadcasts - Admin - Rallia",
+      "descriptionMeta": "Reach users by email, push announcement, or preview templates",
+      "title": "Broadcasts",
+      "description": "Reach users by email or with an in-app announcement, and preview notification templates.",
+      "tabs": {
+        "email": "Email",
+        "announcement": "Announcement",
+        "templates": "Templates"
       }
     },
     "organizations": {
