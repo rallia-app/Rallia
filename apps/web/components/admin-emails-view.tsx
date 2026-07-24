@@ -1,5 +1,10 @@
 'use client';
 
+import { useDebounce } from '@rallia/shared-hooks';
+import { Eye, Mail, Moon, Save, Send, Sun, Users } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,10 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { useDebounce } from '@rallia/shared-hooks';
-import { Eye, Mail, Moon, Save, Send, Sun, Users } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { MarkdownToolbar } from '@/components/markdown-toolbar';
 
 interface SportOption {
   id: string;
@@ -133,6 +135,7 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
   // ---- Compose state ----
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   const [ctaText, setCtaText] = useState('');
   const [ctaUrl, setCtaUrl] = useState('');
 
@@ -564,14 +567,19 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="broadcast-body">{t('compose.bodyLabel')}</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="broadcast-body">{t('compose.bodyLabel')}</Label>
+                  <MarkdownToolbar textareaRef={bodyRef} value={body} onChange={setBody} />
+                </div>
                 <Textarea
                   id="broadcast-body"
+                  ref={bodyRef}
                   value={body}
                   onChange={e => setBody(e.target.value)}
                   placeholder={t('compose.bodyPlaceholder')}
                   rows={8}
                 />
+                <p className="text-xs text-muted-foreground">{t('compose.formattingHint')}</p>
               </div>
 
               <div className="rounded-lg border p-4 space-y-4">

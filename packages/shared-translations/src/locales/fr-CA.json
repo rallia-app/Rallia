@@ -7215,7 +7215,12 @@
         "ctaTextLabel": "Libellé du bouton",
         "ctaTextPlaceholder": "p. ex. Ouvrir Rallia",
         "ctaUrlLabel": "Lien du bouton",
-        "ctaUrlPlaceholder": "https://rallia.app/…"
+        "ctaUrlPlaceholder": "https://rallia.app/…",
+        "formatBold": "Gras",
+        "formatItalic": "Italique",
+        "formatLink": "Lien",
+        "formatList": "Liste à puces",
+        "formattingHint": "Mise en forme : **gras**, *italique*, [lien](https://…), - liste"
       },
       "recipients": {
         "heading": "Destinataires",
@@ -7516,6 +7521,15 @@
         "confirmWarning": "Ceci publie à tous les joueurs de {sport} et leur envoie une notification push. Continuer?",
         "confirm": "Publier",
         "cancel": "Annuler"
+      },
+      "preview": {
+        "heading": "Aperçu",
+        "language": "Langue",
+        "pushLabel": "Notification push",
+        "inAppLabel": "Dans le canal d'annonces",
+        "empty": "Choisis un sport et écris un message pour voir l'aperçu.",
+        "now": "maintenant",
+        "truncatedBadge": "Tronquée à {limit} caractères"
       },
       "feedback": {
         "success": "Annonce publiée."

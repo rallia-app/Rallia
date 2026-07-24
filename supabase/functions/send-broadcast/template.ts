@@ -3,9 +3,10 @@
  *
  * Renders the admin-composed subject + body into the shared Rallia layout
  * (logo/header/footer + dark mode), with an optional CTA button and a
- * CASL-compliant unsubscribe link. Body is plain text authored in the admin
- * UI — blank lines become paragraphs, single newlines become <br>, and
- * everything is HTML-escaped (no raw HTML from the composer).
+ * CASL-compliant unsubscribe link. Body is authored in the admin UI as text
+ * with a safe markdown subset — **bold**, *italic*, [link](https://…), and
+ * "- " bullet lists. Blank lines become paragraphs, single newlines become
+ * <br>, and everything is HTML-escaped first (no raw HTML from the composer).
  */
 
 import {
@@ -27,15 +28,45 @@ export interface BroadcastEmailParams {
   siteUrl?: string;
 }
 
-/** Convert plain-text body into escaped paragraph HTML. */
+const TEXT_STYLE = `font-size: 16px; line-height: 1.6; color: ${EMAIL_TOKENS.neutral900};`;
+
+/**
+ * Render the inline markdown subset of an already-escaped block. Links are
+ * extracted into placeholders first so the emphasis passes can't touch
+ * characters inside a URL or the generated <a> markup.
+ */
+function inlineMarkdownToHtml(escaped: string): string {
+  const links: string[] = [];
+  let out = escaped.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, text, url) => {
+    links.push(
+      `<a href="${url}" style="color: ${EMAIL_TOKENS.primary600}; font-weight: 600; text-decoration: underline;">${text}</a>`
+    );
+    // "<" can never survive escapeHtml, so this token cannot collide with text.
+    return `<L${links.length - 1}>`;
+  });
+  out = out
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  return out.replace(/<L(\d+)>/g, (_match, index) => links[Number(index)]);
+}
+
+/** Convert the composer body (text + markdown subset) into escaped HTML. */
 function paragraphsToHtml(body: string): string {
   return body
     .split(/\n{2,}/)
     .map(block => block.trim())
     .filter(block => block.length > 0)
     .map(block => {
-      const safe = escapeHtml(block).replace(/\n/g, '<br />');
-      return `<p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: ${EMAIL_TOKENS.neutral900};">${safe}</p>`;
+      const lines = block.split('\n').map(line => line.trim());
+      if (lines.every(line => /^[-*]\s+/.test(line))) {
+        const items = lines
+          .map(line => inlineMarkdownToHtml(escapeHtml(line.replace(/^[-*]\s+/, ''))))
+          .map(item => `<li style="margin: 0 0 8px 0; ${TEXT_STYLE}">${item}</li>`)
+          .join('');
+        return `<ul style="margin: 0 0 16px 0; padding: 0 0 0 24px;">${items}</ul>`;
+      }
+      const safe = inlineMarkdownToHtml(escapeHtml(block)).replace(/\n/g, '<br />');
+      return `<p style="margin: 0 0 16px 0; ${TEXT_STYLE}">${safe}</p>`;
     })
     .join('');
 }
@@ -66,7 +97,13 @@ export function renderBroadcastEmail(params: BroadcastEmailParams): {
                 ${ctaHtml}
                 ${renderDividerAndDisclaimer(disclaimer)}`;
 
-  const preheader = body.replace(/\s+/g, ' ').trim().slice(0, 100);
+  const preheader = body
+    .replace(/\[([^\]\n]+)\]\(https?:\/\/[^\s)]+\)/g, '$1')
+    .replace(/\*/g, '')
+    .replace(/^[-*]\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100);
 
   const html = wrapInLayout({
     title: subject,
