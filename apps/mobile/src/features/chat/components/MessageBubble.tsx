@@ -4,7 +4,7 @@
  * Includes swipe-to-reply with visual feedback
  */
 
-import React, { useCallback, memo, useMemo } from 'react';
+import React, { useCallback, memo, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { getShortName, getProfilePictureUrl } from '@rallia/shared-utils';
+import { getShortName, getProfilePictureUrl, lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, fontSizePixels, primary, status } from '@rallia/design-system';
 import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services';
 
@@ -43,6 +43,58 @@ const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
 // Swipe threshold to trigger reply
 const SWIPE_THRESHOLD = 60;
+
+interface ReactionPillProps {
+  reaction: ReactionSummary;
+  onPress: () => void;
+  isDark: boolean;
+  backgroundColor: string;
+  borderColor: string;
+  countColor: string;
+}
+
+function ReactionPill({
+  reaction,
+  onPress,
+  isDark,
+  backgroundColor,
+  borderColor,
+  countColor,
+}: ReactionPillProps) {
+  const scale = useMemo(() => new Animated.Value(0.6), []);
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 160,
+    }).start();
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    void lightHaptic();
+    onPress();
+  }, [onPress]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        style={[
+          styles.reactionPill,
+          !isDark && styles.reactionPillShadow,
+          { backgroundColor, borderColor },
+        ]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+        hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+      >
+        <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+        <Text style={[styles.reactionCount, { color: countColor }]}>{reaction.count}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 function MessageBubbleComponent({
   message,
@@ -420,28 +472,33 @@ function MessageBubbleComponent({
               </View>
             </Pressable>
 
-            {/* Reactions */}
+            {/* Reactions — pills overlapping the bubble's bottom edge */}
             {reactions.length > 0 && (
               <View
                 style={[styles.reactionsContainer, isOwnMessage && styles.reactionsContainerOwn]}
               >
                 {reactions.map(reaction => (
-                  <TouchableOpacity
+                  <ReactionPill
                     key={reaction.emoji}
-                    style={[
-                      styles.reactionBadge,
-                      { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-                      reaction.hasReacted && styles.reactionBadgeActive,
-                    ]}
+                    reaction={reaction}
                     onPress={() => onReact(reaction.emoji)}
-                  >
-                    <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-                    {reaction.count > 1 && (
-                      <Text style={[styles.reactionCount, { color: colors.textMuted }]}>
-                        {reaction.count}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                    isDark={isDark}
+                    backgroundColor={
+                      reaction.hasReacted
+                        ? isDark
+                          ? primary[900]
+                          : primary[100]
+                        : colors.background
+                    }
+                    borderColor={reaction.hasReacted ? primary[500] : colors.border}
+                    countColor={
+                      reaction.hasReacted
+                        ? isDark
+                          ? primary[300]
+                          : primary[600]
+                        : colors.textMuted
+                    }
+                  />
                 ))}
               </View>
             )}
@@ -589,33 +646,41 @@ const styles = StyleSheet.create({
   reactionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: spacingPixels[1],
-    marginLeft: spacingPixels[2],
+    // Pull the pills up so they overlap the bubble's bottom corner
+    // (-8 = the bubble's own bottom padding, so the timestamp is never covered)
+    marginTop: -8,
+    marginLeft: spacingPixels[3],
+    marginBottom: spacingPixels[1],
+    gap: spacingPixels[1],
   },
   reactionsContainerOwn: {
     justifyContent: 'flex-end',
     marginLeft: 0,
-    marginRight: spacingPixels[2],
+    marginRight: spacingPixels[3],
   },
-  reactionBadge: {
+  reactionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[1],
-    marginRight: spacingPixels[1],
-    marginBottom: spacingPixels[1],
-  },
-  reactionBadgeActive: {
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: primary[500],
+    paddingHorizontal: spacingPixels[2],
+    gap: 3,
+  },
+  reactionPillShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   reactionEmoji: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 19,
   },
   reactionCount: {
     fontSize: fontSizePixels.xs,
-    marginLeft: spacingPixels[1],
+    fontWeight: '600',
   },
   // Search highlight styles
   highlightedText: {
