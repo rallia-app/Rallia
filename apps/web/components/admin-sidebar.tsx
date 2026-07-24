@@ -30,6 +30,7 @@ import {
   LogOut,
   Mail,
   MapPin,
+  Megaphone,
   Network,
   ScrollText,
   Send,
@@ -147,6 +148,12 @@ export function AdminSidebar() {
       href: '/admin/emails',
       label: t('emails'),
       icon: Send,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/announcements',
+      label: t('announcements'),
+      icon: Megaphone,
       exactMatch: false,
     },
     {

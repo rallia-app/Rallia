@@ -7197,6 +7197,7 @@
       "map": "Map",
       "communications": "Communications",
       "emails": "Emails",
+      "announcements": "Announcements",
       "referralContests": "Referral Contests"
     },
     "emails": {
@@ -7498,6 +7499,32 @@
         "organization": "Organization",
         "system": "System",
         "auth": "Authentication"
+      }
+    },
+    "announcements": {
+      "titleMeta": "Announcements - Admin - Rallia",
+      "title": "Sport announcements",
+      "description": "Post an announcement to every player of a sport. It appears in their chat and sends a push notification.",
+      "form": {
+        "sportLabel": "Sport",
+        "sportPlaceholder": "Select a sport",
+        "messageLabel": "Announcement",
+        "messagePlaceholder": "What do you want to tell players?",
+        "charCount": "{count} characters",
+        "pushHint": "The push notification shows the first ~178 characters.",
+        "submit": "Post announcement",
+        "confirmWarning": "This posts to every {sport} player and sends them a push notification. Continue?",
+        "confirm": "Post it",
+        "cancel": "Cancel"
+      },
+      "feedback": {
+        "success": "Announcement posted."
+      },
+      "errors": {
+        "EMPTY_CONTENT": "Write a message before posting.",
+        "NOT_AUTHORIZED": "You don't have permission to post announcements.",
+        "CHANNEL_NOT_FOUND": "No announcement channel exists for that sport.",
+        "generic": "Something went wrong. Try again."
       }
     },
     "organizations": {

@@ -51,6 +51,7 @@ const ROLE_WRITE_PERMISSIONS: Record<string, AdminRole[]> = {
   'invitations:create': ['super_admin'],
   'communications:send': ['super_admin', 'moderator'],
   'broadcasts:send': ['super_admin'],
+  'announcements:send': ['super_admin'],
   'referral-contests:create': ['super_admin'],
   'referral-contests:edit': ['super_admin'],
   'referral-contests:delete': ['super_admin'],
