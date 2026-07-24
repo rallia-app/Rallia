@@ -13,9 +13,9 @@ import { Textarea } from './ui/textarea';
 const PUSH_PREVIEW_LEN = 178;
 
 // Locale-neutral push title and channel branding (notify_new_message +
-// 20260724120000_sport_announcement_rallia_branding).
-const PUSH_TITLE = '📢 Rallia';
-const CHANNEL_TITLE = 'Rallia';
+// 20260724230000_announcement_megaphone_icon).
+const PUSH_TITLE = '📣 Rallia';
+const CHANNEL_TITLE = '📣 Rallia';
 
 /** Mirrors notify_new_message: rtrim(left(content, 178)) || '…'. */
 function pushBody(content: string): { text: string; truncated: boolean } {
@@ -194,7 +194,6 @@ export function AdminAnnouncementComposer() {
               </p>
               <div className="rounded-lg border">
                 <div className="flex items-center gap-2 border-b px-3 py-2">
-                  <Megaphone className="size-4 text-primary" />
                   <span className="text-sm font-medium">{CHANNEL_TITLE}</span>
                 </div>
                 <div className="p-3">
