@@ -1040,7 +1040,7 @@ export function AdminEmailsView({ sports }: { sports: SportOption[] }) {
                         <tr key={b.id} className="border-b last:border-0 hover:bg-muted/50">
                           <td className="py-2 pr-4 max-w-[280px] truncate">
                             <Link
-                              href={`/admin/emails/${b.id}`}
+                              href={`/admin/broadcasts/${b.id}`}
                               className="font-medium hover:underline"
                             >
                               {b.subject}

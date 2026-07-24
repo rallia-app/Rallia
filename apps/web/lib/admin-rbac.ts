@@ -17,7 +17,7 @@ export const ROLE_ALLOWED_ROUTES: Record<AdminRole, string[]> = {
     '/admin/rating-proofs',
     '/admin/alerts',
     '/admin/activity-log',
-    '/admin/communications',
+    '/admin/broadcasts',
   ],
   support: [
     '/admin/dashboard',
