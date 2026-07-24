@@ -36,7 +36,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     <PHProvider
       client={posthogClient}
       autocapture={{
-        captureTouches: true,
+        // Touch autocapture disabled: per-tap tree traversal added latency in prod.
+        captureTouches: false,
         captureScreens: false,
       }}
     >
