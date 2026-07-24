@@ -7197,6 +7197,7 @@
       "map": "Carte",
       "communications": "Communications",
       "emails": "Courriels",
+      "announcements": "Annonces",
       "referralContests": "Concours de parrainage"
     },
     "emails": {
@@ -7498,6 +7499,32 @@
         "organization": "Organisation",
         "system": "Système",
         "auth": "Authentification"
+      }
+    },
+    "announcements": {
+      "titleMeta": "Annonces - Admin - Rallia",
+      "title": "Annonces par sport",
+      "description": "Publie une annonce à tous les joueurs d'un sport. Elle apparaît dans leur clavardage et envoie une notification push.",
+      "form": {
+        "sportLabel": "Sport",
+        "sportPlaceholder": "Choisis un sport",
+        "messageLabel": "Annonce",
+        "messagePlaceholder": "Qu'est-ce que tu veux dire aux joueurs?",
+        "charCount": "{count} caractères",
+        "pushHint": "La notification push montre les 178 premiers caractères environ.",
+        "submit": "Publier l'annonce",
+        "confirmWarning": "Ceci publie à tous les joueurs de {sport} et leur envoie une notification push. Continuer?",
+        "confirm": "Publier",
+        "cancel": "Annuler"
+      },
+      "feedback": {
+        "success": "Annonce publiée."
+      },
+      "errors": {
+        "EMPTY_CONTENT": "Écris un message avant de publier.",
+        "NOT_AUTHORIZED": "Tu n'as pas la permission de publier des annonces.",
+        "CHANNEL_NOT_FOUND": "Aucun canal d'annonce n'existe pour ce sport.",
+        "generic": "Une erreur est survenue. Réessaie."
       }
     },
     "organizations": {
