@@ -23,6 +23,7 @@ import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import {
   useAuth,
+  useAdminStatus,
   useDebounce,
   usePublicTournaments,
   useMyActiveRegistrations,
@@ -52,6 +53,7 @@ export const Tournaments: React.FC = () => {
   const { t } = useTranslation();
   const { selectedSport } = useSport();
   const { session } = useAuth();
+  const { isAdmin } = useAdminStatus();
   const colors = useTournamentListColors();
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
@@ -174,26 +176,29 @@ export const Tournaments: React.FC = () => {
 
   const header = (
     <View style={styles.headerContainer}>
-      <TouchableOpacity
-        onPress={handleCreate}
-        activeOpacity={0.85}
-        style={styles.createButton}
-        accessibilityRole="button"
-        accessibilityLabel={t('tournamentList.create')}
-      >
-        <View style={styles.createIcon}>
-          <Ionicons name="add" size={26} color="#ffffff" />
-        </View>
-        <View style={styles.createTextWrap}>
-          <Text size="base" weight="semibold" color="#ffffff">
-            {t('tournamentList.create')}
-          </Text>
-          <Text size="xs" color="rgba(255,255,255,0.85)">
-            {t('tournamentList.createSubtitle')}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
-      </TouchableOpacity>
+      {/* Tournament creation is admin-gated during rollout (mirrors ActionsBottomSheet). */}
+      {isAdmin && (
+        <TouchableOpacity
+          onPress={handleCreate}
+          activeOpacity={0.85}
+          style={styles.createButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('tournamentList.create')}
+        >
+          <View style={styles.createIcon}>
+            <Ionicons name="add" size={26} color="#ffffff" />
+          </View>
+          <View style={styles.createTextWrap}>
+            <Text size="base" weight="semibold" color="#ffffff">
+              {t('tournamentList.create')}
+            </Text>
+            <Text size="xs" color="rgba(255,255,255,0.85)">
+              {t('tournamentList.createSubtitle')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         onPress={() => {
