@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { Text } from '@rallia/shared-components';
@@ -59,7 +60,7 @@ export const Classements: React.FC = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {renderTab('challenge', 'calendar-outline', t('classements.tabs.challenge'))}
         {renderTab('ranking', 'trophy-outline', t('classements.tabs.ranking'))}
@@ -68,7 +69,7 @@ export const Classements: React.FC = () => {
       <View style={styles.body}>
         {activeTab === 'challenge' ? <Leaderboard /> : <TournamentRanking />}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

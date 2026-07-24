@@ -61,7 +61,10 @@ export const MyLeagues: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       {isInitialLoad && isLoading ? (
         <View style={styles.loadingContainer}>
           {[1, 2, 3, 4, 5].map(i => (

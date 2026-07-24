@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
@@ -182,56 +183,64 @@ export const MonthlyChallengeBoard: React.FC = () => {
 
   if (!sportId || isLoading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        edges={['bottom']}
+        style={[styles.center, { backgroundColor: colors.background }]}
+      >
         <ActivityIndicator color={accentColor} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (isError) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        edges={['bottom']}
+        style={[styles.center, { backgroundColor: colors.background }]}
+      >
         <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
         <Text size="base" color={colors.textMuted} style={styles.centerText}>
           {t('leaderboard.error')}
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <FlatList
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.listContent}
-      data={items}
-      keyExtractor={e => e.playerId}
-      renderItem={renderItem}
-      ListHeaderComponent={header}
-      showsVerticalScrollIndicator={false}
-      onEndReached={() => fetchNextPage()}
-      onEndReachedThreshold={0.5}
-      ListFooterComponent={
-        isFetchingNextPage ? (
-          <View style={styles.footer}>
-            <ActivityIndicator size="small" color={accentColor} />
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <FlatList
+        style={{ backgroundColor: colors.background }}
+        contentContainerStyle={styles.listContent}
+        data={items}
+        keyExtractor={e => e.playerId}
+        renderItem={renderItem}
+        ListHeaderComponent={header}
+        showsVerticalScrollIndicator={false}
+        onEndReached={() => fetchNextPage()}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.footer}>
+              <ActivityIndicator size="small" color={accentColor} />
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          <View style={styles.center}>
+            <Ionicons name="trophy-outline" size={40} color={colors.textMuted} />
+            <Text size="base" weight="semibold" color={colors.text}>
+              {t('leaderboard.empty.title')}
+            </Text>
+            <Text size="sm" color={colors.textMuted} style={styles.centerText}>
+              {t('leaderboard.empty.description')}
+            </Text>
           </View>
-        ) : null
-      }
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <Ionicons name="trophy-outline" size={40} color={colors.textMuted} />
-          <Text size="base" weight="semibold" color={colors.text}>
-            {t('leaderboard.empty.title')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.centerText}>
-            {t('leaderboard.empty.description')}
-          </Text>
-        </View>
-      }
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={accentColor} />
-      }
-    />
+        }
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={accentColor} />
+        }
+      />
+    </SafeAreaView>
   );
 };
 

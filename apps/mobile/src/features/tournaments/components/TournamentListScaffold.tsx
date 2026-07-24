@@ -583,7 +583,7 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
   }
 
   return (
-    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={data}
         keyExtractor={item => item.key}

@@ -12,11 +12,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useCreatePlayedMatch, type CreatePlayedMatchInput } from '@rallia/shared-hooks';
@@ -206,7 +206,10 @@ function AddScoreContent({
   const stepTitle = t('addScore.title');
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
