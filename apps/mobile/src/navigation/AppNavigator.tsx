@@ -664,12 +664,15 @@ function CreateListHeaderButton() {
   );
 }
 
-/** Header "+" that opens the tournament creation wizard. Live for everyone. */
+/** Header "+" that opens the tournament creation wizard. Admin-only during rollout. */
 function TournamentCreateHeaderButton() {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
   const { openSheetForTournamentCreation } = useActionsSheet();
+  const { isAdmin } = useAdminStatus();
+
+  if (!isAdmin) return null;
 
   return (
     <TouchableOpacity
