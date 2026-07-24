@@ -360,7 +360,10 @@ export const SessionDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        edges={['bottom']}
+        style={[styles.root, { backgroundColor: colors.background }]}
+      >
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -370,7 +373,10 @@ export const SessionDetail: React.FC = () => {
 
   if (isError || !sess) {
     return (
-      <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        edges={['bottom']}
+        style={[styles.root, { backgroundColor: colors.background }]}
+      >
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
@@ -403,7 +409,7 @@ export const SessionDetail: React.FC = () => {
   const badge = statusBadge(sess.status);
 
   return (
-    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>

@@ -313,7 +313,10 @@ export const MyTournaments: React.FC = () => {
   const options = activeTab === 'upcoming' ? UPCOMING_OPTIONS : PAST_OPTIONS;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {renderTab('upcoming', 'calendar-outline', t('playerMatches.tabs.upcoming'))}
         {renderTab('past', 'time-outline', t('playerMatches.tabs.past'))}

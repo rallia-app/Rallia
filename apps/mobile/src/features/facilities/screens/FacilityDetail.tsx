@@ -6,7 +6,7 @@
  * - Matches: Public matches at this facility
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useContext, useEffect, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -17,7 +17,8 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
@@ -76,6 +77,9 @@ export default function FacilityDetail() {
 
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  // Mounted both under the bottom tabs (tab bar absorbs the inset) and as a full-screen root/map screen.
+  const safeAreaEdges: Edge[] =
+    useContext(BottomTabBarHeightContext) !== undefined ? [] : ['bottom'];
   const toast = useToast();
   const { location } = useEffectiveLocation();
   const { selectedSport } = useSport();
@@ -266,7 +270,7 @@ export default function FacilityDetail() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={safeAreaEdges}
       >
         <View style={styles.loadingContainer}>
           {/* Header skeleton */}
@@ -344,7 +348,7 @@ export default function FacilityDetail() {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+        edges={safeAreaEdges}
       >
         <View style={styles.emptyContainer}>
           <View
@@ -507,7 +511,7 @@ export default function FacilityDetail() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={safeAreaEdges}
     >
       {/* Tab Bar at top */}
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>

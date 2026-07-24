@@ -13,9 +13,9 @@ import {
   FlatList,
   ActivityIndicator,
   Linking,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
@@ -247,7 +247,10 @@ export function ContactPickerModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        edges={['top', 'bottom']}
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity

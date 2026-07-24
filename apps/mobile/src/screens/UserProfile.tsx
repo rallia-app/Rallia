@@ -637,7 +637,10 @@ const UserProfile = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -1387,7 +1390,6 @@ const UserProfile = () => {
             )}
           </WalkthroughableView>
         </CopilotStep>
-
       </ScrollView>
 
       {/* Reactivate sport confirmation */}
@@ -1403,7 +1405,6 @@ const UserProfile = () => {
         cancelLabel={t('common.cancel')}
         isLoading={reactivating}
       />
-
     </SafeAreaView>
   );
 };

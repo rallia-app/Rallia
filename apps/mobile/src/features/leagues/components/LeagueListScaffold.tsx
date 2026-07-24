@@ -439,7 +439,7 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
   // One list in every state, with the header inside it: pull-to-refresh stays
   // live while loading, erroring and empty, not just once rows exist.
   return (
-    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={data}
         keyExtractor={item => item.key}
