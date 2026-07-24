@@ -138,6 +138,7 @@ import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
 import TennisIcon from '../../assets/icons/tennis.svg';
 
+import { runWhenIdle } from '#/utils/runWhenIdle';
 import { useAppNavigation } from './hooks';
 import type {
   RootStackParamList,
@@ -1115,13 +1116,21 @@ const resetStackOnBlur = ({
     // pushing a screen (e.g. PlayerProfile) — don't reset the stack.
     if (state.index === tabIndex) return;
 
-    const tabRoute = state.routes[tabIndex];
-    if (tabRoute?.state && typeof tabRoute.state.index === 'number' && tabRoute.state.index > 0) {
-      navigation.dispatch({
-        ...StackActions.popToTop(),
-        target: tabRoute.state.key,
-      });
-    }
+    // Deferred so the tab-switch frame paints before the outgoing stack re-renders.
+    runWhenIdle(() => {
+      const fresh = navigation.getState();
+      const freshIndex = fresh.routes.findIndex(r => r.key === route.key);
+      // User already switched back — popping now would yank the screen they're on.
+      if (fresh.index === freshIndex) return;
+
+      const tabRoute = fresh.routes[freshIndex];
+      if (tabRoute?.state && typeof tabRoute.state.index === 'number' && tabRoute.state.index > 0) {
+        navigation.dispatch({
+          ...StackActions.popToTop(),
+          target: tabRoute.state.key,
+        });
+      }
+    });
   },
 });
 
