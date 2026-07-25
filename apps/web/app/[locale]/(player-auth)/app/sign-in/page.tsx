@@ -60,9 +60,38 @@ export default async function PlayerSignInPage({
   return (
     <div className="flex min-h-screen">
       {/* Brand panel — desktop only */}
-      <aside className="hero-gradient relative hidden w-[45%] max-w-2xl overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
-        {/* Court art sits behind the ::before contrast overlay's siblings, so lift content with z-10 */}
-        <CourtLines className="pointer-events-none absolute -bottom-24 -right-40 w-[720px] -rotate-6 text-foreground/[0.07]" />
+      <aside className="hero-gradient signin-hero relative hidden w-[45%] max-w-2xl overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
+        {/* Ambient glow blobs give the flat gradient depth; tokens flip them per theme */}
+        <div
+          aria-hidden="true"
+          className="animate-hero-drift pointer-events-none absolute -left-24 -top-32 size-96 rounded-full bg-[var(--primary-300)]/40 blur-3xl dark:bg-[var(--primary-500)]/15"
+        />
+        <div
+          aria-hidden="true"
+          className="animate-hero-drift-slow pointer-events-none absolute -right-28 top-1/3 size-[28rem] rounded-full bg-[var(--secondary-300)]/35 blur-3xl dark:bg-[var(--secondary-500)]/10"
+        />
+        <div
+          aria-hidden="true"
+          className="animate-hero-drift-slower pointer-events-none absolute -bottom-40 left-1/4 size-[30rem] rounded-full bg-[var(--accent-300)]/35 blur-3xl dark:bg-[var(--accent-500)]/10"
+        />
+
+        {/* Accent ring echoing the logo's swoosh, cropped by the panel edge into an arc */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-40 -top-44 size-96 rounded-full border-[3px] border-[var(--accent-400)]/50 dark:border-[var(--accent-500)]/30"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-24 -top-28 size-64 rounded-full border-2 border-[var(--secondary-400)]/30 dark:border-[var(--secondary-500)]/25"
+        />
+
+        {/* The court as a receding floor, fading out toward the horizon */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[-12%] bottom-[-6%] [perspective:900px]"
+        >
+          <CourtLines className="w-full text-[var(--primary-700)]/30 [mask-image:linear-gradient(to_top,black_25%,transparent_92%)] [transform:rotateX(48deg)] dark:text-[var(--primary-500)]/25" />
+        </div>
 
         <div className="relative z-10">
           <ThemeLogo width={120} height={36} href="/" />
@@ -73,21 +102,21 @@ export default async function PlayerSignInPage({
             <h2 className="font-heading text-4xl font-bold tracking-tight text-foreground xl:text-5xl">
               {t('welcomeTitle')}
             </h2>
-            <p className="text-xl font-medium text-[var(--secondary-600)] dark:text-[var(--secondary-400)]">
+            <p className="font-heading text-xl font-semibold text-[var(--secondary-600)] dark:text-[var(--secondary-500)]">
               {t('welcomeSubtitle')}
             </p>
           </div>
 
-          <ul className="space-y-5">
+          <ul className="space-y-4">
             {benefits.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-start gap-4">
-                <span className="glass-morphism flex size-10 shrink-0 items-center justify-center rounded-xl">
+              <li key={text} className="flex items-center gap-4">
+                <span className="glass-morphism shadow-luma flex size-11 shrink-0 items-center justify-center rounded-2xl">
                   <Icon
-                    className="size-5 text-[var(--primary-600)] dark:text-[var(--primary-400)]"
+                    className="size-5 text-[var(--primary-600)] dark:text-[var(--primary-500)]"
                     aria-hidden="true"
                   />
                 </span>
-                <span className="pt-2 text-sm leading-relaxed text-foreground/80">{text}</span>
+                <span className="max-w-md text-[15px] leading-snug text-foreground/85">{text}</span>
               </li>
             ))}
           </ul>
@@ -108,7 +137,7 @@ export default async function PlayerSignInPage({
           {/* Compact brand header — under lg the hero panel is gone */}
           <div className="mb-10 flex flex-col items-start gap-3 lg:hidden">
             <ThemeLogo width={104} height={31} href="/" />
-            <p className="text-sm font-medium text-[var(--secondary-600)] dark:text-[var(--secondary-400)]">
+            <p className="text-sm font-medium text-[var(--secondary-600)] dark:text-[var(--secondary-500)]">
               {t('welcomeSubtitle')}
             </p>
           </div>
