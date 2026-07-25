@@ -6,10 +6,10 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
-  // Transpile shared monorepo packages
+  // Transpile shared monorepo packages.
+  // @rallia/shared-components is deliberately absent: it is React Native only.
   transpilePackages: [
     '@rallia/design-system',
-    '@rallia/shared-components',
     '@rallia/shared-constants',
     '@rallia/shared-hooks',
     '@rallia/shared-services',
