@@ -225,6 +225,26 @@ function mapSeasonError(message: string | undefined): TranslationKey {
   return 'leagueDetail.seasonErrors.generic';
 }
 
+/**
+ * Map league_join's raw error codes to user-facing copy. Without this the
+ * screen toasted the exception text, so a gated player saw "RATING_TOO_LOW".
+ * Ordered most-specific first, matched by substring like mapSeasonError.
+ */
+function mapJoinError(message: string | undefined): TranslationKey {
+  const m = message || '';
+  if (m.includes('RATING_REQUIRED')) return 'leagueDetail.joinErrors.ratingRequired';
+  if (m.includes('RATING_TOO_LOW')) return 'leagueDetail.joinErrors.ratingTooLow';
+  if (m.includes('RATING_TOO_HIGH')) return 'leagueDetail.joinErrors.ratingTooHigh';
+  if (m.includes('REPUTATION_GATE_NOT_MET')) return 'leagueDetail.joinErrors.reputation';
+  if (m.includes('ALREADY_MEMBER')) return 'leagueDetail.joinErrors.alreadyMember';
+  if (m.includes('LEAGUE_NOT_ACTIVE')) return 'leagueDetail.joinErrors.leagueNotActive';
+  if (m.includes('LEAGUE_NOT_FOUND')) return 'leagueDetail.joinErrors.leagueNotFound';
+  if (m.includes('LEAGUE_FULL')) return 'leagueDetail.joinErrors.leagueFull';
+  if (m.includes('NOT_INVITED')) return 'leagueDetail.joinErrors.notInvited';
+  if (m.includes('SPORT_MISMATCH')) return 'leagueDetail.joinErrors.sportMismatch';
+  return 'leagueDetail.errors.generic';
+}
+
 interface ScreenColors {
   background: string;
   cardBackground: string;
@@ -1099,7 +1119,7 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(t(mapJoinError(e.message)));
     },
   });
 

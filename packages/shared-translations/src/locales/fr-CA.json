@@ -4294,6 +4294,18 @@
         "cancelFailed": "Impossible d'annuler la saison. Réessaie."
       }
     },
+    "joinErrors": {
+      "ratingRequired": "Ça te prend un classement dans ce sport pour rejoindre cette ligue.",
+      "ratingTooLow": "Ton classement est sous le niveau minimum de cette ligue.",
+      "ratingTooHigh": "Ton classement est au-dessus du niveau maximum de cette ligue.",
+      "reputation": "Ton score de réputation est sous ce que cette ligue demande.",
+      "alreadyMember": "Tu es déjà dans cette ligue.",
+      "leagueNotActive": "Cette ligue n'est pas active en ce moment.",
+      "leagueNotFound": "Cette ligue n'existe plus.",
+      "leagueFull": "Cette ligue est pleine.",
+      "notInvited": "Cette ligue est sur invitation seulement.",
+      "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre."
+    },
     "seasonErrors": {
       "notOrganizer": "Seul l'organisateur peut faire ça.",
       "stale": "Quelque chose a changé. Rafraîchis et réessaie.",

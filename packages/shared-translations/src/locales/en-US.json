@@ -4294,6 +4294,18 @@
         "cancelFailed": "Couldn't cancel the season. Please try again."
       }
     },
+    "joinErrors": {
+      "ratingRequired": "You need a rating in this sport to join this league.",
+      "ratingTooLow": "Your rating is below this league's minimum level.",
+      "ratingTooHigh": "Your rating is above this league's maximum level.",
+      "reputation": "Your reputation score is below what this league asks for.",
+      "alreadyMember": "You're already in this league.",
+      "leagueNotActive": "This league isn't active right now.",
+      "leagueNotFound": "This league no longer exists.",
+      "leagueFull": "This league is full.",
+      "notInvited": "This league is invite-only.",
+      "sportMismatch": "Add this sport to your profile before joining."
+    },
     "seasonErrors": {
       "notOrganizer": "Only the organizer can do that.",
       "stale": "Something changed. Refresh and try again.",
