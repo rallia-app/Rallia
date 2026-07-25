@@ -14,6 +14,7 @@ import { QueryProvider } from '@/components/query-provider';
 import { SharedSupabaseSync } from '@/components/shared-supabase-sync';
 import { SidebarProvider } from '@/components/sidebar-context';
 import { SportProvider } from '@/components/app/sport-provider';
+import { UserLocationProvider } from '@/components/app/location-provider';
 import type { PlayerShellData } from '@/lib/supabase/check-player';
 
 interface PlayerShellProps {
@@ -53,27 +54,29 @@ export function PlayerShell({
       <TooltipProvider delayDuration={100}>
         <SidebarProvider>
           <SportProvider userId={userId} initialSportId={initialSportId}>
-            {chromeless ? (
-              <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-8">{children}</main>
-            ) : (
-              <div className="flex min-h-screen">
-                <PlayerSidebar onAction={handleAction} />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <PlayerHeader
-                    userId={userId}
-                    displayName={shellData.displayName ?? shellData.firstName}
-                    profilePictureUrl={shellData.profilePictureUrl}
-                  />
-                  {/* Bottom padding clears the fixed tab bar; it collapses at lg. */}
-                  <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-6 lg:pb-10">
-                    {children}
-                  </main>
+            <UserLocationProvider initialHomeLocation={shellData.homeLocation}>
+              {chromeless ? (
+                <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-8">{children}</main>
+              ) : (
+                <div className="flex min-h-screen">
+                  <PlayerSidebar onAction={handleAction} />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <PlayerHeader
+                      userId={userId}
+                      displayName={shellData.displayName ?? shellData.firstName}
+                      profilePictureUrl={shellData.profilePictureUrl}
+                    />
+                    {/* Bottom padding clears the fixed tab bar; it collapses at lg. */}
+                    <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-6 lg:pb-10">
+                      {children}
+                    </main>
+                  </div>
+                  <PlayerBottomNav onAction={handleAction} />
+                  <PlayerActionsModal open={actionsOpen} onOpenChange={setActionsOpen} />
                 </div>
-                <PlayerBottomNav onAction={handleAction} />
-                <PlayerActionsModal open={actionsOpen} onOpenChange={setActionsOpen} />
-              </div>
-            )}
-            <Toaster position="top-center" richColors />
+              )}
+              <Toaster position="top-center" richColors />
+            </UserLocationProvider>
           </SportProvider>
         </SidebarProvider>
       </TooltipProvider>

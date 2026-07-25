@@ -16,6 +16,8 @@ export interface PlayerShellData {
   activeSportIds: string[];
   primarySportId: string | null;
   hasLocation: boolean;
+  /** The player row's saved location, seed for the client location provider. */
+  homeLocation: { latitude: number; longitude: number; postalCode: string | null } | null;
   /** False when any hard requirement is missing, which sends the player to /app/onboarding. */
   isOnboardingComplete: boolean;
 }
@@ -27,6 +29,7 @@ const EMPTY_SHELL: PlayerShellData = {
   activeSportIds: [],
   primarySportId: null,
   hasLocation: false,
+  homeLocation: null,
   isOnboardingComplete: false,
 };
 
@@ -46,7 +49,11 @@ export async function getPlayerShellData(userId: string): Promise<PlayerShellDat
       .select('first_name, display_name, profile_picture_url')
       .eq('id', userId)
       .maybeSingle(),
-    supabase.from('player').select('latitude, longitude').eq('id', userId).maybeSingle(),
+    supabase
+      .from('player')
+      .select('latitude, longitude, postal_code')
+      .eq('id', userId)
+      .maybeSingle(),
     supabase
       .from('player_sport')
       .select('sport_id, is_primary')
@@ -75,6 +82,14 @@ export async function getPlayerShellData(userId: string): Promise<PlayerShellDat
   ];
 
   const hasLocation = player?.latitude != null && player?.longitude != null;
+  const homeLocation =
+    player?.latitude != null && player?.longitude != null
+      ? {
+          latitude: player.latitude,
+          longitude: player.longitude,
+          postalCode: player.postal_code ?? null,
+        }
+      : null;
 
   return {
     firstName: profile?.first_name ?? null,
@@ -83,6 +98,7 @@ export async function getPlayerShellData(userId: string): Promise<PlayerShellDat
     activeSportIds,
     primarySportId,
     hasLocation,
+    homeLocation,
     isOnboardingComplete: Boolean(profile?.first_name) && activeSportIds.length > 0 && hasLocation,
   };
 }
