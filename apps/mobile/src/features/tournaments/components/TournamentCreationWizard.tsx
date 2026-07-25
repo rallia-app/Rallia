@@ -201,6 +201,7 @@ export interface TournamentEditData {
   rules: string | null;
   logoUrl: string | null;
   minRating: number | null;
+  maxRating: number | null;
   visibility: Enums<'tournament_visibility'>;
   startDate: string; // ISO
   endDate: string; // ISO
@@ -824,6 +825,98 @@ const LocationSection: React.FC<{
   );
 };
 
+type RatingOption = {
+  value: number;
+  label: string;
+  skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
+  id: string;
+};
+
+/** One bound of the rating band: the sport's tiers plus a "no bound" card. */
+const RatingBoundPicker: React.FC<{
+  label: string;
+  noneLabel: string;
+  hint: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  options: RatingOption[];
+  colors: ThemeColors;
+  t: (k: TranslationKey) => string;
+}> = ({ label, noneLabel, hint, value, onChange, options, colors, t }) => (
+  <View style={styles.fieldGroup}>
+    <FieldLabel colors={colors}>{label}</FieldLabel>
+    <GestureScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.ratingScrollContent}
+      nestedScrollEnabled
+    >
+      <TouchableOpacity
+        onPress={() => {
+          lightHaptic();
+          onChange(null);
+        }}
+        activeOpacity={0.7}
+        style={[
+          styles.ratingCard,
+          {
+            backgroundColor: value === null ? `${colors.buttonActive}15` : colors.buttonInactive,
+            borderColor: value === null ? colors.buttonActive : colors.border,
+          },
+        ]}
+      >
+        <Text
+          size="sm"
+          weight={value === null ? 'bold' : 'regular'}
+          color={value === null ? colors.buttonActive : colors.text}
+        >
+          {noneLabel}
+        </Text>
+      </TouchableOpacity>
+      {options.map(opt => {
+        const selected = value === opt.value;
+        return (
+          <TouchableOpacity
+            key={opt.id}
+            onPress={() => {
+              lightHaptic();
+              onChange(opt.value);
+            }}
+            activeOpacity={0.7}
+            style={[
+              styles.ratingCard,
+              {
+                backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+                borderColor: selected ? colors.buttonActive : colors.border,
+              },
+            ]}
+          >
+            <Text
+              size="base"
+              weight={selected ? 'bold' : 'semibold'}
+              color={selected ? colors.buttonActive : colors.text}
+            >
+              {opt.label}
+            </Text>
+            {opt.skillLevel && (
+              <Text
+                size="xs"
+                color={selected ? colors.buttonActive : colors.textMuted}
+                style={styles.ratingSkillLevel}
+              >
+                {t(`matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey)}
+              </Text>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </GestureScrollView>
+    <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+      {hint}
+    </Text>
+  </View>
+);
+
 const DetailsStep: React.FC<{
   /** Which form step to render: 1 Basics, 2 Format. */
   step: number;
@@ -831,9 +924,11 @@ const DetailsStep: React.FC<{
   setName: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
-  /** Minimum required level; ratingOptions are the sport's tiers. */
+  /** Rating band bounds (both inclusive, both optional); ratingOptions are the sport's tiers. */
   minRating: number | null;
   setMinRating: (v: number | null) => void;
+  maxRating: number | null;
+  setMaxRating: (v: number | null) => void;
   ratingOptions: {
     value: number;
     label: string;
@@ -877,6 +972,8 @@ const DetailsStep: React.FC<{
   setDescription,
   minRating,
   setMinRating,
+  maxRating,
+  setMaxRating,
   ratingOptions,
   location,
   logoUrl,
@@ -1287,85 +1384,37 @@ const DetailsStep: React.FC<{
           )}
 
           {canEditStructure && ratingOptions.length > 0 && (
-            <View style={styles.fieldGroup}>
-              <FieldLabel colors={colors}>
-                {t('tournamentCreation.fields.minLevel' as TranslationKey)}
-              </FieldLabel>
-              <GestureScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.ratingScrollContent}
-                nestedScrollEnabled
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    lightHaptic();
-                    setMinRating(null);
-                  }}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.ratingCard,
-                    {
-                      backgroundColor:
-                        minRating === null ? `${colors.buttonActive}15` : colors.buttonInactive,
-                      borderColor: minRating === null ? colors.buttonActive : colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    size="sm"
-                    weight={minRating === null ? 'bold' : 'regular'}
-                    color={minRating === null ? colors.buttonActive : colors.text}
-                  >
-                    {t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
-                  </Text>
-                </TouchableOpacity>
-                {ratingOptions.map(opt => {
-                  const selected = minRating === opt.value;
-                  return (
-                    <TouchableOpacity
-                      key={opt.id}
-                      onPress={() => {
-                        lightHaptic();
-                        setMinRating(opt.value);
-                      }}
-                      activeOpacity={0.7}
-                      style={[
-                        styles.ratingCard,
-                        {
-                          backgroundColor: selected
-                            ? `${colors.buttonActive}15`
-                            : colors.buttonInactive,
-                          borderColor: selected ? colors.buttonActive : colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        size="base"
-                        weight={selected ? 'bold' : 'semibold'}
-                        color={selected ? colors.buttonActive : colors.text}
-                      >
-                        {opt.label}
-                      </Text>
-                      {opt.skillLevel && (
-                        <Text
-                          size="xs"
-                          color={selected ? colors.buttonActive : colors.textMuted}
-                          style={styles.ratingSkillLevel}
-                        >
-                          {t(
-                            `matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey
-                          )}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </GestureScrollView>
-              <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-                {t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
-              </Text>
-            </View>
+            <>
+              <RatingBoundPicker
+                label={t('tournamentCreation.fields.minLevel' as TranslationKey)}
+                noneLabel={t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
+                hint={t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
+                value={minRating}
+                // Raising the floor past the ceiling would be an empty band; drop
+                // the ceiling rather than refuse the tap.
+                onChange={v => {
+                  setMinRating(v);
+                  if (v !== null && maxRating !== null && maxRating < v) setMaxRating(null);
+                }}
+                options={ratingOptions}
+                colors={colors}
+                t={t}
+              />
+              <RatingBoundPicker
+                label={t('tournamentCreation.fields.maxLevel' as TranslationKey)}
+                noneLabel={t('tournamentCreation.fields.maxLevelNone' as TranslationKey)}
+                hint={t('tournamentCreation.fields.maxLevelHint' as TranslationKey)}
+                value={maxRating}
+                onChange={setMaxRating}
+                options={
+                  minRating === null
+                    ? ratingOptions
+                    : ratingOptions.filter(o => o.value >= minRating)
+                }
+                colors={colors}
+                t={t}
+              />
+            </>
           )}
         </>
       )}
@@ -1982,6 +2031,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [logoUrl, setLogoUrl] = useState<string | null>(editTournament?.logoUrl ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [minRating, setMinRating] = useState<number | null>(editTournament?.minRating ?? null);
+  const [maxRating, setMaxRating] = useState<number | null>(editTournament?.maxRating ?? null);
   const sportId = editTournament?.sport.id ?? selectedSport?.id;
   const { ratingScores } = useRatingScoresForSport(sportName, sportId, userId);
   const ratingOptions = useMemo(
@@ -2371,6 +2421,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
           if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
           if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
           if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
+          if (maxRating !== (editTournament.maxRating ?? null)) patch.maxRating = maxRating;
         }
         // Fee settings are server-gated to 'draft'. Send the refund trio together
         // so the partial/bps CHECK stays consistent.
@@ -2419,6 +2470,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         rules: rules.trim() || undefined,
         logoUrl: resolvedLogoUrl ?? undefined,
         minRating: minRating ?? undefined,
+        maxRating: maxRating ?? undefined,
         facilityId: locationPayload?.facilityId ?? undefined,
         venueName: locationPayload?.venueName ?? undefined,
         venueAddress: locationPayload?.venueAddress ?? undefined,
@@ -2466,6 +2518,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     rules,
     logoUrl,
     minRating,
+    maxRating,
     bracketSize,
     matchFormat,
     startDate,
@@ -2495,6 +2548,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setRules('');
     setLogoUrl(null);
     setMinRating(null);
+    setMaxRating(null);
     setIsSubmitting(false);
     setLocationMode('city');
     setSelectedFacility(null);
@@ -2528,6 +2582,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       setDescription,
       minRating,
       setMinRating,
+      maxRating,
+      setMaxRating,
       ratingOptions,
       location: {
         colors,
@@ -2573,6 +2629,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       name,
       description,
       minRating,
+      maxRating,
       ratingOptions,
       colors,
       t,

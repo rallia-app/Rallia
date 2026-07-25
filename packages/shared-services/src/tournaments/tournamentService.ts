@@ -95,7 +95,9 @@ export interface CreateTournamentInput {
   description?: string;
   rules?: string;
   logoUrl?: string;
+  /** Rating band. Both bounds are inclusive; either may be omitted. */
   minRating?: number;
+  maxRating?: number;
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   bracketType?: Enums<'bracket_type'>;
@@ -264,6 +266,7 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_rules: input.rules,
     p_logo_url: input.logoUrl,
     p_min_rating: input.minRating,
+    p_max_rating: input.maxRating,
     p_fee: buildFeePayload(input),
     p_venue_address: input.venueAddress,
     p_city: input.city,
@@ -282,7 +285,9 @@ export interface TournamentUpdatePatch {
   description?: string | null;
   rules?: string | null;
   logoUrl?: string | null;
+  // Rating band — server gates both bounds to 'draft' only.
   minRating?: number | null;
+  maxRating?: number | null;
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   registrationOpensAt?: string | null;
@@ -313,6 +318,7 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   rules: 'rules',
   logoUrl: 'logo_url',
   minRating: 'min_rating',
+  maxRating: 'max_rating',
   visibility: 'visibility',
   registrationMode: 'registration_mode',
   registrationOpensAt: 'registration_opens_at',

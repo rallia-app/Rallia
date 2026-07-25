@@ -12135,6 +12135,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_assert_rating_band: {
+        Args: {
+          p_max: number
+          p_min: number
+          p_partner?: boolean
+          p_sport_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       lt_cancel_refund_candidates: {
         Args: never
         Returns: {
@@ -13787,6 +13797,7 @@ export type Database = {
           p_logo_url?: string
           p_match_format?: Database["public"]["Enums"]["match_format"]
           p_max_participants: number
+          p_max_rating?: number
           p_min_rating?: number
           p_name: string
           p_network_id?: string
