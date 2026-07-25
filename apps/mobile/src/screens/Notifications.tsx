@@ -9,7 +9,7 @@ import {
   RefreshControl,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, useMatch, useNotificationsWithActions } from '@rallia/shared-hooks';
@@ -300,6 +300,7 @@ const Notifications: React.FC = () => {
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { selectedSport, setSelectedSport, userSports } = useSport();
   const { isReady: isOnboarded } = useRequireOnboarding();
+  const insets = useSafeAreaInsets();
   const communityNavigation = useCommunityNavigation();
   const appNavigation = useAppNavigation();
   const isDark = theme === 'dark';
@@ -672,10 +673,9 @@ const Notifications: React.FC = () => {
 
   return (
     <>
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
+      {/* Bottom inset lives in the list's contentContainerStyle, not here, so the
+          list scrolls under the home indicator instead of stopping above it. */}
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         {isLoadingAuth || isLoadingNotifications ? (
           <View style={styles.loadingContainer}>
             {[1, 2, 3, 4, 5, 6].map(i => {
@@ -726,6 +726,7 @@ const Notifications: React.FC = () => {
             keyExtractor={item => item.id}
             contentContainerStyle={[
               styles.listContent,
+              { paddingBottom: Math.max(insets.bottom, spacingPixels[5]) },
               sections.length === 0 && styles.emptyListContent,
             ]}
             ListHeaderComponent={sections.length > 0 ? renderHeader : null}
@@ -844,7 +845,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[5],
     flexGrow: 1,
   },
   emptyListContent: {
