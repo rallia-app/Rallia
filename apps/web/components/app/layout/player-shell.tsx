@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+
+import { PlayerActionsModal } from './player-actions-modal';
 import { PlayerBottomNav } from './player-bottom-nav';
 import { PlayerHeader } from './player-header';
 import { PlayerSidebar } from './player-sidebar';
@@ -38,8 +41,10 @@ export function PlayerShell({
   initialSportId,
   chromeless = false,
 }: PlayerShellProps) {
-  // Wired up with the overlay system; for now the action slot is inert.
-  const handleAction = () => {};
+  // The "+" slot in both navs opens the actions list — plain controlled state, the
+  // same { open, onOpenChange } idiom every other dialog in the web app uses.
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const handleAction = () => setActionsOpen(true);
 
   return (
     <QueryProvider>
@@ -65,6 +70,7 @@ export function PlayerShell({
                   </main>
                 </div>
                 <PlayerBottomNav onAction={handleAction} />
+                <PlayerActionsModal open={actionsOpen} onOpenChange={setActionsOpen} />
               </div>
             )}
             <Toaster position="top-center" richColors />
