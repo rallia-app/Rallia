@@ -21,6 +21,26 @@ export type WebJoinResult = {
 };
 
 /**
+ * Installs the service-role client as the shared-services singleton.
+ *
+ * `joinMatch` / `leaveMatch` are the only shared services that still read the
+ * module singleton instead of taking an explicit client the way `checkPlayerBlocked`
+ * and friends do — and so do the fire-and-forget `notifyPlayerJoined` /
+ * `notifyMatchJoinRequest` calls they make internally. There is no client to pass
+ * them, so the singleton has to be set. Do not remove this.
+ *
+ * Safe because it is the only writer of the server-side global: `SharedSupabaseSync`
+ * is browser-guarded, and every other web server consumer of shared-services passes
+ * its client explicitly. Concurrent web-join requests all install an equivalent
+ * service-role client, so there is nothing to clobber.
+ *
+ * The global goes away once the notification factory accepts a client.
+ */
+function installServiceRoleClient(admin: SupabaseClient<Database>): void {
+  setSupabaseInstance(admin);
+}
+
+/**
  * Joins the match, treating an existing participation as success (idempotent).
  * Without this, re-running the web-join flow for someone already in the match
  * throws "You are already in this match" and the UI surfaces it as an error.
@@ -30,7 +50,7 @@ async function resolveJoinStatus(
   matchId: string,
   userId: string
 ): Promise<WebJoinResult['joinStatus']> {
-  setSupabaseInstance(admin);
+  installServiceRoleClient(admin);
   try {
     const joinResult = await joinMatch(matchId, userId);
     return joinResult.participant.status as WebJoinResult['joinStatus'];
@@ -109,6 +129,6 @@ export async function leaveWebJoinMatch(
   userId: string,
   matchId: string
 ): Promise<void> {
-  setSupabaseInstance(admin);
+  installServiceRoleClient(admin);
   await leaveMatch(matchId, userId);
 }
