@@ -43,6 +43,67 @@ export const playerSportsKeys = {
 };
 
 /**
+ * The subset of a sport that selection UI needs. Structurally what both platforms'
+ * sport contexts already build by hand.
+ */
+export interface ActiveSport {
+  id: string;
+  name: string;
+  display_name: string;
+  icon_url?: string | null;
+}
+
+/**
+ * Flattens player_sport rows into the sports a player can actually switch between.
+ *
+ * Keeps a row only when both the membership and the sport itself are active — a
+ * retired sport must not linger in the switcher just because the player once
+ * registered for it. `sport` arrives as an object or a single-element array
+ * depending on how the caller shaped the embed, so both are handled.
+ *
+ * Pure and platform-agnostic on purpose: the mobile SportContext and the web
+ * sport provider both derive their list from this, so the two cannot drift.
+ */
+export function deriveActiveSports(playerSports: PlayerSport[] | null | undefined): {
+  userSports: ActiveSport[];
+  primarySport: ActiveSport | null;
+} {
+  if (!playerSports || playerSports.length === 0) {
+    return { userSports: [], primarySport: null };
+  }
+
+  const userSports: ActiveSport[] = [];
+  let primarySport: ActiveSport | null = null;
+
+  for (const playerSport of playerSports) {
+    const sportData = Array.isArray(playerSport.sport) ? playerSport.sport[0] : playerSport.sport;
+
+    if (
+      !sportData ||
+      typeof sportData !== 'object' ||
+      playerSport.is_active !== true ||
+      sportData.is_active !== true
+    ) {
+      continue;
+    }
+
+    const sport: ActiveSport = {
+      id: sportData.id,
+      name: sportData.name,
+      display_name: sportData.display_name,
+      icon_url: sportData.icon_url,
+    };
+    userSports.push(sport);
+
+    if (playerSport.is_primary) {
+      primarySport = sport;
+    }
+  }
+
+  return { userSports, primarySport };
+}
+
+/**
  * Load guest-selected sports from storage and transform to PlayerSport format.
  * Used as a fallback when an authenticated user has no player_sport records yet.
  */

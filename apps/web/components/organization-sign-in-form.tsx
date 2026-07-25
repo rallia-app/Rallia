@@ -1,25 +1,47 @@
 'use client';
 
+import { useAuth, type OAuthProvider } from '@rallia/shared-hooks';
+import { Loader2 } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { createClient } from '@/lib/supabase/client';
-import { useAuth, type OAuthProvider } from '@rallia/shared-hooks';
-import { Loader2 } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
-import { useLocale, useTranslations } from 'next-intl';
-import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
 
 type AuthState = 'initial' | 'email-sent' | 'loading' | 'error';
 
 export function OrganizationSignInForm({
   initialError,
   initialEmail,
+  successPath = '/sign-in/post-auth',
+  next,
+  title,
+  description,
 }: {
   initialError?: string;
   initialEmail?: string;
+  /**
+   * Heading copy. Defaults to the organization wording; the player app passes the
+   * `auth.*` strings mobile's sign-in already uses so the two read the same.
+   */
+  title?: string;
+  description?: string;
+  /**
+   * Where to land after OTP verification. Defaults to the org post-auth handler, which
+   * provisions organization_member from an invitation token. The player app has no such
+   * step and points straight at /app.
+   */
+  successPath?: string;
+  /**
+   * Forwarded to /api/auth/callback for the OAuth round trip, which resolves it to a
+   * same-origin path before redirecting.
+   */
+  next?: string;
 }) {
   const t = useTranslations('signIn');
   const locale = useLocale();
@@ -50,6 +72,9 @@ export function OrganizationSignInForm({
     if (token) {
       callbackUrl.searchParams.set('invitation_token', token);
     }
+    if (next) {
+      callbackUrl.searchParams.set('next', next);
+    }
 
     const result = await signInWithProvider(provider, {
       redirectTo: callbackUrl.toString(),
@@ -74,6 +99,11 @@ export function OrganizationSignInForm({
       const callbackUrl = new URL('/api/auth/callback', window.location.origin);
       if (token) {
         callbackUrl.searchParams.set('invitation_token', token);
+      }
+      // Covers the case where the player clicks the emailed link instead of typing the
+      // code; the in-tab OTP path lands via successPath below.
+      if (next) {
+        callbackUrl.searchParams.set('next', next);
       }
 
       const result = await signInWithEmail(email, {
@@ -103,7 +133,7 @@ export function OrganizationSignInForm({
         setAuthState('email-sent');
       } else {
         // Success - redirect to post-auth with token if present
-        router.push(`/sign-in/post-auth${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+        router.push(`${successPath}${token ? `?token=${encodeURIComponent(token)}` : ''}`);
         router.refresh();
       }
     }
@@ -117,8 +147,8 @@ export function OrganizationSignInForm({
   return (
     <Card className="w-full max-w-md border-[var(--secondary-200)] dark:border-[var(--secondary-800)]">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{t('title')}</CardTitle>
-        <CardDescription className="text-base">{t('description')}</CardDescription>
+        <CardTitle className="text-2xl">{title ?? t('title')}</CardTitle>
+        <CardDescription className="text-base">{description ?? t('description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {errorMessage && (
