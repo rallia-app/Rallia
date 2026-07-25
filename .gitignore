@@ -86,6 +86,9 @@ Pods/
 !default.xcworkspace
 *.xcuserdata
 
+# Supabase edge functions: v5 lockfiles block deploys, keep them out
+supabase/functions/**/deno.lock
+
 # Logs
 logs
 *.log
