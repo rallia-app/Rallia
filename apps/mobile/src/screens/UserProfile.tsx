@@ -53,6 +53,7 @@ import {
   useTranslation,
   useTourSequence,
   useSportSetup,
+  useScrollBottomInset,
   type TranslationKey,
 } from '#/hooks';
 import { useActionsSheet, useSport } from '#/context';
@@ -89,6 +90,7 @@ const UserProfile = () => {
   const navigation = useAppNavigation();
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const bottomInset = useScrollBottomInset();
   const toast = useToast();
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const {
@@ -636,14 +638,14 @@ const UserProfile = () => {
     return handMap[hand] || hand;
   };
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
@@ -1434,9 +1436,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacingPixels[10],
   },
   headerTitle: {
     fontSize: fontSizePixels.lg,

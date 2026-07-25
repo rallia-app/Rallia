@@ -43,7 +43,7 @@ import {
   TournamentCardSkeleton,
   useTournamentListColors,
 } from '../features/tournaments/components/TournamentListScaffold';
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
 import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
@@ -162,6 +162,7 @@ export const MyTournaments: React.FC = () => {
   const { selectedSport } = useSport();
   const { session } = useAuth();
   const colors = useTournamentListColors();
+  const bottomInset = useScrollBottomInset();
   const isDark = theme === 'dark';
   const userId = session?.user?.id;
 
@@ -312,11 +313,10 @@ export const MyTournaments: React.FC = () => {
 
   const options = activeTab === 'upcoming' ? UPCOMING_OPTIONS : PAST_OPTIONS;
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {renderTab('upcoming', 'calendar-outline', t('playerMatches.tabs.upcoming'))}
         {renderTab('past', 'time-outline', t('playerMatches.tabs.past'))}
@@ -361,6 +361,7 @@ export const MyTournaments: React.FC = () => {
           )}
           contentContainerStyle={[
             styles.listContent,
+            { paddingBottom: bottomInset },
             visibleTournaments.length === 0 && styles.emptyListContent,
           ]}
           ListEmptyComponent={renderEmptyState}
@@ -436,7 +437,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
     flexGrow: 1,
   },
   emptyListContent: {

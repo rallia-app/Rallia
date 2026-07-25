@@ -32,7 +32,7 @@ import {
   type TournamentRankingEntry,
 } from '@rallia/shared-hooks';
 
-import { useTranslation, useThemeStyles } from '../hooks';
+import { useTranslation, useThemeStyles, useScrollBottomInset } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
 import { lightHaptic } from '#/utils/haptics';
@@ -105,6 +105,7 @@ const FilterChip: React.FC<{
 export const TournamentRanking: React.FC = () => {
   const { t } = useTranslation();
   const { colors, isDark } = useThemeStyles();
+  const bottomInset = useScrollBottomInset();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const userId = session?.user?.id;
@@ -265,7 +266,9 @@ export const TournamentRanking: React.FC = () => {
   return (
     <FlatList
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.listContent}
+      // Bottom inset lives here, not on the Classements wrapper, so the list
+      // scrolls under the home indicator instead of stopping above it.
+      contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset }]}
       data={items}
       keyExtractor={e => e.userId}
       renderItem={({ item }) => (
@@ -309,7 +312,6 @@ export const TournamentRanking: React.FC = () => {
 const styles = StyleSheet.create({
   listContent: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
     flexGrow: 1,
   },
   header: {

@@ -29,7 +29,7 @@ import {
   type SportLeaderboardEntry,
 } from '@rallia/shared-hooks';
 
-import { useTranslation, useThemeStyles } from '../hooks';
+import { useTranslation, useThemeStyles, useScrollBottomInset } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
 
@@ -65,6 +65,7 @@ function RankBadge({
 export const MonthlyChallengeBoard: React.FC = () => {
   const { t, locale } = useTranslation();
   const { colors, isDark } = useThemeStyles();
+  const bottomInset = useScrollBottomInset();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const userId = session?.user?.id;
@@ -206,11 +207,13 @@ export const MonthlyChallengeBoard: React.FC = () => {
     );
   }
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
         style={{ backgroundColor: colors.background }}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset }]}
         data={items}
         keyExtractor={e => e.playerId}
         renderItem={renderItem}
@@ -247,7 +250,6 @@ export const MonthlyChallengeBoard: React.FC = () => {
 const styles = StyleSheet.create({
   listContent: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
   },
   header: {
     gap: spacingPixels[1],

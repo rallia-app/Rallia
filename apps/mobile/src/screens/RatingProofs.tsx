@@ -23,7 +23,7 @@ import { spacingPixels, radiusPixels, fontSizePixels, status } from '@rallia/des
 
 import { useVideoThumbnail } from '#/hooks/useVideoThumbnail';
 import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
-import { useThemeStyles, useTranslation } from '#/hooks';
+import { useThemeStyles, useTranslation, useScrollBottomInset } from '#/hooks';
 import { resolveStorageUrl, isPrivateBucketUrl } from '#/services/imageUpload';
 import RatingBadge from '#/components/RatingBadge';
 import ProofViewer from '#/features/ratings/components/ProofViewer';
@@ -126,6 +126,7 @@ const RatingProofs: React.FC = () => {
   const { playerRatingScoreId, ratingValue, isOwnProfile, openSheet } = route.params;
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const bottomInset = useScrollBottomInset();
   const toast = useToast();
   const { refetch: refetchCompleteness } = useProfileCompleteness();
 
@@ -518,11 +519,10 @@ const RatingProofs: React.FC = () => {
     </View>
   );
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContent}>
@@ -596,7 +596,7 @@ const RatingProofs: React.FC = () => {
           data={proofs}
           renderItem={renderProofCard}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset }]}
           ListHeaderComponent={
             isOwnProfile ? (
               <View
@@ -666,7 +666,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacingPixels[5],
     paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[5],
     flexGrow: 1,
   },
   proofCard: {

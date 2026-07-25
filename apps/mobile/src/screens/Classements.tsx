@@ -59,8 +59,9 @@ export const Classements: React.FC = () => {
     );
   };
 
+  // Each tab's list carries its own bottom inset, so the wrapper takes none.
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         {renderTab('challenge', 'calendar-outline', t('classements.tabs.challenge'))}
         {renderTab('ranking', 'trophy-outline', t('classements.tabs.ranking'))}

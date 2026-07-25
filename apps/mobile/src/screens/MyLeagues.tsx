@@ -15,7 +15,7 @@ import type { LeagueListItem } from '@rallia/shared-services';
 
 import { LeagueCard, LeagueCardSkeleton } from '../features/leagues/components/LeagueListScaffold';
 import { useTournamentListColors } from '../features/tournaments/components/TournamentListScaffold';
-import { useTranslation } from '../hooks';
+import { useTranslation, useScrollBottomInset } from '../hooks';
 import { useSport } from '../context';
 import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
@@ -26,6 +26,7 @@ export const MyLeagues: React.FC = () => {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const colors = useTournamentListColors();
+  const bottomInset = useScrollBottomInset();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const {
@@ -60,11 +61,10 @@ export const MyLeagues: React.FC = () => {
     </View>
   );
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {isInitialLoad && isLoading ? (
         <View style={styles.loadingContainer}>
           {[1, 2, 3, 4, 5].map(i => (
@@ -86,6 +86,7 @@ export const MyLeagues: React.FC = () => {
           )}
           contentContainerStyle={[
             styles.listContent,
+            { paddingBottom: bottomInset },
             leagues.length === 0 && styles.emptyListContent,
           ]}
           ListEmptyComponent={empty}
@@ -117,7 +118,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: spacingPixels[5],
-    paddingBottom: spacingPixels[5],
     flexGrow: 1,
   },
   emptyListContent: {

@@ -36,7 +36,12 @@ import {
 } from '@rallia/design-system';
 import { SheetManager } from 'react-native-actions-sheet';
 
-import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '#/hooks';
+import {
+  useThemeStyles,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  useScrollBottomInset,
+} from '#/hooks';
 import { CertificationBadge } from '#/features/ratings/components';
 
 interface ReferenceRequest {
@@ -66,6 +71,7 @@ interface ReferenceRequest {
 const IncomingReferenceRequests: React.FC = () => {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const bottomInset = useScrollBottomInset();
 
   const [requests, setRequests] = useState<ReferenceRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -355,11 +361,10 @@ const IncomingReferenceRequests: React.FC = () => {
     );
   }
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Header info */}
       <View style={[styles.headerInfo, { backgroundColor: colors.card }]}>
         <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
@@ -374,6 +379,7 @@ const IncomingReferenceRequests: React.FC = () => {
         renderItem={renderRequestCard}
         contentContainerStyle={[
           styles.listContent,
+          { paddingBottom: bottomInset },
           requests.length === 0 && styles.emptyListContent,
         ]}
         ListEmptyComponent={renderEmptyState}
@@ -421,7 +427,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     gap: spacingPixels[3],
   },
   emptyListContent: {

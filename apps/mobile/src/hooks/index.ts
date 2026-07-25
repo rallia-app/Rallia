@@ -18,6 +18,7 @@ export * from './useDeviceContacts';
 export * from './useSuggestionInviteHandler';
 export * from './useImpressionTracker';
 export * from './useActiveConversation';
+export * from './useScrollBottomInset';
 
 // Group chat hooks
 export * from './groupChat';

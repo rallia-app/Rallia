@@ -71,6 +71,7 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
+  useScrollBottomInset,
 } from '#/hooks';
 import { useSport, useMatchDetailSheet, type MatchDetailData } from '#/context';
 import { getJoinErrorToastMessage } from '#/utils/joinErrorToast';
@@ -144,6 +145,7 @@ export default function CommunityDetailScreen() {
   const { player } = usePlayer();
 
   const insets = useSafeAreaInsets();
+  const bottomInset = useScrollBottomInset();
 
   // Get all sport IDs and names for facility search when community has no specific sport
   const { allSportIds, sportNames } = useMemo(() => {
@@ -667,11 +669,8 @@ export default function CommunityDetailScreen() {
   // Non-member view: Show community info with Request to Join option
   if (!isLoadingAccess && !canAccessCommunity && !isActiveMember) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        <ScrollView contentContainerStyle={{ paddingBottom: bottomInset }}>
           {/* Header with back button */}
           <View style={styles.nonMemberHeader}>
             <TouchableOpacity
@@ -968,13 +967,13 @@ export default function CommunityDetailScreen() {
     );
   }
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it. This also stops the floating chat button double-counting it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         refreshControl={
           <RefreshControl
             refreshing={false}
@@ -1499,9 +1498,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 20,
   },
   infoCard: {
     marginHorizontal: 16,

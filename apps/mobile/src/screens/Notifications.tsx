@@ -9,7 +9,7 @@ import {
   RefreshControl,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, useMatch, useNotificationsWithActions } from '@rallia/shared-hooks';
@@ -36,7 +36,7 @@ import {
   neutral,
 } from '@rallia/design-system';
 
-import { useAuth, useRequireOnboarding } from '#/hooks';
+import { useAuth, useRequireOnboarding, useScrollBottomInset } from '#/hooks';
 import { useTranslation, type TranslationOptions } from '#/hooks/useTranslation';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
 import { useCommunityNavigation, useAppNavigation } from '#/navigation/hooks';
@@ -300,7 +300,7 @@ const Notifications: React.FC = () => {
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { selectedSport, setSelectedSport, userSports } = useSport();
   const { isReady: isOnboarded } = useRequireOnboarding();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useScrollBottomInset();
   const communityNavigation = useCommunityNavigation();
   const appNavigation = useAppNavigation();
   const isDark = theme === 'dark';
@@ -671,10 +671,10 @@ const Notifications: React.FC = () => {
     );
   }
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
     <>
-      {/* Bottom inset lives in the list's contentContainerStyle, not here, so the
-          list scrolls under the home indicator instead of stopping above it. */}
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         {isLoadingAuth || isLoadingNotifications ? (
           <View style={styles.loadingContainer}>
@@ -726,7 +726,7 @@ const Notifications: React.FC = () => {
             keyExtractor={item => item.id}
             contentContainerStyle={[
               styles.listContent,
-              { paddingBottom: Math.max(insets.bottom, spacingPixels[5]) },
+              { paddingBottom: bottomInset },
               sections.length === 0 && styles.emptyListContent,
             ]}
             ListHeaderComponent={sections.length > 0 ? renderHeader : null}

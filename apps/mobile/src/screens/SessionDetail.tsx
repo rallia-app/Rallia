@@ -58,7 +58,7 @@ import type {
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -83,6 +83,7 @@ const PRESENCE_GROUPS: ReadonlyArray<{ status: PresenceStatus; key: string }> = 
 export const SessionDetail: React.FC = () => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
+  const bottomInset = useScrollBottomInset();
   const toast = useToast();
   const { session: authSession } = useAuth();
   const userId = authSession?.user?.id;
@@ -408,9 +409,15 @@ export const SessionDetail: React.FC = () => {
   };
   const badge = statusBadge(sess.status);
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it.
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
@@ -884,7 +891,7 @@ export const SessionDetail: React.FC = () => {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacingPixels[4], paddingBottom: spacingPixels[8], gap: spacingPixels[4] },
+  content: { padding: spacingPixels[4], gap: spacingPixels[4] },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacingPixels[6] },
   centeredText: { marginTop: spacingPixels[3], textAlign: 'center' },
   retryButton: {

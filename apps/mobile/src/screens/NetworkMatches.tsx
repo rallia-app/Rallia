@@ -30,7 +30,7 @@ import {
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger } from '@rallia/shared-services';
 
-import { useThemeStyles, useTranslation, useAuth } from '#/hooks';
+import { useThemeStyles, useTranslation, useAuth, useScrollBottomInset } from '#/hooks';
 import { useMatchDetailSheet, useSport } from '#/context';
 import { SportIcon } from '#/components/SportIcon';
 import type { RootStackParamList } from '#/navigation/types';
@@ -102,6 +102,7 @@ export default function NetworkMatchesScreen() {
 
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const bottomInset = useScrollBottomInset();
   const { session } = useAuth();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { selectedSport } = useSport();
@@ -238,10 +239,12 @@ export default function NetworkMatchesScreen() {
     );
   }, [isLoading, hasActiveFilters, colors, t, networkType]);
 
+  // Headerless screen, so the top inset stays on the wrapper. The bottom one
+  // goes in the list's contentContainerStyle so it scrolls to the screen edge.
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
+      edges={['top']}
     >
       {/* Header - green background like CommunityDetail/GroupDetail */}
       <View style={[styles.header, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
@@ -435,6 +438,7 @@ export default function NetworkMatchesScreen() {
           ListEmptyComponent={renderEmptyComponent}
           contentContainerStyle={[
             styles.listContent,
+            { paddingBottom: bottomInset },
             (!filteredMatches || filteredMatches.length === 0) && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
@@ -519,7 +523,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
-    paddingBottom: spacingPixels[6],
   },
   emptyListContent: {
     justifyContent: 'center',

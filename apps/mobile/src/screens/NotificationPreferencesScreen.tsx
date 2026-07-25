@@ -45,7 +45,7 @@ import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import * as Analytics from '#/services/analytics';
-import { useAuth, useTranslation } from '#/hooks';
+import { useAuth, useTranslation, useScrollBottomInset } from '#/hooks';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -456,6 +456,7 @@ const NotificationPreferencesScreen: React.FC = () => {
   const { t } = useTranslation();
   const isDark = theme === 'dark';
   const colors = useColors();
+  const bottomInset = useScrollBottomInset();
 
   const userId = session?.user?.id;
 
@@ -551,14 +552,14 @@ const NotificationPreferencesScreen: React.FC = () => {
     );
   }
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it. The loading and signed-out states above stay wrapper-padded.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Description */}
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: spacingPixels[4],
+    paddingTop: spacingPixels[4],
   },
   descriptionContainer: {
     paddingHorizontal: spacingPixels[5],

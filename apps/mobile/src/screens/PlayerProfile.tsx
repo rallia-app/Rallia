@@ -51,7 +51,7 @@ import {
   status,
 } from '@rallia/design-system';
 
-import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useThemeStyles, useTranslation, useScrollBottomInset, type TranslationKey } from '#/hooks';
 import { useSport, useUserHomeLocation } from '#/context';
 import { SportIcon } from '#/components/SportIcon';
 import {
@@ -342,6 +342,7 @@ const PlayerProfile = () => {
   const navigation = useNavigation<NavigationProp>();
   const { playerId, sportId } = route.params;
   const { colors, isDark } = useThemeStyles();
+  const bottomInset = useScrollBottomInset();
 
   // Skeleton loading colors
   const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
@@ -1659,15 +1660,17 @@ const PlayerProfile = () => {
     }
   }, []);
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it.
+  const scrollContent = { paddingBottom: bottomInset };
+
   if (loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Profile Header Skeleton */}
@@ -1924,13 +1927,10 @@ const PlayerProfile = () => {
     t('common.player');
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={scrollContent}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
       >
@@ -2808,9 +2808,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacingPixels[10],
   },
   profileHeader: {
     marginTop: spacingPixels[4],

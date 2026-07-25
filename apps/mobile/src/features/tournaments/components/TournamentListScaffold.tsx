@@ -36,7 +36,7 @@ import { useTheme } from '@rallia/shared-hooks';
 import type { TournamentListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import { useTranslation, type TranslationKey } from '../../../hooks';
+import { useTranslation, useScrollBottomInset, type TranslationKey } from '../../../hooks';
 import { TournamentBanner, TOURNAMENT_BANNER_ASPECT } from './TournamentBanner';
 
 type Status = Enums<'tournament_status'>;
@@ -518,6 +518,7 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
 }) => {
   const { t, locale } = useTranslation();
   const colors = useTournamentListColors();
+  const bottomInset = useScrollBottomInset();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -582,13 +583,16 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
     );
   }
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={data}
         keyExtractor={item => item.key}
         contentContainerStyle={[
           styles.listContent,
+          { paddingBottom: bottomInset },
           data.length === 0 && !isLoading && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
@@ -645,7 +649,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
     flexGrow: 1,
   },
   emptyListContent: {
