@@ -9,11 +9,10 @@ identifiers (tables, RPCs, i18n keys) keep the `tournament_ranking` naming.
 
 Status: draft · Owner: Mathis / cofounder · Last updated: 2026-07-26 (rev 5, rolling 52-week window)
 
-> **Pricing in §4 and §5 is superseded.** The tier ladder and base curve below
-> describe the July-14 design. Live pricing (continuous level multiplier, the
-> 0.2 snap, flat participation, round-of-N rungs) is documented in
-> [`docs/circuit-rallia-points.md`](../../docs/circuit-rallia-points.md), which
-> is the source of truth. Everything else here tracks the live system.
+> Pricing (§4, §5) tracks the live system as of 2026-07-26. Per-sport level
+> ladders and the reasoning behind the curve shapes live in
+> [`docs/circuit-rallia-points.md`](../../docs/circuit-rallia-points.md);
+> this spec states the formulas and where they are stamped.
 
 A points-based ranking layered on top of tournaments. Players earn **Points
 Rallia** by entering and advancing in tournaments; points accumulate over a
@@ -30,25 +29,29 @@ other result, so the rolling window covers it with no extra machinery.
 
 ## 1. Decisions (validated 2026-07-14)
 
-| Topic                   | Decision                                                                                                                                                                                                                                                                            |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Time window             | **Rolling 52 weeks**, no reset (revised 2026-07-26, was seasons that reset 2×/year). Seasons survive as a browsable **archive** on the same Apr 1 / Oct 1 calendar.                                                                                                                 |
-| Participation weighting | **Balanced** — a modest floor for showing up, bulk of points at finalist/champion                                                                                                                                                                                                   |
-| Boards                  | **One common board per sport** (all levels together) → 2 boards. The tier weighting sorts ability; strong players top the board by winning large, high-strength tournaments. Level is snapshotted per result to power an optional "filter to my level" view — not a separate board. |
-| Tier (point weight)     | **Computed**, not organizer-set. Now draw size × the tournament's `min_rating` level multiplier (see `docs/circuit-rallia-points.md`); §4's field-strength formula is superseded.                                                                                                   |
+| Topic                   | Decision                                                                                                                                                                                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Time window             | **Rolling 52 weeks**, no reset (revised 2026-07-26, was seasons that reset 2×/year). Seasons survive as a browsable **archive** on the same Apr 1 / Oct 1 calendar.                                                                                              |
+| Participation weighting | **Balanced** — a modest floor for showing up, bulk of points at finalist/champion                                                                                                                                                                                |
+| Boards                  | **One common board per sport** (all levels together) → 2 boards. The point weighting sorts ability; strong players top the board by winning large, high-category tournaments. An optional "filter to my level" view narrows the board without splitting it (§6). |
+| Tier (point weight)     | **Computed**, not organizer-set. Now draw size × the tournament's `min_rating` level multiplier (see `docs/circuit-rallia-points.md`); §4's field-strength formula is superseded.                                                                                |
 
 Defaults chosen while specifying (flagged for confirmation in §10):
 
 - **(C)** The DB `skill_level` enum has 4 values; `professional` folds into
   **advanced** (used only for the optional level filter).
-- **(D)** Placement tiers that earn distinct points: Champion / Finalist /
-  Semifinal / Quarterfinal / Participated (everything earlier is flat).
-- **(E)** Concrete tier and points numbers proposed in §4 and §5 — tunable.
+- **(D)** Placements that earn distinct points: Champion / Finalist / Semifinal /
+  Quarterfinal / R16 / R32 / R64 / Participated. (Rungs below the quarterfinal
+  were added 2026-07-17; the original design stopped at Quarterfinal.)
+- **(E)** Concrete multiplier and points numbers in §4 and §5 — tunable, and
+  substantially retuned 2026-07-16 → 07-20.
 - **(F)** Anti-farming: only a player's **best 8 results** in the rolling
   window count toward their board total (§5); tournaments with **fewer than 8
-  entries award participation points only** (§4) — confirmed 2026-07-14. This aligns exactly
-  with the tier cutoffs: `local` (n < 8) is participation-only by definition;
-  placement points exist only at `regional`/`vedette`.
+  entries award participation points only** (§4) — confirmed 2026-07-14.
+  **The `n < 8` half was removed 2026-07-16** with the tier system: the draw
+  curve prices small draws down continuously instead, and the zero-win floor (G)
+  covers the case it was really guarding (an 8-entry bracket has no round below
+  the quarterfinal). The best-8 cap survives.
 - **(G)** **Zero-win floor** — confirmed 2026-07-14: losing your first **real**
   (non-BYE) match pays `participated` regardless of exit round; any placement
   above participation requires **at least one real win**. Without this, an
@@ -142,7 +145,7 @@ registration, each partner receiving **full** (not split) points.
 | `sport_id`        | uuid → sport                    |                                                                                                                                            |
 | `level_bucket`    | text nullable                   | `beginner`\|`intermediate`\|`advanced` — snapshot kept for history/analytics; **no longer drives the level filter** (§6); NULL for unrated |
 | `placement`       | text                            | `champion`\|`finalist`\|`semifinal`\|`quarterfinal`\|`round_of_16`\|`round_of_32`\|`round_of_64`\|`participated`                           |
-| `tier`            | text                            | `local`\|`regional`\|`vedette` — snapshot; superseded as a price input, kept for history                                                   |
+| ~~`tier`~~        | —                               | **dropped** in `20260716230100` when the tier system was replaced (§4)                                                                     |
 | `multiplier`      | numeric(5,3)                    | the event's stamped multiplier, copied onto the row                                                                                        |
 | `points`          | int                             | final awarded points                                                                                                                       |
 | `computed_at`     | timestamptz                     | when the award **ran** — moves on every recompute, never a window input                                                                    |
@@ -228,11 +231,10 @@ BYE / walkover reality check (verified against the code — the enum's
   "win" counts as a real win for the zero-win floor; acceptable, the opponent
   genuinely advanced.)
 
-Small brackets and sparse brackets no longer over-pay: the `n < 8`
-participation-only floor (§4) covers tiny fields, and the zero-win floor (G)
-covers the `n = 8–15` gap (an 8-entry bracket has no round below the
-quarterfinal, and sparse brackets hand out BYEs into deep rounds). See also
-best-8 in §5.
+Small brackets and sparse brackets no longer over-pay: the draw multiplier (§4)
+prices tiny fields down, and the zero-win floor (G) covers the `n = 8–15` gap (an
+8-entry bracket has no round below the quarterfinal, and sparse brackets hand out
+BYEs into deep rounds). See also best-8 in §5.
 
 ### Double elimination — explicit guard, not silent mis-computation
 
@@ -249,68 +251,113 @@ must use the **same** predicate or the tournament never completes/awards.
 
 ---
 
-## 4. Tier (computed point weight)
+## 4. Point weight (the multiplier)
 
-Computed once at completion from the **active field** — defined as the
-**distinct registrations appearing in the bracket** (`tournament_matches`
-slots), not as a count of `registered` rows. Today the two are identical
-because the roster locks at generation (`tournament_withdraw` is
-registration-open-only, organizer removal is pre-bracket), but bracket-derived
-stays correct if any future flow flips a registration after generation.
-(Registration enum for reference: `registered / pending / waitlisted /
-withdrawn / disqualified` — no `confirmed` value; `pending`/`waitlisted` never
-entered the bracket, `withdrawn`/`disqualified` are handled in §7.)
+**Superseded 2026-07-16.** The original design computed a three-step tier
+(`local` / `regional` / `vedette`) from field size **and field strength** (the
+average `skill_level` of entrants, with a ≥ 50 %-rated guard). That is gone:
+`tournament_ranking_points.tier` was dropped in `20260716230100`, along with the
+strength average and the `n < 8` participation-only floor. Two continuous curves
+replaced it.
 
-- **Field size** `n` = count of distinct bracket entries (entries, not
-  players — a doubles team is one entry).
-- **Field strength** `s` = average `skill_level` ordinal of the entrants'
-  players (beginner 1 … professional 4), resolved via
-  `player_sport.active_rating_score_id → rating_score.skill_level` for the
-  tournament's sport. Doubles: both partners count as players here. Using the
-  ordinal (not raw rating) is rating-system-agnostic — NTRP/UTR/self and DUPR
-  all compare on the same 1–4 scale. Unrated players are excluded from the
-  average; if **no** player is rated, `s` is NULL and only size-based tiers
-  apply.
+```
+multiplier = lt_snap_ranking_multiplier( draw_mult(n) × level_mult(min_rating) )
+```
 
-Proposed cutoffs (tunable):
+**Draw multiplier** — `lt_draw_multiplier(n)` = `greatest(0.25, 0.5 × (log₂(max(n,1)) − 1))`,
+where `n` is the count of **real (non-BYE) entries in the main bracket** (entries,
+not players: a doubles team is one entry). Smooth, no cliffs:
 
-| Tier       | Multiplier | Condition                                                  |
-| ---------- | ---------- | ---------------------------------------------------------- |
-| `vedette`  | ×2.0       | `n ≥ 16` **and** `s ≥ 2.5` **and** ≥ 50 % of players rated |
-| `regional` | ×1.0       | `n ≥ 8` (any strength)                                     |
-| `local`    | ×0.5       | everything smaller                                         |
+| Draw | 4   | 8   | 16  | 32  | 64  | 128 |
+| ---- | --- | --- | --- | --- | --- | --- |
+| ×    | 0.5 | 1.0 | 1.5 | 2.0 | 2.5 | 3.0 |
 
-The ≥ 50 %-rated requirement stops a vedette from being manufactured by
-padding a field with unrated accounts around two rated players.
+**Level multiplier** — `lt_min_rating_level_multiplier(sport, min_rating)`, driven
+by the tournament's **rating floor** rather than by who happened to enter. ×1.0 at
+the scale's first `intermediate` rung, ×5 per full rating point above it
+(√5 ≈ ×2.24 per half-point rung), capped at ×16; below the anchor it descends
+geometrically to ×0.2 at the bottom rung. It is computed from the floor's **rank
+within the sport's rating scale**, so there are no per-sport constants and it
+works for any rating system. No floor → ×1.0. Per-sport ladders are tabulated in
+[`docs/circuit-rallia-points.md`](../../docs/circuit-rallia-points.md).
 
-**Minimum field:** if `n < 8`, every entrant earns **participation points
-only** regardless of placement — a 2-person "tournament" is a game, not a
-tournament, and small brackets hand out semifinal+ labels by construction.
-Note the alignment: this threshold equals the `regional` cutoff, so `local`
-tier is participation-only by definition (10 pts: 20 × 0.5) and placement
-points only ever exist at `regional`/`vedette`.
+**The snap** — `lt_snap_ranking_multiplier(m)` = `greatest(0.2, round(m × 5) / 5)`
+rounds the **combined** multiplier to the 0.2 grid, so a champion's points always
+land on a multiple of 100 (base 500 × a 0.2-step multiplier). Snapping the
+product, never the display, is what keeps the card and the ledger identical.
+Step 0.2 rather than 0.5 because 0.5 re-collapses adjacent floors on small draws.
+Adjacent floors may **tie** on small draws (acceptable); they must never invert.
+Side effect: exact-half products round **away**, so a 4-draw with no floor stamps
+×0.6, not ×0.5.
+
+Why the floor and not the field: a floor is announced before anyone registers, so
+it cannot be manufactured after the fact by padding a field with unrated accounts
+(the old ≥ 50 %-rated guard exists to stop exactly that, and is unnecessary once
+the input is the floor). `tournament_register` hard-rejects entrants below
+`min_rating`, so entering up is impossible and entering down now pays far less
+than your own category.
+
+### Where the number is stamped
+
+- **At create / on edit of `max_participants`, `min_rating`, `sport_id`** —
+  `tournaments_set_ranking_ceiling` (BEFORE trigger) writes
+  `ranking_points_ceiling = round(500 × snap(draw_mult(max_participants) × level_mult(min_rating)))`.
+  This is the **"up to N pts"** on the card: the champion's points at full
+  capacity. It is a ceiling, not a promise — capacity is not turnout.
+- **At bracket generation** (the flip to `in_progress`) —
+  `tournaments_stamp_ranking` freezes `ranking_draw_size` (real entries) and
+  `ranking_multiplier` (the snapped product). **The stamp is the price:** the
+  award reads it back rather than recomputing, so the card and the ledger cannot
+  drift. The award self-heals a NULL stamp for events whose bracket predates the
+  trigger.
+
+**Known gap:** because the real multiplier follows turnout while the advertised
+ceiling follows capacity, an underfilled event pays less than its card implied,
+and the players who did show up absorb it. Discussed 2026-07-26; the fix under
+consideration is an admin-settable `greatest(floor, computed)` on events Rallia
+runs. **Not built.**
 
 ---
 
 ## 5. Points formula
 
-`points = round( base[placement] × tier_multiplier )`
+```
+points      = round( base[placement] × multiplier / 10 ) × 10   -- win rungs
+participation = 10                                              -- flat, never multiplied
+```
 
-Base curve at ×1.0 (balanced — participation is a real floor, and champions
-earn 25× a first-loss exit; the zero-win floor (G) is what makes that ratio
-hold at **every** field size, since a first-real-match loss always pays 20):
+| Placement    | Base      |
+| ------------ | --------- |
+| Champion     | 500       |
+| Finalist     | 300       |
+| Semifinal    | 180       |
+| Quarterfinal | 90        |
+| Round of 16  | 50        |
+| Round of 32  | 30        |
+| Round of 64  | 25        |
+| Participated | 10 (flat) |
 
-| Placement    | Base |
-| ------------ | ---- |
-| Champion     | 500  |
-| Finalist     | 300  |
-| Semifinal    | 180  |
-| Quarterfinal | 90   |
-| Participated | 20   |
+**Round-of-N rungs** were added 2026-07-17: grading only down to the quarterfinal
+meant that in a 32 draw, winning your first match paid the same as losing it. The
+ATP grades every round. The zero-win floor (G) is what stops the new rungs from
+being farmed via byes in sparse brackets.
 
-Worked example — a `vedette` (×2.0) tournament: champion 1000, finalist 600,
-semifinal 360, quarterfinal 180, participated 40. (These are the numbers in the
-one-pager's "Vedette" column.)
+**Participation is flat 10 and is never multiplied.** Showing up is the same act
+in every category, so it does not scale with the field. It also bounds pure
+attendance: eight show-ups cap at 80, negligible against any title. It was 20
+until 2026-07-20, lowered because a Débutant R16 exit paid exactly 20, which made
+winning two games tie with losing your first.
+
+**Dime rounding** keeps awarded points off floating residue: the bases 180 / 90 /
+25 are not multiples of 50, so a snapped multiplier still produced values like
+468 or 234. Neutral at ×1.0.
+
+Worked example — tennis, 32 real entries, `min_rating` 4.0: draw ×2.0 × level
+×5.0 = ×10.0, snapped ×10.0 → champion **5000**, finalist 3000, semifinal 1800,
+quarterfinal 900, R16 500, R32 300, participation 10.
+
+Historical ledger rows are **not** re-priced when the curve changes; re-pricing
+history is an unmade product decision.
 
 **Best-8 rule (ATP-style):** a player's board total = the sum of their **8
 highest-point results inside the rolling window**. Every result stays in the
@@ -432,7 +479,8 @@ stateDiagram-v2
 2. Resolve the season from `completed_at`; **raise** if no season row covers it.
    Stamp `earned_at = completed_at` on every row written (§2) — this is what the
    rolling window reads.
-3. Compute tier (§4) from the bracket entries; apply the `n < 8` floor.
+3. Read the multiplier stamp (§4) rather than recomputing it; self-heal it from
+   the bracket if the event predates the stamping trigger.
 4. For each **entry appearing in the bracket** (skip phantom slots): compute
    placement (§3, incl. the zero-win floor), then write **one ledger row per
    player** (two for doubles, full points each) with level bucket (§6) and
@@ -451,7 +499,7 @@ existing RPCs.
 Trigger: called at the end of the bracket-bridge completion block (same
 transaction that flips `status = 'completed'` and sets `completed_at`; badges +
 PostHog `tournament_completed` already fire there). Add analytics event
-`ranking_points_awarded {tournament_id, participant_count, tier, sport}`.
+`ranking_points_awarded {tournament_id, participant_count, multiplier, sport}`.
 
 **Correction (rev 3 — previously flagged as an upstream bug; it isn't):**
 nothing ever writes `status = 'walkover'` on `tournament_matches`, so a final
@@ -547,8 +595,9 @@ status-guard + idempotent recompute cover it if one ever appears.
 4. **Cancelled/archived tournaments** — only `completed` awards points; cancelled
    awards nothing. Confirmed.
 
-Confirmed 2026-07-14: **minimum field `n ≥ 8`** for placement points (below it,
-participation only — aligns with the `regional` tier cutoff).
+Confirmed 2026-07-14, then **reversed 2026-07-16**: the minimum field `n ≥ 8`
+for placement points was removed with the tier system (§4). The continuous draw
+curve replaced the cliff.
 
 Confirmed 2026-07-14 (rev 3, logic review):
 
@@ -564,9 +613,9 @@ Closed: board anchor (per-sport only) and unrated-player bucket (moot — one bo
 per sport). Also closed (rev 3): the "walkover final never completes" upstream
 bug — disproven against the code; see §7 correction.
 
-Flagged, accepted as-is: a doubles `vedette` needs 16 **entries** = 32 players
-(`n` counts entries) — structurally rarer than singles vedettes; revisit the
-cutoff only if real doubles fields never reach it.
+Flagged, accepted as-is: `n` counts **entries**, so a doubles draw needs 16
+entries = 32 players to price like a 16-entry singles draw. Structurally rarer;
+now a smooth penalty on the draw curve rather than a missed tier cutoff.
 
 ---
 
@@ -578,7 +627,8 @@ cutoff only if real doubles fields never reach it.
    completion block (set `completed_at`, call award; optionally widen the
    final-status check to `IN ('completed','walkover')` as future-proofing —
    see §7 correction, not a bug fix); `award_tournament_ranking_points` with
-   placement (incl. zero-win floor) + tier + points logic. Verify against the
+   placement (incl. zero-win floor) + tier + points logic (tier since replaced,
+   §4). Verify against the
    `[JDL Host]` staging tournament fixtures, including a doubles tournament
    and a sparse bracket (entries ≪ `max_participants`, phantom matches).
 2. **Read path** — leaderboard + my-ranking RPCs (best-8 aggregation),
@@ -613,7 +663,7 @@ populations and are deliberately kept as **separate currencies**:
 |                | Monthly challenge                        | Circuit Rallia                                |
 | -------------- | ---------------------------------------- | --------------------------------------------- |
 | Question       | "Who's playing the most?"                | "Who's achieving the most in competition?"    |
-| Currency       | games played (no skill signal)           | placement × tier points                       |
+| Currency       | games played (no skill signal)           | placement × draw × category points            |
 | Cadence        | monthly reset                            | rolling 52 weeks, no reset                    |
 | Who can top it | anyone with volume                       | tournament players who win                    |
 | Job            | engagement engine (join/play bottleneck) | prestige ladder that makes tournaments matter |
@@ -621,7 +671,7 @@ populations and are deliberately kept as **separate currencies**:
 Rules:
 
 - **Never merge the currencies.** Casual game volume feeding the Circuit is
-  the exact failure mode the best-8 cap, `n ≥ 8` floor, and zero-win floor
+  the exact failure mode the best-8 cap, the draw curve and the zero-win floor
   exist to prevent. Retiring the challenge is equally wrong: tournament
   entrants are a small subset, and the challenge serves the ~90 players/month
   playing casual games — the population Rallia actually needs to move.
