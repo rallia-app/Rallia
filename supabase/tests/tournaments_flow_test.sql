@@ -43,7 +43,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 6
       ) s;
     ASSERT array_length(v_players, 1) = 6,
@@ -146,7 +146,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT player_id INTO v_org FROM player_sport
-      WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 1;
+      WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 1;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
     SELECT * INTO v_t FROM tournament_create(
@@ -179,7 +179,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT player_id INTO v_org FROM player_sport
-      WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 1;
+      WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 1;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
     SELECT * INTO v_t FROM tournament_create(
@@ -210,7 +210,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 6
       ) s;
     v_org := v_players[1];
@@ -258,9 +258,9 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT player_id INTO v_org FROM player_sport
-      WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 1;
+      WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 1;
     SELECT player_id INTO v_outsider FROM player_sport
-      WHERE sport_id = v_sport AND is_active = true AND player_id <> v_org
+      WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) AND player_id <> v_org
       ORDER BY player_id LIMIT 1;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);

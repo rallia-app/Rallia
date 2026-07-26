@@ -24,7 +24,7 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 4) s;
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 4) s;
     ASSERT array_length(v_players, 1) = 4, 'need 4 active tennis players';
     v_org := v_players[1];
 
@@ -61,7 +61,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true
+        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 3) s;
     v_org := v_players[1];
 
@@ -102,7 +102,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true
+        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 4) s;
     v_org := v_players[1]; v_outsider := v_players[4];
 
@@ -135,7 +135,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true
+        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 5) s;
     ASSERT array_length(v_players, 1) = 5, 'need 5 active tennis players';
     v_org := v_players[1]; v_outsider := v_players[5];
@@ -194,7 +194,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true
+        SELECT player_id FROM player_sport WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 4) s;
     ASSERT array_length(v_players, 1) = 4, 'need 4 active tennis players';
     v_org := v_players[1]; v_m1 := v_players[2]; v_m2 := v_players[3];
@@ -294,7 +294,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true
+        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 6) s;
     ASSERT array_length(v_players,1)=6, 'need 6 players';
     -- Use player[6] as organizer: player[1] has already created its 5-league
@@ -390,7 +390,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name='tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true
+        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 5) s;
     ASSERT array_length(v_players,1)=5, 'need 5 players';
     -- player[5] has organized no leagues in earlier passes (avoids rate limit).
@@ -463,7 +463,7 @@ DECLARE
 BEGIN
     SELECT id INTO v_sport FROM sport WHERE name='tennis';
     SELECT array_agg(player_id) INTO v_players FROM (
-        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true
+        SELECT player_id FROM player_sport WHERE sport_id=v_sport AND is_active=true AND NOT public.is_admin(player_id)
         ORDER BY player_id LIMIT 4) s;
     -- player[4] has organized no league in earlier passes (rate-limit safe).
     v_org:=v_players[4]; v_p1:=v_players[1]; v_p2:=v_players[2]; v_p3:=v_players[3];

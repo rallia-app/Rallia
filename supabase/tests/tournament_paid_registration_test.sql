@@ -56,7 +56,7 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO o_players FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 10) s;
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 10) s;
     ASSERT array_length(o_players, 1) = 10, 'need 10 active tennis players';
     o_org := o_players[1];
 
@@ -75,7 +75,11 @@ BEGIN
            fee_payer          = p_fee_payer,
            refund_policy_kind = p_refund,
            refund_partial_bps = p_refund_bps,
-           refund_cutoff_at   = p_cutoff
+           refund_cutoff_at   = p_cutoff,
+           -- tournament_create rate-limits a non-admin organizer to 5 per 24h and
+           -- this file builds well past that from one organizer, so age each
+           -- fixture out of the window.
+           created_at         = now() - interval '2 days'
      WHERE id = o_tid;
 END $$;
 

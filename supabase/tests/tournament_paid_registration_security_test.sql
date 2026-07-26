@@ -44,7 +44,7 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO o_players FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 10) s;
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 10) s;
     ASSERT array_length(o_players, 1) = 10, 'need 10 active tennis players';
     o_org := o_players[1];
 
@@ -57,7 +57,13 @@ BEGIN
 
     UPDATE tournaments
        SET entry_fee_cents = 5000, currency = 'CAD', fee_payer = p_fee_payer,
-           refund_policy_kind = p_refund
+           refund_policy_kind = p_refund,
+           -- tournament_create rate-limits a non-admin organizer to 5 per 24h.
+           -- This file builds ~17 drafts from one organizer on purpose (the
+           -- authz it checks depends on that identity), so age each fixture out
+           -- of the window instead of rotating organizers or granting admin,
+           -- which would defeat the very checks below.
+           created_at = now() - interval '2 days'
      WHERE id = o_tid;
 END $$;
 
@@ -255,6 +261,7 @@ BEGIN
       JOIN rating_score rs ON rs.id = prs.rating_score_id
       JOIN sport s ON s.id = ps.sport_id
      WHERE s.name = 'tennis' AND ps.is_active AND ps.player_id <> v_org
+       AND NOT public.is_admin(ps.player_id)
      ORDER BY ps.player_id LIMIT 1;
     ASSERT v_rated IS NOT NULL, '3a: need a rated tennis player';
     UPDATE tournaments SET min_rating = v_rating + 0.5 WHERE id = v_tid;
