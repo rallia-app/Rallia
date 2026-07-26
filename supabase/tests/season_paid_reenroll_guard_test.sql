@@ -60,9 +60,9 @@ BEGIN
     UPDATE seasons SET entry_fee_cents = 5000, currency = 'CAD', fee_payer = 'player_pays'
      WHERE id = v_season.id;
 
-    INSERT INTO player_stripe_account (player_id, stripe_account_id, onboarding_completed)
+    INSERT INTO player_stripe_account (player_id, stripe_account_id, charges_enabled)
     VALUES (o_org, 'acct_test_' || left(o_org::text, 8), true)
-    ON CONFLICT (player_id) DO UPDATE SET onboarding_completed = true;
+    ON CONFLICT (player_id) DO UPDATE SET charges_enabled = true;
 
     SELECT version INTO v_season.version FROM seasons WHERE id = v_season.id;
     SELECT * INTO v_season FROM season_open(v_season.id, v_season.version);

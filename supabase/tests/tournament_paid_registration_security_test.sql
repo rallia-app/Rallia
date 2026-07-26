@@ -63,9 +63,11 @@ END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.setup_payouts(p_org uuid, p_completed boolean DEFAULT true)
 RETURNS void LANGUAGE sql AS $$
-    INSERT INTO player_stripe_account (player_id, stripe_account_id, onboarding_completed)
+    -- charges_enabled is the payout gate since 20260726120000; a trigger keeps
+    -- onboarding_completed in step with it, so only this column is worth setting.
+    INSERT INTO player_stripe_account (player_id, stripe_account_id, charges_enabled)
     VALUES (p_org, 'acct_test_' || left(p_org::text, 8), p_completed)
-    ON CONFLICT (player_id) DO UPDATE SET onboarding_completed = EXCLUDED.onboarding_completed;
+    ON CONFLICT (player_id) DO UPDATE SET charges_enabled = EXCLUDED.charges_enabled;
 $$;
 
 -- Open a paid draft for registration (organizer onboarded).

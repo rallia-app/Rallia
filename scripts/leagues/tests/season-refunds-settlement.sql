@@ -11,9 +11,9 @@ BEGIN
     SELECT ps.player_id INTO v_org FROM player_sport ps WHERE ps.sport_id=v_sport LIMIT 1;
     SELECT ps.player_id INTO v_p1 FROM player_sport ps WHERE ps.sport_id=v_sport AND ps.player_id<>v_org LIMIT 1;
 
-    INSERT INTO player_stripe_account (player_id, stripe_account_id, onboarding_completed)
+    INSERT INTO player_stripe_account (player_id, stripe_account_id, charges_enabled)
     VALUES (v_org, 'acct_test_l5', true)
-    ON CONFLICT (player_id) DO UPDATE SET onboarding_completed=true, stripe_account_id='acct_test_l5';
+    ON CONFLICT (player_id) DO UPDATE SET charges_enabled=true, stripe_account_id='acct_test_l5';
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
     v_league := league_create(p_name=>'L5 Refunds', p_sport_id=>v_sport, p_join_mode=>'open');

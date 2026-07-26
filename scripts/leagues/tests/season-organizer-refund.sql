@@ -23,9 +23,9 @@ BEGIN
     PERFORM league_join(v_league.id);
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
-    INSERT INTO player_stripe_account (player_id, stripe_account_id, onboarding_completed)
+    INSERT INTO player_stripe_account (player_id, stripe_account_id, charges_enabled)
     VALUES (v_org, 'acct_test_rm', true)
-    ON CONFLICT (player_id) DO UPDATE SET onboarding_completed=true, stripe_account_id='acct_test_rm';
+    ON CONFLICT (player_id) DO UPDATE SET charges_enabled=true, stripe_account_id='acct_test_rm';
 
     -- $40 full-refund paid season, open.
     v_season := season_create(v_league.id, 'RM Season', current_date, current_date+90,
