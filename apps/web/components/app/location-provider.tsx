@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 /**
  * Merges mobile's UserLocationContext (home location) and LocationModeContext
@@ -9,11 +17,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
  * authoritative home location, fetched server-side and passed in.
  *
  * Source chain for coords, in order of preference:
- *   1. device GPS — only ever requested on an explicit user gesture
- *      (`requestPreciseLocation`), never auto-prompted on load
+ *   1. device GPS — the permission is only ever *requested* on an explicit user
+ *      gesture (`requestPreciseLocation`), never auto-prompted on load. Once the
+ *      player has granted it, a reload re-reads the position silently (see
+ *      POSITION_MAX_AGE_MS), which shows no prompt.
  *   2. home location from the DB
  *   3. IP geolocation via the existing /api/get-location, fetched lazily and only
  *      when nothing better exists
+ *
+ * Precise coordinates are deliberately kept in memory only. They are sensitive
+ * personal information, and web storage is readable by any script on the origin
+ * and outlives the page. The browser's own positional cache gives us the same
+ * "survives a reload without re-prompting" behaviour for free.
  */
 
 export type LocationMode = 'current' | 'home';
@@ -50,21 +65,13 @@ const UserLocationContext = createContext<UserLocationContextValue | undefined>(
 
 /** Same key mobile uses in AsyncStorage, for conceptual parity in devtools. */
 const LOCATION_MODE_KEY = '@rallia/location-mode';
-/** Device coords cache — session-scoped so a granted position outlives a soft nav. */
-const GEO_CACHE_KEY = 'rallia:geo';
-const GEO_CACHE_TTL_MS = 10 * 60 * 1000;
-
-function readCachedDeviceCoords(): Coords | null {
-  try {
-    const raw = sessionStorage.getItem(GEO_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Coords & { ts: number };
-    if (Date.now() - parsed.ts > GEO_CACHE_TTL_MS) return null;
-    return { latitude: parsed.latitude, longitude: parsed.longitude };
-  } catch {
-    return null;
-  }
-}
+/**
+ * How stale a browser-cached fix may be before a new one is acquired. This is
+ * what lets a granted position survive a reload: getCurrentPosition returns the
+ * cached fix instantly and without a prompt, so we never have to hold
+ * coordinates in web storage ourselves.
+ */
+const POSITION_MAX_AGE_MS = 10 * 60 * 1000;
 
 interface UserLocationProviderProps {
   children: React.ReactNode;
@@ -80,17 +87,13 @@ export function UserLocationProvider({ children, initialHomeLocation }: UserLoca
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
   const [hydrated, setHydrated] = useState(false);
 
-  // Restore persisted mode + cached device coords after hydration (localStorage and
-  // sessionStorage are invisible to the server render).
+  // Restore the persisted mode after hydration (localStorage is invisible to the
+  // server render). Coordinates are not restored from storage — see the header.
   useEffect(() => {
     const storedMode = localStorage.getItem(LOCATION_MODE_KEY);
     if (storedMode === 'home' || storedMode === 'current') {
       setLocationModeState(storedMode);
     }
-    const cached = readCachedDeviceCoords();
-
-    if (cached) setDeviceCoords(cached);
-
     setHydrated(true);
   }, []);
 
@@ -138,27 +141,33 @@ export function UserLocationProvider({ children, initialHomeLocation }: UserLoca
     return new Promise(resolve => {
       navigator.geolocation.getCurrentPosition(
         position => {
-          const coords = {
+          setDeviceCoords({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          };
-          setDeviceCoords(coords);
+          });
           setPermissionState('granted');
-          try {
-            sessionStorage.setItem(GEO_CACHE_KEY, JSON.stringify({ ...coords, ts: Date.now() }));
-          } catch {
-            // Cache miss next navigation; harmless.
-          }
           resolve(true);
         },
         error => {
           if (error.code === error.PERMISSION_DENIED) setPermissionState('denied');
           resolve(false);
         },
-        { enableHighAccuracy: false, timeout: 10_000, maximumAge: GEO_CACHE_TTL_MS }
+        { enableHighAccuracy: false, timeout: 10_000, maximumAge: POSITION_MAX_AGE_MS }
       );
     });
   }, []);
+
+  // Already-granted permission: re-read the position once after hydration so a
+  // reload doesn't cost the player another click. This shows no prompt, and with
+  // POSITION_MAX_AGE_MS it usually resolves from the browser's cache instantly.
+  // Guarded by a ref so a denial or timeout doesn't loop.
+  const silentRestoreDone = useRef(false);
+  useEffect(() => {
+    if (!hydrated || silentRestoreDone.current) return;
+    if (permissionState !== 'granted' || deviceCoords) return;
+    silentRestoreDone.current = true;
+    void requestPreciseLocation();
+  }, [hydrated, permissionState, deviceCoords, requestPreciseLocation]);
 
   // The IP fallback is a third-party hop with rate limits: fetch it once, lazily, and
   // only when there is genuinely nothing better to offer.
