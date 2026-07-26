@@ -4175,6 +4175,15 @@
     "title": "Circuit Rallia",
     "subtitle": "Results from the last 12 months",
     "pointsNote": "Earn Rallia points by entering and advancing in tournaments.",
+    "pointsToDefend": {
+      "title": "Points to defend",
+      "note": "Each result counts for 12 months",
+      "atStake": "at stake",
+      "inDays": "in {count} days",
+      "inDays_one": "in {count} day",
+      "more": "+{count} more",
+      "more_one": "+{count} more"
+    },
     "howItWorks": "How it works",
     "filterMyLevel": "My level · {level}",
     "filterMyRating": "My rating · {rating}",

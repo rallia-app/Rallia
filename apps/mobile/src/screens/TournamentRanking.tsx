@@ -28,6 +28,7 @@ import {
   useAuth,
   useTournamentRanking,
   useMyTournamentRanking,
+  useMyPointsToDefend,
   useRatingScoresForSport,
   type TournamentRankingEntry,
 } from '@rallia/shared-hooks';
@@ -44,6 +45,7 @@ import {
   type BoardEntry,
   type ThemeBits,
 } from '../components/classements/BoardKit';
+import { PointsToDefendCard } from '../components/classements/PointsToDefendCard';
 
 /**
  * Board filter pill. Solid accent + checkmark when active; quiet outline
@@ -113,6 +115,7 @@ export const TournamentRanking: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { data: myRank } = useMyTournamentRanking(sportId);
+  const { items: toDefend, pointsAtStake } = useMyPointsToDefend(sportId);
 
   // Caller's exact active rating (by rating_score id — the canonical compare).
   const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(
@@ -148,6 +151,17 @@ export const TournamentRanking: React.FC = () => {
       inputColor: colors.input,
     }),
     [isDark, colors]
+  );
+
+  const defendItems = useMemo(
+    () =>
+      toDefend.map(row => ({
+        id: row.ledgerId,
+        name: row.tournamentName,
+        points: row.points,
+        daysRemaining: row.daysRemaining,
+      })),
+    [toDefend]
   );
 
   const toEntry = useCallback(
@@ -195,6 +209,17 @@ export const TournamentRanking: React.FC = () => {
           valueLabel={t('tournamentRanking.points')}
         />
       ) : null}
+
+      <PointsToDefendCard
+        items={defendItems}
+        pointsAtStake={pointsAtStake}
+        title={t('tournamentRanking.pointsToDefend.title')}
+        note={t('tournamentRanking.pointsToDefend.note')}
+        valueLabel={t('tournamentRanking.pointsToDefend.atStake')}
+        formatDays={days => t('tournamentRanking.pointsToDefend.inDays', { count: days })}
+        formatMore={count => t('tournamentRanking.pointsToDefend.more', { count })}
+        theme={theme}
+      />
 
       {myRank && (myRank.levelBucket || myRatingValue != null) ? (
         <View style={styles.filterRow}>
