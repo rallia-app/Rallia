@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 
+import { OnboardingAccountBar } from './onboarding-account-bar';
 import { PlayerOnboardingWizard } from './player-onboarding-wizard';
 
 import { redirect } from '@/i18n/navigation';
@@ -33,6 +34,8 @@ export default async function PlayerOnboardingPage() {
         <h1 className="font-heading text-2xl font-semibold text-foreground">{t('welcome')}</h1>
         <p className="text-muted-foreground">{t('welcomeSubtitle')}</p>
       </div>
+
+      {user?.email && <OnboardingAccountBar email={user.email} />}
 
       <PlayerOnboardingWizard initialSportId={shellData?.primarySportId ?? null} />
     </div>
