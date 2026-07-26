@@ -62,6 +62,7 @@ import {
   cellKey,
   emptyGrid,
   countSelected,
+  formatHourLabel,
   parseCellKey,
   type HourGrid,
 } from '@rallia/shared-utils';
@@ -119,29 +120,6 @@ interface HourlyAvailabilityGridProps {
    * window to show concrete dates while keeping day-of-week semantics.
    */
   columnLabels?: Partial<Record<DayEnum, string>>;
-}
-
-// =============================================================================
-// HOUR LABELS — locale-aware
-// =============================================================================
-
-const hourFormatterCache = new Map<string, Intl.DateTimeFormat>();
-
-function getHourFormatter(locale: string): Intl.DateTimeFormat {
-  const cached = hourFormatterCache.get(locale);
-  if (cached) return cached;
-  const f = new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    hour12: locale.toLowerCase().startsWith('en'),
-  });
-  hourFormatterCache.set(locale, f);
-  return f;
-}
-
-function formatHourLabel(hour: number, locale: string): string {
-  const d = new Date();
-  d.setHours(hour, 0, 0, 0);
-  return getHourFormatter(locale).format(d);
 }
 
 // =============================================================================

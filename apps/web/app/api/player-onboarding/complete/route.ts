@@ -52,6 +52,8 @@ const CompleteSchema = z.object({
     country: z.enum(['CA', 'US']).default('CA'),
     latitude: z.number(),
     longitude: z.number(),
+    /** Optional: only present when the player picked one from address search. */
+    address: z.string().min(1).max(240).optional(),
   }),
   availability: z
     .array(z.object({ day: z.string(), hour: z.number().int() }))
@@ -94,6 +96,7 @@ export async function POST(request: NextRequest) {
         sportId: body.sportId,
         ratingScoreId: body.ratingScoreId,
         postalCode: body.location.postalCode,
+        address: body.location.address,
         city: body.location.city,
         province: body.location.province,
         latitude: body.location.latitude,

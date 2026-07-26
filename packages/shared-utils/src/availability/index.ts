@@ -66,6 +66,43 @@ export const MIN_AVAILABILITY_CELLS = 6;
 const WEEKDAYS: DayEnum[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const WEEKEND: DayEnum[] = ['saturday', 'sunday'];
 
+/** True for Saturday and Sunday — both grids tint those columns. */
+export function isWeekendDay(day: DayEnum): boolean {
+  return WEEKEND.includes(day);
+}
+
+/**
+ * Day parts, in grid order. Used to band the hour rows so a player can find
+ * "weekday evenings" without reading every label.
+ */
+export const DAY_PARTS: Array<{ key: 'morning' | 'afternoon' | 'evening'; hours: number[] }> = [
+  { key: 'morning', hours: SUPPORTED_HOURS.filter(h => h < 12) },
+  { key: 'afternoon', hours: SUPPORTED_HOURS.filter(h => h >= 12 && h < 17) },
+  { key: 'evening', hours: SUPPORTED_HOURS.filter(h => h >= 17) },
+];
+
+const hourFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getHourFormatter(locale: string): Intl.DateTimeFormat {
+  const cached = hourFormatterCache.get(locale);
+  if (cached) return cached;
+  const formatter = new Intl.DateTimeFormat(locale, {
+    hour: 'numeric',
+    // English reads 7 PM; French-Canadian reads 19 h. Following the locale beats
+    // a zero-padded 24h label nobody has to translate but everybody has to decode.
+    hour12: locale.toLowerCase().startsWith('en'),
+  });
+  hourFormatterCache.set(locale, formatter);
+  return formatter;
+}
+
+/** Locale-aware label for an hour cell, e.g. "7 PM" (en-US) or "19 h" (fr-CA). */
+export function formatHourLabel(hour: number, locale: string): string {
+  const date = new Date();
+  date.setHours(hour, 0, 0, 0);
+  return getHourFormatter(locale).format(date);
+}
+
 function buildCells(days: ReadonlyArray<DayEnum>, hours: ReadonlyArray<number>): string[] {
   const out: string[] = [];
   for (const d of days) for (const h of hours) out.push(cellKey(d, h));

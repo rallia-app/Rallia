@@ -2,15 +2,28 @@
 
 import { GENDER_VALUES } from '@rallia/shared-types';
 import {
+  RATING_SYSTEM_URLS,
+  ratingDescriptionKey,
+  ratingSkillLevelKey,
+  ratingSkillTier,
+  type RatingSkillTier,
+} from '@rallia/shared-utils';
+import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  ExternalLink,
   Loader2,
+  Lock,
   Mail,
   MapPin,
   ShieldCheck,
+  Sparkles,
+  Star,
+  StarHalf,
   Trophy,
   User,
+  type LucideIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -21,13 +34,15 @@ import {
   StepHeader,
   Stepper,
 } from './wizard-primitives';
-import { PROFILE_STEPS, type WebOnboardingController } from './use-web-onboarding';
+import { type WebOnboardingController } from './use-web-onboarding';
 
+import { AddressAutocomplete } from '@/components/app/inputs/address-autocomplete';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -41,14 +56,19 @@ export function OnboardingStepper({
 }) {
   if (!controller.isProfileStep) return null;
 
+  // controller.profileSteps, not the exported PROFILE_STEPS: a caller that defers
+  // consent has one fewer step, and counting the one it removed would read "2 of 4"
+  // on a three-step walk.
+  const steps = controller.profileSteps;
+
   return (
     <Stepper
-      totalSteps={PROFILE_STEPS.length}
+      totalSteps={steps.length}
       currentIndex={controller.profileStepIndex}
-      currentLabel={t(`steps.${PROFILE_STEPS[controller.profileStepIndex].labelKey}`)}
+      currentLabel={t(`steps.${steps[controller.profileStepIndex].labelKey}`)}
       counterLabel={t('stepCounter', {
         current: controller.profileStepIndex + 1,
-        total: PROFILE_STEPS.length,
+        total: steps.length,
       })}
     />
   );
@@ -311,6 +331,22 @@ export function PersonalStep({
   );
 }
 
+/** Tier → icon, mirroring mobile's star-outline / star-half / star / trophy ladder. */
+const TIER_ICONS: Record<RatingSkillTier, LucideIcon> = {
+  beginner: Star,
+  intermediate: StarHalf,
+  advanced: Sparkles,
+  professional: Trophy,
+};
+
+/**
+ * Skill-level picker.
+ *
+ * Shows what each level actually means rather than a bare "NTRP 3.5" — nobody self-rates
+ * accurately from a number alone, and a wrong rating here mismatches every game the
+ * player is offered. Level names, descriptions and the reference link are the same ones
+ * mobile shows, resolved through the shared score → key mappings.
+ */
 export function RatingStep({
   controller,
   t,
@@ -320,7 +356,10 @@ export function RatingStep({
   t: Translator;
   sportName: string;
 }) {
+  const tRating = useTranslations('onboarding.ratingStep');
+  const tOverlay = useTranslations('onboarding.ratingOverlay');
   const { rating } = controller;
+  const system = rating.systemCode;
 
   return (
     <Card>
@@ -330,22 +369,88 @@ export function RatingStep({
           title={t('rating.title', { sport: sportName })}
           description={t('rating.description')}
         />
+
+        {system && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              {tRating(system === 'dupr' ? 'duprBadge' : 'ntrpBadge')}
+            </span>
+            <a
+              href={RATING_SYSTEM_URLS[system]}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {tOverlay(system === 'dupr' ? 'learnMoreDupr' : 'learnMoreNtrp')}
+              <ExternalLink className="size-3" aria-hidden="true" />
+            </a>
+          </div>
+        )}
+
         {rating.isLoadingRatings ? (
           <div className="flex justify-center py-10">
             <Loader2 className="size-6 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1">
-            {rating.ratings.map(r => (
-              <OptionButton
-                key={r.id}
-                selected={rating.selectedRatingId === r.id}
-                onClick={() => rating.setSelectedRatingId(r.id)}
-                compact
-              >
-                {r.label}
-              </OptionButton>
-            ))}
+          <div className="grid max-h-[26rem] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            {rating.ratings.map(r => {
+              const selected = rating.selectedRatingId === r.id;
+              const tier = r.value != null ? ratingSkillTier(r.value) : null;
+              const Icon = tier ? TIER_ICONS[tier] : Trophy;
+              const levelKey =
+                system && r.value != null ? ratingSkillLevelKey(system, r.value) : null;
+              const description =
+                system && r.value != null ? tRating(ratingDescriptionKey(system, r.value)) : null;
+
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => rating.setSelectedRatingId(r.id)}
+                  aria-pressed={selected}
+                  className={cn(
+                    'flex flex-col gap-1.5 rounded-xl border-2 p-3.5 text-left transition-all outline-none',
+                    'focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    selected
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:border-primary/40 hover:bg-primary/5'
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon
+                      className={cn(
+                        'size-4 shrink-0',
+                        selected ? 'text-primary' : 'text-primary/70'
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        selected ? 'text-foreground' : 'text-muted-foreground'
+                      )}
+                    >
+                      {levelKey ? tRating(`skillLevels.${levelKey}`) : r.label}
+                    </span>
+                  </span>
+                  {/* The raw label ("NTRP 3.5") stays visible: it is what other players
+                      see on a profile, so hiding it here would surprise them later. */}
+                  <span
+                    className={cn(
+                      'text-sm font-medium tabular-nums',
+                      selected ? 'text-primary' : 'text-muted-foreground'
+                    )}
+                  >
+                    {r.label}
+                  </span>
+                  {description && (
+                    <span className="text-xs leading-snug text-muted-foreground">
+                      {description}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </CardContent>
@@ -353,6 +458,18 @@ export function RatingStep({
   );
 }
 
+/**
+ * Where the player is based.
+ *
+ * Asks for the address first and the postal code second, because that ordering does the
+ * work for them: picking an address fills the postal code, the city and precise
+ * coordinates in one action. Anyone who would rather not share a street address just
+ * skips the top field and types the postal code, which is the only required part.
+ *
+ * Copy comes from onboarding.locationStep — the same keys mobile's location step uses,
+ * including its privacy reassurance, since "why do you want my address" is the obvious
+ * next thought and it deserves an answer on the same screen.
+ */
 export function LocationStep({
   controller,
   t,
@@ -360,25 +477,37 @@ export function LocationStep({
   controller: WebOnboardingController;
   t: Translator;
 }) {
+  const tLocation = useTranslations('onboarding.locationStep');
+  const tCommon = useTranslations('common');
   const { location } = controller;
+  const hasArea = location.latitude != null && !!location.postalCode;
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-5 pt-6">
-        <StepHeader
-          icon={MapPin}
-          title={t('location.title')}
-          description={t('location.description')}
-        />
+        <StepHeader icon={MapPin} title={tLocation('title')} description={tLocation('subtitle')} />
+
+        <div className="space-y-1.5">
+          <AddressAutocomplete
+            value={location.address}
+            onSelect={location.selectAddress}
+            onClear={() => void location.clearAddress()}
+            label={`${tLocation('address')} · ${tCommon('optional')}`}
+            placeholder={tLocation('addressPlaceholder')}
+          />
+          <p className="text-xs text-muted-foreground">{tLocation('addressHint')}</p>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="postalCode">{t('location.postalCode')}</Label>
+          <Label htmlFor="postalCode">{tLocation('postalCode')}</Label>
           <Input
             id="postalCode"
             value={location.postalCode}
             onChange={e => location.handlePostalCodeChange(e.target.value)}
             onBlur={location.handlePostalCodeBlur}
-            placeholder="H2X 1Y4"
+            placeholder={tLocation('postalCodePlaceholder')}
             required
+            aria-required="true"
             className="h-11 text-lg tracking-wide"
           />
           {location.isGeocoding && (
@@ -387,7 +516,7 @@ export function LocationStep({
               {t('location.geocoding')}
             </p>
           )}
-          {!location.isGeocoding && location.latitude != null && location.postalCode && (
+          {!location.isGeocoding && hasArea && (
             <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-3.5" />
               <span>
@@ -398,6 +527,16 @@ export function LocationStep({
               </span>
             </div>
           )}
+        </div>
+
+        <div className="flex items-start gap-2.5 rounded-xl bg-muted/50 px-3.5 py-3">
+          <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-foreground">{tLocation('privacyTitle')}</p>
+            <p className="text-xs leading-snug text-muted-foreground">
+              {tLocation('privacyDescription')}
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

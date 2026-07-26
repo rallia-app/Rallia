@@ -15,6 +15,7 @@ export * from './leagues';
 export * from './geo';
 export * from './availability';
 export * from './uploads';
+export * from './ratings';
 export * from './devMocks';
 export * from './utm';
 export * from './fees';

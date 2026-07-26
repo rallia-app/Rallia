@@ -35,20 +35,28 @@ import { Stepper } from '@/components/web-onboarding/wizard-primitives';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-/** Our own steps: one before the shared wizard's four, two after. */
+/** Our own steps: one before the shared wizard's, three after. */
 const SPORT_STEP = 'sport';
 const AVAILABILITY_STEP = 'availability';
 const FAVORITES_STEP = 'favorites';
+const CONSENT_STEP = 'consent';
 
-/** The whole walk, in order. The sport step drops out when the account has one. */
+/**
+ * The whole walk, in order. The sport step drops out when the account has one.
+ *
+ * Consent sits last on purpose. Asking someone to accept the terms before they have
+ * seen anything is asking them to agree to a product they have not met; putting it at
+ * the finish line makes it the deliberate act it is meant to be, and it is also the
+ * point where nothing has been written yet, so declining costs them nothing.
+ */
 const JOURNEY_STEPS = [
   SPORT_STEP,
-  'consent',
   'personal',
   'rating',
   'location',
   AVAILABILITY_STEP,
   FAVORITES_STEP,
+  CONSENT_STEP,
 ];
 
 /**
@@ -58,11 +66,11 @@ const JOURNEY_STEPS = [
  */
 const STEP_NAME_KEYS: Record<string, string> = {
   [SPORT_STEP]: 'sports',
-  consent: 'consent',
   personal: 'personal',
   location: 'location',
   [AVAILABILITY_STEP]: 'availability',
   [FAVORITES_STEP]: 'favoriteSites',
+  [CONSENT_STEP]: 'consent',
 };
 
 interface PlayerOnboardingWizardProps {
@@ -137,7 +145,7 @@ export function PlayerOnboardingWizard({
 
     return {
       // Straight past the sport step when the account already has a primary sport.
-      step: sportIdRef.current ? 'consent' : SPORT_STEP,
+      step: sportIdRef.current ? 'personal' : SPORT_STEP,
       firstName: profile?.first_name ?? null,
       lastName: profile?.last_name ?? null,
     };
@@ -159,12 +167,32 @@ export function PlayerOnboardingWizard({
     [t]
   );
 
+  const controller = useWebOnboarding({
+    sportId,
+    returnPath: `/${locale}/app/onboarding`,
+    locale,
+    t,
+    resolveAuthenticatedStep,
+    onSubmitProfile: submitProfile,
+    mapSubmitError,
+    // This wizard asks for consent as its final step, so the controller must not
+    // demand it up front.
+    deferConsent: true,
+  });
+
+  const { setStep, personal, acceptPolicies } = controller;
+
   const handleFinish = useCallback(async () => {
     if (!profilePayload) return;
     setIsFinishing(true);
     setFinishError(null);
 
     try {
+      // Consent first: it is the only part of this that is a legal record, and the
+      // player just gave it explicitly. Writing it before the profile means a failed
+      // profile write cannot lose it.
+      await acceptPolicies();
+
       const response = await fetch('/api/player-onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,19 +223,7 @@ export function PlayerOnboardingWizard({
       setFinishError(code === 'MINIMUM_AGE' ? t('errors.minimumAge') : t('errors.submitFailed'));
       setIsFinishing(false);
     }
-  }, [profilePayload, availability, favorites, profilePictureUrl, locale, t]);
-
-  const controller = useWebOnboarding({
-    sportId,
-    returnPath: `/${locale}/app/onboarding`,
-    locale,
-    t,
-    resolveAuthenticatedStep,
-    onSubmitProfile: submitProfile,
-    mapSubmitError,
-  });
-
-  const { setStep, personal } = controller;
+  }, [profilePayload, availability, favorites, profilePictureUrl, locale, acceptPolicies, t]);
 
   // Prefill gender and birth date, which applyResolvedStep does not carry. Runs once
   // the controller is ready so it cannot clobber something the player just typed.
@@ -277,7 +293,6 @@ export function PlayerOnboardingWizard({
       >
         {step === SPORT_STEP && <SportStep selectedSportId={sportId} onSelect={setSportId} />}
 
-        {step === 'consent' && <ConsentStep controller={controller} />}
         {step === 'personal' && (
           <>
             {/* Sits above the shared PersonalStep rather than inside it: that component is
@@ -303,20 +318,24 @@ export function PlayerOnboardingWizard({
         )}
 
         {step === FAVORITES_STEP && profilePayload && (
+          <FavoriteFacilitiesStep
+            sportId={profilePayload.sportId}
+            latitude={profilePayload.location.latitude}
+            longitude={profilePayload.location.longitude}
+            selected={favorites}
+            onToggle={facility =>
+              setFavorites(current =>
+                current.some(entry => entry.id === facility.id)
+                  ? current.filter(entry => entry.id !== facility.id)
+                  : [...current, facility]
+              )
+            }
+          />
+        )}
+
+        {step === CONSENT_STEP && (
           <>
-            <FavoriteFacilitiesStep
-              sportId={profilePayload.sportId}
-              latitude={profilePayload.location.latitude}
-              longitude={profilePayload.location.longitude}
-              selected={favorites}
-              onToggle={facility =>
-                setFavorites(current =>
-                  current.some(entry => entry.id === facility.id)
-                    ? current.filter(entry => entry.id !== facility.id)
-                    : [...current, facility]
-                )
-              }
-            />
+            <ConsentStep controller={controller} />
             <OnboardingError message={finishError} />
           </>
         )}
@@ -331,7 +350,7 @@ export function PlayerOnboardingWizard({
             size="lg"
             className="w-full font-semibold"
             disabled={!sportId}
-            onClick={() => setStep('consent')}
+            onClick={() => setStep('personal')}
           >
             {t('continue')}
             <ArrowRight className="size-4" />
@@ -366,6 +385,30 @@ export function PlayerOnboardingWizard({
               variant="outline"
               size="lg"
               onClick={() => setStep(AVAILABILITY_STEP)}
+            >
+              <ArrowLeft className="size-4" />
+              {t('back')}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className="flex-1 font-semibold"
+              disabled={favorites.length < MIN_FAVORITE_FACILITIES}
+              onClick={() => setStep(CONSENT_STEP)}
+            >
+              {t('continue')}
+              <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        )}
+
+        {step === CONSENT_STEP && (
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => setStep(FAVORITES_STEP)}
               disabled={isFinishing}
             >
               <ArrowLeft className="size-4" />
@@ -375,11 +418,13 @@ export function PlayerOnboardingWizard({
               type="button"
               size="lg"
               className="flex-1 font-semibold"
-              disabled={favorites.length < MIN_FAVORITE_FACILITIES || isFinishing}
+              disabled={!controller.consent.isComplete || isFinishing}
               onClick={() => void handleFinish()}
             >
               {isFinishing && <Loader2 className="size-4 animate-spin" />}
-              {t('continue')}
+              {/* Not webJoin.finish — that reads "Join game", which belongs to the
+                  join gate this controller is shared with. */}
+              {tOnboarding('getStarted')}
             </Button>
           </div>
         )}
