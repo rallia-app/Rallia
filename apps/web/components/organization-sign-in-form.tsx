@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from '@/i18n/navigation';
 
 type AuthState = 'initial' | 'email-sent' | 'loading' | 'error';
 
@@ -51,7 +50,6 @@ export function OrganizationSignInForm({
 }) {
   const t = useTranslations('signIn');
   const locale = useLocale();
-  const router = useRouter();
   // Use SSR-aware Supabase client for proper cookie handling
   const supabase = useMemo(() => createClient(), []);
   const { signInWithProvider, signInWithEmail, verifyOtp } = useAuth({
@@ -138,9 +136,20 @@ export function OrganizationSignInForm({
         setErrorMessage(result.error?.message ?? t('failedToVerifyOtp'));
         setAuthState('email-sent');
       } else {
-        // Success - redirect to post-auth with token if present
-        router.push(`${successPath}${token ? `?token=${encodeURIComponent(token)}` : ''}`);
-        router.refresh();
+        // Full document load rather than router.push + refresh.
+        //
+        // A client-side push reuses the router cache, and the destination was very
+        // likely visited moments ago while signed out — /app answers an anonymous
+        // request with a redirect to this page, so the cached entry for it is that
+        // redirect, not the app. Pushing then renders the stale payload and the
+        // player lands on a blank screen until they reload by hand. Firing refresh()
+        // straight after push also races the navigation it is meant to revalidate.
+        //
+        // Signing in is a once-per-session transition, so paying for one real
+        // navigation buys a guaranteed-fresh cookie and server render. This is what
+        // the OAuth path already does implicitly via /api/auth/callback.
+        const target = `${successPath}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+        window.location.assign(`/${locale}${target}`);
       }
     }
   };

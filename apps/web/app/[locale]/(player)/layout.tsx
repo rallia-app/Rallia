@@ -5,6 +5,18 @@ import type { Metadata } from 'next';
 // with the default locale by the intl middleware, silently dropping a fr-CA visitor
 // into the English app.
 import { redirect } from '@/i18n/navigation';
+
+/**
+ * next-intl's redirect throws (it wraps next/navigation's) but is typed as returning
+ * void, so TypeScript will not narrow after it. Wrapping it in a `never` helper gives
+ * the narrowing without the `return null` this guard used to end with — that null was
+ * a real hazard, since anything that stopped the redirect throwing would render an
+ * empty layout, i.e. a blank page, rather than failing loudly.
+ */
+function redirectNever(href: string, locale: string): never {
+  redirect({ href, locale });
+  throw new Error(`redirect(${href}) did not throw`);
+}
 import { PlayerShell } from '@/components/app/layout/player-shell';
 import { getPlayerShellData } from '@/lib/supabase/check-player';
 import { createClient } from '@/lib/supabase/server';
@@ -39,9 +51,7 @@ export default async function PlayerLayout({
 
   if (authError || !user) {
     const next = encodeURIComponent(pathname || `/${locale}/app`);
-    redirect({ href: `/app/sign-in?next=${next}`, locale });
-    // redirect() throws, but next-intl types it as void, so narrow explicitly.
-    return null;
+    redirectNever(`/app/sign-in?next=${next}`, locale);
   }
 
   const shellData = await getPlayerShellData(user.id);
@@ -49,7 +59,7 @@ export default async function PlayerLayout({
   // The onboarding route itself must stay reachable or the redirect loops.
   const isOnboardingPage = pathname.includes('/app/onboarding');
   if (!shellData.isOnboardingComplete && !isOnboardingPage) {
-    redirect({ href: '/app/onboarding', locale });
+    redirectNever('/app/onboarding', locale);
   }
 
   return (
