@@ -1,6 +1,6 @@
 import { HelpCircle, Shield } from 'lucide-react';
-
 import { getTierConfig, type ReputationTier } from '@rallia/shared-services';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 

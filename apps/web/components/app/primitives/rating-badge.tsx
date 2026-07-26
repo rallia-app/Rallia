@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle2, HelpCircle, type LucideIcon } from 'lucide-react';
-
 import { formatRating } from '@rallia/shared-utils';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 

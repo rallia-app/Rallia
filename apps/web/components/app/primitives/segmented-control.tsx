@@ -17,9 +17,15 @@ export interface Segment {
  */
 export function SegmentedControl({
   segments,
+  activeHref,
   className,
 }: {
   segments: Segment[];
+  /**
+   * Overrides pathname matching. Needed when segments differ only by query string
+   * (e.g. ?tab=past), which the pathname alone cannot distinguish.
+   */
+  activeHref?: string;
   className?: string;
 }) {
   const pathname = usePathname();
@@ -30,7 +36,9 @@ export function SegmentedControl({
       aria-label="Sections"
     >
       {segments.map(segment => {
-        const isActive = pathname === segment.href || pathname.startsWith(`${segment.href}/`);
+        const isActive = activeHref
+          ? segment.href === activeHref
+          : pathname === segment.href || pathname.startsWith(`${segment.href}/`);
         return (
           <Link
             key={segment.href}
