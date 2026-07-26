@@ -57,7 +57,7 @@ half-point rung), and is capped at ×16.
 
 A tournament with no floor is ×1.0.
 
-**Why ×5 per full rating point.** The board is a shared, best-8 season sum. At a
+**Why ×5 per full rating point.** The board is a shared, best-8 sum. At a
 ×2 rate, eight Débutant titles outscored eight Avancé quarterfinals, so volume
 in an easy field beat real results in a hard one. ×5 makes any serious run in a
 hard field outrank a title in an easy one, by a wide margin.
@@ -71,8 +71,8 @@ is roughly one more doubling of headroom before that becomes the constraint
 again.
 
 **Why the ×16 cap.** Uncapped, tennis 6.0 would reach ×125 and a single 6.0-floor
-32-draw would pay six figures — more than a perfect eight-event Avancé season,
-which makes the season score meaningless. The cap binds at tennis 5.0 and
+32-draw would pay six figures — more than a perfect eight-event Avancé year,
+which makes the board meaningless. The cap binds at tennis 5.0 and
 pickleball 5.5, holding the largest possible event at 16,000.
 
 ## 4. Worked example — Série 1, 32-cap tennis
@@ -94,12 +94,27 @@ Note that in a 32-draw the R32 rung is unreachable: losing your first match mean
 zero wins, which the floor turns into participation. The lower placement rungs
 only come into play in 64-draws and larger.
 
-## 5. Season score
+## 5. Your score
 
-Your season total is the **sum of your best 8 results** for that sport. Extra
-events beyond eight can only help you — a bad result never subtracts. A season of
-pure attendance and no wins therefore tops out at 8 × 10 = 80, negligible against
-a single title.
+Your total is the **sum of your best 8 results** for that sport, taken over a
+**rolling 52-week window**. Extra events beyond eight can only help you — a bad
+result never subtracts. A year of pure attendance and no wins therefore tops out
+at 8 × 10 = 80, negligible against a single title.
+
+**Nothing resets.** Each result counts from the day its tournament completes
+until 52 weeks later, then ages out on its own. This is how the ATP rankings
+work, and it replaced a hard semi-annual reset: on a base this thin, wiping
+every player to zero twice a year left the board empty for weeks and erased the
+standing of anyone who entered only a couple of events.
+
+Expiry is evaluated at read time off `tournament_ranking_points.earned_at` (the
+tournament's `completed_at`), so nothing sweeps or rewrites the ledger. The
+window length lives in `lt_ranking_window()`.
+
+Seasons still exist as an **archive**: `ranking_season` is still populated and
+every ledger row still carries a `season_id`, so passing a season code to
+`get_tournament_leaderboard` returns that season's final standings. The live
+board is the rolling one, and it is what the wrappers return by default.
 
 There is one board per sport, shared across all levels, with an optional filter
 by level bucket (beginner / intermediate / advanced) for reading your own tier.

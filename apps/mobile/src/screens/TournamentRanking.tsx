@@ -150,17 +150,6 @@ export const TournamentRanking: React.FC = () => {
     [isDark, colors]
   );
 
-  const seasonLabel = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth(); // 0-11
-    const year = now.getFullYear();
-    const isSpringSummer = month >= 3 && month <= 8; // Apr..Sep
-    if (isSpringSummer) return t('tournamentRanking.seasonSpringSummer', { year });
-    // Fall/Winter spans the year-end; keyed by its start year.
-    const startYear = month >= 9 ? year : year - 1;
-    return t('tournamentRanking.seasonFallWinter', { year: startYear });
-  }, [t]);
-
   const toEntry = useCallback(
     (item: TournamentRankingEntry): BoardEntry => ({
       id: item.userId,
@@ -187,7 +176,7 @@ export const TournamentRanking: React.FC = () => {
       <BoardHeader
         icon="trophy"
         title={t('tournamentRanking.title')}
-        subtitle={t('tournamentRanking.subtitle', { season: seasonLabel })}
+        subtitle={t('tournamentRanking.subtitle')}
         note={t('tournamentRanking.pointsNote')}
         noteCtaLabel={t('tournamentRanking.howItWorks')}
         onNotePress={() => {

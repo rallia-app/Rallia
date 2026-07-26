@@ -4173,7 +4173,7 @@
   },
   "tournamentRanking": {
     "title": "Circuit Rallia",
-    "subtitle": "{season} season",
+    "subtitle": "Results from the last 12 months",
     "pointsNote": "Earn Rallia points by entering and advancing in tournaments.",
     "howItWorks": "How it works",
     "filterMyLevel": "My level · {level}",
@@ -4187,10 +4187,10 @@
     "events": "{count} tournaments",
     "events_one": "{count} tournament",
     "youSuffix": "(you)",
-    "yourRank": "You're #{rank} this season",
+    "yourRank": "You're #{rank} right now",
     "error": "Couldn't load the ranking. Pull to retry.",
     "empty": {
-      "title": "The season's just getting started",
+      "title": "No one on the board yet",
       "description": "Enter a tournament to earn your first points and land on the board."
     },
     "seasonSpringSummer": "Spring/Summer {year}",
@@ -11668,7 +11668,7 @@
     },
     "circuitRanking": {
       "title": "How the Circuit Rallia works",
-      "intro": "A ranking per sport and season. You earn points by entering tournaments and winning games.",
+      "intro": "A ranking per sport. You earn points by entering tournaments and winning games.",
       "placement": {
         "title": "How far you get",
         "baseNote": "Base points. Every tournament multiplies them, except participation, which is a flat 10 everywhere.",
@@ -11688,10 +11688,10 @@
         "body": "Bigger draws and higher minimum levels multiply the points above, and moving up a category multiplies what every result is worth by about five. Each tournament shows its top prize up front, like \"up to 5000 pts\" on the card."
       },
       "season": {
-        "title": "Your season score",
-        "body": "Your 8 best results this season add up to your rank. A bad day never sets you back."
+        "title": "Your score",
+        "body": "Your 8 best results from the last 12 months add up to your rank. Each result counts for a year, then drops off. A bad day never sets you back."
       },
-      "finePrint": "Only tournaments run by a certified organizer award points. Two seasons a year: spring/summer and fall/winter."
+      "finePrint": "Only tournaments run by a certified organizer award points. Nothing resets: your results count for 12 months, then they drop off one by one."
     }
   },
   "profileCompletion": {

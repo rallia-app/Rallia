@@ -4173,7 +4173,7 @@
   },
   "tournamentRanking": {
     "title": "Circuit Rallia",
-    "subtitle": "Saison {season}",
+    "subtitle": "Résultats des 12 derniers mois",
     "pointsNote": "Gagne des points Rallia en participant et en avançant dans les tournois.",
     "howItWorks": "Comment ça marche",
     "filterMyLevel": "Mon niveau · {level}",
@@ -4187,10 +4187,10 @@
     "events": "{count} tournois",
     "events_one": "{count} tournoi",
     "youSuffix": "(toi)",
-    "yourRank": "Tu es #{rank} cette saison",
+    "yourRank": "Tu es #{rank} en ce moment",
     "error": "Impossible de charger le classement. Tire pour réessayer.",
     "empty": {
-      "title": "La saison commence",
+      "title": "Personne au classement pour l'instant",
       "description": "Inscris-toi à un tournoi pour gagner tes premiers points pis apparaître au classement."
     },
     "seasonSpringSummer": "Printemps/Été {year}",
@@ -11668,7 +11668,7 @@
     },
     "circuitRanking": {
       "title": "Comment marche le Circuit Rallia",
-      "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
+      "intro": "Un classement par sport. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
       "placement": {
         "title": "Jusqu'où tu te rends",
         "baseNote": "Points de base. Chaque tournoi les multiplie, sauf la participation qui reste à 10 partout.",
@@ -11688,10 +11688,10 @@
         "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie multiplie par environ cinq la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 5000 pts » sur la carte."
       },
       "season": {
-        "title": "Ton score de saison",
-        "body": "Tes 8 meilleurs résultats de la saison forment ton rang. Une mauvaise journée te fait jamais reculer."
+        "title": "Ton score",
+        "body": "Tes 8 meilleurs résultats des 12 derniers mois forment ton rang. Chaque résultat compte pendant un an, après il tombe. Une mauvaise journée te fait jamais reculer."
       },
-      "finePrint": "Seuls les tournois d'un organisateur certifié donnent des points. Deux saisons par année : printemps/été et automne/hiver."
+      "finePrint": "Seuls les tournois d'un organisateur certifié donnent des points. Rien se remet à zéro : tes résultats comptent 12 mois, après ils tombent un par un."
     }
   },
   "profileCompletion": {

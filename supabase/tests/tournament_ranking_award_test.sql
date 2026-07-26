@@ -401,7 +401,7 @@ BEGIN
     SELECT id INTO v_season FROM ranking_season WHERE now() >= starts_at AND now() < ends_at;
     DELETE FROM tournament_ranking_points WHERE sport_id = v_sport AND season_id = v_season;
     SELECT array_agg(id) INTO v_players
-      FROM (SELECT id FROM profile ORDER BY id LIMIT 3) s;
+      FROM (SELECT id FROM player ORDER BY id LIMIT 3) s;
     v_org := v_players[1]; v_p1 := v_players[1]; v_p2 := v_players[2]; v_p3 := v_players[3];
 
     -- P1: 9 results (best-8 must drop the 10) → 500+300+180+90*5 = 1430, events 9.
@@ -486,10 +486,10 @@ BEGIN
     SELECT id INTO v_sport  FROM sport WHERE name = 'pickleball';
     SELECT id INTO v_season FROM ranking_season WHERE now() >= starts_at AND now() < ends_at;
     DELETE FROM tournament_ranking_points WHERE sport_id = v_sport AND season_id = v_season;
-    SELECT id INTO v_org FROM profile ORDER BY id LIMIT 1;
-    SELECT id INTO v_pa FROM profile ORDER BY id OFFSET 4 LIMIT 1;
-    SELECT id INTO v_pb FROM profile ORDER BY id OFFSET 5 LIMIT 1;
-    SELECT id INTO v_pc FROM profile ORDER BY id OFFSET 6 LIMIT 1;
+    SELECT id INTO v_org FROM player ORDER BY id LIMIT 1;
+    SELECT id INTO v_pa FROM player ORDER BY id OFFSET 4 LIMIT 1;
+    SELECT id INTO v_pb FROM player ORDER BY id OFFSET 5 LIMIT 1;
+    SELECT id INTO v_pc FROM player ORDER BY id OFFSET 6 LIMIT 1;
 
     SELECT id INTO v_rs_int FROM rating_score WHERE skill_level = 'intermediate' LIMIT 1;
     SELECT id INTO v_rs_adv FROM rating_score WHERE skill_level = 'advanced' LIMIT 1;
@@ -720,10 +720,15 @@ DECLARE
     v_player uuid;
     v_res    jsonb;
 BEGIN
-    -- Admin fixture (local seed has no admin rows). Promote an existing player.
+    -- Admin fixture. Promote an existing player, and pick the non-admin caller
+    -- from players with no admin row — the local seed does carry admins now, and
+    -- taking the next id blindly can hand us one.
     SELECT id INTO v_admin FROM player ORDER BY id LIMIT 1;
     INSERT INTO admin (id, role) VALUES (v_admin, 'super_admin') ON CONFLICT (id) DO NOTHING;
-    SELECT id INTO v_player FROM player WHERE id <> v_admin ORDER BY id LIMIT 1;
+    SELECT id INTO v_player FROM player
+     WHERE id <> v_admin
+       AND NOT EXISTS (SELECT 1 FROM admin a WHERE a.id = player.id)
+     ORDER BY id LIMIT 1;
 
     -- Non-admin caller is refused.
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_player::text)::text, true);
@@ -1033,6 +1038,232 @@ BEGIN
     ASSERT v_count = 1, 'expected 1 participated row at flat 10, got ' || v_count;
 
     RAISE NOTICE 'PASS 11: played gate — walkover loser gets no row, contested losses keep flat 10';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 12. Rolling 52-week window (20260726140000) — the board no longer resets.
+--     Three synthetic results on one sport: recent, cross-season-but-in-window,
+--     and aged out. Proves the default board is the rolling one, that a
+--     previous season's points still count while inside the window, and that
+--     passing a season code still returns that season's archived standings.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport    uuid;
+    v_org      uuid;
+    v_p1 uuid; v_p2 uuid; v_p3 uuid;
+    v_tid uuid; v_rid uuid;
+    v_recent   timestamptz := now() - interval '1 month';
+    v_midwin   timestamptz := now() - interval '40 weeks';   -- in window, older season
+    v_expired  timestamptz := now() - interval '60 weeks';   -- past the window
+    v_row      record;
+    v_count int; v_points int; v_rank int;
+    v_code_now text; v_code_mid text;
+    v_bad      int;
+BEGIN
+    -- Block 9 leaves session_replication_role = replica; later blocks reset it,
+    -- but be explicit — this block relies on nothing firing either way.
+    SET LOCAL session_replication_role = origin;
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'pickleball';
+    -- Isolate the whole window, not just one season.
+    DELETE FROM tournament_ranking_points WHERE sport_id = v_sport;
+
+    SELECT id INTO v_org FROM player ORDER BY id LIMIT 1;
+    SELECT id INTO v_p1  FROM player ORDER BY id OFFSET 10 LIMIT 1;
+    SELECT id INTO v_p2  FROM player ORDER BY id OFFSET 11 LIMIT 1;
+    SELECT id INTO v_p3  FROM player ORDER BY id OFFSET 12 LIMIT 1;
+
+    -- completed_at == earned_at on every fixture, so the global stamp invariant
+    -- asserted at the end of this block stays meaningful.
+    FOR v_row IN
+        SELECT * FROM (VALUES
+            (v_p1, 500, v_recent),
+            (v_p2, 300, v_midwin),
+            (v_p3, 400, v_expired)
+        ) AS t(pid, pts, whn)
+    LOOP
+        INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date,
+                                 organizer_id, status, completed_at)
+        VALUES ('rolling', v_sport, 8, v_row.whn, v_row.whn, v_org, 'completed', v_row.whn)
+        RETURNING id INTO v_tid;
+        INSERT INTO tournament_registrations (tournament_id, user_id)
+        VALUES (v_tid, v_row.pid) RETURNING id INTO v_rid;
+        INSERT INTO tournament_ranking_points
+            (season_id, tournament_id, registration_id, user_id, sport_id,
+             level_bucket, placement, multiplier, points, earned_at)
+        SELECT rs.id, v_tid, v_rid, v_row.pid, v_sport,
+               'intermediate', 'participated', 1.0, v_row.pts, v_row.whn
+          FROM ranking_season rs
+         WHERE v_row.whn >= rs.starts_at AND v_row.whn < rs.ends_at;
+    END LOOP;
+
+    -- Season codes for the archive assertions.
+    SELECT code INTO v_code_now FROM ranking_season
+     WHERE v_recent >= starts_at AND v_recent < ends_at;
+    SELECT code INTO v_code_mid FROM ranking_season
+     WHERE v_midwin >= starts_at AND v_midwin < ends_at;
+    ASSERT v_code_now IS DISTINCT FROM v_code_mid,
+        'fixture needs two different seasons, both resolved to ' || coalesce(v_code_now, '?');
+
+    -- (a) Default board = rolling: recent + cross-season in, aged-out gone.
+    SELECT count(*) INTO v_count
+      FROM get_tournament_leaderboard(v_sport, NULL, NULL, NULL, 100, 0);
+    ASSERT v_count = 2, 'rolling board should hold 2 players, got ' || v_count;
+
+    SELECT rank, points INTO v_rank, v_points
+      FROM get_tournament_leaderboard(v_sport, NULL, NULL, NULL, 100, 0) WHERE user_id = v_p1;
+    ASSERT v_rank = 1 AND v_points = 500, 'P1 should lead the rolling board at 500';
+
+    -- The point of the change: P2's result is from a CLOSED season and still counts.
+    SELECT rank, points INTO v_rank, v_points
+      FROM get_tournament_leaderboard(v_sport, NULL, NULL, NULL, 100, 0) WHERE user_id = v_p2;
+    ASSERT v_rank = 2 AND v_points = 300,
+        'previous-season result inside the window must still rank, got rank ' || coalesce(v_rank, -1);
+
+    ASSERT NOT EXISTS (
+        SELECT 1 FROM get_tournament_leaderboard(v_sport, NULL, NULL, NULL, 100, 0)
+         WHERE user_id = v_p3
+    ), 'a result older than the window must drop off the rolling board';
+
+    -- (b) Archive path unchanged: an explicit code returns that season only.
+    SELECT count(*) INTO v_count
+      FROM get_tournament_leaderboard(v_sport, v_code_now, NULL, NULL, 100, 0);
+    ASSERT v_count = 1, 'current-season archive should hold 1 player, got ' || v_count;
+    ASSERT EXISTS (
+        SELECT 1 FROM get_tournament_leaderboard(v_sport, v_code_now, NULL, NULL, 100, 0)
+         WHERE user_id = v_p1
+    ), 'current-season archive should hold P1';
+
+    SELECT count(*) INTO v_count
+      FROM get_tournament_leaderboard(v_sport, v_code_mid, NULL, NULL, 100, 0);
+    ASSERT v_count = 1, 'older-season archive should hold 1 player, got ' || v_count;
+    ASSERT EXISTS (
+        SELECT 1 FROM get_tournament_leaderboard(v_sport, v_code_mid, NULL, NULL, 100, 0)
+         WHERE user_id = v_p2
+    ), 'older-season archive should hold P2';
+
+    -- (c) my-ranking follows the same window.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_p2::text)::text, true);
+    SELECT rank, points INTO v_rank, v_points
+      FROM get_my_tournament_ranking(NULL) WHERE sport_id = v_sport;
+    ASSERT v_rank = 2 AND v_points = 300, 'my-ranking should use the rolling window';
+
+    -- P3 is aged out: no sport rows in the window at all.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_p3::text)::text, true);
+    SELECT count(*) INTO v_count FROM get_my_tournament_ranking(NULL) WHERE sport_id = v_sport;
+    ASSERT v_count = 0, 'aged-out player should have no rolling standing, got ' || v_count;
+
+    -- Same player still shows up in their own season's archive.
+    SELECT count(*) INTO v_count
+      FROM get_my_tournament_ranking(
+               (SELECT code FROM ranking_season
+                 WHERE v_expired >= starts_at AND v_expired < ends_at))
+     WHERE sport_id = v_sport;
+    ASSERT v_count = 1, 'aged-out player must still appear in their season archive';
+    PERFORM set_config('request.jwt.claims', NULL, true);
+
+    -- (d) Stamp invariant: every awarded row carries its tournament's
+    --     completed_at. Covers the award-path rows from blocks 1-3, 10 and 11.
+    SELECT count(*) INTO v_bad
+      FROM tournament_ranking_points trp
+      JOIN tournaments t ON t.id = trp.tournament_id
+     WHERE t.completed_at IS NOT NULL
+       AND trp.earned_at <> t.completed_at;
+    ASSERT v_bad = 0, v_bad || ' ledger rows have earned_at out of sync with completed_at';
+
+    RAISE NOTICE 'PASS 12: rolling window — closed-season points still count, aged-out drop off, season archive intact';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 13. get_my_points_to_defend (20260726150000) — horizon, best-8 honesty,
+--     aged-out exclusion, caller scoping.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport   uuid;
+    v_org     uuid;
+    v_me uuid; v_other uuid;
+    v_tid uuid; v_rid uuid;
+    v_soon    timestamptz := now() - interval '50 weeks';  -- expires in ~2 weeks
+    v_fresh   timestamptz := now() - interval '1 month';   -- expires in ~48 weeks
+    v_gone    timestamptz := now() - interval '61 weeks';  -- already out
+    v_row     record;
+    v_count int; v_days int; v_counts boolean;
+    i         integer;
+BEGIN
+    SET LOCAL session_replication_role = origin;
+
+    SELECT id INTO v_sport FROM sport WHERE name = 'pickleball';
+    DELETE FROM tournament_ranking_points WHERE sport_id = v_sport;
+
+    SELECT id INTO v_org   FROM player ORDER BY id LIMIT 1;
+    SELECT id INTO v_me    FROM player ORDER BY id OFFSET 20 LIMIT 1;
+    SELECT id INTO v_other FROM player ORDER BY id OFFSET 21 LIMIT 1;
+
+    -- 8 fresh results at 500 fill the best-8; then two expiring rows, one above
+    -- that bar (900, still counting) and one below it (10, counting for nothing);
+    -- plus one already past the window.
+    FOR v_row IN
+        SELECT * FROM (VALUES
+            (500, v_fresh), (500, v_fresh), (500, v_fresh), (500, v_fresh),
+            (500, v_fresh), (500, v_fresh), (500, v_fresh), (500, v_fresh),
+            (900, v_soon), (10, v_soon), (700, v_gone)
+        ) AS t(pts, whn)
+    LOOP
+        INSERT INTO tournaments (name, sport_id, max_participants, start_date, end_date,
+                                 organizer_id, status, completed_at)
+        VALUES ('defend', v_sport, 8, v_row.whn, v_row.whn, v_org, 'completed', v_row.whn)
+        RETURNING id INTO v_tid;
+        INSERT INTO tournament_registrations (tournament_id, user_id)
+        VALUES (v_tid, v_me) RETURNING id INTO v_rid;
+        INSERT INTO tournament_ranking_points
+            (season_id, tournament_id, registration_id, user_id, sport_id,
+             level_bucket, placement, multiplier, points, earned_at)
+        SELECT rs.id, v_tid, v_rid, v_me, v_sport,
+               'intermediate', 'participated', 1.0, v_row.pts, v_row.whn
+          FROM ranking_season rs
+         WHERE v_row.whn >= rs.starts_at AND v_row.whn < rs.ends_at;
+    END LOOP;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_me::text)::text, true);
+
+    -- (a) Default 60-day horizon surfaces exactly the two ~2-week rows.
+    SELECT count(*) INTO v_count FROM get_my_points_to_defend()
+     WHERE sport_id = v_sport;
+    ASSERT v_count = 2, 'default horizon should surface 2 expiring rows, got ' || v_count;
+
+    -- (b) Soonest first, and the big one leads its tie on points.
+    SELECT points INTO v_count FROM get_my_points_to_defend()
+     WHERE sport_id = v_sport ORDER BY expires_at, points DESC LIMIT 1;
+    ASSERT v_count = 900, 'expected the 900 row first, got ' || v_count;
+
+    -- (c) counts_now is best-8 honest: 900 clears the bar, 10 does not.
+    SELECT counts_now, days_remaining INTO v_counts, v_days
+      FROM get_my_points_to_defend() WHERE sport_id = v_sport AND points = 900;
+    ASSERT v_counts, '900 sits inside the best 8 and must read as counting';
+    ASSERT v_days BETWEEN 7 AND 21, 'expected ~14 days remaining, got ' || v_days;
+
+    SELECT counts_now INTO v_counts
+      FROM get_my_points_to_defend() WHERE sport_id = v_sport AND points = 10;
+    ASSERT NOT v_counts, '10 sits outside the best 8 — defending it costs nothing';
+
+    -- (d) A result already past the window is gone, not expiring.
+    ASSERT NOT EXISTS (
+        SELECT 1 FROM get_my_points_to_defend(400) WHERE sport_id = v_sport AND points = 700
+    ), 'an aged-out result must never be reported as defendable';
+
+    -- (e) A wide horizon reaches the fresh rows too (10 in-window, not 11).
+    SELECT count(*) INTO v_count FROM get_my_points_to_defend(400) WHERE sport_id = v_sport;
+    ASSERT v_count = 10, 'wide horizon should surface all 10 in-window rows, got ' || v_count;
+
+    -- (f) Scoped to the caller.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_other::text)::text, true);
+    SELECT count(*) INTO v_count FROM get_my_points_to_defend(400) WHERE sport_id = v_sport;
+    ASSERT v_count = 0, 'another player must see none of these, got ' || v_count;
+    PERFORM set_config('request.jwt.claims', NULL, true);
+
+    RAISE NOTICE 'PASS 13: points to defend — horizon, best-8 honesty, aged-out excluded, caller-scoped';
 END $$;
 
 ROLLBACK;
