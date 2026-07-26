@@ -35,7 +35,7 @@ export function AvailabilityStep({
           </span>
           <div className="space-y-1">
             <h2 className="font-heading text-xl font-semibold text-foreground">
-              {t('availabilitiesStep.title')}
+              {t('availabilityStep.title')}
             </h2>
             <p className="text-sm text-muted-foreground">{t('availabilitySubtitle')}</p>
           </div>
