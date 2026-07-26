@@ -135,13 +135,8 @@ export async function POST(request: NextRequest) {
       .eq('sport_id', body.sportId);
     if (sportError) throw new Error(`Failed to save sport preferences: ${sportError.message}`);
 
-    // These two write tables whose shape apps/web/types gets wrong (it predates the
-    // move to hourly availability and is missing ~37 tables entirely), so the helpers
-    // are typed against @rallia/shared-types. One cast at the boundary rather than
-    // untyped writes inside them.
-    const sharedAdmin = admin as unknown as Parameters<typeof writePlayerAvailability>[0];
-    await writePlayerAvailability(sharedAdmin, user.id, body.availability);
-    await writeFavoriteFacilities(sharedAdmin, user.id, body.sportId, body.favoriteFacilityIds);
+    await writePlayerAvailability(admin, user.id, body.availability);
+    await writeFavoriteFacilities(admin, user.id, body.sportId, body.favoriteFacilityIds);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

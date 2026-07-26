@@ -1,11 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ORDERED_DAYS, SUPPORTED_HOURS } from '@rallia/shared-utils';
-// Deliberately @rallia/shared-types, not @/types. The web app's generated types are
-// stale for player_availability — they still describe the old period_enum shape, from
-// before the table moved to hourly cells — so typing these writes against them would
-// reject the columns the live table actually has. shared-types is regenerated with
-// mobile and matches production. See the follow-up to reconcile the two.
-import type { Database } from '@rallia/shared-types';
+
+import type { Database } from '@/types';
 
 /**
  * The parts of onboarding that `writeWebOnboardingProfile` does not cover, because the
