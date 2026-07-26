@@ -4,8 +4,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DayEnum, FacilitySearchResult } from '@rallia/shared-types';
 import { useSports } from '@rallia/shared-hooks';
+import {
+  MIN_AVAILABILITY_CELLS,
+  countSelected,
+  emptyGrid,
+  parseCellKey,
+  type HourGrid,
+} from '@rallia/shared-utils';
 
+import { AvailabilityStep } from './availability-step';
+import { FavoriteFacilitiesStep, MIN_FAVORITE_FACILITIES } from './favorite-facilities-step';
 import { SportStep } from './sport-step';
 
 import {
@@ -22,10 +32,11 @@ import {
   type OnboardingProfilePayload,
 } from '@/components/web-onboarding/use-web-onboarding';
 import { Button } from '@/components/ui/button';
-import { useRouter } from '@/i18n/navigation';
 
-/** Our own step, sitting in front of the shared wizard's four. */
+/** Our own steps: one before the shared wizard's four, two after. */
 const SPORT_STEP = 'sport';
+const AVAILABILITY_STEP = 'availability';
+const FAVORITES_STEP = 'favorites';
 
 interface PlayerOnboardingWizardProps {
   /** Primary sport already on the account, if any — skips the sport step. */
@@ -51,11 +62,18 @@ interface PlayerOnboardingWizardProps {
 export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizardProps) {
   const t = useTranslations('webJoin');
   const locale = useLocale();
-  const router = useRouter();
 
   const [sportId, setSportId] = useState<string | null>(initialSportId);
   const sportIdRef = useRef(sportId);
   sportIdRef.current = sportId;
+
+  // The shared wizard submits at its location step; we intercept that payload and hold
+  // it until availability and favourites are collected, then post everything at once.
+  const [profilePayload, setProfilePayload] = useState<OnboardingProfilePayload | null>(null);
+  const [availability, setAvailability] = useState<HourGrid>(emptyGrid);
+  const [favorites, setFavorites] = useState<FacilitySearchResult[]>([]);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   // The level step's heading is "Your {sport} level", so it needs the name, not the id.
   const { sports } = useSports();
@@ -76,32 +94,12 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
     };
   }, []);
 
-  const submitProfile = useCallback(
-    async (payload: OnboardingProfilePayload) => {
-      const response = await fetch('/api/player-onboarding/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          locale,
-          personal: payload.personal,
-          sportId: payload.sportId,
-          ratingScoreId: payload.ratingScoreId,
-          location: payload.location,
-        }),
-      });
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? 'SUBMIT_FAILED');
-      }
-
-      // refresh() re-runs the layout guard, which now sees a complete record and stops
-      // redirecting here; push alone would bounce straight back to onboarding.
-      router.replace('/app');
-      router.refresh();
-    },
-    [locale, router]
-  );
+  const submitProfile = useCallback(async (payload: OnboardingProfilePayload) => {
+    // Nothing is written yet — an account without availability or favourites is exactly
+    // the half-record this wizard exists to avoid.
+    setProfilePayload(payload);
+    return AVAILABILITY_STEP;
+  }, []);
 
   const mapSubmitError = useCallback(
     (error: unknown) => {
@@ -111,6 +109,43 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
     },
     [t]
   );
+
+  const handleFinish = useCallback(async () => {
+    if (!profilePayload) return;
+    setIsFinishing(true);
+    setFinishError(null);
+
+    try {
+      const response = await fetch('/api/player-onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locale,
+          personal: profilePayload.personal,
+          sportId: profilePayload.sportId,
+          ratingScoreId: profilePayload.ratingScoreId,
+          location: profilePayload.location,
+          availability: Array.from(availability)
+            .map(parseCellKey)
+            .filter((cell): cell is { day: DayEnum; hour: number } => cell !== null),
+          favoriteFacilityIds: favorites.map(facility => facility.id),
+        }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? 'SUBMIT_FAILED');
+      }
+
+      // Full navigation, not router.push: the guard that sent the player here is cached
+      // against /app from before the record was complete.
+      window.location.assign(`/${locale}/app`);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'SUBMIT_FAILED';
+      setFinishError(code === 'MINIMUM_AGE' ? t('errors.minimumAge') : t('errors.submitFailed'));
+      setIsFinishing(false);
+    }
+  }, [profilePayload, availability, favorites, locale, t]);
 
   const controller = useWebOnboarding({
     sportId,
@@ -186,6 +221,51 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
       {step === 'location' && <LocationStep controller={controller} t={t} />}
 
       <OnboardingNav controller={controller} t={t} finishLabel={t('continue')} />
+
+      {step === AVAILABILITY_STEP && (
+        <>
+          <AvailabilityStep value={availability} onChange={setAvailability} />
+          <Button
+            type="button"
+            size="lg"
+            className="font-semibold"
+            disabled={countSelected(availability) < MIN_AVAILABILITY_CELLS}
+            onClick={() => setStep(FAVORITES_STEP)}
+          >
+            {t('continue')}
+            <ArrowRight className="size-4" />
+          </Button>
+        </>
+      )}
+
+      {step === FAVORITES_STEP && profilePayload && (
+        <>
+          <FavoriteFacilitiesStep
+            sportId={profilePayload.sportId}
+            latitude={profilePayload.location.latitude}
+            longitude={profilePayload.location.longitude}
+            selected={favorites}
+            onToggle={facility =>
+              setFavorites(current =>
+                current.some(entry => entry.id === facility.id)
+                  ? current.filter(entry => entry.id !== facility.id)
+                  : [...current, facility]
+              )
+            }
+          />
+          <OnboardingError message={finishError} />
+          <Button
+            type="button"
+            size="lg"
+            className="font-semibold"
+            disabled={favorites.length < MIN_FAVORITE_FACILITIES || isFinishing}
+            onClick={() => void handleFinish()}
+          >
+            {isFinishing && <Loader2 className="size-4 animate-spin" />}
+            {t('continue')}
+          </Button>
+        </>
+      )}
     </div>
   );
 }

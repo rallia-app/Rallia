@@ -1,17 +1,35 @@
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
-import { meetsMinimumAge } from '@rallia/shared-utils';
+import { MIN_AVAILABILITY_CELLS, meetsMinimumAge } from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { writeWebOnboardingProfile } from '@/lib/web-onboarding/profile';
 import {
-  DEFAULT_WEB_ONBOARDING_PREFERENCES,
-  writeWebOnboardingProfile,
-} from '@/lib/web-onboarding/profile';
+  isValidAvailabilityCell,
+  writeFavoriteFacilities,
+  writePlayerAvailability,
+} from '@/lib/web-onboarding/player-extras';
 
 /** Accepts seed/test IDs (e.g. b1000000-0000-...) that fail z.uuid(). */
 const uuidLike = z
   .string()
   .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+/**
+ * Defaults for a primary signup, matching mobile's onboarding defaults.
+ *
+ * Deliberately NOT DEFAULT_WEB_ONBOARDING_PREFERENCES: that set (25km, 60min, "both")
+ * exists for the join and booking gates, where onboarding is a side-quest to getting
+ * into one specific game and a wide net is helpful. For someone signing up to the app
+ * itself, silently disagreeing with mobile about travel distance and match type would
+ * hand two players different feeds for no reason they could see.
+ */
+const PRIMARY_SIGNUP_DEFAULTS = {
+  playingHand: 'right' as const,
+  matchType: 'competitive' as const,
+  matchDuration: '90' as const,
+  maxTravelDistance: 10,
+};
 
 const CompleteSchema = z.object({
   locale: z.string().default('en-US'),
@@ -30,20 +48,24 @@ const CompleteSchema = z.object({
     postalCode: z.string().min(3).max(12),
     city: z.string().min(1).max(120),
     province: z.string().min(1).max(80),
+    country: z.enum(['CA', 'US']).default('CA'),
     latitude: z.number(),
     longitude: z.number(),
   }),
+  availability: z
+    .array(z.object({ day: z.string(), hour: z.number().int() }))
+    .min(MIN_AVAILABILITY_CELLS, { message: 'AVAILABILITY_REQUIRED' })
+    .refine(cells => cells.every(isValidAvailabilityCell), { message: 'AVAILABILITY_INVALID' }),
+  favoriteFacilityIds: z.array(uuidLike).min(2, { message: 'FAVORITES_REQUIRED' }),
 });
 
 /**
  * Completes onboarding for a player who signed up on the web.
  *
- * Writes through the same `writeWebOnboardingProfile` the /games join gate and
- * /courts booking gate use, so an account created here is shaped identically to one
- * created through those flows — same defaults, same rating source, same primary sport.
- *
- * The only difference is attribution: `web_app` rather than a referral, since nobody
- * invited this player to anything.
+ * Writes the profile through the same writeWebOnboardingProfile the /games join gate and
+ * /courts booking gate use, then adds the two things those gates never collect —
+ * availability and favourite facilities — so the resulting account matches what mobile
+ * onboarding produces rather than a subset of it.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -60,8 +82,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = CompleteSchema.parse(await request.json());
-
     const admin = createServiceRoleClient();
+
     await writeWebOnboardingProfile(
       admin,
       user.id,
@@ -70,19 +92,57 @@ export async function POST(request: NextRequest) {
         ...body.personal,
         sportId: body.sportId,
         ratingScoreId: body.ratingScoreId,
-        ...body.location,
-        ...DEFAULT_WEB_ONBOARDING_PREFERENCES,
+        postalCode: body.location.postalCode,
+        city: body.location.city,
+        province: body.location.province,
+        latitude: body.location.latitude,
+        longitude: body.location.longitude,
+        playingHand: PRIMARY_SIGNUP_DEFAULTS.playingHand,
+        matchType: PRIMARY_SIGNUP_DEFAULTS.matchType,
         locale: body.locale,
       },
       { acquisitionChannel: 'web_app' }
     );
 
+    // Columns writeWebOnboardingProfile does not carry: country (mobile writes it from
+    // the geocode) and the primary-signup travel/duration defaults.
+    const { error: playerError } = await admin
+      .from('player')
+      .update({
+        country: body.location.country,
+        max_travel_distance: PRIMARY_SIGNUP_DEFAULTS.maxTravelDistance,
+      })
+      .eq('id', user.id);
+    if (playerError) throw new Error(`Failed to save player details: ${playerError.message}`);
+
+    const { error: sportError } = await admin
+      .from('player_sport')
+      .update({ preferred_match_duration: PRIMARY_SIGNUP_DEFAULTS.matchDuration })
+      .eq('player_id', user.id)
+      .eq('sport_id', body.sportId);
+    if (sportError) throw new Error(`Failed to save sport preferences: ${sportError.message}`);
+
+    // These two write tables whose shape apps/web/types gets wrong (it predates the
+    // move to hourly availability and is missing ~37 tables entirely), so the helpers
+    // are typed against @rallia/shared-types. One cast at the boundary rather than
+    // untyped writes inside them.
+    const sharedAdmin = admin as unknown as Parameters<typeof writePlayerAvailability>[0];
+    await writePlayerAvailability(sharedAdmin, user.id, body.availability);
+    await writeFavoriteFacilities(sharedAdmin, user.id, body.sportId, body.favoriteFacilityIds);
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const isAgeFailure = error.issues.some(issue => issue.message === 'MINIMUM_AGE');
+      const codes = new Set(error.issues.map(issue => issue.message));
+      const known = [
+        'MINIMUM_AGE',
+        'AVAILABILITY_REQUIRED',
+        'AVAILABILITY_INVALID',
+        'FAVORITES_REQUIRED',
+      ];
+      const matched = known.find(code => codes.has(code));
       return NextResponse.json(
-        { error: isAgeFailure ? 'MINIMUM_AGE' : 'INVALID_REQUEST', details: error.issues },
+        { error: matched ?? 'INVALID_REQUEST', details: error.issues },
         { status: 400 }
       );
     }

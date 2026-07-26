@@ -52,18 +52,29 @@ import type { TranslationKey } from '@rallia/shared-translations';
 // CONSTANTS
 // =============================================================================
 
-/** Hour cells the grid supports: 06..22 inclusive (17 cells). */
-export const SUPPORTED_HOURS: number[] = Array.from({ length: 17 }, (_, i) => i + 6);
+// The grid's shape and cell encoding live in @rallia/shared-utils so mobile, the web
+// onboarding wizard and the weekly check-in cannot disagree about which hours exist or
+// how a cell is keyed. Re-exported here because this module is the established import
+// site across the app.
+import {
+  SUPPORTED_HOURS,
+  ORDERED_DAYS,
+  cellKey,
+  emptyGrid,
+  countSelected,
+  parseCellKey,
+  type HourGrid,
+} from '@rallia/shared-utils';
 
-export const ORDERED_DAYS: DayEnum[] = [
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday',
-];
+export {
+  SUPPORTED_HOURS,
+  ORDERED_DAYS,
+  cellKey,
+  emptyGrid,
+  countSelected,
+  parseCellKey,
+  type HourGrid,
+};
 
 const DAY_LETTER_KEY: Record<DayEnum, TranslationKey> = {
   monday: 'playerDirectory.dayLetters.monday',
@@ -78,26 +89,6 @@ const DAY_LETTER_KEY: Record<DayEnum, TranslationKey> = {
 // =============================================================================
 // TYPES
 // =============================================================================
-
-/**
- * Selection state. Keys are `${day}-${hour}` strings — flat representation so
- * one Set clone per drag tick is cheap. Helpers below build/parse cell keys.
- */
-export type HourGrid = ReadonlySet<string>;
-
-export function cellKey(day: DayEnum, hour: number): string {
-  return `${day}-${hour}`;
-}
-
-/** Build an empty grid (no cells selected). */
-export function emptyGrid(): HourGrid {
-  return new Set();
-}
-
-/** Total cells selected. */
-export function countSelected(grid: HourGrid): number {
-  return grid.size;
-}
 
 export interface HourlyAvailabilityGridColors {
   text: string;
