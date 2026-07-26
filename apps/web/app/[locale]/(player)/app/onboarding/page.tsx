@@ -37,7 +37,13 @@ export default async function PlayerOnboardingPage() {
 
       {user?.email && <OnboardingAccountBar email={user.email} />}
 
-      <PlayerOnboardingWizard initialSportId={shellData?.primarySportId ?? null} />
+      {user && (
+        <PlayerOnboardingWizard
+          userId={user.id}
+          initialSportId={shellData?.primarySportId ?? null}
+          initialProfilePictureUrl={shellData?.profilePictureUrl ?? null}
+        />
+      )}
     </div>
   );
 }

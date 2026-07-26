@@ -44,6 +44,7 @@ const CompleteSchema = z.object({
   }),
   sportId: uuidLike,
   ratingScoreId: uuidLike,
+  profilePictureUrl: z.string().url().nullable().optional(),
   location: z.object({
     postalCode: z.string().min(3).max(12),
     city: z.string().min(1).max(120),
@@ -103,6 +104,18 @@ export async function POST(request: NextRequest) {
       },
       { acquisitionChannel: 'web_app' }
     );
+
+    // writeWebOnboardingProfile has no photo parameter (the join and booking gates never
+    // collect one), so the avatar is written alongside it rather than through it.
+    if (body.profilePictureUrl !== undefined) {
+      const { error: pictureError } = await admin
+        .from('profile')
+        .update({ profile_picture_url: body.profilePictureUrl })
+        .eq('id', user.id);
+      if (pictureError) {
+        throw new Error(`Failed to save profile picture: ${pictureError.message}`);
+      }
+    }
 
     // Columns writeWebOnboardingProfile does not carry: country (mobile writes it from
     // the geocode) and the primary-signup travel/duration defaults.

@@ -18,6 +18,7 @@ import { AvailabilityStep } from './availability-step';
 import { FavoriteFacilitiesStep, MIN_FAVORITE_FACILITIES } from './favorite-facilities-step';
 import { SportStep } from './sport-step';
 
+import { AvatarPicker } from '@/components/app/inputs/avatar-picker';
 import {
   ConsentStep,
   LocationStep,
@@ -32,6 +33,7 @@ import {
   type OnboardingProfilePayload,
 } from '@/components/web-onboarding/use-web-onboarding';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 /** Our own steps: one before the shared wizard's four, two after. */
 const SPORT_STEP = 'sport';
@@ -41,6 +43,9 @@ const FAVORITES_STEP = 'favorites';
 interface PlayerOnboardingWizardProps {
   /** Primary sport already on the account, if any — skips the sport step. */
   initialSportId: string | null;
+  userId: string;
+  /** Existing avatar, so a returning player is not asked for one twice. */
+  initialProfilePictureUrl: string | null;
 }
 
 /**
@@ -59,7 +64,11 @@ interface PlayerOnboardingWizardProps {
  * jumping straight to, say, location would post empty names. Prefill plus a few
  * Continue clicks is the safe version of the same idea.
  */
-export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizardProps) {
+export function PlayerOnboardingWizard({
+  initialSportId,
+  userId,
+  initialProfilePictureUrl,
+}: PlayerOnboardingWizardProps) {
   const t = useTranslations('webJoin');
   const locale = useLocale();
 
@@ -72,6 +81,9 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
   const [profilePayload, setProfilePayload] = useState<OnboardingProfilePayload | null>(null);
   const [availability, setAvailability] = useState<HourGrid>(emptyGrid);
   const [favorites, setFavorites] = useState<FacilitySearchResult[]>([]);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(
+    initialProfilePictureUrl
+  );
   const [isFinishing, setIsFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
 
@@ -122,6 +134,7 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
         body: JSON.stringify({
           locale,
           personal: profilePayload.personal,
+          profilePictureUrl,
           sportId: profilePayload.sportId,
           ratingScoreId: profilePayload.ratingScoreId,
           location: profilePayload.location,
@@ -145,7 +158,7 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
       setFinishError(code === 'MINIMUM_AGE' ? t('errors.minimumAge') : t('errors.submitFailed'));
       setIsFinishing(false);
     }
-  }, [profilePayload, availability, favorites, locale, t]);
+  }, [profilePayload, availability, favorites, profilePictureUrl, locale, t]);
 
   const controller = useWebOnboarding({
     sportId,
@@ -216,7 +229,23 @@ export function PlayerOnboardingWizard({ initialSportId }: PlayerOnboardingWizar
       )}
 
       {step === 'consent' && <ConsentStep controller={controller} />}
-      {step === 'personal' && <PersonalStep controller={controller} t={t} />}
+      {step === 'personal' && (
+        <>
+          {/* Sits above the shared PersonalStep rather than inside it: that component is
+              also used by the join and booking gates, which do not collect a photo. */}
+          <Card>
+            <CardContent className="pt-6">
+              <AvatarPicker
+                userId={userId}
+                name={`${controller.personal.firstName} ${controller.personal.lastName}`.trim()}
+                value={profilePictureUrl}
+                onChange={setProfilePictureUrl}
+              />
+            </CardContent>
+          </Card>
+          <PersonalStep controller={controller} t={t} />
+        </>
+      )}
       {step === 'rating' && <RatingStep controller={controller} t={t} sportName={sportName} />}
       {step === 'location' && <LocationStep controller={controller} t={t} />}
 
