@@ -7,17 +7,24 @@ Québec racquet sports already name a season of tournaments with a points
 ranking (Tennis Québec circuits), and it's identical in FR/EN. Internal
 identifiers (tables, RPCs, i18n keys) keep the `tournament_ranking` naming.
 
-Status: draft · Owner: Mathis / cofounder · Last updated: 2026-07-14 (rev 4, + monthly-challenge relationship §12)
+Status: draft · Owner: Mathis / cofounder · Last updated: 2026-07-26 (rev 5, rolling 52-week window)
+
+> **Pricing in §4 and §5 is superseded.** The tier ladder and base curve below
+> describe the July-14 design. Live pricing (continuous level multiplier, the
+> 0.2 snap, flat participation, round-of-N rungs) is documented in
+> [`docs/circuit-rallia-points.md`](../../docs/circuit-rallia-points.md), which
+> is the source of truth. Everything else here tracks the live system.
 
 A points-based ranking layered on top of tournaments. Players earn **Points
 Rallia** by entering and advancing in tournaments; points accumulate over a
-season into one leaderboard per sport. This is a **ranking**
+**rolling 52-week window** into one leaderboard per sport. This is a **ranking**
 (achievement/engagement), separate from the skill **rating** used for
 matchmaking — the rating is never derived from or affected by this system.
 
 Scope: **tournaments only**. Leagues already have a per-season points table
 (`season_rankings` + `recalc_season_ranking`) and will fold into the same
-currency later, on the same season calendar.
+currency later; a league season's award lands with a completion date like any
+other result, so the rolling window covers it with no extra machinery.
 
 ---
 
@@ -25,10 +32,10 @@ currency later, on the same season calendar.
 
 | Topic                   | Decision                                                                                                                                                                                                                                                                            |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Time window             | Seasons that reset, **2 per year**: Spring/Summer (Apr 1 – Sep 30), Fall/Winter (Oct 1 – Mar 31, **crosses year-end**)                                                                                                                                                              |
+| Time window             | **Rolling 52 weeks**, no reset (revised 2026-07-26, was seasons that reset 2×/year). Seasons survive as a browsable **archive** on the same Apr 1 / Oct 1 calendar.                                                                                                                 |
 | Participation weighting | **Balanced** — a modest floor for showing up, bulk of points at finalist/champion                                                                                                                                                                                                   |
 | Boards                  | **One common board per sport** (all levels together) → 2 boards. The tier weighting sorts ability; strong players top the board by winning large, high-strength tournaments. Level is snapshotted per result to power an optional "filter to my level" view — not a separate board. |
-| Tier (point weight)     | **Computed** from field size + field strength, not organizer-set                                                                                                                                                                                                                    |
+| Tier (point weight)     | **Computed**, not organizer-set. Now draw size × the tournament's `min_rating` level multiplier (see `docs/circuit-rallia-points.md`); §4's field-strength formula is superseded.                                                                                                   |
 
 Defaults chosen while specifying (flagged for confirmation in §10):
 
@@ -37,9 +44,9 @@ Defaults chosen while specifying (flagged for confirmation in §10):
 - **(D)** Placement tiers that earn distinct points: Champion / Finalist /
   Semifinal / Quarterfinal / Participated (everything earlier is flat).
 - **(E)** Concrete tier and points numbers proposed in §4 and §5 — tunable.
-- **(F)** Anti-farming: only a player's **best 8 results** per season count
-  toward their board total (§5); tournaments with **fewer than 8 entries award
-  participation points only** (§4) — confirmed 2026-07-14. This aligns exactly
+- **(F)** Anti-farming: only a player's **best 8 results** in the rolling
+  window count toward their board total (§5); tournaments with **fewer than 8
+  entries award participation points only** (§4) — confirmed 2026-07-14. This aligns exactly
   with the tier cutoffs: `local` (n < 8) is participation-only by definition;
   placement points exist only at `regional`/`vedette`.
 - **(G)** **Zero-win floor** — confirmed 2026-07-14: losing your first **real**
@@ -84,10 +91,15 @@ needs a stable completion time:
 - Backfill existing completed/archived tournaments from `updated_at`
   (best available proxy — noted for the staging backfill).
 
-### `ranking_season`
+### `ranking_season` — the archive calendar
 
-One row per half-year. Global calendar shared by both boards. Boundaries are
-**midnight America/Toronto**, stored as timestamptz.
+One row per half-year. Boundaries are **midnight America/Toronto**, stored as
+timestamptz.
+
+**Revised 2026-07-26:** seasons no longer scope the live board. They are kept,
+still seeded, and still stamped on every ledger row, so a season's **final
+standings stay browsable** after it closes. The live board is the rolling
+window (§6).
 
 | Column      | Type        | Notes                                                                                      |
 | ----------- | ----------- | ------------------------------------------------------------------------------------------ |
@@ -107,9 +119,11 @@ Seed the current season plus at least the next two, **and historical seasons
 back to the earliest `tournaments.completed_at`** so the backfill (§11) always
 finds a covering season and old seasons are browsable. The award function must
 **fail loudly** (raise) if no season row covers the completion time — never
-award into a silent NULL season.
+award into a silent NULL season. This still holds: `season_id` is `NOT NULL`
+on the ledger and the archive depends on it being right.
 
-A tournament's points belong to the season containing its `completed_at`.
+A tournament's points belong to the season containing its `completed_at`, and
+count on the live board for 52 weeks from that same timestamp.
 
 ### `tournament_ranking_points` (the ledger — source of truth)
 
@@ -118,19 +132,21 @@ single `tournament_registrations` row carries **two players** (`user_id` +
 `partner_user_id`) → the award writes **two ledger rows** for that
 registration, each partner receiving **full** (not split) points.
 
-| Column            | Type                            | Notes                                                                                                                        |
-| ----------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `id`              | uuid pk                         |                                                                                                                              |
-| `season_id`       | uuid → ranking_season           |                                                                                                                              |
-| `tournament_id`   | uuid → tournaments              |                                                                                                                              |
-| `registration_id` | uuid → tournament_registrations | shared by both partners in doubles                                                                                           |
-| `user_id`         | uuid → player                   | the individual earner                                                                                                        |
-| `sport_id`        | uuid → sport                    |                                                                                                                              |
-| `level_bucket`    | text nullable                   | `beginner`\|`intermediate`\|`advanced` — snapshot; powers the optional level filter, **not** the board key; NULL for unrated |
-| `placement`       | text                            | `champion`\|`finalist`\|`semifinal`\|`quarterfinal`\|`participated`                                                          |
-| `tier`            | text                            | `local`\|`regional`\|`vedette` — snapshot of computed tier                                                                   |
-| `points`          | int                             | final awarded points                                                                                                         |
-| `computed_at`     | timestamptz                     |                                                                                                                              |
+| Column            | Type                            | Notes                                                                                                                                      |
+| ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`              | uuid pk                         |                                                                                                                                            |
+| `season_id`       | uuid → ranking_season           |                                                                                                                                            |
+| `tournament_id`   | uuid → tournaments              |                                                                                                                                            |
+| `registration_id` | uuid → tournament_registrations | shared by both partners in doubles                                                                                                         |
+| `user_id`         | uuid → player                   | the individual earner                                                                                                                      |
+| `sport_id`        | uuid → sport                    |                                                                                                                                            |
+| `level_bucket`    | text nullable                   | `beginner`\|`intermediate`\|`advanced` — snapshot kept for history/analytics; **no longer drives the level filter** (§6); NULL for unrated |
+| `placement`       | text                            | `champion`\|`finalist`\|`semifinal`\|`quarterfinal`\|`round_of_16`\|`round_of_32`\|`round_of_64`\|`participated`                           |
+| `tier`            | text                            | `local`\|`regional`\|`vedette` — snapshot; superseded as a price input, kept for history                                                   |
+| `multiplier`      | numeric(5,3)                    | the event's stamped multiplier, copied onto the row                                                                                        |
+| `points`          | int                             | final awarded points                                                                                                                       |
+| `computed_at`     | timestamptz                     | when the award **ran** — moves on every recompute, never a window input                                                                    |
+| `earned_at`       | timestamptz                     | the tournament's `completed_at` — **drives the rolling window** (added 2026-07-26)                                                         |
 
 Unique **`(tournament_id, user_id)`** — not `(tournament_id, registration_id)`,
 which would collapse doubles partners. The app-level `UNIQUE (tournament_id,
@@ -140,8 +156,19 @@ function guards against a player appearing both as primary and partner with
 tournament_ranking_points.points` — **keep the higher-points result**
 (`DO NOTHING` would keep whichever row happened to insert first).
 
-Index the board read path too: `(season_id, sport_id, user_id)` — the
-leaderboard does a per-player best-8 sort over exactly that key.
+Index the board read path twice, once per window mode:
+
+- `(season_id, sport_id, user_id)` — the archive read.
+- `(sport_id, earned_at)` (`trp_window_idx`) — the rolling read's predicate.
+
+Both feed the same per-player best-8 sort.
+
+**Why `earned_at` rather than reusing `computed_at`:** `computed_at` records
+when the award function ran. For backfilled tournaments that is backfill time,
+not the tournament date, and it moves again on every idempotent recompute.
+Windowing on it would silently resurrect old results. The `NOT NULL DEFAULT
+now()` on `earned_at` exists only so direct inserts (seeds, tests) stay valid;
+anything inserting a **backdated** result must pass it explicitly.
 
 Recompute = delete rows for the tournament, reinsert (idempotent; one-shot per
 completion, so no write-amp concern).
@@ -286,23 +313,53 @@ semifinal 360, quarterfinal 180, participated 40. (These are the numbers in the
 one-pager's "Vedette" column.)
 
 **Best-8 rule (ATP-style):** a player's board total = the sum of their **8
-highest-point results** in the season. Every result stays in the ledger and on
-the player's history; the cap applies at read time (§8). This is the standard
-anti-volume device: without it the board is a pure grind ladder and small-event
-farming pays linearly forever. 8 results ≈ one tournament every 3 weeks of a
-6-month season — above what a normal player will do, so casuals never feel the
-cap; it only clips grinders.
+highest-point results inside the rolling window**. Every result stays in the
+ledger and on the player's history; the cap applies at read time (§8). This is
+the standard anti-volume device: without it the board is a pure grind ladder
+and small-event farming pays linearly forever.
+
+**Note the window change made the cap looser, not tighter.** 8 results over 12
+months is roughly one tournament every 6 weeks, well above what anyone plays
+today, so the cap currently binds on nobody. Revisit N against real
+events-per-player once supply grows; the ATP counts 19.
 
 ---
 
 ## 6. Board resolution & the level filter
 
-A board = `(sport_id, season_id)`. **One common board per sport** — all levels
-ranked together. Ability is sorted by the tier weighting (§4): the players on top
-are the ones winning large, high-strength tournaments.
+A board = `(sport_id, window)`, where the window is either the **rolling 52
+weeks** (the live board, the default) or a **season** (the archive). **One
+common board per sport** — all levels ranked together. Ability is sorted by the
+point weighting: the players on top are the ones winning large, high-category
+tournaments.
+
+### Rolling window (revised 2026-07-26)
+
+The board was a hard semi-annual reset: every Apr 1 and Oct 1 every player
+dropped to zero. On a base this thin that leaves the board empty for weeks, and
+a player who entered two tournaments in a season watched both evaporate having
+never held a meaningful rank.
+
+The live board now counts results from the last **52 weeks** (`lt_ranking_window()`,
+the single home of the length). Nothing resets; each result ages out on its own
+52 weeks after its tournament completed. This is what the ATP **rankings** do.
+The semi-annual reset is the shape of the ATP **Race**, a separate board whose
+job is qualification rather than ranking — worth building only if there is
+something to qualify for (a season-ending event), which there is not yet.
+
+Expiry is a **read-time predicate** on `earned_at`. No cron, no expiry sweep, no
+rewriting of ledger rows.
+
+**Mechanism:** `p_season_id IS NULL` means rolling. The wrappers pass NULL when
+no season code is given, so the default is rolling and an explicit code returns
+that season's archived standings. This was deliberately **not** a signature
+change: adding a trailing DEFAULT parameter creates a second overload and makes
+existing 3-arg and 4-arg calls ambiguous, so every caller kept working untouched
+and inherited the rolling default. An unknown season code falls back to rolling
+rather than raising.
 
 Two optional, mutually exclusive read-side **filters** let a player narrow the
-board to peers, without fragmenting the real season standings (§8). **Both
+board to peers, without fragmenting the real board standings (§8). **Both
 resolve off the player's CURRENT active rating** for the sport
 (`active_rating_score_id → rating_score`), so they share one axis:
 
@@ -322,7 +379,7 @@ exact-rating filter (snapshot vs live), producing the inversion above and
 letting a player's two chips disagree. `level_bucket` is **still snapshotted**
 on every ledger row for history/analytics, but **no longer drives the filter**.
 
-Because there's no level partition, all of a player's season points sit on their
+Because there's no level partition, all of a player's points sit on their
 sport's single board regardless of rating/level changes.
 
 ### Singles vs doubles — combined, not split (decided 2026-07-14)
@@ -373,6 +430,8 @@ stateDiagram-v2
    also _clears_ rows, de-certifying an organizer and recomputing removes their
    past points.
 2. Resolve the season from `completed_at`; **raise** if no season row covers it.
+   Stamp `earned_at = completed_at` on every row written (§2) — this is what the
+   rolling window reads.
 3. Compute tier (§4) from the bracket entries; apply the `n < 8` floor.
 4. For each **entry appearing in the bracket** (skip phantom slots): compute
    placement (§3, incl. the zero-win floor), then write **one ledger row per
@@ -412,8 +471,10 @@ status-guard + idempotent recompute cover it if one ever appears.
 
 - `get_tournament_leaderboard(p_sport_id, p_season_code, p_level_filter, p_rating_score_id, p_limit, p_offset)`
   → ranked rows `{ rank, user_id, full_name, avatar, points, events_played }`.
-  Per player: `points` = sum of their **best 8** ledger rows in the season
-  (§5), `events_played` = total ledger rows. Order: `points` desc, then
+  **`p_season_code` NULL (the default) = the live rolling board**; a season code
+  = that season's archived standings (§6). Per player: `points` = sum of their
+  **best 8** ledger rows in the chosen window (§5), `events_played` = their
+  total rows in that window. Order: `points` desc, then
   `events_played` **asc** (fewer events for the same points = stronger — and
   deterministic), then `user_id` for stability. Both filters (§6) **select
   players, not rows**, and all of a kept player's rows count toward their
@@ -427,7 +488,19 @@ status-guard + idempotent recompute cover it if one ever appears.
 - `get_my_tournament_ranking(p_season_code)` → the **caller's** (`auth.uid()`,
   not a parameter) rank + points **+ level_bucket** (current active rating,
   drives the "my level" chip) per sport board they appear on, for a "your
-  standing" card.
+  standing" card. Same window rule as above: NULL = rolling.
+- `get_my_points_to_defend(p_within_days)` (added 2026-07-26) → the caller's
+  still-counting results expiring inside the horizon (default 60 days), soonest
+  first, with the tournament that produced them. `counts_now` reports whether
+  the row is currently inside the player's best 8 for that sport: a result
+  outside it is not being defended, since its expiry will not move the total, so
+  the UI must not claim urgency for it. Rows already **past** the window are
+  gone, not expiring, and are never returned.
+
+  This is the payoff of the rolling window. A reset gives one shared
+  re-engagement moment per half-year; a rolling window gives every player their
+  own, attached to a concrete action ("900 points drop off April 12, that
+  tournament opens Monday").
 
 ---
 
@@ -449,7 +522,13 @@ status-guard + idempotent recompute cover it if one ever appears.
 - Canonical icons: **calendar = monthly challenge, trophy = Circuit Rallia**
   (tabs, board headers, Home tiles, empty states).
 - Ranked list with rank, avatar, name, points; the caller's row pinned/highlighted.
-- Season selector (current Spring/Summer or Fall/Winter default; past seasons browsable).
+- Board subtitle states the window ("Results from the last 12 months"). Copy
+  says **12 months**, never "52 weeks" — the precision only matters in code.
+- Season **archive** selector (past seasons browsable; the live board is the
+  rolling one and is the default). **Still deferred** — the RPCs accept a season
+  code, nothing in the UI passes one yet.
+- A **points-to-defend** surface (home tile / push) off `get_my_points_to_defend`.
+  **Not built** — the RPC has no caller.
 - Copy follows house rules: "games/parties" not "matches", no 🎾, FR "streak"
   stays anglicism where relevant.
 
@@ -457,8 +536,11 @@ status-guard + idempotent recompute cover it if one ever appears.
 
 ## 10. Open items (defaults in place, confirm to lock)
 
-1. **Best-8 cap (F)** — count only a player's 8 best results per season.
+1. **Best-8 cap (F)** — count only a player's 8 best results in the window.
    Default: ON. Alternative: no cap (pure volume ladder — not recommended).
+   Reopened 2026-07-26: N was sized for a 6-month season and the window is now
+   12 months, so the cap is looser than intended. Check real events-per-player
+   before tuning.
 2. **Minimum to appear on a board** — show everyone with ≥1 point, or require
    ≥N events? Default: ≥1 point.
 3. **Tier/points numbers** (§4, §5) — placeholders, tune against real fields.
@@ -511,6 +593,13 @@ cutoff only if real doubles fields never reach it.
    tournaments (season resolved from backfilled `completed_at` ≈ `updated_at`);
    wire PostHog event + a leaderboard funnel.
 5. **(Later)** Leagues feed the same ledger via `season_rankings` final standings.
+6. **Rolling window** (done 2026-07-26, local + staging + `origin/dev`) —
+   `earned_at` + backfill + index (`20260726130000`), window mode on the board
+   and both wrappers (`20260726140000`), `get_my_points_to_defend`
+   (`20260726150000`). Test blocks 12 and 13. Copy and
+   `docs/circuit-rallia-points.md` updated; the season subtitle came off the
+   mobile board. **Not done:** any UI reading the new RPC, the archive selector,
+   and on-device QA of the changed copy.
 
 ---
 
@@ -525,7 +614,7 @@ populations and are deliberately kept as **separate currencies**:
 | -------------- | ---------------------------------------- | --------------------------------------------- |
 | Question       | "Who's playing the most?"                | "Who's achieving the most in competition?"    |
 | Currency       | games played (no skill signal)           | placement × tier points                       |
-| Cadence        | monthly reset                            | 2 seasons/year                                |
+| Cadence        | monthly reset                            | rolling 52 weeks, no reset                    |
 | Who can top it | anyone with volume                       | tournament players who win                    |
 | Job            | engagement engine (join/play bottleneck) | prestige ladder that makes tournaments matter |
 
@@ -550,6 +639,9 @@ Rules:
   context. **Verify once on staging** (slice 3 checklist) that a completed
   bridged tournament match actually qualifies (filled/attendance predicates),
   so this is a decision rather than an accident.
-- **Cross-pollination:** the challenge screen advertises the ranking
-  ("Circuit season ends Sep 30 — enter a tournament") and the ranking
-  screen advertises the challenge to unranked visitors.
+- **Cross-pollination:** the challenge screen advertises the ranking and the
+  ranking screen advertises the challenge to unranked visitors. The old pitch
+  ("Circuit season ends Sep 30") died with the reset; the rolling equivalent is
+  a player's own expiry ("900 points drop off April 12"), which is stronger
+  because it is personal and carries an action. Needs
+  `get_my_points_to_defend` wired first (§8).
