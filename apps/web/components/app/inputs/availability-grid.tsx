@@ -97,11 +97,13 @@ export function AvailabilityGrid({
       style={{ userSelect: isPainting ? 'none' : undefined }}
     >
       {/* table-fixed so all seven day columns share equal width; auto layout sizes them
-          by the day letter, which differs per locale (M/T/W vs L/M/M). */}
-      <table className="w-full min-w-[22rem] table-fixed border-separate border-spacing-1">
+          by the day letter, which differs per locale (M/T/W vs L/M/M). No min-width:
+          paint-dragging inside a horizontal scroller is miserable on touch, so the
+          columns squeeze to fit even the narrowest phones instead of overflowing. */}
+      <table className="w-full table-fixed border-separate border-spacing-1">
         <thead>
           <tr>
-            <th className="w-10" />
+            <th className="w-8" />
             {ORDERED_DAYS.map((day, dayIndex) => (
               <th key={day} className="p-0">
                 <button

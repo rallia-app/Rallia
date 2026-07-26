@@ -16,12 +16,16 @@ export function OnboardingAccountBar({ email }: { email: string }) {
   const locale = useLocale();
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2.5">
-      <span className="min-w-0 truncate text-sm text-muted-foreground" title={email}>
+    <div className="flex min-w-0 items-center gap-2.5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 backdrop-blur-sm">
+      {/* The email is a luxury on a phone-width header; sign-out is not. */}
+      <span
+        className="hidden max-w-[11rem] truncate text-xs text-muted-foreground sm:block"
+        title={email}
+      >
         {email}
       </span>
       <MarketingSignOutButton
-        className="shrink-0"
+        className="shrink-0 text-xs"
         // Full navigation rather than the button's default router.refresh(): signing out
         // is an auth transition, and a client-side revalidate can serve a cached
         // authenticated payload — the same failure that stranded players on a blank

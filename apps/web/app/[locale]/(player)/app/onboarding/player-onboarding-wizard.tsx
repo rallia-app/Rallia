@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DayEnum, FacilitySearchResult } from '@rallia/shared-types';
 import { useSports } from '@rallia/shared-hooks';
@@ -24,7 +24,6 @@ import {
   LocationStep,
   OnboardingError,
   OnboardingNav,
-  OnboardingStepper,
   PersonalStep,
   RatingStep,
 } from '@/components/web-onboarding/onboarding-steps';
@@ -32,6 +31,7 @@ import {
   useWebOnboarding,
   type OnboardingProfilePayload,
 } from '@/components/web-onboarding/use-web-onboarding';
+import { Stepper } from '@/components/web-onboarding/wizard-primitives';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -39,6 +39,31 @@ import { Card, CardContent } from '@/components/ui/card';
 const SPORT_STEP = 'sport';
 const AVAILABILITY_STEP = 'availability';
 const FAVORITES_STEP = 'favorites';
+
+/** The whole walk, in order. The sport step drops out when the account has one. */
+const JOURNEY_STEPS = [
+  SPORT_STEP,
+  'consent',
+  'personal',
+  'rating',
+  'location',
+  AVAILABILITY_STEP,
+  FAVORITES_STEP,
+];
+
+/**
+ * Step → label key under onboarding.stepNames (mobile's own step names, so the two
+ * wizards narrate the walk identically). The rating step has no per-sport entry
+ * there; webJoin.steps.level covers it.
+ */
+const STEP_NAME_KEYS: Record<string, string> = {
+  [SPORT_STEP]: 'sports',
+  consent: 'consent',
+  personal: 'personal',
+  location: 'location',
+  [AVAILABILITY_STEP]: 'availability',
+  [FAVORITES_STEP]: 'favoriteSites',
+};
 
 interface PlayerOnboardingWizardProps {
   /** Primary sport already on the account, if any — skips the sport step. */
@@ -63,6 +88,12 @@ interface PlayerOnboardingWizardProps {
  * the submit payload is all-or-nothing (profile + sport + rating + location), so
  * jumping straight to, say, location would post empty names. Prefill plus a few
  * Continue clicks is the safe version of the same idea.
+ *
+ * Presentation notes: one Stepper spans the entire journey (the shared
+ * OnboardingStepper only covers the four profile steps, which read as the bar
+ * vanishing at availability); step bodies animate in on a keyed remount; and every
+ * step's navigation lives in one sticky footer so Continue never scrolls out of
+ * reach under the availability grid.
  */
 export function PlayerOnboardingWizard({
   initialSportId,
@@ -70,6 +101,7 @@ export function PlayerOnboardingWizard({
   initialProfilePictureUrl,
 }: PlayerOnboardingWizardProps) {
   const t = useTranslations('webJoin');
+  const tOnboarding = useTranslations('onboarding');
   const locale = useLocale();
 
   const [sportId, setSportId] = useState<string | null>(initialSportId);
@@ -90,6 +122,11 @@ export function PlayerOnboardingWizard({
   // The level step's heading is "Your {sport} level", so it needs the name, not the id.
   const { sports } = useSports();
   const sportName = sports.find(sport => sport.id === sportId)?.display_name ?? '';
+
+  const journey = useMemo(
+    () => (initialSportId ? JOURNEY_STEPS.filter(s => s !== SPORT_STEP) : JOURNEY_STEPS),
+    [initialSportId]
+  );
 
   const resolveAuthenticatedStep = useCallback(async (supabase: SupabaseClient, userId: string) => {
     const { data: profile } = await supabase
@@ -197,6 +234,15 @@ export function PlayerOnboardingWizard({
     })();
   }, [controller.isReady, controller.supabase, personal]);
 
+  const { step } = controller;
+
+  // A tall step (the availability grid) leaves the page scrolled down; the next step
+  // would otherwise open mid-card. Instant, not smooth — the entry animation is the
+  // motion here, and it should start from the top.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
+
   if (!controller.isReady) {
     return (
       <div className="flex justify-center py-16">
@@ -205,96 +251,139 @@ export function PlayerOnboardingWizard({
     );
   }
 
-  const { step } = controller;
+  const journeyIndex = Math.max(0, journey.indexOf(step));
+  const stepLabel =
+    step === 'rating' ? t('steps.level') : tOnboarding(`stepNames.${STEP_NAME_KEYS[step]}`);
 
   return (
     <div className="flex flex-col gap-6">
-      <OnboardingStepper controller={controller} t={t} />
+      <Stepper
+        totalSteps={journey.length}
+        currentIndex={journeyIndex}
+        currentLabel={stepLabel}
+        counterLabel={tOnboarding('step', {
+          current: journeyIndex + 1,
+          total: journey.length,
+        })}
+      />
       <OnboardingError message={controller.errorMessage} />
 
-      {step === SPORT_STEP && (
-        <>
-          <SportStep selectedSportId={sportId} onSelect={setSportId} />
+      {/* Keyed on the step so each one remounts and plays its entrance. The sticky
+          footer stays outside: an animated (transformed) ancestor would become its
+          containing block and break position: sticky. */}
+      <div
+        key={step}
+        className="flex flex-col gap-6 duration-500 animate-in fade-in slide-in-from-bottom-3"
+      >
+        {step === SPORT_STEP && <SportStep selectedSportId={sportId} onSelect={setSportId} />}
+
+        {step === 'consent' && <ConsentStep controller={controller} />}
+        {step === 'personal' && (
+          <>
+            {/* Sits above the shared PersonalStep rather than inside it: that component is
+                also used by the join and booking gates, which do not collect a photo. */}
+            <Card>
+              <CardContent className="pt-6">
+                <AvatarPicker
+                  userId={userId}
+                  name={`${controller.personal.firstName} ${controller.personal.lastName}`.trim()}
+                  value={profilePictureUrl}
+                  onChange={setProfilePictureUrl}
+                />
+              </CardContent>
+            </Card>
+            <PersonalStep controller={controller} t={t} />
+          </>
+        )}
+        {step === 'rating' && <RatingStep controller={controller} t={t} sportName={sportName} />}
+        {step === 'location' && <LocationStep controller={controller} t={t} />}
+
+        {step === AVAILABILITY_STEP && (
+          <AvailabilityStep value={availability} onChange={setAvailability} />
+        )}
+
+        {step === FAVORITES_STEP && profilePayload && (
+          <>
+            <FavoriteFacilitiesStep
+              sportId={profilePayload.sportId}
+              latitude={profilePayload.location.latitude}
+              longitude={profilePayload.location.longitude}
+              selected={favorites}
+              onToggle={facility =>
+                setFavorites(current =>
+                  current.some(entry => entry.id === facility.id)
+                    ? current.filter(entry => entry.id !== facility.id)
+                    : [...current, facility]
+                )
+              }
+            />
+            <OnboardingError message={finishError} />
+          </>
+        )}
+      </div>
+
+      {/* One sticky footer for every step's navigation: Continue stays reachable under
+          tall content, and the fade lets cards scroll away beneath it. */}
+      <div className="sticky bottom-0 z-10 -mx-4 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 sm:-mx-6 sm:px-6">
+        {step === SPORT_STEP && (
           <Button
             type="button"
             size="lg"
-            className="font-semibold"
+            className="w-full font-semibold"
             disabled={!sportId}
             onClick={() => setStep('consent')}
           >
             {t('continue')}
             <ArrowRight className="size-4" />
           </Button>
-        </>
-      )}
+        )}
 
-      {step === 'consent' && <ConsentStep controller={controller} />}
-      {step === 'personal' && (
-        <>
-          {/* Sits above the shared PersonalStep rather than inside it: that component is
-              also used by the join and booking gates, which do not collect a photo. */}
-          <Card>
-            <CardContent className="pt-6">
-              <AvatarPicker
-                userId={userId}
-                name={`${controller.personal.firstName} ${controller.personal.lastName}`.trim()}
-                value={profilePictureUrl}
-                onChange={setProfilePictureUrl}
-              />
-            </CardContent>
-          </Card>
-          <PersonalStep controller={controller} t={t} />
-        </>
-      )}
-      {step === 'rating' && <RatingStep controller={controller} t={t} sportName={sportName} />}
-      {step === 'location' && <LocationStep controller={controller} t={t} />}
+        <OnboardingNav controller={controller} t={t} finishLabel={t('continue')} />
 
-      <OnboardingNav controller={controller} t={t} finishLabel={t('continue')} />
+        {step === AVAILABILITY_STEP && (
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" size="lg" onClick={() => setStep('location')}>
+              <ArrowLeft className="size-4" />
+              {t('back')}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className="flex-1 font-semibold"
+              disabled={countSelected(availability) < MIN_AVAILABILITY_CELLS}
+              onClick={() => setStep(FAVORITES_STEP)}
+            >
+              {t('continue')}
+              <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        )}
 
-      {step === AVAILABILITY_STEP && (
-        <>
-          <AvailabilityStep value={availability} onChange={setAvailability} />
-          <Button
-            type="button"
-            size="lg"
-            className="font-semibold"
-            disabled={countSelected(availability) < MIN_AVAILABILITY_CELLS}
-            onClick={() => setStep(FAVORITES_STEP)}
-          >
-            {t('continue')}
-            <ArrowRight className="size-4" />
-          </Button>
-        </>
-      )}
-
-      {step === FAVORITES_STEP && profilePayload && (
-        <>
-          <FavoriteFacilitiesStep
-            sportId={profilePayload.sportId}
-            latitude={profilePayload.location.latitude}
-            longitude={profilePayload.location.longitude}
-            selected={favorites}
-            onToggle={facility =>
-              setFavorites(current =>
-                current.some(entry => entry.id === facility.id)
-                  ? current.filter(entry => entry.id !== facility.id)
-                  : [...current, facility]
-              )
-            }
-          />
-          <OnboardingError message={finishError} />
-          <Button
-            type="button"
-            size="lg"
-            className="font-semibold"
-            disabled={favorites.length < MIN_FAVORITE_FACILITIES || isFinishing}
-            onClick={() => void handleFinish()}
-          >
-            {isFinishing && <Loader2 className="size-4 animate-spin" />}
-            {t('continue')}
-          </Button>
-        </>
-      )}
+        {step === FAVORITES_STEP && (
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => setStep(AVAILABILITY_STEP)}
+              disabled={isFinishing}
+            >
+              <ArrowLeft className="size-4" />
+              {t('back')}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className="flex-1 font-semibold"
+              disabled={favorites.length < MIN_FAVORITE_FACILITIES || isFinishing}
+              onClick={() => void handleFinish()}
+            >
+              {isFinishing && <Loader2 className="size-4 animate-spin" />}
+              {t('continue')}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

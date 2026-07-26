@@ -74,6 +74,15 @@ export const formatRating = (rating: number): string => {
 };
 
 /**
+ * Format a distance in meters (e.g., "850 m", "1.2 km"). Empty string when unknown.
+ */
+export const formatDistance = (meters: number | null | undefined): string => {
+  if (meters === null || meters === undefined) return '';
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
+/**
  * Format ordinal number (e.g., "1st", "2nd", "3rd", "4th")
  */
 export const formatOrdinal = (num: number): string => {

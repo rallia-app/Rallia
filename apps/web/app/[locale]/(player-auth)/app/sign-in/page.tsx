@@ -1,7 +1,7 @@
 import { CalendarCheck2, MapPin, UsersRound } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { CourtLines } from './court-lines';
+import { CourtLines } from '@/components/court-lines';
 
 import { Link, redirect } from '@/i18n/navigation';
 import LocaleToggle from '@/components/locale-toggle';

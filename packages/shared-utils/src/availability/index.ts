@@ -62,3 +62,52 @@ export function countSelected(grid: HourGrid): number {
  * Fewer than this and the matchmaking engine has too little to work with.
  */
 export const MIN_AVAILABILITY_CELLS = 6;
+
+const WEEKDAYS: DayEnum[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+const WEEKEND: DayEnum[] = ['saturday', 'sunday'];
+
+function buildCells(days: ReadonlyArray<DayEnum>, hours: ReadonlyArray<number>): string[] {
+  const out: string[] = [];
+  for (const d of days) for (const h of hours) out.push(cellKey(d, h));
+  return out;
+}
+
+export type AvailabilityPresetKey = 'afterWork' | 'weekendsAny' | 'lunch' | 'mornings';
+
+export interface AvailabilityPreset {
+  key: AvailabilityPresetKey;
+  cells: ReadonlyArray<string>;
+}
+
+/**
+ * One-tap selection patterns for the grid. Labels live under
+ * `onboarding.availabilityStep.presets.{key}`; each platform renders its own chips.
+ *
+ * Hour ranges (cell h = the [h:00, h+1:00) window):
+ *   afterWork    Mon–Fri 17:00–22:00
+ *   weekendsAny  Sat–Sun all 17 hours
+ *   lunch        Mon–Fri 12:00–13:00
+ *   mornings     Daily   06:00–09:00
+ */
+export const AVAILABILITY_PRESETS: AvailabilityPreset[] = [
+  { key: 'afterWork', cells: buildCells(WEEKDAYS, [17, 18, 19, 20, 21, 22]) },
+  { key: 'weekendsAny', cells: buildCells(WEEKEND, SUPPORTED_HOURS) },
+  { key: 'lunch', cells: buildCells(WEEKDAYS, [12]) },
+  { key: 'mornings', cells: buildCells(ORDERED_DAYS, [6, 7, 8]) },
+];
+
+/** A preset reads as applied only when every one of its cells is selected. */
+export function isPresetApplied(grid: HourGrid, preset: AvailabilityPreset): boolean {
+  return preset.cells.every(cell => grid.has(cell));
+}
+
+/** Adds the preset's cells, or removes exactly them when already fully applied. */
+export function togglePreset(grid: HourGrid, preset: AvailabilityPreset): HourGrid {
+  const next = new Set(grid);
+  if (isPresetApplied(grid, preset)) {
+    for (const cell of preset.cells) next.delete(cell);
+  } else {
+    for (const cell of preset.cells) next.add(cell);
+  }
+  return next;
+}

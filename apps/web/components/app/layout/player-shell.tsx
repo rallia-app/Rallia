@@ -56,7 +56,8 @@ export function PlayerShell({
           <SportProvider userId={userId} initialSportId={initialSportId}>
             <UserLocationProvider initialHomeLocation={shellData.homeLocation}>
               {chromeless ? (
-                <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-8">{children}</main>
+                // Full-bleed: the onboarding page draws its own ambient frame.
+                <main className="min-h-screen">{children}</main>
               ) : (
                 <div className="flex min-h-screen">
                   <PlayerSidebar onAction={handleAction} />

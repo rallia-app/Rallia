@@ -1,11 +1,13 @@
 'use client';
 
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, CheckCircle2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { MIN_AVAILABILITY_CELLS, countSelected, type HourGrid } from '@rallia/shared-utils';
 
 import { AvailabilityGrid } from '@/components/app/inputs/availability-grid';
+import { AvailabilityPresets } from '@/components/app/inputs/availability-presets';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 /**
  * Weekly availability. Mandatory on mobile and mandatory here for the same reason:
@@ -21,7 +23,7 @@ export function AvailabilityStep({
 }) {
   const t = useTranslations('onboarding');
   const selected = countSelected(value);
-  const remaining = Math.max(0, MIN_AVAILABILITY_CELLS - selected);
+  const met = selected >= MIN_AVAILABILITY_CELLS;
 
   return (
     <Card>
@@ -41,16 +43,29 @@ export function AvailabilityStep({
           </div>
         </div>
 
+        <AvailabilityPresets value={value} onChange={onChange} />
+
         <AvailabilityGrid value={value} onChange={onChange} />
 
         {/* Announced so a keyboard or screen-reader user learns they can continue
             without hunting for the disabled button's reason. */}
-        <p
-          className={remaining > 0 ? 'text-sm text-muted-foreground' : 'text-sm text-primary'}
-          aria-live="polite"
-        >
-          {selected} / {MIN_AVAILABILITY_CELLS}
-        </p>
+        <div className="flex items-center gap-3" aria-live="polite">
+          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+              style={{ width: `${Math.min(100, (selected / MIN_AVAILABILITY_CELLS) * 100)}%` }}
+            />
+          </div>
+          <p
+            className={cn(
+              'flex items-center gap-1.5 text-sm tabular-nums',
+              met ? 'font-medium text-primary' : 'text-muted-foreground'
+            )}
+          >
+            {met && <CheckCircle2 className="size-4" aria-hidden="true" />}
+            {selected} / {MIN_AVAILABILITY_CELLS}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -15,60 +15,17 @@ import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { selectionHaptic } from '@rallia/shared-utils';
-import type { DayEnum } from '@rallia/shared-types';
+import { AVAILABILITY_PRESETS, isPresetApplied, selectionHaptic } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
-import { cellKey, ORDERED_DAYS, type HourGrid } from './HourlyAvailabilityGrid';
+import type { HourGrid } from './HourlyAvailabilityGrid';
 
-const WEEKDAYS: DayEnum[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-const WEEKEND: DayEnum[] = ['saturday', 'sunday'];
-
-// Preset definitions. Cells are computed lazily so the helper functions can
-// reuse weekday/weekend day arrays without prebuilding 100+ key strings.
-interface PresetDef {
-  key: 'afterWork' | 'weekendsAny' | 'lunch' | 'mornings';
-  labelKey: TranslationKey;
-  cells: ReadonlyArray<string>;
-}
-
-function buildCells(days: ReadonlyArray<DayEnum>, hours: ReadonlyArray<number>): string[] {
-  const out: string[] = [];
-  for (const d of days) for (const h of hours) out.push(cellKey(d, h));
-  return out;
-}
-
-// Preset hour ranges (start..end inclusive, mapped to hour cells where
-// `cell h` represents the [h:00, h+1:00) window):
-//   afterWork    Mon–Fri 17:00–22:00 → cells 17,18,19,20,21,22  (5–11 PM)
-//   weekendsAny  Sat–Sun 06:00–22:00 → all 17 hours
-//   lunch        Mon–Fri 12:00–13:00 → cell 12 only             (12 PM)
-//   mornings     Daily   06:00–09:00 → cells 6,7,8              (6–9 AM)
-const PRESETS: PresetDef[] = [
-  {
-    key: 'afterWork',
-    labelKey: 'onboarding.availabilityStep.presets.afterWork',
-    cells: buildCells(WEEKDAYS, [17, 18, 19, 20, 21, 22]),
-  },
-  {
-    key: 'weekendsAny',
-    labelKey: 'onboarding.availabilityStep.presets.weekendsAny',
-    cells: buildCells(
-      WEEKEND,
-      Array.from({ length: 17 }, (_, i) => i + 6)
-    ),
-  },
-  {
-    key: 'lunch',
-    labelKey: 'onboarding.availabilityStep.presets.lunch',
-    cells: buildCells(WEEKDAYS, [12]),
-  },
-  {
-    key: 'mornings',
-    labelKey: 'onboarding.availabilityStep.presets.mornings',
-    cells: buildCells(ORDERED_DAYS, [6, 7, 8]),
-  },
-];
+// Cell patterns live in shared-utils (web renders the same presets); only the
+// label-key mapping is platform-side because TranslationKey is app-typed.
+const PRESETS = AVAILABILITY_PRESETS.map(preset => ({
+  ...preset,
+  labelKey: `onboarding.availabilityStep.presets.${preset.key}` as TranslationKey,
+}));
 
 interface PresetColors {
   presetActiveBg: string;
@@ -97,7 +54,7 @@ export const HourlyAvailabilityPresets: React.FC<HourlyAvailabilityPresetsProps>
   // Determine which presets are currently fully applied so they render with
   // the active styling. A preset is applied when every cell in its pattern
   // is in the current selection; partial overlap renders as inactive.
-  const appliedFlags = useMemo(() => PRESETS.map(p => p.cells.every(c => value.has(c))), [value]);
+  const appliedFlags = useMemo(() => PRESETS.map(p => isPresetApplied(value, p)), [value]);
 
   const totalSelected = value.size;
 

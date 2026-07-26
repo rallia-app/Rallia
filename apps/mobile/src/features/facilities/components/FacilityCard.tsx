@@ -17,7 +17,7 @@ import {
   darkTheme,
 } from '@rallia/design-system';
 import type { FacilitySearchResult } from '@rallia/shared-types';
-import { lightHaptic } from '@rallia/shared-utils';
+import { formatDistance, lightHaptic } from '@rallia/shared-utils';
 import { formatInlineSnapshotSlots, type FormattedSlot } from '@rallia/shared-hooks';
 
 import { useAuth } from '#/context';
@@ -55,17 +55,6 @@ interface FacilityCardProps {
     error: string;
   };
   t: (key: TranslationKey, options?: TranslationOptions) => string;
-}
-
-/**
- * Formats distance in meters to a human-readable string
- */
-function formatDistance(meters: number | null): string {
-  if (meters === null || meters === undefined) return '';
-  if (meters < 1000) {
-    return `${Math.round(meters)} m`;
-  }
-  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 function FacilityCard({

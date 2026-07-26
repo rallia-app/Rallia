@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Loader2, MapPin } from 'lucide-react';
+import { Check, Loader2, MapPin, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useFacilitySearch } from '@rallia/shared-hooks';
+import { formatDistance } from '@rallia/shared-utils';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +47,7 @@ export function FavoriteFacilitiesStep({
   });
 
   const selectedIds = new Set(selected.map(facility => facility.id));
+  const met = selected.length >= MIN_FAVORITE_FACILITIES;
 
   return (
     <Card>
@@ -57,27 +59,39 @@ export function FavoriteFacilitiesStep({
               aria-hidden="true"
             />
           </span>
-          <div className="space-y-1">
-            <h2 className="font-heading text-xl font-semibold text-foreground">{t('title')}</h2>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-heading text-xl font-semibold text-foreground">{t('title')}</h2>
+              {/* Announced so a keyboard or screen-reader user learns why Continue is
+                  still disabled without hunting for it. */}
+              <span
+                aria-live="polite"
+                className={cn(
+                  'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums',
+                  met ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                )}
+              >
+                {selected.length} / {MIN_FAVORITE_FACILITIES} {t('selected')}
+              </span>
+            </div>
             <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="facility-search" className="text-sm font-medium">
-            {t('searchLabel')}
-          </label>
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             id="facility-search"
+            aria-label={t('searchLabel')}
             value={searchQuery}
             onChange={event => setSearchQuery(event.target.value)}
             placeholder={t('searchPlaceholder')}
+            className="h-11 pl-9"
           />
         </div>
-
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {selected.length} / {MIN_FAVORITE_FACILITIES} {t('selected')}
-        </p>
 
         {latitude == null || longitude == null ? (
           <p className="py-6 text-center text-sm text-muted-foreground">{t('noLocation')}</p>
@@ -90,9 +104,10 @@ export function FavoriteFacilitiesStep({
             {searchQuery ? t('noResults') : t('noFacilitiesNearby')}
           </p>
         ) : (
-          <ul className="max-h-80 space-y-2 overflow-y-auto">
+          <ul className="max-h-80 space-y-2 overflow-y-auto pr-1">
             {facilities.map(facility => {
               const isSelected = selectedIds.has(facility.id);
+              const distance = formatDistance(facility.distance_meters);
               return (
                 <li key={facility.id}>
                   <button
@@ -100,15 +115,16 @@ export function FavoriteFacilitiesStep({
                     onClick={() => onToggle(facility)}
                     aria-pressed={isSelected}
                     className={cn(
-                      'flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
+                      'flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors outline-none',
+                      'focus-visible:ring-[3px] focus-visible:ring-ring/50',
                       isSelected
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/40'
+                        : 'border-border hover:border-primary/40 hover:bg-primary/5'
                     )}
                   >
                     <span
                       className={cn(
-                        'flex size-5 shrink-0 items-center justify-center rounded-full border',
+                        'flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors',
                         isSelected ? 'border-primary bg-primary' : 'border-border'
                       )}
                     >
@@ -116,7 +132,7 @@ export function FavoriteFacilitiesStep({
                         <Check className="size-3 text-primary-foreground" aria-hidden="true" />
                       )}
                     </span>
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-foreground">
                         {facility.name}
                       </span>
@@ -126,6 +142,11 @@ export function FavoriteFacilitiesStep({
                         </span>
                       )}
                     </span>
+                    {distance && (
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {distance}
+                      </span>
+                    )}
                   </button>
                 </li>
               );
