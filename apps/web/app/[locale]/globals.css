@@ -267,7 +267,11 @@
     font-family: var(--font-inter), sans-serif;
   }
 
-  /* All headings use Poppins font (Energy & Trust theme) */
+  /* All headings use Poppins font (Energy & Trust theme).
+     No margin here on purpose: Preflight zeroes heading/paragraph margins so layout
+     spacing comes from utilities (space-y-*, gap-*). Re-adding a bottom margin stacks
+     on top of those and every heading ends up double-spaced. Long-form pages that do
+     want prose rhythm use the typography plugin (see /privacy), which sets its own. */
   h1,
   h2,
   h3,
@@ -278,14 +282,12 @@
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.025em;
-    margin-bottom: 0.5em;
   }
 
   /* H1 gets extra weight and size */
   h1 {
     font-weight: 800;
     letter-spacing: -0.05em;
-    margin-bottom: 0.75em;
   }
 
   /* Improved spacing for sections — disabled for landing page full-bleed sections */
@@ -293,10 +295,8 @@
     margin-bottom: 4rem;
   } */
 
-  /* Better paragraph spacing */
   p {
     line-height: 1.6;
-    margin-bottom: 1rem;
   }
 
   /* Improved card spacing */

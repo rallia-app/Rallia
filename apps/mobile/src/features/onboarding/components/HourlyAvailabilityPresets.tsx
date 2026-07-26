@@ -15,7 +15,12 @@ import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { AVAILABILITY_PRESETS, isPresetApplied, selectionHaptic } from '@rallia/shared-utils';
+import {
+  AVAILABILITY_PRESETS,
+  isPresetApplied,
+  selectionHaptic,
+  togglePreset as applyPresetToggle,
+} from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import type { HourGrid } from './HourlyAvailabilityGrid';
@@ -60,15 +65,7 @@ export const HourlyAvailabilityPresets: React.FC<HourlyAvailabilityPresetsProps>
 
   const togglePreset = (idx: number) => {
     selectionHaptic();
-    const preset = PRESETS[idx];
-    const applied = appliedFlags[idx];
-    const next = new Set(value);
-    if (applied) {
-      for (const c of preset.cells) next.delete(c);
-    } else {
-      for (const c of preset.cells) next.add(c);
-    }
-    onChange(next);
+    onChange(applyPresetToggle(value, PRESETS[idx]));
   };
 
   const clearAll = () => {
