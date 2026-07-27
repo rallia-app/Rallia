@@ -12,7 +12,7 @@ const PUBLIC_PATHS: ReadonlyArray<{
   priority: number;
 }> = [
   { path: '', changeFrequency: 'weekly', priority: 1.0 },
-  { path: '/games', changeFrequency: 'hourly', priority: 0.9 },
+  { path: '/play', changeFrequency: 'hourly', priority: 0.9 },
   { path: '/communities', changeFrequency: 'daily', priority: 0.8 },
   { path: '/guides', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/about', changeFrequency: 'monthly', priority: 0.5 },

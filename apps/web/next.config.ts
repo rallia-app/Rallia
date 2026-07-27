@@ -31,6 +31,28 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // /games and /courts merged into /play (constrained to real locales so
+      // authenticated routes like /app/games are untouched)
+      {
+        source: '/games',
+        destination: '/play',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en-US|fr-CA)/games',
+        destination: '/:locale/play',
+        permanent: true,
+      },
+      {
+        source: '/courts',
+        destination: '/play',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en-US|fr-CA)/courts',
+        destination: '/:locale/play',
+        permanent: true,
+      },
       {
         source: '/:locale/waitlist',
         destination: '/:locale',

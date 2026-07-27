@@ -11,7 +11,7 @@ const SITE_URL = 'https://www.rallia.app';
 
 // Flat public marketing paths (locale-stripped) → seo translation namespace key.
 const BREADCRUMB_PATHS: Record<string, string> = {
-  '/games': 'games',
+  '/play': 'play',
   '/communities': 'communities',
   '/guides': 'guides',
   '/about': 'about',

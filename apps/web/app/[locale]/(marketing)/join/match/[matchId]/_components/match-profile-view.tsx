@@ -22,7 +22,7 @@ import { MatchProfileMap } from './match-profile-map';
 import {
   MatchChipRow,
   type MatchChipDef,
-} from '@/app/[locale]/(marketing)/games/_components/match-chip';
+} from '@/app/[locale]/(marketing)/play/_components/match-chip';
 import { cn } from '@/lib/utils';
 import { getStorageImageUrl } from '@rallia/shared-utils';
 

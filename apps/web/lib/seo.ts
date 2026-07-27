@@ -10,7 +10,7 @@ export const TWITTER_HANDLE = '@rallia';
  * Build locale-aware canonical + hreflang alternates for a path.
  *
  * `path` is the route AFTER the locale segment, with leading slash —
- * e.g. '', '/games', '/communities'. Pass '' (or '/') for the home page.
+ * e.g. '', '/play', '/communities'. Pass '' (or '/') for the home page.
  */
 export function buildAlternates(
   path: string,

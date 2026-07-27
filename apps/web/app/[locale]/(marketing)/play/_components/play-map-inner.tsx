@@ -9,6 +9,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { primary, accent, neutral, status } from '@rallia/design-system';
 
+import type { PublicFacility, SlotGroupRef } from './facility-card';
+import { FACILITY_MARKER_COLOR, facilityKey, matchKey } from './play-map';
 import type { PublicMatch } from './public-match-card';
 import { getRelativeDateLabel, formatDuration, resolveMatchCoords } from './utils';
 
@@ -28,12 +30,10 @@ const TENNIS_COLOR = primary[500];
 const PICKLEBALL_COLOR = accent[500];
 const OTHER_COLOR = status.info.DEFAULT;
 
-/** A public match paired with resolved map coordinates. */
-interface MappableMatch {
-  match: PublicMatch;
-  lat: number;
-  lng: number;
-}
+/** A map point pairing an item with resolved coordinates. */
+type MapPoint =
+  | { key: string; kind: 'match'; lat: number; lng: number; match: PublicMatch }
+  | { key: string; kind: 'facility'; lat: number; lng: number; facility: PublicFacility };
 
 function sportColor(sportName: string | undefined): string {
   const s = sportName?.toLowerCase();
@@ -43,6 +43,8 @@ function sportColor(sportName: string | undefined): string {
 }
 
 const usersSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+
+const buildingSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>`;
 
 const matchIconCache = new Map<string, L.DivIcon>();
 function getMatchIcon(color: string, isFull: boolean, emphasized = false): L.DivIcon {
@@ -71,6 +73,33 @@ function getMatchIcon(color: string, isFull: boolean, emphasized = false): L.Div
   return icon;
 }
 
+// Facilities get a rounded-square marker so courts read differently from the
+// teardrop game pins at a glance.
+const facilityIconCache = new Map<string, L.DivIcon>();
+function getFacilityIcon(emphasized = false): L.DivIcon {
+  const key = String(emphasized);
+  const cached = facilityIconCache.get(key);
+  if (cached) return cached;
+
+  const size = emphasized ? 34 : 26;
+  const shadow = emphasized
+    ? `0 0 0 3px #fff,0 0 0 5px ${FACILITY_MARKER_COLOR},0 4px 12px rgba(0,0,0,.35)`
+    : `0 0 0 2px #fff,0 2px 4px rgba(0,0,0,.25)`;
+  const html = `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;background:${FACILITY_MARKER_COLOR};border-radius:8px;box-shadow:${shadow};transition:all .15s ease;">
+    <span style="display:flex;color:white;">${buildingSvg}</span>
+  </span>`;
+
+  const icon = L.divIcon({
+    html,
+    className: '',
+    iconSize: L.point(size, size),
+    iconAnchor: L.point(size / 2, size / 2),
+    popupAnchor: L.point(0, -(size / 2 + 4)),
+  });
+  facilityIconCache.set(key, icon);
+  return icon;
+}
+
 function createClusterIcon(cluster: { getChildCount: () => number }): L.DivIcon {
   const count = cluster.getChildCount();
   const px = count < 10 ? 36 : count < 50 ? 44 : 52;
@@ -82,7 +111,7 @@ function createClusterIcon(cluster: { getChildCount: () => number }): L.DivIcon 
 }
 
 // Leaflet popup style overrides — injected once (mirrors admin map popups)
-const popupStyleId = 'rallia-games-map-popup-styles';
+const popupStyleId = 'rallia-play-map-popup-styles';
 function usePopupStyles() {
   useEffect(() => {
     if (document.getElementById(popupStyleId)) return;
@@ -119,23 +148,17 @@ function usePopupStyles() {
 }
 
 /**
- * Fit the map to all markers whenever the dataset changes (the full match set
- * loads asynchronously and refetches on filter changes), else center on the user.
+ * Fit the map to all markers whenever the dataset changes (the full sets load
+ * asynchronously and refetch on filter changes), else center on the user.
  * Keyed on a signature so panning/zooming between fetches isn't disturbed.
  */
-function FitToMarkers({
-  points,
-  center,
-}: {
-  points: MappableMatch[];
-  center: [number, number] | null;
-}) {
+function FitToMarkers({ points, center }: { points: MapPoint[]; center: [number, number] | null }) {
   const map = useMap();
   const needsRefit = useRef(false);
   const signature =
     points.length === 0
       ? 'empty'
-      : `${points.length}:${points[0].match.id}:${points[points.length - 1].match.id}`;
+      : `${points.length}:${points[0].key}:${points[points.length - 1].key}`;
 
   const fit = useCallback(() => {
     if (points.length === 0) {
@@ -188,7 +211,7 @@ function ResizeHandler() {
   return null;
 }
 
-/** Animates the camera to a card-selected match (desktop panel sync). */
+/** Animates the camera to a card-selected item (desktop panel sync). */
 function FlyToHandler({ flyTo }: { flyTo: { lat: number; lng: number; ts: number } | null }) {
   const map = useMap();
   useEffect(() => {
@@ -290,42 +313,116 @@ function MatchPopup({
   );
 }
 
-interface GamesMatchMapInnerProps {
+function FacilityPopup({
+  facility,
+  onBook,
+}: {
+  facility: PublicFacility;
+  onBook: (facility: PublicFacility, slot: SlotGroupRef | null) => void;
+}) {
+  const t = useTranslations('courtsPage');
+
+  const addressLine = [facility.address, facility.city].filter(Boolean).join(', ');
+  const distanceKm = facility.distance_meters != null ? facility.distance_meters / 1000 : null;
+  const canBookOnline = !!facility.booking_url_template && !!facility.external_provider_id;
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ height: 3, background: FACILITY_MARKER_COLOR }} />
+      <div style={{ padding: '12px 14px' }} className="text-card-foreground">
+        <div className="pr-7 text-sm font-semibold">{facility.name}</div>
+
+        <div className="mt-1 text-xs text-muted-foreground">
+          {addressLine && <div>{addressLine}</div>}
+          {[
+            facility.court_count
+              ? facility.court_count === 1
+                ? t('courtCountSingular')
+                : t('courtCount', { count: facility.court_count })
+              : null,
+            distanceKm != null ? t('kmAway', { distance: distanceKm.toFixed(1) }) : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </div>
+
+        {canBookOnline ? (
+          <Button
+            size="sm"
+            className="w-full mt-3 font-semibold"
+            onClick={() => onBook(facility, null)}
+          >
+            {t('bookCta')}
+          </Button>
+        ) : (
+          <div className="mt-3 text-center text-[11px] text-muted-foreground">
+            {facility.is_first_come_first_serve ? t('justShowUp') : t('noOnlineBooking')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface PlayMapInnerProps {
   matches: PublicMatch[];
+  facilities: PublicFacility[];
   viewerPlayerId?: string | null;
   center: [number, number] | null;
   onJoin: (matchId: string) => void;
+  onBook: (facility: PublicFacility, slot: SlotGroupRef | null) => void;
   /** Desktop split view: markers select the side-panel card instead of opening popups. */
   panelMode?: boolean;
-  activeMatchId?: string | null;
-  hoveredMatchId?: string | null;
-  onMarkerClick?: (matchId: string) => void;
+  activeKey?: string | null;
+  hoveredKey?: string | null;
+  onMarkerClick?: (key: string) => void;
   flyTo?: { lat: number; lng: number; ts: number } | null;
 }
 
-export default function GamesMatchMapInner({
+export default function PlayMapInner({
   matches,
+  facilities,
   viewerPlayerId,
   center,
   onJoin,
+  onBook,
   panelMode = false,
-  activeMatchId = null,
-  hoveredMatchId = null,
+  activeKey = null,
+  hoveredKey = null,
   onMarkerClick,
   flyTo = null,
-}: GamesMatchMapInnerProps) {
+}: PlayMapInnerProps) {
   usePopupStyles();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  const points = useMemo<MappableMatch[]>(() => {
-    const out: MappableMatch[] = [];
+  const points = useMemo<MapPoint[]>(() => {
+    const out: MapPoint[] = [];
     for (const match of matches) {
       const coords = resolveMatchCoords(match);
-      if (coords) out.push({ match, lat: coords.lat, lng: coords.lng });
+      if (coords) {
+        out.push({
+          key: matchKey(match.id),
+          kind: 'match',
+          lat: coords.lat,
+          lng: coords.lng,
+          match,
+        });
+      }
+    }
+    for (const facility of facilities) {
+      if (facility.latitude != null && facility.longitude != null) {
+        out.push({
+          key: facilityKey(facility.id),
+          kind: 'facility',
+          lat: facility.latitude,
+          lng: facility.longitude,
+          facility,
+        });
+      }
     }
     return out;
-  }, [matches]);
+  }, [matches, facilities]);
 
   return (
     <MapContainer
@@ -350,18 +447,38 @@ export default function GamesMatchMapInner({
         spiderfyOnMaxZoom
         showCoverageOnHover={false}
       >
-        {points.map(({ match, lat, lng }) => {
+        {points.map(point => {
+          const emphasized = point.key === activeKey || point.key === hoveredKey;
+
+          if (point.kind === 'facility') {
+            return (
+              <Marker
+                key={point.key}
+                position={[point.lat, point.lng]}
+                icon={getFacilityIcon(emphasized)}
+                zIndexOffset={emphasized ? 1000 : 0}
+                eventHandlers={panelMode ? { click: () => onMarkerClick?.(point.key) } : undefined}
+              >
+                {!panelMode && (
+                  <Popup>
+                    <FacilityPopup facility={point.facility} onBook={onBook} />
+                  </Popup>
+                )}
+              </Marker>
+            );
+          }
+
+          const { match } = point;
           const total = match.format === 'doubles' ? 4 : 2;
           const joinedCount = match.participants?.filter(p => p.status === 'joined').length ?? 0;
           const isFull = total - joinedCount <= 0;
-          const emphasized = match.id === activeMatchId || match.id === hoveredMatchId;
           return (
             <Marker
-              key={match.id}
-              position={[lat, lng]}
+              key={point.key}
+              position={[point.lat, point.lng]}
               icon={getMatchIcon(sportColor(match.sport?.name), isFull, emphasized)}
               zIndexOffset={emphasized ? 1000 : 0}
-              eventHandlers={panelMode ? { click: () => onMarkerClick?.(match.id) } : undefined}
+              eventHandlers={panelMode ? { click: () => onMarkerClick?.(point.key) } : undefined}
             >
               {!panelMode && (
                 <Popup>
