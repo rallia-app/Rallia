@@ -13,8 +13,6 @@ import {
   Switch,
   ActivityIndicator,
   Linking,
-  Keyboard,
-  Platform,
   ScrollView,
   TextInput,
 } from 'react-native';
@@ -299,48 +297,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
 
   // Track if we've set the default rating to avoid overwriting user selection
   const hasSetDefaultRating = useRef(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const scrollViewRef = useRef<any>(null);
-  const notesFieldRef = useRef<View>(null);
   const ratingScrollRef = useRef<ScrollView>(null);
   const [ratingScrollViewWidth, setRatingScrollViewWidth] = useState(0);
-
-  // Keyboard handling state for Android
-  const [focusedField, setFocusedField] = useState<'cost' | 'notes' | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  // Handle keyboard show/hide for scrolling to focused field
-  useEffect(() => {
-    const keyboardShowEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const keyboardHideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSubscription = Keyboard.addListener(keyboardShowEvent, e => {
-      setKeyboardHeight(e.endCoordinates.height);
-      // Scroll to focused field when keyboard appears
-      if (focusedField && scrollViewRef.current) {
-        setTimeout(() => {
-          // Scroll positions for each field
-          const scrollPositions = {
-            cost: 300, // Cost field is in the upper middle
-            notes: 600, // Notes field is at the bottom
-          };
-          const targetY = scrollPositions[focusedField] || 0;
-          scrollViewRef.current?.scrollTo?.({ y: targetY, animated: true });
-        }, 100);
-      }
-    });
-
-    const hideSubscription = Keyboard.addListener(keyboardHideEvent, () => {
-      setKeyboardHeight(0);
-      setFocusedField(null);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [focusedField]);
 
   // Set player's rating as default once on initial load (never override user's explicit selection)
   useEffect(() => {
@@ -402,7 +360,6 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
 
   return (
     <SheetScrollView
-      ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -595,7 +552,6 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 placeholder={t('matchCreation.fields.estimatedCostPlaceholderTotal')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
-                onFocus={() => setFocusedField('cost')}
               />
             </View>
             {costSplitType === 'equal' && typeof estimatedCost === 'number' && (
@@ -948,7 +904,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       )}
 
       {/* Notes */}
-      <View ref={notesFieldRef} style={styles.fieldGroup}>
+      <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
           {t('matchCreation.fields.notes')}
         </Text>
@@ -969,7 +925,6 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           numberOfLines={4}
           textAlignVertical="top"
           maxLength={500}
-          onFocus={() => setFocusedField('notes')}
         />
         <Text size="xs" color={colors.textMuted} style={styles.characterCount}>
           {notes?.length ?? 0}/500
@@ -989,7 +944,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[32], // Extra padding to allow scrolling above keyboard for notes field
+    paddingBottom: spacingPixels[8],
   },
   stepHeader: {
     marginBottom: spacingPixels[6],
