@@ -31,7 +31,7 @@ import {
 } from '@rallia/shared-hooks';
 import type { PreviewBracketMatch } from '@rallia/shared-services';
 
-import { useThemeStyles, useTranslation } from '../hooks';
+import { useThemeStyles, useTranslation, useScrollBottomInset } from '../hooks';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import type { RootStackParamList } from '../navigation';
 
@@ -92,6 +92,7 @@ export default function TournamentBracketSetup() {
   const { params } = useRoute<Route>();
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const bottomInset = useScrollBottomInset();
   const toast = useToast();
   const accent = isDark ? primary[500] : primary[600];
 
@@ -253,9 +254,15 @@ export default function TournamentBracketSetup() {
     );
   }
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it.
   return (
-    <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]} edges={[]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Intro tip */}
         <View style={[styles.tip, { backgroundColor: `${accent}14` }]}>
           <Ionicons name="podium-outline" size={18} color={accent} style={styles.tipIcon} />
@@ -465,7 +472,7 @@ export default function TournamentBracketSetup() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: spacingPixels[4], paddingBottom: spacingPixels[10] },
+  content: { padding: spacingPixels[4] },
 
   // Intro tip
   tip: {

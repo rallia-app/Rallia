@@ -37,7 +37,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 7
       ) s;
     ASSERT array_length(v_players, 1) = 7, 'need 7 active tennis players';
@@ -163,7 +163,7 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players
       FROM (SELECT player_id FROM player_sport
-             WHERE sport_id = v_sport AND is_active = true
+             WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
              ORDER BY player_id LIMIT 7) s;
     v_org := v_players[1];
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);

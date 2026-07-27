@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
 import { Text, LocationSelector } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent, secondary, status } from '@rallia/design-system';
-import { lightHaptic, successHaptic } from '@rallia/shared-utils';
+import { formatDistance, lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
   getOrCreateCourt,
   parseCourtNumber,
@@ -153,17 +153,6 @@ function mapDurationToFormValue(minutes: number): '30' | '60' | '90' | '120' | '
     }
   }
   return 'custom';
-}
-
-/**
- * Format distance in meters to human-readable string
- */
-function formatDistance(meters: number | null): string {
-  if (meters === null) return '';
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`;
-  }
-  return `${(meters / 1000).toFixed(1)}km`;
 }
 
 // =============================================================================

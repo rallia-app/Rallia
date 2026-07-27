@@ -4173,8 +4173,17 @@
   },
   "tournamentRanking": {
     "title": "Circuit Rallia",
-    "subtitle": "{season} season",
+    "subtitle": "Results from the last 12 months",
     "pointsNote": "Earn Rallia points by entering and advancing in tournaments.",
+    "pointsToDefend": {
+      "title": "Points to defend",
+      "note": "Each result counts for 12 months",
+      "atStake": "at stake",
+      "inDays": "in {count} days",
+      "inDays_one": "in {count} day",
+      "more": "+{count} more",
+      "more_one": "+{count} more"
+    },
     "howItWorks": "How it works",
     "filterMyLevel": "My level · {level}",
     "filterMyRating": "My rating · {rating}",
@@ -4187,10 +4196,10 @@
     "events": "{count} tournaments",
     "events_one": "{count} tournament",
     "youSuffix": "(you)",
-    "yourRank": "You're #{rank} this season",
+    "yourRank": "You're #{rank} right now",
     "error": "Couldn't load the ranking. Pull to retry.",
     "empty": {
-      "title": "The season's just getting started",
+      "title": "No one on the board yet",
       "description": "Enter a tournament to earn your first points and land on the board."
     },
     "seasonSpringSummer": "Spring/Summer {year}",
@@ -4293,6 +4302,18 @@
         "stale": "Something changed. Refresh and try again.",
         "cancelFailed": "Couldn't cancel the season. Please try again."
       }
+    },
+    "joinErrors": {
+      "ratingRequired": "You need a rating in this sport to join this league.",
+      "ratingTooLow": "Your rating is below this league's minimum level.",
+      "ratingTooHigh": "Your rating is above this league's maximum level.",
+      "reputation": "Your reputation score is below what this league asks for.",
+      "alreadyMember": "You're already in this league.",
+      "leagueNotActive": "This league isn't active right now.",
+      "leagueNotFound": "This league no longer exists.",
+      "leagueFull": "This league is full.",
+      "notInvited": "This league is invite-only.",
+      "sportMismatch": "Add this sport to your profile before joining."
     },
     "seasonErrors": {
       "notOrganizer": "Only the organizer can do that.",
@@ -5242,8 +5263,10 @@
       "partnerAlreadyRegistered": "That player is already registered in this tournament.",
       "partnerSportMismatch": "Your partner doesn't have this sport active on their profile.",
       "ratingTooLow": "Your rating is below this tournament's minimum level.",
+      "ratingTooHigh": "Your rating is above this tournament's maximum level.",
       "ratingRequired": "You need a rating in this sport to register for this tournament.",
       "partnerRatingTooLow": "Your partner's rating is below this tournament's minimum level.",
+      "partnerRatingTooHigh": "Your partner's rating is above this tournament's maximum level.",
       "partnerRatingRequired": "Your partner needs a rating in this sport to be entered.",
       "partnerInvalid": "That partner can't be registered. Pick someone else.",
       "inviteInvalid": "This invite link is no longer valid.",
@@ -5326,7 +5349,10 @@
       "rulesPlaceholder": "Format, scoring, check-in, conduct… (optional)",
       "minLevel": "Minimum level",
       "minLevelNone": "No minimum",
-      "minLevelHint": "Players below this level can still apply. You approve or decline them.",
+      "minLevelHint": "Players below this level can't register. Locked once the tournament leaves draft.",
+      "maxLevel": "Maximum level",
+      "maxLevelNone": "No maximum",
+      "maxLevelHint": "Players above this level can't register. Locked once the tournament leaves draft.",
       "lockedAfterDraft": "You can only change this while the tournament is a draft.",
       "location": "Location",
       "locationExact": "Exact venue",
@@ -11651,7 +11677,7 @@
     },
     "circuitRanking": {
       "title": "How the Circuit Rallia works",
-      "intro": "A ranking per sport and season. You earn points by entering tournaments and winning games.",
+      "intro": "A ranking per sport. You earn points by entering tournaments and winning games.",
       "placement": {
         "title": "How far you get",
         "baseNote": "Base points. Every tournament multiplies them, except participation, which is a flat 10 everywhere.",
@@ -11671,10 +11697,10 @@
         "body": "Bigger draws and higher minimum levels multiply the points above, and moving up a category multiplies what every result is worth by about five. Each tournament shows its top prize up front, like \"up to 5000 pts\" on the card."
       },
       "season": {
-        "title": "Your season score",
-        "body": "Your 8 best results this season add up to your rank. A bad day never sets you back."
+        "title": "Your score",
+        "body": "Your 8 best results from the last 12 months add up to your rank. Each result counts for a year, then drops off. A bad day never sets you back."
       },
-      "finePrint": "Only tournaments run by a certified organizer award points. Two seasons a year: spring/summer and fall/winter."
+      "finePrint": "Only tournaments run by a certified organizer award points. Nothing resets: your results count for 12 months, then they drop off one by one."
     }
   },
   "profileCompletion": {

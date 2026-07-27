@@ -11,5 +11,8 @@
   "devDependencies": {
     "@rallia/eslint-config": "*",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@rallia/shared-types": "*"
   }
 }

@@ -1,22 +1,24 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { supabase, Logger } from '@rallia/shared-services';
+import {
+  IMAGE_RESIZE_QUALITY,
+  IMAGE_RESIZE_WIDTHS as RESIZE_WIDTHS,
+  IMAGE_UPLOAD_CACHE_CONTROL,
+  buildStorageObjectPath,
+  contentTypeForExtension,
+} from '@rallia/shared-utils';
 
-// Max stored width per bucket. Avatars display at ≤100pt (~300px @3x), so we store
-// them small and serve raw — no Supabase image transformation needed.
-const RESIZE_WIDTHS: Record<string, number> = {
-  'profile-pictures': 320,
-  'facility-images': 800,
-  'group-images': 800,
-  'tournament-logos': 1080,
-  'league-logos': 1080,
-  'feedback-screenshots': 800,
-  'report-evidence': 800,
-};
+// Bucket widths, the object-path shape and the content-type mapping live in
+// @rallia/shared-utils: the storage RLS policy and the buckets' MIME allow-list are
+// contracts web and mobile both have to satisfy identically.
 
 async function resizeImageForUpload(uri: string, maxWidth: number): Promise<string> {
   const context = ImageManipulator.manipulate(uri);
   const rendered = await context.resize({ width: maxWidth }).renderAsync();
-  const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+  const result = await rendered.saveAsync({
+    format: SaveFormat.JPEG,
+    compress: IMAGE_RESIZE_QUALITY,
+  });
   return result.uri;
 }
 
@@ -127,12 +129,9 @@ export async function uploadImage(
     // Create unique filename with folder structure for RLS policy
     // RLS policy expects: (storage.foldername(name))[1] = auth.uid()::text
     // So we must upload to: {userId}/{filename}.ext
-    const rawExt = (sourceUri.split('.').pop()?.split('?')[0] || 'jpg').toLowerCase();
-    // Normalize HEIC/HEIF to JPEG — Supabase Storage doesn't support HEIC
-    const fileExt = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
-    const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+    const rawExt = sourceUri.split('.').pop()?.split('?')[0] || 'jpg';
+    const filePath = buildStorageObjectPath(userId, rawExt);
+    const contentType = contentTypeForExtension(rawExt);
 
     let uploadData: ArrayBuffer | Blob;
 
@@ -187,7 +186,7 @@ export async function uploadImage(
       .from(bucket)
       .upload(filePath, uploadData, {
         contentType,
-        cacheControl: '604800',
+        cacheControl: IMAGE_UPLOAD_CACHE_CONTROL,
         upsert: false, // Create new file each time
       });
 

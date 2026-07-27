@@ -66,6 +66,7 @@ import {
   useTranslation,
   useNavigateToPlayerProfile,
   useRequireOnboarding,
+  useScrollBottomInset,
 } from '#/hooks';
 import { useSport } from '#/context';
 import { SportIcon } from '#/components/SportIcon';
@@ -109,6 +110,7 @@ export default function GroupDetailScreen() {
   const playerId = session?.user?.id;
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const insets = useSafeAreaInsets();
+  const bottomInset = useScrollBottomInset();
 
   // Get all sport IDs and names for displaying sport tags on facilities
   const { allSportIds, sportNames } = useMemo(() => {
@@ -551,13 +553,13 @@ export default function GroupDetailScreen() {
     );
   }
 
+  // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
+  // wrapper, so content scrolls under the home indicator instead of stopping
+  // above it. This also stops the floating chat button double-counting it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: bottomInset }}
         refreshControl={
           <RefreshControl
             refreshing={false}
@@ -964,9 +966,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 20,
   },
   infoCard: {
     marginHorizontal: 16,

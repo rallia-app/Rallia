@@ -1,8 +1,12 @@
 'use client';
 
-import { usePostalCodeGeocode, useAuth } from '@rallia/shared-hooks';
+import { usePostalCodeGeocode, useAuth, type PlaceDetails } from '@rallia/shared-hooks';
 import { GENDER_VALUES } from '@rallia/shared-types';
-import { formatPostalCodeInput, meetsMinimumAge } from '@rallia/shared-utils';
+import {
+  formatPostalCodeInput,
+  meetsMinimumAge,
+  type RatingSystemCode,
+} from '@rallia/shared-utils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -18,6 +22,9 @@ export const PROFILE_STEPS: Array<{ id: OnboardingStep; labelKey: string }> = [
   { id: 'rating', labelKey: 'level' },
   { id: 'location', labelKey: 'location' },
 ];
+
+/** Same steps with consent lifted out, for callers that ask for it at the very end. */
+const PROFILE_STEPS_WITHOUT_CONSENT = PROFILE_STEPS.filter(s => s.id !== 'consent');
 
 export type RatingOption = { id: string; label: string; value: number | null };
 
@@ -37,6 +44,8 @@ export type OnboardingProfilePayload = {
     province: string;
     latitude: number;
     longitude: number;
+    /** Full street address, when the player chose to give one. */
+    address?: string;
   };
 };
 
@@ -82,6 +91,16 @@ export interface UseWebOnboardingOptions {
   onSubmitProfile: (payload: OnboardingProfilePayload) => Promise<OnboardingStep | string | void>;
   /** Turns a thrown submit error into localized copy. Defaults to a generic message. */
   mapSubmitError?: (error: unknown) => string;
+  /**
+   * Lifts consent out of this hook's step sequence so the caller can ask for it
+   * wherever it belongs in a longer journey — for the player wizard, at the very end,
+   * once someone has seen what they are agreeing to. The caller then calls
+   * `acceptPolicies()` itself before completing.
+   *
+   * Left off for the join and booking gates: those submit the profile at the location
+   * step, so consent has to be recorded before it.
+   */
+  deferConsent?: boolean;
 }
 
 export function useWebOnboarding({
@@ -92,6 +111,7 @@ export function useWebOnboarding({
   resolveAuthenticatedStep,
   onSubmitProfile,
   mapSubmitError,
+  deferConsent = false,
 }: UseWebOnboardingOptions) {
   const supabase = useMemo(() => createClient(), []);
   const { signInWithProvider, signInWithEmail, verifyOtp } = useAuth({ client: supabase });
@@ -123,6 +143,7 @@ export function useWebOnboarding({
   const [ratings, setRatings] = useState<RatingOption[]>([]);
   const [selectedRatingId, setSelectedRatingId] = useState<string | null>(null);
   const [isLoadingRatings, setIsLoadingRatings] = useState(false);
+  const [ratingSystemCode, setRatingSystemCode] = useState<RatingSystemCode | null>(null);
 
   // Location
   const [postalCode, setPostalCode] = useState('');
@@ -130,8 +151,12 @@ export function useWebOnboarding({
   const [locationProvince, setLocationProvince] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  // Optional precise address. When set, its coordinates win over the postal code's
+  // centroid — that is the whole point of asking for it.
+  const [address, setAddress] = useState('');
 
-  const profileStepIndex = PROFILE_STEPS.findIndex(s => s.id === step);
+  const profileSteps = deferConsent ? PROFILE_STEPS_WITHOUT_CONSENT : PROFILE_STEPS;
+  const profileStepIndex = profileSteps.findIndex(s => s.id === step);
   const isProfileStep = profileStepIndex !== -1;
 
   const applyResolvedStep = useCallback(
@@ -206,9 +231,13 @@ export function useWebOnboarding({
       try {
         const res = await fetch(`/api/web-join/ratings?sportId=${sportId}`);
         if (!res.ok) throw new Error('Failed to load ratings');
-        const data = (await res.json()) as { ratings: RatingOption[] };
+        const data = (await res.json()) as {
+          ratings: RatingOption[];
+          systemCode?: RatingSystemCode;
+        };
         if (!cancelled) {
           setRatings(data.ratings);
+          setRatingSystemCode(data.systemCode ?? null);
           if (data.ratings.length > 0) {
             setSelectedRatingId(
               prev => prev ?? data.ratings[Math.floor(data.ratings.length / 2)]?.id ?? null
@@ -315,19 +344,86 @@ export function useWebOnboarding({
     setPostalCode(formatPostalCodeInput(value));
   }, []);
 
-  const handlePostalCodeBlur = useCallback(async () => {
+  /**
+   * Adopts a place the player picked from address autocomplete. Its postal code only
+   * overwrites what is already there when Google actually returned one — a place
+   * without one must not blank out a postal code the player typed themselves, since
+   * that field is the required one.
+   */
+  const selectAddress = useCallback((details: PlaceDetails) => {
+    setAddress(details.address);
+    setLatitude(details.latitude);
+    setLongitude(details.longitude);
+    if (details.city) setLocationCity(details.city);
+    if (details.province) setLocationProvince(details.province);
+    if (details.postalCode) {
+      const normalized = formatPostalCodeInput(details.postalCode);
+      if (normalized) setPostalCode(normalized);
+    }
+  }, []);
+
+  /** Drops the precise address and falls back to the postal code's centroid. */
+  const clearAddress = useCallback(async () => {
+    setAddress('');
     const validation = validateFormat(postalCode);
     if (!validation.isValid || !validation.normalized) return;
 
     const result = await geocode(validation.normalized);
     if (result) {
-      setPostalCode(result.postalCode);
       setLatitude(result.latitude);
       setLongitude(result.longitude);
       setLocationCity(result.city ?? '');
       setLocationProvince(result.province ?? '');
     }
   }, [postalCode, validateFormat, geocode]);
+
+  const handlePostalCodeBlur = useCallback(async () => {
+    const validation = validateFormat(postalCode);
+    if (!validation.isValid || !validation.normalized) return;
+
+    const result = await geocode(validation.normalized);
+    if (!result) return;
+
+    setPostalCode(result.postalCode);
+    // A chosen address is more precise than the postal code's centroid, so it keeps
+    // the coordinates. Without this, blurring the field after picking an address
+    // would quietly throw that precision away.
+    if (address) return;
+
+    setLatitude(result.latitude);
+    setLongitude(result.longitude);
+    setLocationCity(result.city ?? '');
+    setLocationProvince(result.province ?? '');
+  }, [postalCode, address, validateFormat, geocode]);
+
+  /**
+   * Records acceptance of every current policy. Throws so the caller decides what a
+   * failure means — blocking a gate mid-flow and failing a final submit want
+   * different handling.
+   *
+   * Re-fetches current versions rather than caching them, so a policy bumped
+   * mid-onboarding is still recorded accurately. Same write path as mobile's consent
+   * step (accept_policy_consent RPC).
+   */
+  const acceptPolicies = useCallback(async () => {
+    const { data: versions, error: versionsError } = await supabase
+      .from('policy_versions')
+      .select('policy_type, current_version');
+
+    if (versionsError || !versions) {
+      throw new Error(versionsError?.message ?? 'Failed to load policy versions');
+    }
+
+    await Promise.all(
+      versions.map(async v => {
+        const { error: acceptError } = await supabase.rpc('accept_policy_consent', {
+          p_policy_type: v.policy_type,
+          p_version: v.current_version,
+        });
+        if (acceptError) throw new Error(acceptError.message);
+      })
+    );
+  }, [supabase]);
 
   const goNext = useCallback(async () => {
     setErrorMessage(null);
@@ -340,27 +436,7 @@ export function useWebOnboarding({
 
       setIsSubmitting(true);
       try {
-        // Re-fetch current versions rather than caching them — robust to
-        // policy_versions being bumped mid-onboarding. Same write path as the
-        // mobile consent step (accept_policy_consent RPC).
-        const { data: versions, error: versionsError } = await supabase
-          .from('policy_versions')
-          .select('policy_type, current_version');
-
-        if (versionsError || !versions) {
-          throw new Error(versionsError?.message ?? 'Failed to load policy versions');
-        }
-
-        await Promise.all(
-          versions.map(async v => {
-            const { error: acceptError } = await supabase.rpc('accept_policy_consent', {
-              p_policy_type: v.policy_type,
-              p_version: v.current_version,
-            });
-            if (acceptError) throw new Error(acceptError.message);
-          })
-        );
-
+        await acceptPolicies();
         setStep('personal');
       } catch {
         setErrorMessage(t('errors.submitFailed'));
@@ -414,6 +490,7 @@ export function useWebOnboarding({
             province: locationProvince || 'QC',
             latitude,
             longitude,
+            ...(address ? { address } : {}),
           },
         });
         if (nextStep) setStep(nextStep);
@@ -438,7 +515,9 @@ export function useWebOnboarding({
     longitude,
     locationCity,
     locationProvince,
+    address,
     sportId,
+    acceptPolicies,
     onSubmitProfile,
     mapSubmitError,
     t,
@@ -447,9 +526,9 @@ export function useWebOnboarding({
   const goBack = useCallback(() => {
     setErrorMessage(null);
     if (profileStepIndex > 0) {
-      setStep(PROFILE_STEPS[profileStepIndex - 1].id);
+      setStep(profileSteps[profileStepIndex - 1].id);
     }
-  }, [profileStepIndex]);
+  }, [profileStepIndex, profileSteps]);
 
   return {
     supabase,
@@ -460,8 +539,10 @@ export function useWebOnboarding({
     setIsSubmitting,
     errorMessage,
     setErrorMessage,
+    profileSteps,
     profileStepIndex,
     isProfileStep,
+    acceptPolicies,
 
     auth: {
       email,
@@ -493,7 +574,13 @@ export function useWebOnboarding({
       birthDate,
       setBirthDate,
     },
-    rating: { ratings, selectedRatingId, setSelectedRatingId, isLoadingRatings },
+    rating: {
+      ratings,
+      selectedRatingId,
+      setSelectedRatingId,
+      isLoadingRatings,
+      systemCode: ratingSystemCode,
+    },
     location: {
       postalCode,
       handlePostalCodeChange,
@@ -502,6 +589,9 @@ export function useWebOnboarding({
       locationProvince,
       latitude,
       isGeocoding,
+      address,
+      selectAddress,
+      clearAddress,
     },
 
     goNext,

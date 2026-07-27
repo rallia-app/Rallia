@@ -5,6 +5,13 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type {
+  WebBookCourtOption,
+  WebBookFacilityContext,
+  WebBookSlotGroup,
+  WebBookSport,
+} from './_lib/facility-context';
+
 import {
   AuthStep,
   ConsentStep,
@@ -14,23 +21,12 @@ import {
   OnboardingStepper,
   PersonalStep,
   RatingStep,
-} from '../../../_components/web-onboarding/onboarding-steps';
+} from '@/components/web-onboarding/onboarding-steps';
 import {
   useWebOnboarding,
   type OnboardingProfilePayload,
-} from '../../../_components/web-onboarding/use-web-onboarding';
-import {
-  AppStoreBadges,
-  OptionButton,
-} from '../../../_components/web-onboarding/wizard-primitives';
-
-import type {
-  WebBookCourtOption,
-  WebBookFacilityContext,
-  WebBookSlotGroup,
-  WebBookSport,
-} from './_lib/facility-context';
-
+} from '@/components/web-onboarding/use-web-onboarding';
+import { AppStoreBadges, OptionButton } from '@/components/web-onboarding/wizard-primitives';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { webBookCompleted, webBookRedirected, webBookStarted } from '@/lib/analytics';

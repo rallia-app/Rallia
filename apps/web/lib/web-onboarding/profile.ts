@@ -16,6 +16,11 @@ export type WebOnboardingProfilePayload = {
   sportId: string;
   ratingScoreId: string;
   postalCode: string;
+  /**
+   * Street address, when the surface collected one. The join and booking gates do not,
+   * so this falls back to the postal code rather than leaving the column empty.
+   */
+  address?: string;
   city: string;
   province: string;
   latitude: number;
@@ -80,7 +85,7 @@ export async function writeWebOnboardingProfile(
     {
       id: userId,
       gender: payload.gender,
-      address: payload.postalCode,
+      address: payload.address ?? payload.postalCode,
       city: payload.city,
       province: payload.province,
       postal_code: payload.postalCode,

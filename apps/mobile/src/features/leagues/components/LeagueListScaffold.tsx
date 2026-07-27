@@ -26,7 +26,7 @@ import {
   useTournamentListColors,
   type TournamentListColors,
 } from '../../tournaments/components/TournamentListScaffold';
-import { useTranslation, type TranslationKey } from '../../../hooks';
+import { useTranslation, useScrollBottomInset, type TranslationKey } from '../../../hooks';
 import { LeagueBanner, LEAGUE_BANNER_ASPECT } from './LeagueBanner';
 
 type LeagueStatus = Enums<'league_status'>;
@@ -372,6 +372,7 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
 }) => {
   const { t } = useTranslation();
   const colors = useTournamentListColors();
+  const bottomInset = useScrollBottomInset();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -438,13 +439,16 @@ export const LeagueListScaffold: React.FC<LeagueListScaffoldProps> = ({
 
   // One list in every state, with the header inside it: pull-to-refresh stays
   // live while loading, erroring and empty, not just once rows exist.
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={data}
         keyExtractor={item => item.key}
         contentContainerStyle={[
           styles.listContent,
+          { paddingBottom: bottomInset },
           data.length === 0 && !isLoading && styles.emptyListContent,
         ]}
         showsVerticalScrollIndicator={false}
@@ -500,7 +504,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
     // Lets the empty/error state fill the screen so it centres and the whole
     // surface stays pullable.
     flexGrow: 1,

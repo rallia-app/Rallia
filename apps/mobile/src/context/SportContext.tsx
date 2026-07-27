@@ -8,7 +8,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { usePlayerSports } from '@rallia/shared-hooks';
+import { usePlayerSports, deriveActiveSports, type ActiveSport } from '@rallia/shared-hooks';
 
 import * as Analytics from '#/services/analytics';
 
@@ -16,14 +16,10 @@ const SPORT_STORAGE_KEY = '@rallia/selected-sport';
 const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
 
 /**
- * Sport interface for context consumption
+ * Sport interface for context consumption.
+ * Aliases the shared shape so mobile and web derive identical sport lists.
  */
-export interface Sport {
-  id: string;
-  name: string;
-  display_name: string;
-  icon_url?: string | null;
-}
+export type Sport = ActiveSport;
 
 interface SportContextValue {
   /** Currently selected sport */
@@ -54,39 +50,12 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   const [allSports, setAllSports] = useState<Sport[]>([]);
   const [guestSportsLoading, setGuestSportsLoading] = useState(!userId); // Start loading if guest
 
-  // Derive userSports from playerSports using useMemo (avoids setState in effect)
-  const { userSports, primarySport } = useMemo(() => {
-    if (!userId || !playerSports || playerSports.length === 0) {
-      return { userSports: [] as Sport[], primarySport: null as Sport | null };
-    }
-
-    const sports: Sport[] = [];
-    let primary: Sport | null = null;
-
-    playerSports.forEach(ps => {
-      const sportData = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
-      if (
-        sportData &&
-        typeof sportData === 'object' &&
-        ps.is_active === true &&
-        sportData.is_active === true
-      ) {
-        const sport: Sport = {
-          id: sportData.id,
-          name: sportData.name,
-          display_name: sportData.display_name,
-          icon_url: sportData.icon_url,
-        };
-        sports.push(sport);
-
-        if (ps.is_primary) {
-          primary = sport;
-        }
-      }
-    });
-
-    return { userSports: sports, primarySport: primary };
-  }, [userId, playerSports]);
+  // Derive userSports from playerSports using useMemo (avoids setState in effect).
+  // Guests have no player_sport rows, so they fall through to allSports below.
+  const { userSports, primarySport } = useMemo(
+    () => (userId ? deriveActiveSports(playerSports) : { userSports: [], primarySport: null }),
+    [userId, playerSports]
+  );
 
   // Initialize selected sport from storage or use primary/first sport
   const initializeSelectedSport = useCallback(async (sports: Sport[], primary: Sport | null) => {

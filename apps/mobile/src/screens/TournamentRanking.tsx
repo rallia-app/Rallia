@@ -28,11 +28,12 @@ import {
   useAuth,
   useTournamentRanking,
   useMyTournamentRanking,
+  useMyPointsToDefend,
   useRatingScoresForSport,
   type TournamentRankingEntry,
 } from '@rallia/shared-hooks';
 
-import { useTranslation, useThemeStyles } from '../hooks';
+import { useTranslation, useThemeStyles, useScrollBottomInset } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
 import { lightHaptic } from '#/utils/haptics';
@@ -44,6 +45,7 @@ import {
   type BoardEntry,
   type ThemeBits,
 } from '../components/classements/BoardKit';
+import { PointsToDefendCard } from '../components/classements/PointsToDefendCard';
 
 /**
  * Board filter pill. Solid accent + checkmark when active; quiet outline
@@ -105,6 +107,7 @@ const FilterChip: React.FC<{
 export const TournamentRanking: React.FC = () => {
   const { t } = useTranslation();
   const { colors, isDark } = useThemeStyles();
+  const bottomInset = useScrollBottomInset();
   const { session } = useAuth();
   const { selectedSport } = useSport();
   const userId = session?.user?.id;
@@ -112,6 +115,7 @@ export const TournamentRanking: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { data: myRank } = useMyTournamentRanking(sportId);
+  const { items: toDefend, pointsAtStake } = useMyPointsToDefend(sportId);
 
   // Caller's exact active rating (by rating_score id — the canonical compare).
   const { ratingScores, playerRatingScoreId } = useRatingScoresForSport(
@@ -149,16 +153,16 @@ export const TournamentRanking: React.FC = () => {
     [isDark, colors]
   );
 
-  const seasonLabel = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth(); // 0-11
-    const year = now.getFullYear();
-    const isSpringSummer = month >= 3 && month <= 8; // Apr..Sep
-    if (isSpringSummer) return t('tournamentRanking.seasonSpringSummer', { year });
-    // Fall/Winter spans the year-end; keyed by its start year.
-    const startYear = month >= 9 ? year : year - 1;
-    return t('tournamentRanking.seasonFallWinter', { year: startYear });
-  }, [t]);
+  const defendItems = useMemo(
+    () =>
+      toDefend.map(row => ({
+        id: row.ledgerId,
+        name: row.tournamentName,
+        points: row.points,
+        daysRemaining: row.daysRemaining,
+      })),
+    [toDefend]
+  );
 
   const toEntry = useCallback(
     (item: TournamentRankingEntry): BoardEntry => ({
@@ -186,7 +190,7 @@ export const TournamentRanking: React.FC = () => {
       <BoardHeader
         icon="trophy"
         title={t('tournamentRanking.title')}
-        subtitle={t('tournamentRanking.subtitle', { season: seasonLabel })}
+        subtitle={t('tournamentRanking.subtitle')}
         note={t('tournamentRanking.pointsNote')}
         noteCtaLabel={t('tournamentRanking.howItWorks')}
         onNotePress={() => {
@@ -205,6 +209,17 @@ export const TournamentRanking: React.FC = () => {
           valueLabel={t('tournamentRanking.points')}
         />
       ) : null}
+
+      <PointsToDefendCard
+        items={defendItems}
+        pointsAtStake={pointsAtStake}
+        title={t('tournamentRanking.pointsToDefend.title')}
+        note={t('tournamentRanking.pointsToDefend.note')}
+        valueLabel={t('tournamentRanking.pointsToDefend.atStake')}
+        formatDays={days => t('tournamentRanking.pointsToDefend.inDays', { count: days })}
+        formatMore={count => t('tournamentRanking.pointsToDefend.more', { count })}
+        theme={theme}
+      />
 
       {myRank && (myRank.levelBucket || myRatingValue != null) ? (
         <View style={styles.filterRow}>
@@ -265,7 +280,9 @@ export const TournamentRanking: React.FC = () => {
   return (
     <FlatList
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.listContent}
+      // Bottom inset lives here, not on the Classements wrapper, so the list
+      // scrolls under the home indicator instead of stopping above it.
+      contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset }]}
       data={items}
       keyExtractor={e => e.userId}
       renderItem={({ item }) => (
@@ -309,7 +326,6 @@ export const TournamentRanking: React.FC = () => {
 const styles = StyleSheet.create({
   listContent: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
     flexGrow: 1,
   },
   header: {

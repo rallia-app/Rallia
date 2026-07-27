@@ -19,7 +19,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import DatabaseService, { Logger } from '@rallia/shared-services';
-import { selectionHaptic } from '@rallia/shared-utils';
+import {
+  RATING_SYSTEM_URLS,
+  ratingDescriptionKey,
+  ratingSkillLevelKey,
+  ratingSkillTier,
+  selectionHaptic,
+  type RatingSystemCode,
+} from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 
 import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardingWizard';
@@ -49,66 +56,19 @@ interface Rating {
 }
 
 /**
- * Maps NTRP score value to a translation key
+ * Score → translation key. The mappings live in @rallia/shared-utils so web's rating
+ * step names and describes each level identically; only the namespace prefix (which
+ * differs by translator shape) is applied here.
  */
-const getNtrpSkillLabelKey = (scoreValue: number): TranslationKey => {
-  const mapping: Record<number, TranslationKey> = {
-    1.5: 'onboarding.ratingStep.skillLevels.beginner1',
-    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
-    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
-    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
-    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
-    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
-    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
-    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
-    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
-    6.0: 'onboarding.ratingStep.skillLevels.professional',
-  };
-  return mapping[scoreValue] || '';
+const skillLabelKey = (system: RatingSystemCode, scoreValue: number): TranslationKey => {
+  const leaf = ratingSkillLevelKey(system, scoreValue);
+  return leaf
+    ? (`onboarding.ratingStep.skillLevels.${leaf}` as TranslationKey)
+    : ('' as TranslationKey);
 };
 
-/**
- * Maps DUPR score value to a translation key
- */
-const getDuprSkillLabelKey = (scoreValue: number): TranslationKey => {
-  const mapping: Record<number, TranslationKey> = {
-    1.0: 'onboarding.ratingStep.skillLevels.beginner1',
-    2.0: 'onboarding.ratingStep.skillLevels.beginner2',
-    2.5: 'onboarding.ratingStep.skillLevels.beginner3',
-    3.0: 'onboarding.ratingStep.skillLevels.intermediate1',
-    3.5: 'onboarding.ratingStep.skillLevels.intermediate2',
-    4.0: 'onboarding.ratingStep.skillLevels.intermediate3',
-    4.5: 'onboarding.ratingStep.skillLevels.advanced1',
-    5.0: 'onboarding.ratingStep.skillLevels.advanced2',
-    5.5: 'onboarding.ratingStep.skillLevels.advanced3',
-    6.0: 'onboarding.ratingStep.skillLevels.professional',
-  };
-  return mapping[scoreValue] || '';
-};
-
-/**
- * Maps NTRP score value to a description translation key
- */
-const getNtrpDescriptionKey = (scoreValue: number): TranslationKey => {
-  return `onboarding.ratingStep.ntrpDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
-};
-
-/**
- * Maps DUPR score value to a description translation key
- */
-const getDuprDescriptionKey = (scoreValue: number): TranslationKey => {
-  return `onboarding.ratingStep.duprDescriptions.${scoreValue.toFixed(1).replace('.', '_')}` as TranslationKey;
-};
-
-/**
- * Get skill category from score value for icon selection
- */
-const getSkillCategory = (scoreValue: number): string => {
-  if (scoreValue <= 2.5) return 'beginner';
-  if (scoreValue <= 4.0) return 'intermediate';
-  if (scoreValue <= 5.5) return 'advanced';
-  return 'professional';
-};
+const descriptionKey = (system: RatingSystemCode, scoreValue: number): TranslationKey =>
+  `onboarding.ratingStep.${ratingDescriptionKey(system, scoreValue)}` as TranslationKey;
 
 interface RatingStepProps {
   sport: 'tennis' | 'pickleball';
@@ -132,7 +92,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   const isTennis = sport === 'tennis';
-  const ratingSystem = isTennis ? 'ntrp' : 'dupr';
+  const ratingSystem: RatingSystemCode = isTennis ? 'ntrp' : 'dupr';
   const titleKey = isTennis
     ? 'onboarding.ratingStep.tennisTitle'
     : 'onboarding.ratingStep.pickleballTitle';
@@ -196,11 +156,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
     return 'trophy';
   };
 
-  const getRatingUrl = () => {
-    return isTennis
-      ? 'https://www.usta.com/content/dam/usta/pdfs/10013_experience_player_ntrp_characteristics1%20(2).pdf'
-      : 'https://www.dupr.com/post/understanding-all-pickleball-ratings';
-  };
+  const getRatingUrl = () => RATING_SYSTEM_URLS[ratingSystem];
 
   return (
     <SheetScrollView
@@ -297,7 +253,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
               >
                 <View style={styles.ratingHeader}>
                   <Ionicons
-                    name={getRatingIcon(getSkillCategory(rating.score_value))}
+                    name={getRatingIcon(ratingSkillTier(rating.score_value))}
                     size={20}
                     color={isSelected ? colors.buttonActive : colors.buttonActive}
                     style={styles.ratingIcon}
@@ -307,11 +263,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                     weight="bold"
                     color={isSelected ? colors.buttonActive : colors.text}
                   >
-                    {t(
-                      isTennis
-                        ? getNtrpSkillLabelKey(rating.score_value)
-                        : getDuprSkillLabelKey(rating.score_value)
-                    )}
+                    {t(skillLabelKey(ratingSystem, rating.score_value))}
                   </Text>
                 </View>
                 <Text
@@ -327,11 +279,7 @@ export const RatingStep: React.FC<RatingStepProps> = ({
                   color={isSelected ? colors.text : colors.textSecondary}
                   style={styles.ratingDescription}
                 >
-                  {t(
-                    isTennis
-                      ? getNtrpDescriptionKey(rating.score_value)
-                      : getDuprDescriptionKey(rating.score_value)
-                  )}
+                  {t(descriptionKey(ratingSystem, rating.score_value))}
                 </Text>
               </TouchableOpacity>
             );

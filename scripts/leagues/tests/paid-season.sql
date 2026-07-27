@@ -39,9 +39,9 @@ BEGIN
     END;
 
     -- Onboard the organizer.
-    INSERT INTO player_stripe_account (player_id, stripe_account_id, onboarding_completed)
+    INSERT INTO player_stripe_account (player_id, stripe_account_id, charges_enabled)
     VALUES (v_org, 'acct_test_l4', true)
-    ON CONFLICT (player_id) DO UPDATE SET onboarding_completed=true, stripe_account_id='acct_test_l4';
+    ON CONFLICT (player_id) DO UPDATE SET charges_enabled=true, stripe_account_id='acct_test_l4';
 
     v_season := season_open(v_season.id, v_season.version);
     IF v_season.status='open' THEN v_pass:=v_pass+1; RAISE NOTICE 'PASS paid season opens once onboarded';

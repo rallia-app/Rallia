@@ -177,6 +177,7 @@ const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
   registration_removed: 'tournamentDetail.errors.registrationRemoved',
   rating_required: 'tournamentDetail.errors.ratingRequired',
   rating_too_low: 'tournamentDetail.errors.ratingTooLow',
+  rating_too_high: 'tournamentDetail.errors.ratingTooHigh',
   partner_required: 'tournamentDetail.errors.partnerRequired',
   partner_not_allowed: 'tournamentDetail.errors.partnerInvalid',
   partner_invalid: 'tournamentDetail.errors.partnerInvalid',
@@ -184,6 +185,7 @@ const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
   partner_already_registered: 'tournamentDetail.errors.partnerAlreadyRegistered',
   partner_rating_required: 'tournamentDetail.errors.partnerRatingRequired',
   partner_rating_too_low: 'tournamentDetail.errors.partnerRatingTooLow',
+  partner_rating_too_high: 'tournamentDetail.errors.partnerRatingTooHigh',
 };
 
 interface ScreenColors {
@@ -1408,13 +1410,17 @@ export const TournamentDetail: React.FC = () => {
                                           : // partner_rating_* first: they contain the bare rating_* codes.
                                             lower.includes('partner_rating_too_low')
                                             ? 'tournamentDetail.errors.partnerRatingTooLow'
-                                            : lower.includes('partner_rating_required')
-                                              ? 'tournamentDetail.errors.partnerRatingRequired'
-                                              : lower.includes('rating_too_low')
-                                                ? 'tournamentDetail.errors.ratingTooLow'
-                                                : lower.includes('rating_required')
-                                                  ? 'tournamentDetail.errors.ratingRequired'
-                                                  : fallbackKey;
+                                            : lower.includes('partner_rating_too_high')
+                                              ? 'tournamentDetail.errors.partnerRatingTooHigh'
+                                              : lower.includes('partner_rating_required')
+                                                ? 'tournamentDetail.errors.partnerRatingRequired'
+                                                : lower.includes('rating_too_low')
+                                                  ? 'tournamentDetail.errors.ratingTooLow'
+                                                  : lower.includes('rating_too_high')
+                                                    ? 'tournamentDetail.errors.ratingTooHigh'
+                                                    : lower.includes('rating_required')
+                                                      ? 'tournamentDetail.errors.ratingRequired'
+                                                      : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -2524,6 +2530,7 @@ export const TournamentDetail: React.FC = () => {
       rules: tournament.rules,
       logoUrl: tournament.logo_url,
       minRating: tournament.min_rating,
+      maxRating: tournament.max_rating,
       visibility: tournament.visibility,
       startDate: tournament.start_date,
       endDate: tournament.end_date,

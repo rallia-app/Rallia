@@ -18,7 +18,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@rallia/shared-components';
 import { useFacilitySearch, facilityKeys } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
-import { lightHaptic, selectionHaptic, successHaptic, mediumHaptic } from '@rallia/shared-utils';
+import {
+  formatDistance,
+  lightHaptic,
+  selectionHaptic,
+  successHaptic,
+  mediumHaptic,
+} from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -35,14 +41,6 @@ const MIN_FAVORITES = 3;
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
-function formatDistance(meters: number | null): string {
-  if (meters === null) return '';
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`;
-  }
-  return `${(meters / 1000).toFixed(1)}km`;
-}
 
 // =============================================================================
 // SUB-COMPONENTS

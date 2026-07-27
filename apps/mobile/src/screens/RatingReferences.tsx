@@ -41,7 +41,12 @@ import {
   status as statusColors,
 } from '@rallia/design-system';
 
-import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '#/hooks';
+import {
+  useThemeStyles,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  useScrollBottomInset,
+} from '#/hooks';
 import RatingBadge from '#/components/RatingBadge';
 import { formatDateShort } from '#/utils/dateFormatting';
 
@@ -173,6 +178,7 @@ const RatingReferences: React.FC = () => {
 
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const bottomInset = useScrollBottomInset();
   const toast = useToast();
   const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const { player } = usePlayer();
@@ -592,11 +598,10 @@ const RatingReferences: React.FC = () => {
           ? 'emptyPending'
           : 'empty';
 
+  // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
+  // so the list scrolls under the home indicator instead of stopping above it.
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Filter chips */}
       <View style={styles.chipsWrapper}>
         <ScrollView
@@ -685,7 +690,7 @@ const RatingReferences: React.FC = () => {
           data={filteredReferences}
           keyExtractor={item => item.id}
           renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset }]}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={colors.textMuted} />
@@ -746,7 +751,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacingPixels[5],
     paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[5],
     flexGrow: 1,
   },
   card: {

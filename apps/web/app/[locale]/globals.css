@@ -267,7 +267,11 @@
     font-family: var(--font-inter), sans-serif;
   }
 
-  /* All headings use Poppins font (Energy & Trust theme) */
+  /* All headings use Poppins font (Energy & Trust theme).
+     No margin here on purpose: Preflight zeroes heading/paragraph margins so layout
+     spacing comes from utilities (space-y-*, gap-*). Re-adding a bottom margin stacks
+     on top of those and every heading ends up double-spaced. Long-form pages that do
+     want prose rhythm use the typography plugin (see /privacy), which sets its own. */
   h1,
   h2,
   h3,
@@ -278,14 +282,12 @@
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.025em;
-    margin-bottom: 0.5em;
   }
 
   /* H1 gets extra weight and size */
   h1 {
     font-weight: 800;
     letter-spacing: -0.05em;
-    margin-bottom: 0.75em;
   }
 
   /* Improved spacing for sections — disabled for landing page full-bleed sections */
@@ -293,10 +295,8 @@
     margin-bottom: 4rem;
   } */
 
-  /* Better paragraph spacing */
   p {
     line-height: 1.6;
-    margin-bottom: 1rem;
   }
 
   /* Improved card spacing */
@@ -1333,4 +1333,58 @@ textarea:focus-visible {
   a::after {
     display: none;
   }
+}
+
+/* Sign-in hero: ambient drift for the brand panel's glow blobs */
+@keyframes hero-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2rem, 1.5rem, 0) scale(1.08);
+  }
+}
+
+.animate-hero-drift {
+  animation: hero-drift 14s ease-in-out infinite alternate;
+}
+
+.animate-hero-drift-slow {
+  animation: hero-drift 20s ease-in-out infinite alternate-reverse;
+}
+
+.animate-hero-drift-slower {
+  animation: hero-drift 26s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-drift,
+  .animate-hero-drift-slow,
+  .animate-hero-drift-slower {
+    animation: none;
+  }
+}
+
+/* Sign-in hero panel, dark override.
+   .dark .hero-gradient remixes the dark ramp's 100/200 steps into a muddy brown wash;
+   this replaces it with a charcoal base plus token-driven teal/coral/gold glows.
+   Appended after .dark .hero-gradient so source order resolves the tie. */
+.dark .signin-hero {
+  background:
+    radial-gradient(
+      80rem 50rem at 90% -10%,
+      color-mix(in oklab, var(--accent-500) 9%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      70rem 45rem at -15% 115%,
+      color-mix(in oklab, var(--secondary-500) 11%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      60rem 40rem at 15% 0%,
+      color-mix(in oklab, var(--primary-500) 13%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--primary-100) 0%, var(--primary-50) 60%, var(--primary-100) 100%);
 }

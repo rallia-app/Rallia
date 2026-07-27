@@ -4173,8 +4173,17 @@
   },
   "tournamentRanking": {
     "title": "Circuit Rallia",
-    "subtitle": "Saison {season}",
+    "subtitle": "Résultats des 12 derniers mois",
     "pointsNote": "Gagne des points Rallia en participant et en avançant dans les tournois.",
+    "pointsToDefend": {
+      "title": "Points à défendre",
+      "note": "Chaque résultat compte 12 mois",
+      "atStake": "en jeu",
+      "inDays": "dans {count} jours",
+      "inDays_one": "dans {count} jour",
+      "more": "+{count} autres",
+      "more_one": "+{count} autre"
+    },
     "howItWorks": "Comment ça marche",
     "filterMyLevel": "Mon niveau · {level}",
     "filterMyRating": "Ma cote · {rating}",
@@ -4187,10 +4196,10 @@
     "events": "{count} tournois",
     "events_one": "{count} tournoi",
     "youSuffix": "(toi)",
-    "yourRank": "Tu es #{rank} cette saison",
+    "yourRank": "Tu es #{rank} en ce moment",
     "error": "Impossible de charger le classement. Tire pour réessayer.",
     "empty": {
-      "title": "La saison commence",
+      "title": "Personne au classement pour l'instant",
       "description": "Inscris-toi à un tournoi pour gagner tes premiers points pis apparaître au classement."
     },
     "seasonSpringSummer": "Printemps/Été {year}",
@@ -4293,6 +4302,18 @@
         "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
         "cancelFailed": "Impossible d'annuler la saison. Réessaie."
       }
+    },
+    "joinErrors": {
+      "ratingRequired": "Ça te prend un classement dans ce sport pour rejoindre cette ligue.",
+      "ratingTooLow": "Ton classement est sous le niveau minimum de cette ligue.",
+      "ratingTooHigh": "Ton classement est au-dessus du niveau maximum de cette ligue.",
+      "reputation": "Ton score de réputation est sous ce que cette ligue demande.",
+      "alreadyMember": "Tu es déjà dans cette ligue.",
+      "leagueNotActive": "Cette ligue n'est pas active en ce moment.",
+      "leagueNotFound": "Cette ligue n'existe plus.",
+      "leagueFull": "Cette ligue est pleine.",
+      "notInvited": "Cette ligue est sur invitation seulement.",
+      "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre."
     },
     "seasonErrors": {
       "notOrganizer": "Seul l'organisateur peut faire ça.",
@@ -5242,8 +5263,10 @@
       "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
       "partnerSportMismatch": "Ton partenaire n'a pas ce sport actif sur son profil.",
       "ratingTooLow": "Ton niveau est sous le minimum de ce tournoi.",
+      "ratingTooHigh": "Ton niveau est au-dessus du maximum de ce tournoi.",
       "ratingRequired": "Ça te prend un niveau dans ce sport pour t'inscrire à ce tournoi.",
       "partnerRatingTooLow": "Le niveau de ton partenaire est sous le minimum de ce tournoi.",
+      "partnerRatingTooHigh": "Le niveau de ton partenaire est au-dessus du maximum de ce tournoi.",
       "partnerRatingRequired": "Ton partenaire a besoin d'un niveau dans ce sport pour être inscrit.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide.",
@@ -5326,7 +5349,10 @@
       "rulesPlaceholder": "Format, pointage, présence, conduite… (optionnel)",
       "minLevel": "Niveau minimum",
       "minLevelNone": "Aucun minimum",
-      "minLevelHint": "Les joueurs sous ce niveau peuvent quand même postuler. Tu acceptes ou refuses.",
+      "minLevelHint": "Les joueurs sous ce niveau ne peuvent pas s'inscrire. Verrouillé dès que le tournoi n'est plus un brouillon.",
+      "maxLevel": "Niveau maximum",
+      "maxLevelNone": "Aucun maximum",
+      "maxLevelHint": "Les joueurs au-dessus de ce niveau ne peuvent pas s'inscrire. Verrouillé dès que le tournoi n'est plus un brouillon.",
       "lockedAfterDraft": "Modifiable seulement tant que le tournoi est en brouillon.",
       "location": "Lieu",
       "locationExact": "Lieu exact",
@@ -11651,7 +11677,7 @@
     },
     "circuitRanking": {
       "title": "Comment marche le Circuit Rallia",
-      "intro": "Un classement par sport et par saison. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
+      "intro": "Un classement par sport. Tu gagnes des points en t'inscrivant à des tournois pis en gagnant tes parties.",
       "placement": {
         "title": "Jusqu'où tu te rends",
         "baseNote": "Points de base. Chaque tournoi les multiplie, sauf la participation qui reste à 10 partout.",
@@ -11671,10 +11697,10 @@
         "body": "Les gros tableaux et les niveaux minimums plus élevés multiplient les points ci-dessus. Monter d'une catégorie multiplie par environ cinq la valeur de chaque résultat. Chaque tournoi affiche son gros lot d'avance, comme « jusqu'à 5000 pts » sur la carte."
       },
       "season": {
-        "title": "Ton score de saison",
-        "body": "Tes 8 meilleurs résultats de la saison forment ton rang. Une mauvaise journée te fait jamais reculer."
+        "title": "Ton score",
+        "body": "Tes 8 meilleurs résultats des 12 derniers mois forment ton rang. Chaque résultat compte pendant un an, après il tombe. Une mauvaise journée te fait jamais reculer."
       },
-      "finePrint": "Seuls les tournois d'un organisateur certifié donnent des points. Deux saisons par année : printemps/été et automne/hiver."
+      "finePrint": "Seuls les tournois d'un organisateur certifié donnent des points. Rien se remet à zéro : tes résultats comptent 12 mois, après ils tombent un par un."
     }
   },
   "profileCompletion": {

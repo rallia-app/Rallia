@@ -9060,6 +9060,7 @@ export type Database = {
       tournament_ranking_points: {
         Row: {
           computed_at: string
+          earned_at: string
           id: string
           level_bucket: string | null
           multiplier: number
@@ -9073,6 +9074,7 @@ export type Database = {
         }
         Insert: {
           computed_at?: string
+          earned_at?: string
           id?: string
           level_bucket?: string | null
           multiplier: number
@@ -9086,6 +9088,7 @@ export type Database = {
         }
         Update: {
           computed_at?: string
+          earned_at?: string
           id?: string
           level_bucket?: string | null
           multiplier?: number
@@ -10586,6 +10589,21 @@ export type Database = {
       get_my_contest_rank: {
         Args: { p_contest_id: string; p_player_id: string }
         Returns: Json
+      }
+      get_my_points_to_defend: {
+        Args: { p_within_days?: number }
+        Returns: {
+          counts_now: boolean
+          days_remaining: number
+          earned_at: string
+          expires_at: string
+          ledger_id: string
+          placement: string
+          points: number
+          sport_id: string
+          tournament_id: string
+          tournament_name: string
+        }[]
       }
       get_my_sport_rank: {
         Args: { p_month?: string; p_sport_id: string }
@@ -12135,6 +12153,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_assert_rating_band: {
+        Args: {
+          p_max: number
+          p_min: number
+          p_partner?: boolean
+          p_sport_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       lt_cancel_refund_candidates: {
         Args: never
         Returns: {
@@ -12181,6 +12209,7 @@ export type Database = {
         Args: { p_match_result_id: string }
         Returns: undefined
       }
+      lt_ranking_window: { Args: never; Returns: string }
       lt_rating_skill_bucket: {
         Args: { p_skill_level: Database["public"]["Enums"]["skill_level"] }
         Returns: string
@@ -13787,6 +13816,7 @@ export type Database = {
           p_logo_url?: string
           p_match_format?: Database["public"]["Enums"]["match_format"]
           p_max_participants: number
+          p_max_rating?: number
           p_min_rating?: number
           p_name: string
           p_network_id?: string

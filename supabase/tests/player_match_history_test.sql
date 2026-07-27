@@ -39,7 +39,7 @@ BEGIN
   SELECT id INTO v_pickle FROM sport WHERE name = 'pickleball';
   SELECT array_agg(player_id) INTO v_pl FROM (
     SELECT player_id FROM player_sport
-     WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 5) s;
+     WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 5) s;
   ASSERT array_length(v_pl, 1) = 5, 'need 5 active tennis players in seed';
   p1 := v_pl[1]; p2 := v_pl[2]; p3 := v_pl[3]; p4 := v_pl[4]; p5 := v_pl[5];
 

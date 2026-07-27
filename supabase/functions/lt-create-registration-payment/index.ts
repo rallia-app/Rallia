@@ -53,6 +53,7 @@ type ErrorCode =
   | 'registration_removed'
   | 'rating_required'
   | 'rating_too_low'
+  | 'rating_too_high'
   | 'partner_required'
   | 'partner_not_allowed'
   | 'partner_invalid'
@@ -60,6 +61,7 @@ type ErrorCode =
   | 'partner_already_registered'
   | 'partner_rating_required'
   | 'partner_rating_too_low'
+  | 'partner_rating_too_high'
   | 'season_not_found'
   | 'season_not_open'
   | 'season_not_paid'
@@ -104,6 +106,8 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'rating_required';
     case 'RATING_TOO_LOW':
       return 'rating_too_low';
+    case 'RATING_TOO_HIGH':
+      return 'rating_too_high';
     case 'PARTNER_REQUIRED':
       return 'partner_required';
     case 'PARTNER_NOT_ALLOWED':
@@ -118,6 +122,8 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'partner_rating_required';
     case 'PARTNER_RATING_TOO_LOW':
       return 'partner_rating_too_low';
+    case 'PARTNER_RATING_TOO_HIGH':
+      return 'partner_rating_too_high';
     case 'SEASON_NOT_FOUND':
       return 'season_not_found';
     case 'SEASON_NOT_OPEN':

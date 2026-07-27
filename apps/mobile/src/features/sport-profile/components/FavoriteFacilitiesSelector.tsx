@@ -17,7 +17,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import {
+  formatDistance,
+  lightHaptic,
+  selectionHaptic,
+  successHaptic,
+  warningHaptic,
+} from '@rallia/shared-utils';
 import { useFacilitySearch, useFavoriteFacilities } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { TranslationKey } from '@rallia/shared-translations';
@@ -60,21 +66,6 @@ interface FavoriteFacilitiesSelectorProps {
 // =============================================================================
 
 const DEFAULT_MAX_FAVORITES = 3;
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Format distance in meters to human-readable string
- */
-function formatDistance(meters: number | null): string {
-  if (meters === null) return '';
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`;
-  }
-  return `${(meters / 1000).toFixed(1)}km`;
-}
 
 // =============================================================================
 // SUB-COMPONENTS

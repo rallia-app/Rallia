@@ -78,7 +78,9 @@ export default async function Home({ params }: { params: Promise<{ locale: Local
           <h1 className="text-5xl md:text-8xl font-bold text-white">
             {t('landing.hero.headline')}
           </h1>
-          <h2 className="text-xl md:text-2xl text-white/60 max-w-2xl -mt-8">
+          {/* Spacing comes from the parent's gap-6; this used to carry a -mt-8 to
+              cancel the global heading margin that no longer exists. */}
+          <h2 className="text-xl md:text-2xl text-white/60 max-w-2xl">
             {t('landing.hero.subheadline')}
           </h2>
           <div className="mt-6 md:hidden">

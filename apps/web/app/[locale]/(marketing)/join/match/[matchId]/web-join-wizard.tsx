@@ -19,13 +19,12 @@ import {
   OnboardingStepper,
   PersonalStep,
   RatingStep,
-} from '../../../_components/web-onboarding/onboarding-steps';
+} from '@/components/web-onboarding/onboarding-steps';
 import {
   useWebOnboarding,
   type OnboardingProfilePayload,
-} from '../../../_components/web-onboarding/use-web-onboarding';
-import { AppStoreBadges, StepHeader } from '../../../_components/web-onboarding/wizard-primitives';
-
+} from '@/components/web-onboarding/use-web-onboarding';
+import { AppStoreBadges, StepHeader } from '@/components/web-onboarding/wizard-primitives';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';

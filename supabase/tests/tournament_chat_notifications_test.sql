@@ -39,7 +39,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 8
       ) s;
     ASSERT array_length(v_players, 1) = 8, 'need 8 active tennis players';
@@ -123,7 +123,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 8
       ) s;
     v_org := v_players[1];
@@ -182,7 +182,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 8
       ) s;
     v_org := v_players[1];
@@ -273,7 +273,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 8
       ) s;
     v_org := v_players[1];
@@ -397,7 +397,7 @@ BEGIN
     SELECT array_agg(player_id) INTO v_players
       FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
          ORDER BY player_id LIMIT 8
       ) s;
     v_org := v_players[1];

@@ -44,7 +44,7 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO o_players FROM (
         SELECT player_id FROM player_sport
-         WHERE sport_id = v_sport AND is_active = true ORDER BY player_id LIMIT 4) s;
+         WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 4) s;
     ASSERT array_length(o_players, 1) = 4, 'need 4 active tennis players';
     o_org := o_players[1];
 
@@ -64,9 +64,9 @@ BEGIN
         UPDATE seasons SET entry_fee_cents = p_fee_cents, currency = 'CAD',
                            fee_payer = 'player_pays'
          WHERE id = v_season.id;
-        INSERT INTO player_stripe_account (player_id, stripe_account_id, onboarding_completed)
+        INSERT INTO player_stripe_account (player_id, stripe_account_id, charges_enabled)
         VALUES (o_org, 'acct_test_' || left(o_org::text, 8), true)
-        ON CONFLICT (player_id) DO UPDATE SET onboarding_completed = true;
+        ON CONFLICT (player_id) DO UPDATE SET charges_enabled = true;
     END IF;
 
     SELECT version INTO v_season.version FROM seasons WHERE id = v_season.id;

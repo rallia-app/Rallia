@@ -1,8 +1,8 @@
 /**
- * useTournamentRanking + useMyTournamentRanking
- * Infinite-scroll pagination for the Points-Rallia season board, plus the
- * caller's own standing for the selected sport (kept correct regardless of how
- * far the list is paged).
+ * useTournamentRanking + useMyTournamentRanking + useMyPointsToDefend
+ * Infinite-scroll pagination for the Points-Rallia board, the caller's own
+ * standing for the selected sport (kept correct regardless of how far the list
+ * is paged), and the results about to age out of the rolling window.
  */
 
 import { useCallback, useMemo } from 'react';
@@ -10,9 +10,11 @@ import { useInfiniteQuery, useQuery, keepPreviousData } from '@tanstack/react-qu
 import {
   getTournamentRankingPage,
   getMyTournamentRanking,
+  getMyPointsToDefend,
   type TournamentRankingEntry,
   type TournamentRankingPage,
   type MyTournamentRanking,
+  type PointsToDefendRow,
   type RankingLevelFilter,
 } from '@rallia/shared-services';
 
@@ -36,6 +38,8 @@ export const tournamentRankingKeys = {
     ] as const,
   myRank: (seasonCode?: string) =>
     [...tournamentRankingKeys.all, 'my-rank', seasonCode ?? 'current'] as const,
+  toDefend: (withinDays?: number) =>
+    [...tournamentRankingKeys.all, 'to-defend', withinDays ?? 'default'] as const,
 };
 
 /**
@@ -119,4 +123,29 @@ export function useMyTournamentRanking(sportId?: string, seasonCode?: string) {
   return { data: mine, isLoading: query.isLoading };
 }
 
-export type { TournamentRankingEntry, MyTournamentRanking, RankingLevelFilter };
+/**
+ * The caller's soon-to-expire results for `sportId`, soonest first.
+ *
+ * Filtered to rows whose expiry actually moves the player's total (`countsNow`)
+ * — a result outside their best 8 is not being defended, and surfacing it would
+ * be false urgency. `pointsAtStake` sums exactly what is shown.
+ */
+export function useMyPointsToDefend(sportId?: string, withinDays?: number) {
+  const query = useQuery({
+    queryKey: tournamentRankingKeys.toDefend(withinDays),
+    queryFn: () => getMyPointsToDefend({ withinDays }),
+    enabled: !!sportId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const items = useMemo<PointsToDefendRow[]>(
+    () => (query.data ?? []).filter(r => r.sportId === sportId && r.countsNow),
+    [query.data, sportId]
+  );
+
+  const pointsAtStake = useMemo(() => items.reduce((sum, r) => sum + r.points, 0), [items]);
+
+  return { items, pointsAtStake, isLoading: query.isLoading };
+}
+
+export type { TournamentRankingEntry, MyTournamentRanking, PointsToDefendRow, RankingLevelFilter };

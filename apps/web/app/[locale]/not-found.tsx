@@ -21,7 +21,9 @@ export default async function NotFound() {
         <section className="relative flex items-center justify-center w-full min-h-[100svh] overflow-hidden bg-[var(--primary-950)] dark:bg-[#0b1a18]">
           <div className="relative z-10 flex flex-col items-center text-center gap-8 px-8 pt-36 pb-24 max-w-3xl mx-auto">
             <p className="text-7xl md:text-9xl font-bold text-white/20">404</p>
-            <h1 className="text-4xl md:text-6xl font-bold text-white -mt-4">{t('title')}</h1>
+            {/* -mt-4 removed with the global paragraph margin it cancelled; the
+                parent's gap-8 is the intended spacing. */}
+            <h1 className="text-4xl md:text-6xl font-bold text-white">{t('title')}</h1>
             <p className="text-lg text-white/60 max-w-xl">{t('description')}</p>
 
             <Link

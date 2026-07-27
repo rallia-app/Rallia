@@ -7,6 +7,7 @@ const DISALLOW_PRIVATE = [
   '/monitoring/',
   '/ingest/',
   '/*/admin/',
+  '/*/app/',
   '/*/dashboard/',
   '/*/onboarding/',
   '/*/sign-in',
