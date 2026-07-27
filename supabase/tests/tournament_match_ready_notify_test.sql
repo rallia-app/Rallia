@@ -30,7 +30,7 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
     SELECT array_agg(player_id) INTO v_players
       FROM (SELECT player_id FROM player_sport
-             WHERE sport_id = v_sport AND is_active = true
+             WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
              ORDER BY player_id LIMIT 9) s;
     ASSERT array_length(v_players, 1) = 9, 'need 9 active tennis players';
     v_org := v_players[1];

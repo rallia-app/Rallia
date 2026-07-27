@@ -48,7 +48,7 @@ BEGIN
 
     SELECT array_agg(player_id) INTO v_ids
       FROM (SELECT player_id FROM player_sport
-             WHERE sport_id = v_sport AND is_active = true
+             WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id)
              ORDER BY player_id LIMIT 5) s;
     ASSERT array_length(v_ids, 1) = 5, 'need 5 tennis players';
 
