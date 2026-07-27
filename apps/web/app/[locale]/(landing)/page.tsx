@@ -216,7 +216,7 @@ export default async function Home({ params }: { params: Promise<{ locale: Local
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
             {(
               [
-                { key: 'games', href: '/games', icon: ShoppingCart },
+                { key: 'games', href: '/play', icon: ShoppingCart },
                 { key: 'communities', href: '/communities', icon: Users },
                 { key: 'guides', href: '/guides', icon: BookOpen },
               ] as const

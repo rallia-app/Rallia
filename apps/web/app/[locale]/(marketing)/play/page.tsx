@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@rallia/shared-translations';
+import type { FacilitySearchResult } from '@rallia/shared-types';
 import { getTranslations } from 'next-intl/server';
 
-import GamesMatchList from './_components/games-match-list';
+import PlayExplorer from './_components/play-explorer';
 import type { PublicMatch } from './_components/public-match-card';
 
 import { JsonLd, sportsEventJsonLd } from '@/components/json-ld';
@@ -15,11 +16,12 @@ export async function generateMetadata({
   params: Promise<{ locale: Locale }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return buildPageMetadata({ locale, path: '/games', namespace: 'seo.games' });
+  return buildPageMetadata({ locale, path: '/play', namespace: 'seo.play' });
 }
 
 // Larger initial page so several days of matches load up front (each date renders its own carousel row)
-const PAGE_SIZE = 36;
+const MATCH_PAGE_SIZE = 36;
+const FACILITY_PAGE_SIZE = 24;
 
 async function getInitialMatches(): Promise<PublicMatch[]> {
   const supabase = createServiceRoleClient();
@@ -31,7 +33,7 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
     p_longitude: 0,
     p_max_distance_km: null,
     p_sport_id: null,
-    p_limit: PAGE_SIZE,
+    p_limit: MATCH_PAGE_SIZE,
     p_offset: 0,
   });
 
@@ -54,6 +56,32 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
     .map(id => matchMap.get(id)!) as unknown as PublicMatch[];
 }
 
+async function getInitialFacilities(): Promise<FacilitySearchResult[]> {
+  const supabase = createServiceRoleClient();
+
+  const { data: sports } = await supabase.from('sport').select('id').eq('is_active', true);
+  const sportIds = (sports ?? []).map(s => s.id);
+  if (sportIds.length === 0) return [];
+
+  // Distance ordering from (0,0) is arbitrary for the SSR paint — the client
+  // immediately re-fetches sorted by the visitor's real location. This just
+  // gives crawlers and the first paint a populated list.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('search_facilities_nearby', {
+    p_sport_ids: sportIds,
+    p_latitude: 0,
+    p_longitude: 0,
+    p_limit: FACILITY_PAGE_SIZE,
+    p_offset: 0,
+  });
+
+  if (error || !data) return [];
+  // The SSR origin is a placeholder (0,0), so the RPC's distance is meaningless
+  // here — strip it and let the client fill in real distances after it resolves
+  // the visitor's location.
+  return (data as FacilitySearchResult[]).map(f => ({ ...f, distance_meters: null }));
+}
+
 function matchesToSportsEvents(matches: PublicMatch[]) {
   return matches.slice(0, 20).map(m => {
     const sportName = m.sport?.name ?? 'racquet sport';
@@ -74,14 +102,35 @@ function matchesToSportsEvents(matches: PublicMatch[]) {
   });
 }
 
-export default async function GamesPage() {
-  const t = await getTranslations('gamesPage');
-  const matches = await getInitialMatches();
-  const events = matchesToSportsEvents(matches);
+function facilitiesToJsonLd(facilities: FacilitySearchResult[]) {
+  return facilities.slice(0, 20).map(f => ({
+    '@context': 'https://schema.org',
+    '@type': 'SportsActivityLocation',
+    name: f.name,
+    ...(f.address || f.city
+      ? {
+          address: {
+            '@type': 'PostalAddress',
+            ...(f.address ? { streetAddress: f.address } : {}),
+            ...(f.city ? { addressLocality: f.city } : {}),
+          },
+        }
+      : {}),
+    ...(f.latitude != null && f.longitude != null
+      ? { geo: { '@type': 'GeoCoordinates', latitude: f.latitude, longitude: f.longitude } }
+      : {}),
+    url: `${SITE_URL}/en-US/play`,
+  }));
+}
+
+export default async function PlayPage() {
+  const t = await getTranslations('playPage');
+  const [matches, facilities] = await Promise.all([getInitialMatches(), getInitialFacilities()]);
+  const jsonLd = [...matchesToSportsEvents(matches), ...facilitiesToJsonLd(facilities)];
 
   return (
     <div className="relative flex w-full flex-col gap-8">
-      {events.length > 0 && <JsonLd data={events} />}
+      {jsonLd.length > 0 && <JsonLd data={jsonLd} />}
 
       {/* Soft decorative glow behind the hero */}
       <div
@@ -105,7 +154,7 @@ export default async function GamesPage() {
         <p className="max-w-xl text-lg text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      <GamesMatchList initialMatches={matches} />
+      <PlayExplorer initialMatches={matches} initialFacilities={facilities} />
     </div>
   );
 }

@@ -15,8 +15,6 @@ import {
   AppState,
   Linking,
   Animated,
-  Keyboard,
-  Platform,
   TextInput,
 } from 'react-native';
 import { UseFormReturn, useWatch } from 'react-hook-form';
@@ -681,44 +679,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
   const [bookedCourtNumber, setBookedCourtNumber] = useState<number | null>(null);
-  const scrollViewRef = useRef<any>(null);
-  const facilitySearchRef = useRef<View>(null);
-  const placeSearchRef = useRef<View>(null);
-
-  // Track which field is focused for keyboard handling
-  const [focusedField, setFocusedField] = useState<'facility' | 'place' | 'address' | null>(null);
-
-  // Listen for keyboard events and scroll to focused field
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const keyboardShowListener = Keyboard.addListener(showEvent, () => {
-      // Scroll to the focused field when keyboard shows
-      if (focusedField && scrollViewRef.current) {
-        // Use a timeout to ensure the keyboard is fully shown
-        setTimeout(() => {
-          // Scroll positions based on which field is focused
-          const scrollPositions = {
-            facility: 200, // Facility search is near top
-            place: 200, // Place search is similar position
-            address: 400, // Address field is lower in the form
-          };
-          const scrollY = scrollPositions[focusedField] || 200;
-          scrollViewRef.current?.scrollTo({ y: scrollY, animated: true });
-        }, 100);
-      }
-    });
-
-    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
-      setFocusedField(null);
-    });
-
-    return () => {
-      keyboardShowListener.remove();
-      keyboardHideListener.remove();
-    };
-  }, [focusedField]);
 
   // Local state for custom location search
   const [placeSearchQuery, setPlaceSearchQuery] = useState('');
@@ -1383,12 +1343,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
   return (
     <SheetScrollView
-      ref={scrollViewRef}
       style={styles.container}
-      contentContainerStyle={[
-        styles.contentContainer,
-        locationType === 'custom' && styles.contentContainerWithKeyboard,
-      ]}
+      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       onScroll={handleScroll}
       scrollEventThrottle={400}
@@ -1460,7 +1416,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           ) : (
             <>
               {/* Search input with location selector */}
-              <View ref={facilitySearchRef} style={styles.searchRow}>
+              <View style={styles.searchRow}>
                 <View style={styles.searchBarFlex}>
                   <SearchBar
                     value={searchQuery}
@@ -1468,7 +1424,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                     placeholder={t('matchCreation.fields.facilityPlaceholder')}
                     colors={colors}
                     InputComponent={TextInput}
-                    onFocus={() => setFocusedField('facility')}
                     containerStyle={styles.compactSearchContainer}
                   />
                 </View>
@@ -1533,7 +1488,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           ) : (
             <>
               {/* Search input */}
-              <View ref={placeSearchRef}>
+              <View>
                 <SearchBar
                   value={placeSearchQuery}
                   onChangeText={text => {
@@ -1543,7 +1498,6 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                   placeholder={t('matchCreation.fields.searchLocationPlaceholder')}
                   colors={colors}
                   InputComponent={TextInput}
-                  onFocus={() => setFocusedField('place')}
                   borderColor={errors.locationName ? status.error.DEFAULT : undefined}
                 />
               </View>
@@ -1653,10 +1607,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[16], // Base padding for scrolling
-  },
-  contentContainerWithKeyboard: {
-    paddingBottom: spacingPixels[32], // Extra padding when custom location is selected to allow scrolling above keyboard
+    paddingBottom: spacingPixels[8],
   },
   stepHeader: {
     marginBottom: spacingPixels[6],

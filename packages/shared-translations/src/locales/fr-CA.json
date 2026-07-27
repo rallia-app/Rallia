@@ -5532,8 +5532,7 @@
       "ctaButton": "Télécharger",
       "nav": {
         "home": "Accueil",
-        "games": "Parties",
-        "courts": "Terrains",
+        "play": "Jouer",
         "communities": "Communautés",
         "guides": "Guides",
         "donate": "Soutenir"
@@ -6127,8 +6126,7 @@
     "download": "Télécharger l'application",
     "about": "À propos",
     "guides": "Guides",
-    "games": "Parties ouvertes",
-    "courts": "Terrains",
+    "play": "Parties et terrains",
     "communities": "Communautés",
     "donate": "Soutenir Rallia",
     "legal": "Légal",
@@ -6143,8 +6141,7 @@
     "description": "Nous n'avons pas trouvé la page que vous cherchez. Elle a peut-être été déplacée ou n'existe plus.",
     "backHome": "Retour à l'accueil",
     "exploreHeading": "Ou explorez",
-    "games": "Parties",
-    "courts": "Terrains",
+    "play": "Parties et terrains",
     "communities": "Communautés",
     "guides": "Guides"
   },
@@ -11246,6 +11243,19 @@
       "facilityUnavailable": "Ce terrain n’est plus disponible."
     }
   },
+  "playPage": {
+    "title": "Parties et terrains près de chez vous",
+    "subtitle": "Joignez-vous à une partie ouverte ou réservez un terrain, au même endroit.",
+    "filterAll": "Tout",
+    "filterGames": "Parties",
+    "filterCourts": "Terrains",
+    "legendCourts": "Terrains",
+    "mapCourtsShown": "{count, plural, =0 {Aucun terrain à afficher sur la carte ici} =1 {1 terrain sur la carte} other {# terrains sur la carte}}",
+    "mapSummary": "{games, plural, =1 {1 partie} other {# parties}} · {courts, plural, =1 {1 terrain} other {# terrains}}",
+    "emptyTitle": "Rien à montrer pour l'instant",
+    "emptyDescription": "Aucune partie ouverte ni terrain trouvé près de vous en ce moment. Téléchargez l'application pour en découvrir plus.",
+    "emptyCta": "Télécharger l'application"
+  },
   "courtsPage": {
     "title": "Terrains près de chez vous",
     "subtitle": "Trouve des terrains de tennis et pickleball près de toi pis vois ce qui est libre.",
@@ -12066,17 +12076,11 @@
       "ogTitle": "Rallia — Trouvez votre prochaine partie de tennis ou pickleball",
       "ogDescription": "Jumelage par niveau, planification simplifiée et score de fiabilité pour voir qui tend à se présenter. Téléchargez Rallia sur iOS et Android."
     },
-    "games": {
-      "title": "Parties de tennis et pickleball ouvertes près de chez vous",
-      "description": "Parcourez les parties de tennis et pickleball ouvertes près de vous. Joignez-vous à une partie en quelques secondes — simples, doubles, tous niveaux, vrais terrains, vrais joueurs.",
-      "ogTitle": "Parties ouvertes de tennis et pickleball — Joignez-vous maintenant",
-      "ogDescription": "Liste en direct des parties ouvertes près de vous. Simples, doubles, tous niveaux. Joignez-vous en quelques secondes avec Rallia."
-    },
-    "courts": {
-      "title": "Terrains de tennis et pickleball près de chez vous",
-      "description": "Trouvez des terrains de tennis et pickleball près de vous et voyez les disponibilités en temps réel. Parcourez les parcs publics et les clubs, regardez les plages libres et réservez directement dans l'application Rallia.",
-      "ogTitle": "Terrains de tennis et pickleball — Disponibilités en temps réel",
-      "ogDescription": "Parcourez les terrains près de vous avec les plages libres en temps réel. Parcs publics, clubs et centres intérieurs. Réservez dans l'application Rallia."
+    "play": {
+      "title": "Parties et terrains de tennis et pickleball près de chez vous",
+      "description": "Parcourez les parties ouvertes de tennis et pickleball et trouvez des terrains près de vous. Joignez-vous à une partie en quelques secondes, voyez les disponibilités en temps réel et réservez dans l'application Rallia.",
+      "ogTitle": "Parties ouvertes et terrains près de chez vous",
+      "ogDescription": "Liste en direct des parties ouvertes et des terrains avec disponibilités en temps réel. Joignez-vous ou réservez en quelques secondes avec Rallia."
     },
     "communities": {
       "title": "Communautés de tennis et pickleball",

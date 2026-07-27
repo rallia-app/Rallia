@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { Calendar, CircleDollarSign, Clock, MapPin, Swords, User, Users } from 'lucide-react';
 import { getStorageImageUrl } from '@rallia/shared-utils';
 
-import { getRelativeDateLabel, formatDuration } from '../../games/_components/utils';
+import { getRelativeDateLabel, formatDuration } from '../../play/_components/utils';
 
 import { getMatch } from './_lib/get-match';
 

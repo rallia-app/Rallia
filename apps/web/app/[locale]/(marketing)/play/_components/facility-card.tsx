@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-import { getRelativeDateLabel } from '../../games/_components/utils';
+import { getRelativeDateLabel } from './utils';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

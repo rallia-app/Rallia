@@ -5532,8 +5532,7 @@
       "ctaButton": "Download",
       "nav": {
         "home": "Home",
-        "games": "Games",
-        "courts": "Courts",
+        "play": "Play",
         "communities": "Communities",
         "guides": "Guides",
         "donate": "Support"
@@ -6127,8 +6126,7 @@
     "download": "Download the App",
     "about": "About",
     "guides": "Guides",
-    "games": "Open Games",
-    "courts": "Courts",
+    "play": "Games & Courts",
     "communities": "Communities",
     "donate": "Support Rallia",
     "legal": "Legal",
@@ -6143,8 +6141,7 @@
     "description": "We couldn't find the page you're looking for. It may have moved or no longer exists.",
     "backHome": "Back to home",
     "exploreHeading": "Or explore",
-    "games": "Games",
-    "courts": "Courts",
+    "play": "Games & Courts",
     "communities": "Communities",
     "guides": "Guides"
   },
@@ -11246,6 +11243,19 @@
       "facilityUnavailable": "This court is no longer available."
     }
   },
+  "playPage": {
+    "title": "Games & Courts Near You",
+    "subtitle": "Join an open game or book a court, all in one place.",
+    "filterAll": "All",
+    "filterGames": "Games",
+    "filterCourts": "Courts",
+    "legendCourts": "Courts",
+    "mapCourtsShown": "{count, plural, =0 {No courts to show on the map here} =1 {1 court on the map} other {# courts on the map}}",
+    "mapSummary": "{games, plural, =1 {1 game} other {# games}} · {courts, plural, =1 {1 court} other {# courts}}",
+    "emptyTitle": "Nothing nearby yet",
+    "emptyDescription": "No open games or courts found around here right now. Get the app to explore more.",
+    "emptyCta": "Get the app"
+  },
   "courtsPage": {
     "title": "Courts Near You",
     "subtitle": "Find tennis and pickleball courts near you and see what's open.",
@@ -12066,17 +12076,11 @@
       "ogTitle": "Rallia — Find Your Next Tennis or Pickleball Match",
       "ogDescription": "Skill-based matchmaking, easier scheduling, and reliability scores so you can see who tends to show up. Download Rallia on iOS and Android."
     },
-    "games": {
-      "title": "Open Tennis & Pickleball Games Near You",
-      "description": "Browse open tennis and pickleball games happening near you. Join a game in seconds — singles, doubles, all levels, real courts, real players.",
-      "ogTitle": "Open Tennis & Pickleball Games — Join One Now",
-      "ogDescription": "Live list of open games near you. Singles, doubles, all levels. Join in seconds with Rallia."
-    },
-    "courts": {
-      "title": "Tennis & Pickleball Courts Near You",
-      "description": "Find tennis and pickleball courts near you and see live availability. Browse public parks and clubs, check open slots, and book straight from the Rallia app.",
-      "ogTitle": "Tennis & Pickleball Courts — See Live Availability",
-      "ogDescription": "Browse courts near you with real-time open slots. Public parks, clubs, and indoor centers. Book in the Rallia app."
+    "play": {
+      "title": "Tennis & Pickleball Games and Courts Near You",
+      "description": "Browse open tennis and pickleball games and find courts near you. Join a game in seconds, see live availability, and book straight from the Rallia app.",
+      "ogTitle": "Open Games and Courts Near You",
+      "ogDescription": "Live list of open games plus courts with real-time availability. Join or book in seconds with Rallia."
     },
     "communities": {
       "title": "Tennis & Pickleball Communities",

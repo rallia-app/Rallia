@@ -8,8 +8,7 @@ export default async function NotFound() {
   const t = await getTranslations('notFoundPage');
 
   const exploreLinks = [
-    { href: '/games', key: 'games' },
-    { href: '/courts', key: 'courts' },
+    { href: '/play', key: 'play' },
     { href: '/communities', key: 'communities' },
     { href: '/guides', key: 'guides' },
   ] as const;

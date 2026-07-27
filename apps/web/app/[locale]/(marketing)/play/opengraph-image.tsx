@@ -6,13 +6,13 @@ import { OG_CONTENT_TYPE, OG_SIZE, renderOgImage } from '@/lib/og-template';
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 
-export const alt = 'Open Tennis & Pickleball Games Near You';
+export const alt = 'Open Tennis & Pickleball Games and Courts Near You';
 
 export default async function Image({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale = defaultLocale } = await params;
-  const t = await getTranslations({ locale, namespace: 'seo.games' });
+  const t = await getTranslations({ locale, namespace: 'seo.play' });
   return renderOgImage({
-    eyebrow: locale === 'fr-CA' ? 'Parties' : 'Games',
+    eyebrow: locale === 'fr-CA' ? 'Jouer' : 'Play',
     title: t('ogTitle'),
     subtitle: t('ogDescription'),
   });
