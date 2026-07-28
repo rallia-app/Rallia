@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Regenerates Guide_de_test_ligues_et_tournois.pdf from
+ * Regenerates docs/Guide_de_test_ligues_et_tournois.pdf from
  * scripts/leagues-tournaments/test-guide.html
  *
  * Usage: npm run docs:lt-test-guide
@@ -12,7 +12,7 @@ import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HTML_PATH = path.join(__dirname, 'test-guide.html');
-const PDF_PATH = path.join(__dirname, '..', '..', 'Guide_de_test_ligues_et_tournois.pdf');
+const PDF_PATH = path.join(__dirname, '..', '..', 'docs', 'Guide_de_test_ligues_et_tournois.pdf');
 
 const CHROME_PATHS = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
