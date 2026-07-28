@@ -250,8 +250,15 @@
       <li>Tu l'as organisé et tu es certifié, donc les points Rallia sont attribués :
         champion 500, finaliste 300, demi-finalistes 180, participation 10.</li>
       <li>Ouvre le classement Rallia et vérifie que ces joueurs y apparaissent.</li>
-      <li>Archive le tournoi. Il doit disparaître des listes actives.</li>
+      <li>Archive le tournoi. Il disparaît des listes actives.</li>
     </ol>
+    <div class="note">
+      <strong>Où va un tournoi archivé ?</strong> Nulle part de visible. Il sort de la découverte et
+      de « Mes tournois », et il n'existe aucun onglet ni filtre « Archivés ». Le seul moyen d'y
+      revenir est le lien direct ou une notification. C'est conforme à ce qu'annonce la modale
+      d'archivage, mais il n'y a effectivement pas d'écran pour les retrouver. Garde le lien sous la
+      main avant d'archiver.
+    </div>
 
     <h3>1.8 · <span class="fixture">[SEED-T] Termine sans points (non certifie)</span></h3>
     <p>
@@ -276,28 +283,50 @@
     <ul>
       <li><span class="fixture">[SEED-T] Prive</span> : absent de la découverte publique, joignable
         seulement par lien.</li>
-      <li><span class="fixture">[SEED-T] Communaute (reserve aux membres)</span> : visible seulement
-        pour les membres de la communauté. Vérifie qu'un compte hors communauté ne le voit pas.</li>
+      <li><span class="fixture">[SEED-T] Communaute (reserve aux membres)</span> :
+        <strong>ne cherche pas, tu ne le trouveras pas.</strong> La base autorise bien les membres
+        de la communauté à le voir, mais la seule requête de découverte de l'app ne demande que les
+        tournois publics, donc aucun tournoi communauté n'apparaît nulle part. Rien à tester ici
+        pour l'instant, voir section 8.</li>
     </ul>
 
     <h3>1.12 · <span class="fixture">[SEED-T] Reputation minimale 40</span></h3>
-    <p>Vérifie que la barrière de réputation est affichée sur la carte du tournoi et qu'un joueur
-      sous le seuil se fait refuser (<code>REPUTATION_GATE_NOT_MET</code>). Les barrières de cote
-      (min et max) se testent sur les tournois Série 1 déjà en place.</p>
+    <div class="warn">
+      <strong>Rien à tester, la barrière ne fait rien.</strong> Sur les tournois, la réputation
+      minimale est stockée en base mais elle n'est ni affichée, ni modifiable depuis l'app, ni
+      vérifiée à l'inscription. Un joueur sous le seuil s'inscrit sans être refusé. Seules les
+      <em>ligues</em> appliquent réellement cette barrière. Ne rapporte pas d'anomalie ici, c'est
+      une fonctionnalité incomplète, notée en section 8.
+    </div>
+    <p>Les barrières de <strong>cote</strong>, elles, fonctionnent : elles se testent en 2.7.</p>
 
     <h3>1.13 · <span class="fixture">[SEED-T] Double - tableau en cours</span> (4 équipes)</h3>
     <ol>
-      <li>Vérifie l'affichage des noms d'équipe (« Alex et Sam ») partout dans le tableau.</li>
+      <li>Regarde l'affichage des noms d'équipe dans le tableau. Aujourd'hui l'app compose
+        « Prénom Nom &amp; Prénom Nom » sur une seule ligne, ce qui déborde presque toujours.
+        Signale les endroits précis où c'est illisible, ça aide à cadrer le correctif.</li>
       <li>Entre le résultat de la finale et vérifie l'équipe championne.</li>
     </ol>
+    <div class="note">
+      <strong>Points Rallia en double :</strong> les deux coéquipiers reçoivent chacun la
+      <strong>totalité</strong> des points de l'équipe, sans division, et ils vont dans le même
+      classement que le simple. C'est une décision assumée : trop peu de volume en double pour
+      soutenir un classement séparé. À revoir quand le double représentera une part significative
+      des tournois. Ce n'est donc pas une anomalie à rapporter.
+    </div>
 
     <h3>1.14 · <span class="fixture">[SEED-T] Vous etes co-organisateur</span></h3>
     <p>Mathis organise, tu es co-organisateur (4 inscrits, 3 demandes en attente).</p>
     <ol>
       <li>Vérifie que tu peux approuver les demandes, modifier et gérer les inscrits.</li>
-      <li>Vérifie que tu <strong>ne peux pas</strong> supprimer le tournoi ni transférer la
-        propriété.</li>
+      <li>Vérifie que tu <strong>ne peux pas</strong> transférer la propriété du tournoi.</li>
     </ol>
+    <div class="note">
+      <strong>Il n'y a pas de « supprimer », et c'est voulu.</strong> Le cycle complet est
+      <em>annuler</em> puis <em>archiver</em>. La suppression a été réservée aux admins au niveau de
+      la base pour qu'un tournoi ne puisse jamais emporter un historique de paiements avec lui.
+      Aucune interface de suppression n'a jamais existé.
+    </div>
 
     <h2>2. Tournois : cycle de vie côté participant</h2>
     <p class="section-intro">Ici tu es joueur, pas organisateur.</p>
@@ -375,14 +404,15 @@
         être refusée (<code>RATING_TOO_LOW</code>).</li>
       <li><span class="fixture">[SEED-T] Vous jouez - cote 2.5 a 3.5</span> : le contraste. Tu es
         dans la fourchette, l'inscription doit passer.</li>
-      <li><span class="fixture">[SEED-T] Vous jouez - reputation minimale 40</span> : refusée
-        (<code>REPUTATION_GATE_NOT_MET</code>).</li>
+      <li><span class="fixture">[SEED-T] Vous jouez - reputation minimale 40</span> :
+        <strong>l'inscription va passer</strong>, et c'est le comportement actuel, pas un bogue.
+        Les tournois ne vérifient pas la réputation, voir 1.12. Fixture conservée pour le jour où
+        la barrière sera posée.</li>
       <li><span class="fixture">[SEED-T] Prive - vous n'y etes pas</span> : privé, organisé par
         Mathis, tu n'y es pas. Il ne doit apparaître nulle part, ni en découverte ni en recherche.</li>
-      <li><span class="fixture">[SEED-T] Communaute - vous n'en etes pas membre</span> : même chose
-        pour une communauté dont tu ne fais pas partie. À comparer avec
-        <span class="fixture">[SEED-T] Communaute (reserve aux membres)</span>, qui est dans une
-        communauté à toi et doit donc bien s'afficher.</li>
+      <li><span class="fixture">[SEED-T] Communaute - vous n'en etes pas membre</span> : invisible
+        aussi, mais ça ne prouve rien pour l'instant, puisque <em>aucun</em> tournoi communauté
+        n'apparaît dans la découverte, membre ou pas. Voir 1.11.</li>
     </ul>
 
     <h3>2.8 · <span class="fixture">[SEED-T] Vous jouez - termine</span></h3>
@@ -680,9 +710,18 @@
       <li><strong>Contestation de score en ligue.</strong> Le joueur ne saisit plus de score
         lui-même, donc l'état « contesté » n'est pas atteignable depuis l'app.</li>
       <li><strong>Tableau à double élimination.</strong> Prévu en v2.</li>
-      <li><strong>Rien de plus.</strong> Les refus côté joueur (cote, réputation, saisie de score,
-        visibilité privée et communauté) étaient hors de portée tant que le compte était admin. Le
-        rôle a été retiré, ils sont désormais tous vérifiables, voir 2.7.</li>
+      <li><strong>Les tournois à visibilité communauté sont introuvables.</strong> La base les
+        autorise pour les membres du réseau, mais l'unique requête de découverte de l'app ne demande
+        que les tournois publics. Ils ne sont joignables que par lien direct.</li>
+      <li><strong>La réputation minimale sur un tournoi ne fait rien.</strong> Ni affichée, ni
+        modifiable depuis l'app, ni vérifiée à l'inscription. Seules les ligues l'appliquent.</li>
+      <li><strong>Aucun écran pour les tournois archivés.</strong> L'archivage fonctionne, mais rien
+        ne permet de les relister ensuite. Le lien direct reste le seul chemin.</li>
+      <li><strong>Le compteur d'inscrits fige sur la carte.</strong> Retirer ou approuver un inscrit
+        met à jour la fiche mais pas l'étiquette de la carte, et le mauvais chiffre survit à un
+        redémarrage. Correctif identifié, côté cache.</li>
+      <li><strong>Les refus côté joueur</strong> (cote, saisie de score, visibilité privée) sont
+        désormais vérifiables depuis le retrait du rôle admin, voir 2.7.</li>
     </ol>
 
     <h2>9. Aide-mémoire des comptes</h2>
