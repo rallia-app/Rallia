@@ -22,11 +22,15 @@ export interface SmokeExperiment {
   variantPriceCents: MonthlyPriceVariant;
 }
 
+// Only reached from the browser branch below, so `crypto` is always present.
 function randomSessionId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+  // randomUUID needs a secure context; getRandomValues does not.
+  if (typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return `sess_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return `sess_${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /**

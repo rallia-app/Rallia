@@ -141,11 +141,17 @@ export function formatMatchPlanPrice(
 
 // ---- Random A/B assignment (browser-side, once per session) ----
 
+function randomFraction(): number {
+  const buffer = new Uint32Array(1);
+  crypto.getRandomValues(buffer);
+  return (buffer[0] ?? 0) / 2 ** 32;
+}
+
 export function pickValuePropVariant(): ValuePropVariant {
-  return Math.random() < 0.5 ? 'A' : 'B';
+  return randomFraction() < 0.5 ? 'A' : 'B';
 }
 
 export function pickMonthlyPriceVariant(): MonthlyPriceVariant {
-  const index = Math.floor(Math.random() * MONTHLY_PRICE_VARIANTS.length);
+  const index = Math.floor(randomFraction() * MONTHLY_PRICE_VARIANTS.length);
   return MONTHLY_PRICE_VARIANTS[index] ?? MONTHLY_PRICE_VARIANTS[0];
 }
