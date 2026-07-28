@@ -691,7 +691,7 @@ function TournamentCreateHeaderButton() {
   );
 }
 
-/** Header "+" that opens the league creation wizard. Admin-only during rollout. */
+/** Header "+" that opens the league creation wizard. */
 function LeagueCreateHeaderButton({
   navigation,
 }: {
@@ -700,9 +700,6 @@ function LeagueCreateHeaderButton({
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
-  const { isAdmin } = useAdminStatus();
-
-  if (!isAdmin) return null;
 
   return (
     <TouchableOpacity
