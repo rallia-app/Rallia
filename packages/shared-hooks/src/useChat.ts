@@ -37,9 +37,6 @@ import {
   updatePlayerLastSeen,
   getPlayersOnlineStatus,
   searchMessagesInConversation,
-  subscribeToTypingIndicators,
-  sendTypingIndicator,
-  unsubscribeFromTypingIndicators,
   type ConversationPreview,
   type ConversationWithDetails,
   type Message,
@@ -48,7 +45,6 @@ import {
   type CreateConversationInput,
   type ReactionSummary,
   type PlayerOnlineStatus,
-  type TypingIndicator,
   type SearchMessageResult,
 } from '@rallia/shared-services';
 import type { ConversationFilter } from '@rallia/shared-types';
@@ -1008,70 +1004,6 @@ export function useUpdateLastSeen(playerId: string | undefined) {
 }
 
 // ============================================================================
-// TYPING INDICATOR HOOKS
-// ============================================================================
-
-/**
- * Subscribe to typing indicators in a conversation
- */
-export function useTypingIndicators(
-  conversationId: string | undefined,
-  playerId: string | undefined,
-  playerName: string | undefined
-) {
-  const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    // Early return for invalid state - cleanup function handles clearing
-    if (!conversationId || !playerId || !playerName) {
-      return;
-    }
-
-    // Subscribe to typing indicators (channel is managed internally)
-    subscribeToTypingIndicators(conversationId, playerId, playerName, users => {
-      // Filter out stale typing indicators (older than 5 seconds)
-      const now = Date.now();
-      const activeUsers = users.filter(u => now - u.timestamp < 5000);
-      setTypingUsers(activeUsers);
-    });
-
-    return () => {
-      unsubscribeFromTypingIndicators(conversationId);
-      // Clear typing users when unsubscribing (e.g., when leaving conversation)
-      setTypingUsers([]);
-    };
-  }, [conversationId, playerId, playerName]);
-
-  // Function to send typing indicator
-  const sendTyping = useCallback(
-    (isTyping: boolean) => {
-      if (!conversationId || !playerId || !playerName) return;
-
-      // Clear any existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      sendTypingIndicator(conversationId, playerId, playerName, isTyping);
-
-      // Auto-stop typing after 3 seconds
-      if (isTyping) {
-        typingTimeoutRef.current = setTimeout(() => {
-          sendTypingIndicator(conversationId, playerId, playerName, false);
-        }, 3000);
-      }
-    },
-    [conversationId, playerId, playerName]
-  );
-
-  return {
-    typingUsers,
-    sendTyping,
-  };
-}
-
-// ============================================================================
 // SEARCH HOOKS
 // ============================================================================
 
@@ -1104,6 +1036,5 @@ export type {
   CreateConversationInput,
   ReactionSummary,
   PlayerOnlineStatus,
-  TypingIndicator,
   SearchMessageResult,
 };

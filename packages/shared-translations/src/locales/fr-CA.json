@@ -2292,11 +2292,6 @@
       "placeholder": "Rechercher dans la conversation...",
       "noMatches": "Aucune correspondance"
     },
-    "typing": {
-      "one": "{name} écrit",
-      "two": "{name1} et {name2} écrivent",
-      "many": "{name} et {count} autres écrivent"
-    },
     "announcement": {
       "subtitle": "Annonces officielles",
       "readOnly": "Seul Rallia publie ici"

@@ -1,13 +1,13 @@
 /**
  * Realtime Service
- * Real-time subscriptions for messages, conversations, and typing indicators
+ * Real-time subscriptions for messages and conversations
  */
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { supabase } from '../supabase';
 
-import type { Message, TypingIndicator } from './chatTypes';
+import type { Message } from './chatTypes';
 
 // ============================================================================
 // MESSAGE SUBSCRIPTIONS
@@ -247,127 +247,4 @@ export function unsubscribeFromChannel(channel: RealtimeChannel): void {
   channelCleanups.get(channel)?.();
   channelCleanups.delete(channel);
   void supabase.removeChannel(channel);
-}
-
-// ============================================================================
-// TYPING INDICATORS (using Supabase Realtime Presence)
-// ============================================================================
-
-// Store for active typing channels
-const typingChannels = new Map<string, RealtimeChannel>();
-
-// Last typing state broadcast per channel, to drop redundant presence events
-// (each track() counts against the tenant presence rate limit).
-const lastTypingSent = new Map<string, { isTyping: boolean; at: number }>();
-const TYPING_REFRESH_MS = 2000;
-
-/**
- * Subscribe to typing indicators in a conversation
- * Uses Supabase Realtime Presence for real-time typing updates
- */
-export function subscribeToTypingIndicators(
-  conversationId: string,
-  playerId: string,
-  playerName: string,
-  onTypingChange: (typingUsers: TypingIndicator[]) => void
-): RealtimeChannel {
-  const channelName = `typing:${conversationId}`;
-
-  // Clean up existing channel if any
-  const existingChannel = typingChannels.get(channelName);
-  if (existingChannel) {
-    void supabase.removeChannel(existingChannel);
-  }
-
-  const channel = supabase.channel(channelName, {
-    config: {
-      presence: {
-        key: playerId,
-      },
-    },
-  });
-
-  channel
-    .on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState();
-      const typingUsers: TypingIndicator[] = [];
-
-      for (const [key, presences] of Object.entries(state)) {
-        if (key !== playerId) {
-          const presence = presences[0] as {
-            player_name?: string;
-            timestamp?: number;
-            is_typing?: boolean;
-          };
-          // Only include users who are actively typing
-          if (presence && presence.is_typing === true) {
-            typingUsers.push({
-              player_id: key,
-              player_name: presence.player_name || 'Someone',
-              conversation_id: conversationId,
-              timestamp: presence.timestamp || Date.now(),
-            });
-          }
-        }
-      }
-
-      onTypingChange(typingUsers);
-    })
-    .subscribe(status => {
-      if ((status as string) === 'SUBSCRIBED') {
-        // Track presence with player info
-        lastTypingSent.set(channelName, { isTyping: false, at: Date.now() });
-        void channel.track({
-          player_name: playerName,
-          timestamp: Date.now(),
-          is_typing: false,
-        });
-      }
-    });
-
-  typingChannels.set(channelName, channel);
-  return channel;
-}
-
-/**
- * Send typing indicator (call when user starts/stops typing)
- */
-export async function sendTypingIndicator(
-  conversationId: string,
-  playerId: string,
-  playerName: string,
-  isTyping: boolean
-): Promise<void> {
-  const channelName = `typing:${conversationId}`;
-  const channel = typingChannels.get(channelName);
-  if (!channel) return;
-
-  // State changes always go out. Repeats of `false` are pure noise (presence
-  // state doesn't decay); repeats of `true` only refresh the freshness
-  // timestamp, so cap them at one per TYPING_REFRESH_MS.
-  const last = lastTypingSent.get(channelName);
-  if (last && last.isTyping === isTyping) {
-    if (!isTyping || Date.now() - last.at < TYPING_REFRESH_MS) return;
-  }
-  lastTypingSent.set(channelName, { isTyping, at: Date.now() });
-
-  await channel.track({
-    player_name: playerName,
-    timestamp: Date.now(),
-    is_typing: isTyping,
-  });
-}
-
-/**
- * Unsubscribe from typing indicators
- */
-export function unsubscribeFromTypingIndicators(conversationId: string): void {
-  const channelName = `typing:${conversationId}`;
-  const channel = typingChannels.get(channelName);
-
-  if (channel) {
-    void supabase.removeChannel(channel);
-    typingChannels.delete(channelName);
-    lastTypingSent.delete(channelName);
-  }
 }

@@ -9,7 +9,7 @@
  * - conversationService.ts - Conversation CRUD operations
  * - messageService.ts     - Message operations
  * - participantService.ts - Participant management (mute, pin, archive, add, remove)
- * - realtimeService.ts    - Real-time subscriptions & typing indicators
+ * - realtimeService.ts    - Real-time subscriptions
  * - reactionService.ts    - Emoji reaction operations
  * - chatUtilityService.ts - Search, online status, chat agreement, utilities
  */
@@ -39,7 +39,6 @@ export type {
   CreateConversationInput,
   UpdateConversationInput,
   PlayerOnlineStatus,
-  TypingIndicator,
   SearchMessageResult,
 } from './chatTypes';
 
@@ -112,9 +111,6 @@ export {
   subscribeToReactions,
   subscribeToMatchVotes,
   unsubscribeFromChannel,
-  subscribeToTypingIndicators,
-  sendTypingIndicator,
-  unsubscribeFromTypingIndicators,
   type MessageEventCallback,
 } from './realtimeService';
 
