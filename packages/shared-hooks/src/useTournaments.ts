@@ -259,6 +259,11 @@ function useTournamentDetailInvalidator() {
     qc.invalidateQueries({ queryKey: tournamentKeys.matches(tournamentId) });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myRegistration', tournamentId] });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myActiveRegistrations'] });
+    // The card's "5/16" chip comes from registration_count, which the list query
+    // computes from an embed and bakes into its cached payload. Without this the
+    // chip keeps the pre-mutation number, and the persisted cache carries it
+    // across restarts.
+    qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
   };
 }
 
