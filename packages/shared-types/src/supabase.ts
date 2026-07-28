@@ -400,6 +400,56 @@ export type Database = {
           },
         ]
       }
+      announcement_fanout_job: {
+        Row: {
+          attempts: number
+          conversation_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          last_player_id: string | null
+          message_id: string
+          notified_count: number
+          processed_at: string | null
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          conversation_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_player_id?: string | null
+          message_id: string
+          notified_count?: number
+          processed_at?: string | null
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_player_id?: string | null
+          message_id?: string
+          notified_count?: number
+          processed_at?: string | null
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_fanout_job_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "message"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_min_version: {
         Row: {
           min_supported_version: string
