@@ -68,8 +68,20 @@ export const DEFAULT_MATCH_FORMAT: MatchFormatOption = 'singles';
 export const MATCH_NATURE_OPTIONS = ['recreational', 'competitive'] as const;
 export type MatchNatureOption = (typeof MATCH_NATURE_OPTIONS)[number];
 
-export const LOCATION_OPTIONS = ['address'] as const;
+// Step 2 takes a full address or just a postal code — visitors who don't want to
+// hand over a street address can still be placed on the map.
+export const LOCATION_OPTIONS = ['address', 'postal_code'] as const;
 export type LocationOption = (typeof LOCATION_OPTIONS)[number];
+
+// ---- Play-site preference ----
+// 'specific' picked a facility; 'flexible' deliberately skipped one; 'none_found'
+// had no facility within the radius. Separating the last two keeps "no supply
+// here" out of the "prefers to stay flexible" bucket.
+export const FACILITY_PREFERENCE_OPTIONS = ['specific', 'flexible', 'none_found'] as const;
+export type FacilityPreference = (typeof FACILITY_PREFERENCE_OPTIONS)[number];
+
+export const DEFAULT_MAX_DISTANCE_KM = 25;
+export const DISTANCE_OPTIONS_KM = [10, 25, 50] as const;
 
 export { FLEXIBLE_TIME_SLOT } from './time-selection';
 export type { TimeDayOption } from './time-selection';

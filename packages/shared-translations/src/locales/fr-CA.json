@@ -11834,9 +11834,9 @@
     },
     "location": {
       "question": "Où veux-tu jouer ?",
-      "hint": "Entre ton adresse, puis choisis un terrain proche.",
-      "placeholder": "1234 Rue Saint-Denis, Montréal",
-      "placeholderWithCity": "Ton adresse à {city}",
+      "hint": "Entre ton adresse, ou juste ton code postal si tu préfères.",
+      "placeholder": "1234 rue Saint-Denis, ou H2X 1Y4",
+      "placeholderWithCity": "Ton adresse ou ton code postal à {city}",
       "resolving": "On cherche ton adresse…",
       "searching": "On trouve les terrains proches…",
       "openSlots": "{count} plages de terrain libres",
@@ -11849,8 +11849,13 @@
       "continueAnyway": "Continuer quand même",
       "errors": {
         "notFound": "On n'a pas trouvé cette adresse.",
-        "searchFailed": "Impossible de charger les terrains. Réessaie."
-      }
+        "searchFailed": "Impossible de charger les terrains. Réessaie.",
+        "postalNotFound": "On n'a pas trouvé ce code postal."
+      },
+      "orPickSite": "Ou choisis un endroit précis",
+      "flexibleTitle": "N'importe quel terrain proche",
+      "flexibleSubtitle": "Je choisirai la place plus tard, dans un rayon de {km} km.",
+      "postalCodeHint": "On garde seulement le code postal, jamais l'adresse."
     },
     "courts": {
       "dayQuestion": "Quelle journée te convient ?",
@@ -11940,8 +11945,7 @@
       "headline": "C'était un test, pis t'as rien payé.",
       "message": "Aucun champ de carte n'a été affiché et aucun paiement n'a été ni ne sera prélevé. On valide combien de joueurs veulent qu'on organise leurs parties avant de le bâtir.",
       "thanks": "Merci de nous aider à bâtir la vraie affaire.",
-      "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville.",
-      "deletion": "Tu veux retirer ton courriel et ton téléphone ? Écris à contact@rallia.ca et on les supprime."
+      "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville."
     }
   },
   "subscription": {

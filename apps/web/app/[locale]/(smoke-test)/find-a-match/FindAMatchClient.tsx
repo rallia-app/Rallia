@@ -1,6 +1,6 @@
 'use client';
 
-import { validateEmail, validatePhoneNumber } from '@rallia/shared-utils';
+import { normalizePostalCode, validateEmail, validatePhoneNumber } from '@rallia/shared-utils';
 import { usePlacesAutocomplete } from '@rallia/shared-hooks';
 import type {
   FacilityAvailabilitySlotRow,
@@ -33,6 +33,8 @@ import {
   formatMatchPlanPrice,
   MATCH_NATURE_OPTIONS,
   SPORT_OPTIONS,
+  type FacilityPreference,
+  type LocationOption,
   type MatchNatureOption,
   type MatchPlanTier,
   type RatingOption,
@@ -217,12 +219,6 @@ function CourtBackdrop() {
   );
 }
 
-function normalizePostalCode(value: string): string {
-  const compact = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (compact.length <= 3) return compact;
-  return `${compact.slice(0, 3)} ${compact.slice(3, 6)}`;
-}
-
 function stepProgress(step: Step): number {
   return ((WIZARD_STEPS.indexOf(step) + 1) / WIZARD_STEPS.length) * 100;
 }
@@ -374,7 +370,6 @@ function WizardShell({
 
 export default function FindAMatchClient({ geoCity = null }: { geoCity?: string | null }) {
   const t = useTranslations('findAMatch');
-  const tw = useTranslations('findAMatch.wizard');
   const locale = useLocale();
   const langue: 'fr' | 'en' = locale.toLowerCase().startsWith('fr') ? 'fr' : 'en';
   const advanceTimer = useRef<number | null>(null);
@@ -387,8 +382,13 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const [matchNature, setMatchNature] = useState<MatchNatureOption | null>(null);
 
   const [addressQuery, setAddressQuery] = useState('');
-  const [homeAddress, setHomeAddress] = useState<string | null>(null);
+  /** What we echo back on the recap screen. Display only — never submitted. */
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [homePostalCode, setHomePostalCode] = useState<string | null>(null);
+  const [homeCity, setHomeCity] = useState<string | null>(null);
+  const [homeRegion, setHomeRegion] = useState<string | null>(null);
+  const [locationType, setLocationType] = useState<LocationOption>('address');
+  const [isResolvingPostal, setIsResolvingPostal] = useState(false);
   const [homeCoordinates, setHomeCoordinates] = useState<{
     latitude: number;
     longitude: number;
@@ -404,7 +404,10 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [isSearchingFacilities, setIsSearchingFacilities] = useState(false);
   const [facilitySearchError, setFacilitySearchError] = useState<string | null>(null);
-  const [isOutOfArea, setIsOutOfArea] = useState(false);
+  // True when the visitor moves on without a specific play site — either by
+  // choosing to stay flexible, or because nothing was within the radius.
+  const [skippedFacility, setSkippedFacility] = useState(false);
+  const [facilityPreference, setFacilityPreference] = useState<FacilityPreference | null>(null);
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [maxDistanceKm, setMaxDistanceKm] = useState<number>(DEFAULT_MAX_DISTANCE_KM);
 
@@ -494,8 +497,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   }, [step, timeDay]);
 
   useEffect(() => {
-    if (step === 'day' && !selectedFacilityId && !isOutOfArea) setStep('location');
-  }, [step, selectedFacilityId, isOutOfArea]);
+    if (step === 'day' && !selectedFacilityId && !skippedFacility) setStep('location');
+  }, [step, selectedFacilityId, skippedFacility]);
 
   useEffect(() => {
     if (step !== 'time' || !timeDay || !timeSlot) return;
@@ -509,6 +512,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     courtsViewedFired.current = true;
     trackSmokeEvent('courts_viewed', eventContext(experiment), {
       courts_available: Boolean(selectedFacilityId),
+      facility_preference: facilityPreference,
+      max_distance_km: maxDistanceKm,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, experiment]);
@@ -565,7 +570,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
       setIsSearchingFacilities(true);
       setSearchCompleted(false);
       setFacilitySearchError(null);
-      setIsOutOfArea(false);
+      setSkippedFacility(false);
+      setFacilityPreference(null);
       setNearbyFacilities([]);
       setSelectedFacilityId(null);
       setSelectedFacilityName(null);
@@ -586,30 +592,90 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         setSearchCompleted(true);
       } catch {
         if (requestId !== facilitySearchRequest.current) return;
-        setFacilitySearchError(tw('location.errors.searchFailed'));
+        setFacilitySearchError(t('location.errors.searchFailed'));
       } finally {
         if (requestId === facilitySearchRequest.current) {
           setIsSearchingFacilities(false);
         }
       }
     },
-    [tw]
+    [t]
   );
 
-  const handleAddressQueryChange = (value: string) => {
-    setAddressQuery(value);
-    setHomeAddress(null);
+  const resetResolvedLocation = () => {
+    setLocationLabel(null);
     setHomePostalCode(null);
+    setHomeCity(null);
+    setHomeRegion(null);
     setHomeCoordinates(null);
     setNearbyFacilities([]);
     setSelectedFacilityId(null);
     setSelectedFacilityName(null);
     setSelectedFacilityCity(null);
     setFacilitySearchError(null);
-    setIsOutOfArea(false);
+    setSkippedFacility(false);
+    setFacilityPreference(null);
     setSearchCompleted(false);
     setError(null);
+  };
+
+  /**
+   * Step 2 takes a street address or just a postal code. A postal code resolves
+   * straight through the geocoder — no dropdown to pick from something the
+   * visitor already knows exactly.
+   */
+  const handleAddressQueryChange = (value: string) => {
+    setAddressQuery(value);
+    resetResolvedLocation();
     clearPredictions();
+
+    const postal = normalizePostalCode(value);
+    if (postal && sport) {
+      void resolvePostalCode(postal.normalized);
+    }
+  };
+
+  const resolvePostalCode = async (normalized: string) => {
+    if (!sport) return;
+    setIsResolvingPostal(true);
+    try {
+      const res = await fetch('/api/places/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postalCode: normalized }),
+      });
+      if (!res.ok) {
+        setFacilitySearchError(t('location.errors.postalNotFound'));
+        return;
+      }
+
+      const { location } = (await res.json()) as {
+        location: {
+          latitude: number;
+          longitude: number;
+          postalCode: string;
+          city?: string;
+          province?: string;
+        };
+      };
+
+      setLocationType('postal_code');
+      setLocationLabel([location.postalCode, location.city].filter(Boolean).join(', '));
+      setHomePostalCode(location.postalCode);
+      setHomeCity(location.city ?? null);
+      setHomeRegion(location.province ?? null);
+      setHomeCoordinates({ latitude: location.latitude, longitude: location.longitude });
+
+      void loadNearbyFacilities(
+        { latitude: location.latitude, longitude: location.longitude },
+        sport,
+        maxDistanceKm
+      );
+    } catch {
+      setFacilitySearchError(t('location.errors.postalNotFound'));
+    } finally {
+      setIsResolvingPostal(false);
+    }
   };
 
   const handleSelectDistance = (distanceKm: number) => {
@@ -630,16 +696,21 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
     const details = await getPlaceDetails(prediction.placeId);
     if (!details) {
-      setFacilitySearchError(tw('location.errors.notFound'));
+      setFacilitySearchError(t('location.errors.notFound'));
       return;
     }
 
-    setHomeAddress(details.address);
+    // The address is shown back to the visitor but never leaves the browser —
+    // only the postal code, city and region are submitted.
     setAddressQuery(details.address);
+    setLocationLabel(details.address);
+    setLocationType('address');
     setHomeCoordinates({ latitude: details.latitude, longitude: details.longitude });
-    if (details.postalCode) {
-      setHomePostalCode(normalizePostalCode(details.postalCode));
-    }
+    setHomeCity(details.city ?? null);
+    setHomeRegion(details.province ?? null);
+    setHomePostalCode(
+      details.postalCode ? (normalizePostalCode(details.postalCode)?.normalized ?? null) : null
+    );
 
     void loadNearbyFacilities(
       { latitude: details.latitude, longitude: details.longitude },
@@ -648,8 +719,19 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     );
   };
 
-  const continueWithoutFacility = () => {
-    setIsOutOfArea(true);
+  /**
+   * Move on without a specific play site. `preference` separates a deliberate
+   * "any court near me" from "nothing was within the radius", which read very
+   * differently when sizing supply in a city.
+   */
+  const continueWithoutFacility = (
+    preference: Extract<FacilityPreference, 'flexible' | 'none_found'>
+  ) => {
+    setSkippedFacility(true);
+    setFacilityPreference(preference);
+    setSelectedFacilityId(null);
+    setSelectedFacilityName(null);
+    setSelectedFacilityCity(null);
     markPreferencesCompleted();
     clearAdvanceTimer();
     setStep('day');
@@ -668,6 +750,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     setSelectedFacilityCity(facility.city ?? null);
     setSelectedFacilityTimezone(facility.timezone ?? 'America/Toronto');
     setFacilityAvailabilitySlots([]);
+    setSkippedFacility(false);
+    setFacilityPreference('specific');
     setError(null);
     void loadFacilityAvailability(facility.id);
     markPreferencesCompleted();
@@ -723,10 +807,13 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           rating,
           matchNature,
           timeSlot,
-          locationType: 'address',
-          homeAddress,
+          locationType,
           postalCode: homePostalCode ?? undefined,
+          homeCity: homeCity ?? undefined,
+          homeRegion: homeRegion ?? undefined,
+          maxDistanceKm,
           facilityId: selectedFacilityId,
+          facilityPreference: facilityPreference ?? undefined,
           city: selectedFacilityCity ?? undefined,
           email: trimmedEmail,
           phone: phoneDigits,
@@ -747,7 +834,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         rating,
         matchNature,
         timeSlot,
-        locationType: 'address',
+        locationType,
         facilityId: selectedFacilityId ?? undefined,
         facilityName: selectedFacilityName ?? undefined,
         city: selectedFacilityCity ?? undefined,
@@ -806,11 +893,11 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const renderRecapSummary = () => {
     if (!sport || !rating || !matchNature || !timeSlot) return null;
     const where = selectedFacilityName
-      ? homeAddress
-        ? t('recap.whereFacility', { facility: selectedFacilityName, address: homeAddress })
+      ? locationLabel
+        ? t('recap.whereFacility', { facility: selectedFacilityName, address: locationLabel })
         : selectedFacilityName
-      : homeAddress
-        ? t('recap.whereAddress', { address: homeAddress })
+      : locationLabel
+        ? t('recap.whereAddress', { address: locationLabel })
         : null;
     return (
       <div className="smk-panel p-5 text-sm">
@@ -971,7 +1058,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   }
 
   if (step === 'location') {
-    const isResolvingAddress = isLoadingPredictions || isSearchingFacilities;
+    const isResolvingAddress = isLoadingPredictions || isSearchingFacilities || isResolvingPostal;
     return (
       <WizardShell
         step={step}
@@ -986,6 +1073,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         <div className="flex flex-col gap-3">
           <h2 className="smk-display text-3xl sm:text-4xl">{t('location.question')}</h2>
           <p className="smk-text-muted">{t('location.hint')}</p>
+          <p className="smk-text-muted text-sm">{t('location.postalCodeHint')}</p>
         </div>
 
         <div className="relative">
@@ -1054,8 +1142,29 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           <p className="smk-text-error text-sm font-medium">{placesError}</p>
         )}
 
+        {/* Offered even where we have courts mapped: plenty of players just want
+            a game near them and don't care which site it lands at. */}
+        {homeCoordinates && searchCompleted && !isSearchingFacilities && (
+          <button
+            type="button"
+            onClick={() => continueWithoutFacility('flexible')}
+            className={optionClass(false)}
+          >
+            <span className="flex w-full items-center justify-between gap-3 text-left">
+              <span className="flex flex-col gap-1">
+                <span className="smk-title text-lg">{t('location.flexibleTitle')}</span>
+                <span className="smk-text-muted text-sm">
+                  {t('location.flexibleSubtitle', { km: String(maxDistanceKm) })}
+                </span>
+              </span>
+              <ArrowRight className="h-5 w-5 shrink-0" />
+            </span>
+          </button>
+        )}
+
         {nearbyFacilities.length > 0 && (
           <div className="flex flex-col gap-2.5">
+            <p className="smk-tag">{t('location.orPickSite')}</p>
             {nearbyFacilities.map(facility => {
               const openSlots = countFutureOpenAvailabilities(facility);
               const address = [facility.address, facility.city].filter(Boolean).join(', ');
@@ -1104,7 +1213,11 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
                 {t('location.noResultsRadius', { km: String(maxDistanceKm) })}
               </p>
               <p className="smk-text-muted text-sm">{t('location.widenHint')}</p>
-              <button type="button" onClick={continueWithoutFacility} className="smk-btn w-full">
+              <button
+                type="button"
+                onClick={() => continueWithoutFacility('none_found')}
+                className="smk-btn w-full"
+              >
                 {t('location.continueAnyway')}
                 <ArrowRight className="h-5 w-5" />
               </button>
@@ -1475,7 +1588,6 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
               {t('reveal.thanks')}
             </p>
             <p className="smk-text-muted text-sm">{t('reveal.purpose')}</p>
-            <p className="smk-text-muted text-xs">{t('reveal.deletion')}</p>
           </div>
         </div>
       </WizardShell>

@@ -1,12 +1,15 @@
 import { searchFacilitiesNearby } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-import type { SportOption } from './constants';
+import { DEFAULT_MAX_DISTANCE_KM, type SportOption } from './constants';
 
 import { createClient } from '@/lib/supabase/client';
 
-export const DEFAULT_MAX_DISTANCE_KM = 25;
-export const DISTANCE_OPTIONS_KM = [10, 25, 50] as const;
+// Re-exported so the client keeps importing distance options from one place; the
+// values live in constants.ts because the API route needs them and must not pull
+// in the browser Supabase client.
+export { DEFAULT_MAX_DISTANCE_KM, DISTANCE_OPTIONS_KM } from './constants';
+
 const FACILITY_SEARCH_LIMIT = 15;
 
 const sportIdCache = new Map<SportOption, string>();
