@@ -45,6 +45,45 @@ function authorizeRealtime(): void {
   void supabase.realtime.setAuth();
 }
 
+// Pending trailing-edge timers per channel, cleared by unsubscribeFromChannel.
+const channelCleanups = new WeakMap<RealtimeChannel, () => void>();
+
+/**
+ * Leading + trailing throttle: fires immediately when idle, then coalesces any
+ * burst into a single trailing call at most once per `waitMs`.
+ */
+function throttleWithTrailing(
+  fn: () => void,
+  waitMs: number
+): { call: () => void; cancel: () => void } {
+  let lastRun = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return {
+    call() {
+      const now = Date.now();
+      if (now - lastRun >= waitMs) {
+        lastRun = now;
+        fn();
+        return;
+      }
+      if (!timer) {
+        timer = setTimeout(
+          () => {
+            timer = null;
+            lastRun = Date.now();
+            fn();
+          },
+          waitMs - (now - lastRun)
+        );
+      }
+    },
+    cancel() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
+  };
+}
+
 /**
  * Subscribe to all message events in a conversation (INSERT, UPDATE, DELETE).
  *
@@ -174,13 +213,16 @@ export function subscribeToMatchVotes(
  * and listening to message UPDATEs would race against mark_messages_as_read.
  */
 export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
+  // Every visible message INSERT/DELETE triggers a conversation-list refetch
+  // (~120-170ms RPC), so bursts must coalesce instead of stampeding the DB.
+  const throttled = throttleWithTrailing(onUpdate, 2000);
   const channel = supabase
     .channel(`conversations:${playerId}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message' }, () =>
-      onUpdate()
+      throttled.call()
     )
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message' }, () =>
-      onUpdate()
+      throttled.call()
     )
     .on(
       'postgres_changes',
@@ -190,10 +232,11 @@ export function subscribeToConversations(playerId: string, onUpdate: () => void)
         table: 'conversation_participant',
         filter: `player_id=eq.${playerId}`,
       },
-      () => onUpdate()
+      () => throttled.call()
     )
     .subscribe();
 
+  channelCleanups.set(channel, throttled.cancel);
   return channel;
 }
 
@@ -201,6 +244,8 @@ export function subscribeToConversations(playerId: string, onUpdate: () => void)
  * Unsubscribe from a channel
  */
 export function unsubscribeFromChannel(channel: RealtimeChannel): void {
+  channelCleanups.get(channel)?.();
+  channelCleanups.delete(channel);
   void supabase.removeChannel(channel);
 }
 
@@ -210,6 +255,11 @@ export function unsubscribeFromChannel(channel: RealtimeChannel): void {
 
 // Store for active typing channels
 const typingChannels = new Map<string, RealtimeChannel>();
+
+// Last typing state broadcast per channel, to drop redundant presence events
+// (each track() counts against the tenant presence rate limit).
+const lastTypingSent = new Map<string, { isTyping: boolean; at: number }>();
+const TYPING_REFRESH_MS = 2000;
 
 /**
  * Subscribe to typing indicators in a conversation
@@ -266,6 +316,7 @@ export function subscribeToTypingIndicators(
     .subscribe(status => {
       if ((status as string) === 'SUBSCRIBED') {
         // Track presence with player info
+        lastTypingSent.set(channelName, { isTyping: false, at: Date.now() });
         void channel.track({
           player_name: playerName,
           timestamp: Date.now(),
@@ -289,14 +340,22 @@ export async function sendTypingIndicator(
 ): Promise<void> {
   const channelName = `typing:${conversationId}`;
   const channel = typingChannels.get(channelName);
+  if (!channel) return;
 
-  if (channel) {
-    await channel.track({
-      player_name: playerName,
-      timestamp: Date.now(),
-      is_typing: isTyping,
-    });
+  // State changes always go out. Repeats of `false` are pure noise (presence
+  // state doesn't decay); repeats of `true` only refresh the freshness
+  // timestamp, so cap them at one per TYPING_REFRESH_MS.
+  const last = lastTypingSent.get(channelName);
+  if (last && last.isTyping === isTyping) {
+    if (!isTyping || Date.now() - last.at < TYPING_REFRESH_MS) return;
   }
+  lastTypingSent.set(channelName, { isTyping, at: Date.now() });
+
+  await channel.track({
+    player_name: playerName,
+    timestamp: Date.now(),
+    is_typing: isTyping,
+  });
 }
 
 /**
@@ -309,5 +368,6 @@ export function unsubscribeFromTypingIndicators(conversationId: string): void {
   if (channel) {
     void supabase.removeChannel(channel);
     typingChannels.delete(channelName);
+    lastTypingSent.delete(channelName);
   }
 }
