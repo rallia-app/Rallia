@@ -1,7 +1,15 @@
 export const MATCH_SMOKE_TEST_CURRENCY = 'CAD';
 
-/** Stable identifier for this willingness-to-pay experiment (attached to every event). */
-export const SMOKE_TEST_ID = 'wtp_smoke_v2_2026';
+/**
+ * Stable identifier for this willingness-to-pay run (attached to every event).
+ *
+ * Deliberately distinct from the earlier `wtp_smoke_v2_2026` run hosted inside
+ * the main web app. That run only recorded visitors who accepted a cookie
+ * banner and never delivered a single `page_view`; this one records everyone
+ * and has a working top-of-funnel. Mixing them in one bucket would compare
+ * numbers produced under different rules.
+ */
+export const SMOKE_TEST_ID = 'wtp_smoke_v3_slice_2026';
 
 // ---- Sport ----
 

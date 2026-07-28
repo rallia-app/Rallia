@@ -14,6 +14,7 @@
 import posthog from 'posthog-js';
 
 import type { MatchPlanTier, SportOption, ValuePropVariant } from './constants';
+import { ensurePostHog } from './posthog';
 
 export type SmokeEventName =
   | 'page_view'
@@ -43,7 +44,9 @@ export function trackSmokeEvent(
   context: SmokeEventContext,
   extra?: Record<string, unknown>
 ): void {
-  if (typeof window === 'undefined') return;
+  // Initialize on first capture rather than trusting a provider's effect to
+  // have run: `page_view` fires on mount and would otherwise be dropped.
+  if (!ensurePostHog()) return;
   posthog.capture(event, {
     ...context,
     horodatage: new Date().toISOString(),
