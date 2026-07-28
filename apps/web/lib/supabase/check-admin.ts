@@ -1,4 +1,28 @@
+import * as Sentry from '@sentry/nextjs';
+
 import { createClient } from '@/lib/supabase/server';
+
+/**
+ * Thrown when the admin-role lookup itself fails (network/DB error), as
+ * opposed to a genuine "no admin row". Callers must not treat this as
+ * "not an admin": API routes should return 503, page guards should let it
+ * propagate to the error boundary instead of redirecting.
+ */
+export class AdminCheckError extends Error {
+  constructor(public readonly cause: unknown) {
+    super('Admin role lookup failed');
+    this.name = 'AdminCheckError';
+  }
+}
+
+// PGRST116 = .single() found no rows: the legit "not an admin" case.
+function assertQuerySucceeded(error: { code?: string } | null): void {
+  if (error && error.code !== 'PGRST116') {
+    const checkError = new AdminCheckError(error);
+    Sentry.captureException(checkError);
+    throw checkError;
+  }
+}
 
 /**
  * Check if a user is an admin (Rallia employee/manager)
@@ -23,8 +47,10 @@ export async function isAdmin(userId: string): Promise<boolean> {
     .eq('id', userId)
     .single();
 
-  // If there's an error or no admin record found, user is not a platform admin
-  if (error || !admin) {
+  assertQuerySucceeded(error);
+
+  // No admin record found, user is not a platform admin
+  if (!admin) {
     return false;
   }
 
@@ -46,7 +72,9 @@ export async function getAdminRole(userId: string): Promise<string | null> {
     .eq('id', userId)
     .single();
 
-  if (error || !admin) {
+  assertQuerySucceeded(error);
+
+  if (!admin) {
     return null;
   }
 
@@ -67,7 +95,9 @@ export async function isSuperAdmin(userId: string): Promise<boolean> {
     .eq('id', userId)
     .single();
 
-  if (error || !admin) {
+  assertQuerySucceeded(error);
+
+  if (!admin) {
     return false;
   }
 
@@ -79,6 +109,7 @@ export async function isSuperAdmin(userId: string): Promise<boolean> {
  * super_admin always passes regardless of allowedRoles.
  *
  * Returns the role if allowed, or { allowed: false } if not.
+ * Throws AdminCheckError if the lookup fails — API routes map it to a 503.
  */
 export async function requireApiRole(
   userId: string,

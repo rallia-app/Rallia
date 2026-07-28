@@ -1,4 +1,4 @@
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -82,6 +82,9 @@ export async function PATCH(request: NextRequest) {
       updatedCount: playerIds.length,
     });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('Admin players PATCH error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -184,6 +187,9 @@ export async function DELETE(request: NextRequest) {
       ...(errors.length > 0 && { errors }),
     });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('Admin players DELETE error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

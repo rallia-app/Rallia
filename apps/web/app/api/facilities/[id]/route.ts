@@ -1,4 +1,4 @@
-import { isAdmin } from '@/lib/supabase/check-admin';
+import { AdminCheckError, isAdmin } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -137,6 +137,9 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Facility Delete] Unexpected error:', error);
     return NextResponse.json(
       {

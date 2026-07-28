@@ -3,6 +3,7 @@ import {
   getAuthedAdminBroadcastDb,
   parseSegmentFromQuery,
 } from '@/lib/admin/broadcasts';
+import { AdminCheckError } from '@/lib/supabase/check-admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -21,6 +22,9 @@ export async function GET(request: NextRequest) {
     const count = await countSegmentRecipients(adminDb, filters);
     return NextResponse.json({ count });
   } catch (err) {
+    if (err instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Broadcasts Recipients GET]', err);
     return NextResponse.json({ error: 'Failed to count recipients' }, { status: 500 });
   }

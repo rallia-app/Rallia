@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation';
 /**
  * Server-side guard for admin pages. Fetches auth + role and redirects
  * to /admin/dashboard if the user's role is not in allowedRoles.
+ * If the role lookup fails, AdminCheckError propagates to the error
+ * boundary instead of redirecting the admin out.
  *
  * @returns The user's admin role (guaranteed to be in allowedRoles).
  */

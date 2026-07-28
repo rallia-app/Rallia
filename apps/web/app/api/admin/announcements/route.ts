@@ -1,6 +1,7 @@
+import * as Sentry from '@sentry/nextjs';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 // Map the domain errors raised by post_global_announcement to HTTP statuses.
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      Sentry.captureException(error);
       const status = RPC_ERROR_STATUS[error.message] ?? 500;
       return NextResponse.json({ error: error.message }, { status });
     }
@@ -70,6 +72,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, messageId }, { status: 201 });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
+    Sentry.captureException(error);
     console.error('[Admin Announcements POST]', error);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }

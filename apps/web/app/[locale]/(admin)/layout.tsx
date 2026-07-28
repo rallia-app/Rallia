@@ -20,7 +20,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect(`/${locale}/admin/sign-in`);
   }
 
-  // Check if user is an admin and get their role
+  // Check if user is an admin and get their role. A failed lookup throws
+  // AdminCheckError to the error boundary rather than redirecting out.
   const role = await getAdminRole(user.id);
 
   // If not an admin, redirect to org dashboard

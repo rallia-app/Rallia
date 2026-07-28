@@ -1,4 +1,4 @@
-import { getAdminRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, getAdminRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { generateUrlSafeToken } from '@/utils/invitation';
 import { NextRequest, NextResponse } from 'next/server';
@@ -88,6 +88,9 @@ export async function POST(Request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('Invitation error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
