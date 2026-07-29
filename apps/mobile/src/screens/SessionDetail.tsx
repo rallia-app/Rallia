@@ -8,16 +8,8 @@
  *       specs/17-leagues-tournaments/leagues.md §Sessions
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-} from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,7 +40,7 @@ import {
   useSessionMatches,
   useGenerateSessionSheet,
   useSetSessionMatchLock,
-  useRecordSessionScore,
+  useSports,
 } from '@rallia/shared-hooks';
 import { isLeagueOrganizer } from '@rallia/shared-services';
 import type {
@@ -239,27 +231,10 @@ export const SessionDetail: React.FC = () => {
     },
   });
 
-  const [scoringMatch, setScoringMatch] = useState<SessionMatch | null>(null);
-  const [scoreWinner, setScoreWinner] = useState<'a' | 'b'>('a');
-  const [scoreText, setScoreText] = useState('');
-
-  const { mutate: recordScore, isPending: isRecording } = useRecordSessionScore(
-    sessionId,
-    seasonId,
-    {
-      onSuccess: () => {
-        successHaptic();
-        toast.success(t('sessionDetail.score.saved'));
-        Analytics.sessionScoreSubmittedAnalytics({ sessionId });
-        setScoringMatch(null);
-        setScoreText('');
-        invalidate();
-      },
-      onError: e => {
-        warningHaptic();
-        toast.error(e.message || t('sessionDetail.errors.generic'));
-      },
-    }
+  const { sports } = useSports();
+  const isPickleballLeague = useMemo(
+    () => sports.find(sp => sp.id === league?.sport_id)?.name === 'pickleball',
+    [sports, league?.sport_id]
   );
 
   const isScored = useCallback(
@@ -314,24 +289,40 @@ export const SessionDetail: React.FC = () => {
     [league, sessionId, seasonId, invalidate]
   );
 
-  const openScoreEntry = useCallback((m: SessionMatch) => {
-    lightHaptic();
-    setScoringMatch(m);
-    // Prefill when editing an already-recorded score; default for a fresh entry.
-    setScoreWinner(m.winner_team ?? 'a');
-    setScoreText(m.score ?? '');
-  }, []);
-
-  const submitScore = useCallback(() => {
-    if (!scoringMatch || isRecording) return;
-    recordScore({
-      sessionMatchId: scoringMatch.id,
-      winnerTeam: scoreWinner,
-      score: scoreText.trim() || undefined,
-      status: 'completed',
-      versionWas: scoringMatch.version,
-    });
-  }, [scoringMatch, scoreWinner, scoreText, recordScore, isRecording]);
+  const openScoreEntry = useCallback(
+    (m: SessionMatch) => {
+      lightHaptic();
+      void SheetManager.show('session-record-score', {
+        payload: {
+          sessionMatchId: m.id,
+          sessionId,
+          seasonId,
+          versionWas: m.version,
+          teamAName: nameOf(m.team_a_user_ids[0]),
+          teamBName: nameOf(m.team_b_user_ids[0]),
+          isPickleball: isPickleballLeague,
+          matchFormat: sess?.match_format,
+          isEdit: isScored(m),
+          onSuccess: () => {
+            toast.success(t('sessionDetail.score.saved'));
+            Analytics.sessionScoreSubmittedAnalytics({ sessionId });
+            invalidate();
+          },
+        },
+      });
+    },
+    [
+      sessionId,
+      seasonId,
+      nameOf,
+      isPickleballLeague,
+      sess?.match_format,
+      isScored,
+      toast,
+      t,
+      invalidate,
+    ]
+  );
 
   const handleConfirm = useCallback(
     (status: PresenceStatus) => {
@@ -776,115 +767,6 @@ export const SessionDetail: React.FC = () => {
           );
         })}
       </ScrollView>
-
-      <Modal
-        visible={scoringMatch !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setScoringMatch(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
-            <Text size="lg" weight="bold" color={colors.text}>
-              {scoringMatch && isScored(scoringMatch)
-                ? t('sessionDetail.score.edit')
-                : t('sessionDetail.score.title')}
-            </Text>
-            {scoringMatch ? (
-              <>
-                <Text size="sm" color={colors.textMuted}>
-                  {t('sessionDetail.score.winnerPrompt')}
-                </Text>
-                <View style={styles.winnerRow}>
-                  {(['a', 'b'] as const).map(side => {
-                    const ids =
-                      side === 'a' ? scoringMatch.team_a_user_ids : scoringMatch.team_b_user_ids;
-                    const selected = scoreWinner === side;
-                    return (
-                      <TouchableOpacity
-                        key={side}
-                        onPress={() => {
-                          lightHaptic();
-                          setScoreWinner(side);
-                        }}
-                        style={[
-                          styles.winnerOption,
-                          {
-                            borderColor: selected ? colors.primary : colors.border,
-                            backgroundColor: selected ? colors.highlightBg : 'transparent',
-                          },
-                        ]}
-                        testID={`score-winner-${side}`}
-                      >
-                        <Ionicons
-                          name={selected ? 'radio-button-on' : 'radio-button-off'}
-                          size={18}
-                          color={selected ? colors.primary : colors.textMuted}
-                        />
-                        <Text
-                          size="base"
-                          weight={selected ? 'semibold' : 'regular'}
-                          color={colors.text}
-                          numberOfLines={1}
-                          style={styles.winnerName}
-                        >
-                          {nameOf(ids[0])}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <TextInput
-                  value={scoreText}
-                  onChangeText={setScoreText}
-                  placeholder={t('sessionDetail.score.scorePlaceholder')}
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
-                  testID="score-input"
-                  style={[
-                    styles.scoreInput,
-                    {
-                      backgroundColor: colors.background,
-                      borderColor: colors.border,
-                      color: colors.text,
-                    },
-                  ]}
-                />
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    onPress={() => setScoringMatch(null)}
-                    style={[
-                      styles.modalBtn,
-                      styles.ctaButtonOutline,
-                      { borderColor: colors.border },
-                    ]}
-                  >
-                    <Text size="base" weight="semibold" color={colors.text}>
-                      {t('sessionDetail.score.cancel')}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={submitScore}
-                    disabled={isRecording}
-                    style={[
-                      styles.modalBtn,
-                      { backgroundColor: colors.primary },
-                      isRecording && styles.disabled,
-                    ]}
-                    testID="cta-submit-score"
-                  >
-                    <Text size="base" weight="semibold" color="#fff">
-                      {isRecording
-                        ? t('sessionDetail.score.saving')
-                        : t('sessionDetail.score.save')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : null}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -943,41 +825,6 @@ const styles = StyleSheet.create({
   vsName: { flexShrink: 1 },
   lockButton: { padding: spacingPixels[1] },
   matchActions: { flexDirection: 'row', alignItems: 'center', gap: spacingPixels[1] },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: {
-    borderTopLeftRadius: radiusPixels.xl,
-    borderTopRightRadius: radiusPixels.xl,
-    padding: spacingPixels[5],
-    paddingBottom: spacingPixels[8],
-    gap: spacingPixels[3],
-  },
-  winnerRow: { flexDirection: 'row', gap: spacingPixels[3] },
-  winnerOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-    borderWidth: 1.5,
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-  },
-  winnerName: { flexShrink: 1 },
-  scoreInput: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.lg,
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    fontSize: 16,
-  },
-  modalButtons: { flexDirection: 'row', gap: spacingPixels[3], marginTop: spacingPixels[1] },
-  modalBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3.5],
-    borderRadius: radiusPixels.lg,
-  },
   byeRow: {
     flexDirection: 'row',
     alignItems: 'center',
