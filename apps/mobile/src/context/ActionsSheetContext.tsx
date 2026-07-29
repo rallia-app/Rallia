@@ -287,6 +287,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   /**
    * Open the sheet directly to the league creation wizard (skips actions menu).
+   * The sheet still gates the wizard on admin (leagues are admin-gated during
+   * rollout), so callers should only surface this to admins.
    */
   const openSheetForLeagueCreation = useCallback(() => {
     const mode = computeInitialMode();

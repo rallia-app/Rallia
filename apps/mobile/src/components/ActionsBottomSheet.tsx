@@ -250,9 +250,9 @@ export const ActionsBottomSheet: React.FC = () => {
   const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Tournaments stay admin-gated during rollout; leagues are open to everyone.
+  // Both leagues and tournaments are admin-gated during rollout.
   const showCreateTournament = isAdmin;
-  const showCreateLeague = true;
+  const showCreateLeague = isAdmin;
 
   // Wizard state for all sliding panels (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
@@ -338,6 +338,8 @@ export const ActionsBottomSheet: React.FC = () => {
   ]);
 
   // Effect to automatically open league creation wizard when flag is set.
+  // showCreateLeague keeps the admin gate: a non-admin who somehow sets the flag
+  // lands on the actions menu instead of the wizard.
   useEffect(() => {
     if (
       showCreateLeague &&

@@ -21,6 +21,7 @@ import {
   usePublicLeagues,
   useMyLeagues,
   useRatingScoresForSport,
+  useAdminStatus,
 } from '@rallia/shared-hooks';
 import type { LeagueListItem } from '@rallia/shared-services';
 
@@ -49,6 +50,9 @@ export const Leagues: React.FC = () => {
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
   const { openSheetForLeagueCreation } = useActionsSheet();
+  // Leagues are admin-gated during rollout (ActionsBottomSheet gates the wizard
+  // the same way), so only admins see the create button.
+  const { isAdmin } = useAdminStatus();
 
   const handleCreate = useCallback(() => {
     void lightHaptic();
@@ -132,27 +136,29 @@ export const Leagues: React.FC = () => {
 
   const header = (
     <View style={styles.headerContainer}>
-      <TouchableOpacity
-        onPress={handleCreate}
-        activeOpacity={0.85}
-        style={styles.createButton}
-        accessibilityRole="button"
-        accessibilityLabel={t('leagueList.create')}
-        testID="cta-create-league"
-      >
-        <View style={styles.createIcon}>
-          <Ionicons name="add" size={26} color="#ffffff" />
-        </View>
-        <View style={styles.createTextWrap}>
-          <Text size="base" weight="semibold" color="#ffffff">
-            {t('leagueList.create')}
-          </Text>
-          <Text size="xs" color="rgba(255,255,255,0.85)">
-            {t('leagueList.createSubtitle')}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
-      </TouchableOpacity>
+      {isAdmin && (
+        <TouchableOpacity
+          onPress={handleCreate}
+          activeOpacity={0.85}
+          style={styles.createButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('leagueList.create')}
+          testID="cta-create-league"
+        >
+          <View style={styles.createIcon}>
+            <Ionicons name="add" size={26} color="#ffffff" />
+          </View>
+          <View style={styles.createTextWrap}>
+            <Text size="base" weight="semibold" color="#ffffff">
+              {t('leagueList.create')}
+            </Text>
+            <Text size="xs" color="rgba(255,255,255,0.85)">
+              {t('leagueList.createSubtitle')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         onPress={() => {

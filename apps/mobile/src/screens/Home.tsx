@@ -2032,18 +2032,21 @@ const Home = () => {
           onPress={() => appNavigation.navigate('Tournaments')}
         />
       );
-      playTiles.push(
-        <GradientNavTile
-          key="leagues"
-          style={quickNavStyles.item}
-          icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-          watermark={<Ionicons name="ribbon" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
-          gradient={[primary[700], primary[900]]}
-          borderColor={primary[800]}
-          label={t('home.playGrid.leagues')}
-          onPress={() => appNavigation.navigate('Leagues')}
-        />
-      );
+      // Leagues are re-admin-gated during rollout.
+      if (isAdmin) {
+        playTiles.push(
+          <GradientNavTile
+            key="leagues"
+            style={quickNavStyles.item}
+            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
+            watermark={<Ionicons name="ribbon" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
+            gradient={[primary[700], primary[900]]}
+            borderColor={primary[800]}
+            label={t('home.playGrid.leagues')}
+            onPress={() => appNavigation.navigate('Leagues')}
+          />
+        );
+      }
     }
     headerComponents.push(
       <View key="play-grid">
@@ -2109,6 +2112,7 @@ const Home = () => {
     weeklyCheckinCooldownActive,
     handleAvailabilityBannerAction,
     handleDismissAvailabilityBanner,
+    isAdmin,
     navigation,
     myLeaderboardRank,
     myLeaderboardRankLoading,
