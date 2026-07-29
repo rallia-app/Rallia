@@ -192,14 +192,20 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   const availableSports = userId ? userSports : allSports;
   const isLoading = userId ? playerSportsLoading : guestSportsLoading;
 
-  const value: SportContextValue = {
-    selectedSport,
-    userSports: availableSports,
-    isLoading,
-    setSelectedSport,
-    setSelectedSportsOrdered,
-    refetch,
-  };
+  // Memoized so provider re-renders (React Compiler bails on this component
+  // because of the try/catch value blocks above) don't hand every consumer a
+  // new identity and cascade re-renders through the tree.
+  const value: SportContextValue = useMemo(
+    () => ({
+      selectedSport,
+      userSports: availableSports,
+      isLoading,
+      setSelectedSport,
+      setSelectedSportsOrdered,
+      refetch,
+    }),
+    [selectedSport, availableSports, isLoading, setSelectedSport, setSelectedSportsOrdered, refetch]
+  );
 
   return <SportContext.Provider value={value}>{children}</SportContext.Provider>;
 }

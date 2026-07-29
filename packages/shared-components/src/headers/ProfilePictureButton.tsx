@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -38,9 +38,17 @@ const ProfilePictureButton: React.FC<ProfilePictureButtonProps> = ({
     }
   }, [profile, profilePictureUrl]);
 
-  // Refetch profile when screen comes into focus
+  // Refetch profile when the screen comes into focus, at most once per
+  // 5 minutes. Unthrottled, every tab switch/back-navigation fired a profile
+  // fetch whose loading-state flips re-rendered every ProfileContext consumer
+  // mid-transition. In-app edits update the context directly, so the focus
+  // refetch only exists to catch cross-device changes.
+  const lastFocusRefetchRef = useRef(0);
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastFocusRefetchRef.current < 5 * 60 * 1000) return;
+      lastFocusRefetchRef.current = now;
       refetch();
     }, [refetch])
   );

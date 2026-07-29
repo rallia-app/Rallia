@@ -895,9 +895,24 @@ export function useReactionsRealtime(conversationId: string | undefined) {
 
 /**
  * Subscribe to all conversation updates
+ *
+ * The conversation-list screen stays mounted app-wide (tab preload +
+ * freezeOnBlur), so pass `isScreenVisible` to keep the expensive
+ * conversation-list RPC from refetching while the screen isn't on screen:
+ * blurred, events only mark the list stale (`refetchType: 'none'`) and the
+ * caller refetches stale queries when the screen regains focus. Unread-count
+ * queries always refetch actively — they power the tab badge.
  */
-export function useConversationsRealtime(playerId: string | undefined) {
+export function useConversationsRealtime(
+  playerId: string | undefined,
+  options?: { isScreenVisible?: boolean }
+) {
   const queryClient = useQueryClient();
+  const isScreenVisible = options?.isScreenVisible ?? true;
+
+  // Read by the subscription callback so visibility changes don't resubscribe.
+  const isScreenVisibleRef = useRef(isScreenVisible);
+  isScreenVisibleRef.current = isScreenVisible;
 
   useEffect(() => {
     if (!playerId) return;
@@ -906,6 +921,7 @@ export function useConversationsRealtime(playerId: string | undefined) {
       // Refresh conversations list (also invalidates filteredConversations via prefix matching)
       queryClient.invalidateQueries({
         queryKey: chatKeys.playerConversations(playerId),
+        refetchType: isScreenVisibleRef.current ? 'active' : 'none',
       });
       queryClient.invalidateQueries({
         queryKey: chatKeys.unreadCount(playerId),

@@ -119,6 +119,132 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
 };
 
 // =============================================================================
+// MODULE-LEVEL CACHE
+// =============================================================================
+
+/**
+ * Admin status barely changes, but this hook is mounted on Home, Community,
+ * Tournaments, Leagues, Settings, header buttons and more — the previous
+ * implementation re-ran a network `auth.getUser()` plus an `admin` select on
+ * EVERY mount, which head-of-line-blocked the auth lock during navigation.
+ * A module-level cache (5 min TTL, in-flight dedup) means one cheap fetch
+ * shared by every mount, with no QueryClientProvider requirement so the hook
+ * keeps working in the web admin views.
+ */
+
+interface AdminStatusData {
+  adminId: string | null;
+  role: AdminRole | null;
+  permissions: AdminPermissions | null;
+}
+
+const NOT_ADMIN: AdminStatusData = { adminId: null, role: null, permissions: null };
+const ADMIN_STATUS_TTL_MS = 5 * 60 * 1000;
+
+const adminStatusCache = new Map<string, { data: AdminStatusData; fetchedAt: number }>();
+const adminStatusInflight = new Map<string, Promise<AdminStatusData>>();
+const adminStatusSubscribers = new Set<() => void>();
+
+function notifyAdminStatusSubscribers() {
+  adminStatusSubscribers.forEach(fn => fn());
+}
+
+/** Exposed for tests and for auth flows that must force a fresh check. */
+export function clearAdminStatusCache() {
+  adminStatusCache.clear();
+  notifyAdminStatusSubscribers();
+}
+
+async function fetchAdminStatusData(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: SupabaseClient<any, any, any>,
+  userId: string | undefined
+): Promise<AdminStatusData> {
+  let targetUserId = userId;
+
+  if (!targetUserId) {
+    // Local session read (memory/storage) — deliberately NOT the network
+    // round-trip of auth.getUser(); the admin table lookup below is what
+    // actually authorizes anything, and RLS re-validates server-side.
+    const {
+      data: { session },
+    } = await client.auth.getSession();
+
+    if (!session?.user) {
+      return NOT_ADMIN;
+    }
+
+    targetUserId = session.user.id;
+  }
+
+  const { data: adminData, error: adminError } = await client
+    .from('admin')
+    .select('role, permissions')
+    .eq('id', targetUserId)
+    .maybeSingle();
+
+  if (adminError) {
+    throw new Error(adminError.message);
+  }
+
+  if (!adminData) {
+    return NOT_ADMIN;
+  }
+
+  const adminRole = adminData.role as AdminRole;
+  const defaultPerms = DEFAULT_PERMISSIONS[adminRole] || {};
+  const customPerms = (adminData.permissions as AdminPermissions) || {};
+  return {
+    adminId: targetUserId,
+    role: adminRole,
+    permissions: { ...defaultPerms, ...customPerms },
+  };
+}
+
+function loadAdminStatus(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: SupabaseClient<any, any, any>,
+  userId: string | undefined,
+  force: boolean
+): Promise<AdminStatusData> {
+  const key = userId ?? 'self';
+
+  if (!force) {
+    const cached = adminStatusCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < ADMIN_STATUS_TTL_MS) {
+      return Promise.resolve(cached.data);
+    }
+    const inflight = adminStatusInflight.get(key);
+    if (inflight) {
+      return inflight;
+    }
+  }
+
+  const promise = fetchAdminStatusData(client, userId)
+    .then(data => {
+      adminStatusCache.set(key, { data, fetchedAt: Date.now() });
+      adminStatusInflight.delete(key);
+      notifyAdminStatusSubscribers();
+      return data;
+    })
+    .catch(err => {
+      adminStatusInflight.delete(key);
+      throw err;
+    });
+
+  adminStatusInflight.set(key, promise);
+  return promise;
+}
+
+/** Internal seams exposed for unit tests only — not part of the public API. */
+export const __adminStatusInternals = {
+  loadAdminStatus,
+  fetchAdminStatusData,
+  cache: adminStatusCache,
+  inflight: adminStatusInflight,
+};
+
+// =============================================================================
 // HOOK
 // =============================================================================
 
@@ -130,90 +256,52 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
  */
 export function useAdminStatus(options?: UseAdminStatusOptions): AdminStatus {
   const supabase = useMemo(() => options?.client ?? sharedSupabase, [options?.client]);
+  const cacheKey = options?.userId ?? 'self';
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminId, setAdminId] = useState<string | null>(null);
-  const [role, setRole] = useState<AdminRole | null>(null);
-  const [permissions, setPermissions] = useState<AdminPermissions | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedEntry = adminStatusCache.get(cacheKey);
+  const isCacheFresh = !!cachedEntry && Date.now() - cachedEntry.fetchedAt < ADMIN_STATUS_TTL_MS;
+
+  const [data, setData] = useState<AdminStatusData | null>(isCacheFresh ? cachedEntry.data : null);
+  const [loading, setLoading] = useState(!isCacheFresh);
   const [error, setError] = useState<Error | null>(null);
 
-  /**
-   * Fetch admin status from database
-   */
-  const fetchAdminStatus = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Get user ID to check
-      let targetUserId = options?.userId;
-
-      if (!targetUserId) {
-        // Get current authenticated user
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-          // Not authenticated - not an admin
-          setIsAdmin(false);
-          setAdminId(null);
-          setRole(null);
-          setPermissions(null);
-          setLoading(false);
-          return;
-        }
-
-        targetUserId = user.id;
+  const fetchAdminStatus = useCallback(
+    async (force = true) => {
+      try {
+        const result = await loadAdminStatus(supabase, options?.userId, force);
+        setData(result);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching admin status:', err);
+        setError(err as Error);
+        setData(NOT_ADMIN);
+      } finally {
+        setLoading(false);
       }
+    },
+    [supabase, options?.userId]
+  );
 
-      // Check admin table for user
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin')
-        .select('role, permissions')
-        .eq('id', targetUserId)
-        .maybeSingle();
-
-      if (adminError) {
-        throw new Error(adminError.message);
-      }
-
-      if (!adminData) {
-        // No admin record found - user is not an admin
-        setIsAdmin(false);
-        setAdminId(null);
-        setRole(null);
-        setPermissions(null);
-      } else {
-        // User is an admin
-        const adminRole = adminData.role as AdminRole;
-        setIsAdmin(true);
-        setAdminId(targetUserId);
-        setRole(adminRole);
-
-        // Merge default permissions with custom permissions from database
-        const defaultPerms = DEFAULT_PERMISSIONS[adminRole] || {};
-        const customPerms = (adminData.permissions as AdminPermissions) || {};
-        setPermissions({ ...defaultPerms, ...customPerms });
-      }
-    } catch (err) {
-      console.error('Error fetching admin status:', err);
-      setError(err as Error);
-      setIsAdmin(false);
-      setAdminId(null);
-      setRole(null);
-      setPermissions(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase, options?.userId]);
-
-  // Initial fetch
+  // Initial fetch (cache/in-flight dedup makes this a no-op when fresh) and
+  // subscription so every mounted instance reflects cache updates.
   useEffect(() => {
-    fetchAdminStatus();
-  }, [fetchAdminStatus]);
+    void fetchAdminStatus(false);
+
+    const onCacheChange = () => {
+      const entry = adminStatusCache.get(cacheKey);
+      if (entry) {
+        setData(entry.data);
+        setLoading(false);
+      } else {
+        // Cache was cleared (auth transition) — refetch.
+        void fetchAdminStatus(false);
+      }
+    };
+    adminStatusSubscribers.add(onCacheChange);
+    return () => {
+      adminStatusSubscribers.delete(onCacheChange);
+    };
+  }, [fetchAdminStatus, cacheKey]);
 
   // Listen for auth state changes to refetch
   useEffect(() => {
@@ -221,31 +309,40 @@ export function useAdminStatus(options?: UseAdminStatusOptions): AdminStatus {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(event => {
       if (event === 'SIGNED_IN') {
-        fetchAdminStatus();
+        // Drop the stale entry, then load un-forced so the in-flight dedup
+        // collapses the N mounted instances into a single admin query.
+        adminStatusCache.delete(cacheKey);
+        void fetchAdminStatus(false);
       } else if (event === 'SIGNED_OUT') {
-        setIsAdmin(false);
-        setAdminId(null);
-        setRole(null);
-        setPermissions(null);
+        adminStatusCache.set(cacheKey, { data: NOT_ADMIN, fetchedAt: Date.now() });
+        setData(NOT_ADMIN);
         setError(null);
         setLoading(false);
+        notifyAdminStatusSubscribers();
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, fetchAdminStatus]);
+  }, [supabase, fetchAdminStatus, cacheKey]);
 
-  return {
-    isAdmin,
-    adminId,
-    role,
-    permissions,
-    loading,
-    error,
-    refetch: fetchAdminStatus,
-  };
+  const refetch = useCallback(async () => {
+    await fetchAdminStatus(true);
+  }, [fetchAdminStatus]);
+
+  return useMemo(
+    () => ({
+      isAdmin: !!data?.adminId,
+      adminId: data?.adminId ?? null,
+      role: data?.role ?? null,
+      permissions: data?.permissions ?? null,
+      loading,
+      error,
+      refetch,
+    }),
+    [data, loading, error, refetch]
+  );
 }
 
 // =============================================================================

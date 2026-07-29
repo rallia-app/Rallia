@@ -10,6 +10,7 @@ import React, {
   createContext,
   useContext,
   useCallback,
+  useMemo,
   useState,
   useEffect,
   ReactNode,
@@ -117,13 +118,19 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
     fetchProfile();
   }, [fetchProfile]);
 
-  const contextValue: ProfileContextType = {
-    profile,
-    loading,
-    error,
-    refetch,
-    refetchForUser,
-  };
+  // Memoized so provider re-renders (React Compiler bails on this component
+  // because of fetchProfile's try/finally) don't hand every consumer a new
+  // identity and cascade re-renders through the tree.
+  const contextValue: ProfileContextType = useMemo(
+    () => ({
+      profile,
+      loading,
+      error,
+      refetch,
+      refetchForUser,
+    }),
+    [profile, loading, error, refetch, refetchForUser]
+  );
 
   return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;
 };
