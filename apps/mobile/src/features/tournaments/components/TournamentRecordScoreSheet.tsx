@@ -17,6 +17,7 @@ import {
   TextInput,
   ActivityIndicator,
   Keyboard,
+  Alert,
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,6 +127,8 @@ function overrideErrorKey(message: string): TranslationKey {
     return 'tournamentDetail.override.errors.notInProgress';
   if (message.includes('MATCH_SLOTS_INCOMPLETE'))
     return 'tournamentDetail.override.errors.slotsIncomplete';
+  if (message.includes('CORRECTION_WINDOW_CLOSED'))
+    return 'tournamentDetail.override.errors.correctionWindowClosed';
   return 'tournamentDetail.override.errors.generic';
 }
 
@@ -144,6 +147,7 @@ export function TournamentRecordScoreActionSheet({
   const player2Name = payload?.player2Name ?? '';
   const isPickleballSport = payload?.isPickleball ?? false;
   const matchFormat = payload?.matchFormat;
+  const isFinal = payload?.isFinal ?? false;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -289,21 +293,45 @@ export function TournamentRecordScoreActionSheet({
     Keyboard.dismiss();
     lightHaptic();
     setError(null);
-    override.mutate({
-      tournamentMatchId,
-      winnerRegistrationId: winningSide === 1 ? player1RegId : player2RegId,
-      score: serializeSets(validSets),
-      tournamentId,
-    });
+
+    const submit = () =>
+      override.mutate({
+        tournamentMatchId,
+        winnerRegistrationId: winningSide === 1 ? player1RegId : player2RegId,
+        score: serializeSets(validSets),
+        tournamentId,
+      });
+
+    // The final crowns the champion and releases the ranking points, and it can
+    // only be corrected for a short window afterwards. Confirm before writing.
+    if (isFinal) {
+      Alert.alert(
+        t('tournamentDetail.override.confirmFinal.title'),
+        t('tournamentDetail.override.confirmFinal.message', {
+          champion: winningSide === 1 ? player1Name : player2Name,
+          score: serializeSets(validSets),
+        }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('tournamentDetail.override.confirmFinal.cta'), onPress: submit },
+        ]
+      );
+      return;
+    }
+
+    submit();
   }, [
     validSets,
     winningSide,
     isPickleballSport,
+    isFinal,
     override,
     tournamentMatchId,
     tournamentId,
     player1RegId,
     player2RegId,
+    player1Name,
+    player2Name,
     t,
   ]);
 

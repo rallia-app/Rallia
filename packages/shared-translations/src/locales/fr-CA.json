@@ -5216,12 +5216,18 @@
       "title": "Inscrire le résultat",
       "subtitle": "Entrez le score final. Le gagnant est déterminé automatiquement.",
       "confirm": "Enregistrer le résultat",
+      "confirmFinal": {
+        "title": "Confirmer le résultat de la finale",
+        "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Vous pouvez encore corriger pendant 24 heures.",
+        "cta": "Confirmer le champion"
+      },
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
         "nextMatchPlayed": "Vous ne pouvez plus modifier ce score. La prochaine partie a déjà été jouée.",
         "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
+        "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demandez l'aide d'un admin.",
         "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
       }
     },

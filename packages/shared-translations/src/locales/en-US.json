@@ -5216,12 +5216,18 @@
       "title": "Record the result",
       "subtitle": "Enter the final score. The winner is set automatically.",
       "confirm": "Save result",
+      "confirmFinal": {
+        "title": "Confirm the final result",
+        "message": "{champion} wins {score} and is crowned champion. Ranking points go out right away. You can still fix this for 24 hours.",
+        "cta": "Confirm the champion"
+      },
       "errors": {
         "notOverridable": "This match can't be edited anymore.",
         "nextMatchPlayed": "You can't change this score now. The next game has already been played.",
         "winnerNotInMatch": "Pick one of the two players in this match.",
         "notInProgress": "The tournament isn't in progress.",
         "slotsIncomplete": "Both players aren't set yet for this match.",
+        "correctionWindowClosed": "The 24-hour window to correct this result has closed. Ask an admin for help.",
         "generic": "Couldn't save the result. Please try again."
       }
     },

@@ -2397,6 +2397,7 @@ export const TournamentDetail: React.FC = () => {
       if (!tournament) return;
       lightHaptic();
       const sportName = sports.find(s => s.id === tournament.sport_id)?.name;
+      const match = matches.find(m => m.id === tournamentMatchId);
       SheetManager.show('tournament-record-score', {
         payload: {
           tournamentMatchId,
@@ -2407,13 +2408,14 @@ export const TournamentDetail: React.FC = () => {
           player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
           isPickleball: sportName === 'pickleball',
           matchFormat: tournament.match_format,
+          isFinal: !!totalRounds && match?.round_number === totalRounds,
           onSuccess: () => {
             successHaptic();
           },
         },
       });
     },
-    [tournament, sports, nameByRegId, seedByRegId, t]
+    [tournament, sports, matches, totalRounds, nameByRegId, seedByRegId, t]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;

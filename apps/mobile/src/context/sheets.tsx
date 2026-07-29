@@ -367,6 +367,9 @@ declare module 'react-native-actions-sheet' {
         player2Name: string;
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'>;
+        // The final decides the champion and releases ranking points, so the
+        // sheet asks for confirmation before submitting.
+        isFinal?: boolean;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
