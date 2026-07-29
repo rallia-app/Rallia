@@ -51,18 +51,27 @@ export function TournamentPartnerPickerActionSheet({
     sportId
   );
 
+  // Runs with an empty query too, which returns the sport's players (the RPC
+  // excludes the caller). That is what keeps the picker from opening empty:
+  // "recent partners" only knows about doubles games whose score was submitted,
+  // because team_number — the only way to tell a teammate from an opponent — is
+  // assigned at score submission. A player with unscored doubles games, or none,
+  // has no recents at all, which is the common case.
   const { players, isLoading: isSearching } = usePlayerSearch({
     sportId,
     currentUserId,
     searchQuery,
     pageSize: 20,
-    enabled: !!sportId && !!currentUserId && searchQuery.length >= 2,
+    enabled: !!sportId && !!currentUserId,
   });
 
-  const showingSearch = searchQuery.length >= 2;
+  const isSearchQuery = searchQuery.length >= 2;
+  // Recents lead when we have them; otherwise fall straight through to the
+  // browsable list rather than showing an empty sheet.
+  const showingRecents = !isSearchQuery && recentPartners.length > 0;
   const rows: PickerRow[] = useMemo(
-    () => (showingSearch ? players : recentPartners),
-    [showingSearch, players, recentPartners]
+    () => (showingRecents ? recentPartners : players),
+    [showingRecents, players, recentPartners]
   );
 
   const handleClose = useCallback(() => {
@@ -126,7 +135,9 @@ export function TournamentPartnerPickerActionSheet({
     [selected, handleSelect, colors, isDark]
   );
 
-  const isLoading = showingSearch ? isSearching : isLoadingRecent;
+  // Only spin for the list actually being rendered: while recents are still
+  // resolving we can't yet know which of the two lists that is.
+  const isLoading = isLoadingRecent || (!showingRecents && isSearching);
 
   return (
     <BaseActionSheet
@@ -145,9 +156,13 @@ export function TournamentPartnerPickerActionSheet({
           testID="partner-search-input"
         />
 
-        {!showingSearch && rows.length > 0 ? (
+        {!isSearchQuery && rows.length > 0 ? (
           <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionHeader}>
-            {t('tournamentDetail.partner.recentHeader').toUpperCase()}
+            {t(
+              showingRecents
+                ? 'tournamentDetail.partner.recentHeader'
+                : 'tournamentDetail.partner.browseHeader'
+            ).toUpperCase()}
           </Text>
         ) : null}
 
@@ -160,7 +175,7 @@ export function TournamentPartnerPickerActionSheet({
             <Ionicons name="search-outline" size={36} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
               {t(
-                showingSearch
+                isSearchQuery
                   ? 'tournamentDetail.partner.noResults'
                   : 'tournamentDetail.partner.empty'
               )}

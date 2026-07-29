@@ -27,8 +27,20 @@ import { getTournamentInviteLink } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
-import { useThemeStyles, useTranslation } from '../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 import * as Analytics from '../../../services/analytics';
+
+/**
+ * Map a link-minting failure to a user-facing reason. The RPC is organizer- or
+ * admin-only and refuses terminal tournaments, so "why can't I see a link" has
+ * a real answer worth showing instead of an endless spinner.
+ */
+function inviteErrorKey(message: string | undefined): TranslationKey {
+  if (message?.includes('NOT_ORGANIZER')) return 'tournamentDetail.invite.errors.notOrganizer';
+  if (message?.includes('TOURNAMENT_TERMINAL')) return 'tournamentDetail.invite.errors.terminal';
+  if (message?.includes('TOURNAMENT_NOT_FOUND')) return 'tournamentDetail.invite.errors.notFound';
+  return 'tournamentDetail.invite.errors.generic';
+}
 
 export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite'>) {
   const tournamentId = payload?.tournamentId ?? '';
@@ -40,8 +52,14 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
   const { session } = useAuth();
   const [copied, setCopied] = useState(false);
 
-  const { data: link, isLoading } = useTournamentInviteLink(tournamentId, !!tournamentId);
-  const { code: referralCode } = useReferral(session?.user?.id);
+  const {
+    data: link,
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useTournamentInviteLink(tournamentId, !!tournamentId);
+  const { code: referralCode, codeLoading } = useReferral(session?.user?.id);
   const reset = useResetTournamentInvite({
     onSuccess: () => toast.success(t('tournamentDetail.invite.resetDone')),
     onError: () => toast.error(t('tournamentDetail.invite.resetFailed')),
@@ -56,6 +74,14 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
           utm_content: 'invite_sheet',
         })
       : '';
+
+  // The link needs both halves: the token and the sender's referral code. Spin
+  // only while we lack a link AND something is still in flight; once nothing is
+  // in flight and we still have no link, that is a failure worth naming rather
+  // than a permanent spinner. Keyed off the absence of a link so a background
+  // refetch never pulls the QR code out from under the user.
+  const isPreparing = !inviteLink && (isLoading || codeLoading || isFetching);
+  const hasFailed = !inviteLink && !isPreparing;
 
   // One "link surfaced" signal per sheet open, once the link resolves.
   const surfacedRef = useRef(false);
@@ -141,12 +167,33 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {isLoading || !inviteLink ? (
+          {isPreparing ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.buttonActive} />
               <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
                 {t('tournamentDetail.invite.generating')}
               </Text>
+            </View>
+          ) : hasFailed ? (
+            <View style={styles.loadingContainer} testID="invite-link-error">
+              <Ionicons name="link-outline" size={40} color={colors.textMuted} />
+              <Text size="base" weight="semibold" color={colors.text} style={styles.errorTitle}>
+                {t('tournamentDetail.invite.errors.title')}
+              </Text>
+              <Text size="sm" color={colors.textMuted} style={styles.errorBody}>
+                {t(inviteErrorKey(error?.message))}
+              </Text>
+              <Button
+                variant="secondary"
+                size="md"
+                onPress={() => {
+                  void lightHaptic();
+                  void refetch();
+                }}
+                isDark={isDark}
+              >
+                {t('common.retry')}
+              </Button>
             </View>
           ) : (
             <>
@@ -282,6 +329,16 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: spacingPixels[3],
+  },
+  errorTitle: {
+    marginTop: spacingPixels[3],
+    textAlign: 'center',
+  },
+  errorBody: {
+    marginTop: spacingPixels[2],
+    marginBottom: spacingPixels[4],
+    textAlign: 'center',
+    paddingHorizontal: spacingPixels[4],
   },
   description: {
     textAlign: 'center',

@@ -5099,7 +5099,14 @@
       "resetWarning": "The current link will stop working. Players already registered keep their spot.",
       "resetDone": "New invite link ready",
       "resetFailed": "Couldn't reset the link. Please try again.",
-      "linkInfo": "Anyone who uses this link is registered right away, even if registration normally requires approval."
+      "linkInfo": "Anyone who uses this link is registered right away, even if registration normally requires approval.",
+      "errors": {
+        "title": "Can't show an invite link",
+        "notOrganizer": "Only the organizer can create an invite link for this tournament. Ask them to share it with you.",
+        "terminal": "This tournament is cancelled or archived, so its invite link is closed.",
+        "notFound": "This tournament couldn't be found.",
+        "generic": "Couldn't prepare the invite link. Please try again."
+      }
     },
     "inviteLanding": {
       "invalidTitle": "Invite link not valid",
@@ -5195,7 +5202,8 @@
       "title": "Pick your partner",
       "searchPlaceholder": "Search players",
       "recentHeader": "Recent partners",
-      "empty": "No recent partners yet. Search to find your partner.",
+      "browseHeader": "All players",
+      "empty": "No players found for this sport yet.",
       "noResults": "No players found",
       "confirmCta": "Register with {name}",
       "confirmCtaEmpty": "Pick a partner"

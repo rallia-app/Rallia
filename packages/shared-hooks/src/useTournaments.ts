@@ -934,6 +934,10 @@ export function useTournamentInviteLink(tournamentId: string | undefined, enable
     queryKey: tournamentKeys.inviteLink(tournamentId ?? ''),
     queryFn: () => getOrCreateTournamentInvite(tournamentId!),
     enabled: !!tournamentId && enabled,
+    // Every failure mode here is terminal (NOT_ORGANIZER, TOURNAMENT_TERMINAL,
+    // TOURNAMENT_NOT_FOUND) — retrying only delays the error state the share
+    // sheet now renders, and the sheet offers an explicit retry.
+    retry: false,
   });
 }
 

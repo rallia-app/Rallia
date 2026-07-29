@@ -5099,7 +5099,14 @@
       "resetWarning": "Le lien actuel cessera de fonctionner. Les joueurs déjà inscrits gardent leur place.",
       "resetDone": "Nouveau lien d'invitation prêt",
       "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
-      "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation."
+      "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation.",
+      "errors": {
+        "title": "Impossible d'afficher un lien d'invitation",
+        "notOrganizer": "Seul l'organisateur peut créer un lien d'invitation pour ce tournoi. Demande-lui de te le partager.",
+        "terminal": "Ce tournoi est annulé ou archivé, donc son lien d'invitation est fermé.",
+        "notFound": "Ce tournoi est introuvable.",
+        "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
+      }
     },
     "inviteLanding": {
       "invalidTitle": "Lien d'invitation non valide",
@@ -5195,7 +5202,8 @@
       "title": "Choisis ton partenaire",
       "searchPlaceholder": "Chercher des joueurs",
       "recentHeader": "Partenaires récents",
-      "empty": "Pas encore de partenaire récent. Cherche pour trouver ton partenaire.",
+      "browseHeader": "Tous les joueurs",
+      "empty": "Aucun joueur trouvé pour ce sport pour le moment.",
       "noResults": "Aucun joueur trouvé",
       "confirmCta": "S'inscrire avec {name}",
       "confirmCtaEmpty": "Choisis un partenaire"
