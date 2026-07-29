@@ -1057,6 +1057,14 @@ function App() {
                     // and consumers calling .has() on the rehydrated value
                     // crash with "undefined is not a function".
                     if (root === 'blockedUserIds' || root === 'favoriteUserIds') return false;
+                    // Heavy infinite lists that are always refetched when
+                    // their screen opens: chat message pages (50/page per
+                    // conversation) and the notification list. Persisting
+                    // them bloats every dehydrate/serialize cycle for zero
+                    // cold-start benefit. Unread counts stay persisted —
+                    // they're tiny and power the badges at launch.
+                    if (root === 'chat' && sub === 'messages') return false;
+                    if (root === 'notifications' && sub === 'list') return false;
                     return true;
                   },
                 },

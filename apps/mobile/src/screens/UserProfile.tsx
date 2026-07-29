@@ -290,10 +290,17 @@ const UserProfile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Refresh completeness when returning from SportProfile (e.g. after
+  // editing favorite facilities, rating, or play style). The first focus is
+  // skipped: ProfileCompletenessProvider already fetches on mount, so
+  // refetching here doubled 4 Supabase queries on every screen open.
+  const hasFocusedOnceRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      // Refresh completeness when returning from SportProfile (e.g. after
-      // editing favorite facilities, rating, or play style)
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        return;
+      }
       profileCompleteness.refetch();
     }, [profileCompleteness.refetch])
   );

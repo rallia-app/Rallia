@@ -332,8 +332,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // (checkAccountSuspended signs out + clears the session if suspended,
         // and nulls previousSessionRef first so it won't trip sessionExpired).
         // Avoids gating the whole post-sign-in load on the suspend-check call.
-        setSession(newSession);
+        //
+        // Same-user refreshes keep the previous state identity: publishing the
+        // fresh session object re-rendered the entire authenticated tree every
+        // hour for a token rotation no consumer can observe (nothing reads
+        // token fields from this context — the supabase client holds its own).
+        // The ref below still gets the fresh session, and USER_UPDATED events
+        // fall through to the unconditional setSession.
         previousSessionRef.current = newSession;
+        setSession(prev => (prev && prev.user.id === newSession.user.id ? prev : newSession));
         void checkAccountSuspended(newSession.user.id);
         return;
       }
