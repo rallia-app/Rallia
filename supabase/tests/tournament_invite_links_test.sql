@@ -59,13 +59,18 @@ BEGIN
   v_link2 := tournament_invite_get_or_create(v_t.id);
   ASSERT v_link.id = v_link2.id, 'get_or_create not idempotent';
 
-  -- 2. non-organizer cannot mint
+  -- 2. non-organizer cannot mint on THIS tournament. Since 20260729140000 a
+  -- player can mint their own shareable link, but only on a public,
+  -- non-invite-only tournament; this fixture is private, so the refusal now
+  -- names the real reason (not shareable) rather than the caller's role.
+  -- The player-link path itself is covered by
+  -- supabase/tests/tournament_player_invite_links_test.sql.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_p2, 'role','authenticated')::text, true);
   BEGIN
     PERFORM tournament_invite_get_or_create(v_t.id);
     RAISE EXCEPTION 'non-organizer minted';
   EXCEPTION WHEN OTHERS THEN
-    ASSERT SQLERRM = 'NOT_ORGANIZER', 'wrong error: ' || SQLERRM;
+    ASSERT SQLERRM = 'SHARING_NOT_AVAILABLE', 'wrong error: ' || SQLERRM;
   END;
 
   -- 3. token preview reveals the private tournament + count; direct reads stay RLS-hidden

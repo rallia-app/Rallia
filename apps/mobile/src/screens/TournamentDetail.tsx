@@ -2499,28 +2499,6 @@ export const TournamentDetail: React.FC = () => {
     return () => clearTimeout(timer);
   }, [params.openInviteSheet, isOrganizer, tournament, navigation]);
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: adminActions.enabled
-        ? () => (
-            <TouchableOpacity
-              onPress={() => {
-                lightHaptic();
-                setShowActionsMenu(true);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel={t('tournamentDetail.sections.manage')}
-              style={styles.headerMenuButton}
-              testID="tournament-overflow-menu"
-            >
-              <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
-            </TouchableOpacity>
-          )
-        : undefined,
-    });
-  }, [navigation, adminActions.enabled, colors.text, t]);
-
   const sport = useMemo(
     () => sports.find(s => s.id === tournament?.sport_id),
     [sports, tournament]
@@ -2598,6 +2576,16 @@ export const TournamentDetail: React.FC = () => {
     });
   }, [tournament]);
 
+  // Any player can invite friends into a public, open tournament: their link
+  // redeems through the normal rules (band applies, approval mode queues), so
+  // sharing it hands out no privilege the sharer doesn't have. Mirrors the mint
+  // conditions in tournament_invite_get_or_create.
+  const canPlayerShare =
+    !isOrganizer &&
+    tournament?.visibility === 'public' &&
+    tournament?.status === 'registration_open' &&
+    tournament?.registration_mode !== 'invite_only';
+
   // Post-close, pre-bracket: hand the organizer the still-active share link so
   // they can admit late entrants (the in-app invite picker closes with the
   // registration window, but the link stays live until the bracket publishes).
@@ -2608,6 +2596,45 @@ export const TournamentDetail: React.FC = () => {
       payload: { tournamentId: tournament.id, tournamentName: tournament.name },
     });
   }, [tournament]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight:
+        adminActions.enabled || canPlayerShare
+          ? () => (
+              <View style={styles.headerActions}>
+                {canPlayerShare && (
+                  <TouchableOpacity
+                    onPress={handleShareInviteLink}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('tournamentDetail.invite.shareCta')}
+                    style={styles.headerMenuButton}
+                    testID="tournament-player-share"
+                  >
+                    <Ionicons name="share-outline" size={22} color={colors.text} />
+                  </TouchableOpacity>
+                )}
+                {adminActions.enabled && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      lightHaptic();
+                      setShowActionsMenu(true);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('tournamentDetail.sections.manage')}
+                    style={styles.headerMenuButton}
+                    testID="tournament-overflow-menu"
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
+          : undefined,
+    });
+  }, [navigation, adminActions.enabled, canPlayerShare, handleShareInviteLink, colors.text, t]);
 
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -5210,6 +5237,10 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
   },
   buttonDisabled: { opacity: 0.6 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerMenuButton: {
     paddingHorizontal: spacingPixels[2],
     paddingVertical: spacingPixels[1],

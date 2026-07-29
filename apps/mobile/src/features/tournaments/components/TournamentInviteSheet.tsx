@@ -39,6 +39,8 @@ function inviteErrorKey(message: string | undefined): TranslationKey {
   if (message?.includes('NOT_ORGANIZER')) return 'tournamentDetail.invite.errors.notOrganizer';
   if (message?.includes('TOURNAMENT_TERMINAL')) return 'tournamentDetail.invite.errors.terminal';
   if (message?.includes('TOURNAMENT_NOT_FOUND')) return 'tournamentDetail.invite.errors.notFound';
+  if (message?.includes('SHARING_NOT_AVAILABLE'))
+    return 'tournamentDetail.invite.errors.sharingUnavailable';
   return 'tournamentDetail.invite.errors.generic';
 }
 
@@ -74,6 +76,11 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
           utm_content: 'invite_sheet',
         })
       : '';
+
+  // A player-shared link redeems through the normal rules, so it promises the
+  // recipient something different from the organizer's skeleton key, and reset
+  // is organizer-only.
+  const isPlayerLink = link?.kind === 'player';
 
   // The link needs both halves: the token and the sender's referral code. Spin
   // only while we lack a link AND something is still in flight; once nothing is
@@ -198,7 +205,11 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
           ) : (
             <>
               <Text size="sm" color={colors.textSecondary} style={styles.description}>
-                {t('tournamentDetail.invite.description')}
+                {t(
+                  isPlayerLink
+                    ? 'tournamentDetail.invite.descriptionPlayer'
+                    : 'tournamentDetail.invite.description'
+                )}
               </Text>
 
               <View style={[styles.qrContainer, { backgroundColor: colors.buttonInactive }]}>
@@ -261,23 +272,29 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
                   {t('tournamentDetail.invite.share')}
                 </Button>
 
-                <TouchableOpacity
-                  style={[styles.resetButton, { borderColor: colors.border }]}
-                  onPress={handleReset}
-                  disabled={reset.isPending}
-                  testID="invite-reset-link"
-                >
-                  <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
-                  <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                    {t('tournamentDetail.invite.resetLink')}
-                  </Text>
-                </TouchableOpacity>
+                {!isPlayerLink && (
+                  <TouchableOpacity
+                    style={[styles.resetButton, { borderColor: colors.border }]}
+                    onPress={handleReset}
+                    disabled={reset.isPending}
+                    testID="invite-reset-link"
+                  >
+                    <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
+                    <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
+                      {t('tournamentDetail.invite.resetLink')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.infoSection}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
                 <Text size="xs" style={{ color: colors.textMuted, marginLeft: 6, flex: 1 }}>
-                  {t('tournamentDetail.invite.linkInfo')}
+                  {t(
+                    isPlayerLink
+                      ? 'tournamentDetail.invite.linkInfoPlayer'
+                      : 'tournamentDetail.invite.linkInfo'
+                  )}
                 </Text>
               </View>
             </>

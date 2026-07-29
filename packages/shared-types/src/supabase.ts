@@ -8868,6 +8868,7 @@ export type Database = {
           created_by: string
           expires_at: string | null
           id: string
+          kind: string
           label: string | null
           max_uses: number | null
           revoked_at: string | null
@@ -8880,6 +8881,7 @@ export type Database = {
           created_by: string
           expires_at?: string | null
           id?: string
+          kind?: string
           label?: string | null
           max_uses?: number | null
           revoked_at?: string | null
@@ -8892,6 +8894,7 @@ export type Database = {
           created_by?: string
           expires_at?: string | null
           id?: string
+          kind?: string
           label?: string | null
           max_uses?: number | null
           revoked_at?: string | null
@@ -14024,6 +14027,7 @@ export type Database = {
           created_by: string
           expires_at: string | null
           id: string
+          kind: string
           label: string | null
           max_uses: number | null
           revoked_at: string | null
@@ -14049,6 +14053,7 @@ export type Database = {
           created_by: string
           expires_at: string | null
           id: string
+          kind: string
           label: string | null
           max_uses: number | null
           revoked_at: string | null
