@@ -77,10 +77,6 @@ export function donateFailed(props: {
   capture('donate_failed', props);
 }
 
-// The /find-a-match smoke-test funnel has its own canonical event contract in
-// lib/match-smoke-test/analytics.ts (each event carries the 9 required
-// segmentation attributes), so it deliberately does not live here.
-
 // ---- Deep-link landings ----
 
 export type InvitationLandingType =

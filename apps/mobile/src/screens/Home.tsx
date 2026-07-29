@@ -1280,16 +1280,25 @@ const Home = () => {
   // won't re-emit viewability on refocus — replay the last viewable snapshot
   // into the fresh session instead, and close the gate while away so
   // background refetches can't fire impressions (the prod inflation bug).
-  const [homeFocusNonce, setHomeFocusNonce] = useState(0);
+  //
+  // The session counter is a ref, not state: bumping state here re-rendered
+  // the entire Home screen on every refocus just to drive the jfy_viewed
+  // analytics effect below.
+  const homeFocusNonceRef = useRef(0);
+  // Latest-callback ref, synced by an effect next to the callback definition
+  // below — keeps this focus callback's identity stable across data changes.
+  const maybeFireJfySectionViewedRef = useRef<(() => void) | null>(null);
   useFocusEffect(
     useCallback(() => {
-      // Deferred so the tab-switch frame paints before Home's full re-render.
+      // Deferred so the tab-switch frame paints before impression replay.
       const handle = runWhenIdle(() => {
-        setHomeFocusNonce(n => n + 1);
+        homeFocusNonceRef.current += 1;
         for (const token of lastJfyViewableRef.current) {
           fireJfyImpression(token.item, token.index);
         }
         recomputeJfyGate();
+        // Data may already be settled on refocus — fire for the new session.
+        maybeFireJfySectionViewedRef.current?.();
       });
       return () => {
         handle.cancel();
@@ -2140,12 +2149,16 @@ const Home = () => {
 
   // jfy_section_viewed: once per focus session, after the section settles.
   // "Viewed" here means Home focused with data resolved — per-card visibility
-  // lives in the impression events.
+  // lives in the impression events. Two triggers, same guard: the focus
+  // handler above (data already settled on refocus) and the effect below
+  // (focused first, data settles later). The ref indirection keeps the focus
+  // callback's identity stable across data changes.
   const jfyViewedForNonce = useRef(0);
-  useEffect(() => {
-    if (homeFocusNonce === 0 || jfyViewedForNonce.current === homeFocusNonce) return;
+  const maybeFireJfySectionViewed = useCallback(() => {
+    const nonce = homeFocusNonceRef.current;
+    if (nonce === 0 || jfyViewedForNonce.current === nonce) return;
     if (!showNearbySection || showJfyLoading) return;
-    jfyViewedForNonce.current = homeFocusNonce;
+    jfyViewedForNonce.current = nonce;
     const matchCount = justForYouItems.filter(i => i.kind === 'match').length;
     Analytics.jfySectionViewed({
       item_count: justForYouItems.length,
@@ -2153,7 +2166,15 @@ const Home = () => {
       suggestion_count: justForYouItems.length - matchCount,
       is_empty: justForYouItems.length === 0,
     });
-  }, [homeFocusNonce, showNearbySection, showJfyLoading, justForYouItems]);
+  }, [showNearbySection, showJfyLoading, justForYouItems]);
+
+  useEffect(() => {
+    maybeFireJfySectionViewedRef.current = maybeFireJfySectionViewed;
+  }, [maybeFireJfySectionViewed]);
+
+  useEffect(() => {
+    maybeFireJfySectionViewed();
+  }, [maybeFireJfySectionViewed]);
 
   const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>

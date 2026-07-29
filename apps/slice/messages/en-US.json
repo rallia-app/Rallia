@@ -110,6 +110,7 @@
       "continueCta": "Continue",
       "submitting": "Saving…",
       "privacyNote": "We'll only use this to reach you about your game.",
+      "eraseLink": "Ask us to delete it anytime.",
       "errors": {
         "email": "Enter a valid email address.",
         "phone": "Enter a valid 10-digit phone number.",
@@ -157,7 +158,28 @@
       "headline": "This was a test, and you weren't charged.",
       "message": "No card field was ever shown and no payment was or will be taken. We're validating how many players want us to set up their games before we build it.",
       "thanks": "Thanks for helping us build the real thing.",
-      "purpose": "Your interest tells us this is worth building for your city."
+      "purpose": "Your interest tells us this is worth building for your city.",
+      "eraseIntro": "Want the info you gave us gone?",
+      "eraseCta": "Delete my info",
+      "eraseDeleting": "Deleting…",
+      "eraseDone": "Deleted. We're not keeping anything you gave us.",
+      "eraseError": "Something went wrong. Please try again."
+    }
+  },
+  "eraseData": {
+    "title": "Delete your info",
+    "subtitle": "Enter the email you gave us and we'll erase everything we kept from your request: your email, your phone number and your preferences.",
+    "emailPlaceholder": "you@email.com",
+    "cta": "Delete my info",
+    "submitting": "Deleting…",
+    "note": "Nothing else is kept, and there's no account to close.",
+    "done": {
+      "title": "It's gone.",
+      "message": "If that email was in our list, everything tied to it has been deleted."
+    },
+    "errors": {
+      "email": "Enter a valid email address.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "seo": {
