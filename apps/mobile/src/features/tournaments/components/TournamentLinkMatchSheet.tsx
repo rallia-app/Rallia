@@ -3,9 +3,10 @@
  *
  * Picker that links one of the caller's already-played, verified matches to a
  * bracket slot. Lists the eligible matches (both bracket players joined, same
- * sport, verified result, not yet linked) as MatchCard-style cards — each side
- * shows the player's avatar and first name, with the sets-won score and the
- * per-set breakdown between them — and attaches the chosen one on tap. Built on
+ * sport, verified result, not yet linked) as MatchCard-style cards. Each side
+ * shows the player's avatar and name (first name alone for singles, first name
+ * + last initial per player for a doubles pair), with the sets-won score and
+ * the per-set breakdown between them, and attaches the chosen one on tap. Built on
  * BaseActionSheet for consistent header, safe-area, and dismiss handling.
  */
 
@@ -27,6 +28,7 @@ import {
   successHaptic,
   warningHaptic,
   getProfilePictureUrl,
+  getInitialName,
 } from '@rallia/shared-utils';
 import {
   useLinkableMatchesForSlot,
@@ -193,7 +195,7 @@ const PlayerAvatar: React.FC<{
   );
 };
 
-/** One side: avatar(s) + first name(s) — a pair for doubles — hugging the central score. */
+/** One side: avatar(s) + name(s), a pair for doubles, hugging the central score. */
 const PlayerSide: React.FC<{
   sideProfiles: Array<PlayerProfile | undefined>;
   won: boolean;
@@ -201,9 +203,13 @@ const PlayerSide: React.FC<{
   colors: ThemeColors;
   trophyColor: string;
 }> = ({ sideProfiles, won, align, colors, trophyColor }) => {
+  // Pairs carry the last initial so two teammates stay tellable apart, matching
+  // the bracket's pair labels. A lone player keeps the bare first name: this
+  // card is compact and there is nobody to confuse them with.
+  const isPair = sideProfiles.length > 1;
   const name =
     sideProfiles
-      .map(p => p?.first_name?.trim())
+      .map(p => (isPair ? getInitialName(p, '') : (p?.first_name?.trim() ?? '')))
       .filter(Boolean)
       .join(' & ') || '—';
   const avatars = (

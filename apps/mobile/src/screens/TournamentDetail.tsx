@@ -54,6 +54,7 @@ import {
   successHaptic,
   warningHaptic,
   getHumanName,
+  getInitialName,
   getProfilePictureUrl,
   formatPrice,
   tournamentRankingHeadline,
@@ -2020,12 +2021,17 @@ export const TournamentDetail: React.FC = () => {
       const p = profiles?.[r.user_id];
       // Always use first (+ last). display_name is intentionally ignored
       // per the app-wide convention in @rallia/shared-utils/getHumanName.
-      const name = p ? getHumanName(p, '') : '';
-      // Doubles entries render as a pair label ("Alex & Sam") everywhere the
-      // registration is shown: bracket slots, champion, opponent, score sheet.
+      // Doubles entries render as a pair label everywhere the registration is
+      // shown: bracket slots, champion, opponent, score sheet. Two full names on
+      // one line overflow essentially always, so pairs shorten to first name +
+      // last initial ("Mathis L. & Jean-Daniel S."). Singles keep the full name,
+      // where there is room for it.
       const partner = r.partner_user_id ? profiles?.[r.partner_user_id] : undefined;
-      const partnerName = partner ? getHumanName(partner, '') : '';
-      const label = partnerName && name ? `${name} & ${partnerName}` : name;
+      const label = partner
+        ? [getInitialName(p, ''), getInitialName(partner, '')].filter(Boolean).join(' & ')
+        : p
+          ? getHumanName(p, '')
+          : '';
       if (label) map.set(r.id, label);
     }
     return map;

@@ -29,3 +29,21 @@ export function getShortName(profile: NameFields | null | undefined, fallback = 
   if (!profile) return fallback;
   return profile.first_name?.trim() || fallback;
 }
+
+/**
+ * First name + last initial ("Mathis L.") -> fallback.
+ * Use where two names share one line and the full pair would overflow, but a
+ * bare first name would be ambiguous: doubles team labels above all.
+ * Falls back to the first name alone when there is no last name.
+ * Never falls back to display_name.
+ */
+export function getInitialName(
+  profile: NameFields | null | undefined,
+  fallback = 'Player'
+): string {
+  if (!profile) return fallback;
+  const first = profile.first_name?.trim();
+  if (!first) return fallback;
+  const initial = profile.last_name?.trim()?.[0];
+  return initial ? `${first} ${initial.toUpperCase()}.` : first;
+}
