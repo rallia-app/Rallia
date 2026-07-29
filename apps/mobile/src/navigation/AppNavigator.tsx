@@ -213,25 +213,27 @@ function SportSelectorWithContext() {
   // Determine if user is a guest (not signed in)
   // const isGuest = !session?.user;
 
-  // Refetch profile when auth state changes (e.g., user first authenticates)
+  // Refetch profile when auth state changes (e.g., user first authenticates).
+  // Keyed on the user id and written without an eslint-disable, which made
+  // React Compiler skip this component.
+  const sessionUserId = session?.user?.id;
   useEffect(() => {
-    if (session?.user) {
+    if (sessionUserId) {
       refetch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, refetch]);
+  }, [sessionUserId, refetch]);
 
   // Refetch profile when actions sheet mode changes from 'onboarding' to 'actions'
   // This indicates onboarding was completed and the profile needs to be refreshed
   const prevContentModeRef = React.useRef<typeof contentMode>(contentMode);
   useEffect(() => {
-    if (prevContentModeRef.current === 'onboarding' && contentMode === 'actions' && session?.user) {
+    if (prevContentModeRef.current === 'onboarding' && contentMode === 'actions' && sessionUserId) {
       // Onboarding was just completed, refetch profile and sports
       refetch();
       refetchSports();
     }
     prevContentModeRef.current = contentMode;
-  }, [contentMode, session?.user, refetch]);
+  }, [contentMode, sessionUserId, refetch, refetchSports]);
 
   // For signed-in users, only show if onboarding is completed
   // For guests, always allow (they browse all public matches)

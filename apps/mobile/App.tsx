@@ -167,6 +167,7 @@ import {
   TourProvider,
 } from './src/context';
 import { appOpened, deepLinkOpened } from './src/services/analytics';
+import { runWhenIdle } from './src/utils/runWhenIdle';
 import { fetchDeferredAppLink, setMetaUserId, setMetaUserData } from './src/lib/meta';
 import { Logger } from './src/services/logger';
 import { JustForYouPrefetch } from './src/components/JustForYouPrefetch';
@@ -227,6 +228,12 @@ const queryPersister = createAsyncStoragePersister({
   key: '@rallia/rq-cache',
   serialize: serializeQueryCache,
   deserialize: deserializeQueryCache,
+  // Serializing the whole cache is a synchronous JS-thread cost that lands
+  // mid-navigation while queries churn; the cache only needs to be roughly
+  // current for cold-start hydration, so persist at most once per 5s instead
+  // of the 1s default (asyncThrottle runs on the trailing edge, so the last
+  // burst still gets written).
+  throttleTime: 5000,
 });
 
 // Bump this string to invalidate every persisted query at once — e.g. after a
@@ -950,10 +957,16 @@ function AppContent() {
           // Fresh queries (within staleTime) are not affected.
           focusManager.setFocused(true);
 
-          // Track screen views in PostHog
+          // Track screen views in PostHog. Deferred off the transition frame:
+          // each capture synchronously JSON.stringifys PostHog's whole
+          // persisted cache (flags, person props, event queue), which is a
+          // real per-navigation JS-thread cost for signed-in users.
           const currentRoute = navigationRef.current?.getCurrentRoute();
           if (currentRoute?.name) {
-            posthogClient?.screen(currentRoute.name);
+            const screenName = currentRoute.name;
+            runWhenIdle(() => {
+              posthogClient?.screen(screenName);
+            });
           }
         }}
       >

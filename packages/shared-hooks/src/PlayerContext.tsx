@@ -441,18 +441,35 @@ export const PlayerProvider: React.FC<PlayerProviderProps> = ({ children, userId
     [player?.max_travel_distance]
   );
 
-  const contextValue: PlayerContextType = {
-    player,
-    loading,
-    error,
-    refetch,
-    maxTravelDistanceKm,
-    primaryRating,
-    sportRatings,
-    sportPreferences,
-    reputationDisplay,
-    reputationTotalEvents,
-  };
+  // Memoized so provider re-renders (React Compiler bails on this component
+  // because of fetchPlayer's try/finally) don't hand every consumer a new
+  // identity and cascade re-renders through the tree.
+  const contextValue: PlayerContextType = useMemo(
+    () => ({
+      player,
+      loading,
+      error,
+      refetch,
+      maxTravelDistanceKm,
+      primaryRating,
+      sportRatings,
+      sportPreferences,
+      reputationDisplay,
+      reputationTotalEvents,
+    }),
+    [
+      player,
+      loading,
+      error,
+      refetch,
+      maxTravelDistanceKm,
+      primaryRating,
+      sportRatings,
+      sportPreferences,
+      reputationDisplay,
+      reputationTotalEvents,
+    ]
+  );
 
   return <PlayerContext.Provider value={contextValue}>{children}</PlayerContext.Provider>;
 };

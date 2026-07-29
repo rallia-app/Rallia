@@ -17,6 +17,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -29,10 +31,10 @@ import {
   useTogglePinConversation,
   useToggleMuteConversation,
   useToggleArchiveConversation,
-  useUpdateLastSeen,
   useBlockedUserIds,
   useFavoriteUserIds,
   useMarkMessagesAsDelivered,
+  chatKeys,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
 import type { ChatInboxFilter, ConversationFilter } from '@rallia/shared-types';
@@ -120,11 +122,23 @@ const Chat = () => {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Subscribe to real-time updates
-  useConversationsRealtime(playerId);
+  // Subscribe to real-time updates. This screen stays mounted app-wide
+  // (tab preload + freezeOnBlur), so while it's blurred realtime events only
+  // mark the conversation list stale instead of refetching the heavy list RPC.
+  const isFocused = useIsFocused();
+  useConversationsRealtime(playerId, { isScreenVisible: isFocused });
 
-  // Update last seen for online status tracking
-  useUpdateLastSeen(playerId);
+  // Refetch anything the blurred-state events marked stale when the user
+  // actually returns to the inbox.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!isFocused || !playerId) return;
+    void queryClient.refetchQueries({
+      queryKey: chatKeys.playerConversations(playerId),
+      type: 'active',
+      stale: true,
+    });
+  }, [isFocused, playerId, queryClient]);
 
   // Mutations for conversation actions
   const { mutate: togglePin } = useTogglePinConversation();
@@ -138,10 +152,15 @@ const Chat = () => {
   // Mark messages as delivered when conversations are loaded
   const { mutate: markAsDelivered } = useMarkMessagesAsDelivered();
 
+  // conv.id → last_message_at already marked delivered. Without this guard,
+  // any refetch of the list re-fired one delivery mutation per unread
+  // conversation, even for conversations with no new messages.
+  const deliveredRef = useRef(new Map<string, string | null>());
   useEffect(() => {
     if (!playerId || !conversations || conversations.length === 0) return;
     conversations.forEach(conv => {
-      if (conv.unread_count > 0) {
+      if (conv.unread_count > 0 && deliveredRef.current.get(conv.id) !== conv.last_message_at) {
+        deliveredRef.current.set(conv.id, conv.last_message_at);
         markAsDelivered({
           conversationId: conv.id,
           recipientId: playerId,

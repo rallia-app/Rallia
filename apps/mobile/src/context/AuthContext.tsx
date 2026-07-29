@@ -19,6 +19,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
   PropsWithChildren,
 } from 'react';
@@ -587,23 +588,40 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [queryClient]);
 
-  const value: AuthContextType = {
-    // State
-    session,
-    loading,
-    isAuthenticated: !!session,
-    user: session?.user ?? null,
-    sessionExpired,
-    clearSessionExpired,
-    accountSuspended,
-    clearAccountSuspended,
+  // Memoized so provider re-renders (React Compiler bails on this component
+  // because of signOut's try/finally) don't hand every consumer a new
+  // identity and cascade re-renders through the tree.
+  const value: AuthContextType = useMemo(
+    () => ({
+      // State
+      session,
+      loading,
+      isAuthenticated: !!session,
+      user: session?.user ?? null,
+      sessionExpired,
+      clearSessionExpired,
+      accountSuspended,
+      clearAccountSuspended,
 
-    // Auth methods
-    signInWithProvider,
-    signInWithEmail,
-    verifyOtp,
-    signOut,
-  };
+      // Auth methods
+      signInWithProvider,
+      signInWithEmail,
+      verifyOtp,
+      signOut,
+    }),
+    [
+      session,
+      loading,
+      sessionExpired,
+      clearSessionExpired,
+      accountSuspended,
+      clearAccountSuspended,
+      signInWithProvider,
+      signInWithEmail,
+      verifyOtp,
+      signOut,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

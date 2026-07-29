@@ -51,6 +51,7 @@ import {
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
+import { SessionRecordScoreActionSheet } from '#/features/leagues/components/SessionRecordScoreSheet';
 import type { TournamentEditData } from '#/features/tournaments';
 import type { LeagueEditData } from '#/features/leagues';
 // Facilities components
@@ -367,6 +368,9 @@ declare module 'react-native-actions-sheet' {
         player2Name: string;
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'>;
+        // The final decides the champion and releases ranking points, so the
+        // sheet asks for confirmation before submitting.
+        isFinal?: boolean;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -392,6 +396,21 @@ declare module 'react-native-actions-sheet' {
         entryFormat: import('@rallia/shared-types').Enums<'entry_format'>;
         team1UserIds: string[];
         team2UserIds: string[];
+        onSuccess?: () => void;
+        onDismiss?: () => void;
+      };
+    }>;
+    'session-record-score': SheetDefinition<{
+      payload: {
+        sessionMatchId: string;
+        sessionId: string;
+        seasonId: string;
+        versionWas: number;
+        teamAName: string;
+        teamBName: string;
+        isPickleball: boolean;
+        matchFormat?: import('@rallia/shared-types').Enums<'match_format'> | null;
+        isEdit?: boolean;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -957,6 +976,7 @@ export const Sheets = () => {
         'tournament-record-score': TournamentRecordScoreActionSheet,
         'tournament-link-match': TournamentLinkMatchActionSheet,
         'session-link-match': SessionLinkMatchActionSheet,
+        'session-record-score': SessionRecordScoreActionSheet,
         'tournament-partner-picker': TournamentPartnerPickerActionSheet,
         'tournament-edit': TournamentEditActionSheet,
         'tournament-invite': TournamentInviteSheet,

@@ -16,6 +16,7 @@ import React, {
   createContext,
   useContext,
   useCallback,
+  useMemo,
   useState,
   useEffect,
   ReactNode,
@@ -163,14 +164,15 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     price?: number;
   } | null>(null);
 
-  // Refetch profile when auth state changes
-  // Refetch profile when auth state changes
+  // Refetch profile when auth state changes. Keyed on the user id (not the
+  // session object) so token refreshes don't re-trigger it — and written
+  // without an eslint-disable, which made React Compiler skip this component.
+  const sessionUserId = session?.user?.id;
   useEffect(() => {
-    if (session?.user) {
+    if (sessionUserId) {
       refetch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, refetch]);
+  }, [sessionUserId, refetch]);
 
   /**
    * Compute the appropriate mode based on current auth/profile state
@@ -412,32 +414,62 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     await refetch();
   }, [refetch]);
 
-  const contextValue: ActionsSheetContextType = {
-    openSheet,
-    openSheetForEdit,
-    openSheetForTournamentEdit,
-    openSheetForMatchCreation,
-    openSheetForTournamentCreation,
-    openSheetForLeagueCreation,
-    openSheetForMatchCreationFromBooking,
-    closeSheet,
-    contentMode,
-    setContentMode,
-    refreshProfile,
-    editMatchData,
-    clearEditMatch,
-    shouldOpenMatchCreation,
-    clearMatchCreationFlag,
-    shouldOpenTournamentCreation,
-    clearTournamentCreationFlag,
-    shouldOpenLeagueCreation,
-    clearLeagueCreationFlag,
-    openSheetForInvitePlayers,
-    shouldOpenInvitePlayers,
-    clearInvitePlayersFlag,
-    initialBookingForWizard,
-    clearInitialBookingFlag,
-  };
+  // Memoized so provider re-renders don't hand every consumer (26+
+  // useRequireOnboarding call sites) a new identity on each render.
+  const contextValue: ActionsSheetContextType = useMemo(
+    () => ({
+      openSheet,
+      openSheetForEdit,
+      openSheetForTournamentEdit,
+      openSheetForMatchCreation,
+      openSheetForTournamentCreation,
+      openSheetForLeagueCreation,
+      openSheetForMatchCreationFromBooking,
+      closeSheet,
+      contentMode,
+      setContentMode,
+      refreshProfile,
+      editMatchData,
+      clearEditMatch,
+      shouldOpenMatchCreation,
+      clearMatchCreationFlag,
+      shouldOpenTournamentCreation,
+      clearTournamentCreationFlag,
+      shouldOpenLeagueCreation,
+      clearLeagueCreationFlag,
+      openSheetForInvitePlayers,
+      shouldOpenInvitePlayers,
+      clearInvitePlayersFlag,
+      initialBookingForWizard,
+      clearInitialBookingFlag,
+    }),
+    [
+      openSheet,
+      openSheetForEdit,
+      openSheetForTournamentEdit,
+      openSheetForMatchCreation,
+      openSheetForTournamentCreation,
+      openSheetForLeagueCreation,
+      openSheetForMatchCreationFromBooking,
+      closeSheet,
+      contentMode,
+      setContentMode,
+      refreshProfile,
+      editMatchData,
+      clearEditMatch,
+      shouldOpenMatchCreation,
+      clearMatchCreationFlag,
+      shouldOpenTournamentCreation,
+      clearTournamentCreationFlag,
+      shouldOpenLeagueCreation,
+      clearLeagueCreationFlag,
+      openSheetForInvitePlayers,
+      shouldOpenInvitePlayers,
+      clearInvitePlayersFlag,
+      initialBookingForWizard,
+      clearInitialBookingFlag,
+    ]
+  );
 
   return (
     <ActionsSheetContext.Provider value={contextValue}>{children}</ActionsSheetContext.Provider>

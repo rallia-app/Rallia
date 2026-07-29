@@ -4670,13 +4670,10 @@
     },
     "score": {
       "title": "Entrer le pointage",
-      "winnerPrompt": "Qui a gagné?",
-      "scorePlaceholder": "Pointage (p. ex. 6-4 6-2)",
+      "subtitle": "Entrez le score. Le gagnant est déterminé automatiquement.",
       "enter": "Entrer le pointage",
       "edit": "Modifier le pointage",
       "save": "Enregistrer",
-      "saving": "Enregistrement...",
-      "cancel": "Annuler",
       "saved": "Pointage enregistré 🙌",
       "played": "Jouée"
     },
@@ -5099,7 +5096,14 @@
       "resetWarning": "Le lien actuel cessera de fonctionner. Les joueurs déjà inscrits gardent leur place.",
       "resetDone": "Nouveau lien d'invitation prêt",
       "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
-      "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation."
+      "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation.",
+      "errors": {
+        "title": "Impossible d'afficher un lien d'invitation",
+        "notOrganizer": "Seul l'organisateur peut créer un lien d'invitation pour ce tournoi. Demande-lui de te le partager.",
+        "terminal": "Ce tournoi est annulé ou archivé, donc son lien d'invitation est fermé.",
+        "notFound": "Ce tournoi est introuvable.",
+        "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
+      }
     },
     "inviteLanding": {
       "invalidTitle": "Lien d'invitation non valide",
@@ -5195,7 +5199,8 @@
       "title": "Choisis ton partenaire",
       "searchPlaceholder": "Chercher des joueurs",
       "recentHeader": "Partenaires récents",
-      "empty": "Pas encore de partenaire récent. Cherche pour trouver ton partenaire.",
+      "browseHeader": "Tous les joueurs",
+      "empty": "Aucun joueur trouvé pour ce sport pour le moment.",
       "noResults": "Aucun joueur trouvé",
       "confirmCta": "S'inscrire avec {name}",
       "confirmCtaEmpty": "Choisis un partenaire"
@@ -5216,12 +5221,18 @@
       "title": "Inscrire le résultat",
       "subtitle": "Entrez le score final. Le gagnant est déterminé automatiquement.",
       "confirm": "Enregistrer le résultat",
+      "confirmFinal": {
+        "title": "Confirmer le résultat de la finale",
+        "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Vous pouvez encore corriger pendant 24 heures.",
+        "cta": "Confirmer le champion"
+      },
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
         "nextMatchPlayed": "Vous ne pouvez plus modifier ce score. La prochaine partie a déjà été jouée.",
         "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
+        "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demandez l'aide d'un admin.",
         "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
       }
     },

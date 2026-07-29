@@ -157,7 +157,7 @@ DECLARE
   v_tester uuid;   -- jdl.sonkin@gmail.com
   v_peer uuid;     -- lefrancmathis@gmail.com
   v_p uuid[]; v_pk uuid[]; v_t tournaments; v_net uuid;
-  v_match uuid; v_opponent uuid; v_v integer; i integer;
+  v_match uuid; v_opponent uuid; v_result uuid; v_v integer; i integer;
 BEGIN
   SELECT id INTO v_tennis   FROM sport WHERE name = 'tennis';
   SELECT id INTO v_pickle   FROM sport WHERE name = 'pickleball';
@@ -405,7 +405,13 @@ BEGIN
       SET team_number = 2, status = 'joined', joined_at = now() - interval '3 days';
     INSERT INTO match_result (match_id, winning_team, team1_score, team2_score,
                               is_verified, verified_at, submitted_by, confirmed_by)
-    VALUES (v_match, 1, 2, 0, true, now() - interval '2 days', v_tester, v_opponent);
+    VALUES (v_match, 1, 2, 0, true, now() - interval '2 days', v_tester, v_opponent)
+    RETURNING id INTO v_result;
+    -- Required: the bracket score is string_agg over match_set, so without these
+    -- rows linking advances the winner but leaves the bracket cell blank.
+    INSERT INTO match_set (match_result_id, set_number, team1_score, team2_score)
+    VALUES (v_result, 1, 6, 4),
+           (v_result, 2, 6, 3);
   END IF;
 
   -- 20. An invitation waiting for the tester to accept.

@@ -12,6 +12,7 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   Alert,
   Image,
@@ -277,12 +278,40 @@ const InfoRow: React.FC<{ label: string; value: string; colors: ScreenColors }> 
   colors,
 }) => (
   <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
-    <Text size="sm" color={colors.textMuted}>
+    <Text size="sm" color={colors.textMuted} style={styles.infoRowLabel}>
       {label}
     </Text>
-    <Text size="base" weight="semibold" color={colors.text}>
+    <Text size="base" weight="semibold" color={colors.text} style={styles.infoRowValue}>
       {value}
     </Text>
+  </View>
+);
+
+/** Standalone card holding a single soft "label over full-width value" block —
+ *  for free-text fields (description) that shouldn't sit in a cramped right
+ *  column. Mirrors TournamentDetail's LabeledBlock. */
+const LabeledBlock: React.FC<{
+  label: string;
+  value?: string;
+  colors: ScreenColors;
+  children?: React.ReactNode;
+}> = ({ label, value, colors, children }) => (
+  <View style={styles.section}>
+    <View
+      style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+    >
+      <View style={styles.stackedBlock}>
+        <Text size="sm" color={colors.textMuted}>
+          {label}
+        </Text>
+        {value ? (
+          <Text size="sm" color={colors.text} style={styles.stackedValue}>
+            {value}
+          </Text>
+        ) : null}
+        {children}
+      </View>
+    </View>
   </View>
 );
 
@@ -1032,6 +1061,7 @@ export const LeagueDetail: React.FC = () => {
   const route = useRoute<Route>();
   const { leagueId } = route.params;
   const isDark = theme === 'dark';
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const colors = useMemo<ScreenColors>(
@@ -2153,6 +2183,38 @@ export const LeagueDetail: React.FC = () => {
     [navigation, leagueId]
   );
 
+  // Pull-to-refresh: rosters, seasons and paid-enrolment state all settle
+  // server-side after the user leaves the screen, so refetch the whole set.
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: leagueKeys.detail(leagueId) }),
+        qc.invalidateQueries({ queryKey: leagueKeys.members(leagueId) }),
+        qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) }),
+        // The roster can move server-side while the user sits here, so the
+        // card's member count is refreshed alongside the rest.
+        qc.invalidateQueries({ queryKey: leagueKeys.lists() }),
+        openSeasonId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(openSeasonId) })
+          : Promise.resolve(),
+        openSeasonId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.sessions(openSeasonId) })
+          : Promise.resolve(),
+        openSeasonId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.rankings(openSeasonId) })
+          : Promise.resolve(),
+        openSeasonId && userId
+          ? qc.invalidateQueries({
+              queryKey: leagueKeys.mySeasonMembership(openSeasonId, userId),
+            })
+          : Promise.resolve(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [qc, leagueId, openSeasonId, userId]);
+
   if (isLoading) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
@@ -2398,6 +2460,14 @@ export const LeagueDetail: React.FC = () => {
         ]}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void onRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Hero */}
         <View style={styles.heroFixed}>
@@ -3210,6 +3280,14 @@ export const LeagueDetail: React.FC = () => {
         {/* Details */}
         {currentTabKey === 'details' && (
           <View style={styles.tabContent}>
+            {league.description?.trim() ? (
+              <LabeledBlock
+                label={t('leagueDetail.labels.description')}
+                value={league.description}
+                colors={colors}
+              />
+            ) : null}
+
             <Section title={t('leagueDetail.tabs.details')} colors={colors}>
               <InfoRow
                 label={t('leagueDetail.labels.visibility')}
@@ -3225,13 +3303,6 @@ export const LeagueDetail: React.FC = () => {
                 <InfoRow
                   label={t('leagueDetail.labels.venue')}
                   value={league.venue_name}
-                  colors={colors}
-                />
-              ) : null}
-              {league.description ? (
-                <InfoRow
-                  label={t('leagueDetail.labels.description')}
-                  value={league.description}
                   colors={colors}
                 />
               ) : null}
@@ -3409,6 +3480,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  infoRowLabel: {
+    marginRight: spacingPixels[3],
+  },
+  infoRowValue: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  stackedBlock: {
+    padding: spacingPixels[4],
+    gap: spacingPixels[1],
+  },
+  stackedValue: {
+    lineHeight: 20,
   },
   stepperCard: {
     borderWidth: 1,
