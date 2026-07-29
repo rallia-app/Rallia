@@ -5086,7 +5086,9 @@
     },
     "invite": {
       "title": "Invite players",
+      "shareCta": "Invite friends",
       "description": "Anyone with this link can register for this tournament, even if it is private.",
+      "descriptionPlayer": "Invite friends to join this tournament. They register under the same rules as you did.",
       "generating": "Preparing your invite link...",
       "scanToRegister": "Scan to register for the tournament",
       "share": "Share invite link",
@@ -5097,11 +5099,13 @@
       "resetDone": "New invite link ready",
       "resetFailed": "Couldn't reset the link. Please try again.",
       "linkInfo": "Anyone who uses this link is registered right away, even if registration normally requires approval.",
+      "linkInfoPlayer": "Anyone who signs up through your link is credited to you.",
       "errors": {
         "title": "Can't show an invite link",
         "notOrganizer": "Only the organizer can create an invite link for this tournament. Ask them to share it with you.",
         "terminal": "This tournament is cancelled or archived, so its invite link is closed.",
         "notFound": "This tournament couldn't be found.",
+        "sharingUnavailable": "This tournament can't be shared by players. Ask the organizer for an invite.",
         "generic": "Couldn't prepare the invite link. Please try again."
       }
     },

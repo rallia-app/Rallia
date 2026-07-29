@@ -5086,7 +5086,9 @@
     },
     "invite": {
       "title": "Inviter des joueurs",
+      "shareCta": "Inviter des amis",
       "description": "Toute personne avec ce lien peut s'inscrire au tournoi, même s'il est privé.",
+      "descriptionPlayer": "Invite des amis à ce tournoi. Ils s'inscrivent selon les mêmes règles que toi.",
       "generating": "Préparation de votre lien d'invitation...",
       "scanToRegister": "Balayez pour vous inscrire au tournoi",
       "share": "Partager le lien d'invitation",
@@ -5097,11 +5099,13 @@
       "resetDone": "Nouveau lien d'invitation prêt",
       "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
       "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation.",
+      "linkInfoPlayer": "Toute personne qui s'inscrit avec ton lien t'est créditée.",
       "errors": {
         "title": "Impossible d'afficher un lien d'invitation",
         "notOrganizer": "Seul l'organisateur peut créer un lien d'invitation pour ce tournoi. Demande-lui de te le partager.",
         "terminal": "Ce tournoi est annulé ou archivé, donc son lien d'invitation est fermé.",
         "notFound": "Ce tournoi est introuvable.",
+        "sharingUnavailable": "Ce tournoi ne peut pas être partagé par les joueurs. Demande une invitation à l'organisateur.",
         "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
       }
     },
