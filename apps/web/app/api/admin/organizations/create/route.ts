@@ -1,4 +1,4 @@
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { Enums } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
@@ -648,6 +648,9 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Org Create] Unexpected error:', error);
     return NextResponse.json(
       { error: 'An error occurred while creating the organization' },

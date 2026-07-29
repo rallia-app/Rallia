@@ -3,7 +3,7 @@
  * Text input for sending messages with reply functionality
  */
 
-import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
+import React, { useState, useCallback, useRef, memo } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -18,7 +18,6 @@ interface MessageInputProps {
   disabled?: boolean;
   replyToMessage?: MessageWithSender | null;
   onCancelReply?: () => void;
-  onTypingChange?: (isTyping: boolean) => void;
   /** When true, bottom padding is reduced to avoid gap above keyboard (safe area already accounted for by system). */
   keyboardVisible?: boolean;
 }
@@ -29,83 +28,23 @@ function MessageInputComponent({
   disabled = false,
   replyToMessage,
   onCancelReply,
-  onTypingChange,
   keyboardVisible = false,
 }: MessageInputProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const inputRef = useRef<TextInput>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const wasTypingRef = useRef(false);
-
-  // Handle text change and typing indicator
-  const handleTextChange = useCallback(
-    (text: string) => {
-      setMessage(text);
-
-      // Notify typing status
-      if (onTypingChange) {
-        const isTyping = text.length > 0;
-
-        // Only send typing indicator when status changes or periodically
-        if (isTyping && !wasTypingRef.current) {
-          onTypingChange(true);
-          wasTypingRef.current = true;
-        }
-
-        // Clear existing timeout
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-
-        // Stop typing after 2 seconds of inactivity
-        if (isTyping) {
-          typingTimeoutRef.current = setTimeout(() => {
-            onTypingChange(false);
-            wasTypingRef.current = false;
-          }, 2000);
-        } else {
-          onTypingChange(false);
-          wasTypingRef.current = false;
-        }
-      }
-    },
-    [onTypingChange]
-  );
-
-  // Cleanup typing timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      // Stop typing when component unmounts
-      if (wasTypingRef.current && onTypingChange) {
-        onTypingChange(false);
-      }
-    };
-  }, [onTypingChange]);
 
   const handleSend = useCallback(() => {
     const trimmedMessage = message.trim();
     if (trimmedMessage && !disabled) {
-      // Stop typing indicator when sending
-      if (onTypingChange && wasTypingRef.current) {
-        onTypingChange(false);
-        wasTypingRef.current = false;
-      }
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
       onSend(trimmedMessage, replyToMessage?.id);
       setMessage('');
       onCancelReply?.();
       // Keep keyboard open after sending
       inputRef.current?.focus();
     }
-  }, [message, onSend, disabled, replyToMessage, onCancelReply, onTypingChange]);
+  }, [message, onSend, disabled, replyToMessage, onCancelReply]);
 
   const canSend = message.trim().length > 0 && !disabled;
 
@@ -146,7 +85,6 @@ function MessageInputComponent({
       )}
 
       <View style={styles.inputRow}>
-
         <View
           style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}
         >
@@ -158,7 +96,7 @@ function MessageInputComponent({
               Platform.OS === 'android' && { textAlignVertical: 'center' },
             ]}
             value={message}
-            onChangeText={handleTextChange}
+            onChangeText={setMessage}
             placeholder={placeholder}
             placeholderTextColor={colors.textMuted}
             multiline

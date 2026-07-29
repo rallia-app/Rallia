@@ -1588,6 +1588,8 @@ export const TournamentDetail: React.FC = () => {
             void queryClient.invalidateQueries({
               queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
             });
+            // Paying takes a slot, so the card's count chip moves too.
+            void queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
           };
           invalidate();
           setTimeout(invalidate, 2500);
@@ -2616,6 +2618,9 @@ export const TournamentDetail: React.FC = () => {
           queryKey: tournamentKeys.participants(params.tournamentId),
         }),
         queryClient.invalidateQueries({ queryKey: tournamentKeys.matches(params.tournamentId) }),
+        // The roster can move server-side while the user sits here, so the card's
+        // count chip is refreshed alongside the rest.
+        queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() }),
         userId
           ? queryClient.invalidateQueries({
               queryKey: tournamentKeys.myRegistration(params.tournamentId, userId),

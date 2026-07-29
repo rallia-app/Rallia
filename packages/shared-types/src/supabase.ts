@@ -400,6 +400,56 @@ export type Database = {
           },
         ]
       }
+      announcement_fanout_job: {
+        Row: {
+          attempts: number
+          conversation_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          last_player_id: string | null
+          message_id: string
+          notified_count: number
+          processed_at: string | null
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          conversation_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_player_id?: string | null
+          message_id: string
+          notified_count?: number
+          processed_at?: string | null
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_player_id?: string | null
+          message_id?: string
+          notified_count?: number
+          processed_at?: string | null
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_fanout_job_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "message"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_min_version: {
         Row: {
           min_supported_version: string
@@ -3656,11 +3706,16 @@ export type Database = {
           created_at: string
           credits: number | null
           email: string | null
+          facility_id: string | null
+          facility_preference: string | null
+          home_city: string | null
+          home_region: string | null
           id: string
           langue: string | null
           location_type: string
           match_format: string | null
           match_nature: string | null
+          max_distance_km: number | null
           payment_intent_id: string | null
           phone: string | null
           phone_verified: boolean
@@ -3680,11 +3735,16 @@ export type Database = {
           created_at?: string
           credits?: number | null
           email?: string | null
+          facility_id?: string | null
+          facility_preference?: string | null
+          home_city?: string | null
+          home_region?: string | null
           id?: string
           langue?: string | null
           location_type: string
           match_format?: string | null
           match_nature?: string | null
+          max_distance_km?: number | null
           payment_intent_id?: string | null
           phone?: string | null
           phone_verified?: boolean
@@ -3704,11 +3764,16 @@ export type Database = {
           created_at?: string
           credits?: number | null
           email?: string | null
+          facility_id?: string | null
+          facility_preference?: string | null
+          home_city?: string | null
+          home_region?: string | null
           id?: string
           langue?: string | null
           location_type?: string
           match_format?: string | null
           match_nature?: string | null
+          max_distance_km?: number | null
           payment_intent_id?: string | null
           phone?: string | null
           phone_verified?: boolean
@@ -12399,6 +12464,10 @@ export type Database = {
         }[]
       }
       post_global_announcement: { Args: { p_content: string }; Returns: string }
+      process_announcement_fanout: {
+        Args: { p_batch_size?: number }
+        Returns: number
+      }
       propose_rebuttal_score: {
         Args: {
           p_match_result_id: string

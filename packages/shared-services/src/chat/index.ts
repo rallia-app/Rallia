@@ -24,7 +24,6 @@ export {
   type ReactionSummary,
   // New enhanced types
   type PlayerOnlineStatus,
-  type TypingIndicator,
   type SearchMessageResult,
 
   // Helpers
@@ -69,11 +68,6 @@ export {
   updatePlayerLastSeen,
   getPlayersOnlineStatus,
   isPlayerOnline,
-
-  // Typing Indicator Operations
-  subscribeToTypingIndicators,
-  sendTypingIndicator,
-  unsubscribeFromTypingIndicators,
 
   // Search Operations
   searchMessagesInConversation,

@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import {
   isWindowParam,
@@ -205,6 +205,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ window, ...data });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     if (error instanceof PostHogQueryError) {
       console.error('[Admin UTM] PostHog query failed:', error);
       return NextResponse.json(

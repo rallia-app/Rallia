@@ -437,20 +437,6 @@ export interface PlayerOnlineStatus {
 }
 
 /**
- * Real-time typing indicator
- * @property player_id - ID of the player typing
- * @property player_name - Display name of the player
- * @property conversation_id - ID of the conversation
- * @property timestamp - When the typing started (for timeout)
- */
-export interface TypingIndicator {
-  player_id: string;
-  player_name: string;
-  conversation_id: string;
-  timestamp: number;
-}
-
-/**
  * Result from searching messages
  * @property id - Message ID
  * @property conversation_id - Conversation the message is in

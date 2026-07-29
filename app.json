@@ -1,8 +1,0 @@
-{
-  "ios": {
-    "bundleIdentifier": "com.mathisl971.rallia"
-  },
-  "android": {
-    "package": "com.mathisl971.rallia"
-  }
-}

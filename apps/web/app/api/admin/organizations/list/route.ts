@@ -1,4 +1,4 @@
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -29,6 +29,9 @@ export async function GET() {
 
     return NextResponse.json({ organizations: organizations || [] });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Org List] Error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch organizations' },

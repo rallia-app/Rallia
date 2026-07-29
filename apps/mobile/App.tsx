@@ -51,6 +51,8 @@ Sentry.init({
   enabled: !__DEV__,
   environment: process.env.EXPO_PUBLIC_APP_ENV,
   tracesSampleRate: 0.2,
+  // Relative to tracesSampleRate: ~6% of navigations get a Hermes flamegraph.
+  profilesSampleRate: 0.3,
   // No session replay: its buffer-mode capture caused app-wide jank in prod.
   integrations: [sentryNavigationIntegration],
   enableNativeFramesTracking: !__DEV__ && !isRunningInExpoGo(),

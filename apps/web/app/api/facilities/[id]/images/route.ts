@@ -1,4 +1,4 @@
-import { isAdmin } from '@/lib/supabase/check-admin';
+import { AdminCheckError, isAdmin } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
@@ -182,6 +182,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json({ images: uploadedImages });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('Error uploading images:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to upload images' },
@@ -261,6 +264,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('Error deleting image:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete image' },
@@ -324,6 +330,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('Error updating image:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update image' },

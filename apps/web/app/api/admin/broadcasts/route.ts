@@ -4,6 +4,7 @@ import {
   resolveSegmentRecipients,
   type Recipient,
 } from '@/lib/admin/broadcasts';
+import { AdminCheckError } from '@/lib/supabase/check-admin';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Json } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
@@ -481,6 +482,9 @@ export async function POST(request: NextRequest) {
       skipped: result.body.skipped ?? 0,
     });
   } catch (err) {
+    if (err instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Broadcasts POST]', err);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }
@@ -525,6 +529,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ broadcasts: data ?? [] });
   } catch (err) {
+    if (err instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Broadcasts GET]', err);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }
@@ -554,6 +561,9 @@ export async function DELETE(request: NextRequest) {
     }
     return NextResponse.json({ success: true });
   } catch (err) {
+    if (err instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Broadcasts DELETE]', err);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }

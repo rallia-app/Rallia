@@ -13,7 +13,6 @@ export { EmojiReactionPicker } from './EmojiReactionPicker';
 export { ChatAgreementActionSheet as ChatAgreementModal } from './ChatAgreementModal';
 
 // Enhanced chat components
-export { TypingIndicator } from './TypingIndicator';
 export { AnnouncementNotice } from './AnnouncementNotice';
 export { MessageActionsSheet } from './MessageActionsSheet';
 export { ReplyBanner } from './ReplyBanner';

@@ -1,0 +1,36 @@
+{
+  "name": "slice-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev --turbopack -p 3400",
+    "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build --turbopack",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf node_modules .next"
+  },
+  "dependencies": {
+    "@radix-ui/react-popover": "^1.1.15",
+    "@supabase/supabase-js": "^2.83.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.546.0",
+    "next": "16.0.10",
+    "next-intl": "~4.5.8",
+    "posthog-js": "^1.364.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "^16.1.6",
+    "@tailwindcss/postcss": "4.1.16",
+    "@types/node": "^22",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "tailwindcss": "4.1.16",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1"
+  }
+}

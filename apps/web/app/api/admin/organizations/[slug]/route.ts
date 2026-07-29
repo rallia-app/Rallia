@@ -1,4 +1,4 @@
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient } from '@/lib/supabase/server';
 import { Enums, Tables } from '@/types';
 import { NextRequest, NextResponse } from 'next/server';
@@ -779,6 +779,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Org Update] Unexpected error:', error);
     return NextResponse.json(
       {
@@ -913,6 +916,9 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Org Delete] Unexpected error:', error);
     return NextResponse.json(
       {

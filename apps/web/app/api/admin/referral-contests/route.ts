@@ -1,4 +1,4 @@
-import { requireApiRole } from '@/lib/supabase/check-admin';
+import { AdminCheckError, requireApiRole } from '@/lib/supabase/check-admin';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -110,6 +110,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Referral Contests POST]', error);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }
@@ -189,6 +192,9 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Referral Contests PATCH]', error);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }
@@ -226,6 +232,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, deletedCount: contestIds.length });
   } catch (error) {
+    if (error instanceof AdminCheckError) {
+      return NextResponse.json({ error: 'Admin check unavailable' }, { status: 503 });
+    }
     console.error('[Admin Referral Contests DELETE]', error);
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
   }

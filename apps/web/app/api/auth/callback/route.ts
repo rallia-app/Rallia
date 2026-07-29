@@ -52,7 +52,18 @@ export async function GET(request: NextRequest) {
 
     // If admin flow, verify admin status before redirecting
     if (isAdminFlow && data.user) {
-      const userIsAdmin = await isAdmin(data.user.id);
+      // A failed lookup redirects with a retryable message, not "Access denied".
+      let userIsAdmin: boolean;
+      try {
+        userIsAdmin = await isAdmin(data.user.id);
+      } catch {
+        return NextResponse.redirect(
+          new URL(
+            `${signInPath}?error=${encodeURIComponent('Unable to verify admin access. Please try again.')}`,
+            request.url
+          )
+        );
+      }
       if (!userIsAdmin) {
         return NextResponse.redirect(
           new URL(
@@ -87,7 +98,18 @@ export async function GET(request: NextRequest) {
 
     // If admin flow, verify admin status before redirecting
     if (isAdminFlow && data.user) {
-      const userIsAdmin = await isAdmin(data.user.id);
+      // A failed lookup redirects with a retryable message, not "Access denied".
+      let userIsAdmin: boolean;
+      try {
+        userIsAdmin = await isAdmin(data.user.id);
+      } catch {
+        return NextResponse.redirect(
+          new URL(
+            `${signInPath}?error=${encodeURIComponent('Unable to verify admin access. Please try again.')}`,
+            request.url
+          )
+        );
+      }
       if (!userIsAdmin) {
         return NextResponse.redirect(
           new URL(

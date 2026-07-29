@@ -1,13 +1,13 @@
 /**
  * Realtime Service
- * Real-time subscriptions for messages, conversations, and typing indicators
+ * Real-time subscriptions for messages and conversations
  */
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { supabase } from '../supabase';
 
-import type { Message, TypingIndicator } from './chatTypes';
+import type { Message } from './chatTypes';
 
 // ============================================================================
 // MESSAGE SUBSCRIPTIONS
@@ -43,6 +43,45 @@ type BroadcastBody<TRecord> = {
  */
 function authorizeRealtime(): void {
   void supabase.realtime.setAuth();
+}
+
+// Pending trailing-edge timers per channel, cleared by unsubscribeFromChannel.
+const channelCleanups = new WeakMap<RealtimeChannel, () => void>();
+
+/**
+ * Leading + trailing throttle: fires immediately when idle, then coalesces any
+ * burst into a single trailing call at most once per `waitMs`.
+ */
+function throttleWithTrailing(
+  fn: () => void,
+  waitMs: number
+): { call: () => void; cancel: () => void } {
+  let lastRun = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return {
+    call() {
+      const now = Date.now();
+      if (now - lastRun >= waitMs) {
+        lastRun = now;
+        fn();
+        return;
+      }
+      if (!timer) {
+        timer = setTimeout(
+          () => {
+            timer = null;
+            lastRun = Date.now();
+            fn();
+          },
+          waitMs - (now - lastRun)
+        );
+      }
+    },
+    cancel() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
+  };
 }
 
 /**
@@ -174,13 +213,16 @@ export function subscribeToMatchVotes(
  * and listening to message UPDATEs would race against mark_messages_as_read.
  */
 export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
+  // Every visible message INSERT/DELETE triggers a conversation-list refetch
+  // (~120-170ms RPC), so bursts must coalesce instead of stampeding the DB.
+  const throttled = throttleWithTrailing(onUpdate, 2000);
   const channel = supabase
     .channel(`conversations:${playerId}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message' }, () =>
-      onUpdate()
+      throttled.call()
     )
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message' }, () =>
-      onUpdate()
+      throttled.call()
     )
     .on(
       'postgres_changes',
@@ -190,10 +232,11 @@ export function subscribeToConversations(playerId: string, onUpdate: () => void)
         table: 'conversation_participant',
         filter: `player_id=eq.${playerId}`,
       },
-      () => onUpdate()
+      () => throttled.call()
     )
     .subscribe();
 
+  channelCleanups.set(channel, throttled.cancel);
   return channel;
 }
 
@@ -201,113 +244,7 @@ export function subscribeToConversations(playerId: string, onUpdate: () => void)
  * Unsubscribe from a channel
  */
 export function unsubscribeFromChannel(channel: RealtimeChannel): void {
+  channelCleanups.get(channel)?.();
+  channelCleanups.delete(channel);
   void supabase.removeChannel(channel);
-}
-
-// ============================================================================
-// TYPING INDICATORS (using Supabase Realtime Presence)
-// ============================================================================
-
-// Store for active typing channels
-const typingChannels = new Map<string, RealtimeChannel>();
-
-/**
- * Subscribe to typing indicators in a conversation
- * Uses Supabase Realtime Presence for real-time typing updates
- */
-export function subscribeToTypingIndicators(
-  conversationId: string,
-  playerId: string,
-  playerName: string,
-  onTypingChange: (typingUsers: TypingIndicator[]) => void
-): RealtimeChannel {
-  const channelName = `typing:${conversationId}`;
-
-  // Clean up existing channel if any
-  const existingChannel = typingChannels.get(channelName);
-  if (existingChannel) {
-    void supabase.removeChannel(existingChannel);
-  }
-
-  const channel = supabase.channel(channelName, {
-    config: {
-      presence: {
-        key: playerId,
-      },
-    },
-  });
-
-  channel
-    .on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState();
-      const typingUsers: TypingIndicator[] = [];
-
-      for (const [key, presences] of Object.entries(state)) {
-        if (key !== playerId) {
-          const presence = presences[0] as {
-            player_name?: string;
-            timestamp?: number;
-            is_typing?: boolean;
-          };
-          // Only include users who are actively typing
-          if (presence && presence.is_typing === true) {
-            typingUsers.push({
-              player_id: key,
-              player_name: presence.player_name || 'Someone',
-              conversation_id: conversationId,
-              timestamp: presence.timestamp || Date.now(),
-            });
-          }
-        }
-      }
-
-      onTypingChange(typingUsers);
-    })
-    .subscribe(status => {
-      if ((status as string) === 'SUBSCRIBED') {
-        // Track presence with player info
-        void channel.track({
-          player_name: playerName,
-          timestamp: Date.now(),
-          is_typing: false,
-        });
-      }
-    });
-
-  typingChannels.set(channelName, channel);
-  return channel;
-}
-
-/**
- * Send typing indicator (call when user starts/stops typing)
- */
-export async function sendTypingIndicator(
-  conversationId: string,
-  playerId: string,
-  playerName: string,
-  isTyping: boolean
-): Promise<void> {
-  const channelName = `typing:${conversationId}`;
-  const channel = typingChannels.get(channelName);
-
-  if (channel) {
-    await channel.track({
-      player_name: playerName,
-      timestamp: Date.now(),
-      is_typing: isTyping,
-    });
-  }
-}
-
-/**
- * Unsubscribe from typing indicators
- */
-export function unsubscribeFromTypingIndicators(conversationId: string): void {
-  const channelName = `typing:${conversationId}`;
-  const channel = typingChannels.get(channelName);
-
-  if (channel) {
-    void supabase.removeChannel(channel);
-    typingChannels.delete(channelName);
-  }
 }

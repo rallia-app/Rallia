@@ -23,7 +23,6 @@ import {
   useChatAgreement,
   useAgreeToChatRules,
   useEditMessage,
-  useTypingIndicators,
   useToggleMuteConversation,
   useBlockedStatus,
   useFavoriteStatus,
@@ -46,7 +45,6 @@ import {
   MessageList,
   MessageInput,
   MatchOrganizerBanner,
-  TypingIndicator,
   AnnouncementNotice,
   ChatSearchBar,
   BlockedUserModal,
@@ -54,7 +52,6 @@ import {
 import {
   useThemeStyles,
   useAuth,
-  useProfile,
   useTranslation,
   useNavigateToPlayerProfile,
   useActiveConversation,
@@ -85,12 +82,9 @@ export default function ChatConversationScreen() {
 
   const { colors } = useThemeStyles();
   const { session } = useAuth();
-  const { profile } = useProfile();
   const toast = useToast();
   const { t, locale } = useTranslation();
   const playerId = session?.user?.id;
-  // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
-  const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user');
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { openSheet: openMatchDetailSheet } = useMatchDetailSheet();
@@ -178,17 +172,6 @@ export default function ChatConversationScreen() {
   const markAsReadMutation = useMarkMessagesAsRead();
   const toggleReactionMutation = useToggleReaction();
   const editMessageMutation = useEditMessage();
-
-  // Typing indicators
-  const { typingUsers, sendTyping } = useTypingIndicators(conversationId, playerId, playerName);
-
-  // Handle typing change from input
-  const handleTypingChange = useCallback(
-    (isTyping: boolean) => {
-      sendTyping(isTyping);
-    },
-    [sendTyping]
-  );
 
   // Real-time subscriptions for messages (including edits and deletes)
   // Includes haptic feedback for incoming messages (respecting mute status)
@@ -893,9 +876,6 @@ export default function ChatConversationScreen() {
         currentHighlightedId={currentHighlightedId}
       />
 
-      {/* Typing indicators */}
-      {typingUsers.length > 0 && <TypingIndicator typingUsers={typingUsers} />}
-
       {/* Show blocked modal if user has blocked the other user */}
       {isDirectChat && isBlocked ? (
         <BlockedUserModal
@@ -913,7 +893,6 @@ export default function ChatConversationScreen() {
           onSend={handleSendMessage}
           replyToMessage={replyToMessage}
           onCancelReply={handleCancelReply}
-          onTypingChange={handleTypingChange}
           keyboardVisible={isKeyboardVisible}
         />
       )}
