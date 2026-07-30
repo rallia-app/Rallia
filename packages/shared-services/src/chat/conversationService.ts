@@ -931,6 +931,12 @@ export async function getConversationUnreadCountLast7Days(
  * the server treats the active state as valid for 60 seconds.
  */
 export async function setActiveConversation(conversationId: string): Promise<void> {
+  // Suppression is per-user; without a session the RPC would run with a null
+  // auth.uid() and there is nothing to suppress.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return;
   const { error } = await supabase.rpc('set_active_conversation', {
     p_conversation_id: conversationId,
   });
@@ -944,6 +950,10 @@ export async function setActiveConversation(conversationId: string): Promise<voi
  * Call on screen blur and when the app goes to the background.
  */
 export async function clearActiveConversation(conversationId: string): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return;
   const { error } = await supabase.rpc('clear_active_conversation', {
     p_conversation_id: conversationId,
   });
