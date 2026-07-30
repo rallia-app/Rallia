@@ -795,4 +795,286 @@ BEGIN
     RAISE NOTICE 'PASS 15: late-landing results resurrect the pruned ranking row';
 END $$;
 
+-- --------------------------------------------------------------------------
+-- 16. Added seats drain the waitlist before any walk-in sees them
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_p uuid[]; v_org uuid; v_l leagues; v_j league_members;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name='tennis';
+    v_p := pg_temp.tennis_players(5);
+    v_org := v_p[5];
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM league_create(p_name=>'Drain', p_sport_id=>v_sport, p_join_mode=>'open');
+    SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
+        jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
+
+    PERFORM pg_temp.as_user(v_p[1]); PERFORM league_join(v_l.id);   -- 2/2
+    PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);   -- queued #1
+    PERFORM pg_temp.as_user(v_p[3]); PERFORM league_join(v_l.id);   -- queued #2
+
+    -- Raising the cap seats the queue synchronously, inside league_update.
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM league_update(v_l.id, v_l.version, jsonb_build_object('member_capacity', 4));
+    ASSERT (SELECT status FROM league_members WHERE league_id=v_l.id AND user_id=v_p[2]) = 'active'
+       AND (SELECT status FROM league_members WHERE league_id=v_l.id AND user_id=v_p[3]) = 'active',
+        'raising the cap must promote the whole queue into the new seats';
+    ASSERT NOT EXISTS (SELECT 1 FROM league_member_waitlist
+                        WHERE league_id=v_l.id AND promoted_at IS NULL),
+        'the queue must be fully consumed';
+
+    -- The raised cap still binds: the next walk-in queues at 4/4.
+    PERFORM pg_temp.as_user(v_p[4]);
+    SELECT * INTO v_j FROM league_join(v_l.id);
+    ASSERT v_j.status = 'pending', 'the raised cap is still a cap';
+
+    -- Removing the cap entirely drains the rest.
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM leagues WHERE id=v_l.id;
+    SELECT * INTO v_l FROM league_update(v_l.id, v_l.version, jsonb_build_object('member_capacity', NULL));
+    ASSERT (SELECT status FROM league_members WHERE league_id=v_l.id AND user_id=v_p[4]) = 'active',
+        'removing the cap must seat everyone still queued';
+
+    RAISE NOTICE 'PASS 16: capacity raises and removals drain the queue first';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 17. One open season per league
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_p uuid[]; v_org uuid; v_l leagues;
+    v_sa seasons; v_sb seasons; v_err text;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name='tennis';
+    v_p := pg_temp.tennis_players(6);
+    v_org := v_p[6];
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM league_create(p_name=>'One Open', p_sport_id=>v_sport, p_join_mode=>'open');
+    SELECT * INTO v_sa FROM season_create(v_l.id, 'Now', current_date, current_date+60);
+    SELECT * INTO v_sa FROM season_open(v_sa.id, v_sa.version);
+
+    -- Drafting the next season while one runs stays legal...
+    SELECT * INTO v_sb FROM season_create(v_l.id, 'Next', current_date+61, current_date+120);
+    ASSERT v_sb.status = 'draft', 'drafting alongside an open season is allowed';
+
+    -- ...opening it is not.
+    BEGIN
+        PERFORM season_open(v_sb.id, v_sb.version);
+        v_err := '(no error)';
+    EXCEPTION WHEN OTHERS THEN v_err := SQLERRM;
+    END;
+    ASSERT v_err = 'LEAGUE_HAS_OPEN_SEASON',
+        format('a second season_open must refuse, got %s', v_err);
+
+    SELECT * INTO v_sa FROM seasons WHERE id=v_sa.id;
+    PERFORM season_close(v_sa.id, v_sa.version);
+    SELECT * INTO v_sb FROM seasons WHERE id=v_sb.id;
+    SELECT * INTO v_sb FROM season_open(v_sb.id, v_sb.version);
+    ASSERT v_sb.status = 'open', 'closing the running season unblocks the next';
+
+    RAISE NOTICE 'PASS 17: only one season can be open at a time';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 18. Doubles sessions: 2v2 sheets, mutual pairs locked, residue benches
+--     rotate, scoring lands per player
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_p uuid[]; v_org uuid; v_l leagues; v_s seasons; v_sess sessions;
+    v_m session_matches; v_i integer; v_count integer; v_err text;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name='tennis';
+    v_p := pg_temp.tennis_players(8);
+    ASSERT array_length(v_p,1) = 8, 'need 8 active tennis players';
+    v_org := v_p[3];
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM league_create(p_name=>'Doubles Night', p_sport_id=>v_sport, p_join_mode=>'open');
+    FOR v_i IN 1..8 LOOP
+        IF v_p[v_i] <> v_org THEN
+            PERFORM pg_temp.as_user(v_p[v_i]); PERFORM league_join(v_l.id);
+        END IF;
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_s FROM season_create(v_l.id, 'D', current_date, current_date+90,
+        p_rules_override => '{"formatsAllowed":["doubles"]}'::jsonb);
+    SELECT * INTO v_s FROM season_open(v_s.id, v_s.version);
+
+    -- Night 1: all 8 confirm; p7 and p8 name each other as partners.
+    SELECT * INTO v_sess FROM session_create(v_s.id, 'D N1', now()+interval '3 days');
+    ASSERT v_sess.formats_allowed[1] = 'doubles', 'the session inherits the doubles format';
+    SELECT * INTO v_sess FROM session_publish(v_sess.id, NULL, v_sess.version);
+    FOR v_i IN 1..6 LOOP
+        PERFORM pg_temp.as_user(v_p[v_i]); PERFORM session_confirm_presence(v_sess.id, 'confirmed');
+    END LOOP;
+    PERFORM pg_temp.as_user(v_p[7]); PERFORM session_confirm_presence(v_sess.id, 'confirmed', v_p[8]);
+    PERFORM pg_temp.as_user(v_p[8]); PERFORM session_confirm_presence(v_sess.id, 'confirmed', v_p[7]);
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_sess FROM session_generate_sheet(v_sess.id, v_sess.version);
+
+    SELECT count(*) INTO v_count FROM session_matches WHERE session_id=v_sess.id;
+    ASSERT v_count = 2, format('8 confirmed -> two 2v2 matches, got %s', v_count);
+    ASSERT NOT EXISTS (SELECT 1 FROM session_matches WHERE session_id=v_sess.id
+                        AND (format <> 'doubles'
+                             OR cardinality(team_a_user_ids) <> 2
+                             OR cardinality(team_b_user_ids) <> 2)),
+        'every match must be a doubles 2v2';
+    ASSERT (SELECT count(DISTINCT u) FROM session_matches sm,
+                 unnest(sm.team_a_user_ids || sm.team_b_user_ids) u
+             WHERE sm.session_id=v_sess.id) = 8,
+        'all eight confirmed players are on the sheet';
+    ASSERT EXISTS (SELECT 1 FROM session_matches WHERE session_id=v_sess.id
+                    AND ((v_p[7] = ANY(team_a_user_ids) AND v_p[8] = ANY(team_a_user_ids))
+                      OR (v_p[7] = ANY(team_b_user_ids) AND v_p[8] = ANY(team_b_user_ids)))),
+        'the mutual pair must play as one team';
+
+    FOR v_m IN SELECT * FROM session_matches WHERE session_id=v_sess.id LOOP
+        PERFORM session_record_score(v_m.id, 'a', '6-4 6-4', 'completed', v_m.version);
+    END LOOP;
+    ASSERT (SELECT status FROM sessions WHERE id=v_sess.id) = 'completed',
+        'a doubles session completes when its matches are scored';
+    ASSERT (SELECT count(*) FROM season_rankings WHERE season_id=v_s.id AND points=10 AND wins=1) = 4
+       AND (SELECT count(*) FROM season_rankings WHERE season_id=v_s.id AND points=1 AND losses=1) = 4,
+        'doubles scoring credits each of the four winners and four losers individually';
+
+    -- Night 2: six confirm over two rounds -> one 2v2 per round, disjoint
+    -- benches, nobody sits the whole night.
+    SELECT * INTO v_sess FROM session_create(v_s.id, 'D N2', now()+interval '5 days',
+        p_rounds => 2::smallint);
+    SELECT * INTO v_sess FROM session_publish(v_sess.id, NULL, v_sess.version);
+    FOR v_i IN 1..6 LOOP
+        PERFORM pg_temp.as_user(v_p[v_i]); PERFORM session_confirm_presence(v_sess.id, 'confirmed');
+    END LOOP;
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_sess FROM session_generate_sheet(v_sess.id, v_sess.version);
+
+    ASSERT (SELECT count(*) FROM session_matches WHERE session_id=v_sess.id) = 2,
+        'six confirmed over two rounds -> one 2v2 per round';
+    ASSERT (SELECT count(DISTINCT u) FROM session_matches sm,
+                 unnest(sm.team_a_user_ids || sm.team_b_user_ids) u
+             WHERE sm.session_id=v_sess.id) = 6,
+        'rotating benches must let all six play at least one round';
+
+    -- Under four confirmed, doubles refuses to generate.
+    SELECT * INTO v_sess FROM session_create(v_s.id, 'D N3', now()+interval '7 days');
+    SELECT * INTO v_sess FROM session_publish(v_sess.id, NULL, v_sess.version);
+    PERFORM pg_temp.as_user(v_p[1]); PERFORM session_confirm_presence(v_sess.id, 'confirmed');
+    PERFORM pg_temp.as_user(v_p[2]); PERFORM session_confirm_presence(v_sess.id, 'confirmed');
+    PERFORM pg_temp.as_user(v_p[4]); PERFORM session_confirm_presence(v_sess.id, 'confirmed');
+    PERFORM pg_temp.as_user(v_org);
+    BEGIN
+        PERFORM session_generate_sheet(v_sess.id, v_sess.version);
+        v_err := '(no error)';
+    EXCEPTION WHEN OTHERS THEN v_err := SQLERRM;
+    END;
+    ASSERT v_err = 'NOT_ENOUGH_CONFIRMED',
+        format('three confirmed cannot make a doubles sheet, got %s', v_err);
+
+    RAISE NOTICE 'PASS 18: doubles sheets pair 2v2, honour partners, rotate benches, score per player';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 19. mixed_doubles pairs 2v2 like the tournament rule (entry_format <>
+--     'singles'), not as singles
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_p uuid[]; v_org uuid; v_l leagues; v_s seasons; v_sess sessions;
+    v_i integer;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name='tennis';
+    v_p := pg_temp.tennis_players(5);
+    v_org := v_p[5];
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM league_create(p_name=>'Mixed Night', p_sport_id=>v_sport, p_join_mode=>'open');
+    FOR v_i IN 1..4 LOOP
+        PERFORM pg_temp.as_user(v_p[v_i]); PERFORM league_join(v_l.id);
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_s FROM season_create(v_l.id, 'M', current_date, current_date+90,
+        p_rules_override => '{"formatsAllowed":["mixed_doubles"]}'::jsonb);
+    SELECT * INTO v_s FROM season_open(v_s.id, v_s.version);
+    SELECT * INTO v_sess FROM session_create(v_s.id, 'M N1', now()+interval '3 days');
+    SELECT * INTO v_sess FROM session_publish(v_sess.id, NULL, v_sess.version);
+    FOR v_i IN 1..4 LOOP
+        PERFORM pg_temp.as_user(v_p[v_i]); PERFORM session_confirm_presence(v_sess.id, 'confirmed');
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_sess FROM session_generate_sheet(v_sess.id, v_sess.version);
+
+    -- The regression: this used to fall through to the singles branch and
+    -- produce two 1v1 rows.
+    ASSERT (SELECT count(*) FROM session_matches WHERE session_id=v_sess.id) = 1,
+        'four confirmed in mixed doubles -> exactly one 2v2 match';
+    ASSERT NOT EXISTS (SELECT 1 FROM session_matches WHERE session_id=v_sess.id
+                        AND (format <> 'mixed_doubles'
+                             OR cardinality(team_a_user_ids) <> 2
+                             OR cardinality(team_b_user_ids) <> 2)),
+        'the match must be 2v2 and stamped mixed_doubles';
+
+    RAISE NOTICE 'PASS 19: mixed_doubles sessions pair 2v2 with the right format stamp';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 20. On an approval league, a capacity raise promotes exactly as many queue
+--     heads as seats opened — the rest keep their place
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_sport uuid; v_p uuid[]; v_org uuid; v_l leagues; v_m league_members;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name='tennis';
+    v_p := pg_temp.tennis_players(6);
+    v_org := v_p[6];
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM league_create(p_name=>'Approval Drain', p_sport_id=>v_sport, p_join_mode=>'approval');
+    SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
+        jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
+
+    PERFORM pg_temp.as_user(v_p[1]); PERFORM league_join(v_l.id);
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_m FROM league_members WHERE league_id=v_l.id AND user_id=v_p[1];
+    PERFORM league_approve_member(v_m.id, v_m.version);     -- 2/2 seated
+    PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);  -- queued 1
+    PERFORM pg_temp.as_user(v_p[3]); PERFORM league_join(v_l.id);  -- queued 2
+    PERFORM pg_temp.as_user(v_p[4]); PERFORM league_join(v_l.id);  -- queued 3
+
+    -- One extra seat: exactly ONE head becomes a pending request; the other
+    -- two keep their un-promoted queue rows. Before 20260730160100 all three
+    -- were consumed (promotions to 'pending' occupy no seat, so the unbounded
+    -- loop only stopped on an empty queue).
+    PERFORM pg_temp.as_user(v_org);
+    SELECT * INTO v_l FROM leagues WHERE id=v_l.id;
+    SELECT * INTO v_l FROM league_update(v_l.id, v_l.version, jsonb_build_object('member_capacity', 3));
+
+    ASSERT (SELECT count(*) FROM league_member_waitlist
+             WHERE league_id=v_l.id AND promoted_at IS NOT NULL) = 1,
+        'one opened seat must consume exactly one queue entry';
+    ASSERT (SELECT promoted_at FROM league_member_waitlist
+             WHERE league_id=v_l.id AND user_id=v_p[2]) IS NOT NULL,
+        'the head of the queue is the one promoted';
+    ASSERT (SELECT count(*) FROM league_member_waitlist
+             WHERE league_id=v_l.id AND promoted_at IS NULL) = 2,
+        'the remaining two keep their place in line';
+
+    -- The organizer seats the promoted head; the queue is otherwise intact.
+    SELECT * INTO v_m FROM league_members WHERE league_id=v_l.id AND user_id=v_p[2];
+    PERFORM league_approve_member(v_m.id, v_m.version);
+    ASSERT (SELECT status FROM league_members WHERE league_id=v_l.id AND user_id=v_p[2]) = 'active',
+        'the promoted head is approvable into the opened seat';
+
+    RAISE NOTICE 'PASS 20: approval-league drains are bounded by opened seats';
+END $$;
+
 ROLLBACK;
