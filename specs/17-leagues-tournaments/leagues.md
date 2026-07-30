@@ -76,6 +76,10 @@ A queued joiner is held at `league_members.status = 'pending'` (not a new `waitl
 
 Promotion is `tg_league_member_promote_waitlist`, mirroring `tg_session_presence_promote_waitlist`. On an `open` league the head of the queue is promoted to `active` (and the existing membership trigger sends the "you're in" notification); on `approval` / `invite_only` it stays `pending` for the organizer to confirm.
 
+**Added seats drain the queue (20260730150200).** Raising `member_capacity`, removing it, or resuming a league whose cap was raised while paused promotes queued players into every opened seat — synchronously, inside `league_update` / `league_resume` — before any walk-in can take one. Promotion ignores `waitlist_enabled` (the flag only governs whether new joiners queue); a `NULL` capacity counts as seats-for-everyone on the drain path.
+
+**One open season per league (20260730150100).** `season_open` refuses with `LEAGUE_HAS_OPEN_SEASON` while another season is open; drafting the next season alongside a running one stays legal.
+
 **Lifecycle coherence (20260730120000).** A suspension holds its seat: `suspended` counts against `member_capacity` everywhere (join, approve, promotion re-check), and the trigger fires on any permanent departure — `active → inactive` _or_ `suspended → inactive` — so a seat frees exactly once and a walk-in can never take a suspended member's place. Leaving or being removed while queued deletes the queue entry (no involuntary re-admission later); accepting an invite or being approved consumes it. The trigger independently skips any queue entry whose membership is no longer the `pending` hold, so a stale row can never eat a promotion slot. `league_approve_member` raises `LEAGUE_FULL` at capacity — the cap binds approvals like joins; only the invite-accept path bypasses it (the organizer already chose them).
 
 Not yet surfaced: the mobile league screen has no capacity/waitlist editor and reads a queued player as a plain join request, so the copy says "request sent" rather than showing a queue position.
