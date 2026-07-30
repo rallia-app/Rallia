@@ -135,3 +135,92 @@ export function byRankPairings(
 
   return { matches, byes };
 }
+
+/**
+ * BY_RANK pairing for doubles, mirroring `lt_run_session_sheet`'s doubles
+ * branch (migration 20260730150000).
+ *
+ * Per round: `n % 4` players sit (walked in chunks along the bye queue, with
+ * pre-paired players sorted to the back so a committed pair is only split when
+ * nobody else is left); mutual pairs whose two members both play stay locked
+ * as teams; the remaining players pair adjacently in ranking order; teams are
+ * ordered by summed points (ties by lowest member id) and adjacent teams play,
+ * rotating top-team-pinned across rounds — partners keep for the night,
+ * opponents change.
+ *
+ * `mutualPairs` are preferred-partner pairs where BOTH players named each
+ * other; one-sided preferences do not bind. Entries with a member off the
+ * roster are ignored.
+ */
+export function byRankDoublesPairings(
+  players: readonly RankedPlayer[],
+  opts: {
+    rounds?: number;
+    byeQueue?: readonly string[];
+    mutualPairs?: readonly (readonly [string, string])[];
+  } = {}
+): ByRankSheet {
+  const rounds = Math.max(1, Math.trunc(opts.rounds ?? 1));
+  const sorted = [...players].sort(rankingCompare);
+  const points = new Map(sorted.map(p => [p.userId, p.points]));
+  const matches: SessionPairing[] = [];
+  const byes: SessionBye[] = [];
+
+  const roster = new Set(sorted.map(p => p.userId));
+  const pairs = (opts.mutualPairs ?? []).filter(([x, y]) => roster.has(x) && roster.has(y));
+  const pairMembers = new Set(pairs.flat());
+
+  // Same completed queue as singles, then pre-paired players move to the back.
+  const provided = (opts.byeQueue ?? []).filter(id => roster.has(id));
+  const providedSet = new Set(provided);
+  const completed = [
+    ...provided,
+    ...[...sorted]
+      .reverse()
+      .map(p => p.userId)
+      .filter(id => !providedSet.has(id)),
+  ];
+  const queue = [
+    ...completed.filter(id => !pairMembers.has(id)),
+    ...completed.filter(id => pairMembers.has(id)),
+  ];
+
+  const residue = sorted.length % 4;
+
+  for (let round = 1; round <= rounds; round++) {
+    const bench = new Set<string>();
+    for (let j = 0; j < residue; j++) {
+      bench.add(queue[((round - 1) * residue + j) % queue.length]);
+    }
+    for (const id of bench) byes.push({ roundNumber: round, userId: id });
+
+    const active = sorted.filter(p => !bench.has(p.userId));
+    const activePairs = pairs.filter(([x, y]) => !bench.has(x) && !bench.has(y));
+    const activePairMembers = new Set(activePairs.flat());
+    const singles = active.filter(p => !activePairMembers.has(p.userId));
+
+    const teams: [string, string][] = [...activePairs.map(([x, y]) => [x, y] as [string, string])];
+    for (let i = 0; i + 1 < singles.length; i += 2) {
+      teams.push([singles[i].userId, singles[i + 1].userId]);
+    }
+    teams.sort((t1, t2) => {
+      const s1 = (points.get(t1[0]) ?? 0) + (points.get(t1[1]) ?? 0);
+      const s2 = (points.get(t2[0]) ?? 0) + (points.get(t2[1]) ?? 0);
+      if (s1 !== s2) return s2 - s1;
+      const lo1 = t1[0] < t1[1] ? t1[0] : t1[1];
+      const lo2 = t2[0] < t2[1] ? t2[0] : t2[1];
+      return lo1 < lo2 ? -1 : lo1 > lo2 ? 1 : 0;
+    });
+
+    const order = rotateForRound(teams, round);
+    for (let i = 0; i + 1 < order.length; i += 2) {
+      matches.push({
+        roundNumber: round,
+        teamAUserIds: [...order[i]],
+        teamBUserIds: [...order[i + 1]],
+      });
+    }
+  }
+
+  return { matches, byes };
+}

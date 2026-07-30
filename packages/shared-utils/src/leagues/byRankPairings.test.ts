@@ -1,6 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 
 import {
+  byRankDoublesPairings,
   byRankPairings,
   rankingCompare,
   rotateForRound,
@@ -122,6 +123,88 @@ describe('byRankPairings — singles, single round', () => {
     for (const id of ['a', 'b', 'c', 'd', 'e']) {
       expect(appearances.get(id) ?? 0).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  it('doubles: teams by rank adjacency, matches by team strength', () => {
+    const { matches, byes } = byRankDoublesPairings(
+      players(
+        ['a', 80],
+        ['b', 70],
+        ['c', 60],
+        ['d', 50],
+        ['e', 40],
+        ['f', 30],
+        ['g', 20],
+        ['h', 10]
+      )
+    );
+    expect(byes).toEqual([]);
+    expect(matches).toEqual([
+      { roundNumber: 1, teamAUserIds: ['a', 'b'], teamBUserIds: ['c', 'd'] },
+      { roundNumber: 1, teamAUserIds: ['e', 'f'], teamBUserIds: ['g', 'h'] },
+    ]);
+  });
+
+  it('doubles: a mutual pair stays together; one roster-invalid pair is ignored', () => {
+    const { matches } = byRankDoublesPairings(
+      players(
+        ['a', 80],
+        ['b', 70],
+        ['c', 60],
+        ['d', 50],
+        ['e', 40],
+        ['f', 30],
+        ['g', 20],
+        ['h', 10]
+      ),
+      {
+        mutualPairs: [
+          ['b', 'g'],
+          ['ghost', 'a'],
+        ],
+      }
+    );
+    const together = matches.some(
+      m =>
+        (m.teamAUserIds.includes('b') && m.teamAUserIds.includes('g')) ||
+        (m.teamBUserIds.includes('b') && m.teamBUserIds.includes('g'))
+    );
+    expect(together).toBe(true);
+  });
+
+  it('doubles: a 6-player 2-round night rotates disjoint benches so everyone plays', () => {
+    const { matches, byes } = byRankDoublesPairings(
+      players(['a', 60], ['b', 50], ['c', 40], ['d', 30], ['e', 20], ['f', 10]),
+      { rounds: 2 }
+    );
+    expect(matches).toHaveLength(2); // one 2v2 per round
+    expect(byes).toHaveLength(4); // two benched per round
+    expect(new Set(byes.map(x => x.userId)).size).toBe(4); // benches don't repeat
+    const played = new Set(matches.flatMap(m => [...m.teamAUserIds, ...m.teamBUserIds]));
+    expect(played.size).toBe(6); // nobody sits the whole night
+  });
+
+  it('doubles: when everyone is pre-paired, a residue bench must split a pair', () => {
+    // 6 players in 3 mutual pairs, residue 2: two players sit, their orphaned
+    // partners team together, and the two intact pairs are undisturbed... but
+    // with only paired players available, benching necessarily splits pairs.
+    const { matches, byes } = byRankDoublesPairings(
+      players(['a', 60], ['b', 50], ['c', 40], ['d', 30], ['e', 20], ['f', 10]),
+      {
+        mutualPairs: [
+          ['a', 'b'],
+          ['c', 'd'],
+          ['e', 'f'],
+        ],
+      }
+    );
+    expect(byes).toHaveLength(2);
+    expect(matches).toHaveLength(1);
+    const onCourt = [...matches[0].teamAUserIds, ...matches[0].teamBUserIds];
+    expect(onCourt).toHaveLength(4);
+    // Benched + playing partitions the roster exactly.
+    const all = new Set([...onCourt, ...byes.map(b => b.userId)]);
+    expect(all.size).toBe(6);
   });
 
   it('byes a lone player and pairs nothing; an empty roster yields nothing', () => {

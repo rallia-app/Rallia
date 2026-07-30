@@ -27,6 +27,10 @@ A list of `session_matches` rows with `team_a_user_ids`, `team_b_user_ids`, `rou
 2. If `cardinality(confirmed) % 2 == 1` and format is `singles`: one player takes a BYE. Per [ranking.md § Outcome matrix](./ranking.md#outcome-matrix-authoritative), a BYE awards `pointBye` (default 1) but no win.
 3. If `cardinality(confirmed) % 4 != 0` and format is `doubles`: by default, the residue players take BYEs.
 
+### BY_RANK doubles (as built, 20260730150000 / 20260730160000)
+
+The session's primary `formats_allowed` entry picks the branch (seasons freeze it via `rules.formatsAllowed`; `session_create` copies it). Any non-`singles` format — `doubles` or `mixed_doubles` — takes the doubles path and stamps match rows with the session's actual format, the same `entry_format <> 'singles'` rule tournaments use (neither feature enforces gender for mixed). Doubles needs four confirmed. Per round: `n % 4` players sit, walked in chunks along the same fewest-byes-first queue as singles — pre-paired players sort to the back so a committed pair is only split when nobody else is left. Mutual `preferred_partner_id` pairs (both named each other; one-sided doesn't bind) lock as teams; the remaining players pair adjacently in ranking order; teams order by summed season points and adjacent teams play, rotating top-team-pinned across rounds. Partners keep for the night, opponents change. Reference implementation: `byRankDoublesPairings` in `shared-utils`.
+
 ### How the BYE is stored and who gets it (as built, 20260730100000/100100)
 
 Two deliberate divergences from the original draft above:
