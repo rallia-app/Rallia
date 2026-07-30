@@ -331,8 +331,12 @@ BEGIN
        AND (cardinality(team_a_user_ids)<>1 OR cardinality(team_b_user_ids)<>1);
     ASSERT v_bad = 0, 'even: every match must be 1v1';
 
-    -- 5th confirms (odd) -> regenerate -> 2 matches + exactly 1 unpaired (bye),
-    -- and the bye is the rank-top player
+    -- 5th confirms (odd) -> regenerate -> 2 matches + exactly 1 unpaired (bye).
+    -- Since 20260730100000 the bye goes to whoever has sat out least this
+    -- season, tie-broken by the LOWER standing then user_id — not to the
+    -- rank-top player, who previously inherited it in every round of every
+    -- session. Nobody has byed yet here, and everyone is on 0 points, so the
+    -- expected byer is the lowest user_id among the confirmed roster.
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[5]::text)::text, true);
     PERFORM session_confirm_presence(v_session.id, 'confirmed');
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
@@ -349,12 +353,13 @@ BEGIN
     SELECT sp.user_id INTO v_expected_bye FROM session_presence sp
         LEFT JOIN season_rankings sr ON sr.season_id=v_season.id AND sr.user_id=sp.user_id
         WHERE sp.session_id=v_session.id AND sp.status='confirmed'
-        ORDER BY coalesce(sr.points,0) DESC, coalesce(sr.tiebreak_seed,0) ASC, sp.user_id LIMIT 1;
+        ORDER BY coalesce(sr.points,0) ASC, sp.user_id LIMIT 1;
     SELECT sp.user_id INTO v_actual_bye FROM session_presence sp
         WHERE sp.session_id=v_session.id AND sp.status='confirmed'
           AND NOT EXISTS (SELECT 1 FROM session_matches sm WHERE sm.session_id=v_session.id
                             AND sp.user_id = ANY(sm.team_a_user_ids||sm.team_b_user_ids));
-    ASSERT v_actual_bye = v_expected_bye, 'odd: bye must be the rank-top player';
+    ASSERT v_actual_bye = v_expected_bye,
+        'odd: bye must go to the least-rested / lowest-standing confirmed player';
 
     -- lock a match -> regenerate -> locked row preserved
     SELECT id, version INTO v_locked_id, v_locked_ver FROM session_matches

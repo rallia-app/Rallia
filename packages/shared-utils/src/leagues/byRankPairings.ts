@@ -5,13 +5,28 @@
  *
  * This is the reference implementation. The authoritative runtime path is the
  * SQL helper `lt_rotate_for_round` + the pairing loop in `session_generate_sheet`
- * (migration 20260618130000_lt_session_sheet_rpcs.sql), which mirrors this file
- * — same as how `lt_seed_positions` mirrors `tournament/seedPositions.ts`.
+ * (migration 20260730100000_lt_session_bye_rotation.sql, superseding
+ * 20260618130000), which mirrors this file — same as how `lt_seed_positions`
+ * mirrors `tournament/seedPositions.ts`.
  *
- * Byes: when the confirmed count is odd, the highest-ranked player sits out.
- * The `session_matches` CHECK requires `cardinality(team_b_user_ids) IN (1, 2)`,
- * so a bye is NOT stored as a row — it is returned here (and derived in the UI)
- * as the unpaired player for that round.
+ * Byes: when the confirmed count is odd, one player sits out per round. The
+ * `session_matches` CHECK requires `cardinality(team_b_user_ids) IN (1, 2)`, so
+ * a bye is NOT stored as a row — it is returned here (and derived in the UI, and
+ * in `recalc_season_ranking`) as the unpaired player for that round.
+ *
+ * Who byes: the caller supplies `byeQueue`, the roster ordered by fewest byes
+ * taken so far this season, then lowest standing. Round R benches `byeQueue[R]`,
+ * cycling. SQL builds that queue from prior completed sessions; callers with no
+ * history can pass nothing and get reverse-ranking order (weakest sits first),
+ * which is the same answer on a season's opening night. The effective queue is
+ * always completed to a permutation of the roster (missing members appended in
+ * reverse-ranking order), so a partial or stale queue can neither starve one
+ * player with every bye nor lose the bye altogether.
+ *
+ * This replaced "the highest-ranked player byes": combined with the round
+ * rotation below (which pins the first entry), that benched the same leader in
+ * every round of every session — a 5-player, 3-round night left one member
+ * playing nothing at all.
  */
 
 export interface RankedPlayer {
@@ -61,27 +76,55 @@ export function rotateForRound<T>(sorted: readonly T[], round: number): T[] {
 }
 
 /**
- * BY_RANK pairing for singles: highest plays second-highest, etc. For an odd
- * roster the highest-ranked player byes; the remaining players pair adjacently.
+ * BY_RANK pairing for singles: highest plays second-highest, etc.
+ *
+ * Even roster: the top seed is pinned and the tail rotates per round (classic
+ * round-robin). Odd roster: one player from `byeQueue` sits out each round and
+ * the rest pair adjacently in ranking order.
+ *
+ * `byeQueue` is the bye priority — fewest byes so far this season first, then
+ * lowest standing. Omit it and the weakest confirmed player sits first, which
+ * matches SQL on an opening night when nobody has byed yet.
+ *
  * Produces pairings for rounds 1..max(1, rounds).
  */
 export function byRankPairings(
   players: readonly RankedPlayer[],
-  opts: { rounds?: number } = {}
+  opts: { rounds?: number; byeQueue?: readonly string[] } = {}
 ): ByRankSheet {
   const rounds = Math.max(1, Math.trunc(opts.rounds ?? 1));
   const sorted = [...players].sort(rankingCompare);
   const matches: SessionPairing[] = [];
   const byes: SessionBye[] = [];
 
+  // Effective queue = caller's priority entries (restricted to the roster, so
+  // a stale queue can never bench someone who isn't playing), completed to a
+  // full roster permutation in reverse ranking order — the lowest-standing
+  // player is benched first. Always covering the roster is what guarantees an
+  // odd roster records a bye and a partial queue still rotates.
+  const roster = new Set(sorted.map(p => p.userId));
+  const provided = (opts.byeQueue ?? []).filter(id => roster.has(id));
+  const providedSet = new Set(provided);
+  const queue = [
+    ...provided,
+    ...[...sorted]
+      .reverse()
+      .map(p => p.userId)
+      .filter(id => !providedSet.has(id)),
+  ];
+
   for (let round = 1; round <= rounds; round++) {
-    const order = rotateForRound(sorted, round);
-    let start = 0;
-    if (order.length % 2 === 1) {
-      byes.push({ roundNumber: round, userId: order[0].userId });
-      start = 1;
+    let order: RankedPlayer[];
+
+    if (sorted.length % 2 === 1) {
+      const byer = queue[(round - 1) % queue.length];
+      byes.push({ roundNumber: round, userId: byer });
+      order = sorted.filter(p => p.userId !== byer);
+    } else {
+      order = rotateForRound(sorted, round);
     }
-    for (let i = start; i + 1 < order.length; i += 2) {
+
+    for (let i = 0; i + 1 < order.length; i += 2) {
       matches.push({
         roundNumber: round,
         teamAUserIds: [order[i].userId],

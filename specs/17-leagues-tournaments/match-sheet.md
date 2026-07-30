@@ -24,8 +24,15 @@ A list of `session_matches` rows with `team_a_user_ids`, `team_b_user_ids`, `rou
 ## Pre-processing
 
 1. Drop pre-paired pairs from the active player set if their preferred partner also confirmed.
-2. If `cardinality(confirmed) % 2 == 1` and format is `singles`: highest-ranked player gets a BYE row (`team_a_user_ids = [user]`, `team_b_user_ids = []`, status = `walkover`, `winner_team = 'a'`). Per [ranking.md § Outcome matrix](./ranking.md#outcome-matrix-authoritative), a BYE awards `pointBye` (default 1) but no win.
-3. If `cardinality(confirmed) % 4 != 0` and format is `doubles`: by default, highest-ranked players matching the residue get BYE rows.
+2. If `cardinality(confirmed) % 2 == 1` and format is `singles`: one player takes a BYE. Per [ranking.md § Outcome matrix](./ranking.md#outcome-matrix-authoritative), a BYE awards `pointBye` (default 1) but no win.
+3. If `cardinality(confirmed) % 4 != 0` and format is `doubles`: by default, the residue players take BYEs.
+
+### How the BYE is stored and who gets it (as built, 20260730100000/100100)
+
+Two deliberate divergences from the original draft above:
+
+- **No BYE row.** The `session_matches` CHECK requires `cardinality(team_b_user_ids) IN (1, 2)`, so a one-sided row cannot exist. A bye is **derived**: a `confirmed` `session_presence` with no non-drill `session_matches` row in that session. `recalc_season_ranking` reads it the same way and credits `pointBye` plus `sessions_attended`, so a benched-but-present member is never scored as absent.
+- **The bye rotates; it is not the top seed.** The draft's "highest-ranked player" rule combined with `lt_rotate_for_round` (which pins index 1) meant the same leader sat out _every round of every session_ — a five-player, three-round night left one member with nothing to play. The bye now goes to whoever has byed **least so far this season**, tie-broken by the lower standing, and advances one place per round so a multi-round night spreads its byes.
 
 ### Pickleball odd-cardinality alternatives
 

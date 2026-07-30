@@ -38,10 +38,47 @@ describe('byRankPairings — singles, single round', () => {
     ]);
   });
 
-  it('byes the highest-ranked player on an odd roster; pairs the rest', () => {
+  it('byes the lowest-standing player on an odd roster by default; pairs the rest', () => {
     const { matches, byes } = byRankPairings(players(['a', 30], ['b', 20], ['c', 10]));
-    expect(byes).toEqual([{ roundNumber: 1, userId: 'a' }]);
-    expect(matches).toEqual([{ roundNumber: 1, teamAUserIds: ['b'], teamBUserIds: ['c'] }]);
+    expect(byes).toEqual([{ roundNumber: 1, userId: 'c' }]);
+    expect(matches).toEqual([{ roundNumber: 1, teamAUserIds: ['a'], teamBUserIds: ['b'] }]);
+  });
+
+  it('honours an explicit byeQueue (fewest byes this season first)', () => {
+    const { matches, byes } = byRankPairings(players(['a', 30], ['b', 20], ['c', 10]), {
+      byeQueue: ['b', 'c', 'a'],
+    });
+    expect(byes).toEqual([{ roundNumber: 1, userId: 'b' }]);
+    expect(matches).toEqual([{ roundNumber: 1, teamAUserIds: ['a'], teamBUserIds: ['c'] }]);
+  });
+
+  it('ignores byeQueue entries who are not on the confirmed roster', () => {
+    const { byes } = byRankPairings(players(['a', 30], ['b', 20], ['c', 10]), {
+      byeQueue: ['ghost', 'b'],
+    });
+    expect(byes).toEqual([{ roundNumber: 1, userId: 'b' }]);
+  });
+
+  it('still records a bye when byeQueue is empty or entirely off-roster', () => {
+    // The regression: an empty effective queue used to fall into the even-roster
+    // path, silently dropping the third player from both matches and byes.
+    for (const byeQueue of [[], ['ghost1', 'ghost2']]) {
+      const { matches, byes } = byRankPairings(players(['a', 30], ['b', 20], ['c', 10]), {
+        byeQueue,
+      });
+      expect(byes).toEqual([{ roundNumber: 1, userId: 'c' }]);
+      expect(matches).toEqual([{ roundNumber: 1, teamAUserIds: ['a'], teamBUserIds: ['b'] }]);
+    }
+  });
+
+  it('completes a partial byeQueue to the full roster so the bye still rotates', () => {
+    // A one-entry queue used to cycle onto the same player every round —
+    // the same starvation the queue exists to prevent.
+    const { byes } = byRankPairings(
+      players(['a', 50], ['b', 40], ['c', 30], ['d', 20], ['e', 10]),
+      { rounds: 3, byeQueue: ['b'] }
+    );
+    expect(byes.map(b => b.userId)).toEqual(['b', 'e', 'd']);
   });
 
   it('sorts unsorted input before pairing', () => {
@@ -62,6 +99,28 @@ describe('byRankPairings — singles, single round', () => {
       }
       // Exactly one bye iff odd.
       expect(byRankPairings(players(...specs)).byes).toHaveLength(n % 2);
+    }
+  });
+
+  it('rotates the bye across rounds so nobody sits out the whole night', () => {
+    // The regression: with the top seed pinned, one player used to bye in every
+    // round of an odd-roster session and play nothing at all.
+    const { matches, byes } = byRankPairings(
+      players(['a', 50], ['b', 40], ['c', 30], ['d', 20], ['e', 10]),
+      { rounds: 3 }
+    );
+
+    expect(byes).toHaveLength(3);
+    expect(new Set(byes.map(b => b.userId)).size).toBe(3);
+
+    const appearances = new Map<string, number>();
+    for (const m of matches) {
+      for (const id of [...m.teamAUserIds, ...m.teamBUserIds]) {
+        appearances.set(id, (appearances.get(id) ?? 0) + 1);
+      }
+    }
+    for (const id of ['a', 'b', 'c', 'd', 'e']) {
+      expect(appearances.get(id) ?? 0).toBeGreaterThanOrEqual(2);
     }
   });
 
