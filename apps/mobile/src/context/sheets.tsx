@@ -411,6 +411,9 @@ declare module 'react-native-actions-sheet' {
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'> | null;
         isEdit?: boolean;
+        // True when this result leaves no playable match behind, so it closes
+        // the session: the sheet confirms before writing it.
+        isDecider?: boolean;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };

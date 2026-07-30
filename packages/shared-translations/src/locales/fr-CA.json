@@ -4675,7 +4675,15 @@
       "edit": "Modifier le pointage",
       "save": "Enregistrer",
       "saved": "Pointage enregistré 🙌",
-      "played": "Jouée"
+      "played": "Jouée",
+      "confirmLast": {
+        "title": "Fermer la séance?",
+        "message": "C'est le dernier résultat. L'enregistrer ferme la séance et met à jour le classement. Tu peux encore corriger n'importe quel score pendant 24 heures.",
+        "cta": "Enregistrer et fermer"
+      },
+      "errors": {
+        "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin."
+      }
     },
     "linkPicker": {
       "title": "Lier une partie jouée",

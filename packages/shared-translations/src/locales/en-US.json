@@ -4675,7 +4675,15 @@
       "edit": "Edit score",
       "save": "Save",
       "saved": "Score saved 🙌",
-      "played": "Played"
+      "played": "Played",
+      "confirmLast": {
+        "title": "Close the session?",
+        "message": "This is the last result. Saving it closes the session and updates the standings. You can still fix any score for 24 hours.",
+        "cta": "Save and close"
+      },
+      "errors": {
+        "correctionWindowClosed": "The 24-hour window to correct this session has closed. Ask an admin for help."
+      }
     },
     "linkPicker": {
       "title": "Link a played match",

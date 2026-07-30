@@ -250,6 +250,23 @@ export const SessionDetail: React.FC = () => {
 
   const sessionScoreable = !!sess && (sess.status === 'published' || sess.status === 'in_progress');
 
+  // Scoring the last match completes the session, which used to freeze every
+  // score in it. No clock here on purpose: session_record_score owns the 24h
+  // window (20260730170000) and answers CORRECTION_WINDOW_CLOSED with copy that
+  // explains it, so the screen keeps the affordance reachable on a finished
+  // session rather than re-deriving a deadline it cannot enforce.
+  const sessionCorrectable = !!sess && sess.status === 'completed' && !!sess.completed_at;
+
+  const canEditScore = isOrganizer && (sessionScoreable || sessionCorrectable);
+
+  // The result that leaves no playable match behind closes the session, so it
+  // gets a confirmation the way a tournament final does.
+  const isSessionDecider = useCallback(
+    (m: SessionMatch) =>
+      !isScored(m) && matches.every(x => x.id === m.id || isScored(x) || x.status === 'cancelled'),
+    [matches, isScored]
+  );
+
   // Organizer/admin records an authoritative result directly (override path).
   const canOverride = useCallback(
     (m: SessionMatch) => sessionScoreable && isOrganizer && !isScored(m),
@@ -303,6 +320,7 @@ export const SessionDetail: React.FC = () => {
           isPickleball: isPickleballLeague,
           matchFormat: sess?.match_format,
           isEdit: isScored(m),
+          isDecider: isSessionDecider(m),
           onSuccess: () => {
             toast.success(t('sessionDetail.score.saved'));
             Analytics.sessionScoreSubmittedAnalytics({ sessionId });
@@ -318,6 +336,7 @@ export const SessionDetail: React.FC = () => {
       isPickleballLeague,
       sess?.match_format,
       isScored,
+      isSessionDecider,
       toast,
       t,
       invalidate,
@@ -635,9 +654,7 @@ export const SessionDetail: React.FC = () => {
                       >
                         <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                       </TouchableOpacity>
-                    ) : isScored(m) &&
-                      isOrganizer &&
-                      (sess.status === 'published' || sess.status === 'in_progress') ? (
+                    ) : isScored(m) && canEditScore ? (
                       // A recorded score stays editable by the organizer for the
                       // direct-override path; an attached match is edited through the
                       // match flow. The lock toggle protects it from a regenerate.

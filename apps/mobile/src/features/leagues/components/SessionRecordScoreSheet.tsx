@@ -13,7 +13,14 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Keyboard } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Keyboard,
+  Alert,
+} from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -44,6 +51,7 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
   const isPickleball = payload?.isPickleball ?? false;
   const matchFormat = payload?.matchFormat;
   const isEdit = payload?.isEdit ?? false;
+  const isDecider = payload?.isDecider ?? false;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -81,7 +89,11 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     },
     onError: e => {
       warningHaptic();
-      setError(e.message || t('sessionDetail.errors.generic'));
+      setError(
+        e.message?.includes('CORRECTION_WINDOW_CLOSED')
+          ? t('sessionDetail.score.errors.correctionWindowClosed')
+          : e.message || t('sessionDetail.errors.generic')
+      );
     },
   });
 
@@ -118,14 +130,31 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     setError(null);
     // Side 1 is team A, side 2 is team B: ScoreEntrySets renders them in that
     // order, so the derived side maps straight onto the pairing.
-    recordScore({
-      sessionMatchId,
-      winnerTeam: winningSide === 1 ? 'a' : 'b',
-      score: serializeSets(validSets),
-      status: 'completed',
-      versionWas,
-    });
-  }, [validSets, winningSide, isPickleball, recordScore, sessionMatchId, versionWas, t]);
+    const submit = () =>
+      recordScore({
+        sessionMatchId,
+        winnerTeam: winningSide === 1 ? 'a' : 'b',
+        score: serializeSets(validSets),
+        status: 'completed',
+        versionWas,
+      });
+
+    // This result leaves no playable match behind, so it closes the session and
+    // freezes the sheet once the correction window lapses. Confirm first.
+    if (isDecider) {
+      Alert.alert(
+        t('sessionDetail.score.confirmLast.title'),
+        t('sessionDetail.score.confirmLast.message'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('sessionDetail.score.confirmLast.cta'), onPress: submit },
+        ]
+      );
+      return;
+    }
+
+    submit();
+  }, [validSets, winningSide, isPickleball, isDecider, recordScore, sessionMatchId, versionWas, t]);
 
   return (
     <ActionSheet
