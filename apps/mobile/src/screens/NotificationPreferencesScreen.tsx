@@ -111,7 +111,9 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'league_member_approved',
   'session_published',
   'session_confirm_reminder',
+  'session_cancelled',
   'season_closed',
+  'season_cancelled',
 ] as ExtendedNotificationTypeEnum[]);
 
 // Types where only the email channel is relevant — push and sms toggles are disabled.
@@ -178,7 +180,10 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   league_member_approved: status.success.light,
   session_published: status.info.DEFAULT,
   session_confirm_reminder: accent[600],
+  // Cancellations share the tournament_cancelled colour: same kind of bad news.
+  session_cancelled: secondary[500],
   season_closed: status.info.DEFAULT,
+  season_cancelled: secondary[500],
 };
 
 // Group notification types by category

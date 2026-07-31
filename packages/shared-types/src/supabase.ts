@@ -14907,6 +14907,8 @@ export type Database = {
         | "league_member_approved"
         | "session_confirm_reminder"
         | "tournament_match_ready"
+        | "session_cancelled"
+        | "season_cancelled"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15582,6 +15584,8 @@ export const Constants = {
         "league_member_approved",
         "session_confirm_reminder",
         "tournament_match_ready",
+        "session_cancelled",
+        "season_cancelled",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

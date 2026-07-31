@@ -352,6 +352,8 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   session_published: 'calendar-outline',
   session_confirm_reminder: 'alarm-outline',
   season_closed: 'flag-outline',
+  session_cancelled: 'close-circle-outline',
+  season_cancelled: 'close-circle-outline',
   league_invitation: 'mail-outline',
   league_member_request: 'person-add-outline',
   league_member_approved: 'checkmark-circle-outline',
@@ -457,6 +459,8 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   session_published: '#4DB8A8', // Teal — info
   session_confirm_reminder: '#FF9800', // Amber — action needed
   season_closed: '#4CAF50', // Green — completion
+  session_cancelled: '#F44336', // Red — cancellation
+  season_cancelled: '#F44336', // Red — cancellation
   league_invitation: '#4DB8A8', // Teal — info
   league_member_request: '#FF9800', // Amber — action needed
   league_member_approved: '#4CAF50', // Green — accepted
@@ -558,6 +562,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   session_published: 'Session Schedule Published',
   session_confirm_reminder: 'Confirm Your Spot',
   season_closed: 'Season Closed',
+  session_cancelled: 'Session Cancelled',
+  season_cancelled: 'Season Cancelled',
   league_invitation: 'League Invitation',
   league_member_request: 'New Join Request',
   league_member_approved: 'Membership Approved',
@@ -669,6 +675,8 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   session_published: 'leagues',
   session_confirm_reminder: 'leagues',
   season_closed: 'leagues',
+  session_cancelled: 'leagues',
+  season_cancelled: 'leagues',
   league_invitation: 'leagues',
   league_member_request: 'leagues',
   league_member_approved: 'leagues',
@@ -822,6 +830,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   session_published: { email: true, push: true, sms: false },
   session_confirm_reminder: { email: false, push: true, sms: false },
   season_closed: { email: true, push: true, sms: false },
+  session_cancelled: { email: true, push: true, sms: false },
+  season_cancelled: { email: true, push: true, sms: false },
   league_invitation: { email: true, push: true, sms: false },
   league_member_request: { email: false, push: true, sms: false },
   league_member_approved: { email: true, push: true, sms: false },
@@ -903,12 +913,14 @@ export const LEAGUE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] 
   'league_member_request',
   'league_member_approved',
   'season_closed',
+  'season_cancelled',
 ];
 
 /** Session notifications — need both payload.sessionId and payload.leagueId. */
 export const SESSION_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
   'session_published',
   'session_confirm_reminder',
+  'session_cancelled',
 ];
 
 // ============================================
