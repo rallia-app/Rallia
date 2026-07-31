@@ -728,18 +728,22 @@ export const SessionDetail: React.FC = () => {
                   {t('sessionDetail.cta.confirm')}
                 </Text>
               </TouchableOpacity>
+              {/* Withdrawing is a negative action and read as neutral in a plain
+                  white outline, so it carries the danger tone the cancel controls
+                  already use rather than looking like a second confirm. */}
               <TouchableOpacity
                 onPress={() => handleConfirm('declined')}
                 disabled={isConfirming || myPresence?.status === 'declined'}
                 style={[
                   styles.ctaButton,
                   styles.ctaButtonOutline,
-                  { borderColor: colors.border },
+                  { borderColor: colors.danger },
                   (isConfirming || myPresence?.status === 'declined') && styles.disabled,
                 ]}
                 testID="cta-decline-presence"
               >
-                <Text size="sm" weight="semibold" color={colors.text}>
+                <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
+                <Text size="sm" weight="semibold" color={colors.danger}>
                   {t('sessionDetail.cta.decline')}
                 </Text>
               </TouchableOpacity>
