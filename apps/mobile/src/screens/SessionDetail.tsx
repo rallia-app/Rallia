@@ -482,6 +482,7 @@ export const SessionDetail: React.FC = () => {
           teamBName: teamLabel(m.team_b_user_ids),
           isPickleball: isPickleballLeague,
           matchFormat: sess?.match_format,
+          pointsPerGame: sess?.points_per_game,
           isEdit: isScored(m),
           isDecider: isSessionDecider(m),
           onSuccess: () => {

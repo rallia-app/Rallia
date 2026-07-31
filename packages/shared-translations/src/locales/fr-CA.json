@@ -5506,7 +5506,12 @@
       "registrationModeApproval": "Approbation",
       "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
       "registrationModeInviteOnly": "Sur invitation",
-      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire"
+      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire",
+      "matchFormatOneGame": "1 partie",
+      "matchFormatTwoOfThreeGames": "2 de 3",
+      "matchFormatThreeOfFiveGames": "3 de 5",
+      "pointsPerGame": "Points par partie",
+      "pointsPerGameHint": "Points pour gagner une partie, 2 points d'écart"
     },
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",

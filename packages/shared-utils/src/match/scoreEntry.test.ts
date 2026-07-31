@@ -147,3 +147,30 @@ describe('firstSetFailingFormat', () => {
     expect(setTargetFor(undefined)).toBeNull();
   });
 });
+
+describe('the points/games split', () => {
+  it('lets pickleball run best-of-3 at a chosen target, which the fused enum could not express', () => {
+    // "2 de 3 à 11 points": three games, two to clinch, each played to 11.
+    expect(setRulesFor('two_of_three')).toEqual({ maxSets: 3, setsToWin: 2 });
+    expect(setTargetFor('two_of_three', 11)).toBe(11);
+    expect(firstSetFailingFormat([set(11, 7), set(11, 9)], 'two_of_three', 11)).toBeNull();
+  });
+
+  it('takes points_per_game over the format target', () => {
+    expect(setTargetFor('two_of_three', 21)).toBe(21);
+    expect(setTargetFor('one_set', 15)).toBe(15);
+    // A tennis score no longer clears a to-15 game.
+    expect(firstSetFailingFormat([set(6, 4)], 'two_of_three', 15)).toBe(1);
+  });
+
+  it('falls back to the format when no target is declared', () => {
+    expect(setTargetFor('two_of_three')).toBe(6);
+    expect(setTargetFor('two_of_three', null)).toBe(6);
+    expect(setTargetFor(undefined, null)).toBeNull();
+  });
+
+  it('still reads the legacy fused labels, which survive in the enum', () => {
+    expect(setTargetFor('pickleball_to_15')).toBe(15);
+    expect(setRulesFor('pickleball_to_11')).toEqual({ maxSets: 3, setsToWin: 2 });
+  });
+});

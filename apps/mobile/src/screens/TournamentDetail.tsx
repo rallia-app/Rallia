@@ -2439,6 +2439,7 @@ export const TournamentDetail: React.FC = () => {
           player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
           isPickleball: sportName === 'pickleball',
           matchFormat: tournament.match_format,
+          pointsPerGame: tournament.points_per_game,
           isFinal: !!totalRounds && match?.round_number === totalRounds,
           onSuccess: () => {
             successHaptic();
@@ -2568,6 +2569,7 @@ export const TournamentDetail: React.FC = () => {
       endDate: tournament.end_date,
       maxParticipants: tournament.max_participants,
       matchFormat: tournament.match_format,
+      pointsPerGame: tournament.points_per_game,
       sport: {
         id: tournament.sport_id,
         name: sport?.name ?? '',

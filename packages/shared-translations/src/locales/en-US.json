@@ -5506,7 +5506,12 @@
       "registrationModeApproval": "Approval",
       "registrationModeApprovalDescription": "You approve each registration",
       "registrationModeInviteOnly": "Invite only",
-      "registrationModeInviteOnlyDescription": "Only people you invite can register"
+      "registrationModeInviteOnlyDescription": "Only people you invite can register",
+      "matchFormatOneGame": "1 game",
+      "matchFormatTwoOfThreeGames": "Best of 3",
+      "matchFormatThreeOfFiveGames": "Best of 5",
+      "pointsPerGame": "Points per game",
+      "pointsPerGameHint": "Points to win a game, win by 2"
     },
     "validation": {
       "nameRequired": "Tournament name is required",

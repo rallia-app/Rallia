@@ -102,6 +102,8 @@ export interface CreateTournamentInput {
   registrationMode?: Enums<'tournament_registration_mode'>;
   bracketType?: Enums<'bracket_type'>;
   matchFormat?: Enums<'match_format'>;
+  /** Pickleball only: points that take one game (11/15/21). */
+  pointsPerGame?: number;
   entryFormat?: Enums<'entry_format'>;
   facilityId?: string;
   venueName?: string;
@@ -262,6 +264,7 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_registration_mode: input.registrationMode,
     p_bracket_type: input.bracketType,
     p_match_format: input.matchFormat,
+    p_points_per_game: input.pointsPerGame,
     p_entry_format: input.entryFormat,
     p_facility_id: input.facilityId,
     p_venue_name: input.venueName,
@@ -302,6 +305,7 @@ export interface TournamentUpdatePatch {
   maxParticipants?: 4 | 8 | 16 | 32 | 64 | 128;
   bracketType?: Enums<'bracket_type'>;
   matchFormat?: Enums<'match_format'>;
+  pointsPerGame?: number | null;
   facilityId?: string | null;
   venueName?: string | null;
   venueAddress?: string | null;
@@ -333,6 +337,7 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   maxParticipants: 'max_participants',
   bracketType: 'bracket_type',
   matchFormat: 'match_format',
+  pointsPerGame: 'points_per_game',
   facilityId: 'facility_id',
   venueName: 'venue_name',
   venueAddress: 'venue_address',

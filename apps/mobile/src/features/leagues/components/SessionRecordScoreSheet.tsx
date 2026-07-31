@@ -52,6 +52,7 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
   const teamBName = payload?.teamBName ?? '';
   const isPickleball = payload?.isPickleball ?? false;
   const matchFormat = payload?.matchFormat;
+  const pointsPerGame = payload?.pointsPerGame ?? null;
   const isEdit = payload?.isEdit ?? false;
   const isDecider = payload?.isDecider ?? false;
   const onSuccess = payload?.onSuccess;
@@ -129,12 +130,12 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     }
     // A score from the other sport (6-4 in a to-11 draw) used to be accepted
     // outright; the format's target is the only thing that can rule it out.
-    const badSet = firstSetFailingFormat(validSets, matchFormat);
+    const badSet = firstSetFailingFormat(validSets, matchFormat, pointsPerGame);
     if (badSet !== null) {
       setError(
         t('registerMatchScore.error.formatMismatch', {
           set: String(badSet),
-          target: String(setTargetFor(matchFormat) ?? ''),
+          target: String(setTargetFor(matchFormat, pointsPerGame) ?? ''),
         })
       );
       return;
@@ -174,6 +175,7 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     isPickleball,
     isDecider,
     matchFormat,
+    pointsPerGame,
     recordScore,
     sessionMatchId,
     versionWas,

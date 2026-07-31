@@ -370,6 +370,7 @@ declare module 'react-native-actions-sheet' {
         player2Name: string;
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'>;
+        pointsPerGame?: number | null;
         // The final decides the champion and releases ranking points, so the
         // sheet asks for confirmation before submitting.
         isFinal?: boolean;
@@ -412,6 +413,7 @@ declare module 'react-native-actions-sheet' {
         teamBName: string;
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'> | null;
+        pointsPerGame?: number | null;
         isEdit?: boolean;
         // True when this result leaves no playable match behind, so it closes
         // the session: the sheet confirms before writing it.

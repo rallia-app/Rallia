@@ -28,15 +28,13 @@ export interface SetRules {
 /**
  * Sets a scorer may enter per declared format.
  *
- * The two sports name different things. Tennis formats state how many sets win
- * the match. Pickleball formats state the POINTS that win a single game, which
- * says nothing about how many games are played, so the game count is a separate
- * axis the enum cannot currently express.
+ * match_format counts games/sets to win, for both sports. How many POINTS take
+ * one game is a separate axis (points_per_game, see setTargetFor) — fusing the
+ * two is what made best-of-3 to 11 unreachable in pickleball.
  *
- * Pickleball therefore allows up to 3 games with 2 to clinch: best-of-3 to 11 is
- * the standard format and used to be unreachable, while a single-game event
- * still works because a lone decided game is submittable. Previously these were
- * pinned to exactly one game, so a second game could not be entered at all.
+ * The pickleball_to_* labels are legacy: Postgres cannot drop an enum value, so
+ * they survive on rows written before the split and are read here as the
+ * best-of-3 they were actually playing.
  */
 const FORMAT_SET_RULES: Partial<Record<Enums<'match_format'>, SetRules>> = {
   one_set: { maxSets: 1, setsToWin: 1 },
@@ -96,11 +94,10 @@ export function serializeSets(sets: SetScore[]): string {
 }
 
 /**
- * The score a side must reach to take one set/game, per format. A format that
- * declares no target is not validated at all, which is what keeps casual
- * matches (no declared format) on their old permissive behaviour.
+ * Fallback target for the legacy fused labels. Rows written before the axes
+ * were split carry the target in the format instead of points_per_game.
  */
-const FORMAT_TARGET: Partial<Record<Enums<'match_format'>, number>> = {
+const LEGACY_FORMAT_TARGET: Partial<Record<Enums<'match_format'>, number>> = {
   one_set: 6,
   two_of_three: 6,
   three_of_five: 6,
@@ -109,9 +106,21 @@ const FORMAT_TARGET: Partial<Record<Enums<'match_format'>, number>> = {
   pickleball_to_21: 21,
 };
 
-/** The winning score for one set/game under this format, or null if unconstrained. */
-export function setTargetFor(format: Enums<'match_format'> | undefined | null): number | null {
-  return (format && FORMAT_TARGET[format]) ?? null;
+/**
+ * The score a side must reach to take one set/game.
+ *
+ * `pointsPerGame` is the pickleball target (11/15/21) and wins outright when
+ * present. Otherwise the format's own target applies: 6 for tennis, and for a
+ * legacy pickleball_to_* row the number fused into its label. A context with no
+ * declared format is not validated at all, which is what keeps casual matches
+ * on their permissive behaviour.
+ */
+export function setTargetFor(
+  format: Enums<'match_format'> | undefined | null,
+  pointsPerGame?: number | null
+): number | null {
+  if (pointsPerGame != null) return pointsPerGame;
+  return (format && LEGACY_FORMAT_TARGET[format]) ?? null;
 }
 
 /**
@@ -130,9 +139,10 @@ export function setTargetFor(format: Enums<'match_format'> | undefined | null): 
  */
 export function firstSetFailingFormat(
   sets: SetScore[],
-  format: Enums<'match_format'> | undefined | null
+  format: Enums<'match_format'> | undefined | null,
+  pointsPerGame?: number | null
 ): number | null {
-  const target = setTargetFor(format);
+  const target = setTargetFor(format, pointsPerGame);
   if (target === null) return null;
   const complete = validSetsOf(sets);
   for (let i = 0; i < complete.length; i += 1) {
