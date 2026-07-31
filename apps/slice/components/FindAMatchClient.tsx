@@ -458,7 +458,6 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
       test_id: exp.testId,
       funnel_version: FUNNEL_VERSION,
       variant_valueprop: exp.variantValueProp,
-      variant_price: exp.variantPriceCents,
       sport,
       // Precise facility city once chosen; otherwise the IP-geo city so early
       // funnel events (page_view, value_prop_click…) still carry a `ville`.
@@ -847,7 +846,6 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           langue,
           sessionId: experiment.sessionId,
           variantValueProp: experiment.variantValueProp,
-          variantPriceCents: experiment.variantPriceCents,
           liquidityPlayersShown: liquidity?.playerCount,
           liquidityPctShown: liquidity?.likelihoodPct,
         }),
@@ -881,7 +879,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     if (!experiment) return;
     setSelectedPlanTier(tier);
     setError(null);
-    const plans = getMatchPlans(experiment.variantPriceCents);
+    const plans = getMatchPlans();
     trackSmokeEvent('plan_selected', eventContext(experiment, { forfait: tier }), {
       amount_cents: plans[tier].amountCents,
     });
@@ -889,7 +887,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
   const handlePaymentIntent = () => {
     if (!experiment || !selectedPlanTier) return;
-    const plans = getMatchPlans(experiment.variantPriceCents);
+    const plans = getMatchPlans();
     trackSmokeEvent(
       'payment_intent_click',
       eventContext(experiment, { forfait: selectedPlanTier }),
@@ -945,8 +943,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
   if (!experiment) return null;
 
-  const plans = getMatchPlans(experiment.variantPriceCents);
-  const unlimitedSelected = selectedPlanTier === 'weekly' || selectedPlanTier === 'monthly';
+  const plans = getMatchPlans();
 
   const renderRecapSummary = () => {
     if (!sport || !rating || !matchNature || !timeSlot) return null;
@@ -1633,42 +1630,31 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
             </span>
           </button>
 
-          {/* Unlimited — one plan, choose how you pay */}
-          <div
-            className={`rounded-[1.25rem] border-2 p-5 transition-all duration-200 ${
-              unlimitedSelected
-                ? 'border-[color:var(--smk-ink)] bg-[color:var(--smk-lime-tint)] shadow-[4px_4px_0_var(--smk-ink)]'
-                : 'border-[color:var(--smk-line)] bg-white'
-            }`}
+          {/* Unlimited monthly */}
+          <button
+            type="button"
+            onClick={() => handleSelectPlan('monthly')}
+            className={optionClass(selectedPlanTier === 'monthly')}
           >
-            <div className="flex flex-col gap-1 text-left">
-              <span className="smk-title text-lg">{t('plans.unlimited.title')}</span>
-              <span className="smk-text-muted text-sm">{t('plans.unlimited.description')}</span>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {(['weekly', 'monthly'] as const).map(tier => {
-                const price =
-                  tier === 'weekly'
-                    ? t('plans.priceWeek', {
-                        price: formatMatchPlanPrice(plans.weekly.amountCents, locale),
-                      })
-                    : t('plans.priceMonth', {
-                        price: formatMatchPlanPrice(plans.monthly.amountCents, locale),
-                      });
-                return (
-                  <button
-                    key={tier}
-                    type="button"
-                    onClick={() => handleSelectPlan(tier)}
-                    className={`${chipClass(selectedPlanTier === tier)} h-auto flex-col gap-0.5 px-3 py-2.5`}
-                  >
-                    <span className="text-sm">{t(`plans.billing.${tier}`)}</span>
-                    <span className="text-base font-bold">{price}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <span className="flex items-start justify-between gap-4">
+              <span className="flex flex-col gap-1 text-left">
+                <span className="smk-title text-lg">{t('plans.monthly.title')}</span>
+                <span className="smk-display text-3xl">
+                  {t('plans.priceMonth', {
+                    price: formatMatchPlanPrice(plans.monthly.amountCents, locale),
+                  })}
+                </span>
+                <span className="smk-text-muted text-sm">{t('plans.monthly.description')}</span>
+              </span>
+              <ChevronRight
+                className={`mt-1 h-5 w-5 shrink-0 ${
+                  selectedPlanTier === 'monthly'
+                    ? 'text-[color:var(--smk-ink)]'
+                    : 'text-[color:var(--smk-muted)]'
+                }`}
+              />
+            </span>
+          </button>
         </div>
 
         <div className="smk-note">

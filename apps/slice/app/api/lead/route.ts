@@ -10,7 +10,6 @@ import {
   LOCATION_OPTIONS,
   MATCH_NATURE_OPTIONS,
   SPORT_OPTIONS,
-  isValidMonthlyPrice,
   type FacilityPreference,
   type LocationOption,
   type MatchNatureOption,
@@ -50,7 +49,6 @@ export async function POST(request: NextRequest) {
       langue,
       sessionId,
       variantValueProp,
-      variantPriceCents,
       liquidityPlayersShown,
       liquidityPctShown,
     } = body;
@@ -111,9 +109,6 @@ export async function POST(request: NextRequest) {
     const normalizedSessionId = sessionId ? String(sessionId).slice(0, 80) : null;
     const normalizedVariantValueProp =
       variantValueProp === 'A' || variantValueProp === 'B' ? variantValueProp : null;
-    const normalizedVariantPrice = isValidMonthlyPrice(variantPriceCents)
-      ? variantPriceCents
-      : null;
     // Simulated liquidity numbers shown to this visitor (bounds match the
     // estimator's clamps) — kept so payment intent can be read against them.
     const normalizedLiquidityPlayers =
@@ -148,7 +143,6 @@ export async function POST(request: NextRequest) {
         langue: normalizedLangue,
         session_id: normalizedSessionId,
         variant_valueprop: normalizedVariantValueProp,
-        variant_price_cents: normalizedVariantPrice,
         liquidity_players_shown: normalizedLiquidityPlayers,
         liquidity_pct_shown: normalizedLiquidityPct,
       },

@@ -1,11 +1,8 @@
 import {
   SMOKE_TEST_ID,
-  pickMonthlyPriceVariant,
   pickValuePropVariant,
-  isValidMonthlyPrice,
   type LocationOption,
   type MatchNatureOption,
-  type MonthlyPriceVariant,
   type RatingOption,
   type SportOption,
   type ValuePropVariant,
@@ -19,7 +16,6 @@ export interface SmokeExperiment {
   sessionId: string;
   testId: string;
   variantValueProp: ValuePropVariant;
-  variantPriceCents: MonthlyPriceVariant;
 }
 
 // Only reached from the browser branch below, so `crypto` is always present.
@@ -35,8 +31,9 @@ function randomSessionId(): string {
 
 /**
  * Reads the session's experiment assignment, creating (and persisting) it on
- * first call. Both A/B factors are drawn once and stay fixed for the session so
- * the visitor sees a single value-prop variant and a single monthly price.
+ * first call. The value-prop variant is drawn once and stays fixed for the
+ * session. (Pricing is fixed since v3.2 — entries persisted by the price-A/B
+ * build carry an extra variantPriceCents field, which is simply ignored.)
  */
 export function getOrCreateExperiment(): SmokeExperiment {
   if (typeof window === 'undefined') {
@@ -44,7 +41,6 @@ export function getOrCreateExperiment(): SmokeExperiment {
       sessionId: 'ssr',
       testId: SMOKE_TEST_ID,
       variantValueProp: 'A',
-      variantPriceCents: 999,
     };
   }
 
@@ -54,14 +50,12 @@ export function getOrCreateExperiment(): SmokeExperiment {
       const parsed = JSON.parse(raw) as Partial<SmokeExperiment>;
       if (
         parsed.sessionId &&
-        (parsed.variantValueProp === 'A' || parsed.variantValueProp === 'B') &&
-        isValidMonthlyPrice(parsed.variantPriceCents)
+        (parsed.variantValueProp === 'A' || parsed.variantValueProp === 'B')
       ) {
         return {
           sessionId: parsed.sessionId,
           testId: SMOKE_TEST_ID,
           variantValueProp: parsed.variantValueProp,
-          variantPriceCents: parsed.variantPriceCents,
         };
       }
     }
@@ -73,7 +67,6 @@ export function getOrCreateExperiment(): SmokeExperiment {
     sessionId: randomSessionId(),
     testId: SMOKE_TEST_ID,
     variantValueProp: pickValuePropVariant(),
-    variantPriceCents: pickMonthlyPriceVariant(),
   };
   try {
     sessionStorage.setItem(EXPERIMENT_KEY, JSON.stringify(experiment));

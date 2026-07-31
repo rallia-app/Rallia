@@ -155,15 +155,10 @@
         "title": "One game",
         "description": "We organize one game for you."
       },
-      "unlimited": {
+      "monthly": {
         "title": "Unlimited",
         "description": "We organize as many games as you want."
       },
-      "billing": {
-        "weekly": "Weekly",
-        "monthly": "Monthly"
-      },
-      "priceWeek": "{price} / week",
       "priceMonth": "{price} / month",
       "bookingExcluded": "Court booking isn't included. You book your court once your game is confirmed.",
       "refundNote": "No game proposal within 1 hour? You're automatically refunded 100%.",

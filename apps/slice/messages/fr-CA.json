@@ -155,15 +155,10 @@
         "title": "Une partie",
         "description": "On organise une partie pour toi."
       },
-      "unlimited": {
+      "monthly": {
         "title": "Illimité",
         "description": "On organise autant de parties que tu veux."
       },
-      "billing": {
-        "weekly": "Hebdomadaire",
-        "monthly": "Mensuel"
-      },
-      "priceWeek": "{price} / semaine",
       "priceMonth": "{price} / mois",
       "bookingExcluded": "La réservation du terrain n'est pas incluse. Tu réserves ton terrain une fois ta partie confirmée.",
       "refundNote": "Pas de proposition de partie en moins d'une heure? Remboursement automatique à 100 %.",
