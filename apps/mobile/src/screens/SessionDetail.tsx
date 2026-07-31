@@ -326,6 +326,34 @@ export const SessionDetail: React.FC = () => {
     [matches, isScored]
   );
 
+  // The lock survives a regenerate: lt_run_session_sheet preserves locked rows
+  // when it rebuilds the sheet. It used to render only next to an already-scored
+  // match, which is the one state where it is pointless — an unscored pairing is
+  // exactly what an organizer wants to pin before regenerating.
+  const renderLockToggle = useCallback(
+    (m: SessionMatch) => (
+      <TouchableOpacity
+        onPress={() => {
+          lightHaptic();
+          setLock({ sessionMatchId: m.id, locked: !m.locked, versionWas: m.version });
+        }}
+        disabled={isLocking}
+        accessibilityLabel={
+          m.locked ? t('sessionDetail.sheet.unlock') : t('sessionDetail.sheet.lock')
+        }
+        style={styles.lockButton}
+        testID="cta-lock-match"
+      >
+        <Ionicons
+          name={m.locked ? 'lock-closed' : 'lock-open-outline'}
+          size={18}
+          color={m.locked ? colors.primary : colors.textMuted}
+        />
+      </TouchableOpacity>
+    ),
+    [setLock, isLocking, t, colors.primary, colors.textMuted]
+  );
+
   // Organizer/admin records an authoritative result directly (override path).
   const canOverride = useCallback(
     (m: SessionMatch) => sessionScoreable && isOrganizer && !isScored(m),
@@ -786,14 +814,17 @@ export const SessionDetail: React.FC = () => {
                       </View>
                     </View>
                     {canOverride(m) ? (
-                      <TouchableOpacity
-                        onPress={() => openScoreEntry(m)}
-                        style={styles.lockButton}
-                        accessibilityLabel={t('sessionDetail.score.enter')}
-                        testID="cta-enter-score"
-                      >
-                        <Ionicons name="create-outline" size={18} color={colors.primary} />
-                      </TouchableOpacity>
+                      <View style={styles.matchActions}>
+                        <TouchableOpacity
+                          onPress={() => openScoreEntry(m)}
+                          style={styles.lockButton}
+                          accessibilityLabel={t('sessionDetail.score.enter')}
+                          testID="cta-enter-score"
+                        >
+                          <Ionicons name="create-outline" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                        {renderLockToggle(m)}
+                      </View>
                     ) : canLink(m) ? (
                       <TouchableOpacity
                         onPress={() => openLinkMatch(m)}
@@ -818,30 +849,7 @@ export const SessionDetail: React.FC = () => {
                             <Ionicons name="create-outline" size={18} color={colors.primary} />
                           </TouchableOpacity>
                         ) : null}
-                        <TouchableOpacity
-                          onPress={() => {
-                            lightHaptic();
-                            setLock({
-                              sessionMatchId: m.id,
-                              locked: !m.locked,
-                              versionWas: m.version,
-                            });
-                          }}
-                          disabled={isLocking}
-                          accessibilityLabel={
-                            m.locked
-                              ? t('sessionDetail.sheet.unlock')
-                              : t('sessionDetail.sheet.lock')
-                          }
-                          style={styles.lockButton}
-                          testID="cta-lock-match"
-                        >
-                          <Ionicons
-                            name={m.locked ? 'lock-closed' : 'lock-open-outline'}
-                            size={18}
-                            color={m.locked ? colors.primary : colors.textMuted}
-                          />
-                        </TouchableOpacity>
+                        {renderLockToggle(m)}
                       </View>
                     ) : isScored(m) ? (
                       <Ionicons name="checkmark-circle" size={18} color={colors.positiveText} />
