@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  TextInput,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -96,6 +97,8 @@ import type {
   SeasonMemberWithProfile,
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
+
+import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import ParticipantRow from '../components/ParticipantRow';
 import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
@@ -1614,7 +1617,7 @@ export const LeagueDetail: React.FC = () => {
                 : code === 'not_league_member'
                   ? 'leagueDetail.paid.errors.notMember'
                   : 'leagueDetail.paid.errors.generic';
-      toast.error(t(key as TranslationKey));
+      toast.error(t(key));
     }
   }, [
     createSeasonPayment,
@@ -1727,7 +1730,7 @@ export const LeagueDetail: React.FC = () => {
               ? 'leagueDetail.roster.removeErrors.notRemovable'
               : 'leagueDetail.roster.removeErrors.generic';
         warningHaptic();
-        toast.error(t(key as TranslationKey));
+        toast.error(t(key));
       },
     });
 
@@ -1794,7 +1797,7 @@ export const LeagueDetail: React.FC = () => {
           ? 'leagueDetail.seasonLifecycle.errors.stale'
           : 'leagueDetail.seasonLifecycle.errors.cancelFailed';
       warningHaptic();
-      toast.error(t(key as TranslationKey));
+      toast.error(t(key));
     },
   });
 
@@ -1803,34 +1806,20 @@ export const LeagueDetail: React.FC = () => {
   // refund cron (lt_cancel_refund_candidates). A paid open season is where the
   // money warning matters — cancel refunds everyone per policy, close pays the
   // organizer instead. Draft seasons have no enrolments so the copy is plainer.
+  // season_cancel has always accepted a reason and stored it in
+  // cancelled_reason; the UI sent null, so the cancellation notice reaching
+  // members had nothing to explain it. Ask, the way session cancellation does.
+  const [cancelSeasonTarget, setCancelSeasonTarget] = useState<Season | null>(null);
+  const [cancelSeasonReason, setCancelSeasonReason] = useState('');
+
   const handleCancelSeason = useCallback(
     (season: Season) => {
       if (isCancellingSeason) return;
-      const paidWithEnrolments = (season.entry_fee_cents ?? 0) > 0 && season.status === 'open';
-      Alert.alert(
-        t('leagueDetail.seasonLifecycle.cancelConfirmTitle', { name: season.name }),
-        paidWithEnrolments
-          ? t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
-          : t('leagueDetail.seasonLifecycle.cancelConfirmBody'),
-        [
-          { text: t('leagueDetail.seasonLifecycle.keepSeason'), style: 'cancel' },
-          {
-            text: t('leagueDetail.seasonLifecycle.cancelConfirm'),
-            style: 'destructive',
-            onPress: () => {
-              warningHaptic();
-              void cancelSeasonAsync({
-                seasonId: season.id,
-                reason: null,
-                versionWas: season.version,
-                leagueId,
-              });
-            },
-          },
-        ]
-      );
+      warningHaptic();
+      setCancelSeasonReason('');
+      setCancelSeasonTarget(season);
     },
-    [cancelSeasonAsync, isCancellingSeason, leagueId, t]
+    [isCancellingSeason]
   );
 
   const { mutate: publishSessionMut, isPending: isPublishingSession } = usePublishSession(
@@ -2109,7 +2098,7 @@ export const LeagueDetail: React.FC = () => {
           ? 'leagueDetail.lifecycle.errors.stale'
           : 'leagueDetail.lifecycle.errors.generic';
       warningHaptic();
-      toast.error(t(key as TranslationKey));
+      toast.error(t(key));
     },
     [t, toast]
   );
@@ -3405,11 +3394,70 @@ export const LeagueDetail: React.FC = () => {
           ) : null}
         </View>
       )}
+
+      <ConfirmationModal
+        visible={cancelSeasonTarget !== null}
+        title={t('leagueDetail.seasonLifecycle.cancelConfirmTitle', {
+          name: cancelSeasonTarget?.name ?? '',
+        })}
+        message={
+          cancelSeasonTarget &&
+          (cancelSeasonTarget.entry_fee_cents ?? 0) > 0 &&
+          cancelSeasonTarget.status === 'open'
+            ? t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
+            : t('leagueDetail.seasonLifecycle.cancelConfirmBody')
+        }
+        confirmLabel={t('leagueDetail.seasonLifecycle.cancelConfirm')}
+        cancelLabel={t('leagueDetail.seasonLifecycle.keepSeason')}
+        confirmTestID="confirm-cancel-season"
+        destructive
+        isLoading={isCancellingSeason}
+        onClose={() => {
+          setCancelSeasonTarget(null);
+          setCancelSeasonReason('');
+        }}
+        onConfirm={() => {
+          if (!cancelSeasonTarget) return;
+          void cancelSeasonAsync({
+            seasonId: cancelSeasonTarget.id,
+            reason: cancelSeasonReason.trim() || null,
+            versionWas: cancelSeasonTarget.version,
+            leagueId,
+          }).finally(() => setCancelSeasonTarget(null));
+        }}
+        extraContent={
+          <TextInput
+            style={[
+              styles.seasonReasonInput,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            placeholder={t('leagueDetail.seasonLifecycle.cancelReasonPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={cancelSeasonReason}
+            onChangeText={setCancelSeasonReason}
+            multiline
+            maxLength={300}
+            editable={!isCancellingSeason}
+            testID="season-cancel-reason"
+          />
+        }
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  seasonReasonInput: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
   root: { flex: 1 },
   centered: {
     flex: 1,

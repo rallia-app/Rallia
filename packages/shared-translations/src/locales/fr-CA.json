@@ -4301,7 +4301,8 @@
         "notCancellable": "Cette saison ne peut plus être annulée.",
         "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
         "cancelFailed": "Impossible d'annuler la saison. Réessaie."
-      }
+      },
+      "cancelReasonPlaceholder": "Motif (optionnel), les membres le verront"
     },
     "joinErrors": {
       "ratingRequired": "Ça te prend une cote dans ce sport pour rejoindre cette ligue.",

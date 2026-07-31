@@ -4301,7 +4301,8 @@
         "notCancellable": "This season can't be cancelled anymore.",
         "stale": "Something changed. Refresh and try again.",
         "cancelFailed": "Couldn't cancel the season. Please try again."
-      }
+      },
+      "cancelReasonPlaceholder": "Reason (optional), members will see it"
     },
     "joinErrors": {
       "ratingRequired": "You need a rating in this sport to join this league.",
