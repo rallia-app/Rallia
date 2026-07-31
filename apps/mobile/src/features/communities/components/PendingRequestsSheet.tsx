@@ -17,7 +17,8 @@ import type {
 } from '@rallia/shared-services';
 import { getTierConfig, MIN_EVENTS_FOR_PUBLIC } from '@rallia/shared-services';
 
-import { useThemeStyles, useAuth } from '#/hooks';
+import { useThemeStyles, useAuth, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import RatingBadge from '#/components/RatingBadge';
 import ReputationBadge from '#/components/ReputationBadge';
@@ -39,6 +40,7 @@ function buildReputationDisplay(request: PendingMemberRequest): ReputationDispla
 export function PendingRequestsActionSheet({ payload }: SheetProps<'pending-requests'>) {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const playerId = session?.user?.id;
   const communityId = payload?.communityId ?? '';
   const sportId = payload?.sportId;
@@ -67,7 +69,7 @@ export function PendingRequestsActionSheet({ payload }: SheetProps<'pending-requ
       refetchPendingRequests();
       payload?.onMemberChanged?.();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to approve member');
+      Alert.alert(t('common.error'), rpcErrorMessage(error, t, 'community.errors.failedToApprove'));
     }
   };
 
@@ -82,7 +84,7 @@ export function PendingRequestsActionSheet({ payload }: SheetProps<'pending-requ
       });
       refetchPendingRequests();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to reject request');
+      Alert.alert(t('common.error'), rpcErrorMessage(error, t, 'community.errors.failedToDecline'));
     }
   };
 

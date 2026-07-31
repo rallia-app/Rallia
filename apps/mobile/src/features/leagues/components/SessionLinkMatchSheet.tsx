@@ -36,15 +36,17 @@ import type { LinkableMatch, PlayerProfile } from '@rallia/shared-services';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { rpcErrorMessage, type RpcErrorOverrides } from '#/utils/rpcErrorMessage';
 
 const SHEET_ID = 'session-link-match';
 
-// Attach RPC business errors worth a friendly message. The stale ones mean the
-// pairing changed under us (e.g. the opponent linked first) — close and refresh.
-const ATTACH_ERROR_KEYS: Record<string, TranslationKey> = {
+// Attach RPC business errors worth a friendly message (MATCH_ALREADY_LINKED
+// before its substring ALREADY_LINKED). The stale ones mean the pairing changed
+// under us (e.g. the opponent linked first) — close and refresh.
+const ATTACH_ERROR_KEYS: RpcErrorOverrides = {
+  MATCH_ALREADY_LINKED: 'sessionDetail.linkPicker.errors.matchAlreadyLinked',
   ALREADY_LINKED: 'sessionDetail.linkPicker.errors.alreadyLinked',
   MATCH_NOT_PENDING: 'sessionDetail.linkPicker.errors.notPending',
-  MATCH_ALREADY_LINKED: 'sessionDetail.linkPicker.errors.matchAlreadyLinked',
   MATCH_NOT_VERIFIED: 'sessionDetail.linkPicker.errors.matchNotVerified',
   PARTICIPANTS_MISMATCH: 'sessionDetail.linkPicker.errors.participantsMismatch',
 };
@@ -90,8 +92,9 @@ export function SessionLinkMatchActionSheet({ payload }: SheetProps<'session-lin
     },
     onError: e => {
       warningHaptic();
-      const key = ATTACH_ERROR_KEYS[e.message];
-      toast.error(key ? t(key) : t('sessionDetail.linkPicker.attachFailed') + ` (${e.message})`);
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.linkPicker.attachFailed', ATTACH_ERROR_KEYS)
+      );
       if (STALE_SLOT_ERRORS.has(e.message)) void SheetManager.hide(SHEET_ID);
     },
   });

@@ -16,6 +16,13 @@
   "common": {
     "loading": "Chargement...",
     "error": "Erreur",
+    "rpcErrors": {
+      "notAuthenticated": "Tu dois être connecté pour faire ça.",
+      "notOrganizer": "Seul l'organisateur peut faire ça.",
+      "staleWrite": "Quelqu'un vient de modifier ça. Actualise et réessaie.",
+      "rateLimited": "Trop de tentatives. Attends un moment et réessaie.",
+      "generic": "Une erreur s'est produite. Réessaie."
+    },
     "retry": "Réessayer",
     "tryAgain": "Réessayer",
     "tryDifferentSearch": "Essayez un autre terme de recherche",
@@ -4321,6 +4328,17 @@
       "notInvited": "Cette ligue est sur invitation seulement.",
       "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre."
     },
+    "memberErrors": {
+      "memberNotFound": "Ce membre ne fait plus partie de la ligue.",
+      "notRevocable": "Cette invitation ne peut plus être révoquée.",
+      "organizerImmune": "L'organisateur ne peut pas être retiré de sa propre ligue."
+    },
+    "createErrors": {
+      "invalidName": "Ce nom ne fonctionne pas. Essaies-en un autre.",
+      "invalidDates": "Ces dates ne fonctionnent pas. Vérifie le début et la fin.",
+      "invalidFee": "Ce frais d'inscription n'est pas valide.",
+      "invalidSchedule": "Cet horaire ne fonctionne pas. Vérifie la date et l'heure."
+    },
     "seasonErrors": {
       "notOrganizer": "Seul l'organisateur peut faire ça.",
       "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
@@ -4739,6 +4757,14 @@
       "errors": {
         "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin."
       }
+    },
+    "rpcErrors": {
+      "startPassed": "L'heure de début de la séance est déjà passée.",
+      "sessionPast": "Cette séance est déjà terminée.",
+      "notCancellable": "Cette séance ne peut plus être annulée.",
+      "notWithdrawable": "Ce membre ne peut plus être retiré à ce stade-ci.",
+      "notEnoughConfirmed": "Pas assez de joueurs confirmés pour générer la feuille de match.",
+      "sheetLocked": "Des parties sont verrouillées ou déjà comptées, la feuille ne peut pas être régénérée."
     },
     "linkPicker": {
       "title": "Lier une partie jouée",
@@ -5183,7 +5209,9 @@
       "noResults": "Aucun joueur trouvé",
       "remove": "Retirer",
       "addFailed": "Impossible d'ajouter ce co-organisateur",
-      "removeFailed": "Impossible de retirer ce co-organisateur"
+      "removeFailed": "Impossible de retirer ce co-organisateur",
+      "alreadyOrganizer": "Ce joueur organise déjà ce tournoi.",
+      "playerNotFound": "Impossible de trouver ce joueur."
     },
     "invite": {
       "title": "Inviter des joueurs",

@@ -19,6 +19,7 @@ import type { Enums } from '@rallia/shared-types';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 import * as Analytics from '#/services/analytics';
 
@@ -72,7 +73,13 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          INVALID_NAME: 'leagueDetail.createErrors.invalidName',
+          INVALID_SCHEDULE: 'leagueDetail.createErrors.invalidSchedule',
+          SEASON_NOT_OPEN: 'leagueDetail.seasonErrors.seasonNotOpen',
+        })
+      );
     },
   });
 

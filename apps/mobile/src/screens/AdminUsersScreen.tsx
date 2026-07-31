@@ -58,6 +58,7 @@ import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-
 
 import type { RootStackParamList } from '#/navigation/types';
 import { useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { exportService } from '#/services/exportService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -444,7 +445,7 @@ const AdminUsersScreen: React.FC = () => {
             {t('admin.errors.loadFailed')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.errorDescription}>
-            {error.message}
+            {rpcErrorMessage(error, t, 'common.rpcErrors.generic')}
           </Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: colors.accent }]}

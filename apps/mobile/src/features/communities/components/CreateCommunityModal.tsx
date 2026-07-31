@@ -37,6 +37,7 @@ import { supabase, Logger } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import { useRequireOnboarding, useThemeStyles, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { useSport } from '#/context/SportContext';
 import { CommunityStackParamList } from '#/navigation/types';
 import { uploadImage } from '#/services/imageUpload';
@@ -265,7 +266,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
       resetForm();
       onSuccess?.(newCommunity.id);
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create community');
+      Alert.alert(t('common.error'), rpcErrorMessage(error, t, 'community.errors.failedToCreate'));
     } finally {
       setIsLoading(false);
     }

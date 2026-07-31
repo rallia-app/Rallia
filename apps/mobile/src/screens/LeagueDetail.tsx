@@ -105,6 +105,7 @@ import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineT
 import type { LeagueEditData } from '../features/leagues';
 import { LeagueBanner, LEAGUE_BANNER_ASPECT } from '../features/leagues/components/LeagueBanner';
 import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
+import { rpcErrorMessage, type RpcErrorOverrides } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -203,53 +204,47 @@ function estimateSeasonRefundCents(
 }
 
 /**
- * Map the raw server error codes from the season + session lifecycle RPCs
- * (season_open/close/enroll/withdraw, session_publish) to user-facing copy.
- * Codes are matched by substring since Supabase can wrap the message. Ordered
- * most-specific first. PAYOUTS_SETUP_REQUIRED is deliberately absent: the open
- * handler intercepts it to launch onboarding before falling through here.
+ * Season + session lifecycle RPC codes (season_open/close/enroll/withdraw,
+ * session_publish), ordered most-specific first. PAYOUTS_SETUP_REQUIRED is
+ * deliberately absent: the open handler intercepts it to launch onboarding
+ * before falling through here.
  */
-function mapSeasonError(message: string | undefined): TranslationKey {
-  const m = message || '';
-  if (m.includes('PAYMENT_REQUIRED')) return 'leagueDetail.seasonErrors.paymentRequired';
-  if (m.includes('ENROLLMENT_REMOVED')) return 'leagueDetail.paid.errors.enrollmentRemoved';
-  if (m.includes('REFUND_REQUIRED')) return 'leagueDetail.seasonErrors.refundRequired';
-  if (m.includes('SEASON_HAS_OPEN_SESSIONS')) return 'leagueDetail.seasonErrors.hasOpenSessions';
-  if (m.includes('SEASON_NOT_DRAFT')) return 'leagueDetail.seasonErrors.seasonNotDraft';
-  if (m.includes('SEASON_NOT_OPEN')) return 'leagueDetail.seasonErrors.seasonNotOpen';
-  if (m.includes('SEASON_ENDED')) return 'leagueDetail.seasonErrors.seasonEnded';
-  if (m.includes('SEASON_NOT_FOUND')) return 'leagueDetail.seasonErrors.seasonNotFound';
-  if (m.includes('NOT_LEAGUE_MEMBER')) return 'leagueDetail.seasonErrors.notMember';
-  if (m.includes('NOT_ENROLLED')) return 'leagueDetail.seasonErrors.notEnrolled';
-  if (m.includes('LEAGUE_NOT_ACTIVE')) return 'leagueDetail.seasonErrors.leagueNotActive';
-  if (m.includes('INVALID_DEADLINE')) return 'leagueDetail.seasonErrors.invalidDeadline';
-  if (m.includes('SESSION_NOT_DRAFT')) return 'leagueDetail.seasonErrors.sessionNotDraft';
-  if (m.includes('SESSION_START_PASSED')) return 'leagueDetail.seasonErrors.sessionStartPassed';
-  if (m.includes('SESSION_NOT_FOUND')) return 'leagueDetail.seasonErrors.sessionNotFound';
-  if (m.includes('NOT_ORGANIZER')) return 'leagueDetail.seasonErrors.notOrganizer';
-  if (m.includes('OPTIMISTIC_LOCK_CONFLICT')) return 'leagueDetail.seasonErrors.stale';
-  return 'leagueDetail.seasonErrors.generic';
-}
+const SEASON_ERROR_KEYS: RpcErrorOverrides = {
+  PAYMENT_REQUIRED: 'leagueDetail.seasonErrors.paymentRequired',
+  ENROLLMENT_REMOVED: 'leagueDetail.paid.errors.enrollmentRemoved',
+  REFUND_REQUIRED: 'leagueDetail.seasonErrors.refundRequired',
+  SEASON_HAS_OPEN_SESSIONS: 'leagueDetail.seasonErrors.hasOpenSessions',
+  SEASON_NOT_DRAFT: 'leagueDetail.seasonErrors.seasonNotDraft',
+  SEASON_NOT_OPEN: 'leagueDetail.seasonErrors.seasonNotOpen',
+  SEASON_ENDED: 'leagueDetail.seasonErrors.seasonEnded',
+  SEASON_NOT_FOUND: 'leagueDetail.seasonErrors.seasonNotFound',
+  NOT_LEAGUE_MEMBER: 'leagueDetail.seasonErrors.notMember',
+  NOT_ENROLLED: 'leagueDetail.seasonErrors.notEnrolled',
+  LEAGUE_NOT_ACTIVE: 'leagueDetail.seasonErrors.leagueNotActive',
+  INVALID_DEADLINE: 'leagueDetail.seasonErrors.invalidDeadline',
+  SESSION_NOT_DRAFT: 'leagueDetail.seasonErrors.sessionNotDraft',
+  SESSION_START_PASSED: 'leagueDetail.seasonErrors.sessionStartPassed',
+  SESSION_NOT_FOUND: 'leagueDetail.seasonErrors.sessionNotFound',
+  NOT_ORGANIZER: 'leagueDetail.seasonErrors.notOrganizer',
+  OPTIMISTIC_LOCK_CONFLICT: 'leagueDetail.seasonErrors.stale',
+};
 
 /**
- * Map league_join's raw error codes to user-facing copy. Without this the
- * screen toasted the exception text, so a gated player saw "RATING_TOO_LOW".
- * Ordered most-specific first, matched by substring like mapSeasonError.
+ * league_join's gate codes. Without this the screen toasted the exception
+ * text, so a gated player saw "RATING_TOO_LOW". Ordered most-specific first.
  */
-function mapJoinError(message: string | undefined): TranslationKey {
-  const m = message || '';
-  if (m.includes('RATING_REQUIRED')) return 'leagueDetail.joinErrors.ratingRequired';
-  if (m.includes('RATING_TOO_LOW')) return 'leagueDetail.joinErrors.ratingTooLow';
-  if (m.includes('RATING_TOO_HIGH')) return 'leagueDetail.joinErrors.ratingTooHigh';
-  if (m.includes('REPUTATION_GATE_NOT_MET')) return 'leagueDetail.joinErrors.reputation';
-  if (m.includes('ALREADY_MEMBER')) return 'leagueDetail.joinErrors.alreadyMember';
-  if (m.includes('LEAGUE_NOT_ACTIVE')) return 'leagueDetail.joinErrors.leagueNotActive';
-  if (m.includes('LEAGUE_NOT_FOUND')) return 'leagueDetail.joinErrors.leagueNotFound';
-  if (m.includes('LEAGUE_FULL')) return 'leagueDetail.joinErrors.leagueFull';
-  if (m.includes('NOT_INVITED')) return 'leagueDetail.joinErrors.notInvited';
-  if (m.includes('SPORT_MISMATCH')) return 'leagueDetail.joinErrors.sportMismatch';
-  return 'leagueDetail.errors.generic';
-}
+const JOIN_ERROR_KEYS: RpcErrorOverrides = {
+  RATING_REQUIRED: 'leagueDetail.joinErrors.ratingRequired',
+  RATING_TOO_LOW: 'leagueDetail.joinErrors.ratingTooLow',
+  RATING_TOO_HIGH: 'leagueDetail.joinErrors.ratingTooHigh',
+  REPUTATION_GATE_NOT_MET: 'leagueDetail.joinErrors.reputation',
+  ALREADY_MEMBER: 'leagueDetail.joinErrors.alreadyMember',
+  LEAGUE_NOT_ACTIVE: 'leagueDetail.joinErrors.leagueNotActive',
+  LEAGUE_NOT_FOUND: 'leagueDetail.joinErrors.leagueNotFound',
+  LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
+  NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
+  SPORT_MISMATCH: 'leagueDetail.joinErrors.sportMismatch',
+};
 
 interface ScreenColors {
   background: string;
@@ -1174,7 +1169,7 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(t(mapJoinError(e.message)));
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.errors.generic', JOIN_ERROR_KEYS));
     },
   });
 
@@ -1186,7 +1181,12 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
   });
 
@@ -1198,7 +1198,12 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
   });
 
@@ -1210,14 +1215,26 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          NOT_REVOCABLE: 'leagueDetail.memberErrors.notRevocable',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
   });
 
   const onMemberLifecycleError = useCallback(
     (e: Error) => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          ORGANIZER_CANNOT_LEAVE: 'leagueDetail.memberErrors.organizerImmune',
+          CANNOT_REMOVE_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+          CANNOT_SUSPEND_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
     [toast, t]
   );
@@ -1354,7 +1371,7 @@ export const LeagueDetail: React.FC = () => {
         return;
       }
       warningHaptic();
-      toast.error(t(mapSeasonError(e.message)));
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
     },
   });
 
@@ -1509,7 +1526,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(t(mapSeasonError(e.message)));
+        toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
       },
     }
   );
@@ -1523,7 +1540,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(t(mapSeasonError(e.message)));
+        toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
       },
     }
   );
@@ -1779,7 +1796,7 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(t(mapSeasonError(e.message)));
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
     },
   });
 
@@ -1831,7 +1848,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(t(mapSeasonError(e.message)));
+        toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
       },
     }
   );

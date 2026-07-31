@@ -59,6 +59,7 @@ import {
 } from '@rallia/shared-utils';
 
 import { useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import type { RootStackParamList } from '#/navigation/types';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminNetworkDetail'>;
@@ -364,7 +365,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
             {t('common.error')}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.centeredText}>
-            {error.message}
+            {rpcErrorMessage(error, t, 'common.rpcErrors.generic')}
           </Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: colors.accent }]}

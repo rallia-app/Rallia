@@ -39,15 +39,17 @@ import type { LinkableMatch, PlayerProfile } from '@rallia/shared-services';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { rpcErrorMessage, type RpcErrorOverrides } from '#/utils/rpcErrorMessage';
 
 const SHEET_ID = 'tournament-link-match';
 
-// Attach RPC business errors worth a friendly message. The stale ones mean the
-// slot changed under us (e.g. the opponent linked first) — close and refresh.
-const ATTACH_ERROR_KEYS: Record<string, TranslationKey> = {
+// Attach RPC business errors worth a friendly message (MATCH_ALREADY_LINKED
+// before its substring ALREADY_LINKED). The stale ones mean the slot changed
+// under us (e.g. the opponent linked first) — close and refresh.
+const ATTACH_ERROR_KEYS: RpcErrorOverrides = {
+  MATCH_ALREADY_LINKED: 'tournamentDetail.linkPicker.errors.matchAlreadyLinked',
   ALREADY_LINKED: 'tournamentDetail.linkPicker.errors.alreadyLinked',
   MATCH_NOT_PENDING: 'tournamentDetail.linkPicker.errors.notPending',
-  MATCH_ALREADY_LINKED: 'tournamentDetail.linkPicker.errors.matchAlreadyLinked',
   MATCH_NOT_VERIFIED: 'tournamentDetail.linkPicker.errors.matchNotVerified',
   PARTICIPANTS_MISMATCH: 'tournamentDetail.linkPicker.errors.participantsMismatch',
 };
@@ -95,8 +97,9 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
     },
     onError: e => {
       warningHaptic();
-      const key = ATTACH_ERROR_KEYS[e.message];
-      toast.error(key ? t(key) : t('tournamentDetail.linkPicker.attachFailed') + ` (${e.message})`);
+      toast.error(
+        rpcErrorMessage(e, t, 'tournamentDetail.linkPicker.attachFailed', ATTACH_ERROR_KEYS)
+      );
       if (STALE_SLOT_ERRORS.has(e.message)) void SheetManager.hide(SHEET_ID);
     },
   });

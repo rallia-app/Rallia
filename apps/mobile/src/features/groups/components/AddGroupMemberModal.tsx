@@ -15,6 +15,7 @@ import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
 import { useSport } from '#/context';
 import { useThemeStyles, useAuth, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { SearchBar } from '#/components/SearchBar';
 
 export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-member'>) {
@@ -85,7 +86,7 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
         setAddedMemberIds(prev => [...prev, memberPlayerId]);
         onSuccess?.();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : t('groups.failedToAddMember'));
+        toast.error(rpcErrorMessage(error, t, 'groups.failedToAddMember'));
       } finally {
         setAddingMemberId(null);
       }

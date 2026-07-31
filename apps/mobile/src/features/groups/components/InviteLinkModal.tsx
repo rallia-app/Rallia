@@ -23,6 +23,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import * as Analytics from '#/services/analytics';
 
 // =============================================================================
@@ -187,7 +188,7 @@ export function InviteLinkActionSheet({ payload }: SheetProps<'invite-link'>) {
             refetch();
             toast.success(t('groups.inviteCodeReset'));
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : t('groups.failedToResetCode'));
+            toast.error(rpcErrorMessage(error, t, 'groups.failedToResetCode'));
           }
         },
       },

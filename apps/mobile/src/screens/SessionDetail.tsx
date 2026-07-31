@@ -66,6 +66,7 @@ import { SheetDateField } from '#/features/leagues/components/SheetDateField';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
+import { rpcErrorMessage } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -203,9 +204,9 @@ export const SessionDetail: React.FC = () => {
     onError: e => {
       warningHaptic();
       toast.error(
-        e.message === 'ENROLLMENT_REMOVED'
-          ? t('leagueDetail.paid.errors.enrollmentRemoved')
-          : e.message || t('sessionDetail.errors.generic')
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          ENROLLMENT_REMOVED: 'leagueDetail.paid.errors.enrollmentRemoved',
+        })
       );
     },
   });
@@ -225,9 +226,10 @@ export const SessionDetail: React.FC = () => {
     onError: e => {
       warningHaptic();
       toast.error(
-        e.message?.includes('INVALID_DEADLINE')
-          ? t('sessionDetail.publishModal.invalidDeadline')
-          : e.message || t('sessionDetail.errors.generic')
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          INVALID_DEADLINE: 'sessionDetail.publishModal.invalidDeadline',
+          SESSION_START_PASSED: 'sessionDetail.rpcErrors.startPassed',
+        })
       );
     },
   });
@@ -240,7 +242,11 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       void warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          PRESENCE_NOT_WITHDRAWABLE: 'sessionDetail.rpcErrors.notWithdrawable',
+        })
+      );
     },
   });
 
@@ -256,11 +262,11 @@ export const SessionDetail: React.FC = () => {
       onError: e => {
         void warningHaptic();
         toast.error(
-          e.message?.includes('REMINDER_TOO_SOON')
-            ? t('sessionDetail.roster.remindTooSoon')
-            : e.message?.includes('NO_PENDING_MEMBERS')
-              ? t('sessionDetail.roster.remindNobody')
-              : e.message || t('sessionDetail.errors.generic')
+          rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+            REMINDER_TOO_SOON: 'sessionDetail.roster.remindTooSoon',
+            NO_PENDING_MEMBERS: 'sessionDetail.roster.remindNobody',
+            SESSION_PAST: 'sessionDetail.rpcErrors.sessionPast',
+          })
         );
       },
     }
@@ -276,7 +282,11 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          SESSION_NOT_CANCELLABLE: 'sessionDetail.rpcErrors.notCancellable',
+        })
+      );
     },
   });
 
@@ -296,7 +306,12 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          NOT_ENOUGH_CONFIRMED: 'sessionDetail.rpcErrors.notEnoughConfirmed',
+          SHEET_LOCKED: 'sessionDetail.rpcErrors.sheetLocked',
+        })
+      );
     },
   });
 
@@ -307,7 +322,7 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(rpcErrorMessage(e, t, 'sessionDetail.errors.generic'));
     },
   });
 

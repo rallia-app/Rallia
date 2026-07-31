@@ -30,6 +30,7 @@ import type { Enums } from '@rallia/shared-types';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import * as Analytics from '#/services/analytics';
 
 import { SheetDateField } from './SheetDateField';
@@ -107,7 +108,14 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          INVALID_NAME: 'leagueDetail.createErrors.invalidName',
+          INVALID_DATE_RANGE: 'leagueDetail.createErrors.invalidDates',
+          INVALID_ENTRY_FEE: 'leagueDetail.createErrors.invalidFee',
+          LEAGUE_NOT_ACTIVE: 'leagueDetail.joinErrors.leagueNotActive',
+        })
+      );
     },
   });
 

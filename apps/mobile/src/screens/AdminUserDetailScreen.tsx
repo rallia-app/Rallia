@@ -67,6 +67,7 @@ import {
 
 import type { RootStackParamList } from '#/navigation/types';
 import { useTranslation, useAuth } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminUserDetail'>;
@@ -805,7 +806,7 @@ const AdminUserDetailScreen: React.FC = () => {
             {t('admin.errors.loadFailed')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.centerDescription}>
-            {error.message}
+            {rpcErrorMessage(error, t, 'common.rpcErrors.generic')}
           </Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: colors.accent }]}
