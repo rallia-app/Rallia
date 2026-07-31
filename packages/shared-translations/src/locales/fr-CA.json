@@ -4239,6 +4239,7 @@
     "joinSuccess": "Vous avez rejoint la ligue",
     "joinPending": "Votre demande attend l'approbation de l'organisateur",
     "membershipPending": "Votre adhésion est en attente d'approbation",
+    "queuedInLine": "{rank}e en file pour une place",
     "memberActive": "Vous êtes membre actif",
     "memberApproved": "Membre approuvé",
     "inviteAccepted": "Invitation acceptée — tu embarques!",
@@ -4385,7 +4386,8 @@
       },
       "pendingRequests": {
         "title": "En attente ({count})",
-        "approveLabel": "Approuver {name}"
+        "approveLabel": "Approuver {name}",
+        "queuedAt": "{rank}e en file pour une place"
       },
       "invited": {
         "title": "Invités · en attente de réponse ({count})",
@@ -4571,6 +4573,18 @@
     },
     "createSeason": {
       "title": "Créer une saison",
+      "formatLabel": "Format de jeu",
+      "format": {
+        "singles": { "title": "Simple", "description": "Parties 1 contre 1" },
+        "doubles": {
+          "title": "Double",
+          "description": "Parties 2 contre 2, équipes formées à chaque séance"
+        },
+        "mixed_doubles": {
+          "title": "Double mixte",
+          "description": "Parties 2 contre 2 en équipes mixtes"
+        }
+      },
       "namePlaceholder": "p. ex., Été 2026",
       "startDate": "Début",
       "endDate": "Fin",
@@ -4635,6 +4649,11 @@
       "declinedTitle": "Tu as décliné — tu changes d'idée?",
       "confirm": "J'embarque",
       "decline": "Pas dispo"
+    },
+    "partner": {
+      "label": "Partenaire préféré (optionnel)",
+      "none": "Aucune préférence",
+      "hint": "Vous ferez équipe si cette personne te choisit aussi."
     },
     "roster": {
       "confirmed": "Confirmés",
@@ -4745,12 +4764,18 @@
       "maxRating": "Niveau maximum",
       "maxRatingNone": "Aucun maximum",
       "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, vous n'avez rien à approuver.",
-      "ratingGateUnavailable": "L'admissibilité par niveau n'est pas encore offerte pour ce sport."
+      "ratingGateUnavailable": "L'admissibilité par niveau n'est pas encore offerte pour ce sport.",
+      "memberCapacity": "Limite de membres",
+      "memberCapacityPlaceholder": "Illimité",
+      "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, vous compris. Laissez vide pour aucune limite.",
+      "waitlistTitle": "Liste d'attente",
+      "waitlistDescription": "Quand la ligue est pleine, les nouveaux se placent en file et entrent automatiquement dès qu'une place se libère."
     },
     "validation": {
       "nameRequired": "Le nom de la ligue est requis",
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
-      "ratingRangeInvalid": "Le niveau maximum doit être égal ou supérieur au minimum"
+      "ratingRangeInvalid": "Le niveau maximum doit être égal ou supérieur au minimum",
+      "capacityInvalid": "Entrez un nombre de 1 ou plus"
     },
     "errors": {
       "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",

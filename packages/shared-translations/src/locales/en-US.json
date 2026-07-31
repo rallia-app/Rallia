@@ -4239,6 +4239,7 @@
     "joinSuccess": "You joined the league",
     "joinPending": "Your request is pending organizer approval",
     "membershipPending": "Your membership is pending approval",
+    "queuedInLine": "#{rank} in line for a spot",
     "memberActive": "You're an active member",
     "memberApproved": "Member approved",
     "inviteAccepted": "Invitation accepted — you're in!",
@@ -4385,7 +4386,8 @@
       },
       "pendingRequests": {
         "title": "Pending approval ({count})",
-        "approveLabel": "Approve {name}"
+        "approveLabel": "Approve {name}",
+        "queuedAt": "#{rank} in line for a spot"
       },
       "invited": {
         "title": "Invited · awaiting response ({count})",
@@ -4571,6 +4573,15 @@
     },
     "createSeason": {
       "title": "Create a season",
+      "formatLabel": "Play format",
+      "format": {
+        "singles": { "title": "Singles", "description": "1 on 1 games" },
+        "doubles": { "title": "Doubles", "description": "2 on 2 games, teams formed each session" },
+        "mixed_doubles": {
+          "title": "Mixed doubles",
+          "description": "2 on 2 games with mixed teams"
+        }
+      },
       "namePlaceholder": "e.g., Summer 2026",
       "startDate": "Start",
       "endDate": "End",
@@ -4635,6 +4646,11 @@
       "declinedTitle": "You declined — changed your mind?",
       "confirm": "I'm in",
       "decline": "Can't make it"
+    },
+    "partner": {
+      "label": "Preferred partner (optional)",
+      "none": "No preference",
+      "hint": "You team up when your pick chooses you back."
     },
     "roster": {
       "confirmed": "Confirmed",
@@ -4745,12 +4761,18 @@
       "maxRating": "Maximum rating",
       "maxRatingNone": "No maximum",
       "ratingGateHint": "Players outside this range can't join — this is enforced automatically, not left to you to approve.",
-      "ratingGateUnavailable": "Rating gating isn't available for this sport yet."
+      "ratingGateUnavailable": "Rating gating isn't available for this sport yet.",
+      "memberCapacity": "Member limit",
+      "memberCapacityPlaceholder": "Unlimited",
+      "memberCapacityHint": "How many players can hold a spot, including you. Leave empty for no limit.",
+      "waitlistTitle": "Waitlist",
+      "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens."
     },
     "validation": {
       "nameRequired": "League name is required",
       "nameTooLong": "Name must be 100 characters or fewer",
-      "ratingRangeInvalid": "Maximum rating must be at or above the minimum"
+      "ratingRangeInvalid": "Maximum rating must be at or above the minimum",
+      "capacityInvalid": "Enter a number of 1 or more"
     },
     "errors": {
       "sportMismatch": "Switch to a sport on your profile before creating a league",
