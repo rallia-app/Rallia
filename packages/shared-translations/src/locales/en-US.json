@@ -3540,7 +3540,8 @@
       "noWinner": "Scores must determine a winner (one team must win more sets).",
       "selectPartner": "Please select your partner.",
       "tennisScoreRange": "Tennis set scores are typically 0–7.",
-      "pickleballScoreRange": "Pickleball game scores are typically 0–25."
+      "pickleballScoreRange": "Pickleball game scores are typically 0–25.",
+      "formatMismatch": "Set {set} doesn't match this format: the winner needs at least {target}."
     }
   },
   "matchFeedback": {

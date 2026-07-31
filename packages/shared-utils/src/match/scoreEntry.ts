@@ -96,6 +96,53 @@ export function serializeSets(sets: SetScore[]): string {
 }
 
 /**
+ * The score a side must reach to take one set/game, per format. A format that
+ * declares no target is not validated at all, which is what keeps casual
+ * matches (no declared format) on their old permissive behaviour.
+ */
+const FORMAT_TARGET: Partial<Record<Enums<'match_format'>, number>> = {
+  one_set: 6,
+  two_of_three: 6,
+  three_of_five: 6,
+  pickleball_to_11: 11,
+  pickleball_to_15: 15,
+  pickleball_to_21: 21,
+};
+
+/** The winning score for one set/game under this format, or null if unconstrained. */
+export function setTargetFor(format: Enums<'match_format'> | undefined | null): number | null {
+  return (format && FORMAT_TARGET[format]) ?? null;
+}
+
+/**
+ * Rejects a score that cannot belong to this format, which in practice means a
+ * score from the other sport: 6-4 in a to-11 pickleball draw, 11-7 in a tennis
+ * one. The rule is simply that whoever took the set reached the format's target.
+ *
+ * Returns the offending set's 1-based index, or null when the sets are
+ * plausible. Sets that are still half-entered are ignored, so the check never
+ * fires while someone is mid-type.
+ *
+ * Deliberately not a range check on both sides: 7-5 and 13-11 are legitimate,
+ * and an upper bound would reject them. Nothing here models a retirement,
+ * because no surface can record one today; a retirement UI would need to bypass
+ * this rather than loosen it.
+ */
+export function firstSetFailingFormat(
+  sets: SetScore[],
+  format: Enums<'match_format'> | undefined | null
+): number | null {
+  const target = setTargetFor(format);
+  if (target === null) return null;
+  const complete = validSetsOf(sets);
+  for (let i = 0; i < complete.length; i += 1) {
+    const s = complete[i];
+    if (Math.max(s.player1Score as number, s.player2Score as number) < target) return i + 1;
+  }
+  return null;
+}
+
+/**
  * Whether a single entered value looks out of range for the sport. Advisory
  * only: the scorer is the authority, this just catches fat fingers.
  */

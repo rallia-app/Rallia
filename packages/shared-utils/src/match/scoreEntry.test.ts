@@ -1,4 +1,6 @@
 import {
+  firstSetFailingFormat,
+  setTargetFor,
   setRulesFor,
   deriveWinningSideFromSets,
   canAddSet,
@@ -103,5 +105,45 @@ describe('isScoreOutOfRange', () => {
     expect(isScoreOutOfRange(26, true)).toBe(true);
     expect(isScoreOutOfRange(21, true)).toBe(false);
     expect(isScoreOutOfRange(null, false)).toBe(false);
+  });
+});
+
+describe('firstSetFailingFormat', () => {
+  it('rejects a tennis score in a pickleball draw, which is the reported case', () => {
+    expect(firstSetFailingFormat([set(6, 4), set(6, 3)], 'pickleball_to_11')).toBe(1);
+  });
+
+  it('rejects a pickleball score in a tennis draw only when nobody reached 6', () => {
+    expect(firstSetFailingFormat([set(4, 2)], 'two_of_three')).toBe(1);
+    // 11-7 clears the tennis target, so it is odd but not impossible; the soft
+    // out-of-range warning covers it rather than a hard block.
+    expect(firstSetFailingFormat([set(11, 7)], 'two_of_three')).toBeNull();
+  });
+
+  it('accepts the legitimate edge scores an upper bound would have broken', () => {
+    expect(firstSetFailingFormat([set(7, 5)], 'two_of_three')).toBeNull();
+    expect(firstSetFailingFormat([set(7, 6)], 'two_of_three')).toBeNull();
+    expect(firstSetFailingFormat([set(13, 11)], 'pickleball_to_11')).toBeNull();
+    expect(firstSetFailingFormat([set(15, 13)], 'pickleball_to_15')).toBeNull();
+  });
+
+  it('points at the offending set, not just the first one', () => {
+    expect(firstSetFailingFormat([set(11, 7), set(6, 4)], 'pickleball_to_11')).toBe(2);
+  });
+
+  it('ignores half-entered sets so it cannot fire mid-type', () => {
+    expect(firstSetFailingFormat([set(1, null)], 'pickleball_to_11')).toBeNull();
+    expect(firstSetFailingFormat([], 'pickleball_to_11')).toBeNull();
+  });
+
+  it('does not constrain a context with no declared format', () => {
+    expect(firstSetFailingFormat([set(2, 1)], undefined)).toBeNull();
+    expect(firstSetFailingFormat([set(2, 1)], null)).toBeNull();
+  });
+
+  it('exposes the target each format expects', () => {
+    expect(setTargetFor('pickleball_to_21')).toBe(21);
+    expect(setTargetFor('three_of_five')).toBe(6);
+    expect(setTargetFor(undefined)).toBeNull();
   });
 });

@@ -32,6 +32,8 @@ import {
   deriveWinningSideFromSets,
   serializeSets,
   validSetsOf,
+  firstSetFailingFormat,
+  setTargetFor,
   type SetScore,
 } from '@rallia/shared-utils';
 import { useRecordSessionScore } from '@rallia/shared-hooks';
@@ -125,6 +127,18 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
       setError(t('registerMatchScore.error.noWinner'));
       return;
     }
+    // A score from the other sport (6-4 in a to-11 draw) used to be accepted
+    // outright; the format's target is the only thing that can rule it out.
+    const badSet = firstSetFailingFormat(validSets, matchFormat);
+    if (badSet !== null) {
+      setError(
+        t('registerMatchScore.error.formatMismatch', {
+          set: String(badSet),
+          target: String(setTargetFor(matchFormat) ?? ''),
+        })
+      );
+      return;
+    }
     Keyboard.dismiss();
     void lightHaptic();
     setError(null);
@@ -154,7 +168,17 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     }
 
     submit();
-  }, [validSets, winningSide, isPickleball, isDecider, recordScore, sessionMatchId, versionWas, t]);
+  }, [
+    validSets,
+    winningSide,
+    isPickleball,
+    isDecider,
+    matchFormat,
+    recordScore,
+    sessionMatchId,
+    versionWas,
+    t,
+  ]);
 
   return (
     <ActionSheet

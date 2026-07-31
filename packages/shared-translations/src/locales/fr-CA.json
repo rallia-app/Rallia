@@ -3540,7 +3540,8 @@
       "noWinner": "Les scores doivent déterminer un gagnant (une équipe doit gagner plus de sets).",
       "selectPartner": "Veuillez sélectionner votre partenaire.",
       "tennisScoreRange": "Les scores de set au tennis sont typiquement de 0 à 7.",
-      "pickleballScoreRange": "Les scores de manche au pickleball sont typiquement de 0 à 25."
+      "pickleballScoreRange": "Les scores de manche au pickleball sont typiquement de 0 à 25.",
+      "formatMismatch": "La manche {set} ne correspond pas au format : le gagnant doit atteindre au moins {target}."
     }
   },
   "matchFeedback": {
