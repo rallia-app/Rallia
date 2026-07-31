@@ -4575,8 +4575,14 @@
       "title": "Create a season",
       "formatLabel": "Play format",
       "format": {
-        "singles": { "title": "Singles", "description": "1 on 1 games" },
-        "doubles": { "title": "Doubles", "description": "2 on 2 games, teams formed each session" },
+        "singles": {
+          "title": "Singles",
+          "description": "1 on 1 games"
+        },
+        "doubles": {
+          "title": "Doubles",
+          "description": "2 on 2 games, teams formed each session"
+        },
         "mixed_doubles": {
           "title": "Mixed doubles",
           "description": "2 on 2 games with mixed teams"
@@ -4712,6 +4718,25 @@
     },
     "errors": {
       "generic": "Something went wrong. Try again."
+    },
+    "publishModal": {
+      "title": "Publish this session?",
+      "description": "Members get a notification and can confirm until the deadline you set.",
+      "confirm": "Publish",
+      "deadlineDate": "Confirm by",
+      "deadlineTime": "Time",
+      "invalidDeadline": "The deadline must be in the future and no later than the session start."
+    },
+    "cancelModal": {
+      "title": "Cancel this session?",
+      "description": "Members who confirmed will be told it is off. Add a reason so they know why.",
+      "confirm": "Cancel the session",
+      "keepIt": "Keep it",
+      "reasonPlaceholder": "Reason (optional), e.g. rain"
+    },
+    "cancelledNotice": {
+      "title": "Session cancelled",
+      "reason": "Reason: {reason}"
     }
   },
   "leagueCreation": {

@@ -9,7 +9,14 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,6 +56,9 @@ import type {
   PresenceStatus,
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
+
+import { SheetDateField } from '#/features/leagues/components/SheetDateField';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
@@ -196,6 +206,7 @@ export const SessionDetail: React.FC = () => {
   const { mutate: publish, isPending: isPublishing } = usePublishSession(seasonId, {
     onSuccess: row => {
       successHaptic();
+      setShowPublishModal(false);
       toast.success(t('sessionDetail.toasts.published'));
       Analytics.sessionPublishedAnalytics({
         leagueId,
@@ -206,13 +217,18 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        e.message?.includes('INVALID_DEADLINE')
+          ? t('sessionDetail.publishModal.invalidDeadline')
+          : e.message || t('sessionDetail.errors.generic')
+      );
     },
   });
 
   const { mutate: cancel, isPending: isCancelling } = useCancelSession(seasonId, {
     onSuccess: () => {
       successHaptic();
+      setShowCancelModal(false);
       toast.success(t('sessionDetail.toasts.cancelled'));
       Analytics.sessionCancelledAnalytics({ sessionId, confirmedCount });
       invalidate();
@@ -263,6 +279,33 @@ export const SessionDetail: React.FC = () => {
     (m: SessionMatch) => !!userId && [...m.team_a_user_ids, ...m.team_b_user_ids].includes(userId),
     [userId]
   );
+
+  // session_publish already defaults the deadline to scheduled_at - 24h
+  // (clamped up for short-notice sessions). The organizer was simply never
+  // asked, so the modal opens pre-filled with exactly that default: accepting it
+  // is byte-identical to the old behaviour.
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishDeadline, setPublishDeadline] = useState<Date | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+
+  // SheetDateField carries its own colour contract; map the screen's palette on.
+  const dateFieldColors = useMemo(
+    () => ({
+      border: colors.border,
+      text: colors.text,
+      textMuted: colors.textMuted,
+      primary: colors.primary,
+      cardBackground: colors.card,
+    }),
+    [colors]
+  );
+
+  const defaultDeadline = useCallback((): Date => {
+    const start = sess ? new Date(sess.scheduled_at) : new Date();
+    const dayBefore = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+    return dayBefore.getTime() > Date.now() ? dayBefore : start;
+  }, [sess]);
 
   const sessionScoreable = !!sess && (sess.status === 'published' || sess.status === 'in_progress');
 
@@ -460,6 +503,21 @@ export const SessionDetail: React.FC = () => {
           <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
             {sess.name}
           </Text>
+          {sess.status === 'cancelled' ? (
+            <View style={[styles.cancelledNotice, { backgroundColor: colors.dangerBg }]}>
+              <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+              <View style={styles.cancelledNoticeBody}>
+                <Text size="sm" weight="semibold" color={colors.danger}>
+                  {t('sessionDetail.cancelledNotice.title')}
+                </Text>
+                {sess.cancelled_reason ? (
+                  <Text size="xs" color={colors.danger}>
+                    {t('sessionDetail.cancelledNotice.reason', { reason: sess.cancelled_reason })}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={16} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted}>
@@ -621,7 +679,8 @@ export const SessionDetail: React.FC = () => {
           <TouchableOpacity
             onPress={() => {
               lightHaptic();
-              publish({ sessionId, versionWas: sess.version });
+              setPublishDeadline(defaultDeadline());
+              setShowPublishModal(true);
             }}
             disabled={isPublishing}
             style={[
@@ -646,7 +705,8 @@ export const SessionDetail: React.FC = () => {
             <TouchableOpacity
               onPress={() => {
                 warningHaptic();
-                cancel({ sessionId, versionWas: sess.version });
+                setCancelReason('');
+                setShowCancelModal(true);
               }}
               disabled={isCancelling}
               style={[
@@ -873,12 +933,123 @@ export const SessionDetail: React.FC = () => {
           );
         })}
       </ScrollView>
+
+      <ConfirmationModal
+        visible={showPublishModal && !!sess}
+        title={t('sessionDetail.publishModal.title')}
+        message={t('sessionDetail.publishModal.description')}
+        confirmLabel={t('sessionDetail.publishModal.confirm')}
+        confirmTestID="confirm-publish-session"
+        isLoading={isPublishing}
+        onClose={() => setShowPublishModal(false)}
+        onConfirm={() => {
+          if (!sess || !publishDeadline) return;
+          publish({
+            sessionId,
+            versionWas: sess.version,
+            deadline: publishDeadline.toISOString(),
+          });
+        }}
+        extraContent={
+          publishDeadline && sess ? (
+            <View style={styles.deadlineRow}>
+              <SheetDateField
+                label={t('sessionDetail.publishModal.deadlineDate')}
+                value={publishDeadline}
+                displayValue={publishDeadline.toLocaleDateString(locale, {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                mode="date"
+                minimumDate={new Date()}
+                maximumDate={new Date(sess.scheduled_at)}
+                onChange={setPublishDeadline}
+                colors={dateFieldColors}
+                isDark={isDark}
+                style={styles.deadlineField}
+                testID="publish-deadline-date"
+              />
+              <SheetDateField
+                label={t('sessionDetail.publishModal.deadlineTime')}
+                value={publishDeadline}
+                displayValue={publishDeadline.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+                mode="time"
+                onChange={setPublishDeadline}
+                colors={dateFieldColors}
+                isDark={isDark}
+                style={styles.deadlineField}
+                testID="publish-deadline-time"
+              />
+            </View>
+          ) : null
+        }
+      />
+
+      <ConfirmationModal
+        visible={showCancelModal && !!sess}
+        title={t('sessionDetail.cancelModal.title')}
+        message={t('sessionDetail.cancelModal.description')}
+        confirmLabel={t('sessionDetail.cancelModal.confirm')}
+        cancelLabel={t('sessionDetail.cancelModal.keepIt')}
+        confirmTestID="confirm-cancel-session"
+        destructive
+        isLoading={isCancelling}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancelReason('');
+        }}
+        onConfirm={() => {
+          if (!sess) return;
+          cancel({ sessionId, versionWas: sess.version, reason: cancelReason.trim() || undefined });
+        }}
+        extraContent={
+          <TextInput
+            style={[
+              styles.reasonInput,
+              {
+                backgroundColor: colors.mutedBg,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            placeholder={t('sessionDetail.cancelModal.reasonPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={cancelReason}
+            onChangeText={setCancelReason}
+            multiline
+            maxLength={300}
+            editable={!isCancelling}
+            testID="session-cancel-reason"
+          />
+        }
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  deadlineRow: { flexDirection: 'row', gap: spacingPixels[3] },
+  cancelledNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[2],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[2],
+  },
+  cancelledNoticeBody: { flex: 1, gap: 2 },
+  deadlineField: { flex: 1 },
+  reasonInput: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
   content: { padding: spacingPixels[4], gap: spacingPixels[4] },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacingPixels[6] },
   centeredText: { marginTop: spacingPixels[3], textAlign: 'center' },

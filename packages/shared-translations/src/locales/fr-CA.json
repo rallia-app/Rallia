@@ -4575,7 +4575,10 @@
       "title": "Créer une saison",
       "formatLabel": "Format de jeu",
       "format": {
-        "singles": { "title": "Simple", "description": "Parties 1 contre 1" },
+        "singles": {
+          "title": "Simple",
+          "description": "Parties 1 contre 1"
+        },
         "doubles": {
           "title": "Double",
           "description": "Parties 2 contre 2, équipes formées à chaque séance"
@@ -4715,6 +4718,25 @@
     },
     "errors": {
       "generic": "Une erreur s'est produite. Réessayez."
+    },
+    "publishModal": {
+      "title": "Publier cette séance?",
+      "description": "Les membres reçoivent une notification et peuvent confirmer jusqu’à la date limite que tu choisis.",
+      "confirm": "Publier",
+      "deadlineDate": "Confirmer avant le",
+      "deadlineTime": "Heure",
+      "invalidDeadline": "La date limite doit être dans le futur et au plus tard au début de la séance."
+    },
+    "cancelModal": {
+      "title": "Annuler cette séance?",
+      "description": "Les membres qui avaient confirmé seront avisés. Ajoute un motif pour qu’ils sachent pourquoi.",
+      "confirm": "Annuler la séance",
+      "keepIt": "La garder",
+      "reasonPlaceholder": "Motif (optionnel), ex. pluie"
+    },
+    "cancelledNotice": {
+      "title": "Séance annulée",
+      "reason": "Motif : {reason}"
     }
   },
   "leagueCreation": {
