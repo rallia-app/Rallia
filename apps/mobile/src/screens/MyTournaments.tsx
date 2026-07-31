@@ -52,7 +52,7 @@ type Tournament = TournamentListItem;
 
 type TimeFilter = 'upcoming' | 'past';
 type UpcomingTournamentFilter = 'all' | 'registered' | 'organizing' | 'drafts';
-type PastTournamentFilter = 'all' | 'completed' | 'cancelled';
+type PastTournamentFilter = 'all' | 'completed' | 'cancelled' | 'archived';
 type TournamentFilter = UpcomingTournamentFilter | PastTournamentFilter;
 
 const UPCOMING_STATUSES = new Set([
@@ -99,6 +99,13 @@ const PAST_OPTIONS: FilterOption[] = [
     labelKey: 'tournamentList.filters.cancelled',
     icon: 'close-circle-outline',
   },
+  // Its own chip rather than a row mixed into "all": archiving is how an
+  // organizer clears the library, so the archive should stay out of it.
+  {
+    value: 'archived',
+    labelKey: 'tournamentList.filters.archived',
+    icon: 'archive-outline',
+  },
 ];
 
 const FILTER_EMPTY_ICONS: Record<TournamentFilter, keyof typeof Ionicons.glyphMap> = {
@@ -108,6 +115,7 @@ const FILTER_EMPTY_ICONS: Record<TournamentFilter, keyof typeof Ionicons.glyphMa
   drafts: 'document-text-outline',
   completed: 'trophy-outline',
   cancelled: 'close-circle-outline',
+  archived: 'archive-outline',
 };
 
 // =============================================================================
@@ -173,12 +181,27 @@ export const MyTournaments: React.FC = () => {
   const [pastFilter, setPastFilter] = useState<PastTournamentFilter>('all');
   const currentFilter: TournamentFilter = activeTab === 'upcoming' ? upcomingFilter : pastFilter;
 
+  // Archived rows are excluded from the library query, so the archive chip
+  // reads from its own query rather than filtering a list that never has them.
+  const showArchived = activeTab === 'past' && pastFilter === 'archived';
+
   const {
-    data: tournaments = [],
-    isLoading,
-    isRefetching,
-    refetch,
+    data: liveTournaments = [],
+    isLoading: isLoadingLive,
+    isRefetching: isRefetchingLive,
+    refetch: refetchLive,
   } = useMyTournaments(userId, selectedSport?.id);
+  const {
+    data: archivedTournaments = [],
+    isLoading: isLoadingArchived,
+    isRefetching: isRefetchingArchived,
+    refetch: refetchArchived,
+  } = useMyTournaments(userId, selectedSport?.id, { archived: true, enabled: showArchived });
+
+  const tournaments = showArchived ? archivedTournaments : liveTournaments;
+  const isLoading = showArchived ? isLoadingArchived : isLoadingLive;
+  const isRefetching = showArchived ? isRefetchingArchived : isRefetchingLive;
+  const refetch = showArchived ? refetchArchived : refetchLive;
   const { data: myRegistrations = [], isLoading: isLoadingRegistrations } =
     useMyActiveRegistrations(userId);
   const registeredIds = useMemo(
@@ -207,7 +230,9 @@ export const MyTournaments: React.FC = () => {
       const inTab =
         activeTab === 'upcoming'
           ? UPCOMING_STATUSES.has(tn.status)
-          : tn.status === 'completed' || tn.status === 'cancelled';
+          : showArchived
+            ? tn.status === 'archived'
+            : tn.status === 'completed' || tn.status === 'cancelled';
       if (!inTab) return false;
       switch (currentFilter) {
         case 'registered':
@@ -222,6 +247,8 @@ export const MyTournaments: React.FC = () => {
           return tn.status === 'completed';
         case 'cancelled':
           return tn.status === 'cancelled';
+        case 'archived':
+          return tn.status === 'archived';
         default:
           return true;
       }
@@ -235,7 +262,7 @@ export const MyTournaments: React.FC = () => {
         : new Date(b.cancelled_at ?? b.end_date).getTime() -
           new Date(a.cancelled_at ?? a.end_date).getTime()
     );
-  }, [tournaments, activeTab, currentFilter, registeredIds, userId]);
+  }, [tournaments, activeTab, currentFilter, registeredIds, userId, showArchived]);
 
   const handlePress = useCallback(
     (tournament: Tournament) => {

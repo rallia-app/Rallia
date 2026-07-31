@@ -4878,7 +4878,8 @@
       "organizing": "Organisés",
       "drafts": "Brouillons",
       "completed": "Terminés",
-      "cancelled": "Annulés"
+      "cancelled": "Annulés",
+      "archived": "Archivés"
     },
     "emptyUpcoming": {
       "title": "Aucun tournoi à venir",
@@ -5161,7 +5162,8 @@
       "archiveTournament": "Archiver le tournoi",
       "editDetails": "Modifier les détails",
       "invitePlayers": "Inviter des joueurs",
-      "manageCoOrganizers": "Gérer les co-organisateurs"
+      "manageCoOrganizers": "Gérer les co-organisateurs",
+      "unarchiveTournament": "Restaurer le tournoi"
     },
     "coOrganizers": {
       "ctaTitle": "Co-organisateurs",
@@ -5244,7 +5246,8 @@
       "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
       "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
       "errorSettlementPending": "Les remboursements ou versements sont encore en traitement. Tu pourras archiver une fois que c'est fait.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "restoredToast": "Tournoi restauré"
     },
     "removeModal": {
       "title": "Retirer ce joueur ?",

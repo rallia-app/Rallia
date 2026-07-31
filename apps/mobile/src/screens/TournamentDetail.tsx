@@ -87,6 +87,7 @@ import {
   useIsCertifiedOrganizer,
   useCancelTournament,
   useArchiveTournament,
+  useUnarchiveTournament,
   useProfilesByIds,
   useTournamentParticipants,
   useSports,
@@ -1762,6 +1763,30 @@ export const TournamentDetail: React.FC = () => {
     },
   });
 
+  const unarchive = useUnarchiveTournament({
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('tournamentDetail.archiveModal.restoredToast'));
+    },
+    onError: e => {
+      const msg = e.message.toLowerCase();
+      warningHaptic();
+      toast.error(
+        t(
+          msg.includes('optimistic_lock')
+            ? 'tournamentDetail.archiveModal.errorLockConflict'
+            : 'tournamentDetail.archiveModal.errorGeneric'
+        )
+      );
+    },
+  });
+
+  const onUnarchive = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    unarchive.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, unarchive]);
+
   const onOpen = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
@@ -2472,6 +2497,9 @@ export const TournamentDetail: React.FC = () => {
       s === 'registration_closed' ||
       s === 'in_progress';
     const canArchive = s === 'completed' || s === 'cancelled';
+    // Archiving used to be a one-way door: the row left every list with no way
+    // back. It restores to whichever status it was archived from.
+    const canUnarchive = s === 'archived';
     // Reopen a closed window for late entrants, while the bracket isn't generated.
     const canReopen = s === 'registration_closed' && !tournament?.bracket_locked_at;
     // The shareable invite link stays active until the bracket is published: even
@@ -2479,8 +2507,24 @@ export const TournamentDetail: React.FC = () => {
     // link (draft/open already reach the link through the "Invite players" sheet).
     const canShareLink = s === 'registration_closed' && !tournament?.bracket_locked_at;
     const enabled =
-      isOrganizer && (canEdit || canInvite || canReopen || canShareLink || canCancel || canArchive);
-    return { canEdit, canInvite, canReopen, canShareLink, canCancel, canArchive, enabled };
+      isOrganizer &&
+      (canEdit ||
+        canInvite ||
+        canReopen ||
+        canShareLink ||
+        canCancel ||
+        canArchive ||
+        canUnarchive);
+    return {
+      canEdit,
+      canInvite,
+      canReopen,
+      canShareLink,
+      canCancel,
+      canArchive,
+      canUnarchive,
+      enabled,
+    };
   }, [isOrganizer, tournament?.status, tournament?.bracket_locked_at]);
 
   // Creation-success handoff: land here with openInviteSheet=true and the
@@ -4014,6 +4058,18 @@ export const TournamentDetail: React.FC = () => {
                   setShowActionsMenu(false);
                   lightHaptic();
                   setShowCancelModal(true);
+                }}
+                colors={colors}
+              />
+            )}
+            {adminActions.canUnarchive && (
+              <MenuItem
+                icon="arrow-undo-outline"
+                label={t('tournamentDetail.actions.unarchiveTournament')}
+                testID="menu-unarchive-tournament"
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  onUnarchive();
                 }}
                 colors={colors}
               />

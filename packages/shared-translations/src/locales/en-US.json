@@ -4878,7 +4878,8 @@
       "organizing": "Organizing",
       "drafts": "Drafts",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "archived": "Archived"
     },
     "emptyUpcoming": {
       "title": "No upcoming tournaments",
@@ -5161,7 +5162,8 @@
       "archiveTournament": "Archive tournament",
       "editDetails": "Edit details",
       "invitePlayers": "Invite players",
-      "manageCoOrganizers": "Manage co-organizers"
+      "manageCoOrganizers": "Manage co-organizers",
+      "unarchiveTournament": "Restore tournament"
     },
     "coOrganizers": {
       "ctaTitle": "Co-organizers",
@@ -5244,7 +5246,8 @@
       "errorGeneric": "Couldn't archive the tournament. Please try again.",
       "errorNotArchivable": "This tournament can't be archived yet.",
       "errorSettlementPending": "Refunds or payouts are still going through. You can archive once they're done.",
-      "errorLockConflict": "Someone else made changes — please refresh and try again."
+      "errorLockConflict": "Someone else made changes — please refresh and try again.",
+      "restoredToast": "Tournament restored"
     },
     "removeModal": {
       "title": "Remove this player?",

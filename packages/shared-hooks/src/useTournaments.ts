@@ -44,6 +44,7 @@ import {
   overrideTournamentMatchScore,
   cancelTournament,
   archiveTournament,
+  unarchiveTournament,
   updateTournament,
   getProfilesByIds,
   getPlayersRatingReputation,
@@ -80,8 +81,8 @@ export const tournamentKeys = {
   lists: () => [...tournamentKeys.all, 'list'] as const,
   publicList: (sportId?: string) =>
     [...tournamentKeys.lists(), 'public', sportId ?? 'all'] as const,
-  myList: (userId: string, sportId?: string) =>
-    [...tournamentKeys.lists(), 'mine', userId, sportId ?? 'all'] as const,
+  myList: (userId: string, sportId?: string, archived = false) =>
+    [...tournamentKeys.lists(), 'mine', userId, sportId ?? 'all', archived] as const,
   detail: (tournamentId: string) => [...tournamentKeys.all, 'detail', tournamentId] as const,
   registrations: (tournamentId: string) =>
     [...tournamentKeys.all, 'registrations', tournamentId] as const,
@@ -201,11 +202,16 @@ export function usePublicTournaments(sportId?: string) {
 /**
  * List the caller's tournaments — organized (incl. drafts) plus registered.
  */
-export function useMyTournaments(userId: string | undefined, sportId?: string) {
+export function useMyTournaments(
+  userId: string | undefined,
+  sportId?: string,
+  opts: { archived?: boolean; enabled?: boolean } = {}
+) {
+  const archived = opts.archived ?? false;
   return useQuery<TournamentListItem[]>({
-    queryKey: tournamentKeys.myList(userId ?? '', sportId),
-    queryFn: () => listMyTournaments(userId!, { sportId }),
-    enabled: !!userId,
+    queryKey: tournamentKeys.myList(userId ?? '', sportId, archived),
+    queryFn: () => listMyTournaments(userId!, { sportId, archived }),
+    enabled: !!userId && (opts.enabled ?? true),
   });
 }
 
@@ -360,6 +366,27 @@ export function useCancelTournament(options: MutationOptions<Tournament> = {}) {
       cancelTournament(tournamentId, reason, versionWas),
     onSuccess: t => {
       invalidate(t.id);
+      qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Restores an archived tournament to completed or cancelled, whichever it was. */
+export function useUnarchiveTournament(options: MutationOptions<Tournament> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<Tournament, Error, { tournamentId: string; versionWas: number }>({
+    mutationFn: ({ tournamentId, versionWas }) => unarchiveTournament(tournamentId, versionWas),
+    onSuccess: t => {
+      invalidate(t.id);
+      // Both views change: the row leaves the archive and rejoins the library.
       qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
       options.onSuccess?.(t);
     },

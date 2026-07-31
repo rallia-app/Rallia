@@ -173,11 +173,16 @@ export async function listPublicTournaments(
 /**
  * List the caller's tournaments — ones they organize (any status, incl.
  * drafts) plus ones they hold an active registration in (as captain or
- * doubles partner). Archived rows are excluded; most-recent first.
+ * doubles partner). Most-recent first.
+ *
+ * Archived rows are excluded by default and are the ONLY thing returned when
+ * `archived` is set, so the archive is its own view rather than clutter mixed
+ * into the live library. Before this existed, archiving hid a tournament with
+ * no screen anywhere that could show it again.
  */
 export async function listMyTournaments(
   userId: string,
-  opts: { sportId?: string } = {}
+  opts: { sportId?: string; archived?: boolean } = {}
 ): Promise<TournamentListItem[]> {
   // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
   if (!userId) return [];
@@ -204,9 +209,9 @@ export async function listMyTournaments(
   let query = supabase
     .from('tournaments')
     .select(LIST_SELECT)
-    .neq('status', 'archived')
     .eq('tournament_registrations.status', 'registered')
     .order('created_at', { ascending: false });
+  query = opts.archived ? query.eq('status', 'archived') : query.neq('status', 'archived');
   query = relatedIds.length
     ? query.or(`organizer_id.eq.${userId},id.in.(${relatedIds.join(',')})`)
     : query.eq('organizer_id', userId);
@@ -1281,6 +1286,18 @@ export async function cancelTournament(
  * Organizer archives a completed or cancelled tournament — hides it from
  * active discovery feeds.
  */
+export async function unarchiveTournament(
+  tournamentId: string,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_unarchive', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
 export async function archiveTournament(
   tournamentId: string,
   versionWas: number
