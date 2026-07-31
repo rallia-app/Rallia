@@ -114,19 +114,19 @@ export interface LeagueMemberWithProfile extends LeagueMember {
 export async function listPublicLeagues(
   opts: { sportId?: string } = {}
 ): Promise<LeagueListItem[]> {
-  // Community leagues belong here too: leagues_select already restricts them to
-  // active members of the league's network, so widening the client filter shows
-  // them to exactly the people entitled to see them and nobody else. Filtering
-  // to 'public' here was hiding them from their own community.
-  //
   // Paused leagues stay listed on purpose. They take no new members (league_join
   // requires status 'active' and answers LEAGUE_NOT_ACTIVE), but a league that
   // pauses for a season should not vanish from discovery. 'closed' is excluded:
   // there is nothing left to join or follow.
+  //
+  // Community visibility is deliberately NOT surfaced here. leagues_select would
+  // permit it (it restricts community leagues to active members of the league's
+  // network), so this is a product decision to park the community concept, not a
+  // limitation. Flipping this back is a one-line change if that decision changes.
   let query = supabase
     .from('leagues')
     .select(LIST_SELECT)
-    .in('visibility', ['public', 'community'])
+    .eq('visibility', 'public')
     .in('status', ['active', 'paused'])
     .eq('league_members.status', 'active')
     .order('created_at', { ascending: false });
