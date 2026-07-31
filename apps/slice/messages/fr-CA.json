@@ -105,7 +105,10 @@
       "badge": "Bonne nouvelle",
       "title": "On a trouvé {count} joueurs compatibles.",
       "subtitle": "Niveau {scale} {rating}, à moins de {km} km, disponibles dans ta plage horaire.",
-      "likelihoodLabel": "Chances estimées que ta partie ait lieu",
+      "confidence": {
+        "very_likely": "Ta partie a de très bonnes chances d'avoir lieu.",
+        "likely": "Ta partie a de bonnes chances d'avoir lieu."
+      },
       "hint": "Basé sur les profils des joueurs et les taux de réponse dans ton coin.",
       "continueCta": "Continuer"
     },
@@ -143,7 +146,11 @@
     "plans": {
       "title": "Choisis ton forfait",
       "subtitle": "Paie à la partie, ou passe en illimité.",
-      "liquidityChip": "{count} joueurs compatibles · {pct} % de chances",
+      "liquidityChip": "{count} joueurs compatibles · {confidence}",
+      "confidence": {
+        "very_likely": "très bonnes chances",
+        "likely": "bonnes chances"
+      },
       "single": {
         "title": "Une partie",
         "description": "On organise une partie pour toi."

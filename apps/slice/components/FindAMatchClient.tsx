@@ -540,6 +540,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     trackSmokeEvent('liquidity_viewed', eventContext(experiment), {
       players_shown: liquidity.playerCount,
       match_likelihood_pct: liquidity.likelihoodPct,
+      confidence_shown: liquidity.confidence,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, experiment, liquidity]);
@@ -896,6 +897,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         amount_cents: plans[selectedPlanTier].amountCents,
         players_shown: liquidity?.playerCount ?? null,
         match_likelihood_pct: liquidity?.likelihoodPct ?? null,
+        confidence_shown: liquidity?.confidence ?? null,
       }
     );
     clearRequestContext();
@@ -1421,23 +1423,11 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           </p>
         </div>
 
-        <div className="smk-panel flex flex-col gap-3 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--smk-ink)]">
-              <Users className="h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
-              {t('liquidity.likelihoodLabel')}
-            </span>
-            <span className="smk-display text-2xl">{liquidity.likelihoodPct}%</span>
-          </div>
-          <div
-            className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--smk-line)]"
-            role="presentation"
-          >
-            <div
-              className="h-full rounded-full bg-[var(--smk-lime)]"
-              style={{ width: `${liquidity.likelihoodPct}%` }}
-            />
-          </div>
+        <div className="smk-panel flex flex-col gap-2 p-5">
+          <span className="flex items-center gap-2 text-base font-semibold text-[color:var(--smk-ink)]">
+            <Users className="h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
+            {t(`liquidity.confidence.${liquidity.confidence}`)}
+          </span>
           <p className="smk-text-muted text-sm">{t('liquidity.hint')}</p>
         </div>
 
@@ -1612,7 +1602,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
               <Users className="h-3.5 w-3.5 shrink-0" />
               {t('plans.liquidityChip', {
                 count: liquidity.playerCount,
-                pct: liquidity.likelihoodPct,
+                confidence: t(`plans.confidence.${liquidity.confidence}`),
               })}
             </span>
           )}

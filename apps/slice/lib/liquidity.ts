@@ -17,11 +17,16 @@ import { isFlexibleTimeSlot, parseTimeSlot } from './time-selection';
  * immediately it's fake.
  */
 
+/** Qualitative label shown to the visitor — a number would quantify failure. */
+export type ConfidenceTier = 'very_likely' | 'likely';
+
 export interface LiquidityEstimate {
   /** "X compatible players" shown to the visitor. */
   playerCount: number;
-  /** "~Y% chance your game happens" shown to the visitor. */
+  /** Internal score (68–92). Recorded for analysis, never shown to the visitor. */
   likelihoodPct: number;
+  /** What the visitor actually sees. */
+  confidence: ConfidenceTier;
 }
 
 /** FNV-1a, folded to [0, 1). Stable jitter source keyed on the inputs. */
@@ -75,5 +80,9 @@ export function estimateLiquidity(input: {
   const rawPct = 71 + 12 * centrality + flexibleBonus + radiusBonus + Math.round(jitter * 6) - 3;
   const likelihoodPct = Math.min(92, Math.max(68, Math.round(rawPct)));
 
-  return { playerCount, likelihoodPct };
+  return {
+    playerCount,
+    likelihoodPct,
+    confidence: likelihoodPct >= 78 ? 'very_likely' : 'likely',
+  };
 }
