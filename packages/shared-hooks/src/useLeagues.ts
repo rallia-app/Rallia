@@ -914,7 +914,18 @@ export function useAttachMatchToSessionSlot(
       qc.invalidateQueries({ queryKey: leagueKeys.rankings(seasonId) });
       options.onSuccess?.(result);
     },
-    onError: options.onError,
+    onError: e => {
+      // The pairing changed under us (opponent linked first / already settled):
+      // refetch so the session stops offering it.
+      if (
+        e instanceof Error &&
+        (e.message === 'ALREADY_LINKED' || e.message === 'MATCH_NOT_PENDING')
+      ) {
+        qc.invalidateQueries({ queryKey: leagueKeys.sessionMatches(sessionId) });
+        qc.invalidateQueries({ queryKey: leagueKeys.session(sessionId) });
+      }
+      options.onError?.(e);
+    },
   });
 }
 

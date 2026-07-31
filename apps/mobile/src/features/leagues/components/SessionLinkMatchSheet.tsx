@@ -39,6 +39,17 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 
 const SHEET_ID = 'session-link-match';
 
+// Attach RPC business errors worth a friendly message. The stale ones mean the
+// pairing changed under us (e.g. the opponent linked first) — close and refresh.
+const ATTACH_ERROR_KEYS: Record<string, TranslationKey> = {
+  ALREADY_LINKED: 'sessionDetail.linkPicker.errors.alreadyLinked',
+  MATCH_NOT_PENDING: 'sessionDetail.linkPicker.errors.notPending',
+  MATCH_ALREADY_LINKED: 'sessionDetail.linkPicker.errors.matchAlreadyLinked',
+  MATCH_NOT_VERIFIED: 'sessionDetail.linkPicker.errors.matchNotVerified',
+  PARTICIPANTS_MISMATCH: 'sessionDetail.linkPicker.errors.participantsMismatch',
+};
+const STALE_SLOT_ERRORS = new Set(['ALREADY_LINKED', 'MATCH_NOT_PENDING']);
+
 export function SessionLinkMatchActionSheet({ payload }: SheetProps<'session-link-match'>) {
   const sessionMatchId = payload?.sessionMatchId ?? '';
   const sessionId = payload?.sessionId ?? '';
@@ -79,7 +90,9 @@ export function SessionLinkMatchActionSheet({ payload }: SheetProps<'session-lin
     },
     onError: e => {
       warningHaptic();
-      toast.error(t('sessionDetail.linkPicker.attachFailed') + ` (${e.message})`);
+      const key = ATTACH_ERROR_KEYS[e.message];
+      toast.error(key ? t(key) : t('sessionDetail.linkPicker.attachFailed') + ` (${e.message})`);
+      if (STALE_SLOT_ERRORS.has(e.message)) void SheetManager.hide(SHEET_ID);
     },
   });
 

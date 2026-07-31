@@ -4747,7 +4747,14 @@
       "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match",
       "linkCta": "Link this game",
-      "addResult": "Add result"
+      "addResult": "Add result",
+      "errors": {
+        "alreadyLinked": "A game is already linked to this matchup.",
+        "notPending": "This matchup is already settled.",
+        "matchAlreadyLinked": "That game is already linked to another result.",
+        "matchNotVerified": "That game's score isn't confirmed yet.",
+        "participantsMismatch": "The players in that game don't match this matchup."
+      }
     },
     "pairingChat": {
       "organize": "Organize your game",
@@ -5292,7 +5299,14 @@
       "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
       "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match",
-      "linkCta": "Link this game"
+      "linkCta": "Link this game",
+      "errors": {
+        "alreadyLinked": "A game is already linked to this matchup.",
+        "notPending": "This matchup is already settled.",
+        "matchAlreadyLinked": "That game is already linked to another result.",
+        "matchNotVerified": "That game's score isn't confirmed yet.",
+        "participantsMismatch": "The players in that game don't match this matchup."
+      }
     },
     "partner": {
       "title": "Pick your partner",

@@ -42,6 +42,17 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 
 const SHEET_ID = 'tournament-link-match';
 
+// Attach RPC business errors worth a friendly message. The stale ones mean the
+// slot changed under us (e.g. the opponent linked first) — close and refresh.
+const ATTACH_ERROR_KEYS: Record<string, TranslationKey> = {
+  ALREADY_LINKED: 'tournamentDetail.linkPicker.errors.alreadyLinked',
+  MATCH_NOT_PENDING: 'tournamentDetail.linkPicker.errors.notPending',
+  MATCH_ALREADY_LINKED: 'tournamentDetail.linkPicker.errors.matchAlreadyLinked',
+  MATCH_NOT_VERIFIED: 'tournamentDetail.linkPicker.errors.matchNotVerified',
+  PARTICIPANTS_MISMATCH: 'tournamentDetail.linkPicker.errors.participantsMismatch',
+};
+const STALE_SLOT_ERRORS = new Set(['ALREADY_LINKED', 'MATCH_NOT_PENDING']);
+
 export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tournament-link-match'>) {
   const tournamentMatchId = payload?.tournamentMatchId ?? '';
   const tournamentId = payload?.tournamentId ?? '';
@@ -84,7 +95,9 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
     },
     onError: e => {
       warningHaptic();
-      toast.error(t('tournamentDetail.linkPicker.attachFailed') + ` (${e.message})`);
+      const key = ATTACH_ERROR_KEYS[e.message];
+      toast.error(key ? t(key) : t('tournamentDetail.linkPicker.attachFailed') + ` (${e.message})`);
+      if (STALE_SLOT_ERRORS.has(e.message)) void SheetManager.hide(SHEET_ID);
     },
   });
 

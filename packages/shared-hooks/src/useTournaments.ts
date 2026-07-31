@@ -434,7 +434,14 @@ export function useAttachMatchToTournamentSlot(options: MutationOptions<Tourname
       invalidate(vars.tournamentId);
       options.onSuccess?.(tm);
     },
-    onError: e => options.onError?.(e),
+    onError: (e, vars) => {
+      // The slot changed under us (opponent linked first / already settled):
+      // refetch so the bracket stops offering it.
+      if (e.message === 'ALREADY_LINKED' || e.message === 'MATCH_NOT_PENDING') {
+        invalidate(vars.tournamentId);
+      }
+      options.onError?.(e);
+    },
   });
   return {
     mutate: mutation.mutate,

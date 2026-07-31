@@ -4747,7 +4747,14 @@
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, entre un pointage confirmé, ensuite reviens la lier ici.",
       "attachFailed": "Impossible de lier la partie",
       "linkCta": "Lier cette partie",
-      "addResult": "Ajouter le résultat"
+      "addResult": "Ajouter le résultat",
+      "errors": {
+        "alreadyLinked": "Une partie est déjà liée à ce duel.",
+        "notPending": "Ce duel est déjà réglé.",
+        "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
+        "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
+        "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
+      }
     },
     "pairingChat": {
       "organize": "Organise ta partie",
@@ -5292,7 +5299,14 @@
       "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, confirme le score, puis reviens ici pour la lier.",
       "attachFailed": "Impossible de lier la partie",
-      "linkCta": "Lier cette partie"
+      "linkCta": "Lier cette partie",
+      "errors": {
+        "alreadyLinked": "Une partie est déjà liée à ce duel.",
+        "notPending": "Ce duel est déjà réglé.",
+        "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
+        "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
+        "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
+      }
     },
     "partner": {
       "title": "Choisis ton partenaire",
