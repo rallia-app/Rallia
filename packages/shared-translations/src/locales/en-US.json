@@ -4228,6 +4228,10 @@
     "emptyMy": {
       "title": "No leagues yet",
       "description": "Leagues you join or organize will show up here. Create one from the action menu."
+    },
+    "tabs": {
+      "active": "Active",
+      "closed": "Closed"
     }
   },
   "leagueDetail": {

@@ -4228,6 +4228,10 @@
     "emptyMy": {
       "title": "Aucune ligue pour l'instant",
       "description": "Les ligues que vous rejoignez ou organisez apparaîtront ici. Créez-en une depuis le menu d'actions."
+    },
+    "tabs": {
+      "active": "Actives",
+      "closed": "Fermées"
     }
   },
   "leagueDetail": {
