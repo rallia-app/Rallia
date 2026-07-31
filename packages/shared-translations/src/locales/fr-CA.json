@@ -4696,7 +4696,12 @@
       "vs": "vs",
       "bye": "Bye : {names}",
       "lock": "Verrouiller la partie",
-      "unlock": "Déverrouiller la partie"
+      "unlock": "Déverrouiller la partie",
+      "oddRoster": {
+        "title": "Un joueur va être exempté",
+        "message": "{count} joueurs ont confirmé, un nombre impair, donc un d’eux sera exempté pour cette séance. Retire ou ajoute un joueur d’abord si tu préfères qu’ils jouent tous.",
+        "cta": "Générer quand même"
+      }
     },
     "score": {
       "title": "Entrer le pointage",

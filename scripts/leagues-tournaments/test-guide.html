@@ -493,7 +493,7 @@
       <tbody>
         <tr><td>1 · brouillon</td><td>brouillon</td><td>Invisible pour les membres, publication</td></tr>
         <tr><td>2 · à confirmer</td><td>publiée</td><td>10 présences en attente</td></tr>
-        <tr><td>3 · feuille à générer</td><td>publiée</td><td>6 confirmés, 2 refus, aucune feuille</td></tr>
+        <tr><td>3 · feuille à générer</td><td>publiée</td><td>6 confirmés, 4 refus, aucune feuille</td></tr>
         <tr><td>4 · feuille générée</td><td>publiée</td><td>3 parties en attente de résultat</td></tr>
         <tr><td>5 · en cours</td><td>en cours</td><td>1 résultat sur 3 saisi</td></tr>
         <tr><td>6 · terminée</td><td>terminée</td><td>Classement recalculé</td></tr>
@@ -519,11 +519,18 @@
 
     <h3>4.3 · Séance 3, générer la feuille de match</h3>
     <ol>
-      <li>6 confirmés, 2 refus, 2 sans réponse. Vérifie les trois compteurs.</li>
+      <li>6 confirmés et 4 refus, personne sans réponse. Vérifie les compteurs.</li>
       <li>Génère la feuille : 3 parties doivent apparaître, uniquement entre les 6 confirmés.</li>
-      <li>Régénère la feuille : les appariements doivent être recalculés.</li>
-      <li>Verrouille une partie, régénère, et vérifie que la partie verrouillée n'a pas bougé.</li>
+      <li>Verrouille une partie, régénère, et vérifie que la partie verrouillée n'a pas bougé.
+        Le verrou se trouve à côté de chaque partie, y compris celles sans score.</li>
     </ol>
+    <div class="warn">
+      <strong>Régénérer ne change pas les appariements</strong> tant que la liste des confirmés ne
+      bouge pas, et une version précédente de ce guide disait le contraire. Le générateur ne lit pas
+      encore le mode d'appariement : aléatoire, éviter les répétitions et suisse retombent tous sur
+      le même calcul déterministe par classement. Ce n'est donc pas un bogue à rapporter, mais le
+      verrou reste utile dès que la liste des confirmés change.
+    </div>
 
     <h3>4.4 · Séance 4, feuille prête</h3>
     <p>Saisis un résultat, puis rouvre-le pour le corriger. Vérifie que le bouton de verrouillage
@@ -550,6 +557,10 @@
       <code>lt_send_session_confirm_reminders</code> (cron aux 15 minutes). C'est donc la seule où
       tu peux réellement recevoir la notification de rappel. Laisse-la sans répondre et attends la
       poussée.
+      <br /><br />
+      Ce que tu vérifies : que la notification arrive bien pour <em>cette</em> séance et pas pour
+      les autres, qu'elle t'amène sur la bonne séance quand tu la touches, et que ta présence est
+      toujours à « en attente » en arrivant. Rien d'autre n'est attendu ici.
     </div>
 
     <h3>4.9 · Séance 9, trois tours</h3>

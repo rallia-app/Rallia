@@ -4696,7 +4696,12 @@
       "vs": "vs",
       "bye": "Bye: {names}",
       "lock": "Lock game",
-      "unlock": "Unlock game"
+      "unlock": "Unlock game",
+      "oddRoster": {
+        "title": "Someone will sit out",
+        "message": "{count} players confirmed, which is an odd number, so one of them gets a bye this session. Remove or add a player first if you would rather they all play.",
+        "cta": "Generate anyway"
+      }
     },
     "score": {
       "title": "Enter score",

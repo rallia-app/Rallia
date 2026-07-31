@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -255,6 +256,13 @@ export const SessionDetail: React.FC = () => {
       toast.error(e.message || t('sessionDetail.errors.generic'));
     },
   });
+
+  // "Pour une ligue, le concept de bye ne devrait pas s'appliquer" — the bye
+  // stays (removing it would block generation whenever someone does not show,
+  // and the rotation that scores it as attendance just shipped), but an odd
+  // roster is now a decision rather than a surprise: the organizer is told who
+  // sits out and can withdraw or add someone first.
+  const oddRoster = confirmedCount % 2 === 1 && (sess?.rounds ?? 1) <= 1;
 
   const { mutate: genSheet, isPending: isGenerating } = useGenerateSessionSheet(sessionId, {
     onSuccess: () => {
@@ -940,6 +948,23 @@ export const SessionDetail: React.FC = () => {
               <TouchableOpacity
                 onPress={() => {
                   lightHaptic();
+                  if (oddRoster) {
+                    Alert.alert(
+                      t('sessionDetail.sheet.oddRoster.title'),
+                      t('sessionDetail.sheet.oddRoster.message', {
+                        count: String(confirmedCount),
+                      }),
+                      [
+                        { text: t('common.cancel'), style: 'cancel' },
+                        {
+                          text: t('sessionDetail.sheet.oddRoster.cta'),
+                          onPress: () =>
+                            genSheet({ versionWas: sess.version, regenerate: hasSheet }),
+                        },
+                      ]
+                    );
+                    return;
+                  }
                   genSheet({ versionWas: sess.version, regenerate: hasSheet });
                 }}
                 disabled={isGenerating || confirmedCount < 2}
