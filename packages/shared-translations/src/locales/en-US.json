@@ -4198,7 +4198,11 @@
       "description": "Enter a tournament to earn your first points and land on the board."
     },
     "seasonSpringSummer": "Spring/Summer {year}",
-    "seasonFallWinter": "Fall/Winter {year}"
+    "seasonFallWinter": "Fall/Winter {year}",
+    "boards": {
+      "singles": "Singles",
+      "doubles": "Doubles"
+    }
   },
   "leagueList": {
     "title": "Leagues",

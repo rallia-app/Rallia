@@ -4198,7 +4198,11 @@
       "description": "Inscris-toi à un tournoi pour gagner tes premiers points pis apparaître au classement."
     },
     "seasonSpringSummer": "Printemps/Été {year}",
-    "seasonFallWinter": "Automne/Hiver {year}"
+    "seasonFallWinter": "Automne/Hiver {year}",
+    "boards": {
+      "singles": "Simple",
+      "doubles": "Double"
+    }
   },
   "leagueList": {
     "title": "Ligues",

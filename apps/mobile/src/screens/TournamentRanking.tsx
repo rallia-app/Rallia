@@ -31,12 +31,14 @@ import {
   useMyPointsToDefend,
   useRatingScoresForSport,
   type TournamentRankingEntry,
+  type RankingBoard,
 } from '@rallia/shared-hooks';
+
+import { lightHaptic } from '#/utils/haptics';
 
 import { useTranslation, useThemeStyles, useScrollBottomInset } from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
-import { lightHaptic } from '#/utils/haptics';
 import {
   BoardRow,
   MyStandingCard,
@@ -114,7 +116,10 @@ export const TournamentRanking: React.FC = () => {
   const sportId = selectedSport?.id;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const { data: myRank } = useMyTournamentRanking(sportId);
+  // Doubles ranks on its own board, so the two never mix in one list.
+  const [board, setBoard] = useState<RankingBoard>('singles');
+
+  const { data: myRank } = useMyTournamentRanking(sportId, undefined, board);
   const { items: toDefend, pointsAtStake } = useMyPointsToDefend(sportId);
 
   // Caller's exact active rating (by rating_score id — the canonical compare).
@@ -137,7 +142,7 @@ export const TournamentRanking: React.FC = () => {
     filterMode === 'rating' && playerRatingScoreId ? playerRatingScoreId : undefined;
 
   const { items, isLoading, isError, isRefetching, isFetchingNextPage, fetchNextPage, refetch } =
-    useTournamentRanking(sportId, undefined, levelFilter, ratingFilter);
+    useTournamentRanking(sportId, undefined, levelFilter, ratingFilter, board);
 
   const accentColor = isDark ? primary[300] : primary[600];
 
@@ -220,6 +225,31 @@ export const TournamentRanking: React.FC = () => {
         formatMore={count => t('tournamentRanking.pointsToDefend.more', { count })}
         theme={theme}
       />
+
+      <View style={styles.filterRow}>
+        <FilterChip
+          active={board === 'singles'}
+          icon="person-outline"
+          label={t('tournamentRanking.boards.singles')}
+          accentColor={accentColor}
+          isDark={isDark}
+          cardColor={colors.card}
+          borderColor={colors.border}
+          mutedColor={colors.textMuted}
+          onPress={() => setBoard('singles')}
+        />
+        <FilterChip
+          active={board === 'doubles'}
+          icon="people-outline"
+          label={t('tournamentRanking.boards.doubles')}
+          accentColor={accentColor}
+          isDark={isDark}
+          cardColor={colors.card}
+          borderColor={colors.border}
+          mutedColor={colors.textMuted}
+          onPress={() => setBoard('doubles')}
+        />
+      </View>
 
       {myRank && (myRank.levelBucket || myRatingValue != null) ? (
         <View style={styles.filterRow}>

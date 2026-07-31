@@ -9137,6 +9137,7 @@ export type Database = {
       }
       tournament_ranking_points: {
         Row: {
+          board: string
           computed_at: string
           earned_at: string
           id: string
@@ -9151,6 +9152,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          board?: string
           computed_at?: string
           earned_at?: string
           id?: string
@@ -9165,6 +9167,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          board?: string
           computed_at?: string
           earned_at?: string
           id?: string
@@ -10691,7 +10694,7 @@ export type Database = {
         }[]
       }
       get_my_tournament_ranking: {
-        Args: { p_season_code?: string }
+        Args: { p_board?: string; p_season_code?: string }
         Returns: {
           events_played: number
           level_bucket: string
@@ -11498,6 +11501,7 @@ export type Database = {
       }
       get_tournament_leaderboard: {
         Args: {
+          p_board?: string
           p_level_filter?: string
           p_limit?: number
           p_offset?: number
@@ -13517,6 +13521,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      session_withdraw_member: {
+        Args: { p_session_id: string; p_user_id: string; p_version_was: number }
+        Returns: {
+          created_at: string
+          guest_invited_by: string | null
+          id: string
+          is_guest: boolean
+          preferred_partner_id: string | null
+          responded_at: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["session_presence_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          waitlist_position: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "session_presence"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_active_conversation: {
         Args: { p_conversation_id: string }
         Returns: undefined
@@ -14261,6 +14288,7 @@ export type Database = {
       }
       tournament_ranked_board: {
         Args: {
+          p_board?: string
           p_level_filter?: string
           p_rating_score_id?: string
           p_season_id: string
