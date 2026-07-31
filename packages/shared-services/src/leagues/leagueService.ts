@@ -517,6 +517,45 @@ export async function getMyLeagueMembership(
   return data as LeagueMember | null;
 }
 
+export interface LeagueWaitlistStatus {
+  queueRank: number;
+  queueSize: number;
+}
+
+/**
+ * The caller's live place in a capped league's waitlist, or null when not
+ * queued. RLS hides other rows, so the rank comes from a definer RPC rather
+ * than a count.
+ */
+export async function getMyLeagueWaitlistStatus(
+  leagueId: string
+): Promise<LeagueWaitlistStatus | null> {
+  const { data, error } = await supabase.rpc('league_waitlist_position', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  const row = (data as { queue_rank: number; queue_size: number }[] | null)?.[0];
+  return row ? { queueRank: row.queue_rank, queueSize: row.queue_size } : null;
+}
+
+export type LeagueWaitlistEntry = Tables<'league_member_waitlist'>;
+
+/**
+ * The un-promoted queue in promotion order. RLS scopes this to the whole
+ * queue for the organizer and to the caller's own row otherwise.
+ */
+export async function listLeagueWaitlist(leagueId: string): Promise<LeagueWaitlistEntry[]> {
+  const { data, error } = await supabase
+    .from('league_member_waitlist')
+    .select('*')
+    .eq('league_id', leagueId)
+    .is('promoted_at', null)
+    .order('position', { ascending: true })
+    .order('joined_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LeagueWaitlistEntry[];
+}
+
 export async function listSeasons(leagueId: string): Promise<Season[]> {
   const { data, error } = await supabase
     .from('seasons')

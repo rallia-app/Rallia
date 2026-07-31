@@ -12162,6 +12162,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_waitlist_position: {
+        Args: { p_league_id: string }
+        Returns: {
+          queue_rank: number
+          queue_size: number
+        }[]
+      }
       list_utm_campaigns: {
         Args: { p_include_archived?: boolean }
         Returns: {
@@ -12257,6 +12264,11 @@ export type Database = {
         Returns: string
       }
       lt_league_default_rules: { Args: { p_sport_id: string }; Returns: Json }
+      lt_league_promote_waitlist_head: {
+        Args: { p_league_id: string }
+        Returns: boolean
+      }
+      lt_lift_expired_suspensions: { Args: never; Returns: number }
       lt_min_rating_level_multiplier: {
         Args: { p_min_rating: number; p_sport_id: string }
         Returns: number
@@ -13032,6 +13044,12 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      season_ranking_population: {
+        Args: { p_season_id: string }
+        Returns: {
+          user_id: string
+        }[]
       }
       season_ranking_roster: {
         Args: { p_season_id: string }

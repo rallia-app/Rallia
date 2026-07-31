@@ -30,6 +30,10 @@ import {
   getLeague,
   getLeagueSession,
   getMyLeagueMembership,
+  getMyLeagueWaitlistStatus,
+  listLeagueWaitlist,
+  type LeagueWaitlistStatus,
+  type LeagueWaitlistEntry,
   getMySessionPresence,
   joinLeague,
   listLeagueMembers,
@@ -89,6 +93,9 @@ export const leagueKeys = {
   members: (leagueId: string) => [...leagueKeys.all, 'members', leagueId] as const,
   myMembership: (leagueId: string, userId: string) =>
     [...leagueKeys.all, 'myMembership', leagueId, userId] as const,
+  waitlist: (leagueId: string) => [...leagueKeys.all, 'waitlist', leagueId] as const,
+  myWaitlistStatus: (leagueId: string, userId: string) =>
+    [...leagueKeys.all, 'myWaitlistStatus', leagueId, userId] as const,
   seasons: (leagueId: string) => [...leagueKeys.all, 'seasons', leagueId] as const,
   seasonFeeQuote: (seasonId: string) => [...leagueKeys.all, 'seasonFeeQuote', seasonId] as const,
   sessions: (seasonId: string) => [...leagueKeys.all, 'sessions', seasonId] as const,
@@ -118,6 +125,10 @@ function useLeagueDetailInvalidator() {
     qc.invalidateQueries({ queryKey: leagueKeys.members(leagueId) });
     qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) });
     qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+    // Any membership change can reshape the queue (joins queue up, departures
+    // and capacity edits promote).
+    qc.invalidateQueries({ queryKey: leagueKeys.waitlist(leagueId) });
+    qc.invalidateQueries({ queryKey: [...leagueKeys.all, 'myWaitlistStatus', leagueId] });
   };
 }
 
@@ -166,6 +177,28 @@ export function useMyLeagueMembership(leagueId: string | undefined, userId: stri
     queryKey: leagueKeys.myMembership(leagueId ?? '', userId ?? ''),
     queryFn: () => getMyLeagueMembership(leagueId!, userId!),
     enabled: !!leagueId && !!userId,
+  });
+}
+
+/** Place in line for a queued joiner; null when not queued. */
+export function useMyLeagueWaitlistStatus(
+  leagueId: string | undefined,
+  userId: string | undefined,
+  enabled = true
+) {
+  return useQuery<LeagueWaitlistStatus | null>({
+    queryKey: leagueKeys.myWaitlistStatus(leagueId ?? '', userId ?? ''),
+    queryFn: () => getMyLeagueWaitlistStatus(leagueId!),
+    enabled: enabled && !!leagueId && !!userId,
+  });
+}
+
+/** The un-promoted queue in order (organizer sees all rows; others their own). */
+export function useLeagueWaitlist(leagueId: string | undefined, enabled = true) {
+  return useQuery<LeagueWaitlistEntry[]>({
+    queryKey: leagueKeys.waitlist(leagueId ?? ''),
+    queryFn: () => listLeagueWaitlist(leagueId!),
+    enabled: enabled && !!leagueId,
   });
 }
 

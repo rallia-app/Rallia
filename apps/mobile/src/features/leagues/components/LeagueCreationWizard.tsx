@@ -76,6 +76,8 @@ export interface LeagueEditData {
   minRating?: number | null;
   maxRating?: number | null;
   logoUrl?: string | null;
+  memberCapacity?: number | null;
+  waitlistEnabled?: boolean;
 }
 
 export interface LeagueCreationWizardProps {
@@ -592,10 +594,27 @@ const EligibilityStep: React.FC<{
   maxRating: number | null;
   setMaxRating: (v: number | null) => void;
   ratingOptions: { id: string; value: number; label: string; skillLevel: string | null }[];
+  capacityInput: string;
+  setCapacityInput: (v: string) => void;
+  waitlistEnabled: boolean;
+  setWaitlistEnabled: (v: boolean) => void;
   errors: Record<string, string | undefined>;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
-}> = ({ minRating, setMinRating, maxRating, setMaxRating, ratingOptions, errors, colors, t }) => (
+}> = ({
+  minRating,
+  setMinRating,
+  maxRating,
+  setMaxRating,
+  ratingOptions,
+  capacityInput,
+  setCapacityInput,
+  waitlistEnabled,
+  setWaitlistEnabled,
+  errors,
+  colors,
+  t,
+}) => (
   <SheetScrollView
     style={styles.stepContainer}
     contentContainerStyle={styles.stepContent}
@@ -646,6 +665,51 @@ const EligibilityStep: React.FC<{
       <Text size="sm" color={colors.textMuted}>
         {t('leagueCreation.fields.ratingGateUnavailable' as TranslationKey)}
       </Text>
+    )}
+
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('leagueCreation.fields.memberCapacity' as TranslationKey)}
+      </FieldLabel>
+      <TextInput
+        style={[
+          styles.textInput,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: errors.memberCapacity ? colors.error : colors.inputBorder,
+            color: colors.text,
+          },
+        ]}
+        placeholder={t('leagueCreation.fields.memberCapacityPlaceholder' as TranslationKey)}
+        placeholderTextColor={colors.textMuted}
+        value={capacityInput}
+        onChangeText={setCapacityInput}
+        keyboardType="number-pad"
+        maxLength={4}
+        returnKeyType="done"
+        testID="league-member-capacity"
+      />
+      {errors.memberCapacity && (
+        <Text size="xs" color={colors.error} style={styles.errorText}>
+          {errors.memberCapacity}
+        </Text>
+      )}
+      <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+        {t('leagueCreation.fields.memberCapacityHint' as TranslationKey)}
+      </Text>
+    </View>
+
+    {capacityInput.trim() !== '' && (
+      <View style={styles.fieldGroup}>
+        <OptionCard
+          icon="list-outline"
+          title={t('leagueCreation.fields.waitlistTitle' as TranslationKey)}
+          description={t('leagueCreation.fields.waitlistDescription' as TranslationKey)}
+          selected={waitlistEnabled}
+          onPress={() => setWaitlistEnabled(!waitlistEnabled)}
+          colors={colors}
+        />
+      </View>
     )}
   </SheetScrollView>
 );
@@ -706,6 +770,10 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   const [joinMode, setJoinMode] = useState<JoinMode>(editLeague?.joinMode ?? 'approval');
   const [minRating, setMinRating] = useState<number | null>(editLeague?.minRating ?? null);
   const [maxRating, setMaxRating] = useState<number | null>(editLeague?.maxRating ?? null);
+  const [capacityInput, setCapacityInput] = useState(
+    editLeague?.memberCapacity != null ? String(editLeague.memberCapacity) : ''
+  );
+  const [waitlistEnabled, setWaitlistEnabled] = useState(editLeague?.waitlistEnabled ?? false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -780,10 +848,16 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       if (step === 3 && minRating !== null && maxRating !== null && maxRating < minRating) {
         next.ratingRange = t('leagueCreation.validation.ratingRangeInvalid' as TranslationKey);
       }
+      if (step === 3 && capacityInput.trim() !== '') {
+        const cap = Number(capacityInput.trim());
+        if (!Number.isInteger(cap) || cap < 1) {
+          next.memberCapacity = t('leagueCreation.validation.capacityInvalid' as TranslationKey);
+        }
+      }
       setErrors(next);
       return Object.values(next).every(v => !v);
     },
-    [name, minRating, maxRating, t]
+    [name, minRating, maxRating, capacityInput, t]
   );
 
   const goNext = useCallback(() => {
@@ -838,6 +912,11 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       resolvedLogoUrl = url;
     }
 
+    // Empty capacity = no cap. The waitlist flag only means something with a
+    // cap, so clearing the cap also clears the flag.
+    const memberCapacity = capacityInput.trim() === '' ? null : Number(capacityInput.trim());
+    const effectiveWaitlist = memberCapacity === null ? false : waitlistEnabled;
+
     // ---- Edit mode: diff against the original and PATCH only what changed ----
     if (isEditMode && editLeague) {
       try {
@@ -851,6 +930,10 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         if (minRating !== (editLeague.minRating ?? null)) patch.minRating = minRating;
         if (maxRating !== (editLeague.maxRating ?? null)) patch.maxRating = maxRating;
         if (resolvedLogoUrl !== (editLeague.logoUrl ?? null)) patch.logoUrl = resolvedLogoUrl;
+        if (memberCapacity !== (editLeague.memberCapacity ?? null))
+          patch.memberCapacity = memberCapacity;
+        if (effectiveWaitlist !== (editLeague.waitlistEnabled ?? false))
+          patch.waitlistEnabled = effectiveWaitlist;
 
         // The server rejects an empty patch, so a no-op save just closes.
         if (Object.keys(patch).length === 0) {
@@ -890,6 +973,20 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         maxRating: maxRating ?? undefined,
         logoUrl: resolvedLogoUrl ?? undefined,
       });
+      // league_create has no capacity params; apply them with a follow-up
+      // patch. If this second call fails the league still exists (the update
+      // hook toasts), so we proceed to success either way.
+      if (memberCapacity !== null || effectiveWaitlist) {
+        try {
+          await updateLeagueAsync({
+            leagueId: league.id,
+            versionWas: league.version,
+            patch: { memberCapacity, waitlistEnabled: effectiveWaitlist },
+          });
+        } catch {
+          // toast handled in hook
+        }
+      }
       successHaptic();
       Analytics.leagueCreated({
         leagueId: league.id,
@@ -911,6 +1008,8 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     logoUrl,
     maxRating,
     minRating,
+    capacityInput,
+    waitlistEnabled,
     name,
     onClose,
     onSuccess,
@@ -929,6 +1028,8 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     setJoinMode('approval');
     setMinRating(null);
     setMaxRating(null);
+    setCapacityInput('');
+    setWaitlistEnabled(false);
     setErrors({});
     setShowSuccess(false);
     setCreatedId(null);
@@ -1034,6 +1135,10 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
             maxRating={maxRating}
             setMaxRating={setMaxRating}
             ratingOptions={ratingOptions}
+            capacityInput={capacityInput}
+            setCapacityInput={setCapacityInput}
+            waitlistEnabled={waitlistEnabled}
+            setWaitlistEnabled={setWaitlistEnabled}
             errors={errors}
             colors={colors}
             t={t}

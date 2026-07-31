@@ -49,6 +49,8 @@ import {
   useLeague,
   useLeagueMembers,
   useMyLeagueMembership,
+  useMyLeagueWaitlistStatus,
+  useLeagueWaitlist,
   useLeagueSeasons,
   useJoinLeague,
   useApproveLeagueMember,
@@ -851,6 +853,8 @@ type PendingMemberRow = {
   player: PlayerSearchResult;
   memberId: string;
   version: number;
+  /** 1-based place in the league waitlist; absent for plain approval requests. */
+  queueRank?: number;
 };
 
 const PendingMembersSection: React.FC<{
@@ -869,24 +873,35 @@ const PendingMembersSection: React.FC<{
           { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
-        {rows.map(({ player, memberId, version }, i) => (
-          <ParticipantRow
-            key={memberId}
-            player={player}
-            onPress={onPlayerPress}
-            colors={colors}
-            showDivider={i > 0}
-            trailingActions={[
-              {
-                icon: 'checkmark-circle',
-                color: colors.statusPositiveText,
-                accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.approveLabel', {
-                  name: getHumanName(player, ''),
-                }),
-                onPress: () => onApprove(memberId, version),
-              },
-            ]}
-          />
+        {rows.map(({ player, memberId, version, queueRank }, i) => (
+          <View key={memberId}>
+            <ParticipantRow
+              player={player}
+              onPress={onPlayerPress}
+              colors={colors}
+              showDivider={i > 0}
+              trailingActions={[
+                {
+                  icon: 'checkmark-circle',
+                  color: colors.statusPositiveText,
+                  accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.approveLabel', {
+                    name: getHumanName(player, ''),
+                  }),
+                  onPress: () => onApprove(memberId, version),
+                },
+              ]}
+            />
+            {queueRank != null && (
+              <View style={styles.queueBadgeRow}>
+                <Ionicons name="list-outline" size={12} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  {t('leagueDetail.dashboard.pendingRequests.queuedAt', {
+                    rank: String(queueRank),
+                  })}
+                </Text>
+              </View>
+            )}
+          </View>
         ))}
       </View>
     </View>
@@ -1104,6 +1119,13 @@ export const LeagueDetail: React.FC = () => {
   const { data: profiles } = useProfilesByIds(league ? [league.organizer_id] : []);
 
   const isOrganizer = league ? isLeagueOrganizer(league, userId) : false;
+
+  // Queue state: a queued joiner holds a 'pending' membership PLUS a waitlist
+  // row — the row is what distinguishes "waiting for a seat" from "waiting for
+  // approval", and it carries the place in line.
+  const isPendingSelfRequest = myMembership?.status === 'pending' && !myMembership.invited_by;
+  const { data: myQueueStatus } = useMyLeagueWaitlistStatus(leagueId, userId, isPendingSelfRequest);
+  const { data: waitlistEntries = [] } = useLeagueWaitlist(leagueId, isOrganizer);
   const viewedRef = useRef(false);
   useEffect(() => {
     if (!league || !membershipFetched || viewedRef.current) return;
@@ -1359,16 +1381,28 @@ export const LeagueDetail: React.FC = () => {
   );
   const { data: memberBadges } = usePlayersRatingReputation(badgePlayerIds, league?.sport_id);
 
+  // Queued joiners are pending rows that also hold a waitlist entry; tag them
+  // with their place in line and list them after the plain approval requests,
+  // in queue order.
+  const queueRankByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    waitlistEntries.forEach((w, i) => map.set(w.user_id, i + 1));
+    return map;
+  }, [waitlistEntries]);
+
   const pendingMemberRows = useMemo<PendingMemberRow[]>(
     () =>
       isOrganizer
-        ? pendingRequests.map(m => ({
-            player: memberToPlayer(m, memberBadges?.[m.user_id]),
-            memberId: m.id,
-            version: m.version,
-          }))
+        ? pendingRequests
+            .map(m => ({
+              player: memberToPlayer(m, memberBadges?.[m.user_id]),
+              memberId: m.id,
+              version: m.version,
+              queueRank: queueRankByUser.get(m.user_id),
+            }))
+            .sort((a, b) => (a.queueRank ?? 0) - (b.queueRank ?? 0))
         : [],
-    [pendingRequests, isOrganizer, memberBadges]
+    [pendingRequests, isOrganizer, memberBadges, queueRankByUser]
   );
 
   const invitedMemberRows = useMemo<PendingMemberRow[]>(
@@ -2055,6 +2089,8 @@ export const LeagueDetail: React.FC = () => {
           minRating: league.min_rating,
           maxRating: league.max_rating,
           logoUrl: league.logo_url,
+          memberCapacity: league.member_capacity,
+          waitlistEnabled: league.waitlist_enabled,
         },
       },
     });
@@ -2530,13 +2566,18 @@ export const LeagueDetail: React.FC = () => {
                 />
               ) : (
                 <HeroChip
-                  icon="hourglass-outline"
+                  icon={myQueueStatus ? 'list-outline' : 'hourglass-outline'}
                   tone="outline"
                   colors={colors}
                   label={
                     myMembership.invited_by
                       ? t('leagueDetail.acceptInvite')
-                      : t('leagueDetail.membershipPending')
+                      : myQueueStatus
+                        ? t('leagueDetail.queuedInLine', {
+                            rank: String(myQueueStatus.queueRank),
+                            size: String(myQueueStatus.queueSize),
+                          })
+                        : t('leagueDetail.membershipPending')
                   }
                 />
               )}
@@ -3651,6 +3692,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pendingSection: { marginBottom: spacingPixels[4] },
+  queueBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingLeft: spacingPixels[14],
+    paddingBottom: spacingPixels[2],
+    marginTop: -spacingPixels[1],
+  },
   segmentBar: {
     marginBottom: spacingPixels[4],
   },
