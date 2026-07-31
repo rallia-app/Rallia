@@ -4702,6 +4702,10 @@
       "hint": "Vous ferez équipe si cette personne te choisit aussi."
     },
     "roster": {
+      "confirmed": "Confirmés",
+      "waitlisted": "Liste d'attente",
+      "pending": "En attente",
+      "declined": "Déclinés",
       "withdraw": "Retirer de cette séance",
       "withdrawn": "Retiré. Le prochain de la liste d’attente monte.",
       "remind": "Relancer",

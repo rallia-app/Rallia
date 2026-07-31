@@ -4702,6 +4702,10 @@
       "hint": "You team up when your pick chooses you back."
     },
     "roster": {
+      "confirmed": "Confirmed",
+      "waitlisted": "Waitlist",
+      "pending": "Pending",
+      "declined": "Declined",
       "withdraw": "Remove from this session",
       "withdrawn": "Removed. The next player on the waitlist moves up.",
       "remind": "Remind",
