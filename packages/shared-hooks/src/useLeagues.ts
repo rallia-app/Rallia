@@ -19,6 +19,7 @@ import {
   attachMatchToSessionSlot,
   confirmSessionPresence,
   withdrawSessionMember,
+  remindPendingSessionMembers,
   createLeague,
   createLeagueSession,
   createSeason,
@@ -571,6 +572,21 @@ export function useWithdrawSessionMember(
       invalidate(sessionId);
       options.onSuccess?.(result);
     },
+    onError: options.onError,
+  });
+}
+
+/**
+ * Nudges the members who have not answered. Sends notifications only, so
+ * nothing local changes and there is nothing to invalidate.
+ */
+export function useRemindPendingSessionMembers(
+  sessionId: string,
+  options: MutationOptions<number> = {}
+) {
+  return useMutation({
+    mutationFn: () => remindPendingSessionMembers(sessionId),
+    onSuccess: options.onSuccess,
     onError: options.onError,
   });
 }

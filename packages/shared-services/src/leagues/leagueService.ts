@@ -838,6 +838,15 @@ export async function withdrawSessionMember(
   return data as SessionPresence;
 }
 
+/** Nudges every member who has not answered yet. Returns how many were reached. */
+export async function remindPendingSessionMembers(sessionId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('session_remind_pending', {
+    p_session_id: sessionId,
+  });
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
 export async function confirmSessionPresence(
   sessionId: string,
   status: PresenceStatus,

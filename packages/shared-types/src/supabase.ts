@@ -13490,6 +13490,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      session_remind_pending: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
       session_set_match_lock: {
         Args: {
           p_locked: boolean

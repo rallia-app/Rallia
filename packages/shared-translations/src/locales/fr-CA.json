@@ -4685,7 +4685,12 @@
     },
     "roster": {
       "withdraw": "Retirer de cette séance",
-      "withdrawn": "Retiré. Le prochain de la liste d’attente monte."
+      "withdrawn": "Retiré. Le prochain de la liste d’attente monte.",
+      "remind": "Relancer",
+      "reminding": "Envoi...",
+      "reminded": "Relance envoyée à {{count}} joueur(s)",
+      "remindTooSoon": "Tu as déjà relancé récemment. Réessaie dans quelques heures.",
+      "remindNobody": "Tout le monde a répondu."
     },
     "actions": {
       "publish": "Publier la séance",

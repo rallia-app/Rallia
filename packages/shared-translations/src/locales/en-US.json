@@ -4685,7 +4685,12 @@
     },
     "roster": {
       "withdraw": "Remove from this session",
-      "withdrawn": "Removed. The next player on the waitlist moves up."
+      "withdrawn": "Removed. The next player on the waitlist moves up.",
+      "remind": "Remind",
+      "reminding": "Sending...",
+      "reminded": "Reminder sent to {{count}} player(s)",
+      "remindTooSoon": "You already sent a reminder recently. Try again in a few hours.",
+      "remindNobody": "Everyone has answered."
     },
     "actions": {
       "publish": "Publish session",

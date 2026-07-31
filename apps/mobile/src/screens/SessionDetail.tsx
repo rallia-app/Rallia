@@ -52,6 +52,7 @@ import {
   useSports,
   useOpenSessionPairingChat,
   useWithdrawSessionMember,
+  useRemindPendingSessionMembers,
 } from '@rallia/shared-hooks';
 import { isLeagueOrganizer } from '@rallia/shared-services';
 import type {
@@ -242,6 +243,28 @@ export const SessionDetail: React.FC = () => {
       toast.error(e.message || t('sessionDetail.errors.generic'));
     },
   });
+
+  // The cron nudge fires once, and only inside the last 24h before the
+  // deadline; this is the organizer's own way to chase the silent members.
+  const { mutate: remindPending, isPending: isReminding } = useRemindPendingSessionMembers(
+    sessionId,
+    {
+      onSuccess: count => {
+        void successHaptic();
+        toast.success(t('sessionDetail.roster.reminded', { count: String(count) }));
+      },
+      onError: e => {
+        void warningHaptic();
+        toast.error(
+          e.message?.includes('REMINDER_TOO_SOON')
+            ? t('sessionDetail.roster.remindTooSoon')
+            : e.message?.includes('NO_PENDING_MEMBERS')
+              ? t('sessionDetail.roster.remindNobody')
+              : e.message || t('sessionDetail.errors.generic')
+        );
+      },
+    }
+  );
 
   const { mutate: cancel, isPending: isCancelling } = useCancelSession(seasonId, {
     onSuccess: () => {
@@ -995,14 +1018,33 @@ export const SessionDetail: React.FC = () => {
           if (rows.length === 0) return null;
           return (
             <View key={group.status} style={styles.section}>
-              <Text
-                size="xs"
-                weight="semibold"
-                color={colors.textMuted}
-                style={styles.sectionTitle}
-              >
-                {`${t(group.key as TranslationKey).toUpperCase()} · ${rows.length}`}
-              </Text>
+              <View style={styles.sectionTitleRow}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionTitle}
+                >
+                  {`${t(group.key as TranslationKey).toUpperCase()} · ${rows.length}`}
+                </Text>
+                {group.status === 'pending' && isOrganizer && sess.status === 'published' && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      void lightHaptic();
+                      remindPending();
+                    }}
+                    disabled={isReminding}
+                    testID="cta-remind-pending"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text size="xs" weight="semibold" color={colors.primary}>
+                      {isReminding
+                        ? t('sessionDetail.roster.reminding')
+                        : t('sessionDetail.roster.remind')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <View
                 style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
@@ -1257,6 +1299,12 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.6 },
   section: { gap: spacingPixels[2] },
   sectionTitle: { letterSpacing: 0.5, marginLeft: spacingPixels[1] },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacingPixels[2],
+  },
   rosterRow: {
     flexDirection: 'row',
     alignItems: 'center',
