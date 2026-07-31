@@ -8,7 +8,7 @@
  *       specs/17-leagues-tournaments/leagues.md §Sessions
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
@@ -133,6 +133,22 @@ export const SessionDetail: React.FC = () => {
         : t('sessionDetail.unknownMember');
     },
     [presence, t]
+  );
+
+  // Doubles rows carry two ids a side; joining with & covers both formats.
+  const teamLabel = useCallback((ids: string[]): string => ids.map(nameOf).join(' & '), [nameOf]);
+
+  const isDoubles = (sess?.formats_allowed?.[0] ?? 'singles') !== 'singles';
+
+  // Preferred partner for doubles nights. undefined = untouched (falls back to
+  // the preference already stored on my presence row), null = explicitly none.
+  const [partnerChoice, setPartnerChoice] = useState<string | null | undefined>(undefined);
+  const selectedPartner =
+    partnerChoice === undefined ? (myPresence?.preferred_partner_id ?? null) : partnerChoice;
+
+  const partnerCandidates = useMemo(
+    () => presence.filter(p => p.user_id !== userId && p.status !== 'declined'),
+    [presence, userId]
   );
 
   const byeNames = useMemo(() => {
@@ -315,8 +331,8 @@ export const SessionDetail: React.FC = () => {
           sessionId,
           seasonId,
           versionWas: m.version,
-          teamAName: nameOf(m.team_a_user_ids[0]),
-          teamBName: nameOf(m.team_b_user_ids[0]),
+          teamAName: teamLabel(m.team_a_user_ids),
+          teamBName: teamLabel(m.team_b_user_ids),
           isPickleball: isPickleballLeague,
           matchFormat: sess?.match_format,
           isEdit: isScored(m),
@@ -347,14 +363,20 @@ export const SessionDetail: React.FC = () => {
     (status: PresenceStatus) => {
       if (isConfirming || !sess) return;
       lightHaptic();
-      confirm({ status });
+      confirm({
+        status,
+        partnerId: status === 'confirmed' && isDoubles ? (selectedPartner ?? undefined) : undefined,
+      });
       if (status === 'confirmed') {
-        Analytics.sessionConfirmedAnalytics({ sessionId, partnerProvided: false });
+        Analytics.sessionConfirmedAnalytics({
+          sessionId,
+          partnerProvided: isDoubles && !!selectedPartner,
+        });
       } else if (status === 'declined') {
         Analytics.sessionDeclinedAnalytics({ sessionId });
       }
     },
-    [confirm, isConfirming, sess, sessionId]
+    [confirm, isConfirming, sess, sessionId, isDoubles, selectedPartner]
   );
 
   const formatDateTime = useCallback(
@@ -492,6 +514,73 @@ export const SessionDetail: React.FC = () => {
                     ? t('sessionDetail.cta.declinedTitle')
                     : t('sessionDetail.cta.title')}
             </Text>
+            {isDoubles && partnerCandidates.length > 0 && (
+              <View style={styles.partnerBlock}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('sessionDetail.partner.label')}
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.partnerChips}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      lightHaptic();
+                      setPartnerChoice(null);
+                    }}
+                    style={[
+                      styles.partnerChip,
+                      {
+                        borderColor: selectedPartner === null ? colors.primary : colors.border,
+                        backgroundColor:
+                          selectedPartner === null ? colors.highlightBg : colors.card,
+                      },
+                    ]}
+                    testID="partner-chip-none"
+                  >
+                    <Text
+                      size="sm"
+                      weight={selectedPartner === null ? 'semibold' : 'regular'}
+                      color={selectedPartner === null ? colors.primary : colors.text}
+                    >
+                      {t('sessionDetail.partner.none')}
+                    </Text>
+                  </TouchableOpacity>
+                  {partnerCandidates.map(p => {
+                    const selected = selectedPartner === p.user_id;
+                    return (
+                      <TouchableOpacity
+                        key={p.user_id}
+                        onPress={() => {
+                          lightHaptic();
+                          setPartnerChoice(selected ? null : p.user_id);
+                        }}
+                        style={[
+                          styles.partnerChip,
+                          {
+                            borderColor: selected ? colors.primary : colors.border,
+                            backgroundColor: selected ? colors.highlightBg : colors.card,
+                          },
+                        ]}
+                        testID={`partner-chip-${p.user_id}`}
+                      >
+                        <Text
+                          size="sm"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.primary : colors.text}
+                        >
+                          {nameOf(p.user_id)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('sessionDetail.partner.hint')}
+                </Text>
+              </View>
+            )}
             <View style={styles.ctaButtons}>
               <TouchableOpacity
                 onPress={() => handleConfirm('confirmed')}
@@ -616,7 +705,7 @@ export const SessionDetail: React.FC = () => {
                           numberOfLines={1}
                           style={styles.vsName}
                         >
-                          {nameOf(m.team_a_user_ids[0])}
+                          {teamLabel(m.team_a_user_ids)}
                         </Text>
                         <Text size="sm" color={colors.textMuted}>
                           {isScored(m)
@@ -632,7 +721,7 @@ export const SessionDetail: React.FC = () => {
                           numberOfLines={1}
                           style={styles.vsName}
                         >
-                          {nameOf(m.team_b_user_ids[0])}
+                          {teamLabel(m.team_b_user_ids)}
                         </Text>
                       </View>
                     </View>
@@ -820,6 +909,14 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
   },
   ctaButtons: { flexDirection: 'row', gap: spacingPixels[3] },
+  partnerBlock: { gap: spacingPixels[2] },
+  partnerChips: { flexDirection: 'row', gap: spacingPixels[2] },
+  partnerChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+  },
   ctaButton: {
     flex: 1,
     flexDirection: 'row',

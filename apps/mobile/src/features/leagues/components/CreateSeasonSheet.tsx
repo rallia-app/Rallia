@@ -37,6 +37,9 @@ import { SheetDateField } from './SheetDateField';
 const SHEET_ID = 'create-season';
 
 type RefundKind = Enums<'refund_policy_kind_enum'>;
+type SeasonFormat = Enums<'entry_format'>;
+
+const SEASON_FORMATS: SeasonFormat[] = ['singles', 'doubles', 'mixed_doubles'];
 
 /** Dollars string → integer cents. Tolerates "", "12", "12.5", "12.50". */
 function dollarsToCents(input: string): number {
@@ -59,6 +62,10 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     d.setMonth(d.getMonth() + 3);
     return d;
   });
+
+  // Play format, frozen into the season's rules at creation: the sheet
+  // generator pairs 1v1 for singles and 2v2 for doubles/mixed.
+  const [format, setFormat] = useState<SeasonFormat>('singles');
 
   // Fee settings. Empty/0 = free season, which is the default.
   const [entryFee, setEntryFee] = useState('');
@@ -91,7 +98,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
         Analytics.seasonCreatedAnalytics({
           leagueId,
           seasonId: season.id,
-          hasOverride: false,
+          hasOverride: format !== 'singles',
           isPaid: season.entry_fee_cents > 0,
           entryFeeCents: season.entry_fee_cents,
           feePayer: season.fee_payer,
@@ -140,6 +147,9 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
       name: trimmed,
       startDate: startDate.toISOString().slice(0, 10),
       endDate: endDate.toISOString().slice(0, 10),
+      // Only a non-default format needs an override; the league's default
+      // rules already say singles.
+      rulesOverride: format !== 'singles' ? { formatsAllowed: [format] } : undefined,
       entryFeeCents,
       feePayer: isPaid ? feePayer : 'player_pays',
       refundPolicyKind: isPaid ? refundKind : 'none',
@@ -150,6 +160,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     name,
     startDate,
     endDate,
+    format,
     createSeason,
     toast,
     t,
@@ -220,6 +231,26 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
           isDark={isDark}
           testID="season-end-field"
         />
+
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.text}>
+            {t('leagueDetail.createSeason.formatLabel')}
+          </Text>
+          {SEASON_FORMATS.map(f => (
+            <OptionRow
+              key={f}
+              selected={format === f}
+              title={t(`leagueDetail.createSeason.format.${f}.title` as TranslationKey)}
+              description={t(`leagueDetail.createSeason.format.${f}.description` as TranslationKey)}
+              onPress={() => {
+                lightHaptic();
+                setFormat(f);
+              }}
+              colors={colors}
+              testID={`season-format-${f}`}
+            />
+          ))}
+        </View>
 
         {/* Entry & payments. Leaving the fee empty keeps the season free, which
             is the default and skips every payment concern below. */}
