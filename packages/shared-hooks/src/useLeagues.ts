@@ -113,6 +113,14 @@ export const leagueKeys = {
     [...leagueKeys.all, 'mySeasonMembership', seasonId, userId] as const,
 };
 
+/**
+ * Opt out of the app-wide 2-minute staleTime (App.tsx) for queries whose value
+ * can change without this device doing anything. The default is right for most
+ * data; these few reflect other people's actions, so a stale copy is a wrong
+ * copy on screen.
+ */
+const ALWAYS_FRESH = { staleTime: 0, refetchOnMount: 'always' } as const;
+
 interface MutationOptions<T> {
   onSuccess?: (result: T) => void;
   onError?: (error: Error) => void;
@@ -145,6 +153,11 @@ export function usePublicLeagues(sportId?: string) {
   return useQuery<LeagueListItem[]>({
     queryKey: leagueKeys.publicList(sportId),
     queryFn: () => listPublicLeagues({ sportId }),
+    // A directory is only useful if it lists what exists right now: leagues
+    // appear and fill up without this device doing anything, so opening the
+    // screen always re-reads rather than serving the 2-minute-fresh cache.
+    // Cheap, and confined to the two league list screens (not the nav path).
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -153,6 +166,9 @@ export function useMyLeagues(userId: string | undefined, sportId?: string) {
     queryKey: leagueKeys.myList(userId ?? '', sportId),
     queryFn: () => listMyLeagues(userId!, { sportId }),
     enabled: !!userId,
+    // Being admitted from a waitlist adds a league here with no action from
+    // this device.
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -177,6 +193,10 @@ export function useMyLeagueMembership(leagueId: string | undefined, userId: stri
     queryKey: leagueKeys.myMembership(leagueId ?? '', userId ?? ''),
     queryFn: () => getMyLeagueMembership(leagueId!, userId!),
     enabled: !!leagueId && !!userId,
+    // Promotion off the waitlist, approval, suspension and removal all happen
+    // on someone else's action, so a cached copy can say "in line" long after
+    // you are in. One row; re-read every time the screen opens.
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -190,6 +210,8 @@ export function useMyLeagueWaitlistStatus(
     queryKey: leagueKeys.myWaitlistStatus(leagueId ?? '', userId ?? ''),
     queryFn: () => getMyLeagueWaitlistStatus(leagueId!),
     enabled: enabled && !!leagueId && !!userId,
+    // Your place in line moves as people ahead of you are seated.
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -199,6 +221,7 @@ export function useLeagueWaitlist(leagueId: string | undefined, enabled = true) 
     queryKey: leagueKeys.waitlist(leagueId ?? ''),
     queryFn: () => listLeagueWaitlist(leagueId!),
     enabled: enabled && !!leagueId,
+    ...ALWAYS_FRESH,
   });
 }
 

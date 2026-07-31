@@ -2231,6 +2231,15 @@ export const LeagueDetail: React.FC = () => {
         // The roster can move server-side while the user sits here, so the
         // card's member count is refreshed alongside the rest.
         qc.invalidateQueries({ queryKey: leagueKeys.lists() }),
+        // Pulling is exactly what someone does when the screen looks stale,
+        // and "am I in yet?" is the state most likely to have moved.
+        userId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.myMembership(leagueId, userId) })
+          : Promise.resolve(),
+        userId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.myWaitlistStatus(leagueId, userId) })
+          : Promise.resolve(),
+        qc.invalidateQueries({ queryKey: leagueKeys.waitlist(leagueId) }),
         openSeasonId
           ? qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(openSeasonId) })
           : Promise.resolve(),
