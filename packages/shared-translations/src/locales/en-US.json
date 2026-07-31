@@ -4663,10 +4663,8 @@
       "hint": "You team up when your pick chooses you back."
     },
     "roster": {
-      "confirmed": "Confirmed",
-      "waitlisted": "Waitlist",
-      "pending": "No response",
-      "declined": "Declined"
+      "withdraw": "Remove from this session",
+      "withdrawn": "Removed. The next player on the waitlist moves up."
     },
     "actions": {
       "publish": "Publish session",

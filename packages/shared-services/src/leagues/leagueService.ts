@@ -819,6 +819,25 @@ export async function publishSession(
   return data as Session;
 }
 
+/**
+ * Organizer withdraws a member from a published session (confirmed or
+ * waitlisted -> declined). Frees a seat, which lets the waitlist trigger
+ * promote the next player. Cannot seat anyone.
+ */
+export async function withdrawSessionMember(
+  sessionId: string,
+  userId: string,
+  versionWas: number
+): Promise<SessionPresence> {
+  const { data, error } = await supabase.rpc('session_withdraw_member', {
+    p_session_id: sessionId,
+    p_user_id: userId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as SessionPresence;
+}
+
 export async function confirmSessionPresence(
   sessionId: string,
   status: PresenceStatus,

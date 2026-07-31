@@ -50,6 +50,7 @@ import {
   useSetSessionMatchLock,
   useSports,
   useOpenSessionPairingChat,
+  useWithdrawSessionMember,
 } from '@rallia/shared-hooks';
 import { isLeagueOrganizer } from '@rallia/shared-services';
 import type {
@@ -226,6 +227,18 @@ export const SessionDetail: React.FC = () => {
           ? t('sessionDetail.publishModal.invalidDeadline')
           : e.message || t('sessionDetail.errors.generic')
       );
+    },
+  });
+
+  const { mutate: withdrawMember, isPending: isWithdrawing } = useWithdrawSessionMember(sessionId, {
+    onSuccess: () => {
+      void successHaptic();
+      toast.success(t('sessionDetail.roster.withdrawn'));
+      invalidate();
+    },
+    onError: e => {
+      void warningHaptic();
+      toast.error(e.message || t('sessionDetail.errors.generic'));
     },
   });
 
@@ -980,11 +993,30 @@ export const SessionDetail: React.FC = () => {
                         ? getHumanName(row.profile, t('sessionDetail.unknownMember'))
                         : t('sessionDetail.unknownMember')}
                     </Text>
-                    {row.status === 'waitlisted' && row.waitlist_position != null ? (
-                      <Text size="xs" color={colors.textMuted}>
-                        {`#${row.waitlist_position}`}
-                      </Text>
-                    ) : null}
+                    <View style={styles.rosterRowEnd}>
+                      {row.status === 'waitlisted' && row.waitlist_position != null ? (
+                        <Text size="xs" color={colors.textMuted}>
+                          {`#${row.waitlist_position}`}
+                        </Text>
+                      ) : null}
+                      {isOrganizer &&
+                      sess.status === 'published' &&
+                      (row.status === 'confirmed' || row.status === 'waitlisted') ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            void warningHaptic();
+                            withdrawMember({ userId: row.user_id, versionWas: row.version });
+                          }}
+                          disabled={isWithdrawing}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('sessionDetail.roster.withdraw')}
+                          testID={`cta-withdraw-${row.user_id}`}
+                        >
+                          <Ionicons name="person-remove-outline" size={18} color={colors.danger} />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
                 ))}
               </View>
@@ -1101,6 +1133,7 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
   },
   cancelledNoticeBody: { flex: 1, gap: 2 },
+  rosterRowEnd: { flexDirection: 'row', alignItems: 'center', gap: spacingPixels[3] },
   deadlineField: { flex: 1 },
   reasonInput: {
     borderWidth: 1,

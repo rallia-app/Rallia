@@ -18,6 +18,7 @@ import {
   listLinkableMatchesForSessionSlot,
   attachMatchToSessionSlot,
   confirmSessionPresence,
+  withdrawSessionMember,
   createLeague,
   createLeagueSession,
   createSeason,
@@ -546,6 +547,27 @@ export function usePublishSession(seasonId: string, options: MutationOptions<Ses
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
       invalidate(result.id);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+/**
+ * Organizer frees a seat by withdrawing a member from a session. The waitlist
+ * promotion happens server-side, so invalidating the session is enough for the
+ * promoted player to appear.
+ */
+export function useWithdrawSessionMember(
+  sessionId: string,
+  options: MutationOptions<SessionPresence> = {}
+) {
+  const invalidate = useSessionInvalidator();
+  return useMutation({
+    mutationFn: ({ userId, versionWas }: { userId: string; versionWas: number }) =>
+      withdrawSessionMember(sessionId, userId, versionWas),
+    onSuccess: result => {
+      invalidate(sessionId);
       options.onSuccess?.(result);
     },
     onError: options.onError,
