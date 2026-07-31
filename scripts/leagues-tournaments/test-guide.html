@@ -132,7 +132,7 @@
     <p class="meta">
       Compte de test : <strong>jdl.sonkin@gmail.com</strong> · Second compte :
       <strong>lefrancmathis@gmail.com</strong> · Environnement : <strong>staging</strong> ·
-      26 juillet 2026
+      26 juillet 2026, révisé le 30 juillet 2026
     </p>
 
     <p class="section-intro">
@@ -158,13 +158,41 @@
     </div>
 
     <div class="warn">
-      <strong>Ton rôle admin a été retiré le 26 juillet 2026</strong>, exprès, pour la durée des
-      tests. Les contrôles serveur laissaient passer un admin, ce qui rendait invérifiable tout ce
-      qui doit t'être <em>refusé</em> comme joueur. Deux conséquences à connaître : tu n'as plus
-      accès aux tableaux de bord <code>/admin</code>, et tu ne peux plus créer de tournoi
-      <em>payant</em> depuis l'assistant. Ce deuxième point ne bloque rien ici, les fixtures
-      payantes sont déjà en place et n'attendent que ton paiement. Si l'app te montre encore des
-      accès admin, ferme-la et rouvre-la.
+      <strong>Ton rôle admin a été rendu le 28 juillet 2026.</strong> Il avait été retiré le
+      26 juillet pour rendre vérifiable tout ce qui doit t'être <em>refusé</em> comme joueur, parce
+      que les contrôles serveur laissent passer un admin.
+      <br /><br />
+      Conséquence directe : <strong>la section 2.7 ne veut plus rien dire en l'état</strong>. Un
+      admin passe toutes les barrières, donc « j'ai pu m'inscrire » y est le résultat attendu et
+      non un bogue. Si tu veux refaire 2.7, demande le retrait du rôle avant de commencer. Le reste
+      du guide n'est pas touché.
+    </div>
+
+    <div class="warn">
+      <strong>Ce qui a été corrigé depuis ta première passe, et pourquoi il ne faut pas encore
+      retester.</strong>
+      <br /><br />
+      Presque tout ce que tu as rapporté est corrigé dans le code, mais l'essentiel est côté
+      application et <strong>n'arrive qu'avec un nouveau build</strong>. Si tu retestes sur ton build
+      actuel, tu vas retrouver exactement les mêmes bogues et les rapporter une deuxième fois.
+      Attends qu'on te dise que le build est prêt.
+      <br /><br />
+      Corrigés, en attente du build : le compteur d'inscrits sur l'étiquette (2, 3), le lien
+      d'invitation qui tournait en boucle (2.3), le sélecteur de partenaire vide (2.6.1), les noms
+      d'équipe en double, maintenant « Mathis L. » (13), le 2<sup>e</sup> jeu au pickleball et la
+      correction du score de finale avec confirmation (3.2), la date limite de confirmation demandée
+      à la publication (4.1), la correction des scores d'une séance terminée (4.5, 4.6), le motif
+      d'annulation demandé puis affiché (4.7), le verrou d'une partie avant de régénérer (4.3.4),
+      les ligues en pause et fermées enfin visibles, avec deux onglets (6.5, 6.6).
+      <br /><br />
+      Déjà actifs sur staging, testables sans build : le score de la partie liée apparaît maintenant
+      dans le tableau (2.1.2), les avis d'annulation partent aux membres (4.7, 5.4), et les fixtures de
+      ligue pointent enfin sur ton compte (6.3, 6.4, 6.6).
+      <br /><br />
+      Toujours pas corrigé, ne le rapporte pas : la réputation minimale sur un tournoi, l'absence de
+      validateur de format de score, les tournois à visibilité communauté, l'écran des tournois
+      archivés, la relance manuelle des présences (4.2), le retrait d'un joueur confirmé (4.11), et
+      la régénération de la feuille qui redonne les mêmes appariements (4.3.3). Voir section 8.
     </div>
 
     <h2>0. Ordre suggéré</h2>
@@ -334,10 +362,12 @@
     <h3>2.1 · <span class="fixture">[SEED-T] Vous jouez - match a jouer</span></h3>
     <p>C'est le scénario le plus important de la section. Deux chemins existent pour régler ta
       partie, teste les deux.</p>
-    <p><strong>Chemin A, organiser la partie depuis le tableau :</strong></p>
+    <p><strong>Chemin A, organiser la partie depuis l'aperçu :</strong></p>
     <ol>
-      <li>Ouvre le tournoi, onglet <strong>Tableau</strong>, touche ta partie en attente.</li>
-      <li>Ouvre la conversation de ronde avec ton adversaire.</li>
+      <li>Ouvre le tournoi, onglet <strong>Aperçu</strong>. Ta partie apparaît dans la carte
+        <strong>« Votre prochaine partie »</strong>.</li>
+      <li>Touche <strong>« Organise ta partie »</strong> pour ouvrir la conversation de ronde avec
+        ton adversaire.</li>
       <li>Propose une heure et un endroit avec la carte d'organisation de partie.</li>
       <li>La partie créée est automatiquement rattachée à la ronde : confirmer son résultat fait
         avancer le tableau.</li>
@@ -358,9 +388,9 @@
     <ol>
       <li>Vérifie le badge <strong>« Invitation en attente »</strong>, et non « en attente
         d'approbation ».</li>
-      <li>Une carte « Tu es invité » doit s'afficher.</li>
+      <li>Une carte <strong>« Invitation reçue »</strong> doit s'afficher.</li>
       <li>Accepte : le badge passe à « Vous êtes inscrit ».</li>
-      <li>Refais le test en déclinant depuis la carte « Invitation reçue ».</li>
+      <li>Refais le test en déclinant depuis cette même carte.</li>
     </ol>
 
     <h3>2.3 · <span class="fixture">[SEED-T] Vous jouez - lien de partage</span></h3>
@@ -396,9 +426,16 @@
 
     <h3>2.7 · Ce qui doit t'être REFUSÉ</h3>
     <p>
-      Ces cinq fixtures ne veulent rien dire tant que le compte est admin, d'où le retrait du rôle.
-      Tu es coté <strong>3.0</strong> en tennis et ta réputation est à <strong>0</strong>.
+      Ces cinq fixtures ne veulent rien dire tant que le compte est admin. Ton rôle ayant été rendu
+      le 28 juillet, <strong>elles sont actuellement intestables</strong> : tu passeras chaque
+      barrière. Fais-les retirer le rôle d'abord. Tu es coté <strong>3.0</strong> en tennis.
     </p>
+    <div class="warn">
+      <strong>Correction :</strong> une version précédente de ce guide disait que ta réputation
+      était à 0. C'était faux, et ça venait d'une colonne morte
+      (<code>player.reputation_score</code>, toujours à 0 pour tout le monde). Ta vraie réputation
+      est de <strong>100</strong>, d'où le badge Platine sur ton profil. Rien à rapporter ici.
+    </div>
     <ul>
       <li><span class="fixture">[SEED-T] Vous jouez - cote minimale 4.0</span> : l'inscription doit
         être refusée (<code>RATING_TOO_LOW</code>).</li>
@@ -433,8 +470,10 @@
     <ol>
       <li>Entre le résultat de la finale au format pickleball, par exemple
         <code>11-7 11-9</code>.</li>
-      <li>Essaie ensuite un score de tennis comme <code>6-4 6-3</code> : le validateur doit le
-        refuser (<code>SCORE_FORMAT_INVALID</code>).</li>
+      <li>Essaie ensuite un score de tennis comme <code>6-4 6-3</code>. <strong>Il va être
+        accepté</strong>, et c'est le comportement actuel : aucun validateur ne compare le score au
+        sport. Le <code>SCORE_FORMAT_INVALID</code> annoncé dans une version précédente de ce guide
+        n'a jamais existé. Ne rapporte pas d'anomalie, voir section 8.</li>
     </ol>
 
     <h3>3.3 · <span class="fixture">[SEED-T] Pickleball - vous jouez</span></h3>
@@ -717,11 +756,12 @@
         modifiable depuis l'app, ni vérifiée à l'inscription. Seules les ligues l'appliquent.</li>
       <li><strong>Aucun écran pour les tournois archivés.</strong> L'archivage fonctionne, mais rien
         ne permet de les relister ensuite. Le lien direct reste le seul chemin.</li>
-      <li><strong>Le compteur d'inscrits fige sur la carte.</strong> Retirer ou approuver un inscrit
-        met à jour la fiche mais pas l'étiquette de la carte, et le mauvais chiffre survit à un
-        redémarrage. Correctif identifié, côté cache.</li>
-      <li><strong>Les refus côté joueur</strong> (cote, saisie de score, visibilité privée) sont
-        désormais vérifiables depuis le retrait du rôle admin, voir 2.7.</li>
+      <li><strong>Aucun validateur de format de score.</strong> Un score de tennis passe dans un
+        tournoi de pickleball et l'inverse aussi. Le <code>SCORE_FORMAT_INVALID</code> annoncé dans
+        une version précédente de ce guide n'existe pas. Seul un avertissement doux s'affiche
+        au-delà de 7 (tennis) ou 25 (pickleball).</li>
+      <li><strong>Les refus côté joueur</strong> (cote, saisie de score, visibilité privée) ne sont
+        vérifiables que si le rôle admin est retiré du compte, voir 2.7.</li>
     </ol>
 
     <h2>9. Aide-mémoire des comptes</h2>
