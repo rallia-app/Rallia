@@ -189,10 +189,10 @@ export default function ChatConversationScreen() {
   });
 
   // Real-time subscription for reactions
-  useReactionsRealtime(conversationId);
+  useReactionsRealtime(conversationId, playerId);
 
   // Real-time subscription for Match Organizer votes
-  useMatchVotesRealtime(conversationId);
+  useMatchVotesRealtime(conversationId, playerId);
 
   // Suppress new-message notifications for this conversation while it's open
   useActiveConversation(conversationId);

@@ -154,12 +154,16 @@ export function useToggleMatchTimeVote() {
 /**
  * Subscribe to live vote changes in a conversation. Both players see each
  * other's option votes refresh in real time (no polling).
+ * Gated on playerId so we never join the private channel before auth is ready.
  */
-export function useMatchVotesRealtime(conversationId: string | undefined) {
+export function useMatchVotesRealtime(
+  conversationId: string | undefined,
+  playerId: string | undefined
+) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !playerId) return;
 
     const channel = subscribeToMatchVotes(conversationId, ({ messageId }) => {
       queryClient.invalidateQueries({
@@ -170,7 +174,7 @@ export function useMatchVotesRealtime(conversationId: string | undefined) {
     return () => {
       unsubscribeFromChannel(channel);
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, playerId, queryClient]);
 }
 
 // ============================================================================

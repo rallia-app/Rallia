@@ -213,8 +213,15 @@ export default function CommunityDetailScreen() {
   useCommunityRealtime(communityId);
   // Subscribe to real-time pending requests updates (for moderators)
   usePendingRequestsRealtime(isModerator ? communityId : undefined);
-  // Subscribe to real-time chat updates for unread count badge
-  useConversationUnreadRealtime(community?.conversation_id ?? undefined, playerId);
+  // Subscribe to real-time chat updates for unread count badge.
+  // Only active members are conversation participants; subscribing as a
+  // non-member viewer gets denied by RLS and loops in Realtime error logs.
+  const isActiveMember =
+    (accessInfo?.isMember && accessInfo?.membershipStatus === 'active') ?? false;
+  useConversationUnreadRealtime(
+    isActiveMember ? (community?.conversation_id ?? undefined) : undefined,
+    playerId
+  );
 
   const leaveCommunityMutation = useLeaveCommunity();
   const deleteCommunityMutation = useDeleteCommunity();
@@ -235,7 +242,6 @@ export default function CommunityDetailScreen() {
 
   // Computed access state
   const canAccessCommunity = accessInfo?.canAccess ?? false;
-  const isActiveMember = accessInfo?.isMember && accessInfo?.membershipStatus === 'active';
   const isPendingMember = accessInfo?.membershipStatus === 'pending';
 
   const handleRequestToJoin = useCallback(async () => {
