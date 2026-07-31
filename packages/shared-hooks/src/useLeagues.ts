@@ -522,6 +522,7 @@ export function useCreateSession(seasonId: string, options: MutationOptions<Sess
       venueName?: string;
       capacity?: number;
       rounds?: number;
+      pairingMode?: Enums<'pairing_mode'>;
     }) => createLeagueSession({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });

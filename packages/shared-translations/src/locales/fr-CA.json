@@ -4532,6 +4532,21 @@
       "publish": "Publier",
       "created": "Séance créée",
       "published": "Séance publiée",
+      "pairing": {
+        "label": "Pairage",
+        "by_rank": {
+          "title": "Par classement",
+          "description": "Les joueurs de niveau proche se rencontrent. La feuille reste la même si tu la regénères."
+        },
+        "random": {
+          "title": "Au hasard",
+          "description": "Pairages tirés au sort. Regénère pour brasser les cartes."
+        },
+        "avoid_repeat": {
+          "title": "Éviter les répétitions",
+          "description": "Priorise les adversaires que chacun n'a pas encore affrontés cette saison."
+        }
+      },
       "validation": {
         "nameRequired": "Le nom de la séance est requis",
         "future": "Choisis une date et une heure à venir"

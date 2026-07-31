@@ -12299,6 +12299,10 @@ export type Database = {
         Args: { p_tm_id: string }
         Returns: undefined
       }
+      lt_order_avoid_repeat: {
+        Args: { p_pool: string[]; p_season_id: string }
+        Returns: string[]
+      }
       lt_parse_score: {
         Args: { p_score: string }
         Returns: Record<string, unknown>
