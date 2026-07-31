@@ -18,12 +18,13 @@ import {
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { trackSmokeEvent, type SmokeEventContext } from '@/lib/analytics';
 import { SmokeBrandLockup } from '@/lib/brand';
 import {
+  FUNNEL_VERSION,
   getMatchPlans,
   getRatingOptions,
   ratingScaleLabel,
@@ -64,6 +65,7 @@ import {
   isHourSelectable,
   parseTimeSlot,
 } from '@/lib/time-selection';
+import { estimateLiquidity } from '@/lib/liquidity';
 import { formatPhoneInput } from '@/lib/phone';
 import {
   clearRequestContext,
@@ -78,6 +80,7 @@ const WIZARD_STEPS = [
   'location',
   'day',
   'time',
+  'liquidity',
   'contact',
   'recap',
   'plan',
@@ -425,8 +428,18 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const pageViewFired = useRef(false);
   const prefsCompletedFired = useRef(false);
   const courtsViewedFired = useRef(false);
+  const liquidityViewedFired = useRef(false);
   const pricingViewedFired = useRef(false);
   const revealFired = useRef(false);
+
+  // Simulated liquidity numbers — deterministic from the visitor's own inputs.
+  const liquidity = useMemo(
+    () =>
+      sport && rating && timeSlot
+        ? estimateLiquidity({ sport, rating, maxDistanceKm, timeSlot })
+        : null,
+    [sport, rating, maxDistanceKm, timeSlot]
+  );
 
   const {
     predictions,
@@ -443,6 +456,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const eventContext = useCallback(
     (exp: SmokeExperiment, overrides?: Partial<SmokeEventContext>): SmokeEventContext => ({
       test_id: exp.testId,
+      funnel_version: FUNNEL_VERSION,
       variant_valueprop: exp.variantValueProp,
       variant_price: exp.variantPriceCents,
       sport,
@@ -494,6 +508,10 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   }, [step, timeDay]);
 
   useEffect(() => {
+    if (step === 'liquidity' && !liquidity) setStep(timeDay ? 'time' : 'day');
+  }, [step, liquidity, timeDay]);
+
+  useEffect(() => {
     if (step === 'day' && !selectedFacilityId && !skippedFacility) setStep('location');
   }, [step, selectedFacilityId, skippedFacility]);
 
@@ -514,6 +532,17 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, experiment]);
+
+  // liquidity_viewed — first time the simulated liquidity signal is shown.
+  useEffect(() => {
+    if (step !== 'liquidity' || !experiment || !liquidity || liquidityViewedFired.current) return;
+    liquidityViewedFired.current = true;
+    trackSmokeEvent('liquidity_viewed', eventContext(experiment), {
+      players_shown: liquidity.playerCount,
+      match_likelihood_pct: liquidity.likelihoodPct,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, experiment, liquidity]);
 
   // pricing_viewed — first time the pricing screen is shown.
   useEffect(() => {
@@ -777,7 +806,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     setTimeSlot(slot);
     setError(null);
     clearAdvanceTimer();
-    setStep('contact');
+    setStep('liquidity');
   };
 
   const handleSubmitContact = async () => {
@@ -818,6 +847,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           sessionId: experiment.sessionId,
           variantValueProp: experiment.variantValueProp,
           variantPriceCents: experiment.variantPriceCents,
+          liquidityPlayersShown: liquidity?.playerCount,
+          liquidityPctShown: liquidity?.likelihoodPct,
         }),
       });
 
@@ -861,7 +892,11 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     trackSmokeEvent(
       'payment_intent_click',
       eventContext(experiment, { forfait: selectedPlanTier }),
-      { amount_cents: plans[selectedPlanTier].amountCents }
+      {
+        amount_cents: plans[selectedPlanTier].amountCents,
+        players_shown: liquidity?.playerCount ?? null,
+        match_likelihood_pct: liquidity?.likelihoodPct ?? null,
+      }
     );
     clearRequestContext();
     setStep('reveal');
@@ -1358,6 +1393,69 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     );
   }
 
+  if (step === 'liquidity' && liquidity && sport && rating) {
+    return (
+      <WizardShell
+        step={step}
+        showBack
+        onBack={() => {
+          setError(null);
+          setStep(timeDay ? 'time' : 'day');
+        }}
+        {...shellProps}
+      >
+        <div className="flex flex-col gap-3">
+          <span className="smk-pill w-fit">
+            <span className="smk-pill-dot" aria-hidden />
+            {t('liquidity.badge')}
+          </span>
+          <h2 className="smk-display text-3xl sm:text-4xl">
+            {t('liquidity.title', { count: liquidity.playerCount })}
+          </h2>
+          <p className="smk-text-muted">
+            {t('liquidity.subtitle', {
+              scale: ratingScaleLabel(sport),
+              rating,
+              km: String(maxDistanceKm),
+            })}
+          </p>
+        </div>
+
+        <div className="smk-panel flex flex-col gap-3 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--smk-ink)]">
+              <Users className="h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
+              {t('liquidity.likelihoodLabel')}
+            </span>
+            <span className="smk-display text-2xl">{liquidity.likelihoodPct}%</span>
+          </div>
+          <div
+            className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--smk-line)]"
+            role="presentation"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--smk-lime)]"
+              style={{ width: `${liquidity.likelihoodPct}%` }}
+            />
+          </div>
+          <p className="smk-text-muted text-sm">{t('liquidity.hint')}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setStep('contact');
+          }}
+          className="smk-btn w-full"
+        >
+          {t('liquidity.continueCta')}
+          <ArrowRight className="h-5 w-5" />
+        </button>
+      </WizardShell>
+    );
+  }
+
   if (step === 'contact') {
     const emailValid = validateEmail(email.trim());
     const phoneValid = validatePhoneNumber(phoneDigits).length === 10;
@@ -1367,7 +1465,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         showBack
         onBack={() => {
           setError(null);
-          setStep(timeDay ? 'time' : 'day');
+          setStep(liquidity ? 'liquidity' : timeDay ? 'time' : 'day');
         }}
         {...shellProps}
       >
@@ -1509,6 +1607,15 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         <div className="flex flex-col gap-3">
           <h2 className="smk-display text-3xl sm:text-4xl">{t('plans.title')}</h2>
           <p className="smk-text-muted">{t('plans.subtitle')}</p>
+          {liquidity && (
+            <span className="smk-pill w-fit">
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              {t('plans.liquidityChip', {
+                count: liquidity.playerCount,
+                pct: liquidity.likelihoodPct,
+              })}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">
@@ -1613,6 +1720,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           <div className="flex flex-col gap-3">
             <h2 className="smk-display text-3xl sm:text-4xl">{t('reveal.headline')}</h2>
             <p className="smk-text-muted">{t('reveal.message')}</p>
+            <p className="smk-text-muted">{t('reveal.simulatedNote')}</p>
             <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
               {t('reveal.thanks')}
             </p>

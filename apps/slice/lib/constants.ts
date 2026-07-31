@@ -11,6 +11,13 @@ export const MATCH_SMOKE_TEST_CURRENCY = 'CAD';
  */
 export const SMOKE_TEST_ID = 'wtp_smoke_v3_slice_2026';
 
+/**
+ * Funnel revision, carried on every event. v3.1 added the simulated liquidity
+ * signal before the contact ask, which lifts every downstream conversion —
+ * pre/post cohorts must never be pooled, so analysis filters on this.
+ */
+export const FUNNEL_VERSION = 'v3.1_liquidity';
+
 // ---- Sport ----
 
 export const SPORT_OPTIONS = ['tennis', 'pickleball'] as const;

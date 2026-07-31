@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
       sessionId,
       variantValueProp,
       variantPriceCents,
+      liquidityPlayersShown,
+      liquidityPctShown,
     } = body;
 
     if (!sport || !SPORT_OPTIONS.includes(sport as SportOption)) {
@@ -112,6 +114,18 @@ export async function POST(request: NextRequest) {
     const normalizedVariantPrice = isValidMonthlyPrice(variantPriceCents)
       ? variantPriceCents
       : null;
+    // Simulated liquidity numbers shown to this visitor (bounds match the
+    // estimator's clamps) — kept so payment intent can be read against them.
+    const normalizedLiquidityPlayers =
+      Number.isInteger(liquidityPlayersShown) &&
+      liquidityPlayersShown >= 1 &&
+      liquidityPlayersShown <= 60
+        ? liquidityPlayersShown
+        : null;
+    const normalizedLiquidityPct =
+      Number.isInteger(liquidityPctShown) && liquidityPctShown >= 50 && liquidityPctShown <= 99
+        ? liquidityPctShown
+        : null;
 
     const supabase = getAdminClient();
     const { error: upsertError } = await supabase.from('match_smoke_test_lead').upsert(
@@ -135,6 +149,8 @@ export async function POST(request: NextRequest) {
         session_id: normalizedSessionId,
         variant_valueprop: normalizedVariantValueProp,
         variant_price_cents: normalizedVariantPrice,
+        liquidity_players_shown: normalizedLiquidityPlayers,
+        liquidity_pct_shown: normalizedLiquidityPct,
       },
       { onConflict: 'email' }
     );

@@ -21,6 +21,7 @@ export type SmokeEventName =
   | 'value_prop_click'
   | 'preferences_completed'
   | 'courts_viewed'
+  | 'liquidity_viewed'
   | 'contact_submitted'
   | 'pricing_viewed'
   | 'plan_selected'
@@ -30,6 +31,8 @@ export type SmokeEventName =
 /** The attributes joined to every smoke-test event (brief §4.3). */
 export interface SmokeEventContext {
   test_id: string;
+  /** Funnel revision (v3.1 = simulated liquidity signal) — cohort fence. */
+  funnel_version: string;
   variant_valueprop: ValuePropVariant;
   variant_price: number; // monthly price A/B, in cents
   sport: SportOption | null;

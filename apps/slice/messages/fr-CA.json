@@ -101,6 +101,14 @@
       "timeFlexible": "Flexible : n'importe quand dans les prochaines 48 heures",
       "timeWindow": "{day} · {window}"
     },
+    "liquidity": {
+      "badge": "Bonne nouvelle",
+      "title": "On a trouvé {count} joueurs compatibles.",
+      "subtitle": "Niveau {scale} {rating}, à moins de {km} km, disponibles dans ta plage horaire.",
+      "likelihoodLabel": "Chances estimées que ta partie ait lieu",
+      "hint": "Basé sur les profils des joueurs et les taux de réponse dans ton coin.",
+      "continueCta": "Continuer"
+    },
     "contact": {
       "badge": "Presque fini",
       "title": "Où veux-tu recevoir ta confirmation ?",
@@ -135,6 +143,7 @@
     "plans": {
       "title": "Choisis ton forfait",
       "subtitle": "Paie à la partie, ou passe en illimité.",
+      "liquidityChip": "{count} joueurs compatibles · {pct} % de chances",
       "single": {
         "title": "Une partie",
         "description": "On organise une partie pour toi."
@@ -157,6 +166,7 @@
       "badge": "Petit mot",
       "headline": "C'était un test, pis t'as rien payé.",
       "message": "Aucun champ de carte n'a été affiché et aucun paiement n'a été ni ne sera prélevé. On valide combien de joueurs veulent qu'on organise leurs parties avant de le bâtir.",
+      "simulatedNote": "Le nombre de joueurs et l'estimation de chances que t'as vus étaient simulés eux aussi.",
       "thanks": "Merci de nous aider à bâtir la vraie affaire.",
       "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville.",
       "eraseIntro": "Tu veux qu'on efface les infos que t'as données ?",
