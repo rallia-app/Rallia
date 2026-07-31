@@ -4720,6 +4720,10 @@
       "linkCta": "Link this game",
       "addResult": "Add result"
     },
+    "pairingChat": {
+      "organize": "Organize your game",
+      "error": "Couldn't open the game chat. Please try again."
+    },
     "errors": {
       "generic": "Something went wrong. Try again."
     },

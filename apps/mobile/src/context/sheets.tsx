@@ -227,6 +227,8 @@ declare module 'react-native-actions-sheet' {
         defaultSportId?: string | null;
         /** Round chat's tournament_match_id — forces the flow onto the tournament sport. */
         tournamentMatchId?: string | null;
+        /** Pairing chat's session_match_id — forces the flow onto the league sport. */
+        sessionMatchId?: string | null;
         /** Analytics context, threaded from the chat for card_posted props. */
         conversationType?: string;
         isRoundChat?: boolean;

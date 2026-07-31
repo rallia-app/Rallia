@@ -385,12 +385,13 @@ export default function ChatConversationScreen() {
   );
 
   // Match Organizer is offered in small direct / group chats (2-4 players), and
-  // in tournament "round chats" (a per-pairing chat tagged tournament_match_id).
+  // in pairing chats: a tournament round chat (tournament_match_id) or a league
+  // session pairing chat (session_match_id).
   // Once a game has been created from the chat (match_id set), it's hidden.
   const canOrganizeMatch = useMemo(() => {
     if (!conversation || !playerId) return false;
     if (conversation.match_id) return false; // a game was already created here
-    const isRoundChat = !!conversation.tournament_match_id;
+    const isRoundChat = !!conversation.tournament_match_id || !!conversation.session_match_id;
     const type = conversation.conversation_type;
     const isSmallChat = type === 'direct' || type === 'group_chat';
     if (!isRoundChat && !isSmallChat) return false;
@@ -401,7 +402,7 @@ export default function ChatConversationScreen() {
     if (!playerId || !conversationId || participantIds.length < 2) return;
     lightHaptic();
     const conversationType = conversation?.conversation_type ?? 'unknown';
-    const isRoundChat = !!conversation?.tournament_match_id;
+    const isRoundChat = !!conversation?.tournament_match_id || !!conversation?.session_match_id;
     Analytics.matchOrganizerOpened({
       conversation_type: conversationType,
       is_round_chat: isRoundChat,
@@ -412,8 +413,9 @@ export default function ChatConversationScreen() {
         conversationId,
         organizerId: playerId,
         participantIds,
-        // Round chats force the tournament's sport; the sheet resolves it.
+        // Pairing chats force the competition's sport; the sheet resolves it.
         tournamentMatchId: conversation?.tournament_match_id ?? null,
+        sessionMatchId: conversation?.session_match_id ?? null,
         conversationType,
         isRoundChat,
       },

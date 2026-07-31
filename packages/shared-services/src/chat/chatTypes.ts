@@ -136,6 +136,8 @@ export interface Conversation {
   tournament_id?: string | null;
   /** Set on a tournament "round chat" — the per-pairing chat for a bracket match. */
   tournament_match_id?: string | null;
+  /** Set on a league "pairing chat" — the per-pairing chat for a session sheet match. */
+  session_match_id?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

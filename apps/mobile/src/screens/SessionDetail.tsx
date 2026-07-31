@@ -20,8 +20,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
@@ -48,6 +49,7 @@ import {
   useGenerateSessionSheet,
   useSetSessionMatchLock,
   useSports,
+  useOpenSessionPairingChat,
 } from '@rallia/shared-hooks';
 import { isLeagueOrganizer } from '@rallia/shared-services';
 import type {
@@ -65,6 +67,7 @@ import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
 type Route = RouteProp<RootStackParamList, 'SessionDetail'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type SessionStatus = Enums<'session_status'>;
 
 const SESSION_STATUS_KEY: Record<SessionStatus, string> = {
@@ -90,6 +93,7 @@ export const SessionDetail: React.FC = () => {
   const { session: authSession } = useAuth();
   const userId = authSession?.user?.id;
   const route = useRoute<Route>();
+  const navigation = useNavigation<NavigationProp>();
   const { sessionId, leagueId } = route.params;
   const isDark = theme === 'dark';
   const tc = isDark ? darkTheme : lightTheme;
@@ -360,9 +364,9 @@ export const SessionDetail: React.FC = () => {
     [sessionScoreable, isOrganizer, isScored]
   );
 
-  // A participant settles their pairing by linking a played, verified casual
-  // match — the canonical flow (feedback + rating + confirmation come with it).
-  const canLink = useCallback(
+  // A participant with an open pairing can organize the game with their
+  // opponent in the pairing chat, before or after a game has been agreed on.
+  const canOrganize = useCallback(
     (m: SessionMatch) =>
       sessionScoreable &&
       !isOrganizer &&
@@ -372,6 +376,12 @@ export const SessionDetail: React.FC = () => {
       !m.is_three_player,
     [sessionScoreable, isOrganizer, isParticipantOf, isScored]
   );
+
+  // A participant settles their pairing by linking a played, verified casual
+  // match — the canonical flow (feedback + rating + confirmation come with it).
+  // A pairing organized in chat is already bound to its game, so there is
+  // nothing left to link: the score arrives through that game's confirmation.
+  const canLink = useCallback((m: SessionMatch) => canOrganize(m) && !m.match_id, [canOrganize]);
 
   const openLinkMatch = useCallback(
     (m: SessionMatch) => {
@@ -391,6 +401,28 @@ export const SessionDetail: React.FC = () => {
       });
     },
     [league, sessionId, seasonId, invalidate]
+  );
+
+  // Open (get-or-create) the per-pairing chat and drop the caller in, so they
+  // can agree on a time with their opponent. The game they create there is
+  // attached to this pairing before it's played, and that chat becomes the
+  // match chat, so confirming the score settles the pairing on its own.
+  const openPairingChat = useOpenSessionPairingChat();
+  const handleOrganizeInChat = useCallback(
+    (m: SessionMatch) => {
+      lightHaptic();
+      openPairingChat.mutate(m.id, {
+        onSuccess: conversationId => {
+          if (!conversationId) return;
+          navigation.navigate('ChatConversation', {
+            conversationId,
+            title: league?.name,
+          });
+        },
+        onError: () => toast.error(t('sessionDetail.pairingChat.error')),
+      });
+    },
+    [openPairingChat, navigation, league?.name, toast, t]
   );
 
   const openScoreEntry = useCallback(
@@ -825,15 +857,34 @@ export const SessionDetail: React.FC = () => {
                         </TouchableOpacity>
                         {renderLockToggle(m)}
                       </View>
-                    ) : canLink(m) ? (
-                      <TouchableOpacity
-                        onPress={() => openLinkMatch(m)}
-                        style={styles.lockButton}
-                        accessibilityLabel={t('sessionDetail.linkPicker.addResult')}
-                        testID="cta-link-match"
-                      >
-                        <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                      </TouchableOpacity>
+                    ) : canOrganize(m) ? (
+                      <View style={styles.matchActions}>
+                        {/* Before the game: agree on a time with the opponent. */}
+                        <TouchableOpacity
+                          onPress={() => handleOrganizeInChat(m)}
+                          disabled={openPairingChat.isPending}
+                          style={styles.lockButton}
+                          accessibilityLabel={t('sessionDetail.pairingChat.organize')}
+                          testID="cta-organize-pairing"
+                        >
+                          <Ionicons
+                            name="chatbubble-ellipses-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
+                        </TouchableOpacity>
+                        {/* After it: link a game played outside the chat. */}
+                        {canLink(m) ? (
+                          <TouchableOpacity
+                            onPress={() => openLinkMatch(m)}
+                            style={styles.lockButton}
+                            accessibilityLabel={t('sessionDetail.linkPicker.addResult')}
+                            testID="cta-link-match"
+                          >
+                            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
                     ) : isScored(m) && canEditScore ? (
                       // A recorded score stays editable by the organizer for the
                       // direct-override path; an attached match is edited through the

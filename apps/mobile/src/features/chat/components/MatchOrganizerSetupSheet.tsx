@@ -41,6 +41,7 @@ import {
   useMatchOrganizerOptions,
   usePostMatchOrganizerCard,
   useTournamentMatchSport,
+  useSessionMatchSport,
 } from '@rallia/shared-hooks';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
@@ -72,32 +73,38 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
 
   const { data: sharedSports = [], isLoading: sportsLoading } = useSharedSports(participantIds);
 
-  // In a tournament round chat the sport is fixed to the tournament's sport.
+  // In a pairing chat the sport is fixed to the competition's own sport: the
+  // tournament's for a bracket round chat, the league's for a session pairing.
   const tournamentMatchId = payload?.tournamentMatchId ?? null;
-  const isTournamentChat = !!tournamentMatchId;
+  const sessionMatchId = payload?.sessionMatchId ?? null;
+  const isPairingChat = !!tournamentMatchId || !!sessionMatchId;
   const { data: tournamentSportId, isLoading: tournamentSportLoading } =
     useTournamentMatchSport(tournamentMatchId);
-  const lockSport = isTournamentChat && !!tournamentSportId;
+  const { data: sessionSportId, isLoading: sessionSportLoading } =
+    useSessionMatchSport(sessionMatchId);
+  const pinnedSportId = tournamentSportId ?? sessionSportId ?? null;
+  const pinnedSportLoading = tournamentSportLoading || sessionSportLoading;
+  const lockSport = isPairingChat && !!pinnedSportId;
 
   const [selectedSportId, setSelectedSportId] = useState<string | null>(
     payload?.defaultSportId ?? null
   );
   const [submitting, setSubmitting] = useState(false);
 
-  // Resolve the sport: force the tournament sport in a round chat, otherwise
-  // default to the first shared sport. Wait for the tournament sport before
-  // falling back so a round chat never briefly previews the wrong sport.
+  // Resolve the sport: force the pinned sport in a pairing chat, otherwise
+  // default to the first shared sport. Wait for the pinned sport before falling
+  // back so a pairing chat never briefly previews the wrong sport.
   useEffect(() => {
     if (selectedSportId) return;
-    if (isTournamentChat) {
-      if (tournamentSportId) {
-        setSelectedSportId(tournamentSportId);
+    if (isPairingChat) {
+      if (pinnedSportId) {
+        setSelectedSportId(pinnedSportId);
         return;
       }
-      if (tournamentSportLoading) return;
+      if (pinnedSportLoading) return;
     }
     if (sharedSports.length > 0) setSelectedSportId(sharedSports[0].id);
-  }, [selectedSportId, isTournamentChat, tournamentSportId, tournamentSportLoading, sharedSports]);
+  }, [selectedSportId, isPairingChat, pinnedSportId, pinnedSportLoading, sharedSports]);
 
   const format: 'singles' | 'doubles' = participantIds.length === 4 ? 'doubles' : 'singles';
 
@@ -218,7 +225,7 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
     optionsLoading ||
     optionsFetching ||
     (sportsLoading && !selectedSportId) ||
-    (isTournamentChat && tournamentSportLoading && !selectedSportId);
+    (isPairingChat && pinnedSportLoading && !selectedSportId);
   const showEmpty = !!selectedSportId && !isLoadingPreview && options.length === 0;
   const submitDisabled = submitting || selectedKeys.size === 0 || !selectedSportId;
 

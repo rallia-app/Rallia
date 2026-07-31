@@ -57,6 +57,7 @@ export {
   getMatchChat,
   getTournamentChat,
   getOrCreateTournamentRoundChat,
+  getOrCreateSessionPairingChat,
   syncMatchConversationTitle,
   updateConversation,
   getConversationByNetworkId,
@@ -128,6 +129,7 @@ export {
   toggleMatchTimeVote,
   createCasualMatch,
   getTournamentMatchSportId,
+  getSessionMatchSportId,
   type OrganizerSport,
   type MatchTimeVote,
 } from './matchOrganizerService';

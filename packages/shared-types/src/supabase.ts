@@ -771,6 +771,7 @@ export type Database = {
           id: string
           match_id: string | null
           picture_url: string | null
+          session_match_id: string | null
           sport_id: string | null
           title: string | null
           tournament_id: string | null
@@ -784,6 +785,7 @@ export type Database = {
           id?: string
           match_id?: string | null
           picture_url?: string | null
+          session_match_id?: string | null
           sport_id?: string | null
           title?: string | null
           tournament_id?: string | null
@@ -797,6 +799,7 @@ export type Database = {
           id?: string
           match_id?: string | null
           picture_url?: string | null
+          session_match_id?: string | null
           sport_id?: string | null
           title?: string | null
           tournament_id?: string | null
@@ -824,6 +827,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "qualifying_played_game"
             referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "conversation_session_match_id_fkey"
+            columns: ["session_match_id"]
+            isOneToOne: false
+            referencedRelation: "session_matches"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "conversation_sport_id_fkey"
@@ -10770,6 +10780,10 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: string
       }
+      get_or_create_session_pairing_chat: {
+        Args: { p_session_match_id: string }
+        Returns: string
+      }
       get_or_create_tournament_round_chat: {
         Args: { p_tournament_match_id: string }
         Returns: string
@@ -12255,6 +12269,10 @@ export type Database = {
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
       lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
+      lt_get_or_create_session_pairing_chat_unchecked: {
+        Args: { p_session_match_id: string }
+        Returns: string
+      }
       lt_get_or_create_tournament_chat: {
         Args: { p_tournament_id: string }
         Returns: string
@@ -13196,6 +13214,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      session_attach_match_pre_play: {
+        Args: { p_match_id: string; p_session_match_id: string }
+        Returns: undefined
       }
       session_cancel: {
         Args: {

@@ -10,13 +10,15 @@ jest.mock('../supabase', () => ({
   supabase: { from: jest.fn(), rpc: jest.fn() },
 }));
 
-import { getTournamentChat } from './conversationService';
+import { getTournamentChat, getOrCreateSessionPairingChat } from './conversationService';
 import { supabase } from '../supabase';
 
 const mockFrom = supabase.from as jest.Mock;
+const mockRpc = supabase.rpc as jest.Mock;
 
 beforeEach(() => {
   mockFrom.mockReset();
+  mockRpc.mockReset();
 });
 
 function chain(result: { data: unknown; error: unknown }) {
@@ -61,5 +63,30 @@ describe('getTournamentChat', () => {
     mockFrom.mockReturnValue(chainProxy);
 
     await expect(getTournamentChat('t-1')).resolves.toBeNull();
+  });
+});
+
+describe('getOrCreateSessionPairingChat', () => {
+  it('calls the RPC with the pairing id and returns the conversation id', async () => {
+    mockRpc.mockResolvedValue({ data: 'conv-9', error: null });
+
+    await expect(getOrCreateSessionPairingChat('sm-1')).resolves.toBe('conv-9');
+    expect(mockRpc).toHaveBeenCalledWith('get_or_create_session_pairing_chat', {
+      p_session_match_id: 'sm-1',
+    });
+  });
+
+  it('returns null for a pairing with no game to organize (drill, 3-player)', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+
+    await expect(getOrCreateSessionPairingChat('sm-1')).resolves.toBeNull();
+  });
+
+  it('throws on error so the caller can surface it', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'NOT_A_PARTICIPANT' } });
+
+    await expect(getOrCreateSessionPairingChat('sm-1')).rejects.toEqual({
+      message: 'NOT_A_PARTICIPANT',
+    });
   });
 });
