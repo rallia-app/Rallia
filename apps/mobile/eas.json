@@ -34,6 +34,13 @@
         "EXPO_APPLE_TEAM_TYPE": "INDIVIDUAL"
       }
     },
+    "preview-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true,
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production",
