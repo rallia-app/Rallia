@@ -14,7 +14,7 @@ export const SMOKE_TEST_ID = 'wtp_smoke_v3_slice_2026';
 /**
  * Funnel revision, carried on every event. v3.1 added the simulated liquidity
  * signal before the contact ask; v3.2 dropped the price A/B and the weekly
- * tier for fixed $1.99 / $5.99-month pricing. Each revision shifts conversion,
+ * tier for fixed $1.99 / $6.99-month pricing. Each revision shifts conversion,
  * so cohorts must never be pooled — analysis filters on this.
  */
 export const FUNNEL_VERSION = 'v3.2_fixed_pricing';
@@ -113,7 +113,7 @@ export const MATCH_PLAN_TIERS = ['single', 'monthly'] as const;
 export type MatchPlanTier = (typeof MATCH_PLAN_TIERS)[number];
 
 export const SINGLE_PRICE_CENTS = 199;
-export const MONTHLY_PRICE_CENTS = 599;
+export const MONTHLY_PRICE_CENTS = 699;
 
 export interface MatchPlanConfig {
   tier: MatchPlanTier;
