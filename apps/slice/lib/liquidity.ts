@@ -48,7 +48,7 @@ function ratingCentrality(sport: SportOption, rating: string): number {
   return 1 - Math.abs(index - mid) / mid;
 }
 
-const BASE_COUNT_BY_RADIUS: Record<number, number> = { 10: 9, 25: 16, 50: 26 };
+const BASE_COUNT_BY_RADIUS: Record<number, number> = { 5: 6, 10: 9, 25: 16 };
 
 function timeSlotFactor(timeSlot: string): number {
   if (isFlexibleTimeSlot(timeSlot)) return 1.25;
@@ -68,7 +68,7 @@ export function estimateLiquidity(input: {
   const centrality = ratingCentrality(sport, rating);
   const jitter = hashFraction(`${sport}|${rating}|${maxDistanceKm}|${timeSlot}`);
 
-  const base = BASE_COUNT_BY_RADIUS[maxDistanceKm] ?? 16;
+  const base = BASE_COUNT_BY_RADIUS[maxDistanceKm] ?? 9;
   const sportFactor = sport === 'pickleball' ? 0.8 : 1;
   const centralityFactor = 0.3 + 0.7 * centrality;
   const raw =
@@ -76,7 +76,7 @@ export function estimateLiquidity(input: {
   const playerCount = Math.min(40, Math.max(2, Math.round(raw)));
 
   const flexibleBonus = isFlexibleTimeSlot(timeSlot) ? 6 : 0;
-  const radiusBonus = maxDistanceKm >= 50 ? 3 : maxDistanceKm >= 25 ? 1 : 0;
+  const radiusBonus = maxDistanceKm >= 25 ? 3 : maxDistanceKm >= 10 ? 1 : 0;
   const rawPct = 71 + 12 * centrality + flexibleBonus + radiusBonus + Math.round(jitter * 6) - 3;
   const likelihoodPct = Math.min(92, Math.max(68, Math.round(rawPct)));
 

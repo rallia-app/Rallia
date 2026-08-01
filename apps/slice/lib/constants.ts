@@ -96,8 +96,8 @@ export type LocationOption = (typeof LOCATION_OPTIONS)[number];
 export const FACILITY_PREFERENCE_OPTIONS = ['specific', 'flexible', 'none_found'] as const;
 export type FacilityPreference = (typeof FACILITY_PREFERENCE_OPTIONS)[number];
 
-export const DEFAULT_MAX_DISTANCE_KM = 25;
-export const DISTANCE_OPTIONS_KM = [10, 25, 50] as const;
+export const DEFAULT_MAX_DISTANCE_KM = 10;
+export const DISTANCE_OPTIONS_KM = [5, 10, 25] as const;
 
 export { FLEXIBLE_TIME_SLOT } from './time-selection';
 export type { TimeDayOption } from './time-selection';
