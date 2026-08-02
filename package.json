@@ -107,6 +107,8 @@
     "// docs:league-test-guide": "Regenerate docs/Guide_de_test_des_ligues.pdf from scripts/leagues/test-guide.html",
     "docs:lt-test-guide": "node scripts/leagues-tournaments/generate-test-guide-pdf.mjs",
     "// docs:lt-test-guide": "Regenerate docs/Guide_de_test_ligues_et_tournois.pdf from scripts/leagues-tournaments/test-guide.html (covers the [SEED-T] and [SEED-S] fixtures)",
+    "docs:payments-test-guide": "node scripts/payments/generate-test-guide-pdf.mjs",
+    "// docs:payments-test-guide": "Regenerate docs/Guide_de_test_des_paiements.pdf from scripts/payments/test-guide.html (paid tournaments + leagues, demo@rallia.ca and jdl.sonkin+10@gmail.com)",
     "check-env": "node scripts/dev/check-env.js",
     "// check-env": "Validate environment variables are set",
     "doctor": "node scripts/dev/doctor.js",
