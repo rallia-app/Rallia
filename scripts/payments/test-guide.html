@@ -185,24 +185,24 @@
   <body>
     <h1>Protocole de test des paiements</h1>
     <p class="meta">
-      Tournois et ligues payants · Environnement : <strong>staging</strong> · Stripe en mode
-      <strong>test (sandbox)</strong> · 2 août 2026
+      Compte de test : <strong>jdl.sonkin+10@gmail.com</strong> · Environnement :
+      <strong>staging</strong> · Stripe en mode <strong>test (sandbox)</strong> · 2 août 2026
     </p>
 
     <p class="section-intro">
-      Deux testeurs, deux comptes. <strong>Alex</strong> utilise
-      <span class="fixture">demo@rallia.ca</span>, <strong>JDL</strong> utilise
-      <span class="fixture">jdl.sonkin+10@gmail.com</span>. Chaque scénario indique qui le fait avec une
-      pastille <span class="pill demo">Alex</span> ou <span class="pill jdl">JDL</span>. Les deux
-      comptes sont administrateurs sur staging, ce qui est requis pour créer un événement payant.
+      Connecte-toi avec <span class="fixture">jdl.sonkin+10@gmail.com</span> pour tous les scénarios
+      ci-dessous. C'est un compte neuf, créé exprès pour tester les paiements : il n'a jamais eu de
+      compte Stripe, ce qui permet de valider l'inscription des versements au complet. Les événements
+      <span class="fixture">[PAYUI-JDL]</span> et <span class="fixture">[PAYE2E]</span> sont ceux qui
+      te concernent.
     </p>
 
     <p class="warn">
-      <strong>Le nom affiché dans l'app n'est pas ton nom.</strong> Ces deux comptes portent un profil
-      de test : <span class="fixture">demo@rallia.ca</span> s'affiche comme
-      <strong>Alex Monza</strong>, et <span class="fixture">jdl.sonkin+10@gmail.com</span> s'affiche
-      comme <strong>Jose Caroon</strong>. C'est normal. Dans les listes de participants, cherche ces
-      noms-là, pas le tien.
+      <strong>Le nom affiché dans l'app n'est pas le tien.</strong> Ce compte porte un profil de test
+      et s'affiche comme <strong>Jose Caroon</strong>. C'est normal : dans les listes de participants,
+      c'est ce nom-là qu'il faut chercher. Les événements que tu ne gères pas sont organisés par un
+      autre compte de test, dont Mathis s'occupe de son côté. Tu n'as jamais à te connecter à un autre
+      compte que le tien.
     </p>
 
     <p class="lifecycle">
@@ -243,24 +243,23 @@
     <p class="warn">
       <strong>Les montants de frais des fixtures pré-payées sont périmés.</strong> Elles ont été
       créées quand les frais incluaient encore un montant fixe de 1,00 $. Le tarif actuel est 5 %
-      seulement. Sur ces inscriptions-là, les frais affichés seront donc plus élevés que le calcul de
-      la page précédente : c'est attendu, ce n'est pas un bogue. Fie-toi aux scénarios
+      seulement. Sur ces inscriptions-là, les frais affichés seront donc plus élevés que le calcul
+      ci-dessus : c'est attendu, ce n'est pas un bogue. Fie-toi aux scénarios
       <span class="pill live">vrai paiement</span> pour valider le calcul des frais.
     </p>
 
     <h2>1. Onboarding Stripe Connect (à faire en premier)</h2>
     <p class="section-intro">
       Rien d'autre ne fonctionne tant que ce n'est pas fait. Un événement payant ne peut pas être
-      publié, et personne ne peut payer pour y entrer, tant que <strong>son organisateur</strong> n'a
-      pas complété son compte Stripe. Alex et JDL organisent chacun des événements où l'autre doit
-      payer : <strong>les deux doivent donc compléter cette étape</strong>, sinon la moitié du
-      protocole est bloquée.
+      publié, et personne ne peut payer pour y entrer, tant que son organisateur n'a pas complété son
+      compte Stripe. Fais cette étape avant tout le reste, sauf le scénario 2.1 qui doit se faire
+      juste avant.
     </p>
 
     <section class="block">
-      <h3>1.1 Compléter le compte <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
+      <h3>1.1 Compléter le compte</h3>
       <ol>
-        <li>Ouvre un de tes propres événements payants (voir le tableau de la section 2 ou 4).</li>
+        <li>Ouvre <span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span>.</li>
         <li>Onglet <strong>Aperçu</strong>, section <strong>GÉRER</strong> : la ligne
           <strong>Versements</strong> affiche <span class="pill">Action requise</span>.</li>
         <li>Touche-la. Un navigateur s'ouvre sur <strong>connect.stripe.com</strong>.</li>
@@ -284,32 +283,19 @@
       </p>
     </section>
 
-    <h2>2. Tournois payants, comme organisateur</h2>
+    <h2>2. Tes événements payants (tu organises)</h2>
 
     <table class="fixtures-table">
-      <tr><th>Fixture</th><th>Organisateur</th><th>Prix</th><th>Sert à tester</th></tr>
-      <tr><td><span class="fixture">[PAYUI] You organize — earnings & cancel</span></td><td>Alex</td><td>25&nbsp;$</td><td>Revenus, annulation</td></tr>
-      <tr><td><span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span></td><td>JDL</td><td>25&nbsp;$</td><td>Revenus, annulation</td></tr>
-      <tr><td><span class="fixture">[PAYUI] Draft a publier</span></td><td>Alex</td><td>25&nbsp;$</td><td>Blocage à la publication</td></tr>
-      <tr><td><span class="fixture">[PAYUI-JDL] Draft a publier</span></td><td>JDL</td><td>25&nbsp;$</td><td>Blocage à la publication</td></tr>
-      <tr><td><span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span></td><td>JDL</td><td>25&nbsp;$</td><td>Annulation</td></tr>
+      <tr><th>Fixture</th><th>Prix</th><th>Sert à tester</th></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Draft a publier</span></td><td>25&nbsp;$</td><td>Blocage à la publication</td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span></td><td>25&nbsp;$</td><td>Revenus (6 inscrits payés)</td></tr>
+      <tr><td><span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span></td><td>25&nbsp;$</td><td>Annulation</td></tr>
     </table>
 
     <section class="block">
-      <h3>2.1 Voir ses revenus <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
-      <p>Ouvre ton fixture <span class="fixture">You organize</span> (6 inscrits déjà payés).</p>
-      <ol>
-        <li>Onglet <strong>Participants</strong> : les 6 joueurs apparaissent comme <strong>inscrits</strong> et payés.</li>
-        <li>Section paiements de l'événement : vérifie le total encaissé et le montant qui te revient.</li>
-        <li>Le calcul doit être cohérent : 6 × 25,00 $ = 150,00 $ d'entrées. Les frais de service sont retenus par Rallia, pas par toi.</li>
-      </ol>
-      <p class="check"><strong>Attendu :</strong> aucun montant à zéro, aucun « NaN », aucun montant négatif. Le montant qui te revient est inférieur au total encaissé.</p>
-    </section>
-
-    <section class="block">
-      <h3>2.2 Le mur des versements <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
+      <h3>2.1 Le mur des versements <span class="pill">à faire avant la section 1</span></h3>
       <p>
-        Chacun sur son <span class="fixture">Draft a publier</span> (25 $, en
+        Sur <span class="fixture">[PAYUI-JDL] Draft a publier</span> (25 $, en
         <strong>brouillon</strong>). C'est le seul scénario du protocole qui doit se faire
         <strong>avant</strong> la section 1 : une fois ton compte Stripe complété, le blocage ne se
         reproduit plus.
@@ -327,7 +313,18 @@
     </section>
 
     <section class="block">
-      <h3>2.3 Annuler un tournoi payant <span class="pill jdl">JDL</span> <span class="pill sim">affichage</span></h3>
+      <h3>2.2 Voir tes revenus</h3>
+      <p>Sur <span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span> (6 inscrits déjà payés).</p>
+      <ol>
+        <li>Onglet <strong>Participants</strong> : les 6 joueurs apparaissent comme <strong>inscrits</strong> et payés.</li>
+        <li>Section paiements de l'événement : vérifie le total encaissé et le montant qui te revient.</li>
+        <li>Le calcul doit être cohérent : 6 × 25,00 $ = 150,00 $ d'entrées. Les frais de service sont retenus par Rallia, pas par toi.</li>
+      </ol>
+      <p class="check"><strong>Attendu :</strong> aucun montant à zéro, aucun « NaN », aucun montant négatif. Le montant qui te revient est inférieur au total encaissé.</p>
+    </section>
+
+    <section class="block">
+      <h3>2.3 Annuler un tournoi payant <span class="pill sim">affichage</span></h3>
       <p>Sur <span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span> (aucun inscrit, donc rien à rembourser).</p>
       <ol>
         <li>Annule le tournoi. L'app doit avertir que les inscrits seront remboursés.</li>
@@ -341,31 +338,31 @@
       </p>
     </section>
 
-    <h2>3. Tournois payants, comme participant</h2>
-
-    <table class="fixtures-table">
-      <tr><th>Fixture (organisé par l'autre)</th><th>Pour</th><th>Prix</th><th>État de départ</th></tr>
-      <tr><td><span class="fixture">[PAYUI] LIVE register + pay</span></td><td>Alex</td><td>15&nbsp;$</td><td>Pas inscrit <span class="pill live">vrai paiement</span></td></tr>
-      <tr><td><span class="fixture">[PAYUI-JDL] LIVE register + pay</span></td><td>JDL</td><td>15&nbsp;$</td><td>Pas inscrit <span class="pill live">vrai paiement</span></td></tr>
-      <tr><td><span class="fixture">[PAYUI] Organizer absorbs — pay entry only</span></td><td>Alex</td><td>40&nbsp;$</td><td>Pas inscrit <span class="pill live">vrai paiement</span></td></tr>
-      <tr><td><span class="fixture">[PAYUI] You are invited — pay to confirm</span></td><td>Alex</td><td>20&nbsp;$</td><td>Invitation en attente</td></tr>
-      <tr><td><span class="fixture">[PAYUI] SOLD OUT</span></td><td>Alex</td><td>20&nbsp;$</td><td>Complet (4/4)</td></tr>
-      <tr><td><span class="fixture">[PAYUI] Withdraw → full refund</span></td><td>Alex</td><td>30&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
-      <tr><td><span class="fixture">[PAYUI] Withdraw → 50% refund</span></td><td>Alex</td><td>30&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
-      <tr><td><span class="fixture">[PAYUI] Withdraw → no refund</span></td><td>Alex</td><td>20&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
-      <tr><td><span class="fixture">[PAYUI] Doubles paid (you + partner)</span></td><td>Alex</td><td>40&nbsp;$</td><td>Déjà payé, en double <span class="pill sim">affichage</span></td></tr>
-      <tr><td><span class="fixture">[PAYE2E] 5 - Date limite depassee</span></td><td>Alex</td><td>25&nbsp;$</td><td>Déjà payé, date limite dépassée</td></tr>
-    </table>
+    <h2>3. Les événements des autres (tu participes)</h2>
     <p class="section-intro">
-      JDL a exactement les mêmes scénarios dans la série <span class="fixture">[PAYUI-JDL]</span>,
-      organisés par Alex. Chacun suit sa propre colonne.
+      Tous ces tournois sont organisés par un autre compte de test. Tu n'as rien à faire de ce
+      côté-là : Mathis s'assure que cet organisateur est prêt à encaisser.
     </p>
 
+    <table class="fixtures-table">
+      <tr><th>Fixture</th><th>Prix</th><th>État de départ</th></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] LIVE register + pay</span></td><td>15&nbsp;$</td><td>Pas inscrit <span class="pill live">vrai paiement</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Organizer absorbs (pay entry only)</span></td><td>40&nbsp;$</td><td>Pas inscrit <span class="pill live">vrai paiement</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] You are invited (pay to confirm)</span></td><td>20&nbsp;$</td><td>Invitation en attente</td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] SOLD OUT</span></td><td>20&nbsp;$</td><td>Complet (4/4)</td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Withdraw → full refund</span></td><td>30&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Withdraw → 50% refund</span></td><td>30&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Withdraw → no refund</span></td><td>20&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Doubles paid (you + partner)</span></td><td>40&nbsp;$</td><td>Déjà payé, en double <span class="pill sim">affichage</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Refund cutoff passed</span></td><td>25&nbsp;$</td><td>Déjà payé, date limite dépassée</td></tr>
+    </table>
+
     <section class="block">
-      <h3>3.1 Payer pour de vrai <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span> <span class="pill live">vrai paiement</span></h3>
+      <h3>3.1 Payer pour de vrai <span class="pill live">vrai paiement</span></h3>
       <p>
-        Le scénario le plus important du protocole. Sur <span class="fixture">LIVE register + pay</span>
-        (15 $, mode <strong>joueur paie</strong>).
+        Le scénario le plus important du protocole. Sur
+        <span class="fixture">[PAYUI-JDL] LIVE register + pay</span> (15 $, mode
+        <strong>joueur paie</strong>).
       </p>
       <ol>
         <li>Touche <strong>S'inscrire</strong>. Un écran de paiement s'ouvre.</li>
@@ -382,8 +379,8 @@
     </section>
 
     <section class="block">
-      <h3>3.2 Organisateur absorbe les frais <span class="pill demo">Alex</span> <span class="pill live">vrai paiement</span></h3>
-      <p>Sur <span class="fixture">[PAYUI] Organizer absorbs — pay entry only</span> (40 $).</p>
+      <h3>3.2 Organisateur absorbe les frais <span class="pill live">vrai paiement</span></h3>
+      <p>Sur <span class="fixture">[PAYUI-JDL] Organizer absorbs (pay entry only)</span> (40 $).</p>
       <ol>
         <li>Ouvre l'écran de paiement.</li>
         <li>Compare avec le scénario 3.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 2,00 $ de frais et les 0,30 $ de taxes : il reçoit 37,70 $.</li>
@@ -393,7 +390,7 @@
     </section>
 
     <section class="block">
-      <h3>3.3 Se retirer et être remboursé <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span> <span class="pill live">vrai paiement</span></h3>
+      <h3>3.3 Se retirer et être remboursé <span class="pill live">vrai paiement</span></h3>
       <p>
         À faire sur l'inscription que tu viens de payer au scénario 3.1, pas sur les fixtures
         <span class="pill sim">affichage</span>.
@@ -411,11 +408,9 @@
     </section>
 
     <section class="block">
-      <h3>3.4 Retrait après la date limite <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
+      <h3>3.4 Retrait après la date limite</h3>
       <p>
-        Alex sur <span class="fixture">[PAYE2E] 5 - Date limite depassee</span>, JDL sur
-        <span class="fixture">[PAYUI-JDL] Refund cutoff passed</span> (c'est le seul scénario dont le
-        nom diffère entre les deux séries). Tu y es déjà inscrit et la
+        Sur <span class="fixture">[PAYUI-JDL] Refund cutoff passed</span>. Tu y es déjà inscrit et la
         date limite de remboursement est passée. Ce scénario fonctionne malgré le paiement simulé,
         parce que le remboursement dû est de 0 $ et qu'aucun appel n'est fait à Stripe.
       </p>
@@ -427,30 +422,28 @@
     </section>
 
     <section class="block">
-      <h3>3.5 Affichage des cas limites <span class="pill demo">Alex</span> <span class="pill sim">affichage</span></h3>
+      <h3>3.5 Affichage des cas limites <span class="pill sim">affichage</span></h3>
       <p>Ici tu regardes seulement, tu ne confirmes rien.</p>
       <ol>
-        <li><span class="fixture">[PAYUI] SOLD OUT</span> : le tournoi est complet. L'inscription doit être bloquée et l'état « complet » doit être visible.</li>
-        <li><span class="fixture">[PAYUI] You are invited — pay to confirm</span> : tu as une invitation en attente. L'app doit indiquer qu'il faut <strong>payer pour confirmer</strong> ta place : une invitation ne donne pas l'entrée gratuite.</li>
-        <li><span class="fixture">[PAYUI] Withdraw → full refund</span>, <span class="fixture">→ 50% refund</span> et <span class="fixture">→ no refund</span> : ouvre-les et lis le montant de remboursement annoncé. Il doit correspondre à la politique de chacun (100 %, 50 %, puis 0 % du prix d'entrée, jamais des frais). <strong>Ne confirme pas le retrait</strong> sur ces trois-là.</li>
-        <li><span class="fixture">[PAYUI] Doubles paid (you + partner)</span> : tournoi en double, 40 $, mode <strong>organisateur absorbe</strong>. Vérifie que ton partenaire apparaît avec toi et qu'une seule inscription payée couvre l'équipe.</li>
+        <li><span class="fixture">[PAYUI-JDL] SOLD OUT</span> : le tournoi est complet. L'inscription doit être bloquée et l'état « complet » doit être visible.</li>
+        <li><span class="fixture">[PAYUI-JDL] You are invited (pay to confirm)</span> : tu as une invitation en attente. L'app doit indiquer qu'il faut <strong>payer pour confirmer</strong> ta place : une invitation ne donne pas l'entrée gratuite.</li>
+        <li><span class="fixture">[PAYUI-JDL] Withdraw → full refund</span>, <span class="fixture">→ 50% refund</span> et <span class="fixture">→ no refund</span> : ouvre-les et lis le montant de remboursement annoncé. Il doit correspondre à la politique de chacun (100 %, 50 %, puis 0 % du prix d'entrée, jamais des frais). <strong>Ne confirme pas le retrait</strong> sur ces trois-là.</li>
+        <li><span class="fixture">[PAYUI-JDL] Doubles paid (you + partner)</span> : tournoi en double, 40 $, mode <strong>organisateur absorbe</strong>. Vérifie que ton partenaire apparaît avec toi et qu'une seule inscription payée couvre l'équipe.</li>
       </ol>
     </section>
 
     <h2>4. Ligues payantes</h2>
 
     <table class="fixtures-table">
-      <tr><th>Ligue</th><th>Organisateur</th><th>Saison</th><th>Rôle du testeur</th></tr>
-      <tr><td><span class="fixture">[SEED] Paid League — Demo Hosts</span></td><td>Alex</td><td>40&nbsp;$, ouverte</td><td>Alex organise, JDL est membre</td></tr>
-      <tr><td><span class="fixture">[SEED] Paid League - JDL Hosts</span></td><td>JDL</td><td>40&nbsp;$, ouverte</td><td>JDL organise, Alex est membre</td></tr>
-      <tr><td><span class="fixture">[SEED] Paid League — Draft Season</span></td><td>Alex</td><td>25&nbsp;$, brouillon</td><td>Ouverture de saison payante</td></tr>
-      <tr><td><span class="fixture">[PAYE2E] Ligue payante</span></td><td>JDL</td><td>30&nbsp;$, brouillon</td><td>Ouverture de saison payante</td></tr>
-      <tr><td><span class="fixture">[SEED] Paid League — Demo Plays</span></td><td>joueur fictif</td><td>30&nbsp;$, ouverte</td><td>Affichage seulement</td></tr>
+      <tr><th>Ligue</th><th>Saison</th><th>Ton rôle</th></tr>
+      <tr><td><span class="fixture">[PAYE2E] Ligue payante</span></td><td>30&nbsp;$, brouillon</td><td>Tu organises</td></tr>
+      <tr><td><span class="fixture">[SEED] Paid League - JDL Hosts</span></td><td>40&nbsp;$, ouverte</td><td>Tu organises</td></tr>
+      <tr><td><span class="fixture">[SEED] Paid League — Demo Hosts</span></td><td>40&nbsp;$, ouverte</td><td>Tu es membre</td></tr>
     </table>
 
     <section class="block">
-      <h3>4.1 Ouvrir une saison payante <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
-      <p>Alex sur <span class="fixture">Draft Season</span>, JDL sur <span class="fixture">[PAYE2E] Ligue payante</span>.</p>
+      <h3>4.1 Ouvrir une saison payante</h3>
+      <p>Sur <span class="fixture">[PAYE2E] Ligue payante</span>.</p>
       <ol>
         <li>Ouvre la ligue, onglet <strong>Saisons</strong> : la saison est en <strong>brouillon</strong>.</li>
         <li>Vérifie le prix d'inscription affiché sur la saison.</li>
@@ -464,11 +457,10 @@
     </section>
 
     <section class="block">
-      <h3>4.2 S'inscrire et payer une saison <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span> <span class="pill live">vrai paiement</span></h3>
+      <h3>4.2 S'inscrire et payer une saison <span class="pill live">vrai paiement</span></h3>
       <p>
-        Alex sur <span class="fixture">[SEED] Paid League - JDL Hosts</span>, JDL sur
-        <span class="fixture">[SEED] Paid League — Demo Hosts</span>. Vous êtes déjà membres de la
-        ligue, mais pas inscrits à la saison payante : c'est la saison qui se paie, pas la ligue.
+        Sur <span class="fixture">[SEED] Paid League — Demo Hosts</span>. Tu es déjà membre de la
+        ligue, mais pas inscrit à la saison payante : c'est la saison qui se paie, pas la ligue.
       </p>
       <ol>
         <li>Onglet <strong>Saisons</strong>, ouvre la saison en cours (40 $).</li>
@@ -487,27 +479,27 @@
     </section>
 
     <section class="block">
-      <h3>4.3 Ligue à organisateur fictif <span class="pill demo">Alex</span> <span class="pill sim">affichage</span></h3>
-      <p>Sur <span class="fixture">[SEED] Paid League — Demo Plays</span>.</p>
+      <h3>4.3 Ta ligue déjà ouverte</h3>
+      <p>Sur <span class="fixture">[SEED] Paid League - JDL Hosts</span> (saison ouverte, 5 joueurs déjà inscrits et payés).</p>
       <ol>
-        <li>Ouvre la saison payante et regarde l'écran d'inscription.</li>
-        <li><strong>Ne complète pas le paiement.</strong> L'organisateur est un joueur fictif dont le compte Stripe n'est pas réel, donc la charge échouerait.</li>
+        <li>Onglet <strong>Saisons</strong> : vérifie que les 5 inscrits apparaissent au classement.</li>
+        <li>Vérifie le prix de la saison et le total encaissé.</li>
       </ol>
-      <p class="check"><strong>Attendu :</strong> l'écran s'affiche correctement, avec le bon prix. C'est tout ce qu'on valide ici.</p>
+      <p class="check"><strong>Attendu :</strong> les montants sont cohérents avec 5 × 40,00 $ d'entrées.</p>
     </section>
 
     <h2>5. Ce qui n'est pas testable pour l'instant</h2>
     <ul>
-      <li><strong>Le versement final à l'organisateur.</strong> L'argent est libéré 24 h après la fin de l'événement par une tâche horaire, et seulement pour un tournoi <strong>terminé</strong>. Aucun fixture n'est dans cet état : <span class="fixture">[PAYE2E] 7 - Versement au createur</span> est seulement fermé aux inscriptions, pas terminé. Le versement ne se vérifie donc pas dans une session de test normale.</li>
+      <li><strong>Le versement final à l'organisateur.</strong> L'argent est libéré 24 h après la fin de l'événement par une tâche horaire, et seulement pour un tournoi <strong>terminé</strong>. Aucun fixture n'est dans cet état, donc le versement ne se vérifie pas dans une session de test normale.</li>
       <li><strong>Les remboursements sur les inscriptions pré-payées</strong> (<span class="fixture">pi_sim…</span>). Ils échouent chez Stripe par construction. Utilise les scénarios <span class="pill live">vrai paiement</span> pour valider un vrai remboursement.</li>
       <li><strong>Le paiement par lien de partage</strong> sur un tournoi payant : le parcours n'aboutit pas encore.</li>
-      <li><strong>La création d'un tournoi payant depuis zéro</strong> est réservée aux administrateurs. Les deux comptes de test le sont, mais un organisateur ordinaire ne verra pas l'option.</li>
+      <li><strong>La création d'un tournoi payant depuis zéro</strong> est réservée aux administrateurs. Ton compte de test l'est, mais un organisateur ordinaire ne verra pas l'option.</li>
     </ul>
 
     <h2>6. Quoi noter en cas de problème</h2>
     <p class="section-intro">Pour chaque anomalie, note ces quatre choses. Sans elles, un bogue de paiement est très difficile à retracer.</p>
     <ol>
-      <li><strong>Le compte utilisé</strong> et <strong>l'heure exacte</strong> (à la minute près).</li>
+      <li><strong>L'heure exacte</strong> (à la minute près).</li>
       <li><strong>Le nom exact du fixture</strong>, tel qu'écrit dans ce document.</li>
       <li><strong>Le montant affiché</strong> à l'écran au moment du problème, et celui que tu attendais.</li>
       <li><strong>Une capture d'écran</strong>, incluant les messages d'erreur ou les toasts.</li>
