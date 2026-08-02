@@ -197,6 +197,14 @@
       comptes sont administrateurs sur staging, ce qui est requis pour créer un événement payant.
     </p>
 
+    <p class="warn">
+      <strong>Le nom affiché dans l'app n'est pas ton nom.</strong> Ces deux comptes portent un profil
+      de test : <span class="fixture">demo@rallia.ca</span> s'affiche comme
+      <strong>Alex Monza</strong>, et <span class="fixture">jdl.sonkin+10@gmail.com</span> s'affiche
+      comme <strong>Jose Caroon</strong>. C'est normal. Dans les listes de participants, cherche ces
+      noms-là, pas le tien.
+    </p>
+
     <p class="lifecycle">
       <strong>Le cycle de l'argent :</strong> l'organisateur complète son compte Stripe Connect → il
       publie un événement payant → le joueur s'inscrit et paie par carte → l'argent atterrit dans le
@@ -206,7 +214,7 @@
     </p>
 
     <p class="lifecycle">
-      <strong>Les frais de service :</strong> 5 % + 1,00 $, plafonnés à 20,00 $, plus TPS/TVQ
+      <strong>Les frais de service :</strong> 5 % du prix d'entrée, plafonnés à 20,00 $, plus TPS/TVQ
       (14,975 %) sur les frais seulement. Deux modes par événement : <strong>joueur paie</strong> (les
       frais s'ajoutent au montant affiché) ou <strong>organisateur absorbe</strong> (le joueur paie
       exactement le prix d'entrée, les frais sont retenus sur le versement). Les frais de service ne
@@ -230,6 +238,14 @@
       remboursement chez Stripe va échouer sur celles-là, et c'est normal. Les scénarios marqués
       <span class="pill live">vrai paiement</span> sont ceux où tu paies réellement avec la carte de
       test : ce sont les seuls où le cycle complet (charge, webhook, remboursement) est validé.
+    </p>
+
+    <p class="warn">
+      <strong>Les montants de frais des fixtures pré-payées sont périmés.</strong> Elles ont été
+      créées quand les frais incluaient encore un montant fixe de 1,00 $. Le tarif actuel est 5 %
+      seulement. Sur ces inscriptions-là, les frais affichés seront donc plus élevés que le calcul de
+      la page précédente : c'est attendu, ce n'est pas un bogue. Fie-toi aux scénarios
+      <span class="pill live">vrai paiement</span> pour valider le calcul des frais.
     </p>
 
     <h2>1. Onboarding Stripe Connect (à faire en premier)</h2>
@@ -274,8 +290,9 @@
       <tr><th>Fixture</th><th>Organisateur</th><th>Prix</th><th>Sert à tester</th></tr>
       <tr><td><span class="fixture">[PAYUI] You organize — earnings & cancel</span></td><td>Alex</td><td>25&nbsp;$</td><td>Revenus, annulation</td></tr>
       <tr><td><span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span></td><td>JDL</td><td>25&nbsp;$</td><td>Revenus, annulation</td></tr>
-      <tr><td><span class="fixture">[PAYE2E] 8 - Tiers organise</span></td><td>Alex</td><td>25&nbsp;$</td><td>Publication, blocage versements</td></tr>
-      <tr><td><span class="fixture">[PAYE2E] 7 - Versement au createur</span></td><td>JDL</td><td>15&nbsp;$</td><td>Versement après l'événement</td></tr>
+      <tr><td><span class="fixture">[PAYUI] Draft a publier</span></td><td>Alex</td><td>25&nbsp;$</td><td>Blocage à la publication</td></tr>
+      <tr><td><span class="fixture">[PAYUI-JDL] Draft a publier</span></td><td>JDL</td><td>25&nbsp;$</td><td>Blocage à la publication</td></tr>
+      <tr><td><span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span></td><td>JDL</td><td>25&nbsp;$</td><td>Annulation</td></tr>
     </table>
 
     <section class="block">
@@ -290,16 +307,23 @@
     </section>
 
     <section class="block">
-      <h3>2.2 Le mur des versements <span class="pill demo">Alex</span></h3>
+      <h3>2.2 Le mur des versements <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
       <p>
-        À faire <strong>avant</strong> la section 1 si tu veux voir le blocage, ou saute-le si tu as déjà
-        complété Stripe. Sur <span class="fixture">[PAYE2E] 8 - Tiers organise</span>.
+        Chacun sur son <span class="fixture">Draft a publier</span> (25 $, en
+        <strong>brouillon</strong>). C'est le seul scénario du protocole qui doit se faire
+        <strong>avant</strong> la section 1 : une fois ton compte Stripe complété, le blocage ne se
+        reproduit plus.
       </p>
       <ol>
-        <li>Tant que ton compte Stripe n'est pas complet, l'app doit t'empêcher de rendre l'événement payant public et t'expliquer pourquoi.</li>
+        <li>Ouvre le tournoi et lance la <strong>publication</strong> (ouvrir les inscriptions).</li>
+        <li>Tant que ton compte Stripe n'est pas complet, l'app doit refuser et t'expliquer pourquoi.</li>
         <li>Le message doit pointer vers la configuration des versements, pas afficher une erreur technique.</li>
       </ol>
-      <p class="check"><strong>Attendu :</strong> un blocage clair et compréhensible. Un joueur ne doit jamais pouvoir payer dans le vide.</p>
+      <p class="check">
+        <strong>Attendu :</strong> un blocage clair et compréhensible. Un joueur ne doit jamais pouvoir
+        payer dans le vide. Après la section 1, reviens sur ce même tournoi : la publication doit
+        maintenant réussir. C'est la meilleure preuve que l'onboarding a bien été enregistré.
+      </p>
     </section>
 
     <section class="block">
@@ -328,6 +352,8 @@
       <tr><td><span class="fixture">[PAYUI] SOLD OUT</span></td><td>Alex</td><td>20&nbsp;$</td><td>Complet (4/4)</td></tr>
       <tr><td><span class="fixture">[PAYUI] Withdraw → full refund</span></td><td>Alex</td><td>30&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
       <tr><td><span class="fixture">[PAYUI] Withdraw → 50% refund</span></td><td>Alex</td><td>30&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI] Withdraw → no refund</span></td><td>Alex</td><td>20&nbsp;$</td><td>Déjà payé <span class="pill sim">affichage</span></td></tr>
+      <tr><td><span class="fixture">[PAYUI] Doubles paid (you + partner)</span></td><td>Alex</td><td>40&nbsp;$</td><td>Déjà payé, en double <span class="pill sim">affichage</span></td></tr>
       <tr><td><span class="fixture">[PAYE2E] 5 - Date limite depassee</span></td><td>Alex</td><td>25&nbsp;$</td><td>Déjà payé, date limite dépassée</td></tr>
     </table>
     <p class="section-intro">
@@ -343,7 +369,7 @@
       </p>
       <ol>
         <li>Touche <strong>S'inscrire</strong>. Un écran de paiement s'ouvre.</li>
-        <li>Vérifie le détail avant de payer : entrée 15,00 $ + frais de service 1,75 $ + taxes sur les frais 0,26 $. Le total doit être exactement <strong>17,01 $</strong>.</li>
+        <li>Vérifie le détail avant de payer : entrée 15,00 $ + frais de service 0,75 $ + taxes sur les frais 0,11 $. Le total doit être exactement <strong>15,86 $</strong>.</li>
         <li>Paie avec <strong>4242 4242 4242 4242</strong>.</li>
         <li>Attends le retour dans l'app sans fermer l'écran.</li>
       </ol>
@@ -360,7 +386,7 @@
       <p>Sur <span class="fixture">[PAYUI] Organizer absorbs — pay entry only</span> (40 $).</p>
       <ol>
         <li>Ouvre l'écran de paiement.</li>
-        <li>Compare avec le scénario 3.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 3,00 $ de frais et les 0,45 $ de taxes, retenus sur son versement.</li>
+        <li>Compare avec le scénario 3.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 2,00 $ de frais et les 0,30 $ de taxes : il reçoit 37,70 $.</li>
         <li>Paie avec la carte de test.</li>
       </ol>
       <p class="check"><strong>Attendu :</strong> le total est le prix affiché, ni plus ni moins. C'est la différence visible entre les deux modes de frais.</p>
@@ -385,9 +411,11 @@
     </section>
 
     <section class="block">
-      <h3>3.4 Retrait après la date limite <span class="pill demo">Alex</span></h3>
+      <h3>3.4 Retrait après la date limite <span class="pill demo">Alex</span> <span class="pill jdl">JDL</span></h3>
       <p>
-        Sur <span class="fixture">[PAYE2E] 5 - Date limite depassee</span>. Tu y es déjà inscrit et la
+        Alex sur <span class="fixture">[PAYE2E] 5 - Date limite depassee</span>, JDL sur
+        <span class="fixture">[PAYUI-JDL] Refund cutoff passed</span> (c'est le seul scénario dont le
+        nom diffère entre les deux séries). Tu y es déjà inscrit et la
         date limite de remboursement est passée. Ce scénario fonctionne malgré le paiement simulé,
         parce que le remboursement dû est de 0 $ et qu'aucun appel n'est fait à Stripe.
       </p>
@@ -404,7 +432,8 @@
       <ol>
         <li><span class="fixture">[PAYUI] SOLD OUT</span> : le tournoi est complet. L'inscription doit être bloquée et l'état « complet » doit être visible.</li>
         <li><span class="fixture">[PAYUI] You are invited — pay to confirm</span> : tu as une invitation en attente. L'app doit indiquer qu'il faut <strong>payer pour confirmer</strong> ta place : une invitation ne donne pas l'entrée gratuite.</li>
-        <li><span class="fixture">[PAYUI] Withdraw → full refund</span> et <span class="fixture">→ 50% refund</span> : ouvre-les et lis le montant de remboursement annoncé. Il doit correspondre à la politique (100 % puis 50 % du prix d'entrée, jamais des frais). <strong>Ne confirme pas le retrait</strong> sur ces deux-là.</li>
+        <li><span class="fixture">[PAYUI] Withdraw → full refund</span>, <span class="fixture">→ 50% refund</span> et <span class="fixture">→ no refund</span> : ouvre-les et lis le montant de remboursement annoncé. Il doit correspondre à la politique de chacun (100 %, 50 %, puis 0 % du prix d'entrée, jamais des frais). <strong>Ne confirme pas le retrait</strong> sur ces trois-là.</li>
+        <li><span class="fixture">[PAYUI] Doubles paid (you + partner)</span> : tournoi en double, 40 $, mode <strong>organisateur absorbe</strong>. Vérifie que ton partenaire apparaît avec toi et qu'une seule inscription payée couvre l'équipe.</li>
       </ol>
     </section>
 
@@ -469,7 +498,7 @@
 
     <h2>5. Ce qui n'est pas testable pour l'instant</h2>
     <ul>
-      <li><strong>Le versement final à l'organisateur.</strong> L'argent est libéré 24 h après la fin de l'événement par une tâche horaire. Aucun fixture n'est encore dans cet état, donc le versement ne se vérifie pas dans une session de test normale.</li>
+      <li><strong>Le versement final à l'organisateur.</strong> L'argent est libéré 24 h après la fin de l'événement par une tâche horaire, et seulement pour un tournoi <strong>terminé</strong>. Aucun fixture n'est dans cet état : <span class="fixture">[PAYE2E] 7 - Versement au createur</span> est seulement fermé aux inscriptions, pas terminé. Le versement ne se vérifie donc pas dans une session de test normale.</li>
       <li><strong>Les remboursements sur les inscriptions pré-payées</strong> (<span class="fixture">pi_sim…</span>). Ils échouent chez Stripe par construction. Utilise les scénarios <span class="pill live">vrai paiement</span> pour valider un vrai remboursement.</li>
       <li><strong>Le paiement par lien de partage</strong> sur un tournoi payant : le parcours n'aboutit pas encore.</li>
       <li><strong>La création d'un tournoi payant depuis zéro</strong> est réservée aux administrateurs. Les deux comptes de test le sont, mais un organisateur ordinaire ne verra pas l'option.</li>
