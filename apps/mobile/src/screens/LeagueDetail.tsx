@@ -65,6 +65,7 @@ import {
   useResumeLeague,
   useCloseLeague,
   useSeasonFeeQuote,
+  useEventEarnings,
   useCreateSeasonEnrollmentPayment,
   useRefundSeasonEnrollment,
   leagueKeys,
@@ -1548,6 +1549,12 @@ export const LeagueDetail: React.FC = () => {
   // ---------------------------------------------------------------- paid seasons
   const isPaidSeason = (openSeason?.entry_fee_cents ?? 0) > 0;
   const { data: seasonFeeQuote } = useSeasonFeeQuote(openSeasonId, isPaidSeason);
+  // What the open season has collected — the organizer's only in-app money view
+  // (the Stripe dashboard is account-wide and can't be tied back to one season).
+  const { data: seasonEarnings } = useEventEarnings(
+    { seasonId: openSeasonId },
+    isOrganizer && isPaidSeason
+  );
   const { mutateAsync: createSeasonPayment, isPending: isPayingSeason } =
     useCreateSeasonEnrollmentPayment();
   const { mutateAsync: refundSeasonEnrollmentAsync, isPending: isRefundingSeason } =
@@ -1828,6 +1835,50 @@ export const LeagueDetail: React.FC = () => {
   // members had nothing to explain it. Ask, the way session cancellation does.
   const [cancelSeasonTarget, setCancelSeasonTarget] = useState<Season | null>(null);
   const [cancelSeasonReason, setCancelSeasonReason] = useState('');
+
+  // Money summary for the open season, from the payment ledger. Alert keeps it
+  // glanceable; the Stripe dashboard remains the detailed view.
+  const showSeasonEarnings = useCallback(() => {
+    if (!seasonEarnings) return;
+    const cur = seasonEarnings.currency ?? 'CAD';
+    const money = (cents: number) => formatPrice(cents, cur, { locale });
+    const e = seasonEarnings;
+    const lines =
+      e.paidCount === 0 && e.pendingCount === 0 && e.refundedCount === 0
+        ? [t('leagueDetail.earnings.none')]
+        : [
+            t('leagueDetail.earnings.paidLine')
+              .replace('{count}', String(e.paidCount))
+              .replace('{amount}', money(e.entryCents)),
+            t('leagueDetail.earnings.feesLine').replace(
+              '{amount}',
+              money(e.serviceFeeCents + e.feeTaxCents)
+            ),
+            ...(e.refundedCents > 0
+              ? [
+                  t('leagueDetail.earnings.refundedLine').replace(
+                    '{amount}',
+                    money(e.refundedCents)
+                  ),
+                ]
+              : []),
+            ...(e.pendingCount > 0
+              ? [t('leagueDetail.earnings.pendingLine').replace('{count}', String(e.pendingCount))]
+              : []),
+            t('leagueDetail.earnings.netLine').replace('{amount}', money(e.netToOrganizerCents)),
+            ...(e.releasedCount > 0
+              ? [
+                  t('leagueDetail.earnings.releasedLine').replace(
+                    '{count}',
+                    String(e.releasedCount)
+                  ),
+                ]
+              : []),
+          ];
+    Alert.alert(t('leagueDetail.earnings.title'), lines.join('\n'), [
+      { text: t('leagueDetail.earnings.close') },
+    ]);
+  }, [seasonEarnings, t, locale]);
 
   const handleCancelSeason = useCallback(
     (season: Season) => {
@@ -3108,6 +3159,28 @@ export const LeagueDetail: React.FC = () => {
                           </Text>
                         </TouchableOpacity>
                       )}
+                      {isOrganizer &&
+                        s.status === 'open' &&
+                        s.id === openSeasonId &&
+                        isPaidSeason && (
+                          <TouchableOpacity
+                            onPress={showSeasonEarnings}
+                            testID="cta-season-earnings"
+                            style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
+                          >
+                            <Text size="sm" weight="semibold" color={colors.primary}>
+                              {t('leagueDetail.earnings.row')}
+                              {seasonEarnings
+                                ? ' · ' +
+                                  formatPrice(
+                                    seasonEarnings.netToOrganizerCents,
+                                    seasonEarnings.currency ?? 'CAD',
+                                    { locale }
+                                  )
+                                : ''}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       {isOrganizer && s.status === 'open' && (
                         <TouchableOpacity
                           onPress={() => {
@@ -3421,7 +3494,22 @@ export const LeagueDetail: React.FC = () => {
           cancelSeasonTarget &&
           (cancelSeasonTarget.entry_fee_cents ?? 0) > 0 &&
           cancelSeasonTarget.status === 'open'
-            ? t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
+            ? cancelSeasonTarget.id === openSeasonId && (seasonEarnings?.paidCount ?? 0) > 0
+              ? `${t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')}\n\n${t(
+                  'leagueDetail.seasonLifecycle.cancelAmounts'
+                )
+                  .replace('{count}', String(seasonEarnings?.paidCount ?? 0))
+                  .replace(
+                    '{amount}',
+                    formatPrice(
+                      seasonEarnings?.entryCents ?? 0,
+                      seasonEarnings?.currency ?? 'CAD',
+                      {
+                        locale,
+                      }
+                    )
+                  )}`
+              : t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
             : t('leagueDetail.seasonLifecycle.cancelConfirmBody')
         }
         confirmLabel={t('leagueDetail.seasonLifecycle.cancelConfirm')}

@@ -4314,7 +4314,8 @@
         "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
         "cancelFailed": "Impossible d'annuler la saison. Réessaie."
       },
-      "cancelReasonPlaceholder": "Motif (optionnel), les membres le verront"
+      "cancelReasonPlaceholder": "Motif (optionnel), les membres le verront",
+      "cancelAmounts": "{count} inscription(s) payée(s), {amount} au total."
     },
     "joinErrors": {
       "ratingRequired": "Ça te prend une cote dans ce sport pour rejoindre cette ligue.",
@@ -4671,6 +4672,18 @@
     },
     "errors": {
       "generic": "Une erreur s'est produite. Réessayez."
+    },
+    "earnings": {
+      "row": "Revenus",
+      "title": "Revenus de la saison",
+      "paidLine": "{count} inscription(s) payée(s) · {amount} d'entrées",
+      "feesLine": "Frais de service retenus par Rallia : {amount}",
+      "refundedLine": "Remboursé : {amount}",
+      "pendingLine": "Paiement en cours : {count}",
+      "netLine": "Ton montant : {amount}",
+      "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
+      "none": "Aucun paiement reçu pour le moment.",
+      "close": "Fermer"
     }
   },
   "sessionDetail": {
@@ -5275,7 +5288,8 @@
       "keepIt": "Garder",
       "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
       "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "paidRefundWarning": "{count} inscription(s) payée(s) seront remboursées, {amount} au total. Les frais de service Rallia ne sont pas remboursés."
     },
     "archiveModal": {
       "title": "Archiver ce tournoi ?",
@@ -5426,6 +5440,18 @@
     "overview": {
       "readMore": "Lire la suite",
       "infoTitle": "Infos pratiques"
+    },
+    "earnings": {
+      "row": "Revenus",
+      "title": "Revenus de l'événement",
+      "paidLine": "{count} inscription(s) payée(s) · {amount} d'entrées",
+      "feesLine": "Frais de service retenus par Rallia : {amount}",
+      "refundedLine": "Remboursé : {amount}",
+      "pendingLine": "Paiement en cours : {count}",
+      "netLine": "Ton montant : {amount}",
+      "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
+      "none": "Aucun paiement reçu pour le moment.",
+      "close": "Fermer"
     }
   },
   "tournamentCreation": {

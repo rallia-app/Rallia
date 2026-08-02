@@ -24,6 +24,7 @@ import {
   revokeTournamentInvite,
   registerForTournament,
   getTournamentFeeQuote,
+  getEventEarnings,
   getMyPayoutAccount,
   createTournamentRegistrationPayment,
   refundTournamentRegistration,
@@ -71,6 +72,7 @@ import {
   type PlayerRatingReputation,
   type PlayerSearchResult,
   type TournamentFeeQuote,
+  type EventEarnings,
   type PayoutAccountStatus,
   type RegistrationPaymentIntent,
   type TournamentRefundResult,
@@ -105,6 +107,7 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
+  earnings: (eventId: string) => [...tournamentKeys.all, 'earnings', eventId] as const,
   myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
   certifiedOrganizer: (playerId: string) =>
     [...tournamentKeys.all, 'certifiedOrganizer', playerId] as const,
@@ -655,6 +658,26 @@ export function useTournamentFeeQuote(tournamentId: string | undefined, enabled 
     queryKey: tournamentKeys.feeQuote(tournamentId ?? ''),
     queryFn: () => getTournamentFeeQuote(tournamentId as string),
     enabled: !!tournamentId && enabled,
+  });
+}
+
+/**
+ * Organizer-only money summary for one paid event. Pass exactly one id; gate
+ * `enabled` on being the organizer of a paid event — the RPC raises
+ * NOT_ORGANIZER for anyone else.
+ */
+export function useEventEarnings(
+  ids: { tournamentId?: string; seasonId?: string },
+  enabled = true
+) {
+  const eventId = ids.tournamentId ?? ids.seasonId;
+  return useQuery<EventEarnings>({
+    queryKey: tournamentKeys.earnings(eventId ?? ''),
+    queryFn: () =>
+      getEventEarnings(
+        ids.tournamentId ? { tournamentId: ids.tournamentId } : { seasonId: ids.seasonId as string }
+      ),
+    enabled: !!eventId && enabled,
   });
 }
 

@@ -785,6 +785,53 @@ export async function getTournamentFeeQuote(
   };
 }
 
+/** What a paid event has collected, for its organizer. Mirrors lt_event_earnings. */
+export interface EventEarnings {
+  paidCount: number;
+  pendingCount: number;
+  refundedCount: number;
+  /** Entry money collected across succeeded payments. */
+  entryCents: number;
+  serviceFeeCents: number;
+  feeTaxCents: number;
+  chargedCents: number;
+  refundedCents: number;
+  /** What settlement will (or did) release to the organizer. */
+  netToOrganizerCents: number;
+  releasedCount: number;
+  currency: string | null;
+}
+
+/**
+ * Organizer-only money summary for one paid event (tournament or season).
+ * Server-authoritative: aggregates the payment ledger, so it reflects refunds
+ * and in-flight checkouts the client never saw. Raises NOT_ORGANIZER for
+ * anyone else.
+ */
+export async function getEventEarnings(
+  ids: { tournamentId: string } | { seasonId: string }
+): Promise<EventEarnings> {
+  const { data, error } = await supabase.rpc('lt_event_earnings', {
+    p_tournament_id: 'tournamentId' in ids ? ids.tournamentId : undefined,
+    p_season_id: 'seasonId' in ids ? ids.seasonId : undefined,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    paidCount: row?.paid_count ?? 0,
+    pendingCount: row?.pending_count ?? 0,
+    refundedCount: row?.refunded_count ?? 0,
+    entryCents: Number(row?.entry_cents ?? 0),
+    serviceFeeCents: Number(row?.service_fee_cents ?? 0),
+    feeTaxCents: Number(row?.fee_tax_cents ?? 0),
+    chargedCents: Number(row?.charged_cents ?? 0),
+    refundedCents: Number(row?.refunded_cents ?? 0),
+    netToOrganizerCents: Number(row?.net_to_organizer_cents ?? 0),
+    releasedCount: row?.released_count ?? 0,
+    currency: row?.currency ?? null,
+  };
+}
+
 /** The caller's payout (Stripe Express) account status, mirrored from Stripe by
  *  stripe-connect-webhook. `null` when the organizer has never onboarded. */
 export interface PayoutAccountStatus {

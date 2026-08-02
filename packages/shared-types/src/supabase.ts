@@ -3722,6 +3722,8 @@ export type Database = {
           home_region: string | null
           id: string
           langue: string | null
+          liquidity_pct_shown: number | null
+          liquidity_players_shown: number | null
           location_type: string
           match_format: string | null
           match_nature: string | null
@@ -3751,6 +3753,8 @@ export type Database = {
           home_region?: string | null
           id?: string
           langue?: string | null
+          liquidity_pct_shown?: number | null
+          liquidity_players_shown?: number | null
           location_type: string
           match_format?: string | null
           match_nature?: string | null
@@ -3780,6 +3784,8 @@ export type Database = {
           home_region?: string | null
           id?: string
           langue?: string | null
+          liquidity_pct_shown?: number | null
+          liquidity_players_shown?: number | null
           location_type?: string
           match_format?: string | null
           match_nature?: string | null
@@ -12278,6 +12284,22 @@ export type Database = {
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
       lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
+      lt_event_earnings: {
+        Args: { p_season_id?: string; p_tournament_id?: string }
+        Returns: {
+          charged_cents: number
+          currency: string
+          entry_cents: number
+          fee_tax_cents: number
+          net_to_organizer_cents: number
+          paid_count: number
+          pending_count: number
+          refunded_cents: number
+          refunded_count: number
+          released_count: number
+          service_fee_cents: number
+        }[]
+      }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }

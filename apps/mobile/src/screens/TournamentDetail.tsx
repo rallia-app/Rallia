@@ -68,6 +68,7 @@ import {
   useMyTournamentRegistration,
   useTournamentFeeQuote,
   useMyPayoutAccount,
+  useEventEarnings,
   useCreateRegistrationPayment,
   useRefundRegistration,
   useOpenTournamentRegistration,
@@ -1533,6 +1534,12 @@ export const TournamentDetail: React.FC = () => {
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
   // Organizer payout status drives the manage/onboard card on paid events.
   const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
+  // What this event has collected — the organizer's only in-app money view
+  // (the Stripe dashboard is account-wide and can't be tied back to one event).
+  const { data: earnings } = useEventEarnings(
+    { tournamentId: params.tournamentId },
+    isOrganizer && isPaidTournament
+  );
 
   // Post-onboarding management: opens the Stripe Express dashboard (update bank
   // details, view payouts) when ready, or resumes onboarding when unfinished.
@@ -1552,6 +1559,57 @@ export const TournamentDetail: React.FC = () => {
       toast.error(t('tournamentDetail.payments.manageError'));
     }
   }, [toast, t, userId, queryClient]);
+
+  // Money summary for this event, from the payment ledger. Alert keeps it
+  // glanceable; the Stripe dashboard (payout row) remains the detailed view.
+  const showEarnings = useCallback(() => {
+    if (!earnings) return;
+    const cur = earnings.currency ?? 'CAD';
+    const money = (cents: number) => formatPrice(cents, cur, { locale });
+    const lines =
+      earnings.paidCount === 0 && earnings.pendingCount === 0 && earnings.refundedCount === 0
+        ? [t('tournamentDetail.earnings.none')]
+        : [
+            t('tournamentDetail.earnings.paidLine')
+              .replace('{count}', String(earnings.paidCount))
+              .replace('{amount}', money(earnings.entryCents)),
+            t('tournamentDetail.earnings.feesLine').replace(
+              '{amount}',
+              money(earnings.serviceFeeCents + earnings.feeTaxCents)
+            ),
+            ...(earnings.refundedCents > 0
+              ? [
+                  t('tournamentDetail.earnings.refundedLine').replace(
+                    '{amount}',
+                    money(earnings.refundedCents)
+                  ),
+                ]
+              : []),
+            ...(earnings.pendingCount > 0
+              ? [
+                  t('tournamentDetail.earnings.pendingLine').replace(
+                    '{count}',
+                    String(earnings.pendingCount)
+                  ),
+                ]
+              : []),
+            t('tournamentDetail.earnings.netLine').replace(
+              '{amount}',
+              money(earnings.netToOrganizerCents)
+            ),
+            ...(earnings.releasedCount > 0
+              ? [
+                  t('tournamentDetail.earnings.releasedLine').replace(
+                    '{count}',
+                    String(earnings.releasedCount)
+                  ),
+                ]
+              : []),
+          ];
+    Alert.alert(t('tournamentDetail.earnings.title'), lines.join('\n'), [
+      { text: t('tournamentDetail.earnings.close') },
+    ]);
+  }, [earnings, t, locale]);
 
   const createRegistrationPayment = useCreateRegistrationPayment();
 
@@ -2988,6 +3046,20 @@ export const TournamentDetail: React.FC = () => {
         testID: 'action-payouts',
       });
     }
+    // Per-event money summary. Only in-app place an organizer can see what
+    // this event collected; the Stripe dashboard is account-wide.
+    if (isPaidTournament && earnings !== undefined) {
+      organizerRows.push({
+        icon: 'cash-outline',
+        label: t('tournamentDetail.earnings.row'),
+        onPress: showEarnings,
+        badge: {
+          label: formatPrice(earnings.netToOrganizerCents, earnings.currency ?? 'CAD', { locale }),
+          tone: earnings.paidCount > 0 ? 'positive' : 'muted',
+        },
+        testID: 'action-earnings',
+      });
+    }
     if (adminActions.canEdit) {
       organizerRows.push({
         icon: 'create-outline',
@@ -4097,7 +4169,20 @@ export const TournamentDetail: React.FC = () => {
       <ConfirmationModal
         visible={showCancelModal && !!tournament}
         title={t('tournamentDetail.cancelModal.title')}
-        message={t('tournamentDetail.cancelModal.description')}
+        message={
+          // Cancelling a paid event refunds every entry; say so with the real
+          // numbers instead of letting the organizer confirm a silent refund.
+          isPaidTournament && (earnings?.paidCount ?? 0) > 0
+            ? `${t('tournamentDetail.cancelModal.description')}\n\n${t(
+                'tournamentDetail.cancelModal.paidRefundWarning'
+              )
+                .replace('{count}', String(earnings?.paidCount ?? 0))
+                .replace(
+                  '{amount}',
+                  formatPrice(earnings?.entryCents ?? 0, earnings?.currency ?? 'CAD', { locale })
+                )}`
+            : t('tournamentDetail.cancelModal.description')
+        }
         confirmLabel={t('tournamentDetail.cancelModal.confirm')}
         cancelLabel={t('tournamentDetail.cancelModal.keepIt')}
         confirmTestID="confirm-cancel-tournament"
