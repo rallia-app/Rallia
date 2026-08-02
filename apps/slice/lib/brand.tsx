@@ -8,6 +8,9 @@ import type { CSSProperties } from 'react';
 
 export const SMOKE_BRAND_NAME = 'Slice';
 
+/** Contact + data-deletion inbox; deletion is email-only, there is no /erase flow. */
+export const SMOKE_CONTACT_EMAIL = 'sliceapp29@gmail.com';
+
 export const SMOKE_BRAND_COLORS = {
   ink: '#171a12',
   lime: '#d6f437',

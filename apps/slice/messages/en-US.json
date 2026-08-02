@@ -174,22 +174,6 @@
       "deletion": "Want your email and phone removed? Write to sliceapp29@gmail.com and we'll delete them."
     }
   },
-  "eraseData": {
-    "title": "Delete your info",
-    "subtitle": "Enter the email you gave us and we'll erase everything we kept from your request: your email, your phone number and your preferences.",
-    "emailPlaceholder": "you@email.com",
-    "cta": "Delete my info",
-    "submitting": "Deleting…",
-    "note": "Nothing else is kept, and there's no account to close.",
-    "done": {
-      "title": "It's gone.",
-      "message": "If that email was in our list, everything tied to it has been deleted."
-    },
-    "errors": {
-      "email": "Enter a valid email address.",
-      "generic": "Something went wrong. Please try again."
-    }
-  },
   "seo": {
     "title": "Slice · Find your next tennis or pickleball game",
     "description": "Tell us your level, your area and your schedule. Slice finds a compatible player and sets up the game for you.",

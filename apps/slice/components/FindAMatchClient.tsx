@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { trackSmokeEvent, type SmokeEventContext } from '@/lib/analytics';
-import { SmokeBrandLockup } from '@/lib/brand';
+import { SMOKE_CONTACT_EMAIL, SmokeBrandLockup } from '@/lib/brand';
 import {
   FUNNEL_VERSION,
   getMatchPlans,
@@ -901,8 +901,6 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     setError(null);
   };
 
-  const erasePath = langue === 'fr' ? '/fr/erase' : '/erase';
-
   const switchLanguage = () => {
     const target = langue === 'fr' ? 'en-US' : 'fr-CA';
     // Remember the manual choice so the geo default doesn't override it.
@@ -1493,9 +1491,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           <Lock className="h-3 w-3 shrink-0" />
           <span>{t('contact.privacyNote')}</span>
           <a
-            href={erasePath}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`mailto:${SMOKE_CONTACT_EMAIL}`}
             className="font-semibold underline underline-offset-2 transition-colors hover:text-[color:var(--smk-ink)]"
           >
             {t('contact.eraseLink')}

@@ -174,22 +174,6 @@
       "deletion": "Tu veux retirer ton courriel et ton téléphone ? Écris à sliceapp29@gmail.com et on les supprime."
     }
   },
-  "eraseData": {
-    "title": "Supprime tes infos",
-    "subtitle": "Entre le courriel que tu nous as donné et on efface tout ce qu'on a gardé de ta demande : ton courriel, ton numéro de téléphone et tes préférences.",
-    "emailPlaceholder": "toi@courriel.com",
-    "cta": "Supprimer mes infos",
-    "submitting": "Suppression…",
-    "note": "On garde rien d'autre, et y'a pas de compte à fermer.",
-    "done": {
-      "title": "C'est effacé.",
-      "message": "Si ce courriel-là était dans notre liste, tout ce qui y était rattaché a été supprimé."
-    },
-    "errors": {
-      "email": "Entre une adresse courriel valide.",
-      "generic": "Une erreur est survenue. Réessaie."
-    }
-  },
   "seo": {
     "title": "Slice · Trouve ta prochaine partie de tennis ou pickleball",
     "description": "Dis-nous ton niveau, ton coin et tes dispos. Slice trouve un joueur compatible et organise la partie pour toi.",
