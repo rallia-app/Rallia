@@ -4684,7 +4684,8 @@
       "releasedLine": "Already paid out to your Stripe account: {count} payment(s)",
       "none": "No payments received yet.",
       "close": "Close"
-    }
+    },
+    "seasonEntryFee": "Entry: {amount}"
   },
   "sessionDetail": {
     "title": "Session",

@@ -30,7 +30,8 @@ const DOCS_DIR = path.join(__dirname, '..', '..', 'docs');
 const MIRROR = {
   'jdl.sonkin+10@gmail.com': 'demo@rallia.ca',
   'Jose Caroon': 'Alex Monza',
-  "dont Mathis s'occupe de son côté": "dont Jean s'occupe de son côté",
+  "dont Mathis s'occupe de son côté":
+    "c'est-à-dire lefrancmathis@gmail.com, le compte principal de Mathis",
 
   // Events Jean organizes -> the ones Alex organizes.
   '[PAYUI-JDL] Draft a publier': '[PAYUI] Draft a publier',
@@ -50,7 +51,7 @@ const MIRROR = {
 
   // Leagues. The last two trade places, hence the single-pass replace.
   '[PAYE2E] Ligue payante': '[SEED] Paid League — Draft Season',
-  '[SEED] Paid League — Demo Hosts': '[SEED] Paid League - JDL Hosts',
+  '[SEED] Paid League — Demo Hosts': '[SEED] Paid League - Mathis Hosts',
   '[SEED] Paid League - JDL Hosts': '[SEED] Paid League — Demo Hosts',
 
   // Bare prefix in the intro. Listed last; the regex is sorted by length so the

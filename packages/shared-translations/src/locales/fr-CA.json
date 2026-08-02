@@ -4684,7 +4684,8 @@
       "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
       "none": "Aucun paiement reçu pour le moment.",
       "close": "Fermer"
-    }
+    },
+    "seasonEntryFee": "Inscription : {amount}"
   },
   "sessionDetail": {
     "title": "Séance",

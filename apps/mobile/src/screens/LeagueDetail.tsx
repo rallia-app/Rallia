@@ -3137,6 +3137,17 @@ export const LeagueDetail: React.FC = () => {
                           <Text size="xs" color={colors.textMuted}>
                             {formatDate(s.start_date)} – {formatDate(s.end_date)}
                           </Text>
+                          {(s.entry_fee_cents ?? 0) > 0 && (
+                            // The price was invisible outside the enroll CTA (open
+                            // seasons only) — a draft's fee showed nowhere, so an
+                            // organizer opened a paid season blind to its price.
+                            <Text size="xs" weight="semibold" color={colors.text}>
+                              {t('leagueDetail.seasonEntryFee').replace(
+                                '{amount}',
+                                formatPrice(s.entry_fee_cents ?? 0, s.currency ?? 'CAD', { locale })
+                              )}
+                            </Text>
+                          )}
                         </View>
                         <View style={[styles.seasonStatusPill, { backgroundColor: statusBg }]}>
                           <Text size="xs" weight="semibold" color={statusFg}>
