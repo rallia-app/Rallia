@@ -248,16 +248,37 @@
       <span class="pill live">vrai paiement</span> pour valider le calcul des frais.
     </p>
 
-    <h2>1. Onboarding Stripe Connect (à faire en premier)</h2>
-    <p class="section-intro">
-      Rien d'autre ne fonctionne tant que ce n'est pas fait. Un événement payant ne peut pas être
-      publié, et personne ne peut payer pour y entrer, tant que son organisateur n'a pas complété son
-      compte Stripe. Fais cette étape avant tout le reste, sauf le scénario 2.1 qui doit se faire
-      juste avant.
+    <h2>1. Le mur des versements <span class="pill">à faire en tout premier</span></h2>
+    <p class="stop">
+      <strong>Ce scénario ne se joue qu'une fois.</strong> Il vérifie qu'un événement payant ne peut
+      pas être publié tant que l'organisateur ne peut pas encaisser. Dès que ton compte Stripe est
+      complété à la section 2, le blocage ne se reproduit plus et le scénario est perdu. Fais-le
+      maintenant, avant de toucher à quoi que ce soit d'autre.
     </p>
 
     <section class="block">
-      <h3>1.1 Compléter le compte</h3>
+      <h3>1.1 Publier sans compte de versement</h3>
+      <p>Sur <span class="fixture">[PAYUI-JDL] Draft a publier</span> (25 $, en <strong>brouillon</strong>).</p>
+      <ol>
+        <li>Ouvre le tournoi et lance la <strong>publication</strong> (ouvrir les inscriptions).</li>
+        <li>Tant que ton compte Stripe n'est pas complet, l'app doit refuser et t'expliquer pourquoi.</li>
+        <li>Le message doit pointer vers la configuration des versements, pas afficher une erreur technique.</li>
+      </ol>
+      <p class="check">
+        <strong>Attendu :</strong> un blocage clair et compréhensible. Un joueur ne doit jamais pouvoir
+        payer dans le vide. Garde ce tournoi de côté : tu y reviendras au scénario 2.2.
+      </p>
+    </section>
+
+    <h2>2. Onboarding Stripe Connect</h2>
+    <p class="section-intro">
+      Rien d'autre ne fonctionne tant que ce n'est pas fait. Un événement payant ne peut pas être
+      publié, et personne ne peut payer pour y entrer, tant que son organisateur n'a pas complété son
+      compte Stripe. Une fois la section 1 faite, tout le reste du protocole en dépend.
+    </p>
+
+    <section class="block">
+      <h3>2.1 Compléter le compte</h3>
       <ol>
         <li>Ouvre <span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span>.</li>
         <li>Onglet <strong>Aperçu</strong>, section <strong>GÉRER</strong> : la ligne
@@ -281,39 +302,37 @@
         une fois. Si elle est toujours là, <strong>arrête le protocole et signale-le</strong> : tout le
         reste dépend de cette étape. Note l'heure exacte, ça sert à retrouver l'événement chez Stripe.
       </p>
+      <p class="warn">
+        Stripe peut te ramener dans l'app avant d'avoir tout demandé (la vérification d'identité,
+        entre autres). Si la ligne <strong>Versements</strong> affiche encore
+        <span class="pill">Action requise</span>, touche-la de nouveau pour repartir où tu étais.
+        Signale-le quand même : normalement tout devrait se demander en une seule passe.
+      </p>
     </section>
 
-    <h2>2. Tes événements payants (tu organises)</h2>
+    <section class="block">
+      <h3>2.2 Débloquer la publication</h3>
+      <p>Retour sur <span class="fixture">[PAYUI-JDL] Draft a publier</span>, celui du scénario 1.1.</p>
+      <ol>
+        <li>Relance la <strong>publication</strong>.</li>
+      </ol>
+      <p class="check">
+        <strong>Attendu :</strong> cette fois elle réussit et le tournoi passe en inscriptions
+        ouvertes. C'est la meilleure preuve que ton onboarding a bien été enregistré côté Rallia, et
+        pas seulement chez Stripe.
+      </p>
+    </section>
+
+    <h2>3. Tes événements payants (tu organises)</h2>
 
     <table class="fixtures-table">
       <tr><th>Fixture</th><th>Prix</th><th>Sert à tester</th></tr>
-      <tr><td><span class="fixture">[PAYUI-JDL] Draft a publier</span></td><td>25&nbsp;$</td><td>Blocage à la publication</td></tr>
       <tr><td><span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span></td><td>25&nbsp;$</td><td>Revenus (6 inscrits payés)</td></tr>
       <tr><td><span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span></td><td>25&nbsp;$</td><td>Annulation</td></tr>
     </table>
 
     <section class="block">
-      <h3>2.1 Le mur des versements <span class="pill">à faire avant la section 1</span></h3>
-      <p>
-        Sur <span class="fixture">[PAYUI-JDL] Draft a publier</span> (25 $, en
-        <strong>brouillon</strong>). C'est le seul scénario du protocole qui doit se faire
-        <strong>avant</strong> la section 1 : une fois ton compte Stripe complété, le blocage ne se
-        reproduit plus.
-      </p>
-      <ol>
-        <li>Ouvre le tournoi et lance la <strong>publication</strong> (ouvrir les inscriptions).</li>
-        <li>Tant que ton compte Stripe n'est pas complet, l'app doit refuser et t'expliquer pourquoi.</li>
-        <li>Le message doit pointer vers la configuration des versements, pas afficher une erreur technique.</li>
-      </ol>
-      <p class="check">
-        <strong>Attendu :</strong> un blocage clair et compréhensible. Un joueur ne doit jamais pouvoir
-        payer dans le vide. Après la section 1, reviens sur ce même tournoi : la publication doit
-        maintenant réussir. C'est la meilleure preuve que l'onboarding a bien été enregistré.
-      </p>
-    </section>
-
-    <section class="block">
-      <h3>2.2 Voir tes revenus</h3>
+      <h3>3.1 Voir tes revenus</h3>
       <p>Sur <span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span> (6 inscrits déjà payés).</p>
       <ol>
         <li>Onglet <strong>Participants</strong> : les 6 joueurs apparaissent comme <strong>inscrits</strong> et payés.</li>
@@ -324,7 +343,7 @@
     </section>
 
     <section class="block">
-      <h3>2.3 Annuler un tournoi payant <span class="pill sim">affichage</span></h3>
+      <h3>3.2 Annuler un tournoi payant <span class="pill sim">affichage</span></h3>
       <p>Sur <span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span> (aucun inscrit, donc rien à rembourser).</p>
       <ol>
         <li>Annule le tournoi. L'app doit avertir que les inscrits seront remboursés.</li>
@@ -338,7 +357,7 @@
       </p>
     </section>
 
-    <h2>3. Les événements des autres (tu participes)</h2>
+    <h2>4. Les événements des autres (tu participes)</h2>
     <p class="section-intro">
       Tous ces tournois sont organisés par un autre compte de test. Tu n'as rien à faire de ce
       côté-là : Mathis s'assure que cet organisateur est prêt à encaisser.
@@ -358,7 +377,7 @@
     </table>
 
     <section class="block">
-      <h3>3.1 Payer pour de vrai <span class="pill live">vrai paiement</span></h3>
+      <h3>4.1 Payer pour de vrai <span class="pill live">vrai paiement</span></h3>
       <p>
         Le scénario le plus important du protocole. Sur
         <span class="fixture">[PAYUI-JDL] LIVE register + pay</span> (15 $, mode
@@ -379,20 +398,20 @@
     </section>
 
     <section class="block">
-      <h3>3.2 Organisateur absorbe les frais <span class="pill live">vrai paiement</span></h3>
+      <h3>4.2 Organisateur absorbe les frais <span class="pill live">vrai paiement</span></h3>
       <p>Sur <span class="fixture">[PAYUI-JDL] Organizer absorbs (pay entry only)</span> (40 $).</p>
       <ol>
         <li>Ouvre l'écran de paiement.</li>
-        <li>Compare avec le scénario 3.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 2,00 $ de frais et les 0,30 $ de taxes : il reçoit 37,70 $.</li>
+        <li>Compare avec le scénario 4.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 2,00 $ de frais et les 0,30 $ de taxes : il reçoit 37,70 $.</li>
         <li>Paie avec la carte de test.</li>
       </ol>
       <p class="check"><strong>Attendu :</strong> le total est le prix affiché, ni plus ni moins. C'est la différence visible entre les deux modes de frais.</p>
     </section>
 
     <section class="block">
-      <h3>3.3 Se retirer et être remboursé <span class="pill live">vrai paiement</span></h3>
+      <h3>4.3 Se retirer et être remboursé <span class="pill live">vrai paiement</span></h3>
       <p>
-        À faire sur l'inscription que tu viens de payer au scénario 3.1, pas sur les fixtures
+        À faire sur l'inscription que tu viens de payer au scénario 4.1, pas sur les fixtures
         <span class="pill sim">affichage</span>.
       </p>
       <ol>
@@ -408,7 +427,7 @@
     </section>
 
     <section class="block">
-      <h3>3.4 Retrait après la date limite</h3>
+      <h3>4.4 Retrait après la date limite</h3>
       <p>
         Sur <span class="fixture">[PAYUI-JDL] Refund cutoff passed</span>. Tu y es déjà inscrit et la
         date limite de remboursement est passée. Ce scénario fonctionne malgré le paiement simulé,
@@ -422,7 +441,7 @@
     </section>
 
     <section class="block">
-      <h3>3.5 Affichage des cas limites <span class="pill sim">affichage</span></h3>
+      <h3>4.5 Affichage des cas limites <span class="pill sim">affichage</span></h3>
       <p>Ici tu regardes seulement, tu ne confirmes rien.</p>
       <ol>
         <li><span class="fixture">[PAYUI-JDL] SOLD OUT</span> : le tournoi est complet. L'inscription doit être bloquée et l'état « complet » doit être visible.</li>
@@ -432,7 +451,7 @@
       </ol>
     </section>
 
-    <h2>4. Ligues payantes</h2>
+    <h2>5. Ligues payantes</h2>
 
     <table class="fixtures-table">
       <tr><th>Ligue</th><th>Saison</th><th>Ton rôle</th></tr>
@@ -442,7 +461,7 @@
     </table>
 
     <section class="block">
-      <h3>4.1 Ouvrir une saison payante</h3>
+      <h3>5.1 Ouvrir une saison payante</h3>
       <p>Sur <span class="fixture">[PAYE2E] Ligue payante</span>.</p>
       <ol>
         <li>Ouvre la ligue, onglet <strong>Saisons</strong> : la saison est en <strong>brouillon</strong>.</li>
@@ -457,7 +476,7 @@
     </section>
 
     <section class="block">
-      <h3>4.2 S'inscrire et payer une saison <span class="pill live">vrai paiement</span></h3>
+      <h3>5.2 S'inscrire et payer une saison <span class="pill live">vrai paiement</span></h3>
       <p>
         Sur <span class="fixture">[SEED] Paid League — Demo Hosts</span>. Tu es déjà membre de la
         ligue, mais pas inscrit à la saison payante : c'est la saison qui se paie, pas la ligue.
@@ -479,7 +498,7 @@
     </section>
 
     <section class="block">
-      <h3>4.3 Ta ligue déjà ouverte</h3>
+      <h3>5.3 Ta ligue déjà ouverte</h3>
       <p>Sur <span class="fixture">[SEED] Paid League - JDL Hosts</span> (saison ouverte, 5 joueurs déjà inscrits et payés).</p>
       <ol>
         <li>Onglet <strong>Saisons</strong> : vérifie que les 5 inscrits apparaissent au classement.</li>
@@ -488,7 +507,7 @@
       <p class="check"><strong>Attendu :</strong> les montants sont cohérents avec 5 × 40,00 $ d'entrées.</p>
     </section>
 
-    <h2>5. Ce qui n'est pas testable pour l'instant</h2>
+    <h2>6. Ce qui n'est pas testable pour l'instant</h2>
     <ul>
       <li><strong>Le versement final à l'organisateur.</strong> L'argent est libéré 24 h après la fin de l'événement par une tâche horaire, et seulement pour un tournoi <strong>terminé</strong>. Aucun fixture n'est dans cet état, donc le versement ne se vérifie pas dans une session de test normale.</li>
       <li><strong>Les remboursements sur les inscriptions pré-payées</strong> (<span class="fixture">pi_sim…</span>). Ils échouent chez Stripe par construction. Utilise les scénarios <span class="pill live">vrai paiement</span> pour valider un vrai remboursement.</li>
@@ -496,7 +515,7 @@
       <li><strong>La création d'un tournoi payant depuis zéro</strong> est réservée aux administrateurs. Ton compte de test l'est, mais un organisateur ordinaire ne verra pas l'option.</li>
     </ul>
 
-    <h2>6. Quoi noter en cas de problème</h2>
+    <h2>7. Quoi noter en cas de problème</h2>
     <p class="section-intro">Pour chaque anomalie, note ces quatre choses. Sans elles, un bogue de paiement est très difficile à retracer.</p>
     <ol>
       <li><strong>L'heure exacte</strong> (à la minute près).</li>

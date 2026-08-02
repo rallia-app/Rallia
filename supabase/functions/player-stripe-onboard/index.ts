@@ -229,6 +229,11 @@ Deno.serve(async req => {
       return_url:
         Deno.env.get('STRIPE_CONNECT_RETURN_URL') ?? 'https://rallia.app/stripe-connect-return',
       refresh_url: `${functionUrl}?refresh=1`,
+      // Ask for everything up front. The default (currently_due) collects only the
+      // minimum to get started, so identity verification lands in eventually_due
+      // and Stripe returns the organizer to the app still incomplete — they have to
+      // re-enter onboarding to finish. One pass instead of two.
+      collection_options: { fields: 'eventually_due' },
     });
 
     return json({ url: accountLink.url });

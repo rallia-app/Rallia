@@ -88,6 +88,10 @@ Deno.serve(async req => {
       return_url:
         Deno.env.get('STRIPE_CONNECT_RETURN_URL') ?? 'https://rallia.app/stripe-connect-return',
       refresh_url: `${functionUrl}?refresh=1`,
+      // Match player-stripe-onboard: collect eventually_due too, so resuming an
+      // incomplete account asks for identity verification in this pass rather than
+      // bouncing the organizer back for another round.
+      collection_options: { fields: 'eventually_due' },
     });
 
     return json({ url: accountLink.url, kind: 'onboarding' });
