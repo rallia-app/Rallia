@@ -126,10 +126,11 @@ Deno.serve(async req => {
         // Already fully onboarded — just reuse it
         stripeAccountId = existing.stripe_account_id;
       } else {
-        // Account exists but onboarding isn't done. Legacy accounts were created
-        // transfers-only (no card_payments) and can't be the settlement merchant
-        // for the on_behalf_of charge — delete and recreate them card-capable.
-        // Otherwise resume the existing account's onboarding.
+        // Account exists but onboarding isn't done — per our mirror. Legacy
+        // accounts were created transfers-only (no card_payments) and can't be
+        // the settlement merchant for the on_behalf_of charge — delete and
+        // recreate them card-capable. Otherwise resume the existing account's
+        // onboarding.
         const acct = await stripe.accounts.retrieve(existing.stripe_account_id);
         if (acct.capabilities?.card_payments == null) {
           await stripe.accounts.del(existing.stripe_account_id).catch(() => {});
@@ -137,6 +138,26 @@ Deno.serve(async req => {
           // stripeAccountId stays undefined → falls through to create below
         } else {
           stripeAccountId = existing.stripe_account_id;
+          // Reconcile while we hold the fresh account: the mirror is normally
+          // webhook-written, and a missed account.updated leaves a complete
+          // account marked incomplete forever (re-running its onboarding is a
+          // no-op that fires no new event). The payout gate reads the mirror,
+          // so healing it here unblocks publish/season-open on the next try.
+          if (acct.charges_enabled === true) {
+            const { error: syncError } = await admin
+              .from('player_stripe_account')
+              .update({
+                onboarding_completed: true,
+                charges_enabled: true,
+                payouts_enabled: acct.payouts_enabled === true,
+                details_submitted: acct.details_submitted === true,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('player_id', playerId);
+            if (syncError) {
+              console.error('[player-stripe-onboard] flag sync failed:', syncError);
+            }
+          }
         }
       }
     }
