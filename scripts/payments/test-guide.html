@@ -261,12 +261,14 @@
       <p>Sur <span class="fixture">[PAYUI-JDL] Draft a publier</span> (25 $, en <strong>brouillon</strong>).</p>
       <ol>
         <li>Ouvre le tournoi et lance la <strong>publication</strong> (ouvrir les inscriptions).</li>
-        <li>Tant que ton compte Stripe n'est pas complet, l'app doit refuser et t'expliquer pourquoi.</li>
-        <li>Le message doit pointer vers la configuration des versements, pas afficher une erreur technique.</li>
+        <li>Le tournoi ne se publie pas. À la place, l'app ouvre un dialogue
+          <strong>« Configure tes paiements d'abord »</strong>.</li>
+        <li>Touche <strong>Annuler</strong> pour l'instant : on fait l'inscription Stripe à la section suivante.</li>
       </ol>
       <p class="check">
-        <strong>Attendu :</strong> un blocage clair et compréhensible. Un joueur ne doit jamais pouvoir
-        payer dans le vide. Garde ce tournoi de côté : tu y reviendras au scénario 2.2.
+        <strong>Attendu :</strong> le tournoi reste en brouillon et le blocage se présente comme une
+        étape à compléter, pas comme une erreur technique. Un joueur ne doit jamais pouvoir payer dans
+        le vide. Garde ce tournoi de côté : tu y reviendras au scénario 2.2.
       </p>
     </section>
 
@@ -332,24 +334,42 @@
     </table>
 
     <section class="block">
-      <h3>3.1 Voir tes revenus</h3>
-      <p>Sur <span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span> (6 inscrits déjà payés).</p>
+      <h3>3.1 Retrouver ton argent</h3>
+      <p>Sur <span class="fixture">[PAYUI-JDL] You organize (earnings &amp; cancel)</span> (6 inscrits déjà payés, 6 × 25,00 $ d'entrées).</p>
       <ol>
-        <li>Onglet <strong>Participants</strong> : les 6 joueurs apparaissent comme <strong>inscrits</strong> et payés.</li>
-        <li>Section paiements de l'événement : vérifie le total encaissé et le montant qui te revient.</li>
-        <li>Le calcul doit être cohérent : 6 × 25,00 $ = 150,00 $ d'entrées. Les frais de service sont retenus par Rallia, pas par toi.</li>
+        <li>Onglet <strong>Participants</strong> : les 6 joueurs apparaissent comme <strong>inscrits</strong>.</li>
+        <li>Onglet <strong>Aperçu</strong>, section <strong>GÉRER</strong> : la ligne <strong>Versements</strong> affiche maintenant <span class="pill">Prêt</span>.</li>
+        <li>Touche-la : tu arrives sur le <strong>tableau de bord Stripe</strong>. C'est le seul endroit où tu vois de l'argent.</li>
       </ol>
-      <p class="check"><strong>Attendu :</strong> aucun montant à zéro, aucun « NaN », aucun montant négatif. Le montant qui te revient est inférieur au total encaissé.</p>
+      <p class="check">
+        <strong>Attendu :</strong> le tableau de bord s'ouvre et affiche un solde. Les montants y sont
+        ceux de Stripe, pas de Rallia.
+      </p>
+      <p class="warn">
+        <strong>À noter, ce n'est pas un bogue :</strong> l'app n'affiche <strong>aucun</strong> total
+        encaissé ni montant à recevoir par événement. Un organisateur ne peut pas savoir ce que lui
+        rapporte un tournoi sans ouvrir Stripe, et rien ne relie le solde Stripe à un tournoi en
+        particulier. Dis-nous si ça te paraît acceptable pour un vrai organisateur.
+      </p>
     </section>
 
     <section class="block">
       <h3>3.2 Annuler un tournoi payant <span class="pill sim">affichage</span></h3>
       <p>Sur <span class="fixture">[PAYE2E] 6 - Annulation et remboursement</span> (aucun inscrit, donc rien à rembourser).</p>
       <ol>
-        <li>Annule le tournoi. L'app doit avertir que les inscrits seront remboursés.</li>
-        <li>Le tournoi passe à <strong>annulé</strong>.</li>
+        <li>Lance l'annulation. Lis le texte du modal de confirmation au complet.</li>
+        <li>Confirme. Le tournoi passe à <strong>annulé</strong>.</li>
       </ol>
-      <p class="check"><strong>Attendu :</strong> l'avertissement mentionne le remboursement des entrées. Le statut change.</p>
+      <p class="check">
+        <strong>Attendu :</strong> le modal prévient que les parties seront annulées et que l'action
+        est irréversible, puis le statut change.
+      </p>
+      <p class="warn">
+        <strong>À noter, ce n'est pas un bogue :</strong> ce modal ne dit <strong>rien</strong> des
+        remboursements, alors qu'annuler un tournoi payant rembourse bel et bien les entrées. Un
+        organisateur confirme donc un remboursement de tous ses inscrits sans en être informé.
+        Confirme que le texte est bien muet là-dessus.
+      </p>
       <p class="warn">
         N'annule <strong>pas</strong> un fixture qui contient des inscriptions <span class="fixture">pi_sim…</span>
         (comme <span class="fixture">You organize</span>) : le remboursement partirait chez Stripe et
@@ -445,7 +465,7 @@
       <p>Ici tu regardes seulement, tu ne confirmes rien.</p>
       <ol>
         <li><span class="fixture">[PAYUI-JDL] SOLD OUT</span> : le tournoi est complet. L'inscription doit être bloquée et l'état « complet » doit être visible.</li>
-        <li><span class="fixture">[PAYUI-JDL] You are invited (pay to confirm)</span> : tu as une invitation en attente. L'app doit indiquer qu'il faut <strong>payer pour confirmer</strong> ta place : une invitation ne donne pas l'entrée gratuite.</li>
+        <li><span class="fixture">[PAYUI-JDL] You are invited (pay to confirm)</span> : tu as une invitation en attente. Touche <strong>Accepter</strong> et décris exactement ce qui arrive. Le principe est qu'une invitation ne donne <strong>pas</strong> l'entrée gratuite : tu dois passer par le paiement. Si tu te retrouves inscrit sans payer, ou devant une erreur au lieu d'un écran de paiement, signale-le : ce parcours n'a jamais été validé de bout en bout.</li>
         <li><span class="fixture">[PAYUI-JDL] Withdraw → full refund</span>, <span class="fixture">→ 50% refund</span> et <span class="fixture">→ no refund</span> : ouvre-les et lis le montant de remboursement annoncé. Il doit correspondre à la politique de chacun (100 %, 50 %, puis 0 % du prix d'entrée, jamais des frais). <strong>Ne confirme pas le retrait</strong> sur ces trois-là.</li>
         <li><span class="fixture">[PAYUI-JDL] Doubles paid (you + partner)</span> : tournoi en double, 40 $, mode <strong>organisateur absorbe</strong>. Vérifie que ton partenaire apparaît avec toi et qu'une seule inscription payée couvre l'équipe.</li>
       </ol>
@@ -469,9 +489,10 @@
         <li>Ouvre la saison.</li>
       </ol>
       <p class="check">
-        <strong>Attendu :</strong> si ton compte Stripe est complet, la saison s'ouvre. S'il ne l'est
-        pas, l'ouverture est <strong>refusée</strong> avec un message qui parle de configurer les
-        versements. Une saison payante ne doit jamais pouvoir s'ouvrir sans compte de versement.
+        <strong>Attendu :</strong> ton compte Stripe étant complété à la section 2, la saison s'ouvre
+        directement. Une saison payante ne peut jamais s'ouvrir sans compte de versement : sans
+        compte, l'app t'aurait proposé la configuration des versements, exactement comme au
+        scénario 1.1.
       </p>
     </section>
 
