@@ -171,11 +171,7 @@
       "simulatedNote": "Le nombre de joueurs et l'estimation de chances que t'as vus étaient simulés eux aussi.",
       "thanks": "Merci de nous aider à bâtir la vraie affaire.",
       "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville.",
-      "eraseIntro": "Tu veux qu'on efface les infos que t'as données ?",
-      "eraseCta": "Supprimer mes infos",
-      "eraseDeleting": "Suppression…",
-      "eraseDone": "C'est effacé. On garde rien de ce que t'as donné.",
-      "eraseError": "Une erreur est survenue. Réessaie."
+      "deletion": "Tu veux retirer ton courriel et ton téléphone ? Écris à sliceapp29@gmail.com et on les supprime."
     }
   },
   "eraseData": {

@@ -171,11 +171,7 @@
       "simulatedNote": "The player count and the confidence estimate you saw were simulated for this test too.",
       "thanks": "Thanks for helping us build the real thing.",
       "purpose": "Your interest tells us this is worth building for your city.",
-      "eraseIntro": "Want the info you gave us gone?",
-      "eraseCta": "Delete my info",
-      "eraseDeleting": "Deleting…",
-      "eraseDone": "Deleted. We're not keeping anything you gave us.",
-      "eraseError": "Something went wrong. Please try again."
+      "deletion": "Want your email and phone removed? Write to sliceapp29@gmail.com and we'll delete them."
     }
   },
   "eraseData": {

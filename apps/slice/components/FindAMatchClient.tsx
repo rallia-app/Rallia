@@ -14,7 +14,6 @@ import {
   MessageSquare,
   ShieldCheck,
   Sparkles,
-  Trash2,
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -421,7 +420,6 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [eraseState, setEraseState] = useState<'idle' | 'deleting' | 'done' | 'error'>('idle');
 
   const facilitySearchRequest = useRef(0);
   const availabilityLoadedFor = useRef<string | null>(null);
@@ -901,28 +899,6 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     clearRequestContext();
     setStep('reveal');
     setError(null);
-  };
-
-  /**
-   * The reveal screen already knows which email was captured, so erasing takes
-   * one tap here — the /erase page is for people who ask later.
-   */
-  const handleEraseMyInfo = async () => {
-    const normalized = email.trim().toLowerCase();
-    if (!validateEmail(normalized)) return;
-
-    setEraseState('deleting');
-    try {
-      const response = await fetch('/api/lead/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalized }),
-      });
-      if (!response.ok) throw new Error('delete failed');
-      setEraseState('done');
-    } catch {
-      setEraseState('error');
-    }
   };
 
   const erasePath = langue === 'fr' ? '/fr/erase' : '/erase';
@@ -1701,39 +1677,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
               {t('reveal.thanks')}
             </p>
             <p className="smk-text-muted text-sm">{t('reveal.purpose')}</p>
-          </div>
-
-          <div className="flex w-full flex-col items-center gap-2 border-t border-[color:var(--smk-line-strong)] pt-6">
-            {eraseState === 'done' ? (
-              <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
-                {t('reveal.eraseDone')}
-              </p>
-            ) : (
-              <>
-                <p className="smk-text-muted text-sm">{t('reveal.eraseIntro')}</p>
-                <button
-                  type="button"
-                  onClick={handleEraseMyInfo}
-                  disabled={eraseState === 'deleting'}
-                  className="smk-text-muted inline-flex items-center gap-1.5 text-sm font-semibold underline underline-offset-4 transition-colors hover:text-[color:var(--smk-ink)] disabled:opacity-60"
-                >
-                  {eraseState === 'deleting' ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('reveal.eraseDeleting')}
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4" />
-                      {t('reveal.eraseCta')}
-                    </>
-                  )}
-                </button>
-                {eraseState === 'error' && (
-                  <p className="smk-text-error text-sm font-medium">{t('reveal.eraseError')}</p>
-                )}
-              </>
-            )}
+            <p className="smk-text-muted text-xs">{t('reveal.deletion')}</p>
           </div>
         </div>
       </WizardShell>
