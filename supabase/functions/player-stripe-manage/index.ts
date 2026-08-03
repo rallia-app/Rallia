@@ -99,7 +99,24 @@ Deno.serve(async req => {
       return json({ error: 'no_account' }, 404);
     }
 
-    const chargesEnabled = account.charges_enabled === true;
+    // Legacy accounts (court-reimbursement era) were created transfers-only.
+    // Hosted onboarding never ADDS capabilities, so such an account can be
+    // fully onboarded and still unable to be the on_behalf_of merchant —
+    // Stripe rejects the charge with "'transfers' but without 'card_payments'".
+    // Upgrade in place (preserves everything already submitted; the old
+    // delete-and-recreate would throw a completed onboarding away) and put it
+    // on the manual payout schedule v0 settlement relies on.
+    if (account.capabilities?.card_payments == null) {
+      account = await stripe.accounts.update(acctRow.stripe_account_id, {
+        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        settings: { payouts: { schedule: { interval: 'manual' } } },
+      });
+    }
+
+    // Ready = can take CARD payments. charges_enabled alone also goes true on
+    // transfers-only accounts, which is exactly the trap above.
+    const chargesEnabled =
+      account.charges_enabled === true && account.capabilities?.card_payments === 'active';
     const payoutsEnabled = account.payouts_enabled === true;
     const detailsSubmitted = account.details_submitted === true;
     if (
