@@ -40,7 +40,9 @@ export interface SearchBarProps extends Omit<TextInputProps, 'style'> {
   /** Override border color (e.g. for error state) */
   borderColor?: string;
   /** Use BottomSheetTextInput when inside a bottom sheet */
-  InputComponent?: React.ComponentType<TextInputProps>;
+  InputComponent?: React.ComponentType<TextInputProps & { ref?: React.Ref<TextInput> }>;
+  /** Ref on the underlying input (e.g. to measure it against a scroll view) */
+  inputRef?: React.Ref<TextInput>;
 }
 
 export function SearchBar({
@@ -52,6 +54,7 @@ export function SearchBar({
   containerStyle,
   borderColor,
   InputComponent = TextInput,
+  inputRef,
   placeholderTextColor,
   autoCapitalize = 'none',
   autoCorrect = false,
@@ -75,6 +78,7 @@ export function SearchBar({
       >
         <Ionicons name="search-outline" size={SEARCH_ICON_SIZE} color={colors.textMuted} />
         <InputComponent
+          ref={inputRef}
           style={[styles.searchInput, { color: colors.text }]}
           value={value}
           onChangeText={onChangeText}

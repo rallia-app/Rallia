@@ -48,6 +48,7 @@ import { ConfirmationModal } from '#/components/ConfirmationModal';
 import { useEffectiveLocation } from '#/hooks/useEffectiveLocation';
 import { useUserHomeLocation } from '#/context';
 import { SearchBar } from '#/components/SearchBar';
+import { useKeyboardAwareSheetScroll } from '#/hooks/useKeyboardAwareSheetScroll';
 import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
 import * as Analytics from '#/services/analytics';
 
@@ -674,6 +675,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const locationType = useWatch({ control, name: 'locationType' });
   const locationName = useWatch({ control, name: 'locationName' });
   const locationAddress = useWatch({ control, name: 'locationAddress' });
+
+  const { scrollProps, inputs } = useKeyboardAwareSheetScroll(['facilitySearch', 'placeSearch']);
 
   // Local state for search and selected facility
   const [searchQuery, setSearchQuery] = useState('');
@@ -1343,11 +1346,14 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
   return (
     <SheetScrollView
+      {...scrollProps}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
-      onScroll={handleScroll}
-      scrollEventThrottle={400}
+      onScroll={event => {
+        scrollProps.onScroll(event);
+        handleScroll(event);
+      }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
@@ -1419,6 +1425,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               <View style={styles.searchRow}>
                 <View style={styles.searchBarFlex}>
                   <SearchBar
+                    inputRef={inputs.facilitySearch.ref}
+                    onFocus={inputs.facilitySearch.onFocus}
+                    onBlur={inputs.facilitySearch.onBlur}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     placeholder={t('matchCreation.fields.facilityPlaceholder')}
@@ -1490,6 +1499,9 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               {/* Search input */}
               <View>
                 <SearchBar
+                  inputRef={inputs.placeSearch.ref}
+                  onFocus={inputs.placeSearch.onFocus}
+                  onBlur={inputs.placeSearch.onBlur}
                   value={placeSearchQuery}
                   onChangeText={text => {
                     setPlaceSearchQuery(text);
