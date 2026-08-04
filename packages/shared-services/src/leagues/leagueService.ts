@@ -386,6 +386,25 @@ export async function createSeasonEnrollmentPayment(
   };
 }
 
+/**
+ * Stripe-hosted receipt page for the caller's paid season enrollment, or null
+ * while the webhook hasn't stored one (or the season was free). Refunded
+ * statuses are included: Stripe updates the same receipt to show the refund.
+ */
+export async function getSeasonReceiptUrl(seasonMemberId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lt_registration_payment')
+    .select('stripe_receipt_url')
+    .eq('season_user_id', seasonMemberId)
+    .in('status', ['succeeded', 'partially_refunded', 'refunded'])
+    .not('stripe_receipt_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.stripe_receipt_url ?? null;
+}
+
 /** Withdraw from a paid season and refund per policy. The entry only — the
  *  service fee and its tax are never returned. */
 export async function refundSeasonEnrollment(

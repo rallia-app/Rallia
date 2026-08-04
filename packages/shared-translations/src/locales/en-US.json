@@ -4695,7 +4695,8 @@
       "none": "No payments received yet.",
       "close": "Close"
     },
-    "seasonEntryFee": "Entry: {amount}"
+    "seasonEntryFee": "Entry: {amount}",
+    "viewReceipt": "View receipt"
   },
   "sessionDetail": {
     "title": "Session",
@@ -5232,7 +5233,8 @@
       "editDetails": "Edit details",
       "invitePlayers": "Invite players",
       "manageCoOrganizers": "Manage co-organizers",
-      "unarchiveTournament": "Restore tournament"
+      "unarchiveTournament": "Restore tournament",
+      "viewReceipt": "View receipt"
     },
     "coOrganizers": {
       "ctaTitle": "Co-organizers",

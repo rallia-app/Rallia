@@ -28,6 +28,7 @@ import {
   removeSeasonMember,
   listSeasonMembers,
   getMySeasonMembership,
+  getSeasonReceiptUrl,
   generateSessionSheet,
   getLeague,
   getLeagueSession,
@@ -113,6 +114,8 @@ export const leagueKeys = {
   seasonMembers: (seasonId: string) => [...leagueKeys.all, 'seasonMembers', seasonId] as const,
   mySeasonMembership: (seasonId: string, userId: string) =>
     [...leagueKeys.all, 'mySeasonMembership', seasonId, userId] as const,
+  seasonReceipt: (seasonMemberId: string) =>
+    [...leagueKeys.all, 'seasonReceipt', seasonMemberId] as const,
 };
 
 /**
@@ -248,6 +251,16 @@ export function useMySeasonMembership(seasonId: string | undefined, userId: stri
     queryKey: leagueKeys.mySeasonMembership(seasonId ?? '', userId ?? ''),
     queryFn: () => getMySeasonMembership(seasonId!, userId!),
     enabled: !!seasonId && !!userId,
+  });
+}
+
+/** Stripe receipt link for the caller's paid season enrollment (null until the
+ *  webhook stores it). Pass enabled=false for free seasons. */
+export function useSeasonReceiptUrl(seasonMemberId: string | undefined, enabled = true) {
+  return useQuery<string | null>({
+    queryKey: leagueKeys.seasonReceipt(seasonMemberId ?? ''),
+    queryFn: () => getSeasonReceiptUrl(seasonMemberId!),
+    enabled: !!seasonMemberId && enabled,
   });
 }
 

@@ -2739,6 +2739,7 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_payment_intent_id: string | null
           stripe_payout_id: string | null
+          stripe_receipt_url: string | null
           tournament_registration_id: string | null
           updated_at: string
           version: number
@@ -2768,6 +2769,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payout_id?: string | null
+          stripe_receipt_url?: string | null
           tournament_registration_id?: string | null
           updated_at?: string
           version?: number
@@ -2797,6 +2799,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payout_id?: string | null
+          stripe_receipt_url?: string | null
           tournament_registration_id?: string | null
           updated_at?: string
           version?: number

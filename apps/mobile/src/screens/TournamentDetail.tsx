@@ -27,6 +27,7 @@ import {
   Alert,
   RefreshControl,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,6 +67,7 @@ import {
   useTournament,
   useTournamentRegistrations,
   useMyTournamentRegistration,
+  useRegistrationReceiptUrl,
   useTournamentFeeQuote,
   useMyPayoutAccount,
   useEventEarnings,
@@ -1561,6 +1563,11 @@ export const TournamentDetail: React.FC = () => {
   const { data: earnings } = useEventEarnings(
     { tournamentId: params.tournamentId },
     isOrganizer && isPaidTournament
+  );
+  // Stripe-hosted receipt for the payer's own paid registration.
+  const { data: receiptUrl } = useRegistrationReceiptUrl(
+    myRegistration?.id,
+    isPaidTournament && myRegistration?.status === 'registered' && myRegistration.user_id === userId
   );
 
   // Post-onboarding management: opens the Stripe Express dashboard (update bank
@@ -3404,6 +3411,15 @@ export const TournamentDetail: React.FC = () => {
                   colors={colors}
                   onPress={handleOpenChat}
                   label={t('tournamentDetail.chat.open')}
+                />
+              ) : null}
+              {receiptUrl ? (
+                <HeroChip
+                  icon="receipt-outline"
+                  tone="outline"
+                  colors={colors}
+                  onPress={() => void Linking.openURL(receiptUrl)}
+                  label={t('tournamentDetail.actions.viewReceipt')}
                 />
               ) : null}
             </View>

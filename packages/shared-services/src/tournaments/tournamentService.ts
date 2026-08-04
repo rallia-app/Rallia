@@ -946,6 +946,26 @@ export async function createTournamentRegistrationPayment(
   };
 }
 
+/**
+ * Stripe-hosted receipt page for the caller's paid registration, or null while
+ * the webhook hasn't stored one (or the entry was free). Refunded statuses are
+ * included: Stripe updates the same receipt to show the refund. RLS scopes the
+ * ledger to the payer/organizer.
+ */
+export async function getRegistrationReceiptUrl(registrationId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lt_registration_payment')
+    .select('stripe_receipt_url')
+    .eq('tournament_registration_id', registrationId)
+    .in('status', ['succeeded', 'partially_refunded', 'refunded'])
+    .not('stripe_receipt_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.stripe_receipt_url ?? null;
+}
+
 export interface TournamentRefundResult {
   withdrawn: boolean;
   refundedCents: number;

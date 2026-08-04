@@ -296,11 +296,38 @@ Deno.serve(async req => {
       }
     }
 
+    // Event name in the description so the receipt and bank statement are
+    // self-explanatory. Best-effort: a lookup failure falls back to the generic
+    // label rather than blocking the charge.
+    let description = tournamentId ? 'Rallia · tournament registration' : 'Rallia · league season';
+    try {
+      if (tournamentId) {
+        const { data: t } = await admin
+          .from('tournaments')
+          .select('name')
+          .eq('id', tournamentId)
+          .single();
+        if (t?.name) description = `Rallia · ${t.name}`;
+      } else {
+        const { data: s } = await admin
+          .from('seasons')
+          .select('name, leagues(name)')
+          .eq('id', seasonId)
+          .single();
+        const leagueName = (s?.leagues as { name?: string } | null)?.name;
+        if (s?.name) description = `Rallia · ${leagueName ? `${leagueName} · ` : ''}${s.name}`;
+      }
+    } catch (e) {
+      console.warn('[lt-create-registration-payment] event name lookup failed', e);
+    }
+
     const params: Stripe.PaymentIntentCreateParams = {
       amount: reg.amount_charged_cents,
       currency,
       automatic_payment_methods: { enabled: true },
-      description: tournamentId ? 'Rallia — tournament registration' : 'Rallia — league season',
+      description,
+      // Stripe emails the payer a receipt on success (live mode only).
+      ...(user.email ? { receipt_email: user.email } : {}),
       on_behalf_of: reg.organizer_stripe_account_id,
       transfer_data: { destination: reg.organizer_stripe_account_id },
       // Rallia's cut = service fee + GST/QST on it (Rallia remits the tax).

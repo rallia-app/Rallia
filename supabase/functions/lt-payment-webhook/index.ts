@@ -74,7 +74,7 @@ Deno.serve(async req => {
   try {
     switch (event.type) {
       case 'payment_intent.succeeded':
-        await handleSucceeded(admin, event.data.object);
+        await handleSucceeded(admin, stripe, event.data.object);
         break;
       case 'payment_intent.payment_failed':
         await handleTerminal(admin, event.data.object, 'failed');
@@ -100,7 +100,11 @@ function isOurFlow(pi: Stripe.PaymentIntent): boolean {
   return pi.metadata?.rallia_flow === 'lt_registration';
 }
 
-async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<void> {
+async function handleSucceeded(
+  admin: Admin,
+  stripe: Stripe,
+  pi: Stripe.PaymentIntent
+): Promise<void> {
   if (!isOurFlow(pi)) return;
 
   const { data: row, error: readError } = await admin
@@ -117,6 +121,19 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
   const chargeId =
     typeof pi.latest_charge === 'string' ? pi.latest_charge : (pi.latest_charge?.id ?? null);
 
+  // Best-effort: the receipt link is a nicety, so a failed fetch must never
+  // block promoting the ledger or finalizing the slot.
+  let receiptUrl: string | null =
+    typeof pi.latest_charge === 'object' ? (pi.latest_charge?.receipt_url ?? null) : null;
+  if (!receiptUrl && chargeId) {
+    try {
+      const charge = await stripe.charges.retrieve(chargeId);
+      receiptUrl = charge.receipt_url ?? null;
+    } catch (e) {
+      console.warn('[lt-payment-webhook] receipt_url fetch failed for', chargeId, e);
+    }
+  }
+
   const decision = classifySucceeded(row.status as LedgerStatus);
 
   // orphan: the row is terminal (failed/cancelled) — the reaper released the
@@ -127,7 +144,11 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
   if (decision === 'orphan') {
     const { error } = await admin
       .from('lt_registration_payment')
-      .update({ stripe_charge_id: chargeId, updated_at: new Date().toISOString() })
+      .update({
+        stripe_charge_id: chargeId,
+        stripe_receipt_url: receiptUrl,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', row.id);
     if (error) throw error;
     console.error(
@@ -153,11 +174,20 @@ async function handleSucceeded(admin: Admin, pi: Stripe.PaymentIntent): Promise<
       .update({
         status: 'succeeded',
         stripe_charge_id: chargeId,
+        stripe_receipt_url: receiptUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('id', row.id)
       .eq('status', 'pending');
     if (error) throw error;
+  } else if (receiptUrl) {
+    // finalize (re-delivery): backfill the receipt if the first delivery's
+    // fetch failed. Compare-and-set so it never clobbers a stored one.
+    await admin
+      .from('lt_registration_payment')
+      .update({ stripe_receipt_url: receiptUrl })
+      .eq('id', row.id)
+      .is('stripe_receipt_url', null);
   }
 
   // Both 'promote' and 'finalize' attempt the slot flip, including on a

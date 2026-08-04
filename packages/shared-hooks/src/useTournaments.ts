@@ -16,6 +16,7 @@ import {
   listActiveRegistrations,
   listMyActiveRegistrations,
   getMyRegistration,
+  getRegistrationReceiptUrl,
   openTournamentRegistration,
   closeTournamentRegistration,
   reopenTournamentRegistration,
@@ -95,6 +96,8 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
   myActiveRegistrations: (userId: string) =>
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
+  registrationReceipt: (registrationId: string) =>
+    [...tournamentKeys.all, 'registrationReceipt', registrationId] as const,
   myUnscheduledMatches: (userId: string, sportId?: string) =>
     [...tournamentKeys.all, 'myUnscheduledMatches', userId, sportId ?? 'all'] as const,
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
@@ -254,6 +257,16 @@ export function useMyTournamentRegistration(
     queryKey: tournamentKeys.myRegistration(tournamentId ?? '', userId ?? ''),
     queryFn: () => getMyRegistration(tournamentId!, userId!),
     enabled: !!tournamentId && !!userId,
+  });
+}
+
+/** Stripe receipt link for the caller's paid registration (null until the
+ *  webhook stores it). Pass enabled=false for free tournaments. */
+export function useRegistrationReceiptUrl(registrationId: string | undefined, enabled = true) {
+  return useQuery<string | null>({
+    queryKey: tournamentKeys.registrationReceipt(registrationId ?? ''),
+    queryFn: () => getRegistrationReceiptUrl(registrationId!),
+    enabled: !!registrationId && enabled,
   });
 }
 

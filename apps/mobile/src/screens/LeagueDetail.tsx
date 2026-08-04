@@ -18,6 +18,7 @@ import {
   Image,
   TextInput,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -76,6 +77,7 @@ import {
   useSeasonRankings,
   useSeasonMembers,
   useMySeasonMembership,
+  useSeasonReceiptUrl,
   useEnrollInSeason,
   useWithdrawFromSeason,
   useRemoveSeasonMember,
@@ -1590,6 +1592,11 @@ export const LeagueDetail: React.FC = () => {
     { seasonId: openSeasonId },
     isOrganizer && isPaidSeason
   );
+  // Stripe-hosted receipt for the viewer's own paid enrollment.
+  const { data: seasonReceiptUrl } = useSeasonReceiptUrl(
+    mySeasonMembership?.id,
+    isPaidSeason && isEnrolledInSeason
+  );
   const { mutateAsync: createSeasonPayment, isPending: isPayingSeason } =
     useCreateSeasonEnrollmentPayment();
   const { mutateAsync: refundSeasonEnrollmentAsync, isPending: isRefundingSeason } =
@@ -2736,6 +2743,15 @@ export const LeagueDetail: React.FC = () => {
                   }
                 />
               )}
+              {seasonReceiptUrl ? (
+                <HeroChip
+                  icon="receipt-outline"
+                  tone="outline"
+                  colors={colors}
+                  onPress={() => void Linking.openURL(seasonReceiptUrl)}
+                  label={t('leagueDetail.viewReceipt')}
+                />
+              ) : null}
               {myMembership.status === 'active' ? (
                 <TouchableOpacity
                   onPress={handleLeavePress}
