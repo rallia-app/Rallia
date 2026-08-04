@@ -7,6 +7,7 @@
 
 import type { Database, Tables, Enums } from '@rallia/shared-types';
 import type { UtmParams } from '@rallia/shared-utils';
+import { DEFAULT_SERVICE_FEE_PARAMS, type ServiceFeeParams } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
 import type { PlayerSearchResult } from '../players/playerService';
@@ -192,7 +193,10 @@ export async function listMyTournaments(
     .from('tournament_registrations')
     .select('tournament_id')
     .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
-    .in('status', ['registered', 'pending']);
+    // payment_pending: checkout in flight (webhook flips it to registered
+    // seconds later). Excluding it made a tournament vanish from "My
+    // tournaments" right after paying, until the post-webhook refetch.
+    .in('status', ['registered', 'pending', 'payment_pending']);
   if (regsError) throw new Error(regsError.message);
 
   const registeredIds = [...new Set((regs ?? []).map(r => r.tournament_id))];
@@ -595,7 +599,9 @@ export async function listMyActiveRegistrations(userId: string): Promise<Tournam
     .from('tournament_registrations')
     .select('*')
     .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
-    .in('status', ['registered', 'pending']);
+    // payment_pending keeps a mid-checkout tournament in "mine" (see
+    // listMyTournaments).
+    .in('status', ['registered', 'pending', 'payment_pending']);
   if (error) throw new Error(error.message);
   return (data ?? []) as TournamentRegistration[];
 }
@@ -783,6 +789,22 @@ export async function getTournamentFeeQuote(
     refundPartialBps: row.refund_partial_bps,
     refundCutoffAt: row.refund_cutoff_at,
   };
+}
+
+/**
+ * Effective service-fee parameters for an organizer (organizer override →
+ * global default, both admin-managed in the database). Feeds the creation
+ * wizards' fee previews so they match what the server will actually charge
+ * instead of the hardcoded TS defaults.
+ */
+export async function getServiceFeeParams(organizerId: string): Promise<ServiceFeeParams> {
+  const { data, error } = await supabase.rpc('resolve_service_fee_policy', {
+    p_organizer_id: organizerId,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return DEFAULT_SERVICE_FEE_PARAMS;
+  return { pctBps: row.pct_bps, flatCents: row.flat_cents, capCents: row.cap_cents };
 }
 
 /** What a paid event has collected, for its organizer. Mirrors lt_event_earnings. */

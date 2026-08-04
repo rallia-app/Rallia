@@ -352,8 +352,11 @@
         <li>Touche-la : tu arrives sur le <strong>tableau de bord Stripe</strong>. C'est le seul endroit où tu vois de l'argent.</li>
       </ol>
       <p class="check">
-        <strong>Attendu :</strong> le tableau de bord s'ouvre et affiche un solde. Les montants y sont
-        ceux de Stripe, pas de Rallia.
+        <strong>Attendu :</strong> le tableau de bord s'ouvre. Le solde affiché est de
+        <strong>0&nbsp;$</strong> et c'est normal : les 6 inscriptions de ce tournoi sont des fixtures
+        simulées (<span class="fixture">pi_sim…</span>), donc aucun argent réel n'existe chez Stripe.
+        Seuls les scénarios <span class="pill live">vrai paiement</span> font bouger ce solde. Les
+        montants y sont ceux de Stripe, pas de Rallia.
       </p>
       <p class="warn">
         <strong>Selon ton build :</strong> les builds preview à partir du 3 août ajoutent une ligne
@@ -514,17 +517,18 @@
       </p>
       <ol>
         <li>Onglet <strong>Saisons</strong>, ouvre la saison en cours (40 $).</li>
-        <li>Inscris-toi. Vérifie le détail du montant, puis paie avec la carte de test.</li>
+        <li>
+          D'abord le piège (déjà corrigé, à revalider) : ouvre l'écran de paiement, quitte
+          <strong>sans payer</strong>, puis réessaie de t'inscrire. Tu ne dois <strong>jamais</strong>
+          obtenir une place gratuite. Si tu te retrouves inscrit sans avoir payé, c'est un bogue
+          majeur : signale-le tout de suite.
+        </li>
+        <li>Inscris-toi pour de vrai. Vérifie le détail du montant, puis paie avec la carte de test.</li>
         <li>Reviens au classement de la saison.</li>
       </ol>
       <p class="check">
         <strong>Attendu :</strong> tu apparais comme <strong>inscrit</strong> et tu entres dans le
         classement de la saison. Les 5 joueurs fictifs déjà payés y sont aussi.
-      </p>
-      <p class="warn">
-        Piège déjà corrigé, à revalider : quitter l'écran de paiement <strong>sans payer</strong>, puis
-        réessayer de s'inscrire, ne doit <strong>jamais</strong> donner une place gratuite. Si tu te
-        retrouves inscrit sans avoir payé, c'est un bogue majeur : signale-le tout de suite.
       </p>
     </section>
 

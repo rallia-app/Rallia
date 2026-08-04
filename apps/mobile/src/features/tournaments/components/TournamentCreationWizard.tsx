@@ -68,6 +68,7 @@ import {
   useRatingScoresForSport,
   useFacilitySearch,
   useAdminStatus,
+  useMyServiceFeeParams,
 } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
@@ -1664,7 +1665,11 @@ const PaymentsStep: React.FC<{
 
   const entryFeeCents = dollarsToCents(entryFeeInput);
   const isPaid = entryFeeCents > 0;
-  const quote = quoteRegistration(entryFeeCents, feePayer);
+  // Preview with the server-resolved fee params (admin-tunable default +
+  // per-organizer override) instead of the hardcoded TS defaults.
+  const { session } = useAuth();
+  const { data: feeParams } = useMyServiceFeeParams(session?.user?.id, isPaid);
+  const quote = quoteRegistration(entryFeeCents, feePayer, feeParams);
   const fmt = (cents: number) => formatPrice(cents, FEE_CURRENCY, { locale });
 
   // Prize money is advertising, not a fee obligation, so it renders even when

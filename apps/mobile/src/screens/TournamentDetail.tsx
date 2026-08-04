@@ -98,7 +98,12 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import type { Enums, Tables } from '@rallia/shared-types';
 import * as WebBrowser from 'expo-web-browser';
-import { getTournamentChat, TournamentPaymentError, supabase } from '@rallia/shared-services';
+import {
+  getTournamentChat,
+  getMyPayoutAccount,
+  TournamentPaymentError,
+  supabase,
+} from '@rallia/shared-services';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 
 import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
@@ -1430,6 +1435,8 @@ export const TournamentDetail: React.FC = () => {
     [t, toast]
   );
 
+  const queryClient = useQueryClient();
+
   // Organizer payout onboarding: a card-capable Stripe Express account (manual
   // payouts) that becomes the settlement merchant for paid registrations.
   // Organizers must finish this before a paid event can open.
@@ -1448,20 +1455,36 @@ export const TournamentDetail: React.FC = () => {
           data.url,
           'rallia://stripe-connect-return'
         );
-        if (result.type === 'success') {
-          // stripe-connect-webhook flips onboarding_completed once charges are
-          // enabled; refetch to clear the organizer payout gate. It settles
-          // asynchronously, so refetch again shortly after.
+        if (result.type === 'success' && userId) {
+          // stripe-connect-webhook flips the mirror asynchronously (usually
+          // well under 30 s); poll it so the payout badge updates without the
+          // user leaving and reopening the screen.
           successHaptic();
-          void refetch();
-          setTimeout(() => void refetch(), 2500);
+          toast.info(t('tournamentDetail.payments.payoutSyncWait'));
+          void (async () => {
+            for (let attempt = 0; attempt < 10; attempt++) {
+              const status = await queryClient
+                .fetchQuery({
+                  queryKey: tournamentKeys.myPayoutAccount(userId),
+                  queryFn: getMyPayoutAccount,
+                  staleTime: 0,
+                })
+                .catch(() => null);
+              if (status?.chargesEnabled) {
+                successHaptic();
+                toast.success(t('tournamentDetail.payments.payoutsConnectedToast'));
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+          })();
         }
       } catch {
         warningHaptic();
         toast.error(t('tournamentDetail.payments.onboardingError'));
       }
     },
-    [toast, t, refetch]
+    [toast, t, userId, queryClient]
   );
 
   // Confirm, then kick off Stripe onboarding. Everyone onboards as an individual
@@ -1528,7 +1551,6 @@ export const TournamentDetail: React.FC = () => {
 
   // Paid-registration flow (Stripe PaymentSheet). isPaidTournament gates the
   // price display + the payment branch in onRegister.
-  const queryClient = useQueryClient();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const isPaidTournament = (tournament?.entry_fee_cents ?? 0) > 0;
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
@@ -1544,7 +1566,12 @@ export const TournamentDetail: React.FC = () => {
   // Post-onboarding management: opens the Stripe Express dashboard (update bank
   // details, view payouts) when ready, or resumes onboarding when unfinished.
   // The webhook refreshes account status, so invalidate on return.
+  // player-stripe-manage makes several sequential Stripe calls before returning
+  // the link, so the row shows a transient state and blocks re-taps meanwhile.
+  const [isOpeningPayoutDashboard, setIsOpeningPayoutDashboard] = useState(false);
   const handleManagePayouts = useCallback(async () => {
+    if (isOpeningPayoutDashboard) return;
+    setIsOpeningPayoutDashboard(true);
     try {
       const { data, error } = await supabase.functions.invoke('player-stripe-manage');
       if (error || !data?.url) throw new Error(error?.message);
@@ -1558,7 +1585,8 @@ export const TournamentDetail: React.FC = () => {
       warningHaptic();
       toast.error(t('tournamentDetail.payments.manageError'));
     }
-  }, [toast, t, userId, queryClient]);
+    setIsOpeningPayoutDashboard(false);
+  }, [toast, t, userId, queryClient, isOpeningPayoutDashboard]);
 
   // Money summary for this event, from the payment ledger. Alert keeps it
   // glanceable; the Stripe dashboard (payout row) remains the detailed view.
@@ -1646,7 +1674,13 @@ export const TournamentDetail: React.FC = () => {
               queryKey: tournamentKeys.registrations(tournament.id),
             });
             void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.participants(tournament.id),
+            });
+            void queryClient.invalidateQueries({
               queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
+            });
+            void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
             });
             // Paying takes a slot, so the card's count chip moves too.
             void queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
@@ -1663,27 +1697,52 @@ export const TournamentDetail: React.FC = () => {
         }
       };
 
-      // Point-of-sale disclosure before any charge: what they pay, the refund
-      // policy, that the service fee isn't refundable, and that Rallia only
-      // facilitates (the organizer, not Rallia, owns the event).
-      const totalLabel = feeQuote
-        ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
-        : null;
-      // GST/QST rides on Rallia's service fee; the player only pays it in
-      // player_pays mode (organizer_absorbs nets it from the organizer's take).
-      const taxLabel =
-        feeQuote && feeQuote.feePayer === 'player_pays' && feeQuote.feeTaxCents > 0
-          ? formatPrice(feeQuote.feeTaxCents, feeQuote.currency, { locale })
-          : null;
+      // Point-of-sale disclosure before any charge: the full price breakdown,
+      // the refund policy, that the service fee isn't refundable, and that
+      // Rallia only facilitates (the organizer, not Rallia, owns the event).
+      // GST/QST rides on Rallia's service fee; the player only pays the fee and
+      // its tax in player_pays mode (organizer_absorbs nets them from the
+      // organizer's take, so the player sees the entry price and nothing else).
+      const money = (cents: number) =>
+        feeQuote ? formatPrice(cents, feeQuote.currency, { locale }) : '';
+      const playerPaysFee = !!feeQuote && feeQuote.feePayer === 'player_pays';
+      const breakdown = !feeQuote
+        ? null
+        : playerPaysFee
+          ? [
+              t('tournamentDetail.payments.breakdownEntry').replace(
+                '{amount}',
+                money(feeQuote.entryCents)
+              ),
+              t('tournamentDetail.payments.breakdownServiceFee').replace(
+                '{amount}',
+                money(feeQuote.serviceFeeCents)
+              ),
+              feeQuote.feeTaxCents > 0
+                ? t('tournamentDetail.payments.breakdownFeeTax').replace(
+                    '{amount}',
+                    money(feeQuote.feeTaxCents)
+                  )
+                : null,
+              t('tournamentDetail.payments.breakdownTotal').replace(
+                '{amount}',
+                money(feeQuote.totalCents)
+              ),
+            ]
+              .filter(Boolean)
+              .join('\n')
+          : [
+              t('tournamentDetail.payments.breakdownTotal').replace(
+                '{amount}',
+                money(feeQuote.totalCents)
+              ),
+              t('tournamentDetail.payments.feeCoveredByOrganizer'),
+            ].join('\n');
+      const totalLabel = feeQuote ? money(feeQuote.totalCents) : null;
       const message = [
-        totalLabel
-          ? t('tournamentDetail.payments.confirmAmount').replace('{amount}', totalLabel)
-          : null,
-        taxLabel
-          ? t('tournamentDetail.payments.confirmFeeTax').replace('{amount}', taxLabel)
-          : null,
+        breakdown,
         refundPolicyLine(feeQuote, t, locale),
-        t('tournamentDetail.payments.confirmFeeNonRefundable'),
+        playerPaysFee ? t('tournamentDetail.payments.confirmFeeNonRefundable') : null,
         t('tournamentDetail.payments.liabilityNotice'),
       ]
         .filter(Boolean)
@@ -1967,26 +2026,64 @@ export const TournamentDetail: React.FC = () => {
           : feeQuote.refundPolicyKind === 'full'
             ? feeQuote.entryCents
             : Math.round((feeQuote.entryCents * (feeQuote.refundPartialBps ?? 0)) / 10000);
-      const amountLabel = formatPrice(estimateCents, tournament.currency ?? 'CAD', { locale });
-      Alert.alert(
-        t('tournamentDetail.payments.withdrawConfirmTitle'),
+      const currency = tournament.currency ?? 'CAD';
+      const money = (cents: number) => formatPrice(cents, currency, { locale });
+      // What the player was charged vs what comes back. The fee + its GST/QST
+      // only exist on the player's side in player_pays mode.
+      const feesKeptCents = feeQuote ? feeQuote.serviceFeeCents + feeQuote.feeTaxCents : 0;
+      const playerPaidFee = !!feeQuote && feeQuote.feePayer === 'player_pays' && feesKeptCents > 0;
+      const cutoffLabel = feeQuote?.refundCutoffAt
+        ? new Date(feeQuote.refundCutoffAt).toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      // Deadline passed reads differently from a no-refund policy: the player
+      // had a refund window and missed it, so say that instead of "not
+      // refundable" and let them confirm the withdrawal knowingly.
+      const zeroLine =
+        pastCutoff && feeQuote?.refundPolicyKind !== 'none'
+          ? t('tournamentDetail.payments.withdrawConfirmCutoffPassed').replace(
+              '{date}',
+              cutoffLabel
+            )
+          : t('tournamentDetail.payments.withdrawConfirmNoRefund');
+      const message = [
+        feeQuote
+          ? t('tournamentDetail.payments.withdrawConfirmPaid').replace(
+              '{amount}',
+              money(feeQuote.totalCents)
+            )
+          : null,
         estimateCents > 0
-          ? t('tournamentDetail.payments.withdrawConfirmRefund').replace('{amount}', amountLabel)
-          : t('tournamentDetail.payments.withdrawConfirmNoRefund'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('tournamentDetail.actions.withdraw'),
-            style: 'destructive',
-            onPress: () =>
-              refundRegistration.mutate({
-                registrationId: myActiveRegistration.id,
-                versionWas: myActiveRegistration.version,
-                tournamentId: tournament.id,
-              }),
-          },
-        ]
-      );
+          ? t('tournamentDetail.payments.withdrawConfirmRefund').replace(
+              '{amount}',
+              money(estimateCents)
+            )
+          : zeroLine,
+        estimateCents > 0 && playerPaidFee
+          ? t('tournamentDetail.payments.withdrawConfirmFeesKept').replace(
+              '{amount}',
+              money(feesKeptCents)
+            )
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      Alert.alert(t('tournamentDetail.payments.withdrawConfirmTitle'), message, [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('tournamentDetail.actions.withdraw'),
+          style: 'destructive',
+          onPress: () =>
+            refundRegistration.mutate({
+              registrationId: myActiveRegistration.id,
+              versionWas: myActiveRegistration.version,
+              tournamentId: tournament.id,
+            }),
+        },
+      ]);
       return;
     }
 
@@ -3037,8 +3134,9 @@ export const TournamentDetail: React.FC = () => {
         icon: 'wallet-outline',
         label: t('tournamentDetail.payments.payoutRow.label'),
         onPress: payoutAccount === null ? promptOnboardPayouts : () => void handleManagePayouts(),
-        badge:
-          payoutAccount === null
+        badge: isOpeningPayoutDashboard
+          ? { label: t('tournamentDetail.payments.payoutRow.opening'), tone: 'muted' }
+          : payoutAccount === null
             ? { label: t('tournamentDetail.payments.payoutRow.setup'), tone: 'muted' }
             : !payoutAccount.chargesEnabled
               ? { label: t('tournamentDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }

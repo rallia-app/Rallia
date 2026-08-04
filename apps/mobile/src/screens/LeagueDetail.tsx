@@ -88,7 +88,12 @@ import {
 import { SheetManager } from 'react-native-actions-sheet';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { isLeagueOrganizer, TournamentPaymentError, supabase } from '@rallia/shared-services';
+import {
+  isLeagueOrganizer,
+  getMyPayoutAccount,
+  TournamentPaymentError,
+  supabase,
+} from '@rallia/shared-services';
 import type {
   LeagueMemberWithProfile,
   PlayerProfile,
@@ -202,6 +207,17 @@ function estimateSeasonRefundCents(
   if (quote.refundCutoffAt && new Date(quote.refundCutoffAt) < new Date()) return 0;
   if (quote.refundPolicyKind === 'full') return quote.entryCents;
   return Math.round((quote.entryCents * (quote.refundPartialBps ?? 0)) / 10000);
+}
+
+/** Why a zero estimate is zero: a no-refund policy reads differently from a
+ *  refund window the player missed, so the confirm copy distinguishes them. */
+function seasonRefundZeroReason(
+  quote: { refundPolicyKind: string; refundCutoffAt: string | null } | null | undefined
+): 'policy' | 'cutoff' | null {
+  if (!quote) return null;
+  if (quote.refundPolicyKind === 'none') return 'policy';
+  if (quote.refundCutoffAt && new Date(quote.refundCutoffAt) < new Date()) return 'cutoff';
+  return null;
 }
 
 /**
@@ -1302,14 +1318,28 @@ export const LeagueDetail: React.FC = () => {
           'rallia://stripe-connect-return'
         );
         if (result.type === 'success' && userId) {
-          // stripe-connect-webhook flips onboarding_completed once charges are
-          // enabled; invalidate to clear the gate. It settles asynchronously, so
-          // refetch again shortly after.
+          // stripe-connect-webhook flips the mirror asynchronously (usually
+          // well under 30 s); poll it so the payout badge updates without the
+          // user leaving and reopening the screen.
           successHaptic();
-          const refresh = () =>
-            void qc.invalidateQueries({ queryKey: tournamentKeys.myPayoutAccount(userId) });
-          refresh();
-          setTimeout(refresh, 2500);
+          toast.info(t('leagueDetail.payments.payoutSyncWait'));
+          void (async () => {
+            for (let attempt = 0; attempt < 10; attempt++) {
+              const status = await qc
+                .fetchQuery({
+                  queryKey: tournamentKeys.myPayoutAccount(userId),
+                  queryFn: getMyPayoutAccount,
+                  staleTime: 0,
+                })
+                .catch(() => null);
+              if (status?.chargesEnabled) {
+                successHaptic();
+                toast.success(t('leagueDetail.payments.payoutsConnectedToast'));
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+          })();
         }
       } catch {
         warningHaptic();
@@ -1341,8 +1371,12 @@ export const LeagueDetail: React.FC = () => {
 
   // Post-onboarding: open the Stripe Express dashboard when ready, or resume
   // onboarding when unfinished. The webhook refreshes status, so invalidate on
-  // return.
+  // return. player-stripe-manage makes several sequential Stripe calls before
+  // returning the link, so the row shows a transient state and blocks re-taps.
+  const [isOpeningPayoutDashboard, setIsOpeningPayoutDashboard] = useState(false);
   const handleManagePayouts = useCallback(async () => {
+    if (isOpeningPayoutDashboard) return;
+    setIsOpeningPayoutDashboard(true);
     try {
       const { data, error } = await supabase.functions.invoke('player-stripe-manage');
       if (error || !data?.url) throw new Error(error?.message);
@@ -1354,7 +1388,8 @@ export const LeagueDetail: React.FC = () => {
       warningHaptic();
       toast.error(t('leagueDetail.payments.manageError'));
     }
-  }, [qc, t, toast, userId]);
+    setIsOpeningPayoutDashboard(false);
+  }, [qc, t, toast, userId, isOpeningPayoutDashboard]);
 
   const { mutate: openSeasonMut, isPending: isOpeningSeason } = useOpenSeason(leagueId, {
     onSuccess: season => {
@@ -1564,24 +1599,49 @@ export const LeagueDetail: React.FC = () => {
   const handlePaidEnroll = useCallback(async () => {
     if (!openSeasonId || !seasonFeeQuote) return;
 
-    // Point-of-sale disclosure before any charge: what they pay, the refund
-    // policy, that the service fee isn't refundable, and that Rallia only
-    // facilitates (the organizer, not Rallia, owns the season).
+    // Point-of-sale disclosure before any charge: the full price breakdown,
+    // the refund policy, that the service fee isn't refundable, and that
+    // Rallia only facilitates (the organizer, not Rallia, owns the season).
+    // GST/QST rides on Rallia's service fee; the player only pays the fee and
+    // its tax in player_pays mode (organizer_absorbs nets them from the
+    // organizer's take, so the player sees the entry price and nothing else).
     const cur = seasonFeeQuote.currency;
-    // GST/QST rides on Rallia's service fee; the player only pays it in
-    // player_pays mode (organizer_absorbs nets it from the organizer's take).
-    const taxLabel =
-      seasonFeeQuote.feePayer === 'player_pays' && seasonFeeQuote.feeTaxCents > 0
-        ? formatPrice(seasonFeeQuote.feeTaxCents, cur, { locale })
-        : null;
+    const money = (cents: number) => formatPrice(cents, cur, { locale });
+    const playerPaysFee = seasonFeeQuote.feePayer === 'player_pays';
+    const breakdown = playerPaysFee
+      ? ([
+          t('leagueDetail.paid.breakdownEntry').replace(
+            '{amount}',
+            money(seasonFeeQuote.entryCents)
+          ),
+          t('leagueDetail.paid.breakdownServiceFee').replace(
+            '{amount}',
+            money(seasonFeeQuote.serviceFeeCents)
+          ),
+          seasonFeeQuote.feeTaxCents > 0
+            ? t('leagueDetail.paid.breakdownFeeTax').replace(
+                '{amount}',
+                money(seasonFeeQuote.feeTaxCents)
+              )
+            : null,
+          t('leagueDetail.paid.breakdownTotal').replace(
+            '{amount}',
+            money(seasonFeeQuote.totalCents)
+          ),
+        ]
+          .filter(Boolean)
+          .join('\n') as string)
+      : [
+          t('leagueDetail.paid.breakdownTotal').replace(
+            '{amount}',
+            money(seasonFeeQuote.totalCents)
+          ),
+          t('leagueDetail.paid.feeCoveredByOrganizer'),
+        ].join('\n');
     const lines = [
-      t('leagueDetail.paid.confirmAmount').replace(
-        '{amount}',
-        formatPrice(seasonFeeQuote.totalCents, cur, { locale })
-      ),
-      taxLabel ? t('leagueDetail.paid.confirmFeeTax').replace('{amount}', taxLabel) : null,
+      breakdown,
       seasonRefundPolicyLine(seasonFeeQuote, t, locale),
-      t('leagueDetail.paid.confirmFeeNonRefundable'),
+      playerPaysFee ? t('leagueDetail.paid.confirmFeeNonRefundable') : null,
       t('leagueDetail.paid.liabilityNotice'),
     ].filter(Boolean) as string[];
 
@@ -1664,48 +1724,74 @@ export const LeagueDetail: React.FC = () => {
       // Client-side mirror of the SQL policy math, for the confirm copy only —
       // the server recomputes the authoritative amount.
       const estimate = estimateSeasonRefundCents(seasonFeeQuote);
-      Alert.alert(
-        t('leagueDetail.paid.withdrawConfirmTitle'),
-        estimate > 0
-          ? t('leagueDetail.paid.withdrawConfirmRefund').replace(
+      const money = (cents: number) =>
+        formatPrice(cents, seasonFeeQuote?.currency ?? 'CAD', { locale });
+      // The fee + its GST/QST only exist on the player's side in player_pays mode.
+      const feesKeptCents = seasonFeeQuote
+        ? seasonFeeQuote.serviceFeeCents + seasonFeeQuote.feeTaxCents
+        : 0;
+      const playerPaidFee =
+        !!seasonFeeQuote && seasonFeeQuote.feePayer === 'player_pays' && feesKeptCents > 0;
+      const cutoffLabel = seasonFeeQuote?.refundCutoffAt
+        ? new Date(seasonFeeQuote.refundCutoffAt).toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      const zeroLine =
+        seasonRefundZeroReason(seasonFeeQuote) === 'cutoff'
+          ? t('leagueDetail.paid.withdrawConfirmCutoffPassed').replace('{date}', cutoffLabel)
+          : t('leagueDetail.paid.withdrawConfirmNoRefund');
+      const message = [
+        seasonFeeQuote
+          ? t('leagueDetail.paid.withdrawConfirmPaid').replace(
               '{amount}',
-              formatPrice(estimate, seasonFeeQuote?.currency ?? 'CAD', { locale })
+              money(seasonFeeQuote.totalCents)
             )
-          : t('leagueDetail.paid.withdrawConfirmNoRefund'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('leagueDetail.roster.leave'),
-            style: 'destructive',
-            onPress: () => {
-              void (async () => {
-                try {
-                  const r = await refundSeasonEnrollmentAsync({
-                    seasonMemberId: mySeasonMembership.id,
-                    versionWas: mySeasonMembership.version,
-                    seasonId: mySeasonMembership.season_id,
-                    leagueId,
-                  });
-                  lightHaptic();
-                  toast.success(
-                    r.refundedCents > 0
-                      ? t('leagueDetail.paid.refunded').replace(
-                          '{amount}',
-                          formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', {
-                            locale,
-                          })
-                        )
-                      : t('leagueDetail.roster.withdrew')
-                  );
-                } catch {
-                  warningHaptic();
-                  toast.error(t('leagueDetail.paid.errors.refundFailed'));
-                }
-              })();
-            },
+          : null,
+        estimate > 0
+          ? t('leagueDetail.paid.withdrawConfirmRefund').replace('{amount}', money(estimate))
+          : zeroLine,
+        estimate > 0 && playerPaidFee
+          ? t('leagueDetail.paid.withdrawConfirmFeesKept').replace('{amount}', money(feesKeptCents))
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      Alert.alert(t('leagueDetail.paid.withdrawConfirmTitle'), message, [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.roster.leave'),
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                const r = await refundSeasonEnrollmentAsync({
+                  seasonMemberId: mySeasonMembership.id,
+                  versionWas: mySeasonMembership.version,
+                  seasonId: mySeasonMembership.season_id,
+                  leagueId,
+                });
+                lightHaptic();
+                toast.success(
+                  r.refundedCents > 0
+                    ? t('leagueDetail.paid.refunded').replace(
+                        '{amount}',
+                        formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', {
+                          locale,
+                        })
+                      )
+                    : t('leagueDetail.roster.withdrew')
+                );
+              } catch {
+                warningHaptic();
+                toast.error(t('leagueDetail.paid.errors.refundFailed'));
+              }
+            })();
           },
-        ]
-      );
+        },
+      ]);
       return;
     }
 
@@ -1777,7 +1863,9 @@ export const LeagueDetail: React.FC = () => {
                 }
               ),
             })
-          : t('leagueDetail.roster.removeConfirmNoRefund')
+          : seasonRefundZeroReason(seasonFeeQuote) === 'cutoff'
+            ? t('leagueDetail.roster.removeConfirmCutoffPassed')
+            : t('leagueDetail.roster.removeConfirmNoRefund')
         : t('leagueDetail.roster.removeConfirmFree');
       Alert.alert(t('leagueDetail.roster.removeConfirmTitle', { name }), body, [
         { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
@@ -2389,8 +2477,9 @@ export const LeagueDetail: React.FC = () => {
         label: t('leagueDetail.payments.payoutRow.label'),
         onPress:
           payoutAccount === null ? promptOnboardBusinessType : () => void handleManagePayouts(),
-        badge:
-          payoutAccount === null
+        badge: isOpeningPayoutDashboard
+          ? { label: t('leagueDetail.payments.payoutRow.opening'), tone: 'muted' }
+          : payoutAccount === null
             ? { label: t('leagueDetail.payments.payoutRow.setup'), tone: 'muted' }
             : !payoutAccount.chargesEnabled
               ? { label: t('leagueDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }

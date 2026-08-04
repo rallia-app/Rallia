@@ -1,3 +1,4 @@
+import { ServiceFeeSettings } from '@/components/admin/service-fee-settings';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireAdminRole } from '@/lib/admin-rbac.server';
 import { Settings } from 'lucide-react';
@@ -22,6 +23,8 @@ export default async function AdminSettingsPage() {
         <h1 className="text-3xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground mt-2 mb-0">{t('description')}</p>
       </div>
+
+      <ServiceFeeSettings />
 
       <Card className="overflow-hidden">
         <CardContent className="flex flex-col items-center justify-center py-12">

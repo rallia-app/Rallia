@@ -119,6 +119,7 @@ import {
   usePendingFeedbackCheck,
   useUpdateLastSeen,
   ProfileCompletenessProvider,
+  tournamentKeys,
 } from '@rallia/shared-hooks';
 import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { ErrorBoundary, ToastProvider, NetworkProvider, useToast } from '@rallia/shared-components';
@@ -433,6 +434,13 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
           if (data?.onboarding_completed) {
             successHaptic();
             toast.success(t('tournamentDetail.payments.payoutsConnectedToast'));
+            // Screens read the mirror through this query; without invalidation
+            // the payout badge stays on its cached pre-onboarding state.
+            if (user?.id) {
+              void queryClient.invalidateQueries({
+                queryKey: tournamentKeys.myPayoutAccount(user.id),
+              });
+            }
           } else if (attempts < 5) {
             setTimeout(() => checkOnboarding(attempts + 1), 2000);
           }

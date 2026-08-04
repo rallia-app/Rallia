@@ -25,10 +25,11 @@ import {
   quoteRegistration,
   type FeePayer,
 } from '@rallia/shared-utils';
-import { useCreateSeason } from '@rallia/shared-hooks';
+import { useCreateSeason, useMyServiceFeeParams } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
+import { useAuth } from '#/context';
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import * as Analytics from '#/services/analytics';
@@ -79,10 +80,13 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
   const isPaid = entryFeeCents > 0;
 
   // Client-side mirror of season_fee_quote, for the preview only — the server
-  // recomputes the authoritative amounts at checkout.
+  // recomputes the authoritative amounts at checkout. Uses the server-resolved
+  // fee params (admin-tunable default + per-organizer override).
+  const { session } = useAuth();
+  const { data: feeParams } = useMyServiceFeeParams(session?.user?.id, isPaid);
   const quote = useMemo(
-    () => quoteRegistration(entryFeeCents, feePayer),
-    [entryFeeCents, feePayer]
+    () => quoteRegistration(entryFeeCents, feePayer, feeParams),
+    [entryFeeCents, feePayer, feeParams]
   );
 
   const formatDate = useCallback(

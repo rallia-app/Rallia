@@ -26,6 +26,7 @@ import {
   getTournamentFeeQuote,
   getEventEarnings,
   getMyPayoutAccount,
+  getServiceFeeParams,
   createTournamentRegistrationPayment,
   refundTournamentRegistration,
   withdrawFromTournament,
@@ -109,6 +110,8 @@ export const tournamentKeys = {
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
   earnings: (eventId: string) => [...tournamentKeys.all, 'earnings', eventId] as const,
   myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
+  myServiceFeeParams: (userId: string) =>
+    [...tournamentKeys.all, 'myServiceFeeParams', userId] as const,
   certifiedOrganizer: (playerId: string) =>
     [...tournamentKeys.all, 'certifiedOrganizer', playerId] as const,
 };
@@ -692,6 +695,21 @@ export function useMyPayoutAccount(userId: string | undefined, enabled = true) {
     queryKey: tournamentKeys.myPayoutAccount(userId ?? ''),
     queryFn: () => getMyPayoutAccount(),
     enabled: !!userId && enabled,
+  });
+}
+
+/**
+ * Effective service-fee parameters for the caller as an organizer (organizer
+ * override → admin-managed global default). Feeds the creation wizards' fee
+ * previews; callers should fall back to DEFAULT_SERVICE_FEE_PARAMS while
+ * loading.
+ */
+export function useMyServiceFeeParams(userId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: tournamentKeys.myServiceFeeParams(userId ?? ''),
+    queryFn: () => getServiceFeeParams(userId!),
+    enabled: !!userId && enabled,
+    staleTime: 1000 * 60 * 10,
   });
 }
 
