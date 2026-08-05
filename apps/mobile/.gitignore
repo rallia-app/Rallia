@@ -49,3 +49,4 @@ credentials/
 
 # Sentry
 .env.sentry-build-plugin
+
