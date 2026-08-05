@@ -24,7 +24,8 @@ import {
   successHaptic,
   getProfilePictureUrl,
 } from '@rallia/shared-utils';
-import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
+import { usePlayerSearch, useInviteToMatch, useMatchInviteCandidates } from '@rallia/shared-hooks';
+import type { InviteCandidate } from '@rallia/shared-hooks';
 import type {
   PlayerSearchResult,
   ReputationTier,
@@ -105,8 +106,8 @@ interface PlayerCardProps {
   colors: PlayerInviteStepProps['colors'];
   isDark: boolean;
   reputationDisplay?: ReputationDisplay;
-  /** Small pill shown next to badges (e.g. "Free at game time" on great-fit cards) */
-  fitLabel?: string;
+  /** Small pills shown next to badges explaining the ranking (max 2) */
+  reasonChips?: string[];
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -116,7 +117,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   colors,
   isDark,
   reputationDisplay,
-  fitLabel,
+  reasonChips,
 }) => {
   const handlePress = () => {
     selectionHaptic();
@@ -183,14 +184,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           {reputationDisplay && (
             <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
           )}
-          {fitLabel && (
-            <View style={[styles.fitPill, { backgroundColor: `${colors.buttonActive}15` }]}>
-              <Ionicons name="time-outline" size={11} color={colors.buttonActive} />
+          {reasonChips?.map(chip => (
+            <View
+              key={chip}
+              style={[styles.fitPill, { backgroundColor: `${colors.buttonActive}15` }]}
+            >
               <Text size="xs" color={colors.buttonActive}>
-                {fitLabel}
+                {chip}
               </Text>
             </View>
-          )}
+          ))}
         </View>
       </View>
 
@@ -370,14 +373,33 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     };
   }, [matchId]);
 
-  // Player search hook — distance-ranked once match coordinates are known.
+  // Browse mode: one compatibility-ranked list from get_match_invite_candidates
+  // (availability at game time, responsiveness, skill fit, pair history, ...).
+  // Typing a search switches to the plain name search below.
+  const usingRankedList = searchQuery.length === 0;
+
   const {
-    players,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch,
+    candidates: rankedCandidates,
+    isLoading: isLoadingRanked,
+    isFetchingNextPage: isFetchingNextRanked,
+    hasNextPage: hasNextRanked,
+    fetchNextPage: fetchNextRanked,
+    refetch: refetchRanked,
+    error: rankedError,
+  } = useMatchInviteCandidates({
+    matchId,
+    excludePlayerIds: effectiveExcludePlayerIds,
+    enabled: usingRankedList,
+  });
+
+  // Name search (query typed) — distance-ranked once match coordinates are known.
+  const {
+    players: searchPlayers,
+    isLoading: isLoadingSearch,
+    isFetchingNextPage: isFetchingNextSearch,
+    hasNextPage: hasNextSearch,
+    fetchNextPage: fetchNextSearch,
+    refetch: refetchSearch,
     error: searchError,
   } = usePlayerSearch({
     sportId,
@@ -386,34 +408,17 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     excludePlayerIds: effectiveExcludePlayerIds,
     latitude: matchContext?.latitude,
     longitude: matchContext?.longitude,
-    enabled: matchContext !== null,
+    enabled: !usingRankedList && matchContext !== null,
   });
 
-  // "Great fits": players whose declared availability covers the game's
-  // weekday + hour, nearest first. Rendered as a pinned section on top.
-  const { players: fitPlayers } = usePlayerSearch({
-    sportId,
-    currentUserId: hostId,
-    searchQuery: '',
-    excludePlayerIds: effectiveExcludePlayerIds,
-    latitude: matchContext?.latitude,
-    longitude: matchContext?.longitude,
-    filters:
-      matchContext?.day && matchContext?.hour != null
-        ? {
-            day: matchContext.day,
-            hourRange: { minHour: matchContext.hour, maxHour: matchContext.hour },
-          }
-        : {},
-    pageSize: 10,
-    enabled:
-      matchContext !== null &&
-      !!matchContext.day &&
-      matchContext.hour != null &&
-      searchQuery.length === 0,
-  });
-  const fitPlayerIds = useMemo(() => new Set(fitPlayers.map(p => p.id)), [fitPlayers]);
-  const showFitSection = searchQuery.length === 0 && fitPlayers.length > 0;
+  // Unified view of whichever source is live.
+  const players = usingRankedList ? rankedCandidates : searchPlayers;
+  const isLoading = usingRankedList ? isLoadingRanked : isLoadingSearch;
+  const isFetchingNextPage = usingRankedList ? isFetchingNextRanked : isFetchingNextSearch;
+  const hasNextPage = usingRankedList ? hasNextRanked : hasNextSearch;
+  const fetchNextPage = usingRankedList ? fetchNextRanked : fetchNextSearch;
+  const refetch = usingRankedList ? refetchRanked : refetchSearch;
+  const listError = usingRankedList ? rankedError : searchError;
 
   // Invite mutation - do not close sheet on success so user can also share with contacts
   const { invitePlayers, isInviting } = useInviteToMatch({
@@ -517,6 +522,23 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     []
   );
 
+  // Top-2 ranking reasons as chip labels (priority: strongest signals first).
+  const getReasonChips = useCallback(
+    (item: PlayerSearchResult): string[] | undefined => {
+      const reasons = (item as InviteCandidate).reasons;
+      if (!reasons) return undefined;
+      const chips: string[] = [];
+      if (reasons.playedTogether) chips.push(t('matchCreation.invite.chips.playedTogether'));
+      if (reasons.availableAtSlot) chips.push(t('matchCreation.invite.freeAtGameTime'));
+      if (reasons.respondsFast) chips.push(t('matchCreation.invite.chips.respondsFast'));
+      if (reasons.sameRating) chips.push(t('matchCreation.invite.chips.sameRating'));
+      if (reasons.activeRecently) chips.push(t('matchCreation.invite.chips.activeRecently'));
+      if (reasons.favoriteFacility) chips.push(t('matchCreation.invite.chips.playsHere'));
+      return chips.slice(0, 2);
+    },
+    [t]
+  );
+
   // Render player item
   const renderPlayer = useCallback(
     ({ item }: { item: PlayerSearchResult }) => (
@@ -527,9 +549,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         colors={colors}
         isDark={isDark}
         reputationDisplay={getReputationDisplay(item)}
+        reasonChips={getReasonChips(item)}
       />
     ),
-    [selectedPlayerIds, handleTogglePlayer, colors, isDark, getReputationDisplay]
+    [selectedPlayerIds, handleTogglePlayer, colors, isDark, getReputationDisplay, getReasonChips]
   );
 
   // Render footer (loading indicator for infinite scroll)
@@ -555,7 +578,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       );
     }
 
-    if (searchError) {
+    if (listError) {
       return (
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
@@ -592,7 +615,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     }
 
     return null;
-  }, [isLoading, searchError, searchQuery, players.length, colors, t]);
+  }, [isLoading, listError, searchQuery, players.length, colors, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -647,41 +670,14 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
       {/* Player list */}
       <FlatList
-        data={showFitSection ? players.filter(p => !fitPlayerIds.has(p.id)) : players}
+        data={players}
         keyExtractor={item => item.id}
         renderItem={renderPlayer}
         ListHeaderComponent={
-          showFitSection ? (
-            <View>
-              <Text
-                size="sm"
-                weight="semibold"
-                color={colors.textMuted}
-                style={styles.sectionLabel}
-              >
-                {t('matchCreation.invite.greatFits')}
-              </Text>
-              {fitPlayers.map(player => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  isSelected={selectedPlayerIds.has(player.id)}
-                  onToggle={handleTogglePlayer}
-                  colors={colors}
-                  isDark={isDark}
-                  reputationDisplay={getReputationDisplay(player)}
-                  fitLabel={t('matchCreation.invite.freeAtGameTime')}
-                />
-              ))}
-              <Text
-                size="sm"
-                weight="semibold"
-                color={colors.textMuted}
-                style={styles.sectionLabel}
-              >
-                {t('matchCreation.invite.morePlayers')}
-              </Text>
-            </View>
+          usingRankedList && players.length > 0 ? (
+            <Text size="sm" weight="semibold" color={colors.textMuted} style={styles.sectionLabel}>
+              {t('matchCreation.invite.suggestedForGame')}
+            </Text>
           ) : null
         }
         ListEmptyComponent={renderEmptyState}

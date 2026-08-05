@@ -10586,6 +10586,33 @@ export type Database = {
           sport_name: string
         }[]
       }
+      get_match_invite_candidates: {
+        Args: { p_limit?: number; p_match_id: string; p_offset?: number }
+        Returns: {
+          active_recently: boolean
+          available_at_slot: boolean
+          badge_status: string
+          city: string
+          compat_score: number
+          display_name: string
+          distance_meters: number
+          favorite_facility: boolean
+          first_name: string
+          gender: string
+          id: string
+          last_name: string
+          played_together: boolean
+          profile_picture_url: string
+          rating_label: string
+          rating_value: number
+          reputation_is_public: boolean
+          reputation_score: number
+          reputation_tier: string
+          responds_fast: boolean
+          same_rating: boolean
+          total_count: number
+        }[]
+      }
       get_match_quality_analytics: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {

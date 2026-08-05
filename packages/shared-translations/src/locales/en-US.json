@@ -4184,7 +4184,15 @@
       "selectContactsFromLists": "Select contacts from your lists",
       "greatFits": "Great fits for this game",
       "morePlayers": "More players",
-      "freeAtGameTime": "Free at game time"
+      "freeAtGameTime": "Free at game time",
+      "suggestedForGame": "Suggested for this game",
+      "chips": {
+        "playedTogether": "Played together",
+        "respondsFast": "Responds fast",
+        "sameRating": "Same level",
+        "activeRecently": "Active this week",
+        "playsHere": "Plays here often"
+      }
     }
   },
   "leaderboard": {

@@ -4184,7 +4184,15 @@
       "selectContactsFromLists": "Sélectionner des contacts dans vos listes",
       "greatFits": "De bons choix pour cette partie",
       "morePlayers": "Plus de joueurs",
-      "freeAtGameTime": "Libre à l'heure de la partie"
+      "freeAtGameTime": "Libre à l'heure de la partie",
+      "suggestedForGame": "Suggérés pour cette partie",
+      "chips": {
+        "playedTogether": "Déjà joué ensemble",
+        "respondsFast": "Répond vite",
+        "sameRating": "Même niveau",
+        "activeRecently": "Actif cette semaine",
+        "playsHere": "Joue souvent ici"
+      }
     }
   },
   "leaderboard": {
