@@ -10199,16 +10199,6 @@ export type Database = {
           time_suggested: number
         }[]
       }
-      get_availability_refresh_eligible_users: {
-        Args: never
-        Returns: {
-          email: string
-          first_name: string
-          most_recent_confirmed_at: string
-          preferred_locale: string
-          user_id: string
-        }[]
-      }
       get_available_slots: {
         Args: { p_court_id: string; p_date: string }
         Returns: {
