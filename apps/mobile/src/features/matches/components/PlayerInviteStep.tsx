@@ -40,6 +40,7 @@ import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation'
 import { SearchBar } from '#/components/SearchBar';
 import RatingBadge from '#/components/RatingBadge';
 import ReputationBadge from '#/components/ReputationBadge';
+import ReasonBadge, { type ReasonKey } from '#/components/ReasonBadge';
 import * as Analytics from '#/services/analytics';
 
 // =============================================================================
@@ -119,8 +120,10 @@ interface PlayerCardProps {
   colors: PlayerInviteStepProps['colors'];
   isDark: boolean;
   reputationDisplay?: ReputationDisplay;
-  /** Small pills shown next to badges explaining the ranking (max 2) */
-  reasonChips?: string[];
+  /** Why this player is suggested — rendered as badges in the same family */
+  reasons?: { key: ReasonKey; label: string }[];
+  /** Pre-formatted distance from the game (e.g. "12 km") */
+  distanceLabel?: string;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -130,45 +133,48 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   colors,
   isDark,
   reputationDisplay,
-  reasonChips,
+  reasons,
+  distanceLabel,
 }) => {
   const handlePress = () => {
     selectionHaptic();
     onToggle(player);
   };
 
+  const fullName = `${player.first_name} ${player.last_name}`.trim();
+
   return (
     <TouchableOpacity
       style={[
         styles.playerCard,
         {
-          backgroundColor: isSelected ? `${colors.buttonActive}15` : colors.buttonInactive,
+          backgroundColor: isSelected ? `${colors.buttonActive}12` : colors.cardBackground,
           borderColor: isSelected ? colors.buttonActive : colors.border,
+          borderWidth: isSelected ? 1.5 : StyleSheet.hairlineWidth,
         },
       ]}
       onPress={handlePress}
       activeOpacity={0.7}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: isSelected }}
+      accessibilityLabel={fullName}
     >
-      {/* Avatar */}
-      <View style={styles.avatarContainer}>
+      {/* Avatar with selection ring */}
+      <View
+        style={[
+          styles.avatarRing,
+          { borderColor: isSelected ? colors.buttonActive : 'transparent' },
+        ]}
+      >
         {player.profile_picture_url ? (
           <Image
             source={{ uri: getProfilePictureUrl(player.profile_picture_url) || '' }}
             style={styles.avatar}
           />
         ) : (
-          <View
-            style={[
-              styles.avatarFallback,
-              { backgroundColor: isSelected ? colors.buttonActive : colors.border },
-            ]}
-          >
-            <Text
-              size="sm"
-              weight="semibold"
-              color={isSelected ? colors.buttonTextActive : colors.textMuted}
-            >
-              {getInitials(`${player.first_name} ${player.last_name}`)}
+          <View style={[styles.avatarFallback, { backgroundColor: `${colors.buttonActive}1A` }]}>
+            <Text size="base" weight="semibold" color={colors.buttonActive}>
+              {getInitials(fullName)}
             </Text>
           </View>
         )}
@@ -176,38 +182,49 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
       {/* Player info */}
       <View style={styles.playerInfo}>
-        <Text
-          size="base"
-          weight={isSelected ? 'semibold' : 'regular'}
-          color={isSelected ? colors.buttonActive : colors.text}
-          numberOfLines={1}
-        >
-          {player.first_name} {player.last_name}
-        </Text>
-        <View style={styles.badgesRow}>
-          {player.rating && (
-            <RatingBadge
-              ratingValue={player.rating.value}
-              ratingLabel={player.rating.label}
-              certificationStatus={player.rating.badge_status}
-              isDark={isDark}
-              size="sm"
-            />
+        <View style={styles.nameRow}>
+          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+            {fullName}
+          </Text>
+          {distanceLabel && (
+            <Text size="xs" color={colors.textMuted} style={styles.distanceLabel}>
+              {distanceLabel}
+            </Text>
           )}
-          {reputationDisplay && (
-            <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
-          )}
-          {reasonChips?.map(chip => (
-            <View
-              key={chip}
-              style={[styles.fitPill, { backgroundColor: `${colors.buttonActive}15` }]}
-            >
-              <Text size="xs" color={colors.buttonActive}>
-                {chip}
-              </Text>
-            </View>
-          ))}
         </View>
+
+        {/* Identity badges: who they are */}
+        {(player.rating || reputationDisplay) && (
+          <View style={styles.badgesRow}>
+            {player.rating && (
+              <RatingBadge
+                ratingValue={player.rating.value}
+                ratingLabel={player.rating.label}
+                certificationStatus={player.rating.badge_status}
+                isDark={isDark}
+                size="sm"
+              />
+            )}
+            {reputationDisplay && (
+              <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
+            )}
+          </View>
+        )}
+
+        {/* Reason badges: why they're suggested */}
+        {reasons && reasons.length > 0 && (
+          <View style={styles.badgesRow}>
+            {reasons.map(reason => (
+              <ReasonBadge
+                key={reason.key}
+                reason={reason.key}
+                label={reason.label}
+                isDark={isDark}
+                size="sm"
+              />
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Selection indicator */}
@@ -220,9 +237,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           },
         ]}
       >
-        {isSelected && (
-          <Ionicons name="checkmark-outline" size={14} color={colors.buttonTextActive} />
-        )}
+        {isSelected && <Ionicons name="checkmark" size={15} color={colors.buttonTextActive} />}
       </View>
     </TouchableOpacity>
   );
@@ -538,21 +553,37 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   );
 
   // Top-2 ranking reasons as chip labels (priority: strongest signals first).
-  const getReasonChips = useCallback(
-    (item: PlayerSearchResult): string[] | undefined => {
+  const getReasons = useCallback(
+    (item: PlayerSearchResult): { key: ReasonKey; label: string }[] | undefined => {
       const reasons = (item as InviteCandidate).reasons;
       if (!reasons) return undefined;
-      const chips: string[] = [];
-      if (reasons.playedTogether) chips.push(t('matchCreation.invite.chips.playedTogether'));
-      if (reasons.availableAtSlot) chips.push(t('matchCreation.invite.freeAtGameTime'));
-      if (reasons.respondsFast) chips.push(t('matchCreation.invite.chips.respondsFast'));
-      if (reasons.sameRating) chips.push(t('matchCreation.invite.chips.sameRating'));
-      if (reasons.activeRecently) chips.push(t('matchCreation.invite.chips.activeRecently'));
-      if (reasons.favoriteFacility) chips.push(t('matchCreation.invite.chips.playsHere'));
-      return chips.slice(0, 2);
+      const out: { key: ReasonKey; label: string }[] = [];
+      if (reasons.playedTogether)
+        out.push({ key: 'playedTogether', label: t('matchCreation.invite.chips.playedTogether') });
+      if (reasons.availableAtSlot)
+        out.push({ key: 'availableAtSlot', label: t('matchCreation.invite.freeAtGameTime') });
+      if (reasons.respondsFast)
+        out.push({ key: 'respondsFast', label: t('matchCreation.invite.chips.respondsFast') });
+      if (reasons.sameRating)
+        out.push({ key: 'sameRating', label: t('matchCreation.invite.chips.sameRating') });
+      if (reasons.activeRecently)
+        out.push({ key: 'activeRecently', label: t('matchCreation.invite.chips.activeRecently') });
+      if (reasons.favoriteFacility)
+        out.push({ key: 'favoriteFacility', label: t('matchCreation.invite.chips.playsHere') });
+      // Two strongest reasons only: more than that wraps into a third row and
+      // makes every card tall without adding decision value.
+      return out.slice(0, 2);
     },
     [t]
   );
+
+  // Distance from the game, rounded for glanceability.
+  const getDistanceLabel = useCallback((item: PlayerSearchResult): string | undefined => {
+    const meters = item.distance_meters;
+    if (meters == null) return undefined;
+    const km = meters / 1000;
+    return km < 1 ? '<1 km' : `${Math.round(km)} km`;
+  }, []);
 
   // Render player item
   const renderPlayer = useCallback(
@@ -564,10 +595,19 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         colors={colors}
         isDark={isDark}
         reputationDisplay={getReputationDisplay(item)}
-        reasonChips={getReasonChips(item)}
+        reasons={getReasons(item)}
+        distanceLabel={getDistanceLabel(item)}
       />
     ),
-    [selectedPlayerIds, handleTogglePlayer, colors, isDark, getReputationDisplay, getReasonChips]
+    [
+      selectedPlayerIds,
+      handleTogglePlayer,
+      colors,
+      isDark,
+      getReputationDisplay,
+      getReasons,
+      getDistanceLabel,
+    ]
   );
 
   // Render footer (loading indicator for infinite scroll)
@@ -870,31 +910,47 @@ const styles = StyleSheet.create({
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.xl,
     marginBottom: spacingPixels[2],
     gap: spacingPixels[3],
   },
-  avatarContainer: {
-    width: 40,
-    height: 40,
+  // Ring is always laid out (transparent when unselected) so selecting a
+  // card never shifts the row's layout.
+  avatarRing: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Top-aligned so the avatar reads with the name, not the badge stack.
+    alignSelf: 'flex-start',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playerInfo: {
     flex: 1,
-    gap: spacingPixels[1],
+    gap: spacingPixels[1.5],
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  distanceLabel: {
+    marginLeft: 'auto',
   },
   badgesRow: {
     flexDirection: 'row',
@@ -935,14 +991,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.lg,
   },
-  fitPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: 2,
-    borderRadius: radiusPixels.full,
-  },
   sectionLabel: {
     marginTop: spacingPixels[3],
     marginBottom: spacingPixels[2],
@@ -957,12 +1005,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-start',
+    marginTop: spacingPixels[0.5],
   },
   emptyState: {
     flex: 1,
