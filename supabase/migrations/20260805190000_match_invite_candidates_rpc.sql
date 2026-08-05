@@ -14,15 +14,19 @@
 --        exclusions); needs >= 3 qualifying invites else 0.5 neutral. The
 --        returned `responds_fast` flag is likewise rate-based; the UI labels
 --        it "Responsive" for that reason.
---   0.20 skill fit vs the gate rating (match minimum, else host active),
+--   0.18 skill fit vs the gate rating (match minimum, else host active),
 --        including the badge-status interplay
---   0.09 proximity to the match point (linear decay over the candidate's own
---        travel radius; favorite-facility candidates with no location = 0.7;
---        low weight on purpose: the pool is already proximity-bounded)
 --   0.10 match-type fit (game's expectation vs candidate preference)
---   0.08 activity recency (player_activity_score)
+--   0.08 venue affinity for the match's facility: favorited (sport-scoped) =
+--        1.0, else 2+ games played there in 180d = 0.7, 1 game = 0.45,
+--        otherwise 0.15; no facility on the game = 0.5 neutral
+--   0.07 activity recency (player_activity_score)
+--   0.06 proximity to the match point (linear decay over the candidate's own
+--        travel radius; low weight on purpose: the pool is already
+--        proximity-bounded, and venue affinity carries the "knows this place"
+--        signal)
 --   0.05 duration fit
---   0.05 reputation (private reputation = 0.5 neutral)
+--   0.04 reputation (private reputation = 0.5 neutral)
 --   + pair history bonus/penalty capped at +/-0.5 (played together weight,
 --     host's past star ratings of them, host favorited them, minus their
 --     no-shows/lates toward the host)
@@ -156,11 +160,14 @@ BEGIN
       CASE WHEN v_point IS NOT NULL AND p.location IS NOT NULL
         THEN extensions.ST_Distance(p.location, v_point)
       END AS dist_m,
+      -- Sport-scoped: favoriting a venue for another sport says nothing about
+      -- whether they play THIS sport there.
       EXISTS (
         SELECT 1 FROM player_favorite_facility pff
         WHERE pff.player_id = p.id
           AND v_m.facility_id IS NOT NULL
           AND pff.facility_id = v_m.facility_id
+          AND (pff.sport_id IS NULL OR pff.sport_id = v_m.sport_id)
       ) AS fav_facility
     FROM player p
     JOIN player_sport ps
@@ -188,6 +195,7 @@ BEGIN
           WHERE pff2.player_id = p.id
             AND v_m.facility_id IS NOT NULL
             AND pff2.facility_id = v_m.facility_id
+            AND (pff2.sport_id IS NULL OR pff2.sport_id = v_m.sport_id)
         )
         OR EXISTS (
           SELECT 1
@@ -298,11 +306,38 @@ BEGIN
     GROUP BY mf.opponent_id
   ),
 
+  -- Venue familiarity: games actually played at the match's facility in the
+  -- last 180 days. Favoriting is the explicit signal, this is the revealed one
+  -- (plenty of regulars never tap the heart).
+  venue_history AS (
+    SELECT mp.player_id, COUNT(*) AS plays_here
+    FROM match_participant mp
+    JOIN match vm ON vm.id = mp.match_id
+    WHERE mp.player_id IN (SELECT po.pid FROM pool po)
+      AND mp.status = 'joined'
+      AND vm.facility_id IS NOT NULL
+      AND vm.facility_id = v_m.facility_id
+      AND vm.cancelled_at IS NULL
+      AND vm.match_date >= CURRENT_DATE - 180
+      AND vm.match_date < CURRENT_DATE
+    GROUP BY mp.player_id
+  ),
+
   scored AS (
     SELECT
       po.pid,
       po.dist_m,
       po.fav_facility,
+      COALESCE(vh.plays_here, 0) AS plays_here,
+      -- Neutral when the game has no facility yet: nobody can be a regular at
+      -- a venue that hasn't been chosen.
+      CASE
+        WHEN v_m.facility_id IS NULL THEN 0.5
+        WHEN po.fav_facility THEN 1.0
+        WHEN COALESCE(vh.plays_here, 0) >= 2 THEN 0.7
+        WHEN COALESCE(vh.plays_here, 0) = 1 THEN 0.45
+        ELSE 0.15
+      END AS score_facility,
       er.rating_score_id,
       er.rating_value,
       er.rating_label,
@@ -391,6 +426,7 @@ BEGIN
     LEFT JOIN player_reputation prep ON prep.player_id = po.pid
     LEFT JOIN pair_matches pmh ON pmh.pid = po.pid
     LEFT JOIN pair_feedback pf ON pf.pid = po.pid
+    LEFT JOIN venue_history vh ON vh.player_id = po.pid
   ),
 
   final AS (
@@ -398,13 +434,14 @@ BEGIN
       s.*,
       LEAST(1.5, GREATEST(0.0,
         ( 0.25 * (CASE WHEN s.avail_cell THEN 1.0 WHEN s.has_avail_rows THEN 0.0 ELSE 0.4 END)
-        + 0.18 * s.score_responsiveness
-        + 0.20 * s.score_skill
-        + 0.09 * s.score_proximity
+        + 0.18 * s.score_skill
+        + 0.17 * s.score_responsiveness
         + 0.10 * s.score_match_type
-        + 0.08 * s.score_activity
+        + 0.08 * s.score_facility
+        + 0.07 * s.score_activity
+        + 0.06 * s.score_proximity
         + 0.05 * s.score_duration
-        + 0.05 * s.score_reputation
+        + 0.04 * s.score_reputation
         )
         + GREATEST(-0.5, LEAST(0.5,
             (CASE WHEN s.pair_count = 0 AND s.fb_events = 0 AND NOT s.host_favorited THEN 0
@@ -443,7 +480,7 @@ BEGIN
     (f.score_activity >= 0.85),
     (f.pair_count >= 1),
     (v_gate_rating_score_id IS NOT NULL AND f.rating_score_id = v_gate_rating_score_id),
-    f.fav_facility,
+    (f.fav_facility OR f.plays_here >= 2),
     COUNT(*) OVER ()
   FROM final f
   JOIN profile pr ON pr.id = f.pid
