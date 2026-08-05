@@ -632,6 +632,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             last_name: formData.lastName,
             birth_date: formattedDate,
             gender: formData.gender as GenderEnum,
+            phone: formData.phoneNumber.trim() || undefined,
             profile_picture_url: uploadedImageUrl,
           });
 
@@ -640,6 +641,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveInfo'));
             setIsSaving(false);
             return false;
+          }
+
+          if (!formData.phoneVerified) {
+            Analytics.phoneCaptureSkipped({
+              source: 'onboarding',
+              had_number: !!formData.phoneNumber.trim(),
+            });
           }
 
           // Silently persist the home location captured in pre-onboarding to the
