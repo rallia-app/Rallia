@@ -617,6 +617,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
   // Player invitation step (shown after success for new matches)
   const [showInviteStep, setShowInviteStep] = useState(false);
+  // New matches land directly on the invite step (hot moment: line up players
+  // while motivation is peak); share/view/create-another sit one step back.
+  const defaultToInviteRef = useRef(false);
   const [isSharing, setIsSharing] = useState(false);
 
   // Match creation mutation
@@ -637,6 +640,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
         successHaptic();
         clearDraft();
         setSuccessMatchId(match.id);
+        defaultToInviteRef.current = true;
+        setShowInviteStep(true);
         setShowSuccess(true);
       }, 800); // 800ms delay for perceived effort
     },
@@ -1154,8 +1159,9 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       // Fade in and scale up success view - snappy with no bounce
       successOpacity.value = withTiming(1, { duration: 250 });
       successScale.value = withTiming(1, { duration: 250 });
-      // Reset post-success position
-      postSuccessTranslateX.value = 0;
+      // Land directly on the invite panel for new matches (no slide flash);
+      // the options panel stays one back-chevron away.
+      postSuccessTranslateX.value = defaultToInviteRef.current ? -SCREEN_WIDTH : 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSuccess]);
@@ -1371,6 +1377,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                       successScale.value = 0.8;
                       formOpacity.value = 1;
                       postSuccessTranslateX.value = 0;
+                      defaultToInviteRef.current = false;
                       setShowSuccess(false);
                       setSuccessMatchId(null);
                       setShowInviteStep(false);
@@ -1395,6 +1402,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 matchId={successMatchId}
                 sportId={selectedSport.id}
                 hostId={session.user.id}
+                successNote={t('matchCreation.invite.gameCreatedNote')}
                 onComplete={() => {
                   // Close invite step and go to match detail
                   onSuccess?.(successMatchId);

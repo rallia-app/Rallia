@@ -76,6 +76,8 @@ interface PlayerInviteStepProps {
   onInviteSuccess?: (participants: MatchParticipantWithPlayer[]) => void;
   /** When true, show a close (X) icon in the top right that calls onComplete (e.g. in wizard; sheet has its own X) */
   showCloseButton?: boolean;
+  /** Confirmation line shown above the header (e.g. "Game created!" when this step is the post-creation default) */
+  successNote?: string;
   /** Optional callback to navigate back (e.g. to the previous step in a wizard). When provided, a back chevron is rendered in the header. */
   onBack?: () => void;
 }
@@ -288,6 +290,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   excludePlayerIds,
   onInviteSuccess,
   showCloseButton = false,
+  successNote,
   onBack,
 }) => {
   const toast = useToast();
@@ -619,6 +622,16 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Creation confirmation (when this step is the post-creation default) */}
+      {successNote && (
+        <View style={[styles.successNote, { backgroundColor: `${colors.buttonActive}12` }]}>
+          <Ionicons name="checkmark-circle" size={18} color={colors.buttonActive} />
+          <Text size="sm" weight="semibold" color={colors.buttonActive}>
+            {successNote}
+          </Text>
+        </View>
+      )}
+
       {/* Header with optional back (chevron) and close (X) */}
       <View style={styles.header}>
         {onBack && (
@@ -837,6 +850,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[1],
     flexWrap: 'wrap',
+  },
+  successNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.lg,
   },
   fitPill: {
     flexDirection: 'row',
