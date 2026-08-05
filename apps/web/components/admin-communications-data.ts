@@ -22,6 +22,7 @@ export type NotificationType =
   | 'match_new_available'
   | 'match_spot_opened'
   | 'court_booking_nudge'
+  | 'match_last_minute_spots'
   | 'nearby_match_available'
   | 'player_kicked'
   | 'player_left'
@@ -77,6 +78,7 @@ export const NOTIFICATION_CATEGORIES: Record<NotificationType, NotificationCateg
   match_new_available: 'match',
   match_spot_opened: 'match',
   court_booking_nudge: 'match',
+  match_last_minute_spots: 'match',
   nearby_match_available: 'match',
   player_kicked: 'match',
   player_left: 'match',
@@ -133,6 +135,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
   court_booking_nudge: { email: false, push: true, sms: false },
+  match_last_minute_spots: { email: false, push: true, sms: false },
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false },
