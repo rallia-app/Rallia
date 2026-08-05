@@ -10,8 +10,10 @@
 -- Scoring (base weights sum to 1.00, then pair-history bonus and penalties):
 --   0.25 availability at the game's weekday+hour (unknown schedule = 0.4
 --        neutral: absence of data must not bury a player)
---   0.18 responsiveness (JFY recipe: 90d window, invitee rows only,
---        auto/self rows excluded, needs >= 3 received else 0.5 neutral)
+--   0.18 responsiveness — response RATE, not speed (see the CTE for the
+--        exclusions); needs >= 3 qualifying invites else 0.5 neutral. The
+--        returned `responds_fast` flag is likewise rate-based; the UI labels
+--        it "Responsive" for that reason.
 --   0.20 skill fit vs the gate rating (match minimum, else host active),
 --        including the badge-status interplay
 --   0.09 proximity to the match point (linear decay over the candidate's own
@@ -215,11 +217,22 @@ BEGIN
       AND eps.player_id IN (SELECT po.pid FROM pool po)
   ),
 
-  -- JFY responsiveness recipe (90d, invitee rows only, settled statuses).
+  -- Responsiveness over invites the player actually had a fair chance to
+  -- answer (90d). Exclusions follow specs/responsiveness/README.md §2, whose
+  -- prod pull showed the metric is meaningless without them:
+  --   * auto-generated invites (5.0% response rate vs 32.9% human) would make
+  --     every player look unresponsive;
+  --   * non-responses on games the HOST later cancelled aren't the invitee's
+  --     fault (63% of ignored human invites);
+  --   * self-requests (requested_at set) are not invites at all.
+  -- 'kicked' counts as responded: the host removed them after they joined.
   responsiveness AS (
     SELECT mp.player_id,
            COUNT(*) AS received,
-           COUNT(*) FILTER (WHERE mp.status IN ('joined','declined','left','refused')) AS responded,
+           COUNT(*) FILTER (
+             WHERE mp.responded_at IS NOT NULL
+                OR mp.status IN ('joined','declined','left','refused','kicked')
+           ) AS responded,
            COUNT(*) FILTER (WHERE mp.status = 'joined') AS accepted
     FROM match_participant mp
     JOIN match m2 ON m2.id = mp.match_id
@@ -228,6 +241,13 @@ BEGIN
       AND mp.is_host = FALSE
       AND m2.created_by != mp.player_id
       AND mp.status NOT IN ('cancelled', 'requested', 'waitlisted')
+      AND mp.requested_at IS NULL
+      AND COALESCE(m2.is_auto_generated, false) = false
+      AND NOT (
+        m2.cancelled_at IS NOT NULL
+        AND mp.responded_at IS NULL
+        AND mp.status NOT IN ('joined','declined','left','refused','kicked')
+      )
       AND (m2.match_date < CURRENT_DATE OR mp.created_at < now() - INTERVAL '3 days')
     GROUP BY mp.player_id
   ),

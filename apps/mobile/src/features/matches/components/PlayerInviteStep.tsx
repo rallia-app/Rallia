@@ -502,7 +502,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       if (reasons.availableAtSlot)
         out.push({ key: 'availableAtSlot', label: t('matchCreation.invite.freeAtGameTime') });
       if (reasons.respondsFast)
-        out.push({ key: 'respondsFast', label: t('matchCreation.invite.chips.respondsFast') });
+        out.push({ key: 'responsive', label: t('matchCreation.invite.chips.responsive') });
       if (reasons.sameRating)
         out.push({ key: 'sameRating', label: t('matchCreation.invite.chips.sameRating') });
       if (reasons.activeRecently)

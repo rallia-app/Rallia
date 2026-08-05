@@ -17,7 +17,7 @@ import { spacingPixels, radiusPixels, primary, accent, status } from '@rallia/de
 export type ReasonKey =
   | 'playedTogether'
   | 'availableAtSlot'
-  | 'respondsFast'
+  | 'responsive'
   | 'sameRating'
   | 'activeRecently'
   | 'favoriteFacility';
@@ -29,7 +29,8 @@ export const REASON_BADGE_CONFIG: Record<
 > = {
   playedTogether: { color: primary[600], icon: 'people' },
   availableAtSlot: { color: status.success.DEFAULT, icon: 'time' },
-  respondsFast: { color: status.info.DEFAULT, icon: 'flash' },
+  // Rate, not speed — hence a "replies" icon rather than a lightning bolt.
+  responsive: { color: status.info.DEFAULT, icon: 'checkmark-done' },
   sameRating: { color: primary[500], icon: 'git-compare' },
   activeRecently: { color: status.success.light, icon: 'pulse' },
   favoriteFacility: { color: accent[600], icon: 'location' },
