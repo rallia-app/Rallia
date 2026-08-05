@@ -58,6 +58,18 @@ export function onboardingAbandoned(props: {
   capture('onboarding_abandoned', props);
 }
 
+export function phoneCodeSent(props: { source: 'onboarding' | 'settings' }): void {
+  capture('phone_code_sent', props);
+}
+
+export function phoneVerified(props: { source: 'onboarding' | 'settings' }): void {
+  capture('phone_verified', props);
+}
+
+export function phoneCaptureSkipped(props: { source: 'onboarding'; had_number: boolean }): void {
+  capture('phone_capture_skipped', props);
+}
+
 // ---- Core Loop ----
 
 export function matchCreated(props: {

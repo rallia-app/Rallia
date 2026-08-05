@@ -12231,5 +12231,20 @@
       "signOutConfirmTitle": "Se déconnecter?",
       "signOutConfirmMessage": "Tu devras accepter la politique mise à jour lors de ta prochaine connexion."
     }
+  },
+  "phoneVerification": {
+    "verify": "Vérifier",
+    "enterCode": "Entre le code à 6 chiffres qu'on t'a texté au {phone}",
+    "resend": "Renvoyer le code",
+    "resendIn": "Renvoyer dans {seconds}s",
+    "success": "Numéro de téléphone vérifié",
+    "consentNotice": "En vérifiant ton numéro, tu acceptes que Rallia puisse te texter à propos de tes parties. Des frais de messagerie peuvent s'appliquer. Réponds STOP en tout temps pour te désinscrire.",
+    "errors": {
+      "invalidPhone": "Entre un numéro de téléphone valide",
+      "incorrectCode": "Ce code n'est pas bon. Réessaie.",
+      "codeExpired": "Ce code est expiré. Demandes-en un nouveau.",
+      "rateLimited": "Trop d'essais. Attends quelques minutes.",
+      "generic": "Une erreur est survenue. Réessaie."
+    }
   }
 }

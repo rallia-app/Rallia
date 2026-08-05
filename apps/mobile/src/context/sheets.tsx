@@ -624,6 +624,7 @@ declare module 'react-native-actions-sheet' {
           dateOfBirth?: string;
           gender?: string;
           phoneNumber?: string;
+          phoneVerified?: boolean;
           profilePictureUrl?: string;
         };
         onSave?: () => void;
