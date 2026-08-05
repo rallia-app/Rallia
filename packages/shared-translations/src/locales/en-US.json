@@ -12244,6 +12244,7 @@
       "incorrectCode": "That code isn't right. Give it another try.",
       "codeExpired": "This code has expired. Request a new one.",
       "rateLimited": "Too many attempts. Please wait a few minutes.",
+      "sessionExpired": "Your session expired. Sign in again to verify your number.",
       "generic": "Something went wrong. Please try again."
     }
   }

@@ -12244,6 +12244,7 @@
       "incorrectCode": "Ce code n'est pas bon. Réessaie.",
       "codeExpired": "Ce code est expiré. Demandes-en un nouveau.",
       "rateLimited": "Trop d'essais. Attends quelques minutes.",
+      "sessionExpired": "Ta session est expirée. Reconnecte-toi pour vérifier ton numéro.",
       "generic": "Une erreur est survenue. Réessaie."
     }
   }

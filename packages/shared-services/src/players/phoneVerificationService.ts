@@ -13,6 +13,7 @@ export type PhoneVerificationErrorCode =
   | 'incorrect_code'
   | 'code_expired'
   | 'rate_limited'
+  | 'unauthorized'
   | 'unknown';
 
 export type PhoneVerificationSource = 'onboarding' | 'settings';
@@ -22,6 +23,7 @@ const KNOWN_ERROR_CODES: PhoneVerificationErrorCode[] = [
   'incorrect_code',
   'code_expired',
   'rate_limited',
+  'unauthorized',
 ];
 
 async function extractErrorCode(error: {

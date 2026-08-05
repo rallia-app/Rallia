@@ -18,6 +18,7 @@ const ERROR_KEYS: Record<PhoneVerificationErrorCode, TranslationKey> = {
   incorrect_code: 'phoneVerification.errors.incorrectCode',
   code_expired: 'phoneVerification.errors.codeExpired',
   rate_limited: 'phoneVerification.errors.rateLimited',
+  unauthorized: 'phoneVerification.errors.sessionExpired',
   unknown: 'phoneVerification.errors.generic',
 };
 
