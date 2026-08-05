@@ -348,15 +348,16 @@ export function usePushNotifications(
     // check below keeps non-match notifications from matching.
     const matchId = (data.matchId ?? data.targetId) as string | undefined;
 
-    // Cancelled-match taps recover instead of dead-ending: land on Public Games
-    // with context so the player can immediately find a replacement game.
-    if (notificationType === 'match_cancelled') {
+    // Cancelled/unfilled-game taps recover instead of dead-ending: land on
+    // Public Games with context so the player immediately sees alternatives.
+    if (notificationType === 'match_cancelled' || notificationType === 'match_unfilled_recovery') {
       navigateFromOutside('PublicMatches', {
         cancelledContext: {
           matchId,
           matchDate: data.matchDate as string | undefined,
           startTime: data.startTime as string | undefined,
           sportName: data.sportName as string | undefined,
+          reason: notificationType === 'match_cancelled' ? 'cancelled' : 'unfilled',
         },
       });
       Logger.logUserAction('push_notification_deep_link', {

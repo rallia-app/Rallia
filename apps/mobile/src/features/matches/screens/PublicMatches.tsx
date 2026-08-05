@@ -516,8 +516,10 @@ export default function PublicMatches() {
     const ctx = route.params?.cancelledContext;
     if (!ctx) return;
     setCancelledContext(ctx);
+    // Prefilter to the freed-up date only for cancellations; an unfilled game's
+    // slot has already passed, so leave the feed open to the coming days.
     const todayIso = new Date().toISOString().slice(0, 10);
-    if (ctx.matchDate && ctx.matchDate >= todayIso) {
+    if (ctx.reason !== 'unfilled' && ctx.matchDate && ctx.matchDate >= todayIso) {
       setSpecificDate(ctx.matchDate);
     }
     // Consume the param so re-focusing the screen doesn't replay the banner.
@@ -626,13 +628,23 @@ export default function PublicMatches() {
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          <Ionicons name="close-circle-outline" size={22} color={colors.textMuted} />
+          <Ionicons
+            name={
+              cancelledContext.reason === 'unfilled' ? 'refresh-outline' : 'close-circle-outline'
+            }
+            size={22}
+            color={colors.textMuted}
+          />
           <View style={styles.cancelledBannerTextWrap}>
             <Text size="sm" weight="semibold" color={colors.text}>
-              {t('publicMatches.cancelledBanner.title')}
+              {cancelledContext.reason === 'unfilled'
+                ? t('publicMatches.unfilledBanner.title')
+                : t('publicMatches.cancelledBanner.title')}
             </Text>
             <Text size="xs" color={colors.textMuted}>
-              {t('publicMatches.cancelledBanner.description')}
+              {cancelledContext.reason === 'unfilled'
+                ? t('publicMatches.unfilledBanner.description')
+                : t('publicMatches.cancelledBanner.description')}
             </Text>
           </View>
           <TouchableOpacity

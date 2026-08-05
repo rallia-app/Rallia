@@ -146,12 +146,13 @@ export type HomeStackParamList = {
   PlayerMatches: undefined;
   PublicMatches:
     | {
-        /** Context shown when arriving from a match_cancelled notification tap. */
+        /** Context shown when arriving from a cancelled/unfilled-game notification tap. */
         cancelledContext?: {
           matchId?: string;
           matchDate?: string;
           startTime?: string;
           sportName?: string;
+          reason?: 'cancelled' | 'unfilled';
         };
       }
     | undefined;

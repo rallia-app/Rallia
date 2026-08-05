@@ -276,6 +276,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_spot_opened: 'enter-outline',
   court_booking_nudge: 'calendar-outline',
   match_last_minute_spots: 'flash-outline',
+  match_unfilled_recovery: 'refresh-outline',
   nearby_match_available: 'location-outline',
   match_completed: 'trophy-outline',
   player_kicked: 'remove-circle-outline',
@@ -385,6 +386,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_spot_opened: '#4CAF50', // Green
   court_booking_nudge: '#FF9800', // Orange
   match_last_minute_spots: '#F44336', // Red (urgency)
+  match_unfilled_recovery: '#4DB8A8', // Teal (supportive)
   nearby_match_available: '#2196F3', // Blue
   match_completed: '#4CAF50', // Green
   player_kicked: '#F44336', // Red
@@ -492,6 +494,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_spot_opened: 'Spot Opened',
   court_booking_nudge: 'Book Your Court',
   match_last_minute_spots: 'Starting Soon',
+  match_unfilled_recovery: 'Game Recovery',
   nearby_match_available: 'Nearby Match',
   match_completed: 'Match Completed',
   player_kicked: 'Removed from Match',
@@ -598,6 +601,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_spot_opened: 'match',
   court_booking_nudge: 'match',
   match_last_minute_spots: 'match',
+  match_unfilled_recovery: 'match',
   nearby_match_available: 'match',
   match_completed: 'match',
   player_kicked: 'match',
@@ -752,6 +756,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_spot_opened: { email: false, push: true, sms: false },
   court_booking_nudge: { email: false, push: true, sms: false },
   match_last_minute_spots: { email: false, push: true, sms: false },
+  match_unfilled_recovery: { email: false, push: true, sms: false },
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false }, // Push only for player leaves

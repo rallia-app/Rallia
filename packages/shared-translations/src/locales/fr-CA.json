@@ -235,6 +235,7 @@
       "match_spot_opened": "Place libérée",
       "court_booking_nudge": "Réserver ton terrain",
       "match_last_minute_spots": "Ça commence bientôt",
+      "match_unfilled_recovery": "Relance de partie",
       "nearby_match_available": "Partie à proximité",
       "player_kicked": "Retiré de la partie",
       "player_left": "Joueur parti",
@@ -454,6 +455,10 @@
       "match_last_minute_spots": {
         "title": "Ça commence bientôt · {sportName} à {locationName}",
         "body": "Une partie près de toi commence bientôt et il reste des places. Touche pour rejoindre."
+      },
+      "match_unfilled_recovery": {
+        "title": "Ta partie ne s'est pas remplie",
+        "body": "Ça arrive. Touche pour voir les parties ouvertes et te remettre en jeu."
       },
       "nearby_match_available": {
         "title": "Nouvelle partie de {sportName} près de toi",
@@ -6231,6 +6236,10 @@
     "cancelledBanner": {
       "title": "Votre partie a été annulée",
       "description": "Voici d'autres parties ouvertes que vous pourriez rejoindre."
+    },
+    "unfilledBanner": {
+      "title": "Votre partie ne s'est pas remplie",
+      "description": "Rejoignez une partie ouverte ci-dessous, ou créez la prochaine et on vous aidera à la remplir."
     },
     "results": {
       "count": "{count} parties",

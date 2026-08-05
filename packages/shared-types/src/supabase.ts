@@ -2886,6 +2886,7 @@ export type Database = {
           sport_id: string
           start_time: string
           timezone: string
+          unfilled_recovery_sent_at: string | null
           updated_at: string | null
           visibility:
             | Database["public"]["Enums"]["match_visibility_enum"]
@@ -2936,6 +2937,7 @@ export type Database = {
           sport_id: string
           start_time: string
           timezone?: string
+          unfilled_recovery_sent_at?: string | null
           updated_at?: string | null
           visibility?:
             | Database["public"]["Enums"]["match_visibility_enum"]
@@ -2986,6 +2988,7 @@ export type Database = {
           sport_id?: string
           start_time?: string
           timezone?: string
+          unfilled_recovery_sent_at?: string | null
           updated_at?: string | null
           visibility?:
             | Database["public"]["Enums"]["match_visibility_enum"]
@@ -13257,6 +13260,7 @@ export type Database = {
       }
       send_court_booking_nudges: { Args: never; Returns: number }
       send_last_minute_spot_pushes: { Args: never; Returns: number }
+      send_unfilled_host_recovery: { Args: never; Returns: number }
       session_attach_match: {
         Args: { p_match_id: string; p_session_match_id: string }
         Returns: {
@@ -15115,6 +15119,7 @@ export type Database = {
         | "season_cancelled"
         | "court_booking_nudge"
         | "match_last_minute_spots"
+        | "match_unfilled_recovery"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15794,6 +15799,7 @@ export const Constants = {
         "season_cancelled",
         "court_booking_nudge",
         "match_last_minute_spots",
+        "match_unfilled_recovery",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

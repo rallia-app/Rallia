@@ -433,13 +433,17 @@ const Notifications: React.FC = () => {
 
       // Navigate to target based on notification type and target_id
       if (notification.target_id && notification.type) {
-        // Cancelled games recover to Public Games with context instead of the
-        // dead detail sheet (every action is disabled on a cancelled match).
-        if (notification.type === 'match_cancelled') {
+        // Cancelled/unfilled games recover to Public Games with context instead
+        // of the dead detail sheet (every action is disabled on those matches).
+        if (
+          notification.type === 'match_cancelled' ||
+          notification.type === 'match_unfilled_recovery'
+        ) {
           const payload = notification.payload as Record<string, unknown> | null;
           Logger.logUserAction('notification_match_cancelled_redirect', {
             notificationId: notification.id,
             matchId: notification.target_id,
+            type: notification.type,
           });
           navigateFromOutside('PublicMatches', {
             cancelledContext: {
@@ -447,6 +451,7 @@ const Notifications: React.FC = () => {
               matchDate: payload?.matchDate as string | undefined,
               startTime: payload?.startTime as string | undefined,
               sportName: payload?.sportName as string | undefined,
+              reason: notification.type === 'match_cancelled' ? 'cancelled' : 'unfilled',
             },
           });
           return;

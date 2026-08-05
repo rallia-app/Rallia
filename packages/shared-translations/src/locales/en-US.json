@@ -235,6 +235,7 @@
       "match_spot_opened": "Spot opened",
       "court_booking_nudge": "Book your court",
       "match_last_minute_spots": "Starting soon",
+      "match_unfilled_recovery": "Game recovery",
       "nearby_match_available": "Nearby game",
       "player_kicked": "Removed from game",
       "player_left": "Player left",
@@ -454,6 +455,10 @@
       "match_last_minute_spots": {
         "title": "Starting soon · {sportName} at {locationName}",
         "body": "A game near you starts soon and still has open spots. Tap to join."
+      },
+      "match_unfilled_recovery": {
+        "title": "Your game didn't fill this time",
+        "body": "It happens. Tap to browse open games and get back out there."
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",
@@ -6231,6 +6236,10 @@
     "cancelledBanner": {
       "title": "Your game was cancelled",
       "description": "Here are other open games you could join instead."
+    },
+    "unfilledBanner": {
+      "title": "Your game didn't fill this time",
+      "description": "Join an open game below, or create your next one and we'll help fill it."
     },
     "results": {
       "count": "{count} games",
