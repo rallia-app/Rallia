@@ -5,7 +5,7 @@
  * Shows a searchable list of players active in the same sport.
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, type ComponentProps } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
@@ -78,6 +79,16 @@ interface PlayerInviteStepProps {
   showCloseButton?: boolean;
   /** Confirmation line shown above the header (e.g. "Game created!" when this step is the post-creation default) */
   successNote?: string;
+  /** Secondary actions rendered as a chip row under the header (share, view game, ...) */
+  secondaryActions?: {
+    key: string;
+    label: string;
+    icon: ComponentProps<typeof Ionicons>['name'];
+    onPress: () => void;
+    /** Optional brand tint (e.g. Facebook blue); defaults to the theme accent */
+    tint?: string;
+    loading?: boolean;
+  }[];
   /** Optional callback to navigate back (e.g. to the previous step in a wizard). When provided, a back chevron is rendered in the header. */
   onBack?: () => void;
 }
@@ -291,6 +302,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   onInviteSuccess,
   showCloseButton = false,
   successNote,
+  secondaryActions,
   onBack,
 }) => {
   const toast = useToast();
@@ -665,6 +677,45 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         )}
       </View>
 
+      {/* Secondary actions (share, view game, ...) — alternatives to inviting
+          from the list, kept on this screen rather than a separate panel */}
+      {secondaryActions && secondaryActions.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.secondaryActionsScroll}
+          contentContainerStyle={styles.secondaryActionsRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          {secondaryActions.map(action => {
+            const tint = action.tint ?? colors.buttonActive;
+            return (
+              <TouchableOpacity
+                key={action.key}
+                style={[styles.secondaryAction, { borderColor: `${tint}55` }]}
+                onPress={() => {
+                  lightHaptic();
+                  action.onPress();
+                }}
+                disabled={action.loading}
+                activeOpacity={0.7}
+              >
+                {action.loading ? (
+                  <ActivityIndicator size="small" color={tint} />
+                ) : (
+                  <>
+                    <Ionicons name={action.icon} size={15} color={tint} />
+                    <Text size="sm" weight="semibold" color={tint}>
+                      {action.label}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {/* Selected players strip */}
       <SelectedPlayersStrip
         players={selectedPlayers}
@@ -850,6 +901,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[1],
     flexWrap: 'wrap',
+  },
+  // flexGrow/Shrink 0 so the row sizes to its chips instead of being
+  // squeezed by the surrounding flex column (which clipped the chips).
+  secondaryActionsScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
+  },
+  secondaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+    minHeight: 36,
   },
   successNote: {
     flexDirection: 'row',
