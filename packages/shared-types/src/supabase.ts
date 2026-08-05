@@ -13260,6 +13260,7 @@ export type Database = {
       }
       send_court_booking_nudges: { Args: never; Returns: number }
       send_last_minute_spot_pushes: { Args: never; Returns: number }
+      send_play_rhythm_nudges: { Args: never; Returns: number }
       send_unfilled_host_recovery: { Args: never; Returns: number }
       session_attach_match: {
         Args: { p_match_id: string; p_session_match_id: string }
@@ -15120,6 +15121,7 @@ export type Database = {
         | "court_booking_nudge"
         | "match_last_minute_spots"
         | "match_unfilled_recovery"
+        | "play_rhythm_nudge"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15800,6 +15802,7 @@ export const Constants = {
         "court_booking_nudge",
         "match_last_minute_spots",
         "match_unfilled_recovery",
+        "play_rhythm_nudge",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

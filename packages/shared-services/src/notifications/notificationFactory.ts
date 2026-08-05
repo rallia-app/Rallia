@@ -366,6 +366,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   court_booking_nudge: 'high',
   match_last_minute_spots: 'high',
   match_unfilled_recovery: 'high',
+  play_rhythm_nudge: 'normal',
   match_completed: 'normal',
   nearby_match_available: 'normal',
   player_kicked: 'high',
@@ -481,6 +482,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   court_booking_nudge: 'Courts are open at {facilityName}',
   match_last_minute_spots: 'Starting soon · {sportName} game',
   match_unfilled_recovery: "Your game didn't fill this time",
+  play_rhythm_nudge: 'Your usual slot is open',
   nearby_match_available: 'New match nearby',
   match_cancelled: 'Game cancelled',
   match_updated: 'Game updated',
@@ -595,6 +597,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   court_booking_nudge: "Games with a booked court fill faster. Grab yours while it's open.",
   match_last_minute_spots: 'A game near you starts soon and still has open spots. Tap to join.',
   match_unfilled_recovery: 'It happens. Tap to browse open games and get back out there.',
+  play_rhythm_nudge: 'A {sportName} game{locationName} still needs players. Tap to join.',
   nearby_match_available: 'A {sportName} match is available near you{startTime}{locationName}',
   match_cancelled:
     'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!',

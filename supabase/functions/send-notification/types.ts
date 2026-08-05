@@ -57,6 +57,7 @@ export type NotificationType =
   | 'court_booking_nudge'
   | 'match_last_minute_spots'
   | 'match_unfilled_recovery'
+  | 'play_rhythm_nudge'
   | 'nearby_match_available'
   // Match time-suggestion (counter-proposal) flow
   | 'match_time_suggested'
@@ -214,6 +215,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   court_booking_nudge: { email: false, push: true, sms: false },
   match_last_minute_spots: { email: false, push: true, sms: false },
   match_unfilled_recovery: { email: false, push: true, sms: false },
+  play_rhythm_nudge: { email: false, push: true, sms: false },
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false },

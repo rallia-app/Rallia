@@ -236,6 +236,7 @@
       "court_booking_nudge": "Book your court",
       "match_last_minute_spots": "Starting soon",
       "match_unfilled_recovery": "Game recovery",
+      "play_rhythm_nudge": "Usual slot open",
       "nearby_match_available": "Nearby game",
       "player_kicked": "Removed from game",
       "player_left": "Player left",
@@ -459,6 +460,10 @@
       "match_unfilled_recovery": {
         "title": "Your game didn't fill this time",
         "body": "It happens. Tap to browse open games and get back out there."
+      },
+      "play_rhythm_nudge": {
+        "title": "Your usual slot is open",
+        "body": "A {sportName} game{locationName} still needs players. Tap to join."
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",
