@@ -1235,19 +1235,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               },
             },
             {
-              key: 'view',
-              label: t('matchCreation.viewMatch'),
-              icon: 'eye-outline',
-              onPress: () => {
-                Analytics.matchCreationSuccessAction({
-                  match_id: successMatchId,
-                  action: 'view_match',
-                  is_edit_mode: false,
-                });
-                onSuccess?.(successMatchId);
-              },
-            },
-            {
               key: 'create_another',
               label: t('matchCreation.createAnother'),
               icon: 'add-circle-outline',
