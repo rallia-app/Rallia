@@ -10,11 +10,13 @@ import { useTheme } from 'next-themes';
 import { primary, accent, neutral, status } from '@rallia/design-system';
 
 import type { PublicFacility, SlotGroupRef } from './facility-card';
+import type { MapArea } from './play-explorer';
 import { FACILITY_MARKER_COLOR, facilityKey, matchKey } from './play-map';
 import type { PublicMatch } from './public-match-card';
-import { getRelativeDateLabel, formatDuration, resolveMatchCoords } from './utils';
+import { displayableKm, getRelativeDateLabel, formatDuration, resolveMatchCoords } from './utils';
 
 import { Button } from '@/components/ui/button';
+import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 
 const TILE_LIGHT = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -147,24 +149,74 @@ function usePopupStyles() {
   }, []);
 }
 
+/** Stamps map movement we triggered so ViewportWatcher can tell it apart from
+ * a user pan/zoom. Time-based so calls that never fire moveend (e.g. a setView
+ * onto the current view) can't wedge the flag. */
+const PROGRAMMATIC_MOVE_WINDOW_MS = 1500;
+
+function markProgrammatic(ref: { current: number }) {
+  ref.current = Date.now();
+}
+
+function isProgrammatic(ref: { current: number }) {
+  return Date.now() - ref.current < PROGRAMMATIC_MOVE_WINDOW_MS;
+}
+
 /**
- * Fit the map to all markers whenever the dataset changes (the full sets load
- * asynchronously and refetch on filter changes), else center on the user.
- * Keyed on a signature so panning/zooming between fetches isn't disturbed.
+ * Watches for user-driven pans/zooms and reports the resulting viewport as a
+ * search area (center + half-diagonal radius).
  */
-function FitToMarkers({ points, center }: { points: MapPoint[]; center: [number, number] | null }) {
+function ViewportWatcher({
+  onUserMove,
+  programmaticRef,
+}: {
+  onUserMove: (area: MapArea) => void;
+  programmaticRef: { current: number };
+}) {
+  const map = useMap();
+  useEffect(() => {
+    const handler = () => {
+      if (isProgrammatic(programmaticRef)) return;
+      const c = map.getCenter();
+      const radiusKm = c.distanceTo(map.getBounds().getNorthEast()) / 1000;
+      onUserMove({ lat: c.lat, lng: c.lng, radiusKm });
+    };
+    map.on('moveend', handler);
+    return () => {
+      map.off('moveend', handler);
+    };
+  }, [map, onUserMove, programmaticRef]);
+  return null;
+}
+
+/**
+ * Fit the map to all markers when the explorer asks for it (fitNonce bumps on
+ * location/filter-driven loads, never on manual area searches), else center on
+ * the user.
+ */
+function FitToMarkers({
+  points,
+  center,
+  fitNonce,
+  programmaticRef,
+}: {
+  points: MapPoint[];
+  center: [number, number] | null;
+  fitNonce: number;
+  programmaticRef: { current: number };
+}) {
   const map = useMap();
   const needsRefit = useRef(false);
-  const signature =
-    points.length === 0
-      ? 'empty'
-      : `${points.length}:${points[0].key}:${points[points.length - 1].key}`;
 
   const fit = useCallback(() => {
     if (points.length === 0) {
-      if (center) map.setView(center, 11);
+      if (center) {
+        markProgrammatic(programmaticRef);
+        map.setView(center, 11);
+      }
       return;
     }
+    markProgrammatic(programmaticRef);
     if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 13);
       return;
@@ -172,7 +224,7 @@ function FitToMarkers({ points, center }: { points: MapPoint[]; center: [number,
     const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number]));
     map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, center, map]);
+  }, [fitNonce, center, map]);
 
   useEffect(() => {
     // A fit computed while the container is collapsed (hidden tab, mid-layout)
@@ -201,21 +253,32 @@ function FitToMarkers({ points, center }: { points: MapPoint[]; center: [number,
 }
 
 /** Keep Leaflet's internal size in sync with the container (split-view resizes). */
-function ResizeHandler() {
+function ResizeHandler({ programmaticRef }: { programmaticRef: { current: number } }) {
   const map = useMap();
   useEffect(() => {
-    const observer = new ResizeObserver(() => map.invalidateSize());
+    const observer = new ResizeObserver(() => {
+      // invalidateSize can emit moveend — that's not a user pan.
+      markProgrammatic(programmaticRef);
+      map.invalidateSize();
+    });
     observer.observe(map.getContainer());
     return () => observer.disconnect();
-  }, [map]);
+  }, [map, programmaticRef]);
   return null;
 }
 
 /** Animates the camera to a card-selected item (desktop panel sync). */
-function FlyToHandler({ flyTo }: { flyTo: { lat: number; lng: number; ts: number } | null }) {
+function FlyToHandler({
+  flyTo,
+  programmaticRef,
+}: {
+  flyTo: { lat: number; lng: number; ts: number } | null;
+  programmaticRef: { current: number };
+}) {
   const map = useMap();
   useEffect(() => {
     if (!flyTo) return;
+    markProgrammatic(programmaticRef);
     map.flyTo([flyTo.lat, flyTo.lng], Math.max(map.getZoom(), 14), { duration: 0.8 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flyTo?.ts]);
@@ -290,8 +353,8 @@ function MatchPopup({
         <div className="mt-1 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{location}</span>
           {city && ` · ${city}`}
-          {match.distance != null && (
-            <div>{t('kmAway', { distance: Math.round(match.distance) })}</div>
+          {displayableKm(match.distance) != null && (
+            <div>{t('kmAway', { distance: Math.round(displayableKm(match.distance)!) })}</div>
           )}
         </div>
 
@@ -323,7 +386,9 @@ function FacilityPopup({
   const t = useTranslations('courtsPage');
 
   const addressLine = [facility.address, facility.city].filter(Boolean).join(', ');
-  const distanceKm = facility.distance_meters != null ? facility.distance_meters / 1000 : null;
+  const distanceKm = displayableKm(
+    facility.distance_meters != null ? facility.distance_meters / 1000 : null
+  );
   const canBookOnline = !!facility.booking_url_template && !!facility.external_provider_id;
 
   return (
@@ -359,6 +424,12 @@ function FacilityPopup({
             {facility.is_first_come_first_serve ? t('justShowUp') : t('noOnlineBooking')}
           </div>
         )}
+        <Link
+          href={`/play/courts/${facility.id}`}
+          className="mt-2 block text-center text-[11px] font-medium text-primary hover:underline"
+        >
+          {t('viewDetails')}
+        </Link>
       </div>
     </div>
   );
@@ -369,6 +440,8 @@ interface PlayMapInnerProps {
   facilities: PublicFacility[];
   viewerPlayerId?: string | null;
   center: [number, number] | null;
+  fitNonce: number;
+  onUserMove: (area: MapArea) => void;
   onJoin: (matchId: string) => void;
   onBook: (facility: PublicFacility, slot: SlotGroupRef | null) => void;
   /** Desktop split view: markers select the side-panel card instead of opening popups. */
@@ -384,6 +457,8 @@ export default function PlayMapInner({
   facilities,
   viewerPlayerId,
   center,
+  fitNonce,
+  onUserMove,
   onJoin,
   onBook,
   panelMode = false,
@@ -395,6 +470,7 @@ export default function PlayMapInner({
   usePopupStyles();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
+  const programmaticMoveRef = useRef(0);
 
   const points = useMemo<MapPoint[]>(() => {
     const out: MapPoint[] = [];
@@ -436,9 +512,15 @@ export default function PlayMapInner({
         attribution={isDark ? ATTR_DARK : ATTR_LIGHT}
         url={isDark ? TILE_DARK : TILE_LIGHT}
       />
-      <ResizeHandler />
-      <FitToMarkers points={points} center={center} />
-      <FlyToHandler flyTo={flyTo} />
+      <ResizeHandler programmaticRef={programmaticMoveRef} />
+      <FitToMarkers
+        points={points}
+        center={center}
+        fitNonce={fitNonce}
+        programmaticRef={programmaticMoveRef}
+      />
+      <FlyToHandler flyTo={flyTo} programmaticRef={programmaticMoveRef} />
+      <ViewportWatcher onUserMove={onUserMove} programmaticRef={programmaticMoveRef} />
 
       <MarkerClusterGroup
         chunkedLoading

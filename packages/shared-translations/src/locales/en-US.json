@@ -11483,6 +11483,9 @@
     "filterAll": "All",
     "filterGames": "Games",
     "filterCourts": "Courts",
+    "useMyLocation": "Use my location",
+    "searchWidened": "Nothing within {km} km, so here are results from farther away.",
+    "searchThisArea": "Search this area",
     "legendCourts": "Courts",
     "mapCourtsShown": "{count, plural, =0 {No courts to show on the map here} =1 {1 court on the map} other {# courts on the map}}",
     "mapSummary": "{games, plural, =1 {1 game} other {# games}} · {courts, plural, =1 {1 court} other {# courts}}",
@@ -11513,7 +11516,16 @@
     "emptyCta": "Get the app",
     "bookSlotAria": "Book the {time} slot",
     "justShowUp": "Just show up and play",
-    "noOnlineBooking": "No online booking for this court"
+    "noOnlineBooking": "No online booking for this court",
+    "viewDetails": "View details"
+  },
+  "facilityPage": {
+    "backToCourts": "All courts",
+    "availabilityHeading": "Book a court",
+    "upcomingGames": "Upcoming games here",
+    "noUpcomingGames": "No public games scheduled here yet.",
+    "metaDescription": "Courts, open slots and upcoming games at {name}. Book and play with Rallia.",
+    "metaDescriptionCity": "Courts, open slots and upcoming games at {name} in {city}. Book and play with Rallia."
   },
   "gamesPage": {
     "title": "Upcoming Games",
@@ -11525,6 +11537,7 @@
     "kmAway": "{distance} km away",
     "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
     "matchFull": "Full",
+    "openSpotsOnly": "Open spots",
     "playersJoined": "players joined",
     "today": "Today",
     "tomorrow": "Tomorrow",

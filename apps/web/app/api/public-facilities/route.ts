@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     const offset = Number(searchParams.get('offset')) || 0;
     const sportId = searchParams.get('sportId') || null;
     const query = searchParams.get('query')?.trim() || null;
+    const maxKmParam = Number(searchParams.get('maxKm'));
+    const maxKm = Number.isFinite(maxKmParam) && maxKmParam > 0 ? maxKmParam : null;
 
     const supabase = createServiceRoleClient();
 
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       p_latitude: latitude ?? 0,
       p_longitude: longitude ?? 0,
       p_search_query: query,
-      p_max_distance_km: null,
+      p_max_distance_km: latitude != null && longitude != null ? maxKm : null,
       p_limit: limit + 1, // +1 to detect hasMore
       p_offset: offset,
       // Show every facility for the sport (parks included) — the same default

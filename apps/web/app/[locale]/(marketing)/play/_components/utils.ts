@@ -27,6 +27,17 @@ export function getRelativeDateLabel(
 
 import type { PublicMatch } from './public-match-card';
 
+/**
+ * Distances beyond this read as geolocation noise ("9151 km away"), not
+ * information — cards omit the line instead.
+ */
+const MAX_DISPLAY_KM = 1000;
+
+export function displayableKm(km: number | null | undefined): number | null {
+  if (km == null || !Number.isFinite(km) || km > MAX_DISPLAY_KM) return null;
+  return km;
+}
+
 /** Facility coordinates take priority, then the match's custom location. */
 export function resolveMatchCoords(match: PublicMatch): { lat: number; lng: number } | null {
   const fLat = match.facility?.latitude;

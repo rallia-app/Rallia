@@ -6,10 +6,11 @@ import { useMemo } from 'react';
 import { formatInlineSnapshotSlots } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 
-import { getRelativeDateLabel } from './utils';
+import { displayableKm, getRelativeDateLabel } from './utils';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 
 export type PublicFacility = FacilitySearchResult;
@@ -31,7 +32,9 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
   const locale = useLocale();
 
   const addressLine = [facility.address, facility.city].filter(Boolean).join(', ');
-  const distanceKm = facility.distance_meters != null ? facility.distance_meters / 1000 : null;
+  const distanceKm = displayableKm(
+    facility.distance_meters != null ? facility.distance_meters / 1000 : null
+  );
 
   // Availability is inlined on each row by search_facilities_nearby, so there's
   // no per-card fetch. The English "Today/Tomorrow" labels from the shared
@@ -56,9 +59,14 @@ export default function FacilityCard({ facility, onBook }: FacilityCardProps) {
       <div className="h-1 w-full bg-linear-to-r from-primary to-primary/60" />
 
       <div className="flex flex-1 flex-col gap-3 p-5">
-        {/* Name */}
+        {/* Name — links to the facility's own page */}
         <h3 className="truncate text-base font-bold" title={facility.name}>
-          {facility.name}
+          <Link
+            href={`/play/courts/${facility.id}`}
+            className="transition-colors hover:text-primary"
+          >
+            {facility.name}
+          </Link>
         </h3>
 
         {/* Address + distance */}
