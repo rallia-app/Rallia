@@ -75,6 +75,9 @@ Deliberately **not** changed in M2:
 
 Weekly refresh infrastructure:
 
+> **Retired 2026-08-05**: the weekly refresh nudge below was superseded by the rolling
+> check-in reminder and removed (see `20260805120000_retire_availability_refresh_cron.sql`).
+
 1. `ALTER TABLE profile ADD COLUMN IF NOT EXISTS last_availability_refresh_sent_at TIMESTAMPTZ` (dedup sentinel, mirrors `last_morning_digest_sent_at`).
 2. `ALTER TYPE notification_type_enum ADD VALUE IF NOT EXISTS 'availability_refresh_reminder'`.
 3. `CREATE FUNCTION get_availability_refresh_eligible_users()` — returns users where:
