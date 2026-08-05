@@ -441,11 +441,6 @@ verify_jwt = false
 [functions.refresh-facility-availability]
 verify_jwt = false
 
-# Weekly availability-refresh email — pg_cron invokes with apikey header; auth
-# validated internally via requireSecretApikey(). Same verify_jwt requirement.
-[functions.send-availability-refresh]
-verify_jwt = false
-
 # Client-invoked functions: gateway JWT verification disabled because these
 # functions validate auth internally via supabaseUser.auth.getUser(token).
 # Gateway rejects ES256 tokens issued by current auth server config.
