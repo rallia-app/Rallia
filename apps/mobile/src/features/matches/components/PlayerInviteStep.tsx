@@ -159,7 +159,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       accessibilityState={{ checked: isSelected }}
       accessibilityLabel={fullName}
     >
-      {/* Avatar with selection ring */}
+      {/* Avatar keeps its own column on the left */}
       <View
         style={[
           styles.avatarRing,
@@ -180,21 +180,37 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         )}
       </View>
 
-      {/* Player info */}
+      {/* Right column: name + distance on one row, badges on the next */}
       <View style={styles.playerInfo}>
         <View style={styles.nameRow}>
-          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
+          <Text
+            size="base"
+            weight="semibold"
+            color={colors.text}
+            numberOfLines={1}
+            style={styles.nameText}
+          >
             {fullName}
           </Text>
           {distanceLabel && (
-            <Text size="xs" color={colors.textMuted} style={styles.distanceLabel}>
+            <Text size="xs" color={colors.textMuted}>
               {distanceLabel}
             </Text>
           )}
+          <View
+            style={[
+              styles.checkCircle,
+              {
+                backgroundColor: isSelected ? colors.buttonActive : 'transparent',
+                borderColor: isSelected ? colors.buttonActive : colors.border,
+              },
+            ]}
+          >
+            {isSelected && <Ionicons name="checkmark" size={15} color={colors.buttonTextActive} />}
+          </View>
         </View>
 
-        {/* Identity badges: who they are */}
-        {(player.rating || reputationDisplay) && (
+        {(player.rating || reputationDisplay || (reasons && reasons.length > 0)) && (
           <View style={styles.badgesRow}>
             {player.rating && (
               <RatingBadge
@@ -208,13 +224,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             {reputationDisplay && (
               <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
             )}
-          </View>
-        )}
-
-        {/* Reason badges: why they're suggested */}
-        {reasons && reasons.length > 0 && (
-          <View style={styles.badgesRow}>
-            {reasons.map(reason => (
+            {reasons?.map(reason => (
               <ReasonBadge
                 key={reason.key}
                 reason={reason.key}
@@ -226,78 +236,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           </View>
         )}
       </View>
-
-      {/* Selection indicator */}
-      <View
-        style={[
-          styles.checkCircle,
-          {
-            backgroundColor: isSelected ? colors.buttonActive : 'transparent',
-            borderColor: isSelected ? colors.buttonActive : colors.border,
-          },
-        ]}
-      >
-        {isSelected && <Ionicons name="checkmark" size={15} color={colors.buttonTextActive} />}
-      </View>
     </TouchableOpacity>
-  );
-};
-
-// =============================================================================
-// SELECTED PLAYERS STRIP
-// =============================================================================
-
-interface SelectedPlayersStripProps {
-  players: PlayerSearchResult[];
-  onRemove: (player: PlayerSearchResult) => void;
-  colors: PlayerInviteStepProps['colors'];
-}
-
-const SelectedPlayersStrip: React.FC<SelectedPlayersStripProps> = ({
-  players,
-  onRemove,
-  colors,
-}) => {
-  if (players.length === 0) return null;
-
-  return (
-    <View style={styles.selectedStrip}>
-      <FlatList
-        horizontal
-        data={players}
-        keyExtractor={item => item.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.selectedStripContent}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.selectedAvatarContainer}
-            onPress={() => {
-              lightHaptic();
-              onRemove(item);
-            }}
-            activeOpacity={0.7}
-          >
-            {item.profile_picture_url ? (
-              <Image
-                source={{ uri: getProfilePictureUrl(item.profile_picture_url) || '' }}
-                style={styles.selectedAvatar}
-              />
-            ) : (
-              <View
-                style={[styles.selectedAvatarFallback, { backgroundColor: colors.buttonActive }]}
-              >
-                <Text size="xs" weight="semibold" color={colors.buttonTextActive}>
-                  {getInitials(`${item.first_name} ${item.last_name}`)}
-                </Text>
-              </View>
-            )}
-            <View style={[styles.removeButton, { backgroundColor: colors.textMuted }]}>
-              <Ionicons name="close-outline" size={10} color={colors.buttonTextActive} />
-            </View>
-          </TouchableOpacity>
-        )}
-      />
-    </View>
   );
 };
 
@@ -756,13 +695,6 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         </ScrollView>
       )}
 
-      {/* Selected players strip */}
-      <SelectedPlayersStrip
-        players={selectedPlayers}
-        onRemove={handleRemovePlayer}
-        colors={colors}
-      />
-
       {/* Search input */}
       <SearchBar
         value={searchQuery}
@@ -863,101 +795,7 @@ const styles = StyleSheet.create({
     padding: spacingPixels[1],
     marginRight: spacingPixels[2],
   },
-  selectedStrip: {
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
-  },
-  selectedStripContent: {
-    gap: spacingPixels[3],
-  },
-  selectedAvatarContainer: {
-    position: 'relative',
-    // Add padding to create space for the remove button
-    paddingTop: 4,
-    paddingRight: 4,
-  },
-  selectedAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  selectedAvatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBarWrapper: {
-    marginHorizontal: spacingPixels[4],
-    marginBottom: spacingPixels[3],
-  },
-  listContent: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[4],
-    flexGrow: 1,
-  },
-  playerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.xl,
-    marginBottom: spacingPixels[2],
-    gap: spacingPixels[3],
-  },
-  // Ring is always laid out (transparent when unselected) so selecting a
-  // card never shifts the row's layout.
-  avatarRing: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Top-aligned so the avatar reads with the name, not the badge stack.
-    alignSelf: 'flex-start',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerInfo: {
-    flex: 1,
-    gap: spacingPixels[1.5],
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-  distanceLabel: {
-    marginLeft: 'auto',
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1],
-    flexWrap: 'wrap',
-  },
+  // ---- Secondary actions (share / Facebook / create another) ----
   // flexGrow/Shrink 0 so the row sizes to its chips instead of being
   // squeezed by the surrounding flex column (which clipped the chips).
   secondaryActionsScroll: {
@@ -997,12 +835,56 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  ratingBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacingPixels[2],
-    paddingVertical: spacingPixels[0.5],
-    borderRadius: radiusPixels.sm,
-    borderWidth: 1,
+  // ---- Player card ----
+  playerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.xl,
+    marginBottom: spacingPixels[2],
+    gap: spacingPixels[3],
+  },
+  // Ring is always laid out (transparent when unselected) so selecting a
+  // card never shifts the row's layout.
+  avatarRing: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Right column stacks the name row over the badge row.
+  playerInfo: {
+    flex: 1,
+    gap: spacingPixels[2],
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  nameText: {
+    flex: 1,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    flexWrap: 'wrap',
   },
   checkCircle: {
     width: 26,
@@ -1011,8 +893,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    marginTop: spacingPixels[0.5],
+  },
+  listContent: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
+  },
+  searchBarWrapper: {
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[2],
   },
   emptyState: {
     flex: 1,
