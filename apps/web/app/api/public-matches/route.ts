@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
     const offset = Number(searchParams.get('offset')) || 0;
     const sportId = searchParams.get('sportId') || null;
     const mine = searchParams.get('mine') === '1';
+    const maxKmParam = Number(searchParams.get('maxKm'));
+    const maxKm = Number.isFinite(maxKmParam) && maxKmParam > 0 ? maxKmParam : null;
 
     if (mine) {
       return getMyMatches({ limit, offset, sportId });
@@ -34,7 +36,8 @@ export async function GET(request: NextRequest) {
       {
         p_latitude: latitude ?? 0,
         p_longitude: longitude ?? 0,
-        p_max_distance_km: null,
+        // A radius only makes sense with a real origin.
+        p_max_distance_km: latitude != null && longitude != null ? maxKm : null,
         p_sport_id: sportId,
         p_limit: limit + 1, // +1 to check hasMore
         p_offset: offset,

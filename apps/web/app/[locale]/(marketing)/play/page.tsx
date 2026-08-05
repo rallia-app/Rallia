@@ -2,9 +2,16 @@ import type { Metadata } from 'next';
 import type { Locale } from '@rallia/shared-translations';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import { getTranslations } from 'next-intl/server';
+import { headers } from 'next/headers';
 
-import PlayExplorer from './_components/play-explorer';
+import PlayExplorer, {
+  SEARCH_RADIUS_KM,
+  type PlayInitialParams,
+  type PlayKind,
+  type ViewMode,
+} from './_components/play-explorer';
 import type { PublicMatch } from './_components/public-match-card';
+import type { DateChip } from './_components/utils';
 
 import { JsonLd, sportsEventJsonLd } from '@/components/json-ld';
 import { buildPageMetadata, SITE_URL } from '@/lib/seo';
@@ -23,23 +30,48 @@ export async function generateMetadata({
 const MATCH_PAGE_SIZE = 36;
 const FACILITY_PAGE_SIZE = 24;
 
-async function getInitialMatches(): Promise<PublicMatch[]> {
+interface Coords {
+  latitude: number;
+  longitude: number;
+}
+
+/**
+ * Approximate visitor location from the request's geo headers (Vercel injects
+ * them at the edge). Null on localhost or when the platform can't resolve one
+ * — the client then falls back to an IP lookup.
+ */
+async function getRequestCoords(): Promise<Coords | null> {
+  const h = await headers();
+  const latitude = Number(h.get('x-vercel-ip-latitude'));
+  const longitude = Number(h.get('x-vercel-ip-longitude'));
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude === 0 && longitude === 0) return null;
+  return { latitude, longitude };
+}
+
+async function getInitialMatches(coords: Coords | null): Promise<PublicMatch[]> {
   const supabase = createServiceRoleClient();
 
   // Step 1: Call RPC to get match IDs (handles timezone-aware filtering, excludes full/past matches)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rpcData, error: rpcError } = await (supabase as any).rpc('search_public_matches', {
-    p_latitude: 0,
-    p_longitude: 0,
-    p_max_distance_km: null,
-    p_sport_id: null,
-    p_limit: MATCH_PAGE_SIZE,
-    p_offset: 0,
-  });
+  const searchMatches = async (maxKm: number | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc('search_public_matches', {
+      p_latitude: coords?.latitude ?? 0,
+      p_longitude: coords?.longitude ?? 0,
+      p_max_distance_km: coords ? maxKm : null,
+      p_sport_id: null,
+      p_limit: MATCH_PAGE_SIZE,
+      p_offset: 0,
+    });
+    if (error || !data) return [];
+    return data as Array<{ match_id: string }>;
+  };
 
-  if (rpcError || !rpcData?.length) return [];
+  let rpcData = await searchMatches(coords ? SEARCH_RADIUS_KM : null);
+  if (coords && rpcData.length === 0) rpcData = await searchMatches(null);
+  if (rpcData.length === 0) return [];
 
-  const matchIds = (rpcData as Array<{ match_id: string }>).map(r => r.match_id);
+  const matchIds = rpcData.map(r => r.match_id);
 
   // Step 2: Hydrate full match details
   const { data: matches } = await supabase
@@ -56,30 +88,34 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
     .map(id => matchMap.get(id)!) as unknown as PublicMatch[];
 }
 
-async function getInitialFacilities(): Promise<FacilitySearchResult[]> {
+async function getInitialFacilities(coords: Coords | null): Promise<FacilitySearchResult[]> {
   const supabase = createServiceRoleClient();
 
   const { data: sports } = await supabase.from('sport').select('id').eq('is_active', true);
   const sportIds = (sports ?? []).map(s => s.id);
   if (sportIds.length === 0) return [];
 
-  // Distance ordering from (0,0) is arbitrary for the SSR paint — the client
-  // immediately re-fetches sorted by the visitor's real location. This just
-  // gives crawlers and the first paint a populated list.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc('search_facilities_nearby', {
-    p_sport_ids: sportIds,
-    p_latitude: 0,
-    p_longitude: 0,
-    p_limit: FACILITY_PAGE_SIZE,
-    p_offset: 0,
-  });
+  const searchFacilities = async (maxKm: number | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc('search_facilities_nearby', {
+      p_sport_ids: sportIds,
+      p_latitude: coords?.latitude ?? 0,
+      p_longitude: coords?.longitude ?? 0,
+      p_max_distance_km: coords ? maxKm : null,
+      p_limit: FACILITY_PAGE_SIZE,
+      p_offset: 0,
+    });
+    if (error || !data) return [];
+    return data as FacilitySearchResult[];
+  };
 
-  if (error || !data) return [];
-  // The SSR origin is a placeholder (0,0), so the RPC's distance is meaningless
-  // here — strip it and let the client fill in real distances after it resolves
-  // the visitor's location.
-  return (data as FacilitySearchResult[]).map(f => ({ ...f, distance_meters: null }));
+  let rows = await searchFacilities(coords ? SEARCH_RADIUS_KM : null);
+  if (coords && rows.length === 0) rows = await searchFacilities(null);
+
+  // Without a real origin the RPC's distance is measured from (0,0) and
+  // meaningless — strip it and let the client fill in real distances once it
+  // resolves the visitor's location.
+  return coords ? rows : rows.map(f => ({ ...f, distance_meters: null }));
 }
 
 function matchesToSportsEvents(matches: PublicMatch[]) {
@@ -119,13 +155,47 @@ function facilitiesToJsonLd(facilities: FacilitySearchResult[]) {
     ...(f.latitude != null && f.longitude != null
       ? { geo: { '@type': 'GeoCoordinates', latitude: f.latitude, longitude: f.longitude } }
       : {}),
-    url: `${SITE_URL}/en-US/play`,
+    url: `${SITE_URL}/en-US/play/courts/${f.id}`,
   }));
 }
 
-export default async function PlayPage() {
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function parseInitialParams(sp: Record<string, string | string[] | undefined>): PlayInitialParams {
+  const kindParam = first(sp.kind);
+  const viewParam = first(sp.view);
+  const dateParam = first(sp.date);
+  const kind: PlayKind = kindParam === 'games' || kindParam === 'courts' ? kindParam : 'all';
+  const view: ViewMode = viewParam === 'map' ? 'map' : 'list';
+  const date: DateChip =
+    dateParam === 'today' || dateParam === 'tomorrow' || dateParam === 'weekend'
+      ? dateParam
+      : 'all';
+  return {
+    kind,
+    view,
+    sportSlug: first(sp.sport) || null,
+    date,
+    mine: first(sp.mine) === '1',
+    openOnly: first(sp.open) === '1',
+    query: kind === 'courts' ? (first(sp.q) ?? '') : '',
+  };
+}
+
+export default async function PlayPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const t = await getTranslations('playPage');
-  const [matches, facilities] = await Promise.all([getInitialMatches(), getInitialFacilities()]);
+  const [sp, coords] = await Promise.all([searchParams, getRequestCoords()]);
+  const initialParams = parseInitialParams(sp);
+  const [matches, facilities] = await Promise.all([
+    getInitialMatches(coords),
+    getInitialFacilities(coords),
+  ]);
   const jsonLd = [...matchesToSportsEvents(matches), ...facilitiesToJsonLd(facilities)];
 
   return (
@@ -154,7 +224,12 @@ export default async function PlayPage() {
         <p className="max-w-xl text-lg text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      <PlayExplorer initialMatches={matches} initialFacilities={facilities} />
+      <PlayExplorer
+        initialMatches={matches}
+        initialFacilities={facilities}
+        initialCoords={coords}
+        initialParams={initialParams}
+      />
     </div>
   );
 }

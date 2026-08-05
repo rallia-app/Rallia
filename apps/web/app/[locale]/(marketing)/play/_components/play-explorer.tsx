@@ -4,8 +4,10 @@ import {
   CalendarX,
   ChevronLeft,
   ChevronRight,
+  Info,
   LayoutGrid,
   Loader2,
+  LocateFixed,
   MapIcon,
   Search,
 } from 'lucide-react';
@@ -15,6 +17,7 @@ import type { FacilitySearchResult } from '@rallia/shared-types';
 
 import FacilityCard, { type PublicFacility, type SlotGroupRef } from './facility-card';
 import FacilityCardSkeleton from './facility-card-skeleton';
+import { getMatchCounts } from './match-card-parts';
 import MatchCardSkeleton from './match-card-skeleton';
 import PlayMap from './play-map';
 import PublicMatchCard, { type PublicMatch } from './public-match-card';
@@ -26,16 +29,40 @@ import { courtsBookClicked } from '@/lib/analytics';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 
-type ViewMode = 'list' | 'map';
+export type ViewMode = 'list' | 'map';
 export type PlayKind = 'all' | 'games' | 'courts';
+
+/** Filter state hydrated from the URL by the server page (deep links). */
+export interface PlayInitialParams {
+  kind: PlayKind;
+  view: ViewMode;
+  sportSlug: string | null;
+  date: DateChip;
+  mine: boolean;
+  openOnly: boolean;
+  query: string;
+}
+
+/** A map query origin: center + radius derived from the viewport. */
+export interface MapArea {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+}
 
 const MATCH_PAGE_SIZE = 36;
 const FACILITY_PAGE_SIZE = 24;
-// Map view loads full datasets; cap facilities so a huge directory can't
-// spiral into dozens of sequential fetches.
-const MAP_MATCH_PAGE = 200;
-const MAP_FACILITY_PAGE = 100;
-const MAP_FACILITY_CAP = 600;
+// The "all" list shows a short preview of each dataset; "see all" jumps to the
+// dedicated view.
+const ALL_VIEW_SECTION_SIZE = 6;
+/** Results beyond this radius aren't "near you" — lists cap here and only
+ * widen (with a notice) when the capped search comes back empty. */
+export const SEARCH_RADIUS_KM = 100;
+// Map view loads one page per dataset around the queried area.
+const MAP_MATCH_LIMIT = 200;
+const MAP_FACILITY_LIMIT = 300;
+const MIN_AREA_RADIUS_KM = 2;
+const MAX_AREA_RADIUS_KM = 300;
 
 interface Sport {
   id: string;
@@ -46,14 +73,17 @@ interface Sport {
 interface PlayExplorerProps {
   initialMatches: PublicMatch[];
   initialFacilities: FacilitySearchResult[];
+  /** Approximate visitor location resolved server-side from request geo headers. */
+  initialCoords: { latitude: number; longitude: number } | null;
+  initialParams: PlayInitialParams;
 }
 
-/** A list entry in the mixed "all" view, ordered by proximity. */
-type MixedItem =
-  | { kind: 'match'; id: string; distanceMeters: number | null; match: PublicMatch }
-  | { kind: 'facility'; id: string; distanceMeters: number | null; facility: PublicFacility };
-
-export default function PlayExplorer({ initialMatches, initialFacilities }: PlayExplorerProps) {
+export default function PlayExplorer({
+  initialMatches,
+  initialFacilities,
+  initialCoords,
+  initialParams,
+}: PlayExplorerProps) {
   const t = useTranslations('playPage');
   const tGames = useTranslations('gamesPage');
   const tCourts = useTranslations('courtsPage');
@@ -62,12 +92,17 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
   const supabase = useMemo(() => createClient(), []);
 
   // Shared state ------------------------------------------------------------
-  const [kind, setKind] = useState<PlayKind>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [locationResolved, setLocationResolved] = useState(false);
+  const [kind, setKind] = useState<PlayKind>(initialParams.kind);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialParams.view);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(
+    initialCoords
+  );
+  const [locationResolved, setLocationResolved] = useState(initialCoords != null);
+  const [locating, setLocating] = useState(false);
+  const [usedPreciseLocation, setUsedPreciseLocation] = useState(false);
+  const [geoFailed, setGeoFailed] = useState(false);
   const [sports, setSports] = useState<Sport[]>([]);
-  const [activeSportId, setActiveSportId] = useState<string | null>(null);
+  const [activeSportSlug, setActiveSportSlug] = useState<string | null>(initialParams.sportSlug);
   const [viewerPlayerId, setViewerPlayerId] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -76,8 +111,10 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
   const [matchesHasMore, setMatchesHasMore] = useState(initialMatches.length >= MATCH_PAGE_SIZE);
   const [matchesOffset, setMatchesOffset] = useState(initialMatches.length);
   const [matchesLoaded, setMatchesLoaded] = useState(true);
-  const [dateFilter, setDateFilter] = useState<DateChip>('all');
-  const [mineOnly, setMineOnly] = useState(false);
+  const [matchesWidened, setMatchesWidened] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateChip>(initialParams.date);
+  const [mineOnly, setMineOnly] = useState(initialParams.mine);
+  const [openOnly, setOpenOnly] = useState(initialParams.openOnly);
 
   // Courts state ------------------------------------------------------------
   const [facilities, setFacilities] = useState<PublicFacility[]>(initialFacilities);
@@ -86,14 +123,23 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
   );
   const [facilitiesOffset, setFacilitiesOffset] = useState(initialFacilities.length);
   const [facilitiesLoaded, setFacilitiesLoaded] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [query, setQuery] = useState('');
+  const [facilitiesWidened, setFacilitiesWidened] = useState(false);
+  const [searchInput, setSearchInput] = useState(initialParams.query);
+  const [query, setQuery] = useState(initialParams.query);
 
-  // Map state — the map shows every item in range, loaded separately from the
-  // paginated lists.
+  // Map state — loaded per queried area, not paginated to completion.
   const [mapMatches, setMapMatches] = useState<PublicMatch[]>([]);
   const [mapFacilities, setMapFacilities] = useState<PublicFacility[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
+  const [mapArea, setMapArea] = useState<MapArea | null>(null);
+  // Bumped when the map should re-frame its markers (never for manual area
+  // searches — the visitor already framed the viewport themselves).
+  const [mapFitNonce, setMapFitNonce] = useState(0);
+
+  const activeSportId = useMemo(
+    () => sports.find(s => s.slug === activeSportSlug)?.id ?? null,
+    [sports, activeSportSlug]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -128,49 +174,77 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
     })();
   }, []);
 
-  // Location (browser geolocation → IP fallback), resolved once.
+  // Location: the server already resolved an approximate position from the
+  // request when it could; otherwise fall back to IP lookup. Precise browser
+  // geolocation is only requested when the visitor asks for it.
   useEffect(() => {
+    if (initialCoords != null) return;
     let cancelled = false;
 
-    async function getCoords(): Promise<{ latitude: number; longitude: number } | null> {
-      if ('geolocation' in navigator) {
-        try {
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              timeout: 5000,
-              maximumAge: 300000,
-            });
-          });
-          return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-        } catch {
-          // Fall through to IP.
-        }
-      }
+    (async () => {
       try {
         const res = await fetch('/api/get-location');
         if (res.ok) {
           const data = await res.json();
-          if (data.latitude != null && data.longitude != null) {
-            return { latitude: data.latitude, longitude: data.longitude };
+          if (!cancelled && data.latitude != null && data.longitude != null) {
+            setCoords({ latitude: data.latitude, longitude: data.longitude });
           }
         }
       } catch {
         // IP location unavailable.
+      } finally {
+        if (!cancelled) setLocationResolved(true);
       }
-      return null;
-    }
-
-    (async () => {
-      const loc = await getCoords();
-      if (cancelled) return;
-      if (loc) setCoords(loc);
-      setLocationResolved(true);
     })();
 
     return () => {
       cancelled = true;
     };
+  }, [initialCoords]);
+
+  const requestPreciseLocation = useCallback(() => {
+    if (!('geolocation' in navigator)) {
+      setGeoFailed(true);
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setLocationResolved(true);
+        setUsedPreciseLocation(true);
+        setMapArea(null);
+        setLocating(false);
+      },
+      () => {
+        setGeoFailed(true);
+        setLocating(false);
+      },
+      { timeout: 8000, maximumAge: 300000 }
+    );
   }, []);
+
+  // Mirror the filter state into the URL (?kind=&view=&sport=&date=&mine=&open=&q=)
+  // so views are shareable and survive refresh — replaceState avoids a server
+  // round-trip and keeps scroll position.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const assign = (key: string, value: string | null) => {
+      if (value == null || value === '') url.searchParams.delete(key);
+      else url.searchParams.set(key, value);
+    };
+    assign('kind', kind === 'all' ? null : kind);
+    assign('view', viewMode === 'list' ? null : viewMode);
+    assign('sport', activeSportSlug);
+    assign('date', dateFilter === 'all' ? null : dateFilter);
+    assign('mine', mineOnly ? '1' : null);
+    assign('open', openOnly ? '1' : null);
+    assign('q', query || null);
+    const qs = url.searchParams.toString();
+    const next = `${url.pathname}${qs ? `?${qs}` : ''}${url.hash}`;
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (next !== current) window.history.replaceState(null, '', next);
+  }, [kind, viewMode, activeSportSlug, dateFilter, mineOnly, openOnly, query]);
 
   // Fetchers ----------------------------------------------------------------
   const fetchMatches = useCallback(
@@ -180,7 +254,8 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       lng?: number | null,
       sportId?: string | null,
       mine?: boolean,
-      limit: number = MATCH_PAGE_SIZE
+      limit: number = MATCH_PAGE_SIZE,
+      maxKm: number | null = null
     ) => {
       const params = new URLSearchParams({
         limit: String(limit),
@@ -192,6 +267,7 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       }
       if (sportId) params.set('sportId', sportId);
       if (mine) params.set('mine', '1');
+      if (maxKm != null) params.set('maxKm', String(maxKm));
       const res = await fetch(`/api/public-matches?${params}`);
       if (!res.ok) return null;
       return res.json() as Promise<{ matches: PublicMatch[]; hasMore: boolean }>;
@@ -206,7 +282,8 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       lng?: number | null,
       sportId?: string | null,
       q?: string,
-      limit: number = FACILITY_PAGE_SIZE
+      limit: number = FACILITY_PAGE_SIZE,
+      maxKm: number | null = null
     ) => {
       const params = new URLSearchParams({
         limit: String(limit),
@@ -218,6 +295,7 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       }
       if (sportId) params.set('sportId', sportId);
       if (q) params.set('query', q);
+      if (maxKm != null) params.set('maxKm', String(maxKm));
       const res = await fetch(`/api/public-facilities?${params}`);
       if (!res.ok) return null;
       return res.json() as Promise<{ facilities: PublicFacility[]; hasMore: boolean }>;
@@ -226,7 +304,9 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
   );
 
   // List refetches — each dataset re-queries from page 0 when its inputs
-  // change, once a location decision has been made (found or not).
+  // change, once a location decision has been made (found or not). Searches
+  // are capped to SEARCH_RADIUS_KM around a real origin; an empty capped page
+  // widens to uncapped with a notice.
   useEffect(() => {
     if (!locationResolved) return;
     let cancelled = false;
@@ -234,17 +314,37 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
     (async () => {
       setMatchesLoaded(false);
       try {
-        const result = await fetchMatches(
+        const capped = coords != null;
+        let widened = false;
+        let result = await fetchMatches(
           0,
           coords?.latitude,
           coords?.longitude,
           activeSportId,
-          mineOnly
+          mineOnly,
+          MATCH_PAGE_SIZE,
+          capped ? SEARCH_RADIUS_KM : null
         );
+        if (capped && result && result.matches.length === 0) {
+          const wide = await fetchMatches(
+            0,
+            coords?.latitude,
+            coords?.longitude,
+            activeSportId,
+            mineOnly,
+            MATCH_PAGE_SIZE,
+            null
+          );
+          if (wide && wide.matches.length > 0) {
+            result = wide;
+            widened = true;
+          }
+        }
         if (result && !cancelled) {
           setMatches(result.matches);
           setMatchesHasMore(result.hasMore);
           setMatchesOffset(result.matches.length);
+          setMatchesWidened(widened);
         }
       } finally {
         if (!cancelled) setMatchesLoaded(true);
@@ -263,17 +363,38 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
     (async () => {
       setFacilitiesLoaded(false);
       try {
-        const result = await fetchFacilities(
+        // A name search should find the facility no matter how far it is.
+        const capped = coords != null && !query;
+        let widened = false;
+        let result = await fetchFacilities(
           0,
           coords?.latitude,
           coords?.longitude,
           activeSportId,
-          query
+          query,
+          FACILITY_PAGE_SIZE,
+          capped ? SEARCH_RADIUS_KM : null
         );
+        if (capped && result && result.facilities.length === 0) {
+          const wide = await fetchFacilities(
+            0,
+            coords?.latitude,
+            coords?.longitude,
+            activeSportId,
+            query,
+            FACILITY_PAGE_SIZE,
+            null
+          );
+          if (wide && wide.facilities.length > 0) {
+            result = wide;
+            widened = true;
+          }
+        }
         if (result && !cancelled) {
           setFacilities(result.facilities);
           setFacilitiesHasMore(result.hasMore);
           setFacilitiesOffset(result.facilities.length);
+          setFacilitiesWidened(widened);
         }
       } finally {
         if (!cancelled) setFacilitiesLoaded(true);
@@ -292,7 +413,7 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
   }, [searchInput]);
 
   // The search box only exists in the courts view — leaving it clears the
-  // filter so the mixed view never runs on an invisible query.
+  // filter so the other views never run on an invisible query.
   const handleKindChange = (next: PlayKind) => {
     setKind(next);
     if (next !== 'courts' && (searchInput || query)) {
@@ -301,70 +422,56 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
     }
   };
 
-  // Map data — pull the full datasets (paginated to completion), refetching
-  // whenever coords or the sport/scope/search filters change.
+  // Map data — one page per dataset around the queried area (the visitor's
+  // location by default, or wherever they last hit "search this area").
   useEffect(() => {
     if (viewMode !== 'map') return;
     let cancelled = false;
 
+    const origin: MapArea | null =
+      mapArea ??
+      (coords ? { lat: coords.latitude, lng: coords.longitude, radiusKm: SEARCH_RADIUS_KM } : null);
+
     (async () => {
       setMapLoading(true);
       try {
-        const [allMatches, allFacilities] = await Promise.all([
-          (async () => {
-            const out: PublicMatch[] = [];
-            const seen = new Set<string>();
-            let pageOffset = 0;
-            for (;;) {
-              const result = await fetchMatches(
-                pageOffset,
-                coords?.latitude,
-                coords?.longitude,
-                activeSportId,
-                mineOnly,
-                MAP_MATCH_PAGE
-              );
-              if (!result || result.matches.length === 0) break;
-              for (const m of result.matches) {
-                if (!seen.has(m.id)) {
-                  seen.add(m.id);
-                  out.push(m);
-                }
-              }
-              pageOffset += result.matches.length;
-              if (!result.hasMore) break;
-            }
-            return out;
-          })(),
-          (async () => {
-            const out: PublicFacility[] = [];
-            const seen = new Set<string>();
-            let pageOffset = 0;
-            while (out.length < MAP_FACILITY_CAP) {
-              const result = await fetchFacilities(
-                pageOffset,
-                coords?.latitude,
-                coords?.longitude,
-                activeSportId,
-                query,
-                MAP_FACILITY_PAGE
-              );
-              if (!result || result.facilities.length === 0) break;
-              for (const f of result.facilities) {
-                if (!seen.has(f.id)) {
-                  seen.add(f.id);
-                  out.push(f);
-                }
-              }
-              pageOffset += result.facilities.length;
-              if (!result.hasMore) break;
-            }
-            return out;
-          })(),
-        ]);
+        const fetchBoth = (maxKm: number | null) =>
+          Promise.all([
+            fetchMatches(
+              0,
+              origin?.lat,
+              origin?.lng,
+              activeSportId,
+              mineOnly,
+              MAP_MATCH_LIMIT,
+              maxKm
+            ),
+            fetchFacilities(
+              0,
+              origin?.lat,
+              origin?.lng,
+              activeSportId,
+              query,
+              MAP_FACILITY_LIMIT,
+              query ? null : maxKm
+            ),
+          ]);
+
+        let [matchResult, facilityResult] = await fetchBoth(origin ? origin.radiusKm : null);
+        // Nothing around the visitor's own area → widen like the lists do.
+        // Manual area searches stay honest: an empty area shows empty.
+        if (
+          !mapArea &&
+          origin &&
+          (matchResult?.matches.length ?? 0) === 0 &&
+          (facilityResult?.facilities.length ?? 0) === 0
+        ) {
+          [matchResult, facilityResult] = await fetchBoth(null);
+        }
         if (!cancelled) {
-          setMapMatches(allMatches);
-          setMapFacilities(allFacilities);
+          setMapMatches(matchResult?.matches ?? []);
+          setMapFacilities(facilityResult?.facilities ?? []);
+          if (!mapArea) setMapFitNonce(n => n + 1);
         }
       } finally {
         if (!cancelled) setMapLoading(false);
@@ -374,7 +481,7 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
     return () => {
       cancelled = true;
     };
-  }, [viewMode, coords, activeSportId, mineOnly, query, fetchMatches, fetchFacilities]);
+  }, [viewMode, coords, activeSportId, mineOnly, query, mapArea, fetchMatches, fetchFacilities]);
 
   // Actions -----------------------------------------------------------------
   const handleJoin = useCallback(
@@ -393,8 +500,7 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       // Carry the active sport filter so a multi-sport facility opens on the
       // tab the visitor was already browsing. With "all sports" the gate infers
       // it from the clicked slot instead.
-      const activeSlug = sports.find(s => s.id === activeSportId)?.slug;
-      if (activeSlug) params.set('sport', activeSlug);
+      if (activeSportSlug) params.set('sport', activeSportSlug);
       if (slot) {
         params.set('start', slot.start);
         params.set('end', slot.end);
@@ -402,99 +508,110 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       const search = params.size > 0 ? `?${params.toString()}` : '';
       router.push(`/book/facility/${facility.id}${search}`);
     },
-    [router, sports, activeSportId]
+    [router, activeSportSlug]
   );
 
-  const handleLoadMore = async () => {
+  const handleSearchArea = useCallback((area: MapArea) => {
+    setMapArea({
+      lat: area.lat,
+      lng: area.lng,
+      radiusKm: Math.min(MAX_AREA_RADIUS_KM, Math.max(MIN_AREA_RADIUS_KM, area.radiusKm)),
+    });
+  }, []);
+
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore) return;
     setIsLoadingMore(true);
     try {
-      const wantMatches = kind !== 'courts' && matchesHasMore;
-      const wantFacilities = kind !== 'games' && facilitiesHasMore;
-      const [matchResult, facilityResult] = await Promise.all([
-        wantMatches
-          ? fetchMatches(
-              matchesOffset,
-              coords?.latitude,
-              coords?.longitude,
-              activeSportId,
-              mineOnly
-            )
-          : Promise.resolve(null),
-        wantFacilities
-          ? fetchFacilities(
-              facilitiesOffset,
-              coords?.latitude,
-              coords?.longitude,
-              activeSportId,
-              query
-            )
-          : Promise.resolve(null),
-      ]);
-      if (matchResult) {
-        setMatches(prev => {
-          const existing = new Set(prev.map(m => m.id));
-          return [...prev, ...matchResult.matches.filter(m => !existing.has(m.id))];
-        });
-        setMatchesHasMore(matchResult.hasMore);
-        setMatchesOffset(prev => prev + matchResult.matches.length);
+      if (kind === 'games' && matchesHasMore) {
+        const maxKm = coords != null && !matchesWidened ? SEARCH_RADIUS_KM : null;
+        const result = await fetchMatches(
+          matchesOffset,
+          coords?.latitude,
+          coords?.longitude,
+          activeSportId,
+          mineOnly,
+          MATCH_PAGE_SIZE,
+          maxKm
+        );
+        if (result) {
+          setMatches(prev => {
+            const existing = new Set(prev.map(m => m.id));
+            return [...prev, ...result.matches.filter(m => !existing.has(m.id))];
+          });
+          setMatchesHasMore(result.hasMore);
+          setMatchesOffset(prev => prev + result.matches.length);
+        }
       }
-      if (facilityResult) {
-        setFacilities(prev => {
-          const existing = new Set(prev.map(f => f.id));
-          return [...prev, ...facilityResult.facilities.filter(f => !existing.has(f.id))];
-        });
-        setFacilitiesHasMore(facilityResult.hasMore);
-        setFacilitiesOffset(prev => prev + facilityResult.facilities.length);
+      if (kind === 'courts' && facilitiesHasMore) {
+        const maxKm = coords != null && !query && !facilitiesWidened ? SEARCH_RADIUS_KM : null;
+        const result = await fetchFacilities(
+          facilitiesOffset,
+          coords?.latitude,
+          coords?.longitude,
+          activeSportId,
+          query,
+          FACILITY_PAGE_SIZE,
+          maxKm
+        );
+        if (result) {
+          setFacilities(prev => {
+            const existing = new Set(prev.map(f => f.id));
+            return [...prev, ...result.facilities.filter(f => !existing.has(f.id))];
+          });
+          setFacilitiesHasMore(result.hasMore);
+          setFacilitiesOffset(prev => prev + result.facilities.length);
+        }
       }
     } finally {
       setIsLoadingMore(false);
     }
-  };
+  }, [
+    isLoadingMore,
+    kind,
+    matchesHasMore,
+    matchesOffset,
+    matchesWidened,
+    facilitiesHasMore,
+    facilitiesOffset,
+    facilitiesWidened,
+    coords,
+    activeSportId,
+    mineOnly,
+    query,
+    fetchMatches,
+    fetchFacilities,
+  ]);
 
   // Derived data ------------------------------------------------------------
+  const availableMatches = useMemo(
+    () => (openOnly ? matches.filter(m => !getMatchCounts(m).isFull) : matches),
+    [matches, openOnly]
+  );
+
   const visibleMatches = useMemo(
     () =>
       dateFilter === 'all' || kind !== 'games'
-        ? matches
-        : matches.filter(m => matchesDateChip(m.match_date, dateFilter)),
-    [matches, dateFilter, kind]
+        ? availableMatches
+        : availableMatches.filter(m => matchesDateChip(m.match_date, dateFilter)),
+    [availableMatches, dateFilter, kind]
   );
 
-  const visibleMapMatches = useMemo(
-    () =>
-      dateFilter === 'all' || kind !== 'games'
-        ? mapMatches
-        : mapMatches.filter(m => matchesDateChip(m.match_date, dateFilter)),
-    [mapMatches, dateFilter, kind]
-  );
+  const visibleMapMatches = useMemo(() => {
+    let list = openOnly ? mapMatches.filter(m => !getMatchCounts(m).isFull) : mapMatches;
+    if (dateFilter !== 'all' && kind === 'games') {
+      list = list.filter(m => matchesDateChip(m.match_date, dateFilter));
+    }
+    return list;
+  }, [mapMatches, dateFilter, kind, openOnly]);
 
-  // The mixed "all" list interleaves both card types by proximity. Items
-  // without a resolvable distance keep their fetch order at the end: matches
-  // (date-ordered) first, then facilities.
-  const mixedItems = useMemo<MixedItem[]>(() => {
-    const items: MixedItem[] = [
-      ...matches.map<MixedItem>(m => ({
-        kind: 'match',
-        id: m.id,
-        distanceMeters: m.distance != null ? m.distance * 1000 : null,
-        match: m,
-      })),
-      ...facilities.map<MixedItem>(f => ({
-        kind: 'facility',
-        id: f.id,
-        distanceMeters: f.distance_meters,
-        facility: f,
-      })),
-    ];
-    return items.sort((a, b) => {
-      if (a.distanceMeters != null && b.distanceMeters != null) {
-        return a.distanceMeters - b.distanceMeters;
-      }
-      if (a.distanceMeters != null) return -1;
-      if (b.distanceMeters != null) return 1;
-      return 0;
-    });
-  }, [matches, facilities]);
+  // The "all" preview surfaces joinable games before full ones.
+  const previewMatches = useMemo(() => {
+    const open: PublicMatch[] = [];
+    const full: PublicMatch[] = [];
+    for (const m of availableMatches) (getMatchCounts(m).isFull ? full : open).push(m);
+    return [...open, ...full].slice(0, ALL_VIEW_SECTION_SIZE);
+  }, [availableMatches]);
 
   // Date-grouped games (games-only list view).
   const dateGroups = useMemo(() => {
@@ -535,7 +652,9 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
     (kind !== 'courts' && !matchesLoaded && matches.length === 0) ||
     (kind !== 'games' && !facilitiesLoaded && facilities.length === 0);
 
-  const hasMore = (kind !== 'courts' && matchesHasMore) || (kind !== 'games' && facilitiesHasMore);
+  // The "all" list is a fixed preview of each section — no pagination there.
+  const hasMore =
+    (kind === 'games' && matchesHasMore) || (kind === 'courts' && facilitiesHasMore);
 
   const isEmpty =
     !isLoading &&
@@ -547,10 +666,36 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
         ? facilities.length === 0
         : matches.length === 0 && facilities.length === 0);
 
+  const showWidenedNotice =
+    coords != null &&
+    !isLoading &&
+    !isEmpty &&
+    (kind === 'games'
+      ? matchesWidened
+      : kind === 'courts'
+        ? facilitiesWidened
+        : matchesWidened || facilitiesWidened);
+
+  // Auto-load the next page as the sentinel scrolls into range (button kept
+  // as a no-JS-observer fallback).
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || viewMode !== 'list') return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) void handleLoadMore();
+      },
+      { rootMargin: '800px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, viewMode, handleLoadMore]);
+
   // Controls ----------------------------------------------------------------
   const filterControls = (
     <div className="sticky top-3 z-40 flex w-full flex-col items-center gap-3">
-      <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-2 rounded-2xl border border-border/70 bg-background/85 px-3 py-2 shadow-lg shadow-black/5 backdrop-blur-md">
+      <div className="flex w-full max-w-full flex-nowrap items-center justify-start gap-x-2 gap-y-2 overflow-x-auto rounded-2xl border border-border/70 bg-background/85 px-3 py-2 shadow-lg shadow-black/5 backdrop-blur-md [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:justify-center sm:overflow-visible [&::-webkit-scrollbar]:hidden">
         <KindChips kind={kind} onChange={handleKindChange} />
 
         <ControlDivider />
@@ -566,10 +711,27 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
             <ControlDivider />
             <SportFilterTabs
               sports={sports}
-              activeSportId={activeSportId}
-              onChange={setActiveSportId}
+              activeSportSlug={activeSportSlug}
+              onChange={setActiveSportSlug}
               allLabel={tGames('allSports')}
             />
+          </>
+        )}
+
+        {kind !== 'courts' && (
+          <>
+            <ControlDivider />
+            <button
+              onClick={() => setOpenOnly(v => !v)}
+              className={cn(
+                'shrink-0 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors',
+                openOnly
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+              )}
+            >
+              {tGames('openSpotsOnly')}
+            </button>
           </>
         )}
 
@@ -590,6 +752,24 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
             )}
           </>
         )}
+
+        {!usedPreciseLocation && !geoFailed && (
+          <>
+            <ControlDivider />
+            <button
+              onClick={requestPreciseLocation}
+              disabled={locating}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+            >
+              {locating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <LocateFixed className="size-3.5" />
+              )}
+              {t('useMyLocation')}
+            </button>
+          </>
+        )}
       </div>
 
       {kind === 'courts' && (
@@ -603,6 +783,13 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
           />
         </div>
       )}
+    </div>
+  );
+
+  const widenedNotice = showWidenedNotice && (
+    <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+      <Info className="size-4 shrink-0" />
+      {t('searchWidened', { km: SEARCH_RADIUS_KM })}
     </div>
   );
 
@@ -620,6 +807,8 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
           isLoading={mapLoading}
           viewerPlayerId={viewerPlayerId}
           center={mapCenter}
+          fitNonce={mapFitNonce}
+          onSearchArea={handleSearchArea}
           onJoin={handleJoin}
           onBook={handleBook}
         />
@@ -631,6 +820,7 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
   return (
     <>
       {filterControls}
+      {widenedNotice}
 
       {isLoading && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -678,35 +868,81 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
         </div>
       )}
 
-      {/* Games view: all loaded matches hidden by the date filter */}
+      {/* Games view: all loaded matches hidden by the date/spots filters */}
       {kind === 'games' && !isLoading && !isEmpty && visibleMatches.length === 0 && (
         <div className="flex w-full flex-col items-center gap-4 py-16 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-muted">
             <CalendarX className="size-6 text-muted-foreground" />
           </div>
           <p className="font-medium">{tGames('noFilteredTitle')}</p>
-          <Button variant="outline" size="sm" onClick={() => setDateFilter('all')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDateFilter('all');
+              setOpenOnly(false);
+            }}
+          >
             {tGames('clearFilters')}
           </Button>
         </div>
       )}
 
-      {/* Mixed proximity grid (all) */}
+      {/* All view: separate games and courts sections — only the map mixes both */}
       {kind === 'all' && !isLoading && !isEmpty && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {mixedItems.map(item =>
-            item.kind === 'match' ? (
-              <PublicMatchCard
-                key={`m-${item.id}`}
-                match={item.match}
-                viewerPlayerId={viewerPlayerId}
-                onJoin={handleJoin}
-              />
-            ) : (
-              <FacilityCard key={`f-${item.id}`} facility={item.facility} onBook={handleBook} />
-            )
+        <>
+          {previewMatches.length > 0 && (
+            <section className="flex w-full flex-col gap-4">
+              <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="text-xl font-bold tracking-tight">{t('gamesSectionTitle')}</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {matchesHasMore
+                    ? t('gamesTotalPlus', { count: matches.length })
+                    : t('gamesTotal', { count: matches.length })}
+                </span>
+                <button
+                  onClick={() => handleKindChange('games')}
+                  className="ml-auto text-sm font-medium text-primary hover:underline"
+                >
+                  {t('seeAllGames')}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {previewMatches.map(match => (
+                  <PublicMatchCard
+                    key={match.id}
+                    match={match}
+                    viewerPlayerId={viewerPlayerId}
+                    onJoin={handleJoin}
+                  />
+                ))}
+              </div>
+            </section>
           )}
-        </div>
+          {facilities.length > 0 && (
+            <section className="flex w-full flex-col gap-4">
+              <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="text-xl font-bold tracking-tight">{t('courtsSectionTitle')}</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {facilitiesHasMore
+                    ? t('courtsTotalPlus', { count: facilities.length })
+                    : t('courtsTotal', { count: facilities.length })}
+                </span>
+                <button
+                  onClick={() => handleKindChange('courts')}
+                  className="ml-auto text-sm font-medium text-primary hover:underline"
+                >
+                  {t('seeAllCourts')}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {facilities.slice(0, ALL_VIEW_SECTION_SIZE).map(facility => (
+                  <FacilityCard key={facility.id} facility={facility} onBook={handleBook} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {/* Games view: date-grouped carousels */}
@@ -750,8 +986,9 @@ export default function PlayExplorer({ initialMatches, initialFacilities }: Play
       )}
 
       {hasMore && !isLoading && !isEmpty && (
-        <div className="mt-8 flex w-full justify-center">
-          <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+        <div className="mt-8 flex w-full flex-col items-center">
+          <div ref={sentinelRef} aria-hidden />
+          <Button variant="outline" onClick={() => void handleLoadMore()} disabled={isLoadingMore}>
             {isLoadingMore && <Loader2 className="mr-2 size-4 animate-spin" />}
             {tGames('loadMore')}
           </Button>
@@ -774,7 +1011,7 @@ function KindChips({ kind, onChange }: { kind: PlayKind; onChange: (kind: PlayKi
   ];
 
   return (
-    <div className="inline-flex rounded-full bg-muted p-0.5">
+    <div className="inline-flex shrink-0 rounded-full bg-muted p-0.5">
       {chips.map(chip => (
         <button
           key={chip.key}
@@ -870,7 +1107,7 @@ function ViewToggle({
   mapLabel: string;
 }) {
   return (
-    <div className="inline-flex rounded-full bg-muted p-0.5">
+    <div className="inline-flex shrink-0 rounded-full bg-muted p-0.5">
       <button
         onClick={() => onChange('list')}
         className={cn(
@@ -913,7 +1150,7 @@ function DateChips({ value, onChange }: { value: DateChip; onChange: (chip: Date
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5">
+    <div className="flex shrink-0 flex-nowrap items-center justify-center gap-1.5 sm:flex-wrap">
       {chips.map(chip => (
         <button
           key={chip.key}
@@ -948,7 +1185,7 @@ function ScopeToggle({
   mineLabel: string;
 }) {
   return (
-    <div className="inline-flex rounded-full bg-muted p-0.5">
+    <div className="inline-flex shrink-0 rounded-full bg-muted p-0.5">
       <button
         onClick={() => onChange(false)}
         className={cn(
@@ -981,22 +1218,22 @@ function ScopeToggle({
 
 function SportFilterTabs({
   sports,
-  activeSportId,
+  activeSportSlug,
   onChange,
   allLabel,
 }: {
   sports: Sport[];
-  activeSportId: string | null;
-  onChange: (sportId: string | null) => void;
+  activeSportSlug: string | null;
+  onChange: (sportSlug: string | null) => void;
   allLabel: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5">
+    <div className="flex shrink-0 flex-nowrap items-center justify-center gap-1.5 sm:flex-wrap">
       <button
         onClick={() => onChange(null)}
         className={cn(
           'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-          activeSportId === null
+          activeSportSlug === null
             ? 'bg-primary text-primary-foreground'
             : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
         )}
@@ -1006,10 +1243,10 @@ function SportFilterTabs({
       {sports.map(sport => (
         <button
           key={sport.id}
-          onClick={() => onChange(sport.id)}
+          onClick={() => onChange(sport.slug)}
           className={cn(
             'rounded-full px-3 py-1.5 text-sm font-medium capitalize transition-colors',
-            activeSportId === sport.id
+            activeSportSlug === sport.slug
               ? 'bg-primary text-primary-foreground'
               : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
           )}
@@ -1026,5 +1263,5 @@ function SportFilterTabs({
 // ---------------------------------------------------------------------------
 
 function ControlDivider() {
-  return <span className="hidden h-5 w-px bg-border sm:block" aria-hidden />;
+  return <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden />;
 }

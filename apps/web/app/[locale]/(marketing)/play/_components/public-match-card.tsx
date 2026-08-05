@@ -13,7 +13,7 @@ import {
 } from './match-card-parts';
 import { MatchChipRow } from './match-chip';
 import { getViewerMatchStatus, getViewerParticipant } from './match-viewer-status';
-import { getRelativeDateLabel, formatDuration } from './utils';
+import { displayableKm, getRelativeDateLabel, formatDuration } from './utils';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -92,6 +92,7 @@ export default function PublicMatchCard({ match, viewerPlayerId, onJoin }: Publi
   const location = facilityName || match.location_name || t('locationTBD');
   const city = match.facility?.city;
   const courtName = match.court?.name;
+  const distanceKm = displayableKm(match.distance);
 
   const { total, joinedCount, spotsLeft, isFull } = getMatchCounts(match);
   const isRequestMode = match.join_mode === 'request';
@@ -161,10 +162,8 @@ export default function PublicMatchCard({ match, viewerPlayerId, onJoin }: Publi
                 {[courtName, city].filter(Boolean).join(' · ')}
               </span>
             )}
-            {match.distance != null && (
-              <span className="text-xs">
-                {t('kmAway', { distance: Math.round(match.distance) })}
-              </span>
+            {distanceKm != null && (
+              <span className="text-xs">{t('kmAway', { distance: Math.round(distanceKm) })}</span>
             )}
           </div>
         </div>
