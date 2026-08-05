@@ -88,7 +88,10 @@ async function getInitialMatches(coords: Coords | null): Promise<PublicMatch[]> 
     .map(id => matchMap.get(id)!) as unknown as PublicMatch[];
 }
 
-async function getInitialFacilities(coords: Coords | null): Promise<FacilitySearchResult[]> {
+async function getInitialFacilities(
+  coords: Coords | null,
+  bookableOnly: boolean
+): Promise<FacilitySearchResult[]> {
   const supabase = createServiceRoleClient();
 
   const { data: sports } = await supabase.from('sport').select('id').eq('is_active', true);
@@ -102,6 +105,7 @@ async function getInitialFacilities(coords: Coords | null): Promise<FacilitySear
       p_latitude: coords?.latitude ?? 0,
       p_longitude: coords?.longitude ?? 0,
       p_max_distance_km: coords ? maxKm : null,
+      p_has_availabilities: bookableOnly ? true : null,
       p_limit: FACILITY_PAGE_SIZE,
       p_offset: 0,
     });
@@ -170,11 +174,7 @@ function parseInitialParams(sp: Record<string, string | string[] | undefined>): 
   const view: ViewMode = viewParam === 'map' ? 'map' : 'list';
   // Lists are single-kind; "all" is only valid on the map.
   const kind: PlayKind =
-    kindParam === 'games' || kindParam === 'courts'
-      ? kindParam
-      : view === 'map'
-        ? 'all'
-        : 'games';
+    kindParam === 'games' || kindParam === 'courts' ? kindParam : view === 'map' ? 'all' : 'games';
   const date: DateChip =
     dateParam === 'today' || dateParam === 'tomorrow' || dateParam === 'weekend'
       ? dateParam
@@ -186,6 +186,7 @@ function parseInitialParams(sp: Record<string, string | string[] | undefined>): 
     date,
     mine: first(sp.mine) === '1',
     openOnly: first(sp.open) === '1',
+    bookableOnly: first(sp.bookable) === '1',
     query: kind === 'courts' ? (first(sp.q) ?? '') : '',
   };
 }
@@ -200,7 +201,7 @@ export default async function PlayPage({
   const initialParams = parseInitialParams(sp);
   const [matches, facilities] = await Promise.all([
     getInitialMatches(coords),
-    getInitialFacilities(coords),
+    getInitialFacilities(coords, initialParams.bookableOnly),
   ]);
   const jsonLd = [...matchesToSportsEvents(matches), ...facilitiesToJsonLd(facilities)];
 
