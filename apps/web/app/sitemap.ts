@@ -3,6 +3,7 @@ import { locales } from '@rallia/shared-translations';
 
 import { getAllGuides } from '@/app/[locale]/(marketing)/guides/_content';
 import { SITE_URL } from '@/lib/seo';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 type ChangeFreq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
 
@@ -30,7 +31,38 @@ function alternatesFor(path: string) {
   return { languages };
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/** Facility detail pages (/play/courts/[slug]) — sourced from the directory
+ * itself; a failed query degrades to the static entries rather than a 500. */
+async function getFacilityEntries(): Promise<MetadataRoute.Sitemap> {
+  try {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase
+      .from('facility')
+      .select('slug, updated_at')
+      .eq('is_active', true)
+      .is('archived_at', null);
+    if (error || !data) return [];
+
+    const entries: MetadataRoute.Sitemap = [];
+    for (const facility of data) {
+      const path = `/play/courts/${facility.slug}`;
+      for (const locale of locales) {
+        entries.push({
+          url: `${SITE_URL}/${locale}${path}`,
+          lastModified: facility.updated_at,
+          changeFrequency: 'daily',
+          priority: 0.6,
+          alternates: alternatesFor(path),
+        });
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [];
 
   for (const { path, changeFrequency, priority } of PUBLIC_PATHS) {
@@ -58,6 +90,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       });
     }
   }
+
+  entries.push(...(await getFacilityEntries()));
 
   return entries;
 }
