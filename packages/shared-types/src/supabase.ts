@@ -12561,6 +12561,14 @@ export type Database = {
           tier: string
         }[]
       }
+      momentum_bucket: {
+        Args: { p_key: string; p_user: string }
+        Returns: number
+      }
+      momentum_enabled_for: {
+        Args: { p_key: string; p_user: string }
+        Returns: boolean
+      }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }
         Returns: number
