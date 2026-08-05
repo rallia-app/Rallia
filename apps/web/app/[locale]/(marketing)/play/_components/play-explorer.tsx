@@ -40,6 +40,7 @@ export interface PlayInitialParams {
   date: DateChip;
   mine: boolean;
   openOnly: boolean;
+  bookableOnly: boolean;
   query: string;
 }
 
@@ -121,6 +122,7 @@ export default function PlayExplorer({
   const [facilitiesOffset, setFacilitiesOffset] = useState(initialFacilities.length);
   const [facilitiesLoaded, setFacilitiesLoaded] = useState(true);
   const [facilitiesWidened, setFacilitiesWidened] = useState(false);
+  const [bookableOnly, setBookableOnly] = useState(initialParams.bookableOnly);
   const [searchInput, setSearchInput] = useState(initialParams.query);
   const [query, setQuery] = useState(initialParams.query);
 
@@ -236,12 +238,13 @@ export default function PlayExplorer({
     assign('date', dateFilter === 'all' ? null : dateFilter);
     assign('mine', mineOnly ? '1' : null);
     assign('open', openOnly ? '1' : null);
+    assign('bookable', bookableOnly ? '1' : null);
     assign('q', query || null);
     const qs = url.searchParams.toString();
     const next = `${url.pathname}${qs ? `?${qs}` : ''}${url.hash}`;
     const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (next !== current) window.history.replaceState(null, '', next);
-  }, [kind, viewMode, activeSportSlug, dateFilter, mineOnly, openOnly, query]);
+  }, [kind, viewMode, activeSportSlug, dateFilter, mineOnly, openOnly, bookableOnly, query]);
 
   // Fetchers ----------------------------------------------------------------
   const fetchMatches = useCallback(
@@ -280,7 +283,8 @@ export default function PlayExplorer({
       sportId?: string | null,
       q?: string,
       limit: number = FACILITY_PAGE_SIZE,
-      maxKm: number | null = null
+      maxKm: number | null = null,
+      bookable: boolean = false
     ) => {
       const params = new URLSearchParams({
         limit: String(limit),
@@ -293,6 +297,7 @@ export default function PlayExplorer({
       if (sportId) params.set('sportId', sportId);
       if (q) params.set('query', q);
       if (maxKm != null) params.set('maxKm', String(maxKm));
+      if (bookable) params.set('bookable', '1');
       const res = await fetch(`/api/public-facilities?${params}`);
       if (!res.ok) return null;
       return res.json() as Promise<{ facilities: PublicFacility[]; hasMore: boolean }>;
@@ -370,7 +375,8 @@ export default function PlayExplorer({
           activeSportId,
           query,
           FACILITY_PAGE_SIZE,
-          capped ? SEARCH_RADIUS_KM : null
+          capped ? SEARCH_RADIUS_KM : null,
+          bookableOnly
         );
         if (capped && result && result.facilities.length === 0) {
           const wide = await fetchFacilities(
@@ -380,7 +386,8 @@ export default function PlayExplorer({
             activeSportId,
             query,
             FACILITY_PAGE_SIZE,
-            null
+            null,
+            bookableOnly
           );
           if (wide && wide.facilities.length > 0) {
             result = wide;
@@ -401,7 +408,7 @@ export default function PlayExplorer({
     return () => {
       cancelled = true;
     };
-  }, [locationResolved, coords, activeSportId, query, fetchFacilities]);
+  }, [locationResolved, coords, activeSportId, query, bookableOnly, fetchFacilities]);
 
   // Debounce the search input into `query`.
   useEffect(() => {
@@ -457,7 +464,8 @@ export default function PlayExplorer({
               activeSportId,
               query,
               MAP_FACILITY_LIMIT,
-              query ? null : maxKm
+              query ? null : maxKm,
+              bookableOnly
             ),
           ]);
 
@@ -485,7 +493,17 @@ export default function PlayExplorer({
     return () => {
       cancelled = true;
     };
-  }, [viewMode, coords, activeSportId, mineOnly, query, mapArea, fetchMatches, fetchFacilities]);
+  }, [
+    viewMode,
+    coords,
+    activeSportId,
+    mineOnly,
+    query,
+    bookableOnly,
+    mapArea,
+    fetchMatches,
+    fetchFacilities,
+  ]);
 
   // Actions -----------------------------------------------------------------
   const handleJoin = useCallback(
@@ -556,7 +574,8 @@ export default function PlayExplorer({
           activeSportId,
           query,
           FACILITY_PAGE_SIZE,
-          maxKm
+          maxKm,
+          bookableOnly
         );
         if (result) {
           setFacilities(prev => {
@@ -583,6 +602,7 @@ export default function PlayExplorer({
     activeSportId,
     mineOnly,
     query,
+    bookableOnly,
     fetchMatches,
     fetchFacilities,
   ]);
@@ -649,8 +669,7 @@ export default function PlayExplorer({
     (kind !== 'games' && !facilitiesLoaded && facilities.length === 0);
 
   // List views are always a single kind ("all" exists only on the map).
-  const hasMore =
-    (kind === 'games' && matchesHasMore) || (kind === 'courts' && facilitiesHasMore);
+  const hasMore = (kind === 'games' && matchesHasMore) || (kind === 'courts' && facilitiesHasMore);
 
   const isEmpty =
     !isLoading &&
@@ -719,6 +738,23 @@ export default function PlayExplorer({
               )}
             >
               {tGames('openSpotsOnly')}
+            </button>
+          </>
+        )}
+
+        {kind !== 'games' && (
+          <>
+            <ControlDivider />
+            <button
+              onClick={() => setBookableOnly(v => !v)}
+              className={cn(
+                'shrink-0 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors',
+                bookableOnly
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+              )}
+            >
+              {tCourts('bookableOnly')}
             </button>
           </>
         )}
@@ -833,13 +869,24 @@ export default function PlayExplorer({
             </h2>
             <p className="text-muted-foreground">
               {kind === 'courts'
-                ? tCourts('emptyDescription')
+                ? bookableOnly
+                  ? tCourts('bookableEmptyDescription')
+                  : tCourts('emptyDescription')
                 : mineOnly
                   ? tGames('myGamesEmptyDescription')
                   : t('emptyDescription')}
             </p>
           </div>
-          {kind === 'games' && mineOnly ? (
+          {kind === 'courts' && bookableOnly ? (
+            <Button
+              variant="default"
+              size="lg"
+              className="font-semibold"
+              onClick={() => setBookableOnly(false)}
+            >
+              {tGames('clearFilters')}
+            </Button>
+          ) : kind === 'games' && mineOnly ? (
             <Button
               variant="default"
               size="lg"

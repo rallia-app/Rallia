@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('query')?.trim() || null;
     const maxKmParam = Number(searchParams.get('maxKm'));
     const maxKm = Number.isFinite(maxKmParam) && maxKmParam > 0 ? maxKmParam : null;
+    // Mirrors the mobile directory's "Bookable" chip: keep only facilities that
+    // can actually be reserved (provider-backed or with their own slot grid).
+    const bookableOnly = searchParams.get('bookable') === '1';
 
     const supabase = createServiceRoleClient();
 
@@ -41,6 +44,7 @@ export async function GET(request: NextRequest) {
       p_longitude: longitude ?? 0,
       p_search_query: query,
       p_max_distance_km: latitude != null && longitude != null ? maxKm : null,
+      p_has_availabilities: bookableOnly ? true : null,
       p_limit: limit + 1, // +1 to detect hasMore
       p_offset: offset,
       // Show every facility for the sport (parks included) — the same default
