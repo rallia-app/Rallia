@@ -27,12 +27,29 @@ import { useProfile } from '@rallia/shared-hooks';
 import { useAuth } from './AuthContext';
 import type { MatchDetailData } from './MatchDetailSheetContext';
 import type { TournamentEditData } from '../features/tournaments';
+import type { MatchCreationSource } from '../services/analytics';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export type ActionsSheetMode = 'auth' | 'onboarding' | 'actions' | 'loading';
+
+/** Pre-fill for the match creation wizard (e.g. "Play again" after feedback). */
+export interface MatchCreationPrefill {
+  locationType: 'facility' | 'custom' | 'tbd';
+  facilityId?: string;
+  locationName?: string;
+  locationAddress?: string;
+  matchDate: string;
+  startTime: string;
+  endTime?: string;
+  timezone?: string;
+  format?: 'singles' | 'doubles';
+  playerExpectation?: 'casual' | 'competitive' | 'both';
+  duration?: string;
+  customDurationMinutes?: number;
+}
 
 interface ActionsSheetContextType {
   /** Open the Actions bottom sheet, computing initial mode based on auth state */
@@ -45,7 +62,16 @@ interface ActionsSheetContextType {
   openSheetForTournamentEdit: (tournament: TournamentEditData) => void;
 
   /** Open the Actions bottom sheet directly to match creation (skips actions menu) */
-  openSheetForMatchCreation: () => void;
+  openSheetForMatchCreation: (source?: MatchCreationSource, prefill?: MatchCreationPrefill) => void;
+
+  /** Attribution source for the pending direct-to-creation open (consumed with the flag) */
+  matchCreationSource: MatchCreationSource | null;
+
+  /** Pending pre-fill for the creation wizard (consumed by the wizard) */
+  matchCreationPrefill: MatchCreationPrefill | null;
+
+  /** Clear the pending pre-fill after the wizard has consumed it */
+  clearMatchCreationPrefill: () => void;
 
   /** Open the Actions bottom sheet directly to tournament creation (skips actions menu) */
   openSheetForTournamentCreation: () => void;
@@ -148,6 +174,10 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
   // Flag to open directly to match creation wizard
   const [shouldOpenMatchCreation, setShouldOpenMatchCreation] = useState(false);
+  const [matchCreationSource, setMatchCreationSource] = useState<MatchCreationSource | null>(null);
+  const [matchCreationPrefill, setMatchCreationPrefill] = useState<MatchCreationPrefill | null>(
+    null
+  );
   const [shouldOpenTournamentCreation, setShouldOpenTournamentCreation] = useState(false);
   const [shouldOpenLeagueCreation, setShouldOpenLeagueCreation] = useState(false);
 
@@ -248,25 +278,36 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   /**
    * Open the sheet directly to match creation wizard (skips actions menu)
    */
-  const openSheetForMatchCreation = useCallback(() => {
-    const mode = computeInitialMode();
+  const openSheetForMatchCreation = useCallback(
+    (source?: MatchCreationSource, prefill?: MatchCreationPrefill) => {
+      const mode = computeInitialMode();
 
-    // If user is not authenticated or not onboarded, show the appropriate screen first
-    if (mode !== 'actions') {
-      setContentMode(mode);
-      setShouldOpenMatchCreation(false);
+      // If user is not authenticated or not onboarded, show the appropriate screen first
+      if (mode !== 'actions') {
+        setContentMode(mode);
+        setShouldOpenMatchCreation(false);
+        setMatchCreationSource(null);
+        setMatchCreationPrefill(null);
+        setInitialBookingForWizard(null);
+        SheetManager.show('main-actions');
+        return;
+      }
+
+      // User is authenticated and onboarded - open directly to match creation
+      setEditMatchData(null);
       setInitialBookingForWizard(null);
+      setMatchCreationSource(source ?? 'direct');
+      setMatchCreationPrefill(prefill ?? null);
+      setShouldOpenMatchCreation(true);
+      setContentMode('actions');
       SheetManager.show('main-actions');
-      return;
-    }
+    },
+    [computeInitialMode]
+  );
 
-    // User is authenticated and onboarded - open directly to match creation
-    setEditMatchData(null);
-    setInitialBookingForWizard(null);
-    setShouldOpenMatchCreation(true);
-    setContentMode('actions');
-    SheetManager.show('main-actions');
-  }, [computeInitialMode]);
+  const clearMatchCreationPrefill = useCallback(() => {
+    setMatchCreationPrefill(null);
+  }, []);
 
   /**
    * Open the sheet directly to the tournament creation wizard (skips actions menu)
@@ -379,6 +420,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    */
   const clearMatchCreationFlag = useCallback(() => {
     setShouldOpenMatchCreation(false);
+    setMatchCreationSource(null);
   }, []);
 
   const clearTournamentCreationFlag = useCallback(() => {
@@ -432,6 +474,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       editMatchData,
       clearEditMatch,
       shouldOpenMatchCreation,
+      matchCreationSource,
+      matchCreationPrefill,
+      clearMatchCreationPrefill,
       clearMatchCreationFlag,
       shouldOpenTournamentCreation,
       clearTournamentCreationFlag,
@@ -458,6 +503,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       editMatchData,
       clearEditMatch,
       shouldOpenMatchCreation,
+      matchCreationSource,
+      matchCreationPrefill,
+      clearMatchCreationPrefill,
       clearMatchCreationFlag,
       shouldOpenTournamentCreation,
       clearTournamentCreationFlag,

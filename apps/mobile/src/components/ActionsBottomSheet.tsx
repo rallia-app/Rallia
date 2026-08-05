@@ -235,6 +235,9 @@ export const ActionsBottomSheet: React.FC = () => {
     editMatchData,
     clearEditMatch,
     shouldOpenMatchCreation,
+    matchCreationSource,
+    matchCreationPrefill,
+    clearMatchCreationPrefill,
     clearMatchCreationFlag,
     shouldOpenTournamentCreation,
     clearTournamentCreationFlag,
@@ -295,6 +298,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Effect to automatically open match creation wizard when flag is set
   useEffect(() => {
     if (shouldOpenMatchCreation && contentMode === 'actions' && !showWizard && !isEditMode) {
+      Analytics.matchCreationStarted({ source: matchCreationSource ?? 'direct' });
       // Clear the flag first
       clearMatchCreationFlag();
       // Then trigger the wizard with a small delay to ensure sheet is fully presented
@@ -305,6 +309,7 @@ export const ActionsBottomSheet: React.FC = () => {
     }
   }, [
     shouldOpenMatchCreation,
+    matchCreationSource,
     contentMode,
     showWizard,
     isEditMode,
@@ -443,7 +448,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle create match - show wizard with slide animation
   const handleCreateMatch = useCallback(() => {
     lightHaptic();
-    Analytics.matchCreationStarted();
+    Analytics.matchCreationStarted({ source: 'plus_menu' });
     setShowWizard(true);
     slideIn();
   }, [slideIn]);
@@ -752,6 +757,8 @@ export const ActionsBottomSheet: React.FC = () => {
               onSuccess={handleWizardSuccess}
               initialBookingForWizard={initialBookingForWizard}
               onConsumeInitialBooking={clearInitialBookingFlag}
+              matchCreationPrefill={matchCreationPrefill}
+              onConsumePrefill={clearMatchCreationPrefill}
             />
           </Animated.View>
         )}

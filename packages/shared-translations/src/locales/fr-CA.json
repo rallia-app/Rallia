@@ -3558,6 +3558,13 @@
       "outcome": "Résultat du match",
       "feedback": "Évaluation"
     },
+    "nextPrompt": {
+      "title": "Évaluation envoyée. Belle partie!",
+      "subtitle": "Gardez le rythme et planifiez la prochaine dès maintenant.",
+      "playAgain": "Rejouer la semaine prochaine",
+      "joinAnother": "Rejoindre une autre partie",
+      "done": "Terminé"
+    },
     "matchContext": {
       "vsPlayer": "avec {name}",
       "vsPlayers": "avec {names}",
@@ -4149,7 +4156,10 @@
       "invitationsSent": "Invitations envoyées!",
       "invitationsSentCount": "{count} invitation(s) envoyée(s)",
       "shareWithContacts": "Partager avec {count} contact(s)",
-      "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
+      "selectContactsFromLists": "Sélectionner des contacts dans vos listes",
+      "greatFits": "De bons choix pour cette partie",
+      "morePlayers": "Plus de joueurs",
+      "freeAtGameTime": "Libre à l'heure de la partie"
     }
   },
   "leaderboard": {
@@ -6204,6 +6214,13 @@
         "title": "Aucune partie publique à proximité",
         "description": "Soyez le premier à créer une partie dans votre région!"
       }
+    },
+    "endOfList": {
+      "title": "Aucune de ces parties ne vous convient?"
+    },
+    "cancelledBanner": {
+      "title": "Votre partie a été annulée",
+      "description": "Voici d'autres parties ouvertes que vous pourriez rejoindre."
     },
     "results": {
       "count": "{count} parties",

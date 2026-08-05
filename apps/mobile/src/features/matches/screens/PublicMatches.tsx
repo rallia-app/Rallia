@@ -4,11 +4,18 @@
  */
 
 import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { useNavigation, useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
+import { Button, MatchCard, Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -34,7 +41,8 @@ import {
   useImpressionTracker,
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
-import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import { useActionsSheet, useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import type { HomeStackParamList } from '#/navigation/types';
 import { SportIcon } from '#/components/SportIcon';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
 
@@ -50,9 +58,10 @@ interface EmptyStateProps {
   hasFilters: boolean;
   textMutedColor: string;
   t: (key: TranslationKey) => string;
+  onCreatePress: () => void;
 }
 
-function EmptyState({ hasFilters, textMutedColor, t }: EmptyStateProps) {
+function EmptyState({ hasFilters, textMutedColor, t, onCreatePress }: EmptyStateProps) {
   return (
     <View style={styles.emptyWrapper}>
       <View style={styles.inlineEmpty}>
@@ -64,6 +73,16 @@ function EmptyState({ hasFilters, textMutedColor, t }: EmptyStateProps) {
         <Text size="sm" color={textMutedColor} style={styles.inlineEmptyText}>
           {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
         </Text>
+      </View>
+      <Text size="sm" color={textMutedColor} style={styles.emptyDescription}>
+        {hasFilters
+          ? t('publicMatches.empty.description')
+          : t('publicMatches.empty.noFilters.description')}
+      </Text>
+      <View style={styles.emptyCtaRow}>
+        <Button variant="primary" size="sm" onPress={onCreatePress}>
+          {t('matches.createMatch')}
+        </Button>
       </View>
     </View>
   );
@@ -88,6 +107,8 @@ export default function PublicMatches() {
     navigation.setOptions({ headerTitle: t('screens.publicMatches') });
   }, [navigation, t]);
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { openSheetForMatchCreation } = useActionsSheet();
+  const route = useRoute<RouteProp<HomeStackParamList, 'PublicMatches'>>();
   const isDark = theme === 'dark';
 
   // Get user location and preferences
@@ -485,6 +506,36 @@ export default function PublicMatches() {
   // Check if we're loading due to filter/search changes (not initial load or pagination)
   const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
+  // Recovery context from a match_cancelled notification tap: show a banner and
+  // prefilter to the cancelled game's date (if still upcoming) so alternatives
+  // for the freed-up slot surface first.
+  const [cancelledContext, setCancelledContext] = useState<
+    NonNullable<HomeStackParamList['PublicMatches']>['cancelledContext'] | null
+  >(null);
+  useEffect(() => {
+    const ctx = route.params?.cancelledContext;
+    if (!ctx) return;
+    setCancelledContext(ctx);
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if (ctx.matchDate && ctx.matchDate >= todayIso) {
+      setSpecificDate(ctx.matchDate);
+    }
+    // Consume the param so re-focusing the screen doesn't replay the banner.
+    navigation.setParams({ cancelledContext: undefined } as never);
+  }, [route.params?.cancelledContext, navigation, setSpecificDate]);
+
+  // "Create your own game" CTA — shared by the empty state and the end-of-list footer.
+  const handleCreateGamePress = useCallback(
+    (placement: 'empty_state' | 'feed_footer') => {
+      Analytics.createGameCtaPressed({
+        placement,
+        has_active_filters: hasActiveFilters || debouncedSearchQuery.length > 0,
+      });
+      openSheetForMatchCreation(placement === 'feed_footer' ? 'feed_footer' : 'empty_feed');
+    },
+    [hasActiveFilters, debouncedSearchQuery, openSheetForMatchCreation]
+  );
+
   // Render empty state — shows once matches have settled and there are none.
   const renderEmptyComponent = useCallback(() => {
     if (isLoading || isSearching) return null;
@@ -493,11 +544,20 @@ export default function PublicMatches() {
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
         textMutedColor={colors.textMuted}
         t={t}
+        onCreatePress={() => handleCreateGamePress('empty_state')}
       />
     );
-  }, [isLoading, isSearching, hasActiveFilters, debouncedSearchQuery, colors.textMuted, t]);
+  }, [
+    isLoading,
+    isSearching,
+    hasActiveFilters,
+    debouncedSearchQuery,
+    colors.textMuted,
+    t,
+    handleCreateGamePress,
+  ]);
 
-  // Render footer — pagination spinner only.
+  // Render footer — pagination spinner, or a create-your-own prompt at the end of the list.
   const renderFooter = useCallback(() => {
     if (isFetchingNextPage) {
       return (
@@ -506,8 +566,28 @@ export default function PublicMatches() {
         </View>
       );
     }
+    if (!hasNextPage && sortedMatches.length > 0) {
+      return (
+        <View style={styles.endOfListCta}>
+          <Text size="sm" color={colors.textMuted} style={styles.inlineEmptyText}>
+            {t('publicMatches.endOfList.title')}
+          </Text>
+          <Button variant="outline" size="sm" onPress={() => handleCreateGamePress('feed_footer')}>
+            {t('matches.createMatch')}
+          </Button>
+        </View>
+      );
+    }
     return null;
-  }, [isFetchingNextPage, colors.primary]);
+  }, [
+    isFetchingNextPage,
+    hasNextPage,
+    sortedMatches.length,
+    colors.primary,
+    colors.textMuted,
+    t,
+    handleCreateGamePress,
+  ]);
 
   // Loading state for initial data
   const isInitialLoading = playerLoading || sportLoading;
@@ -538,6 +618,33 @@ export default function PublicMatches() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      {/* Recovery banner after a cancelled-game notification tap */}
+      {cancelledContext && (
+        <View
+          style={[
+            styles.cancelledBanner,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons name="close-circle-outline" size={22} color={colors.textMuted} />
+          <View style={styles.cancelledBannerTextWrap}>
+            <Text size="sm" weight="semibold" color={colors.text}>
+              {t('publicMatches.cancelledBanner.title')}
+            </Text>
+            <Text size="xs" color={colors.textMuted}>
+              {t('publicMatches.cancelledBanner.description')}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setCancelledContext(null)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('common.close')}
+          >
+            <Ionicons name="close" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Fixed Header - Search and Filters always visible */}
       <View style={styles.headerContainer}>
         {/* Search Bar */}
@@ -713,6 +820,30 @@ const styles = StyleSheet.create({
   inlineEmptyText: {
     flexShrink: 1,
     textAlign: 'center',
+  },
+  emptyCtaRow: {
+    alignItems: 'center',
+    paddingTop: spacingPixels[4],
+  },
+  endOfListCta: {
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[6],
+    paddingHorizontal: spacingPixels[6],
+  },
+  cancelledBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[4],
+    padding: spacingPixels[3],
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  cancelledBannerTextWrap: {
+    flex: 1,
+    gap: 2,
   },
   emptyContainer: {
     padding: spacingPixels[8],

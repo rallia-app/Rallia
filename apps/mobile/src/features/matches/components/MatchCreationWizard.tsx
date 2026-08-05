@@ -57,7 +57,7 @@ import { shareMatch } from '#/utils';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 import * as Analytics from '#/services/analytics';
-import { useSport, type MatchDetailData } from '#/context';
+import { useSport, type MatchDetailData, type MatchCreationPrefill } from '#/context';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
@@ -94,6 +94,10 @@ interface MatchCreationWizardProps {
   initialBookingForWizard?: InitialBookingForWizard | null;
   /** Called after applying initialBookingForWizard so context can clear it */
   onConsumeInitialBooking?: () => void;
+  /** When set, wizard pre-fills fields from a previous match (e.g. post-feedback "Play again") */
+  matchCreationPrefill?: MatchCreationPrefill | null;
+  /** Called after applying matchCreationPrefill so context can clear it */
+  onConsumePrefill?: () => void;
 }
 
 interface ThemeColors {
@@ -282,6 +286,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   editMatch,
   initialBookingForWizard,
   onConsumeInitialBooking,
+  matchCreationPrefill,
+  onConsumePrefill,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -575,6 +581,36 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     timezone,
     formatDateLocal,
   ]);
+
+  // Apply a "play again" style prefill (post-feedback rematch). Unlike the
+  // booking prefill, nothing is locked and the user starts at step 1.
+  const hasAppliedPrefill = useRef(false);
+  useEffect(() => {
+    if (!matchCreationPrefill || hasAppliedPrefill.current || isEditMode) {
+      return;
+    }
+    const p = matchCreationPrefill;
+    form.setValue('locationType', p.locationType, { shouldDirty: true });
+    if (p.facilityId) form.setValue('facilityId', p.facilityId, { shouldDirty: true });
+    if (p.locationName) form.setValue('locationName', p.locationName, { shouldDirty: true });
+    if (p.locationAddress) {
+      form.setValue('locationAddress', p.locationAddress, { shouldDirty: true });
+    }
+    form.setValue('matchDate', p.matchDate, { shouldDirty: true });
+    form.setValue('startTime', p.startTime, { shouldDirty: true });
+    if (p.endTime) form.setValue('endTime', p.endTime, { shouldDirty: true });
+    if (p.timezone) form.setValue('timezone', p.timezone, { shouldDirty: true });
+    if (p.format) form.setValue('format', p.format, { shouldDirty: true });
+    if (p.playerExpectation) {
+      form.setValue('playerExpectation', p.playerExpectation, { shouldDirty: true });
+    }
+    if (p.duration) form.setValue('duration', p.duration as never, { shouldDirty: true });
+    if (p.customDurationMinutes != null) {
+      form.setValue('customDurationMinutes', p.customDurationMinutes, { shouldDirty: true });
+    }
+    hasAppliedPrefill.current = true;
+    onConsumePrefill?.();
+  }, [matchCreationPrefill, onConsumePrefill, isEditMode, form]);
 
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);

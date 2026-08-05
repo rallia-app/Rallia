@@ -3558,6 +3558,13 @@
       "outcome": "Match Outcome",
       "feedback": "Feedback"
     },
+    "nextPrompt": {
+      "title": "Feedback sent. Nice game!",
+      "subtitle": "Keep the momentum going and line up your next one now.",
+      "playAgain": "Play again next week",
+      "joinAnother": "Join another game",
+      "done": "Done"
+    },
     "matchContext": {
       "vsPlayer": "vs {name}",
       "vsPlayers": "vs {names}",
@@ -4149,7 +4156,10 @@
       "invitationsSent": "Invitations sent!",
       "invitationsSentCount": "Sent {count} invitation(s)",
       "shareWithContacts": "Share with {count} contact(s)",
-      "selectContactsFromLists": "Select contacts from your lists"
+      "selectContactsFromLists": "Select contacts from your lists",
+      "greatFits": "Great fits for this game",
+      "morePlayers": "More players",
+      "freeAtGameTime": "Free at game time"
     }
   },
   "leaderboard": {
@@ -6204,6 +6214,13 @@
         "title": "No public games nearby",
         "description": "Be the first to create a game in your area!"
       }
+    },
+    "endOfList": {
+      "title": "None of these work for you?"
+    },
+    "cancelledBanner": {
+      "title": "Your game was cancelled",
+      "description": "Here are other open games you could join instead."
     },
     "results": {
       "count": "{count} games",

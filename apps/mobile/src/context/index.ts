@@ -31,7 +31,7 @@ export {
 export type { AuthContextType, OAuthProvider, AuthResult } from './AuthContext';
 export type { UserHomeLocation } from './UserLocationContext';
 export type { LocationMode } from './LocationModeContext';
-export type { ActionsSheetMode } from './ActionsSheetContext';
+export type { ActionsSheetMode, MatchCreationPrefill } from './ActionsSheetContext';
 export type { Sport } from './SportContext';
 export type { MatchDetailData } from './MatchDetailSheetContext';
 export type { OverlaySport } from './OverlayContext';

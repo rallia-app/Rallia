@@ -25,13 +25,15 @@ export function navigateFromOutside<T extends keyof HomeStackParamList>(
   params?: HomeStackParamList[T]
 ) {
   if (navigationRef.isReady()) {
-    // Navigate to the Home tab first, then to the nested screen
+    // Navigate to the Home tab first, then to the nested screen.
+    // Assertion mirrors navigateToCommunityScreen: generic nested-navigator
+    // params don't narrow once a screen in the list takes params.
     navigationRef.navigate('Main', {
       screen: 'Home',
       params: {
         screen,
         params,
-      },
+      } as NavigatorScreenParams<HomeStackParamList>,
     });
   }
 }

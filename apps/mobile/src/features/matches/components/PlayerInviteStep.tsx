@@ -5,7 +5,7 @@
  * Shows a searchable list of players active in the same sport.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -29,8 +29,9 @@ import type {
   PlayerSearchResult,
   ReputationTier,
   ReputationDisplay,
+  DayFilter,
 } from '@rallia/shared-services';
-import { getTierConfig } from '@rallia/shared-services';
+import { getTierConfig, supabase, Logger } from '@rallia/shared-services';
 import type { MatchParticipantWithPlayer } from '@rallia/shared-types';
 
 import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
@@ -104,6 +105,8 @@ interface PlayerCardProps {
   colors: PlayerInviteStepProps['colors'];
   isDark: boolean;
   reputationDisplay?: ReputationDisplay;
+  /** Small pill shown next to badges (e.g. "Free at game time" on great-fit cards) */
+  fitLabel?: string;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -113,6 +116,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   colors,
   isDark,
   reputationDisplay,
+  fitLabel,
 }) => {
   const handlePress = () => {
     selectionHaptic();
@@ -178,6 +182,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           )}
           {reputationDisplay && (
             <ReputationBadge reputationDisplay={reputationDisplay} isDark={isDark} size="sm" />
+          )}
+          {fitLabel && (
+            <View style={[styles.fitPill, { backgroundColor: `${colors.buttonActive}15` }]}>
+              <Ionicons name="time-outline" size={11} color={colors.buttonActive} />
+              <Text size="xs" color={colors.buttonActive}>
+                {fitLabel}
+              </Text>
+            </View>
           )}
         </View>
       </View>
@@ -298,7 +310,67 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   // Refreshing state for pull-to-refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Player search hook
+  // Match context (location + slot) so candidates can be ranked by proximity
+  // and availability at game time instead of arriving in id order.
+  const [matchContext, setMatchContext] = useState<{
+    latitude?: number;
+    longitude?: number;
+    day?: DayFilter;
+    hour?: number;
+  } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from('match')
+        .select(
+          'match_date, start_time, custom_latitude, custom_longitude, facility:facility_id(latitude, longitude)'
+        )
+        .eq('id', matchId)
+        .single();
+      if (!alive) return;
+      if (error || !data) {
+        Logger.error('PlayerInviteStep: match context fetch failed', error);
+        setMatchContext({});
+        return;
+      }
+      // supabase-js types to-one embeds as arrays in some schema versions; handle both.
+      const facilityRaw = data.facility as unknown;
+      const facility = (Array.isArray(facilityRaw) ? facilityRaw[0] : facilityRaw) as {
+        latitude: number | null;
+        longitude: number | null;
+      } | null;
+      const lat = facility?.latitude ?? data.custom_latitude;
+      const lng = facility?.longitude ?? data.custom_longitude;
+      const days: DayFilter[] = [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ];
+      // match_date is the match's own local calendar date; UTC parse keeps the weekday exact.
+      const day = data.match_date
+        ? days[new Date(`${data.match_date}T00:00:00Z`).getUTCDay()]
+        : undefined;
+      const hour = data.start_time
+        ? Number.parseInt(String(data.start_time).slice(0, 2), 10)
+        : undefined;
+      setMatchContext({
+        latitude: lat != null ? Number(lat) : undefined,
+        longitude: lng != null ? Number(lng) : undefined,
+        day,
+        hour: Number.isFinite(hour) ? hour : undefined,
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [matchId]);
+
+  // Player search hook — distance-ranked once match coordinates are known.
   const {
     players,
     isLoading,
@@ -312,8 +384,36 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     currentUserId: hostId,
     searchQuery,
     excludePlayerIds: effectiveExcludePlayerIds,
-    enabled: true,
+    latitude: matchContext?.latitude,
+    longitude: matchContext?.longitude,
+    enabled: matchContext !== null,
   });
+
+  // "Great fits": players whose declared availability covers the game's
+  // weekday + hour, nearest first. Rendered as a pinned section on top.
+  const { players: fitPlayers } = usePlayerSearch({
+    sportId,
+    currentUserId: hostId,
+    searchQuery: '',
+    excludePlayerIds: effectiveExcludePlayerIds,
+    latitude: matchContext?.latitude,
+    longitude: matchContext?.longitude,
+    filters:
+      matchContext?.day && matchContext?.hour != null
+        ? {
+            day: matchContext.day,
+            hourRange: { minHour: matchContext.hour, maxHour: matchContext.hour },
+          }
+        : {},
+    pageSize: 10,
+    enabled:
+      matchContext !== null &&
+      !!matchContext.day &&
+      matchContext.hour != null &&
+      searchQuery.length === 0,
+  });
+  const fitPlayerIds = useMemo(() => new Set(fitPlayers.map(p => p.id)), [fitPlayers]);
+  const showFitSection = searchQuery.length === 0 && fitPlayers.length > 0;
 
   // Invite mutation - do not close sheet on success so user can also share with contacts
   const { invitePlayers, isInviting } = useInviteToMatch({
@@ -547,9 +647,43 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
       {/* Player list */}
       <FlatList
-        data={players}
+        data={showFitSection ? players.filter(p => !fitPlayerIds.has(p.id)) : players}
         keyExtractor={item => item.id}
         renderItem={renderPlayer}
+        ListHeaderComponent={
+          showFitSection ? (
+            <View>
+              <Text
+                size="sm"
+                weight="semibold"
+                color={colors.textMuted}
+                style={styles.sectionLabel}
+              >
+                {t('matchCreation.invite.greatFits')}
+              </Text>
+              {fitPlayers.map(player => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  isSelected={selectedPlayerIds.has(player.id)}
+                  onToggle={handleTogglePlayer}
+                  colors={colors}
+                  isDark={isDark}
+                  reputationDisplay={getReputationDisplay(player)}
+                  fitLabel={t('matchCreation.invite.freeAtGameTime')}
+                />
+              ))}
+              <Text
+                size="sm"
+                weight="semibold"
+                color={colors.textMuted}
+                style={styles.sectionLabel}
+              >
+                {t('matchCreation.invite.morePlayers')}
+              </Text>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={renderEmptyState}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}
@@ -707,6 +841,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[1],
     flexWrap: 'wrap',
+  },
+  fitPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: 2,
+    borderRadius: radiusPixels.full,
+  },
+  sectionLabel: {
+    marginTop: spacingPixels[3],
+    marginBottom: spacingPixels[2],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   ratingBadge: {
     alignSelf: 'flex-start',
