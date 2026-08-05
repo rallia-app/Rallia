@@ -5912,6 +5912,44 @@ export type Database = {
           },
         ]
       }
+      player_sms_consent: {
+        Row: {
+          created_at: string
+          granted_at: string
+          id: string
+          phone: string
+          player_id: string
+          source: string
+          wording_version: number
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          id?: string
+          phone: string
+          player_id: string
+          source: string
+          wording_version: number
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          id?: string
+          phone?: string
+          player_id?: string
+          source?: string
+          wording_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_sms_consent_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_sport: {
         Row: {
           active_rating_score_id: string | null
