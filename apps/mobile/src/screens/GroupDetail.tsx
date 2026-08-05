@@ -169,8 +169,14 @@ export default function GroupDetailScreen() {
   useGroupRealtime(groupId, playerId);
   // Subscribe to real-time score confirmation updates
   useScoreConfirmationsRealtime(playerId);
-  // Subscribe to real-time chat updates for unread count badge
-  useConversationUnreadRealtime(group?.conversation_id ?? undefined, playerId);
+  // Subscribe to real-time chat updates for unread count badge.
+  // Only members are conversation participants; subscribing as a non-member
+  // viewer gets denied by RLS and loops in Realtime error logs.
+  const isGroupMember = !!playerId && !!group?.members?.some(m => m.player_id === playerId);
+  useConversationUnreadRealtime(
+    isGroupMember ? (group?.conversation_id ?? undefined) : undefined,
+    playerId
+  );
 
   const leaveGroupMutation = useLeaveGroup();
   const deleteGroupMutation = useDeleteGroup();

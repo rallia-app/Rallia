@@ -54,6 +54,7 @@ import {
 } from '#/features/matches/hooks';
 import { supabase } from '#/lib/supabase';
 import { shareMatch } from '#/utils';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 import * as Analytics from '#/services/analytics';
 import { useSport, type MatchDetailData } from '#/context';
@@ -605,7 +606,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     },
     onError: err => {
       warningHaptic();
-      toast.error(err.message);
+      toast.error(rpcErrorMessage(err, t, 'common.rpcErrors.generic'));
     },
   });
 
@@ -620,7 +621,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     },
     onError: err => {
       warningHaptic();
-      toast.error(err.message);
+      toast.error(rpcErrorMessage(err, t, 'common.rpcErrors.generic'));
     },
   });
 

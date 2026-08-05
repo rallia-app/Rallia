@@ -8,21 +8,35 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SheetManager, SheetProps } from 'react-native-actions-sheet';
-import { Button, useToast } from '@rallia/shared-components';
+import { Ionicons } from '@expo/vector-icons';
+import { Button, Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useCreateSession } from '@rallia/shared-hooks';
+import type { Enums } from '@rallia/shared-types';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 import * as Analytics from '#/services/analytics';
 
 import { SheetDateField } from './SheetDateField';
 
 const SHEET_ID = 'create-session';
+
+/**
+ * Pairing modes offered to an organizer. The enum also carries 'swiss' and
+ * 'balanced_doubles', which the generator resolves to the same ranking order as
+ * by_rank; offering them would promise a difference that does not exist.
+ */
+const PAIRING_MODES = [
+  'by_rank',
+  'random',
+  'avoid_repeat',
+] as const satisfies readonly Enums<'pairing_mode'>[];
 
 export function CreateSessionActionSheet({ payload }: SheetProps<'create-session'>) {
   const seasonId = payload?.seasonId ?? '';
@@ -34,6 +48,7 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
 
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [pairingMode, setPairingMode] = useState<Enums<'pairing_mode'>>('by_rank');
   const [scheduledAt, setScheduledAt] = useState<Date>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -58,7 +73,13 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          INVALID_NAME: 'leagueDetail.createErrors.invalidName',
+          INVALID_SCHEDULE: 'leagueDetail.createErrors.invalidSchedule',
+          SEASON_NOT_OPEN: 'leagueDetail.seasonErrors.seasonNotOpen',
+        })
+      );
     },
   });
 
@@ -101,8 +122,9 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
       scheduledAt: scheduledAt.toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       capacity: Number.isFinite(parsedCapacity) && parsedCapacity > 0 ? parsedCapacity : undefined,
+      pairingMode,
     });
-  }, [name, scheduledAt, capacity, createSession, toast, t]);
+  }, [name, scheduledAt, capacity, pairingMode, createSession, toast, t]);
 
   return (
     <BaseActionSheet
@@ -181,6 +203,40 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
             },
           ]}
         />
+
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.text}>
+            {t('leagueDetail.sessions.pairing.label')}
+          </Text>
+          {PAIRING_MODES.map(mode => (
+            <TouchableOpacity
+              key={mode}
+              onPress={() => {
+                lightHaptic();
+                setPairingMode(mode);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: pairingMode === mode }}
+              testID={`session-pairing-${mode}`}
+              style={[
+                styles.option,
+                { borderColor: pairingMode === mode ? colors.primary : colors.border },
+              ]}
+            >
+              <View style={styles.optionText}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t(`leagueDetail.sessions.pairing.${mode}.title`)}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t(`leagueDetail.sessions.pairing.${mode}.description`)}
+                </Text>
+              </View>
+              {pairingMode === mode && (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     </BaseActionSheet>
   );
@@ -203,6 +259,21 @@ const styles = StyleSheet.create({
   },
   dateTimeField: {
     flex: 1,
+  },
+  fieldGroup: {
+    gap: spacingPixels[2],
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+  },
+  optionText: {
+    flex: 1,
+    gap: spacingPixels[1],
   },
 });
 

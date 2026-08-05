@@ -8,13 +8,22 @@
  *       specs/17-leagues-tournaments/leagues.md §Sessions
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
@@ -41,6 +50,9 @@ import {
   useGenerateSessionSheet,
   useSetSessionMatchLock,
   useSports,
+  useOpenSessionPairingChat,
+  useWithdrawSessionMember,
+  useRemindPendingSessionMembers,
 } from '@rallia/shared-hooks';
 import { isLeagueOrganizer } from '@rallia/shared-services';
 import type {
@@ -50,11 +62,16 @@ import type {
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
+import { SheetDateField } from '#/features/leagues/components/SheetDateField';
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
+import { rpcErrorMessage } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
 type Route = RouteProp<RootStackParamList, 'SessionDetail'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type SessionStatus = Enums<'session_status'>;
 
 const SESSION_STATUS_KEY: Record<SessionStatus, string> = {
@@ -80,6 +97,7 @@ export const SessionDetail: React.FC = () => {
   const { session: authSession } = useAuth();
   const userId = authSession?.user?.id;
   const route = useRoute<Route>();
+  const navigation = useNavigation<NavigationProp>();
   const { sessionId, leagueId } = route.params;
   const isDark = theme === 'dark';
   const tc = isDark ? darkTheme : lightTheme;
@@ -135,6 +153,22 @@ export const SessionDetail: React.FC = () => {
     [presence, t]
   );
 
+  // Doubles rows carry two ids a side; joining with & covers both formats.
+  const teamLabel = useCallback((ids: string[]): string => ids.map(nameOf).join(' & '), [nameOf]);
+
+  const isDoubles = (sess?.formats_allowed?.[0] ?? 'singles') !== 'singles';
+
+  // Preferred partner for doubles nights. undefined = untouched (falls back to
+  // the preference already stored on my presence row), null = explicitly none.
+  const [partnerChoice, setPartnerChoice] = useState<string | null | undefined>(undefined);
+  const selectedPartner =
+    partnerChoice === undefined ? (myPresence?.preferred_partner_id ?? null) : partnerChoice;
+
+  const partnerCandidates = useMemo(
+    () => presence.filter(p => p.user_id !== userId && p.status !== 'declined'),
+    [presence, userId]
+  );
+
   const byeNames = useMemo(() => {
     const paired = new Set<string>();
     matches.forEach((m: SessionMatch) => {
@@ -170,9 +204,9 @@ export const SessionDetail: React.FC = () => {
     onError: e => {
       warningHaptic();
       toast.error(
-        e.message === 'ENROLLMENT_REMOVED'
-          ? t('leagueDetail.paid.errors.enrollmentRemoved')
-          : e.message || t('sessionDetail.errors.generic')
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          ENROLLMENT_REMOVED: 'leagueDetail.paid.errors.enrollmentRemoved',
+        })
       );
     },
   });
@@ -180,6 +214,7 @@ export const SessionDetail: React.FC = () => {
   const { mutate: publish, isPending: isPublishing } = usePublishSession(seasonId, {
     onSuccess: row => {
       successHaptic();
+      setShowPublishModal(false);
       toast.success(t('sessionDetail.toasts.published'));
       Analytics.sessionPublishedAnalytics({
         leagueId,
@@ -190,22 +225,77 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          INVALID_DEADLINE: 'sessionDetail.publishModal.invalidDeadline',
+          SESSION_START_PASSED: 'sessionDetail.rpcErrors.startPassed',
+        })
+      );
     },
   });
+
+  const { mutate: withdrawMember, isPending: isWithdrawing } = useWithdrawSessionMember(sessionId, {
+    onSuccess: () => {
+      void successHaptic();
+      toast.success(t('sessionDetail.roster.withdrawn'));
+      invalidate();
+    },
+    onError: e => {
+      void warningHaptic();
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          PRESENCE_NOT_WITHDRAWABLE: 'sessionDetail.rpcErrors.notWithdrawable',
+        })
+      );
+    },
+  });
+
+  // The cron nudge fires once, and only inside the last 24h before the
+  // deadline; this is the organizer's own way to chase the silent members.
+  const { mutate: remindPending, isPending: isReminding } = useRemindPendingSessionMembers(
+    sessionId,
+    {
+      onSuccess: count => {
+        void successHaptic();
+        toast.success(t('sessionDetail.roster.reminded', { count: String(count) }));
+      },
+      onError: e => {
+        void warningHaptic();
+        toast.error(
+          rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+            REMINDER_TOO_SOON: 'sessionDetail.roster.remindTooSoon',
+            NO_PENDING_MEMBERS: 'sessionDetail.roster.remindNobody',
+            SESSION_PAST: 'sessionDetail.rpcErrors.sessionPast',
+          })
+        );
+      },
+    }
+  );
 
   const { mutate: cancel, isPending: isCancelling } = useCancelSession(seasonId, {
     onSuccess: () => {
       successHaptic();
+      setShowCancelModal(false);
       toast.success(t('sessionDetail.toasts.cancelled'));
       Analytics.sessionCancelledAnalytics({ sessionId, confirmedCount });
       invalidate();
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          SESSION_NOT_CANCELLABLE: 'sessionDetail.rpcErrors.notCancellable',
+        })
+      );
     },
   });
+
+  // "Pour une ligue, le concept de bye ne devrait pas s'appliquer" — the bye
+  // stays (removing it would block generation whenever someone does not show,
+  // and the rotation that scores it as attendance just shipped), but an odd
+  // roster is now a decision rather than a surprise: the organizer is told who
+  // sits out and can withdraw or add someone first.
+  const oddRoster = confirmedCount % 2 === 1 && (sess?.rounds ?? 1) <= 1;
 
   const { mutate: genSheet, isPending: isGenerating } = useGenerateSessionSheet(sessionId, {
     onSuccess: () => {
@@ -216,7 +306,12 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          NOT_ENOUGH_CONFIRMED: 'sessionDetail.rpcErrors.notEnoughConfirmed',
+          SHEET_LOCKED: 'sessionDetail.rpcErrors.sheetLocked',
+        })
+      );
     },
   });
 
@@ -227,7 +322,7 @@ export const SessionDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('sessionDetail.errors.generic'));
+      toast.error(rpcErrorMessage(e, t, 'sessionDetail.errors.generic'));
     },
   });
 
@@ -248,7 +343,79 @@ export const SessionDetail: React.FC = () => {
     [userId]
   );
 
+  // session_publish already defaults the deadline to scheduled_at - 24h
+  // (clamped up for short-notice sessions). The organizer was simply never
+  // asked, so the modal opens pre-filled with exactly that default: accepting it
+  // is byte-identical to the old behaviour.
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishDeadline, setPublishDeadline] = useState<Date | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+
+  // SheetDateField carries its own colour contract; map the screen's palette on.
+  const dateFieldColors = useMemo(
+    () => ({
+      border: colors.border,
+      text: colors.text,
+      textMuted: colors.textMuted,
+      primary: colors.primary,
+      cardBackground: colors.card,
+    }),
+    [colors]
+  );
+
+  const defaultDeadline = useCallback((): Date => {
+    const start = sess ? new Date(sess.scheduled_at) : new Date();
+    const dayBefore = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+    return dayBefore.getTime() > Date.now() ? dayBefore : start;
+  }, [sess]);
+
   const sessionScoreable = !!sess && (sess.status === 'published' || sess.status === 'in_progress');
+
+  // Scoring the last match completes the session, which used to freeze every
+  // score in it. No clock here on purpose: session_record_score owns the 24h
+  // window (20260730170000) and answers CORRECTION_WINDOW_CLOSED with copy that
+  // explains it, so the screen keeps the affordance reachable on a finished
+  // session rather than re-deriving a deadline it cannot enforce.
+  const sessionCorrectable = !!sess && sess.status === 'completed' && !!sess.completed_at;
+
+  const canEditScore = isOrganizer && (sessionScoreable || sessionCorrectable);
+
+  // The result that leaves no playable match behind closes the session, so it
+  // gets a confirmation the way a tournament final does.
+  const isSessionDecider = useCallback(
+    (m: SessionMatch) =>
+      !isScored(m) && matches.every(x => x.id === m.id || isScored(x) || x.status === 'cancelled'),
+    [matches, isScored]
+  );
+
+  // The lock survives a regenerate: lt_run_session_sheet preserves locked rows
+  // when it rebuilds the sheet. It used to render only next to an already-scored
+  // match, which is the one state where it is pointless — an unscored pairing is
+  // exactly what an organizer wants to pin before regenerating.
+  const renderLockToggle = useCallback(
+    (m: SessionMatch) => (
+      <TouchableOpacity
+        onPress={() => {
+          lightHaptic();
+          setLock({ sessionMatchId: m.id, locked: !m.locked, versionWas: m.version });
+        }}
+        disabled={isLocking}
+        accessibilityLabel={
+          m.locked ? t('sessionDetail.sheet.unlock') : t('sessionDetail.sheet.lock')
+        }
+        style={styles.lockButton}
+        testID="cta-lock-match"
+      >
+        <Ionicons
+          name={m.locked ? 'lock-closed' : 'lock-open-outline'}
+          size={18}
+          color={m.locked ? colors.primary : colors.textMuted}
+        />
+      </TouchableOpacity>
+    ),
+    [setLock, isLocking, t, colors.primary, colors.textMuted]
+  );
 
   // Organizer/admin records an authoritative result directly (override path).
   const canOverride = useCallback(
@@ -256,9 +423,9 @@ export const SessionDetail: React.FC = () => {
     [sessionScoreable, isOrganizer, isScored]
   );
 
-  // A participant settles their pairing by linking a played, verified casual
-  // match — the canonical flow (feedback + rating + confirmation come with it).
-  const canLink = useCallback(
+  // A participant with an open pairing can organize the game with their
+  // opponent in the pairing chat, before or after a game has been agreed on.
+  const canOrganize = useCallback(
     (m: SessionMatch) =>
       sessionScoreable &&
       !isOrganizer &&
@@ -268,6 +435,12 @@ export const SessionDetail: React.FC = () => {
       !m.is_three_player,
     [sessionScoreable, isOrganizer, isParticipantOf, isScored]
   );
+
+  // A participant settles their pairing by linking a played, verified casual
+  // match — the canonical flow (feedback + rating + confirmation come with it).
+  // A pairing organized in chat is already bound to its game, so there is
+  // nothing left to link: the score arrives through that game's confirmation.
+  const canLink = useCallback((m: SessionMatch) => canOrganize(m) && !m.match_id, [canOrganize]);
 
   const openLinkMatch = useCallback(
     (m: SessionMatch) => {
@@ -289,6 +462,28 @@ export const SessionDetail: React.FC = () => {
     [league, sessionId, seasonId, invalidate]
   );
 
+  // Open (get-or-create) the per-pairing chat and drop the caller in, so they
+  // can agree on a time with their opponent. The game they create there is
+  // attached to this pairing before it's played, and that chat becomes the
+  // match chat, so confirming the score settles the pairing on its own.
+  const openPairingChat = useOpenSessionPairingChat();
+  const handleOrganizeInChat = useCallback(
+    (m: SessionMatch) => {
+      lightHaptic();
+      openPairingChat.mutate(m.id, {
+        onSuccess: conversationId => {
+          if (!conversationId) return;
+          navigation.navigate('ChatConversation', {
+            conversationId,
+            title: league?.name,
+          });
+        },
+        onError: () => toast.error(t('sessionDetail.pairingChat.error')),
+      });
+    },
+    [openPairingChat, navigation, league?.name, toast, t]
+  );
+
   const openScoreEntry = useCallback(
     (m: SessionMatch) => {
       lightHaptic();
@@ -298,11 +493,13 @@ export const SessionDetail: React.FC = () => {
           sessionId,
           seasonId,
           versionWas: m.version,
-          teamAName: nameOf(m.team_a_user_ids[0]),
-          teamBName: nameOf(m.team_b_user_ids[0]),
+          teamAName: teamLabel(m.team_a_user_ids),
+          teamBName: teamLabel(m.team_b_user_ids),
           isPickleball: isPickleballLeague,
           matchFormat: sess?.match_format,
+          pointsPerGame: sess?.points_per_game,
           isEdit: isScored(m),
+          isDecider: isSessionDecider(m),
           onSuccess: () => {
             toast.success(t('sessionDetail.score.saved'));
             Analytics.sessionScoreSubmittedAnalytics({ sessionId });
@@ -318,6 +515,7 @@ export const SessionDetail: React.FC = () => {
       isPickleballLeague,
       sess?.match_format,
       isScored,
+      isSessionDecider,
       toast,
       t,
       invalidate,
@@ -328,14 +526,20 @@ export const SessionDetail: React.FC = () => {
     (status: PresenceStatus) => {
       if (isConfirming || !sess) return;
       lightHaptic();
-      confirm({ status });
+      confirm({
+        status,
+        partnerId: status === 'confirmed' && isDoubles ? (selectedPartner ?? undefined) : undefined,
+      });
       if (status === 'confirmed') {
-        Analytics.sessionConfirmedAnalytics({ sessionId, partnerProvided: false });
+        Analytics.sessionConfirmedAnalytics({
+          sessionId,
+          partnerProvided: isDoubles && !!selectedPartner,
+        });
       } else if (status === 'declined') {
         Analytics.sessionDeclinedAnalytics({ sessionId });
       }
     },
-    [confirm, isConfirming, sess, sessionId]
+    [confirm, isConfirming, sess, sessionId, isDoubles, selectedPartner]
   );
 
   const formatDateTime = useCallback(
@@ -419,6 +623,21 @@ export const SessionDetail: React.FC = () => {
           <Text size="2xl" weight="bold" color={colors.text} style={styles.title}>
             {sess.name}
           </Text>
+          {sess.status === 'cancelled' ? (
+            <View style={[styles.cancelledNotice, { backgroundColor: colors.dangerBg }]}>
+              <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+              <View style={styles.cancelledNoticeBody}>
+                <Text size="sm" weight="semibold" color={colors.danger}>
+                  {t('sessionDetail.cancelledNotice.title')}
+                </Text>
+                {sess.cancelled_reason ? (
+                  <Text size="xs" color={colors.danger}>
+                    {t('sessionDetail.cancelledNotice.reason', { reason: sess.cancelled_reason })}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={16} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted}>
@@ -473,6 +692,73 @@ export const SessionDetail: React.FC = () => {
                     ? t('sessionDetail.cta.declinedTitle')
                     : t('sessionDetail.cta.title')}
             </Text>
+            {isDoubles && partnerCandidates.length > 0 && (
+              <View style={styles.partnerBlock}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('sessionDetail.partner.label')}
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.partnerChips}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      lightHaptic();
+                      setPartnerChoice(null);
+                    }}
+                    style={[
+                      styles.partnerChip,
+                      {
+                        borderColor: selectedPartner === null ? colors.primary : colors.border,
+                        backgroundColor:
+                          selectedPartner === null ? colors.highlightBg : colors.card,
+                      },
+                    ]}
+                    testID="partner-chip-none"
+                  >
+                    <Text
+                      size="sm"
+                      weight={selectedPartner === null ? 'semibold' : 'regular'}
+                      color={selectedPartner === null ? colors.primary : colors.text}
+                    >
+                      {t('sessionDetail.partner.none')}
+                    </Text>
+                  </TouchableOpacity>
+                  {partnerCandidates.map(p => {
+                    const selected = selectedPartner === p.user_id;
+                    return (
+                      <TouchableOpacity
+                        key={p.user_id}
+                        onPress={() => {
+                          lightHaptic();
+                          setPartnerChoice(selected ? null : p.user_id);
+                        }}
+                        style={[
+                          styles.partnerChip,
+                          {
+                            borderColor: selected ? colors.primary : colors.border,
+                            backgroundColor: selected ? colors.highlightBg : colors.card,
+                          },
+                        ]}
+                        testID={`partner-chip-${p.user_id}`}
+                      >
+                        <Text
+                          size="sm"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.primary : colors.text}
+                        >
+                          {nameOf(p.user_id)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('sessionDetail.partner.hint')}
+                </Text>
+              </View>
+            )}
             <View style={styles.ctaButtons}>
               <TouchableOpacity
                 onPress={() => handleConfirm('confirmed')}
@@ -489,18 +775,22 @@ export const SessionDetail: React.FC = () => {
                   {t('sessionDetail.cta.confirm')}
                 </Text>
               </TouchableOpacity>
+              {/* Withdrawing is a negative action and read as neutral in a plain
+                  white outline, so it carries the danger tone the cancel controls
+                  already use rather than looking like a second confirm. */}
               <TouchableOpacity
                 onPress={() => handleConfirm('declined')}
                 disabled={isConfirming || myPresence?.status === 'declined'}
                 style={[
                   styles.ctaButton,
                   styles.ctaButtonOutline,
-                  { borderColor: colors.border },
+                  { borderColor: colors.danger },
                   (isConfirming || myPresence?.status === 'declined') && styles.disabled,
                 ]}
                 testID="cta-decline-presence"
               >
-                <Text size="sm" weight="semibold" color={colors.text}>
+                <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
+                <Text size="sm" weight="semibold" color={colors.danger}>
                   {t('sessionDetail.cta.decline')}
                 </Text>
               </TouchableOpacity>
@@ -513,7 +803,8 @@ export const SessionDetail: React.FC = () => {
           <TouchableOpacity
             onPress={() => {
               lightHaptic();
-              publish({ sessionId, versionWas: sess.version });
+              setPublishDeadline(defaultDeadline());
+              setShowPublishModal(true);
             }}
             disabled={isPublishing}
             style={[
@@ -538,7 +829,8 @@ export const SessionDetail: React.FC = () => {
             <TouchableOpacity
               onPress={() => {
                 warningHaptic();
-                cancel({ sessionId, versionWas: sess.version });
+                setCancelReason('');
+                setShowCancelModal(true);
               }}
               disabled={isCancelling}
               style={[
@@ -597,7 +889,7 @@ export const SessionDetail: React.FC = () => {
                           numberOfLines={1}
                           style={styles.vsName}
                         >
-                          {nameOf(m.team_a_user_ids[0])}
+                          {teamLabel(m.team_a_user_ids)}
                         </Text>
                         <Text size="sm" color={colors.textMuted}>
                           {isScored(m)
@@ -613,31 +905,51 @@ export const SessionDetail: React.FC = () => {
                           numberOfLines={1}
                           style={styles.vsName}
                         >
-                          {nameOf(m.team_b_user_ids[0])}
+                          {teamLabel(m.team_b_user_ids)}
                         </Text>
                       </View>
                     </View>
                     {canOverride(m) ? (
-                      <TouchableOpacity
-                        onPress={() => openScoreEntry(m)}
-                        style={styles.lockButton}
-                        accessibilityLabel={t('sessionDetail.score.enter')}
-                        testID="cta-enter-score"
-                      >
-                        <Ionicons name="create-outline" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                    ) : canLink(m) ? (
-                      <TouchableOpacity
-                        onPress={() => openLinkMatch(m)}
-                        style={styles.lockButton}
-                        accessibilityLabel={t('sessionDetail.linkPicker.addResult')}
-                        testID="cta-link-match"
-                      >
-                        <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                      </TouchableOpacity>
-                    ) : isScored(m) &&
-                      isOrganizer &&
-                      (sess.status === 'published' || sess.status === 'in_progress') ? (
+                      <View style={styles.matchActions}>
+                        <TouchableOpacity
+                          onPress={() => openScoreEntry(m)}
+                          style={styles.lockButton}
+                          accessibilityLabel={t('sessionDetail.score.enter')}
+                          testID="cta-enter-score"
+                        >
+                          <Ionicons name="create-outline" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                        {renderLockToggle(m)}
+                      </View>
+                    ) : canOrganize(m) ? (
+                      <View style={styles.matchActions}>
+                        {/* Before the game: agree on a time with the opponent. */}
+                        <TouchableOpacity
+                          onPress={() => handleOrganizeInChat(m)}
+                          disabled={openPairingChat.isPending}
+                          style={styles.lockButton}
+                          accessibilityLabel={t('sessionDetail.pairingChat.organize')}
+                          testID="cta-organize-pairing"
+                        >
+                          <Ionicons
+                            name="chatbubble-ellipses-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
+                        </TouchableOpacity>
+                        {/* After it: link a game played outside the chat. */}
+                        {canLink(m) ? (
+                          <TouchableOpacity
+                            onPress={() => openLinkMatch(m)}
+                            style={styles.lockButton}
+                            accessibilityLabel={t('sessionDetail.linkPicker.addResult')}
+                            testID="cta-link-match"
+                          >
+                            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    ) : isScored(m) && canEditScore ? (
                       // A recorded score stays editable by the organizer for the
                       // direct-override path; an attached match is edited through the
                       // match flow. The lock toggle protects it from a regenerate.
@@ -652,30 +964,7 @@ export const SessionDetail: React.FC = () => {
                             <Ionicons name="create-outline" size={18} color={colors.primary} />
                           </TouchableOpacity>
                         ) : null}
-                        <TouchableOpacity
-                          onPress={() => {
-                            lightHaptic();
-                            setLock({
-                              sessionMatchId: m.id,
-                              locked: !m.locked,
-                              versionWas: m.version,
-                            });
-                          }}
-                          disabled={isLocking}
-                          accessibilityLabel={
-                            m.locked
-                              ? t('sessionDetail.sheet.unlock')
-                              : t('sessionDetail.sheet.lock')
-                          }
-                          style={styles.lockButton}
-                          testID="cta-lock-match"
-                        >
-                          <Ionicons
-                            name={m.locked ? 'lock-closed' : 'lock-open-outline'}
-                            size={18}
-                            color={m.locked ? colors.primary : colors.textMuted}
-                          />
-                        </TouchableOpacity>
+                        {renderLockToggle(m)}
                       </View>
                     ) : isScored(m) ? (
                       <Ionicons name="checkmark-circle" size={18} color={colors.positiveText} />
@@ -698,6 +987,23 @@ export const SessionDetail: React.FC = () => {
               <TouchableOpacity
                 onPress={() => {
                   lightHaptic();
+                  if (oddRoster) {
+                    Alert.alert(
+                      t('sessionDetail.sheet.oddRoster.title'),
+                      t('sessionDetail.sheet.oddRoster.message', {
+                        count: String(confirmedCount),
+                      }),
+                      [
+                        { text: t('common.cancel'), style: 'cancel' },
+                        {
+                          text: t('sessionDetail.sheet.oddRoster.cta'),
+                          onPress: () =>
+                            genSheet({ versionWas: sess.version, regenerate: hasSheet }),
+                        },
+                      ]
+                    );
+                    return;
+                  }
                   genSheet({ versionWas: sess.version, regenerate: hasSheet });
                 }}
                 disabled={isGenerating || confirmedCount < 2}
@@ -728,14 +1034,33 @@ export const SessionDetail: React.FC = () => {
           if (rows.length === 0) return null;
           return (
             <View key={group.status} style={styles.section}>
-              <Text
-                size="xs"
-                weight="semibold"
-                color={colors.textMuted}
-                style={styles.sectionTitle}
-              >
-                {`${t(group.key as TranslationKey).toUpperCase()} · ${rows.length}`}
-              </Text>
+              <View style={styles.sectionTitleRow}>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionTitle}
+                >
+                  {`${t(group.key as TranslationKey).toUpperCase()} · ${rows.length}`}
+                </Text>
+                {group.status === 'pending' && isOrganizer && sess.status === 'published' && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      void lightHaptic();
+                      remindPending();
+                    }}
+                    disabled={isReminding}
+                    testID="cta-remind-pending"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text size="xs" weight="semibold" color={colors.primary}>
+                      {isReminding
+                        ? t('sessionDetail.roster.reminding')
+                        : t('sessionDetail.roster.remind')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <View
                 style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
@@ -755,11 +1080,30 @@ export const SessionDetail: React.FC = () => {
                         ? getHumanName(row.profile, t('sessionDetail.unknownMember'))
                         : t('sessionDetail.unknownMember')}
                     </Text>
-                    {row.status === 'waitlisted' && row.waitlist_position != null ? (
-                      <Text size="xs" color={colors.textMuted}>
-                        {`#${row.waitlist_position}`}
-                      </Text>
-                    ) : null}
+                    <View style={styles.rosterRowEnd}>
+                      {row.status === 'waitlisted' && row.waitlist_position != null ? (
+                        <Text size="xs" color={colors.textMuted}>
+                          {`#${row.waitlist_position}`}
+                        </Text>
+                      ) : null}
+                      {isOrganizer &&
+                      sess.status === 'published' &&
+                      (row.status === 'confirmed' || row.status === 'waitlisted') ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            void warningHaptic();
+                            withdrawMember({ userId: row.user_id, versionWas: row.version });
+                          }}
+                          disabled={isWithdrawing}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('sessionDetail.roster.withdraw')}
+                          testID={`cta-withdraw-${row.user_id}`}
+                        >
+                          <Ionicons name="person-remove-outline" size={18} color={colors.danger} />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
                 ))}
               </View>
@@ -767,12 +1111,124 @@ export const SessionDetail: React.FC = () => {
           );
         })}
       </ScrollView>
+
+      <ConfirmationModal
+        visible={showPublishModal && !!sess}
+        title={t('sessionDetail.publishModal.title')}
+        message={t('sessionDetail.publishModal.description')}
+        confirmLabel={t('sessionDetail.publishModal.confirm')}
+        confirmTestID="confirm-publish-session"
+        isLoading={isPublishing}
+        onClose={() => setShowPublishModal(false)}
+        onConfirm={() => {
+          if (!sess || !publishDeadline) return;
+          publish({
+            sessionId,
+            versionWas: sess.version,
+            deadline: publishDeadline.toISOString(),
+          });
+        }}
+        extraContent={
+          publishDeadline && sess ? (
+            <View style={styles.deadlineRow}>
+              <SheetDateField
+                label={t('sessionDetail.publishModal.deadlineDate')}
+                value={publishDeadline}
+                displayValue={publishDeadline.toLocaleDateString(locale, {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                mode="date"
+                minimumDate={new Date()}
+                maximumDate={new Date(sess.scheduled_at)}
+                onChange={setPublishDeadline}
+                colors={dateFieldColors}
+                isDark={isDark}
+                style={styles.deadlineField}
+                testID="publish-deadline-date"
+              />
+              <SheetDateField
+                label={t('sessionDetail.publishModal.deadlineTime')}
+                value={publishDeadline}
+                displayValue={publishDeadline.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+                mode="time"
+                onChange={setPublishDeadline}
+                colors={dateFieldColors}
+                isDark={isDark}
+                style={styles.deadlineField}
+                testID="publish-deadline-time"
+              />
+            </View>
+          ) : null
+        }
+      />
+
+      <ConfirmationModal
+        visible={showCancelModal && !!sess}
+        title={t('sessionDetail.cancelModal.title')}
+        message={t('sessionDetail.cancelModal.description')}
+        confirmLabel={t('sessionDetail.cancelModal.confirm')}
+        cancelLabel={t('sessionDetail.cancelModal.keepIt')}
+        confirmTestID="confirm-cancel-session"
+        destructive
+        isLoading={isCancelling}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancelReason('');
+        }}
+        onConfirm={() => {
+          if (!sess) return;
+          cancel({ sessionId, versionWas: sess.version, reason: cancelReason.trim() || undefined });
+        }}
+        extraContent={
+          <TextInput
+            style={[
+              styles.reasonInput,
+              {
+                backgroundColor: colors.mutedBg,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            placeholder={t('sessionDetail.cancelModal.reasonPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={cancelReason}
+            onChangeText={setCancelReason}
+            multiline
+            maxLength={300}
+            editable={!isCancelling}
+            testID="session-cancel-reason"
+          />
+        }
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  deadlineRow: { flexDirection: 'row', gap: spacingPixels[3] },
+  cancelledNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[2],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[2],
+  },
+  cancelledNoticeBody: { flex: 1, gap: 2 },
+  rosterRowEnd: { flexDirection: 'row', alignItems: 'center', gap: spacingPixels[3] },
+  deadlineField: { flex: 1 },
+  reasonInput: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
   content: { padding: spacingPixels[4], gap: spacingPixels[4] },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacingPixels[6] },
   centeredText: { marginTop: spacingPixels[3], textAlign: 'center' },
@@ -803,6 +1259,14 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
   },
   ctaButtons: { flexDirection: 'row', gap: spacingPixels[3] },
+  partnerBlock: { gap: spacingPixels[2] },
+  partnerChips: { flexDirection: 'row', gap: spacingPixels[2] },
+  partnerChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+  },
   ctaButton: {
     flex: 1,
     flexDirection: 'row',
@@ -851,6 +1315,12 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.6 },
   section: { gap: spacingPixels[2] },
   sectionTitle: { letterSpacing: 0.5, marginLeft: spacingPixels[1] },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacingPixels[2],
+  },
   rosterRow: {
     flexDirection: 'row',
     alignItems: 'center',

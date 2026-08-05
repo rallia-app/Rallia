@@ -173,6 +173,29 @@ export async function getTournamentMatchSportId(tournamentMatchId: string): Prom
   return tournament?.sport_id ?? null;
 }
 
+/**
+ * The sport of the league behind a session pairing chat (via its
+ * session_match_id), so the organizer flow can force the league's sport instead
+ * of guessing a shared one. Returns null when it can't be resolved.
+ */
+export async function getSessionMatchSportId(sessionMatchId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('session_matches')
+    .select('sessions!inner ( seasons!inner ( leagues!inner ( sport_id ) ) )')
+    .eq('id', sessionMatchId)
+    .single();
+  if (error) {
+    console.error('Error resolving session match sport:', error);
+    return null;
+  }
+  // These are all to-one embeds, so PostgREST nests objects; the generated
+  // types widen them to arrays, hence the narrowing.
+  const row = data as unknown as {
+    sessions?: { seasons?: { leagues?: { sport_id?: string | null } | null } | null } | null;
+  } | null;
+  return row?.sessions?.seasons?.leagues?.sport_id ?? null;
+}
+
 // ============================================================================
 // CARD POSTING
 // ============================================================================

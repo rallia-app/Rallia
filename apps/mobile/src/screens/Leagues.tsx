@@ -61,8 +61,20 @@ export const Leagues: React.FC = () => {
   }, [guardAction, openSheetForLeagueCreation]);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { data: leagues = [], isLoading, isError, refetch } = usePublicLeagues(selectedSport?.id);
-  const { data: myLeagues = [] } = useMyLeagues(userId, selectedSport?.id);
+  const {
+    data: leagues = [],
+    isLoading,
+    isError,
+    refetch: refetchPublic,
+  } = usePublicLeagues(selectedSport?.id);
+  const { data: myLeagues = [], refetch: refetchMine } = useMyLeagues(userId, selectedSport?.id);
+
+  // Both lists feed this screen (mine decides which cards show the member
+  // chip), so a pull has to refresh the pair or half the screen stays stale.
+  const refetch = useCallback(
+    () => Promise.all([refetchPublic(), refetchMine()]),
+    [refetchPublic, refetchMine]
+  );
   const myLeagueIds = useMemo(() => new Set(myLeagues.map(l => l.id)), [myLeagues]);
 
   const [searchQuery, setSearchQuery] = useState('');

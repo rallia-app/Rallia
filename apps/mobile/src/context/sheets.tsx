@@ -227,6 +227,8 @@ declare module 'react-native-actions-sheet' {
         defaultSportId?: string | null;
         /** Round chat's tournament_match_id — forces the flow onto the tournament sport. */
         tournamentMatchId?: string | null;
+        /** Pairing chat's session_match_id — forces the flow onto the league sport. */
+        sessionMatchId?: string | null;
         /** Analytics context, threaded from the chat for card_posted props. */
         conversationType?: string;
         isRoundChat?: boolean;
@@ -368,6 +370,7 @@ declare module 'react-native-actions-sheet' {
         player2Name: string;
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'>;
+        pointsPerGame?: number | null;
         // The final decides the champion and releases ranking points, so the
         // sheet asks for confirmation before submitting.
         isFinal?: boolean;
@@ -410,7 +413,11 @@ declare module 'react-native-actions-sheet' {
         teamBName: string;
         isPickleball: boolean;
         matchFormat?: import('@rallia/shared-types').Enums<'match_format'> | null;
+        pointsPerGame?: number | null;
         isEdit?: boolean;
+        // True when this result leaves no playable match behind, so it closes
+        // the session: the sheet confirms before writing it.
+        isDecider?: boolean;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };

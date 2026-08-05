@@ -16,7 +16,9 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  TextInput,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,6 +51,8 @@ import {
   useLeague,
   useLeagueMembers,
   useMyLeagueMembership,
+  useMyLeagueWaitlistStatus,
+  useLeagueWaitlist,
   useLeagueSeasons,
   useJoinLeague,
   useApproveLeagueMember,
@@ -62,6 +66,7 @@ import {
   useResumeLeague,
   useCloseLeague,
   useSeasonFeeQuote,
+  useEventEarnings,
   useCreateSeasonEnrollmentPayment,
   useRefundSeasonEnrollment,
   leagueKeys,
@@ -72,6 +77,7 @@ import {
   useSeasonRankings,
   useSeasonMembers,
   useMySeasonMembership,
+  useSeasonReceiptUrl,
   useEnrollInSeason,
   useWithdrawFromSeason,
   useRemoveSeasonMember,
@@ -84,7 +90,12 @@ import {
 import { SheetManager } from 'react-native-actions-sheet';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { isLeagueOrganizer, TournamentPaymentError, supabase } from '@rallia/shared-services';
+import {
+  isLeagueOrganizer,
+  getMyPayoutAccount,
+  TournamentPaymentError,
+  supabase,
+} from '@rallia/shared-services';
 import type {
   LeagueMemberWithProfile,
   PlayerProfile,
@@ -95,11 +106,14 @@ import type {
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
+import { ConfirmationModal } from '#/components/ConfirmationModal';
+
 import ParticipantRow from '../components/ParticipantRow';
 import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
 import type { LeagueEditData } from '../features/leagues';
 import { LeagueBanner, LEAGUE_BANNER_ASPECT } from '../features/leagues/components/LeagueBanner';
 import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
+import { rpcErrorMessage, type RpcErrorOverrides } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -197,54 +211,59 @@ function estimateSeasonRefundCents(
   return Math.round((quote.entryCents * (quote.refundPartialBps ?? 0)) / 10000);
 }
 
-/**
- * Map the raw server error codes from the season + session lifecycle RPCs
- * (season_open/close/enroll/withdraw, session_publish) to user-facing copy.
- * Codes are matched by substring since Supabase can wrap the message. Ordered
- * most-specific first. PAYOUTS_SETUP_REQUIRED is deliberately absent: the open
- * handler intercepts it to launch onboarding before falling through here.
- */
-function mapSeasonError(message: string | undefined): TranslationKey {
-  const m = message || '';
-  if (m.includes('PAYMENT_REQUIRED')) return 'leagueDetail.seasonErrors.paymentRequired';
-  if (m.includes('ENROLLMENT_REMOVED')) return 'leagueDetail.paid.errors.enrollmentRemoved';
-  if (m.includes('REFUND_REQUIRED')) return 'leagueDetail.seasonErrors.refundRequired';
-  if (m.includes('SEASON_HAS_OPEN_SESSIONS')) return 'leagueDetail.seasonErrors.hasOpenSessions';
-  if (m.includes('SEASON_NOT_DRAFT')) return 'leagueDetail.seasonErrors.seasonNotDraft';
-  if (m.includes('SEASON_NOT_OPEN')) return 'leagueDetail.seasonErrors.seasonNotOpen';
-  if (m.includes('SEASON_ENDED')) return 'leagueDetail.seasonErrors.seasonEnded';
-  if (m.includes('SEASON_NOT_FOUND')) return 'leagueDetail.seasonErrors.seasonNotFound';
-  if (m.includes('NOT_LEAGUE_MEMBER')) return 'leagueDetail.seasonErrors.notMember';
-  if (m.includes('NOT_ENROLLED')) return 'leagueDetail.seasonErrors.notEnrolled';
-  if (m.includes('LEAGUE_NOT_ACTIVE')) return 'leagueDetail.seasonErrors.leagueNotActive';
-  if (m.includes('INVALID_DEADLINE')) return 'leagueDetail.seasonErrors.invalidDeadline';
-  if (m.includes('SESSION_NOT_DRAFT')) return 'leagueDetail.seasonErrors.sessionNotDraft';
-  if (m.includes('SESSION_START_PASSED')) return 'leagueDetail.seasonErrors.sessionStartPassed';
-  if (m.includes('SESSION_NOT_FOUND')) return 'leagueDetail.seasonErrors.sessionNotFound';
-  if (m.includes('NOT_ORGANIZER')) return 'leagueDetail.seasonErrors.notOrganizer';
-  if (m.includes('OPTIMISTIC_LOCK_CONFLICT')) return 'leagueDetail.seasonErrors.stale';
-  return 'leagueDetail.seasonErrors.generic';
+/** Why a zero estimate is zero: a no-refund policy reads differently from a
+ *  refund window the player missed, so the confirm copy distinguishes them. */
+function seasonRefundZeroReason(
+  quote: { refundPolicyKind: string; refundCutoffAt: string | null } | null | undefined
+): 'policy' | 'cutoff' | null {
+  if (!quote) return null;
+  if (quote.refundPolicyKind === 'none') return 'policy';
+  if (quote.refundCutoffAt && new Date(quote.refundCutoffAt) < new Date()) return 'cutoff';
+  return null;
 }
 
 /**
- * Map league_join's raw error codes to user-facing copy. Without this the
- * screen toasted the exception text, so a gated player saw "RATING_TOO_LOW".
- * Ordered most-specific first, matched by substring like mapSeasonError.
+ * Season + session lifecycle RPC codes (season_open/close/enroll/withdraw,
+ * session_publish), ordered most-specific first. PAYOUTS_SETUP_REQUIRED is
+ * deliberately absent: the open handler intercepts it to launch onboarding
+ * before falling through here.
  */
-function mapJoinError(message: string | undefined): TranslationKey {
-  const m = message || '';
-  if (m.includes('RATING_REQUIRED')) return 'leagueDetail.joinErrors.ratingRequired';
-  if (m.includes('RATING_TOO_LOW')) return 'leagueDetail.joinErrors.ratingTooLow';
-  if (m.includes('RATING_TOO_HIGH')) return 'leagueDetail.joinErrors.ratingTooHigh';
-  if (m.includes('REPUTATION_GATE_NOT_MET')) return 'leagueDetail.joinErrors.reputation';
-  if (m.includes('ALREADY_MEMBER')) return 'leagueDetail.joinErrors.alreadyMember';
-  if (m.includes('LEAGUE_NOT_ACTIVE')) return 'leagueDetail.joinErrors.leagueNotActive';
-  if (m.includes('LEAGUE_NOT_FOUND')) return 'leagueDetail.joinErrors.leagueNotFound';
-  if (m.includes('LEAGUE_FULL')) return 'leagueDetail.joinErrors.leagueFull';
-  if (m.includes('NOT_INVITED')) return 'leagueDetail.joinErrors.notInvited';
-  if (m.includes('SPORT_MISMATCH')) return 'leagueDetail.joinErrors.sportMismatch';
-  return 'leagueDetail.errors.generic';
-}
+const SEASON_ERROR_KEYS: RpcErrorOverrides = {
+  PAYMENT_REQUIRED: 'leagueDetail.seasonErrors.paymentRequired',
+  ENROLLMENT_REMOVED: 'leagueDetail.paid.errors.enrollmentRemoved',
+  REFUND_REQUIRED: 'leagueDetail.seasonErrors.refundRequired',
+  SEASON_HAS_OPEN_SESSIONS: 'leagueDetail.seasonErrors.hasOpenSessions',
+  SEASON_NOT_DRAFT: 'leagueDetail.seasonErrors.seasonNotDraft',
+  SEASON_NOT_OPEN: 'leagueDetail.seasonErrors.seasonNotOpen',
+  SEASON_ENDED: 'leagueDetail.seasonErrors.seasonEnded',
+  SEASON_NOT_FOUND: 'leagueDetail.seasonErrors.seasonNotFound',
+  NOT_LEAGUE_MEMBER: 'leagueDetail.seasonErrors.notMember',
+  NOT_ENROLLED: 'leagueDetail.seasonErrors.notEnrolled',
+  LEAGUE_NOT_ACTIVE: 'leagueDetail.seasonErrors.leagueNotActive',
+  INVALID_DEADLINE: 'leagueDetail.seasonErrors.invalidDeadline',
+  SESSION_NOT_DRAFT: 'leagueDetail.seasonErrors.sessionNotDraft',
+  SESSION_START_PASSED: 'leagueDetail.seasonErrors.sessionStartPassed',
+  SESSION_NOT_FOUND: 'leagueDetail.seasonErrors.sessionNotFound',
+  NOT_ORGANIZER: 'leagueDetail.seasonErrors.notOrganizer',
+  OPTIMISTIC_LOCK_CONFLICT: 'leagueDetail.seasonErrors.stale',
+};
+
+/**
+ * league_join's gate codes. Without this the screen toasted the exception
+ * text, so a gated player saw "RATING_TOO_LOW". Ordered most-specific first.
+ */
+const JOIN_ERROR_KEYS: RpcErrorOverrides = {
+  RATING_REQUIRED: 'leagueDetail.joinErrors.ratingRequired',
+  RATING_TOO_LOW: 'leagueDetail.joinErrors.ratingTooLow',
+  RATING_TOO_HIGH: 'leagueDetail.joinErrors.ratingTooHigh',
+  REPUTATION_GATE_NOT_MET: 'leagueDetail.joinErrors.reputation',
+  ALREADY_MEMBER: 'leagueDetail.joinErrors.alreadyMember',
+  LEAGUE_NOT_ACTIVE: 'leagueDetail.joinErrors.leagueNotActive',
+  LEAGUE_NOT_FOUND: 'leagueDetail.joinErrors.leagueNotFound',
+  LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
+  NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
+  SPORT_MISMATCH: 'leagueDetail.joinErrors.sportMismatch',
+};
 
 interface ScreenColors {
   background: string;
@@ -851,6 +870,8 @@ type PendingMemberRow = {
   player: PlayerSearchResult;
   memberId: string;
   version: number;
+  /** 1-based place in the league waitlist; absent for plain approval requests. */
+  queueRank?: number;
 };
 
 const PendingMembersSection: React.FC<{
@@ -869,24 +890,35 @@ const PendingMembersSection: React.FC<{
           { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
-        {rows.map(({ player, memberId, version }, i) => (
-          <ParticipantRow
-            key={memberId}
-            player={player}
-            onPress={onPlayerPress}
-            colors={colors}
-            showDivider={i > 0}
-            trailingActions={[
-              {
-                icon: 'checkmark-circle',
-                color: colors.statusPositiveText,
-                accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.approveLabel', {
-                  name: getHumanName(player, ''),
-                }),
-                onPress: () => onApprove(memberId, version),
-              },
-            ]}
-          />
+        {rows.map(({ player, memberId, version, queueRank }, i) => (
+          <View key={memberId}>
+            <ParticipantRow
+              player={player}
+              onPress={onPlayerPress}
+              colors={colors}
+              showDivider={i > 0}
+              trailingActions={[
+                {
+                  icon: 'checkmark-circle',
+                  color: colors.statusPositiveText,
+                  accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.approveLabel', {
+                    name: getHumanName(player, ''),
+                  }),
+                  onPress: () => onApprove(memberId, version),
+                },
+              ]}
+            />
+            {queueRank != null && (
+              <View style={styles.queueBadgeRow}>
+                <Ionicons name="list-outline" size={12} color={colors.textMuted} />
+                <Text size="xs" color={colors.textMuted}>
+                  {t('leagueDetail.dashboard.pendingRequests.queuedAt', {
+                    rank: String(queueRank),
+                  })}
+                </Text>
+              </View>
+            )}
+          </View>
         ))}
       </View>
     </View>
@@ -1104,6 +1136,13 @@ export const LeagueDetail: React.FC = () => {
   const { data: profiles } = useProfilesByIds(league ? [league.organizer_id] : []);
 
   const isOrganizer = league ? isLeagueOrganizer(league, userId) : false;
+
+  // Queue state: a queued joiner holds a 'pending' membership PLUS a waitlist
+  // row — the row is what distinguishes "waiting for a seat" from "waiting for
+  // approval", and it carries the place in line.
+  const isPendingSelfRequest = myMembership?.status === 'pending' && !myMembership.invited_by;
+  const { data: myQueueStatus } = useMyLeagueWaitlistStatus(leagueId, userId, isPendingSelfRequest);
+  const { data: waitlistEntries = [] } = useLeagueWaitlist(leagueId, isOrganizer);
   const viewedRef = useRef(false);
   useEffect(() => {
     if (!league || !membershipFetched || viewedRef.current) return;
@@ -1149,7 +1188,7 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(t(mapJoinError(e.message)));
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.errors.generic', JOIN_ERROR_KEYS));
     },
   });
 
@@ -1161,7 +1200,12 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
   });
 
@@ -1173,7 +1217,12 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
   });
 
@@ -1185,14 +1234,26 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          NOT_REVOCABLE: 'leagueDetail.memberErrors.notRevocable',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
   });
 
   const onMemberLifecycleError = useCallback(
     (e: Error) => {
       warningHaptic();
-      toast.error(e.message || t('leagueDetail.errors.generic'));
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          ORGANIZER_CANNOT_LEAVE: 'leagueDetail.memberErrors.organizerImmune',
+          CANNOT_REMOVE_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+          CANNOT_SUSPEND_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
     },
     [toast, t]
   );
@@ -1259,14 +1320,28 @@ export const LeagueDetail: React.FC = () => {
           'rallia://stripe-connect-return'
         );
         if (result.type === 'success' && userId) {
-          // stripe-connect-webhook flips onboarding_completed once charges are
-          // enabled; invalidate to clear the gate. It settles asynchronously, so
-          // refetch again shortly after.
+          // stripe-connect-webhook flips the mirror asynchronously (usually
+          // well under 30 s); poll it so the payout badge updates without the
+          // user leaving and reopening the screen.
           successHaptic();
-          const refresh = () =>
-            void qc.invalidateQueries({ queryKey: tournamentKeys.myPayoutAccount(userId) });
-          refresh();
-          setTimeout(refresh, 2500);
+          toast.info(t('leagueDetail.payments.payoutSyncWait'));
+          void (async () => {
+            for (let attempt = 0; attempt < 10; attempt++) {
+              const status = await qc
+                .fetchQuery({
+                  queryKey: tournamentKeys.myPayoutAccount(userId),
+                  queryFn: getMyPayoutAccount,
+                  staleTime: 0,
+                })
+                .catch(() => null);
+              if (status?.chargesEnabled) {
+                successHaptic();
+                toast.success(t('leagueDetail.payments.payoutsConnectedToast'));
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+          })();
         }
       } catch {
         warningHaptic();
@@ -1298,8 +1373,12 @@ export const LeagueDetail: React.FC = () => {
 
   // Post-onboarding: open the Stripe Express dashboard when ready, or resume
   // onboarding when unfinished. The webhook refreshes status, so invalidate on
-  // return.
+  // return. player-stripe-manage makes several sequential Stripe calls before
+  // returning the link, so the row shows a transient state and blocks re-taps.
+  const [isOpeningPayoutDashboard, setIsOpeningPayoutDashboard] = useState(false);
   const handleManagePayouts = useCallback(async () => {
+    if (isOpeningPayoutDashboard) return;
+    setIsOpeningPayoutDashboard(true);
     try {
       const { data, error } = await supabase.functions.invoke('player-stripe-manage');
       if (error || !data?.url) throw new Error(error?.message);
@@ -1311,7 +1390,8 @@ export const LeagueDetail: React.FC = () => {
       warningHaptic();
       toast.error(t('leagueDetail.payments.manageError'));
     }
-  }, [qc, t, toast, userId]);
+    setIsOpeningPayoutDashboard(false);
+  }, [qc, t, toast, userId, isOpeningPayoutDashboard]);
 
   const { mutate: openSeasonMut, isPending: isOpeningSeason } = useOpenSeason(leagueId, {
     onSuccess: season => {
@@ -1329,7 +1409,7 @@ export const LeagueDetail: React.FC = () => {
         return;
       }
       warningHaptic();
-      toast.error(t(mapSeasonError(e.message)));
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
     },
   });
 
@@ -1359,16 +1439,28 @@ export const LeagueDetail: React.FC = () => {
   );
   const { data: memberBadges } = usePlayersRatingReputation(badgePlayerIds, league?.sport_id);
 
+  // Queued joiners are pending rows that also hold a waitlist entry; tag them
+  // with their place in line and list them after the plain approval requests,
+  // in queue order.
+  const queueRankByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    waitlistEntries.forEach((w, i) => map.set(w.user_id, i + 1));
+    return map;
+  }, [waitlistEntries]);
+
   const pendingMemberRows = useMemo<PendingMemberRow[]>(
     () =>
       isOrganizer
-        ? pendingRequests.map(m => ({
-            player: memberToPlayer(m, memberBadges?.[m.user_id]),
-            memberId: m.id,
-            version: m.version,
-          }))
+        ? pendingRequests
+            .map(m => ({
+              player: memberToPlayer(m, memberBadges?.[m.user_id]),
+              memberId: m.id,
+              version: m.version,
+              queueRank: queueRankByUser.get(m.user_id),
+            }))
+            .sort((a, b) => (a.queueRank ?? 0) - (b.queueRank ?? 0))
         : [],
-    [pendingRequests, isOrganizer, memberBadges]
+    [pendingRequests, isOrganizer, memberBadges, queueRankByUser]
   );
 
   const invitedMemberRows = useMemo<PendingMemberRow[]>(
@@ -1472,7 +1564,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(t(mapSeasonError(e.message)));
+        toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
       },
     }
   );
@@ -1486,7 +1578,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(t(mapSeasonError(e.message)));
+        toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
       },
     }
   );
@@ -1494,6 +1586,17 @@ export const LeagueDetail: React.FC = () => {
   // ---------------------------------------------------------------- paid seasons
   const isPaidSeason = (openSeason?.entry_fee_cents ?? 0) > 0;
   const { data: seasonFeeQuote } = useSeasonFeeQuote(openSeasonId, isPaidSeason);
+  // What the open season has collected — the organizer's only in-app money view
+  // (the Stripe dashboard is account-wide and can't be tied back to one season).
+  const { data: seasonEarnings } = useEventEarnings(
+    { seasonId: openSeasonId },
+    isOrganizer && isPaidSeason
+  );
+  // Stripe-hosted receipt for the viewer's own paid enrollment.
+  const { data: seasonReceiptUrl } = useSeasonReceiptUrl(
+    mySeasonMembership?.id,
+    isPaidSeason && isEnrolledInSeason
+  );
   const { mutateAsync: createSeasonPayment, isPending: isPayingSeason } =
     useCreateSeasonEnrollmentPayment();
   const { mutateAsync: refundSeasonEnrollmentAsync, isPending: isRefundingSeason } =
@@ -1503,24 +1606,49 @@ export const LeagueDetail: React.FC = () => {
   const handlePaidEnroll = useCallback(async () => {
     if (!openSeasonId || !seasonFeeQuote) return;
 
-    // Point-of-sale disclosure before any charge: what they pay, the refund
-    // policy, that the service fee isn't refundable, and that Rallia only
-    // facilitates (the organizer, not Rallia, owns the season).
+    // Point-of-sale disclosure before any charge: the full price breakdown,
+    // the refund policy, that the service fee isn't refundable, and that
+    // Rallia only facilitates (the organizer, not Rallia, owns the season).
+    // GST/QST rides on Rallia's service fee; the player only pays the fee and
+    // its tax in player_pays mode (organizer_absorbs nets them from the
+    // organizer's take, so the player sees the entry price and nothing else).
     const cur = seasonFeeQuote.currency;
-    // GST/QST rides on Rallia's service fee; the player only pays it in
-    // player_pays mode (organizer_absorbs nets it from the organizer's take).
-    const taxLabel =
-      seasonFeeQuote.feePayer === 'player_pays' && seasonFeeQuote.feeTaxCents > 0
-        ? formatPrice(seasonFeeQuote.feeTaxCents, cur, { locale })
-        : null;
+    const money = (cents: number) => formatPrice(cents, cur, { locale });
+    const playerPaysFee = seasonFeeQuote.feePayer === 'player_pays';
+    const breakdown = playerPaysFee
+      ? ([
+          t('leagueDetail.paid.breakdownEntry').replace(
+            '{amount}',
+            money(seasonFeeQuote.entryCents)
+          ),
+          t('leagueDetail.paid.breakdownServiceFee').replace(
+            '{amount}',
+            money(seasonFeeQuote.serviceFeeCents)
+          ),
+          seasonFeeQuote.feeTaxCents > 0
+            ? t('leagueDetail.paid.breakdownFeeTax').replace(
+                '{amount}',
+                money(seasonFeeQuote.feeTaxCents)
+              )
+            : null,
+          t('leagueDetail.paid.breakdownTotal').replace(
+            '{amount}',
+            money(seasonFeeQuote.totalCents)
+          ),
+        ]
+          .filter(Boolean)
+          .join('\n') as string)
+      : [
+          t('leagueDetail.paid.breakdownTotal').replace(
+            '{amount}',
+            money(seasonFeeQuote.totalCents)
+          ),
+          t('leagueDetail.paid.feeCoveredByOrganizer'),
+        ].join('\n');
     const lines = [
-      t('leagueDetail.paid.confirmAmount').replace(
-        '{amount}',
-        formatPrice(seasonFeeQuote.totalCents, cur, { locale })
-      ),
-      taxLabel ? t('leagueDetail.paid.confirmFeeTax').replace('{amount}', taxLabel) : null,
+      breakdown,
       seasonRefundPolicyLine(seasonFeeQuote, t, locale),
-      t('leagueDetail.paid.confirmFeeNonRefundable'),
+      playerPaysFee ? t('leagueDetail.paid.confirmFeeNonRefundable') : null,
       t('leagueDetail.paid.liabilityNotice'),
     ].filter(Boolean) as string[];
 
@@ -1580,7 +1708,7 @@ export const LeagueDetail: React.FC = () => {
                 : code === 'not_league_member'
                   ? 'leagueDetail.paid.errors.notMember'
                   : 'leagueDetail.paid.errors.generic';
-      toast.error(t(key as TranslationKey));
+      toast.error(t(key));
     }
   }, [
     createSeasonPayment,
@@ -1603,48 +1731,74 @@ export const LeagueDetail: React.FC = () => {
       // Client-side mirror of the SQL policy math, for the confirm copy only —
       // the server recomputes the authoritative amount.
       const estimate = estimateSeasonRefundCents(seasonFeeQuote);
-      Alert.alert(
-        t('leagueDetail.paid.withdrawConfirmTitle'),
-        estimate > 0
-          ? t('leagueDetail.paid.withdrawConfirmRefund').replace(
+      const money = (cents: number) =>
+        formatPrice(cents, seasonFeeQuote?.currency ?? 'CAD', { locale });
+      // The fee + its GST/QST only exist on the player's side in player_pays mode.
+      const feesKeptCents = seasonFeeQuote
+        ? seasonFeeQuote.serviceFeeCents + seasonFeeQuote.feeTaxCents
+        : 0;
+      const playerPaidFee =
+        !!seasonFeeQuote && seasonFeeQuote.feePayer === 'player_pays' && feesKeptCents > 0;
+      const cutoffLabel = seasonFeeQuote?.refundCutoffAt
+        ? new Date(seasonFeeQuote.refundCutoffAt).toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      const zeroLine =
+        seasonRefundZeroReason(seasonFeeQuote) === 'cutoff'
+          ? t('leagueDetail.paid.withdrawConfirmCutoffPassed').replace('{date}', cutoffLabel)
+          : t('leagueDetail.paid.withdrawConfirmNoRefund');
+      const message = [
+        seasonFeeQuote
+          ? t('leagueDetail.paid.withdrawConfirmPaid').replace(
               '{amount}',
-              formatPrice(estimate, seasonFeeQuote?.currency ?? 'CAD', { locale })
+              money(seasonFeeQuote.totalCents)
             )
-          : t('leagueDetail.paid.withdrawConfirmNoRefund'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('leagueDetail.roster.leave'),
-            style: 'destructive',
-            onPress: () => {
-              void (async () => {
-                try {
-                  const r = await refundSeasonEnrollmentAsync({
-                    seasonMemberId: mySeasonMembership.id,
-                    versionWas: mySeasonMembership.version,
-                    seasonId: mySeasonMembership.season_id,
-                    leagueId,
-                  });
-                  lightHaptic();
-                  toast.success(
-                    r.refundedCents > 0
-                      ? t('leagueDetail.paid.refunded').replace(
-                          '{amount}',
-                          formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', {
-                            locale,
-                          })
-                        )
-                      : t('leagueDetail.roster.withdrew')
-                  );
-                } catch {
-                  warningHaptic();
-                  toast.error(t('leagueDetail.paid.errors.refundFailed'));
-                }
-              })();
-            },
+          : null,
+        estimate > 0
+          ? t('leagueDetail.paid.withdrawConfirmRefund').replace('{amount}', money(estimate))
+          : zeroLine,
+        estimate > 0 && playerPaidFee
+          ? t('leagueDetail.paid.withdrawConfirmFeesKept').replace('{amount}', money(feesKeptCents))
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      Alert.alert(t('leagueDetail.paid.withdrawConfirmTitle'), message, [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('leagueDetail.roster.leave'),
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                const r = await refundSeasonEnrollmentAsync({
+                  seasonMemberId: mySeasonMembership.id,
+                  versionWas: mySeasonMembership.version,
+                  seasonId: mySeasonMembership.season_id,
+                  leagueId,
+                });
+                lightHaptic();
+                toast.success(
+                  r.refundedCents > 0
+                    ? t('leagueDetail.paid.refunded').replace(
+                        '{amount}',
+                        formatPrice(r.refundedCents, seasonFeeQuote?.currency ?? 'CAD', {
+                          locale,
+                        })
+                      )
+                    : t('leagueDetail.roster.withdrew')
+                );
+              } catch {
+                warningHaptic();
+                toast.error(t('leagueDetail.paid.errors.refundFailed'));
+              }
+            })();
           },
-        ]
-      );
+        },
+      ]);
       return;
     }
 
@@ -1693,7 +1847,7 @@ export const LeagueDetail: React.FC = () => {
               ? 'leagueDetail.roster.removeErrors.notRemovable'
               : 'leagueDetail.roster.removeErrors.generic';
         warningHaptic();
-        toast.error(t(key as TranslationKey));
+        toast.error(t(key));
       },
     });
 
@@ -1716,7 +1870,9 @@ export const LeagueDetail: React.FC = () => {
                 }
               ),
             })
-          : t('leagueDetail.roster.removeConfirmNoRefund')
+          : seasonRefundZeroReason(seasonFeeQuote) === 'cutoff'
+            ? t('leagueDetail.roster.removeConfirmCutoffPassed')
+            : t('leagueDetail.roster.removeConfirmNoRefund')
         : t('leagueDetail.roster.removeConfirmFree');
       Alert.alert(t('leagueDetail.roster.removeConfirmTitle', { name }), body, [
         { text: t('leagueDetail.roster.keepMember'), style: 'cancel' },
@@ -1742,7 +1898,7 @@ export const LeagueDetail: React.FC = () => {
     },
     onError: e => {
       warningHaptic();
-      toast.error(t(mapSeasonError(e.message)));
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
     },
   });
 
@@ -1760,7 +1916,7 @@ export const LeagueDetail: React.FC = () => {
           ? 'leagueDetail.seasonLifecycle.errors.stale'
           : 'leagueDetail.seasonLifecycle.errors.cancelFailed';
       warningHaptic();
-      toast.error(t(key as TranslationKey));
+      toast.error(t(key));
     },
   });
 
@@ -1769,34 +1925,64 @@ export const LeagueDetail: React.FC = () => {
   // refund cron (lt_cancel_refund_candidates). A paid open season is where the
   // money warning matters — cancel refunds everyone per policy, close pays the
   // organizer instead. Draft seasons have no enrolments so the copy is plainer.
+  // season_cancel has always accepted a reason and stored it in
+  // cancelled_reason; the UI sent null, so the cancellation notice reaching
+  // members had nothing to explain it. Ask, the way session cancellation does.
+  const [cancelSeasonTarget, setCancelSeasonTarget] = useState<Season | null>(null);
+  const [cancelSeasonReason, setCancelSeasonReason] = useState('');
+
+  // Money summary for the open season, from the payment ledger. Alert keeps it
+  // glanceable; the Stripe dashboard remains the detailed view.
+  const showSeasonEarnings = useCallback(() => {
+    if (!seasonEarnings) return;
+    const cur = seasonEarnings.currency ?? 'CAD';
+    const money = (cents: number) => formatPrice(cents, cur, { locale });
+    const e = seasonEarnings;
+    const lines =
+      e.paidCount === 0 && e.pendingCount === 0 && e.refundedCount === 0
+        ? [t('leagueDetail.earnings.none')]
+        : [
+            t('leagueDetail.earnings.paidLine')
+              .replace('{count}', String(e.paidCount))
+              .replace('{amount}', money(e.entryCents)),
+            t('leagueDetail.earnings.feesLine').replace(
+              '{amount}',
+              money(e.serviceFeeCents + e.feeTaxCents)
+            ),
+            ...(e.refundedCents > 0
+              ? [
+                  t('leagueDetail.earnings.refundedLine').replace(
+                    '{amount}',
+                    money(e.refundedCents)
+                  ),
+                ]
+              : []),
+            ...(e.pendingCount > 0
+              ? [t('leagueDetail.earnings.pendingLine').replace('{count}', String(e.pendingCount))]
+              : []),
+            t('leagueDetail.earnings.netLine').replace('{amount}', money(e.netToOrganizerCents)),
+            ...(e.releasedCount > 0
+              ? [
+                  t('leagueDetail.earnings.releasedLine').replace(
+                    '{count}',
+                    String(e.releasedCount)
+                  ),
+                ]
+              : []),
+          ];
+    Alert.alert(t('leagueDetail.earnings.title'), lines.join('\n'), [
+      { text: t('leagueDetail.earnings.close') },
+    ]);
+  }, [seasonEarnings, t, locale]);
+
   const handleCancelSeason = useCallback(
     (season: Season) => {
       if (isCancellingSeason) return;
-      const paidWithEnrolments = (season.entry_fee_cents ?? 0) > 0 && season.status === 'open';
-      Alert.alert(
-        t('leagueDetail.seasonLifecycle.cancelConfirmTitle', { name: season.name }),
-        paidWithEnrolments
-          ? t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
-          : t('leagueDetail.seasonLifecycle.cancelConfirmBody'),
-        [
-          { text: t('leagueDetail.seasonLifecycle.keepSeason'), style: 'cancel' },
-          {
-            text: t('leagueDetail.seasonLifecycle.cancelConfirm'),
-            style: 'destructive',
-            onPress: () => {
-              warningHaptic();
-              void cancelSeasonAsync({
-                seasonId: season.id,
-                reason: null,
-                versionWas: season.version,
-                leagueId,
-              });
-            },
-          },
-        ]
-      );
+      warningHaptic();
+      setCancelSeasonReason('');
+      setCancelSeasonTarget(season);
     },
-    [cancelSeasonAsync, isCancellingSeason, leagueId, t]
+    [isCancellingSeason]
   );
 
   const { mutate: publishSessionMut, isPending: isPublishingSession } = usePublishSession(
@@ -1808,7 +1994,7 @@ export const LeagueDetail: React.FC = () => {
       },
       onError: e => {
         warningHaptic();
-        toast.error(t(mapSeasonError(e.message)));
+        toast.error(rpcErrorMessage(e, t, 'leagueDetail.seasonErrors.generic', SEASON_ERROR_KEYS));
       },
     }
   );
@@ -2055,6 +2241,8 @@ export const LeagueDetail: React.FC = () => {
           minRating: league.min_rating,
           maxRating: league.max_rating,
           logoUrl: league.logo_url,
+          memberCapacity: league.member_capacity,
+          waitlistEnabled: league.waitlist_enabled,
         },
       },
     });
@@ -2073,7 +2261,7 @@ export const LeagueDetail: React.FC = () => {
           ? 'leagueDetail.lifecycle.errors.stale'
           : 'leagueDetail.lifecycle.errors.generic';
       warningHaptic();
-      toast.error(t(key as TranslationKey));
+      toast.error(t(key));
     },
     [t, toast]
   );
@@ -2195,6 +2383,15 @@ export const LeagueDetail: React.FC = () => {
         // The roster can move server-side while the user sits here, so the
         // card's member count is refreshed alongside the rest.
         qc.invalidateQueries({ queryKey: leagueKeys.lists() }),
+        // Pulling is exactly what someone does when the screen looks stale,
+        // and "am I in yet?" is the state most likely to have moved.
+        userId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.myMembership(leagueId, userId) })
+          : Promise.resolve(),
+        userId
+          ? qc.invalidateQueries({ queryKey: leagueKeys.myWaitlistStatus(leagueId, userId) })
+          : Promise.resolve(),
+        qc.invalidateQueries({ queryKey: leagueKeys.waitlist(leagueId) }),
         openSeasonId
           ? qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(openSeasonId) })
           : Promise.resolve(),
@@ -2287,8 +2484,9 @@ export const LeagueDetail: React.FC = () => {
         label: t('leagueDetail.payments.payoutRow.label'),
         onPress:
           payoutAccount === null ? promptOnboardBusinessType : () => void handleManagePayouts(),
-        badge:
-          payoutAccount === null
+        badge: isOpeningPayoutDashboard
+          ? { label: t('leagueDetail.payments.payoutRow.opening'), tone: 'muted' }
+          : payoutAccount === null
             ? { label: t('leagueDetail.payments.payoutRow.setup'), tone: 'muted' }
             : !payoutAccount.chargesEnabled
               ? { label: t('leagueDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }
@@ -2530,16 +2728,30 @@ export const LeagueDetail: React.FC = () => {
                 />
               ) : (
                 <HeroChip
-                  icon="hourglass-outline"
+                  icon={myQueueStatus ? 'list-outline' : 'hourglass-outline'}
                   tone="outline"
                   colors={colors}
                   label={
                     myMembership.invited_by
                       ? t('leagueDetail.acceptInvite')
-                      : t('leagueDetail.membershipPending')
+                      : myQueueStatus
+                        ? t('leagueDetail.queuedInLine', {
+                            rank: String(myQueueStatus.queueRank),
+                            size: String(myQueueStatus.queueSize),
+                          })
+                        : t('leagueDetail.membershipPending')
                   }
                 />
               )}
+              {seasonReceiptUrl ? (
+                <HeroChip
+                  icon="receipt-outline"
+                  tone="outline"
+                  colors={colors}
+                  onPress={() => void Linking.openURL(seasonReceiptUrl)}
+                  label={t('leagueDetail.viewReceipt')}
+                />
+              ) : null}
               {myMembership.status === 'active' ? (
                 <TouchableOpacity
                   onPress={handleLeavePress}
@@ -3030,6 +3242,17 @@ export const LeagueDetail: React.FC = () => {
                           <Text size="xs" color={colors.textMuted}>
                             {formatDate(s.start_date)} – {formatDate(s.end_date)}
                           </Text>
+                          {(s.entry_fee_cents ?? 0) > 0 && (
+                            // The price was invisible outside the enroll CTA (open
+                            // seasons only) — a draft's fee showed nowhere, so an
+                            // organizer opened a paid season blind to its price.
+                            <Text size="xs" weight="semibold" color={colors.text}>
+                              {t('leagueDetail.seasonEntryFee').replace(
+                                '{amount}',
+                                formatPrice(s.entry_fee_cents ?? 0, s.currency ?? 'CAD', { locale })
+                              )}
+                            </Text>
+                          )}
                         </View>
                         <View style={[styles.seasonStatusPill, { backgroundColor: statusBg }]}>
                           <Text size="xs" weight="semibold" color={statusFg}>
@@ -3052,6 +3275,28 @@ export const LeagueDetail: React.FC = () => {
                           </Text>
                         </TouchableOpacity>
                       )}
+                      {isOrganizer &&
+                        s.status === 'open' &&
+                        s.id === openSeasonId &&
+                        isPaidSeason && (
+                          <TouchableOpacity
+                            onPress={showSeasonEarnings}
+                            testID="cta-season-earnings"
+                            style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
+                          >
+                            <Text size="sm" weight="semibold" color={colors.primary}>
+                              {t('leagueDetail.earnings.row')}
+                              {seasonEarnings
+                                ? ' · ' +
+                                  formatPrice(
+                                    seasonEarnings.netToOrganizerCents,
+                                    seasonEarnings.currency ?? 'CAD',
+                                    { locale }
+                                  )
+                                : ''}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       {isOrganizer && s.status === 'open' && (
                         <TouchableOpacity
                           onPress={() => {
@@ -3355,11 +3600,85 @@ export const LeagueDetail: React.FC = () => {
           ) : null}
         </View>
       )}
+
+      <ConfirmationModal
+        visible={cancelSeasonTarget !== null}
+        title={t('leagueDetail.seasonLifecycle.cancelConfirmTitle', {
+          name: cancelSeasonTarget?.name ?? '',
+        })}
+        message={
+          cancelSeasonTarget &&
+          (cancelSeasonTarget.entry_fee_cents ?? 0) > 0 &&
+          cancelSeasonTarget.status === 'open'
+            ? cancelSeasonTarget.id === openSeasonId && (seasonEarnings?.paidCount ?? 0) > 0
+              ? `${t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')}\n\n${t(
+                  'leagueDetail.seasonLifecycle.cancelAmounts'
+                )
+                  .replace('{count}', String(seasonEarnings?.paidCount ?? 0))
+                  .replace(
+                    '{amount}',
+                    formatPrice(
+                      seasonEarnings?.entryCents ?? 0,
+                      seasonEarnings?.currency ?? 'CAD',
+                      {
+                        locale,
+                      }
+                    )
+                  )}`
+              : t('leagueDetail.seasonLifecycle.cancelConfirmBodyPaid')
+            : t('leagueDetail.seasonLifecycle.cancelConfirmBody')
+        }
+        confirmLabel={t('leagueDetail.seasonLifecycle.cancelConfirm')}
+        cancelLabel={t('leagueDetail.seasonLifecycle.keepSeason')}
+        confirmTestID="confirm-cancel-season"
+        destructive
+        isLoading={isCancellingSeason}
+        onClose={() => {
+          setCancelSeasonTarget(null);
+          setCancelSeasonReason('');
+        }}
+        onConfirm={() => {
+          if (!cancelSeasonTarget) return;
+          void cancelSeasonAsync({
+            seasonId: cancelSeasonTarget.id,
+            reason: cancelSeasonReason.trim() || null,
+            versionWas: cancelSeasonTarget.version,
+            leagueId,
+          }).finally(() => setCancelSeasonTarget(null));
+        }}
+        extraContent={
+          <TextInput
+            style={[
+              styles.seasonReasonInput,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            placeholder={t('leagueDetail.seasonLifecycle.cancelReasonPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={cancelSeasonReason}
+            onChangeText={setCancelSeasonReason}
+            multiline
+            maxLength={300}
+            editable={!isCancellingSeason}
+            testID="season-cancel-reason"
+          />
+        }
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  seasonReasonInput: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
   root: { flex: 1 },
   centered: {
     flex: 1,
@@ -3651,6 +3970,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pendingSection: { marginBottom: spacingPixels[4] },
+  queueBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingLeft: spacingPixels[14],
+    paddingBottom: spacingPixels[2],
+    marginTop: -spacingPixels[1],
+  },
   segmentBar: {
     marginBottom: spacingPixels[4],
   },

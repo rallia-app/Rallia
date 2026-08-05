@@ -16,6 +16,13 @@
   "common": {
     "loading": "Chargement...",
     "error": "Erreur",
+    "rpcErrors": {
+      "notAuthenticated": "Tu dois être connecté pour faire ça.",
+      "notOrganizer": "Seul l'organisateur peut faire ça.",
+      "staleWrite": "Quelqu'un vient de modifier ça. Actualise et réessaie.",
+      "rateLimited": "Trop de tentatives. Attends un moment et réessaie.",
+      "generic": "Une erreur s'est produite. Réessaie."
+    },
     "retry": "Réessayer",
     "tryAgain": "Réessayer",
     "tryDifferentSearch": "Essayez un autre terme de recherche",
@@ -3540,7 +3547,8 @@
       "noWinner": "Les scores doivent déterminer un gagnant (une équipe doit gagner plus de sets).",
       "selectPartner": "Veuillez sélectionner votre partenaire.",
       "tennisScoreRange": "Les scores de set au tennis sont typiquement de 0 à 7.",
-      "pickleballScoreRange": "Les scores de manche au pickleball sont typiquement de 0 à 25."
+      "pickleballScoreRange": "Les scores de manche au pickleball sont typiquement de 0 à 25.",
+      "formatMismatch": "La manche {set} ne correspond pas au format : le gagnant doit atteindre au moins {target}."
     }
   },
   "matchFeedback": {
@@ -4198,7 +4206,11 @@
       "description": "Inscris-toi à un tournoi pour gagner tes premiers points pis apparaître au classement."
     },
     "seasonSpringSummer": "Printemps/Été {year}",
-    "seasonFallWinter": "Automne/Hiver {year}"
+    "seasonFallWinter": "Automne/Hiver {year}",
+    "boards": {
+      "singles": "Simple",
+      "doubles": "Double"
+    }
   },
   "leagueList": {
     "title": "Ligues",
@@ -4228,6 +4240,10 @@
     "emptyMy": {
       "title": "Aucune ligue pour l'instant",
       "description": "Les ligues que vous rejoignez ou organisez apparaîtront ici. Créez-en une depuis le menu d'actions."
+    },
+    "tabs": {
+      "active": "Actives",
+      "closed": "Fermées"
     }
   },
   "leagueDetail": {
@@ -4239,6 +4255,7 @@
     "joinSuccess": "Vous avez rejoint la ligue",
     "joinPending": "Votre demande attend l'approbation de l'organisateur",
     "membershipPending": "Votre adhésion est en attente d'approbation",
+    "queuedInLine": "{rank}e en file pour une place",
     "memberActive": "Vous êtes membre actif",
     "memberApproved": "Membre approuvé",
     "inviteAccepted": "Invitation acceptée — tu embarques!",
@@ -4296,12 +4313,14 @@
         "notCancellable": "Cette saison ne peut plus être annulée.",
         "stale": "Quelque chose a changé. Rafraîchis et réessaie.",
         "cancelFailed": "Impossible d'annuler la saison. Réessaie."
-      }
+      },
+      "cancelReasonPlaceholder": "Motif (optionnel), les membres le verront",
+      "cancelAmounts": "{count} inscription(s) payée(s), {amount} au total."
     },
     "joinErrors": {
-      "ratingRequired": "Ça te prend un classement dans ce sport pour rejoindre cette ligue.",
-      "ratingTooLow": "Ton classement est sous le niveau minimum de cette ligue.",
-      "ratingTooHigh": "Ton classement est au-dessus du niveau maximum de cette ligue.",
+      "ratingRequired": "Ça te prend une cote dans ce sport pour rejoindre cette ligue.",
+      "ratingTooLow": "Ta cote est sous la cote minimale de cette ligue.",
+      "ratingTooHigh": "Ta cote est au-dessus de la cote maximale de cette ligue.",
       "reputation": "Ton score de réputation est sous ce que cette ligue demande.",
       "alreadyMember": "Tu es déjà dans cette ligue.",
       "leagueNotActive": "Cette ligue n'est pas active en ce moment.",
@@ -4309,6 +4328,17 @@
       "leagueFull": "Cette ligue est pleine.",
       "notInvited": "Cette ligue est sur invitation seulement.",
       "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre."
+    },
+    "memberErrors": {
+      "memberNotFound": "Ce membre ne fait plus partie de la ligue.",
+      "notRevocable": "Cette invitation ne peut plus être révoquée.",
+      "organizerImmune": "L'organisateur ne peut pas être retiré de sa propre ligue."
+    },
+    "createErrors": {
+      "invalidName": "Ce nom ne fonctionne pas. Essaies-en un autre.",
+      "invalidDates": "Ces dates ne fonctionnent pas. Vérifie le début et la fin.",
+      "invalidFee": "Ce frais d'inscription n'est pas valide.",
+      "invalidSchedule": "Cet horaire ne fonctionne pas. Vérifie la date et l'heure."
     },
     "seasonErrors": {
       "notOrganizer": "Seul l'organisateur peut faire ça.",
@@ -4385,7 +4415,8 @@
       },
       "pendingRequests": {
         "title": "En attente ({count})",
-        "approveLabel": "Approuver {name}"
+        "approveLabel": "Approuver {name}",
+        "queuedAt": "{rank}e en file pour une place"
       },
       "invited": {
         "title": "Invités · en attente de réponse ({count})",
@@ -4451,8 +4482,11 @@
       "enrollFor": "Embarquer pour {amount}",
       "pay": "Payer",
       "confirmTitle": "Confirme ta place",
-      "confirmAmount": "On va te charger {amount}.",
-      "confirmFeeTax": "Inclut {amount} de TPS/TVQ sur les frais de service Rallia.",
+      "breakdownEntry": "Entrée : {amount}",
+      "breakdownServiceFee": "Frais de service Rallia : {amount}",
+      "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
+      "breakdownTotal": "Total : {amount}",
+      "feeCoveredByOrganizer": "L'organisateur assume les frais de service Rallia : tu paies le prix d'entrée, rien de plus.",
       "confirmFeeNonRefundable": "Les frais de service Rallia ne sont pas remboursables.",
       "liabilityNotice": "C'est l'organisateur qui gère cette saison, pas Rallia. Rallia s'occupe juste du paiement.",
       "refundNone": "Aucun remboursement une fois que t'es inscrit.",
@@ -4461,8 +4495,11 @@
       "refundPartial": "{pct} % de l'inscription est remboursé si tu te retires.",
       "refundPartialUntil": "{pct} % de l'inscription est remboursé si tu te retires avant le {date}.",
       "withdrawConfirmTitle": "Quitter cette saison?",
-      "withdrawConfirmRefund": "Tu vas ravoir {amount}. Les frais de service ne sont pas remboursés.",
-      "withdrawConfirmNoRefund": "La période de remboursement est passée, tu ne seras pas remboursé.",
+      "withdrawConfirmPaid": "Tu as payé {amount}.",
+      "withdrawConfirmRefund": "Tu vas ravoir {amount}.",
+      "withdrawConfirmFeesKept": "Les frais de service et la TPS/TVQ ({amount}) ne sont pas remboursés.",
+      "withdrawConfirmCutoffPassed": "La date limite de remboursement ({date}) est passée, donc aucun remboursement ne s'applique. Tu peux quand même te retirer.",
+      "withdrawConfirmNoRefund": "Cette saison ne prévoit aucun remboursement, tu ne seras pas remboursé.",
       "refunded": "C'est fait. {amount} s'en revient vers toi.",
       "errors": {
         "seasonNotOpen": "Cette saison n'est pas ouverte aux inscriptions.",
@@ -4481,10 +4518,13 @@
       "onboardTypeBusiness": "Je suis une entreprise ou un club",
       "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
       "manageError": "Impossible d'ouvrir ton compte de versement. Réessaie.",
+      "payoutsConnectedToast": "Compte de versement connecté !",
+      "payoutSyncWait": "Stripe confirme ton compte. Ça prend environ 30 secondes, le statut va se mettre à jour tout seul.",
       "payoutRow": {
         "label": "Versements",
         "setup": "À configurer",
         "actionNeeded": "Action requise",
+        "opening": "Ouverture...",
         "ready": "Prêt"
       }
     },
@@ -4520,6 +4560,21 @@
       "publish": "Publier",
       "created": "Séance créée",
       "published": "Séance publiée",
+      "pairing": {
+        "label": "Pairage",
+        "by_rank": {
+          "title": "Par classement",
+          "description": "Les joueurs de niveau proche se rencontrent. La feuille reste la même si tu la regénères."
+        },
+        "random": {
+          "title": "Au hasard",
+          "description": "Pairages tirés au sort. Regénère pour brasser les cartes."
+        },
+        "avoid_repeat": {
+          "title": "Éviter les répétitions",
+          "description": "Priorise les adversaires que chacun n'a pas encore affrontés cette saison."
+        }
+      },
       "validation": {
         "nameRequired": "Le nom de la séance est requis",
         "future": "Choisis une date et une heure à venir"
@@ -4558,7 +4613,8 @@
       "removeConfirmTitle": "Retirer {name} ?",
       "removeConfirmFree": "La personne sera retirée de la liste des joueurs.",
       "removeConfirmRefund": "La personne sera retirée et remboursée de {amount} selon la politique de la saison (les frais de service Rallia ne sont pas remboursés). Ça peut prendre quelques jours avant d'apparaître sur sa carte.",
-      "removeConfirmNoRefund": "La personne sera retirée. La fenêtre de remboursement est fermée, donc aucun montant n'est remis.",
+      "removeConfirmNoRefund": "La personne sera retirée. Cette saison ne prévoit aucun remboursement, donc aucun montant n'est remis.",
+      "removeConfirmCutoffPassed": "La personne sera retirée. La date limite de remboursement est passée, donc aucun montant n'est remis.",
       "keepMember": "Garder",
       "removeConfirm": "Retirer",
       "removed": "Retiré de la saison",
@@ -4571,6 +4627,21 @@
     },
     "createSeason": {
       "title": "Créer une saison",
+      "formatLabel": "Format de jeu",
+      "format": {
+        "singles": {
+          "title": "Simple",
+          "description": "Parties 1 contre 1"
+        },
+        "doubles": {
+          "title": "Double",
+          "description": "Parties 2 contre 2, équipes formées à chaque séance"
+        },
+        "mixed_doubles": {
+          "title": "Double mixte",
+          "description": "Parties 2 contre 2 en équipes mixtes"
+        }
+      },
       "namePlaceholder": "p. ex., Été 2026",
       "startDate": "Début",
       "endDate": "Fin",
@@ -4611,7 +4682,21 @@
     },
     "errors": {
       "generic": "Une erreur s'est produite. Réessayez."
-    }
+    },
+    "earnings": {
+      "row": "Revenus",
+      "title": "Revenus de la saison",
+      "paidLine": "{count} inscription(s) payée(s) · {amount} d'entrées",
+      "feesLine": "Frais de service retenus par Rallia : {amount}",
+      "refundedLine": "Remboursé : {amount}",
+      "pendingLine": "Paiement en cours : {count}",
+      "netLine": "Ton montant : {amount}",
+      "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
+      "none": "Aucun paiement reçu pour le moment.",
+      "close": "Fermer"
+    },
+    "seasonEntryFee": "Inscription : {amount}",
+    "viewReceipt": "Voir le reçu"
   },
   "sessionDetail": {
     "title": "Séance",
@@ -4636,11 +4721,23 @@
       "confirm": "J'embarque",
       "decline": "Pas dispo"
     },
+    "partner": {
+      "label": "Partenaire préféré (optionnel)",
+      "none": "Aucune préférence",
+      "hint": "Vous ferez équipe si cette personne te choisit aussi."
+    },
     "roster": {
       "confirmed": "Confirmés",
       "waitlisted": "Liste d'attente",
-      "pending": "Sans réponse",
-      "declined": "Déclinés"
+      "pending": "En attente",
+      "declined": "Déclinés",
+      "withdraw": "Retirer de cette séance",
+      "withdrawn": "Retiré. Le prochain de la liste d’attente monte.",
+      "remind": "Relancer",
+      "reminding": "Envoi...",
+      "reminded": "Relance envoyée à {{count}} joueur(s)",
+      "remindTooSoon": "Tu as déjà relancé récemment. Réessaie dans quelques heures.",
+      "remindNobody": "Tout le monde a répondu."
     },
     "actions": {
       "publish": "Publier la séance",
@@ -4666,7 +4763,12 @@
       "vs": "vs",
       "bye": "Bye : {names}",
       "lock": "Verrouiller la partie",
-      "unlock": "Déverrouiller la partie"
+      "unlock": "Déverrouiller la partie",
+      "oddRoster": {
+        "title": "Un joueur va être exempté",
+        "message": "{count} joueurs ont confirmé, un nombre impair, donc un d’eux sera exempté pour cette séance. Retire ou ajoute un joueur d’abord si tu préfères qu’ils jouent tous.",
+        "cta": "Générer quand même"
+      }
     },
     "score": {
       "title": "Entrer le pointage",
@@ -4675,7 +4777,23 @@
       "edit": "Modifier le pointage",
       "save": "Enregistrer",
       "saved": "Pointage enregistré 🙌",
-      "played": "Jouée"
+      "played": "Jouée",
+      "confirmLast": {
+        "title": "Fermer la séance?",
+        "message": "C'est le dernier résultat. L'enregistrer ferme la séance et met à jour le classement. Tu peux encore corriger n'importe quel score pendant 24 heures.",
+        "cta": "Enregistrer et fermer"
+      },
+      "errors": {
+        "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin."
+      }
+    },
+    "rpcErrors": {
+      "startPassed": "L'heure de début de la séance est déjà passée.",
+      "sessionPast": "Cette séance est déjà terminée.",
+      "notCancellable": "Cette séance ne peut plus être annulée.",
+      "notWithdrawable": "Ce membre ne peut plus être retiré à ce stade-ci.",
+      "notEnoughConfirmed": "Pas assez de joueurs confirmés pour générer la feuille de match.",
+      "sheetLocked": "Des parties sont verrouillées ou déjà comptées, la feuille ne peut pas être régénérée."
     },
     "linkPicker": {
       "title": "Lier une partie jouée",
@@ -4684,10 +4802,40 @@
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, entre un pointage confirmé, ensuite reviens la lier ici.",
       "attachFailed": "Impossible de lier la partie",
       "linkCta": "Lier cette partie",
-      "addResult": "Ajouter le résultat"
+      "addResult": "Ajouter le résultat",
+      "errors": {
+        "alreadyLinked": "Une partie est déjà liée à ce duel.",
+        "notPending": "Ce duel est déjà réglé.",
+        "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
+        "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
+        "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
+      }
+    },
+    "pairingChat": {
+      "organize": "Organise ta partie",
+      "error": "Impossible d'ouvrir le chat de la partie. Réessaie."
     },
     "errors": {
       "generic": "Une erreur s'est produite. Réessayez."
+    },
+    "publishModal": {
+      "title": "Publier cette séance?",
+      "description": "Les membres reçoivent une notification et peuvent confirmer jusqu’à la date limite que tu choisis.",
+      "confirm": "Publier",
+      "deadlineDate": "Confirmer avant le",
+      "deadlineTime": "Heure",
+      "invalidDeadline": "La date limite doit être dans le futur et au plus tard au début de la séance."
+    },
+    "cancelModal": {
+      "title": "Annuler cette séance?",
+      "description": "Les membres qui avaient confirmé seront avisés. Ajoute un motif pour qu’ils sachent pourquoi.",
+      "confirm": "Annuler la séance",
+      "keepIt": "La garder",
+      "reasonPlaceholder": "Motif (optionnel), ex. pluie"
+    },
+    "cancelledNotice": {
+      "title": "Séance annulée",
+      "reason": "Motif : {reason}"
     }
   },
   "leagueCreation": {
@@ -4703,7 +4851,7 @@
     "visibilityStepTitle": "Visibilité",
     "visibilityStepDescription": "Qui peut trouver et rejoindre votre ligue?",
     "eligibilityStepTitle": "Admissibilité",
-    "eligibilityStepDescription": "Restreignez l'accès selon le niveau, si vous le souhaitez",
+    "eligibilityStepDescription": "Restreignez l'accès selon la cote, si vous le souhaitez",
     "next": "Suivant",
     "createLeague": "Créer la ligue",
     "creating": "Création...",
@@ -4732,17 +4880,23 @@
       "joinModeApprovalDescription": "Vous approuvez chaque demande",
       "joinModeInviteOnly": "Sur invitation",
       "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre",
-      "minRating": "Niveau minimum",
+      "minRating": "Cote minimale",
       "minRatingNone": "Aucun minimum",
-      "maxRating": "Niveau maximum",
+      "maxRating": "Cote maximale",
       "maxRatingNone": "Aucun maximum",
       "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, vous n'avez rien à approuver.",
-      "ratingGateUnavailable": "L'admissibilité par niveau n'est pas encore offerte pour ce sport."
+      "ratingGateUnavailable": "L'admissibilité par cote n'est pas encore offerte pour ce sport.",
+      "memberCapacity": "Limite de membres",
+      "memberCapacityPlaceholder": "Illimité",
+      "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, vous compris. Laissez vide pour aucune limite.",
+      "waitlistTitle": "Liste d'attente",
+      "waitlistDescription": "Quand la ligue est pleine, les nouveaux se placent en file et entrent automatiquement dès qu'une place se libère."
     },
     "validation": {
       "nameRequired": "Le nom de la ligue est requis",
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
-      "ratingRangeInvalid": "Le niveau maximum doit être égal ou supérieur au minimum"
+      "ratingRangeInvalid": "La cote maximale doit être égale ou supérieure à la minimale",
+      "capacityInvalid": "Entrez un nombre de 1 ou plus"
     },
     "errors": {
       "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",
@@ -4786,7 +4940,8 @@
       "organizing": "Organisés",
       "drafts": "Brouillons",
       "completed": "Terminés",
-      "cancelled": "Annulés"
+      "cancelled": "Annulés",
+      "archived": "Archivés"
     },
     "emptyUpcoming": {
       "title": "Aucun tournoi à venir",
@@ -4837,14 +4992,21 @@
       "refundIssued": "Retiré, {amount} remboursé.",
       "withdrawnNoRefund": "Tu t'es retiré. Aucun remboursement ne s'applique.",
       "confirmTitle": "Confirmer l'inscription",
-      "confirmAmount": "Tu paies {amount} pour t'inscrire.",
-      "confirmFeeTax": "Inclut {amount} de TPS + TVQ sur les frais de service.",
+      "breakdownEntry": "Entrée : {amount}",
+      "breakdownServiceFee": "Frais de service : {amount}",
+      "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
+      "breakdownTotal": "Total : {amount}",
+      "feeCoveredByOrganizer": "L'organisateur assume les frais de service Rallia : tu paies le prix d'entrée, rien de plus.",
       "confirmFeeNonRefundable": "Les frais de service ne sont pas remboursables.",
       "liabilityNotice": "Rallia facilite l'organisation des tournois. L'organisateur est responsable de l'événement, pas Rallia.",
       "confirmPay": "Payer",
+      "payoutSyncWait": "Stripe confirme ton compte. Ça prend environ 30 secondes, le statut va se mettre à jour tout seul.",
       "withdrawConfirmTitle": "Te retirer de ce tournoi?",
-      "withdrawConfirmRefund": "Tu seras remboursé de {amount} (les frais de service ne sont pas remboursables).",
-      "withdrawConfirmNoRefund": "Cette inscription n'est pas remboursable, tu ne récupéreras pas d'argent.",
+      "withdrawConfirmPaid": "Tu as payé {amount}.",
+      "withdrawConfirmRefund": "Tu seras remboursé de {amount}.",
+      "withdrawConfirmFeesKept": "Les frais de service et la TPS/TVQ ({amount}) ne sont pas remboursés.",
+      "withdrawConfirmCutoffPassed": "La date limite de remboursement ({date}) est passée, donc aucun remboursement ne s'applique. Tu peux quand même te retirer.",
+      "withdrawConfirmNoRefund": "Ce tournoi ne prévoit aucun remboursement, tu ne récupéreras pas d'argent.",
       "errors": {
         "full": "Ce tournoi est complet.",
         "alreadyRegistered": "Tu es déjà inscrit.",
@@ -4856,6 +5018,7 @@
         "label": "Versements",
         "setup": "À configurer",
         "actionNeeded": "Action requise",
+        "opening": "Ouverture...",
         "ready": "Prêt"
       }
     },
@@ -5020,7 +5183,7 @@
       "registrationCloses": "Fermeture des inscriptions",
       "description": "Description",
       "location": "Lieu",
-      "ratingRange": "Niveau",
+      "ratingRange": "Plage de cote",
       "entryFee": "Frais d'inscription",
       "youPay": "Tu paies",
       "refundPolicy": "Politique de remboursement"
@@ -5069,7 +5232,9 @@
       "archiveTournament": "Archiver le tournoi",
       "editDetails": "Modifier les détails",
       "invitePlayers": "Inviter des joueurs",
-      "manageCoOrganizers": "Gérer les co-organisateurs"
+      "manageCoOrganizers": "Gérer les co-organisateurs",
+      "unarchiveTournament": "Restaurer le tournoi",
+      "viewReceipt": "Voir le reçu"
     },
     "coOrganizers": {
       "ctaTitle": "Co-organisateurs",
@@ -5082,7 +5247,9 @@
       "noResults": "Aucun joueur trouvé",
       "remove": "Retirer",
       "addFailed": "Impossible d'ajouter ce co-organisateur",
-      "removeFailed": "Impossible de retirer ce co-organisateur"
+      "removeFailed": "Impossible de retirer ce co-organisateur",
+      "alreadyOrganizer": "Ce joueur organise déjà ce tournoi.",
+      "playerNotFound": "Impossible de trouver ce joueur."
     },
     "invite": {
       "title": "Inviter des joueurs",
@@ -5142,7 +5309,8 @@
       "keepIt": "Garder",
       "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
       "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "paidRefundWarning": "{count} inscription(s) payée(s) seront remboursées, {amount} au total. Les frais de service Rallia ne sont pas remboursés."
     },
     "archiveModal": {
       "title": "Archiver ce tournoi ?",
@@ -5152,7 +5320,8 @@
       "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
       "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
       "errorSettlementPending": "Les remboursements ou versements sont encore en traitement. Tu pourras archiver une fois que c'est fait.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer."
+      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "restoredToast": "Tournoi restauré"
     },
     "removeModal": {
       "title": "Retirer ce joueur ?",
@@ -5197,7 +5366,14 @@
       "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, confirme le score, puis reviens ici pour la lier.",
       "attachFailed": "Impossible de lier la partie",
-      "linkCta": "Lier cette partie"
+      "linkCta": "Lier cette partie",
+      "errors": {
+        "alreadyLinked": "Une partie est déjà liée à ce duel.",
+        "notPending": "Ce duel est déjà réglé.",
+        "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
+        "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
+        "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
+      }
     },
     "partner": {
       "title": "Choisis ton partenaire",
@@ -5272,12 +5448,12 @@
       "partnerRequired": "Choisis un partenaire pour t'inscrire à ce tournoi en double.",
       "partnerAlreadyRegistered": "Ce joueur est déjà inscrit à ce tournoi.",
       "partnerSportMismatch": "Ton partenaire n'a pas ce sport actif sur son profil.",
-      "ratingTooLow": "Ton niveau est sous le minimum de ce tournoi.",
-      "ratingTooHigh": "Ton niveau est au-dessus du maximum de ce tournoi.",
-      "ratingRequired": "Ça te prend un niveau dans ce sport pour t'inscrire à ce tournoi.",
-      "partnerRatingTooLow": "Le niveau de ton partenaire est sous le minimum de ce tournoi.",
-      "partnerRatingTooHigh": "Le niveau de ton partenaire est au-dessus du maximum de ce tournoi.",
-      "partnerRatingRequired": "Ton partenaire a besoin d'un niveau dans ce sport pour être inscrit.",
+      "ratingTooLow": "Ta cote est sous la cote minimale de ce tournoi.",
+      "ratingTooHigh": "Ta cote est au-dessus de la cote maximale de ce tournoi.",
+      "ratingRequired": "Ça te prend une cote dans ce sport pour t'inscrire à ce tournoi.",
+      "partnerRatingTooLow": "La cote de ton partenaire est sous la cote minimale de ce tournoi.",
+      "partnerRatingTooHigh": "La cote de ton partenaire est au-dessus de la cote maximale de ce tournoi.",
+      "partnerRatingRequired": "Ton partenaire a besoin d'une cote dans ce sport pour être inscrit.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide.",
       "paidUseRefund": "Cette inscription a été payée. Passe par l'option de remboursement pour te retirer."
@@ -5285,6 +5461,18 @@
     "overview": {
       "readMore": "Lire la suite",
       "infoTitle": "Infos pratiques"
+    },
+    "earnings": {
+      "row": "Revenus",
+      "title": "Revenus de l'événement",
+      "paidLine": "{count} inscription(s) payée(s) · {amount} d'entrées",
+      "feesLine": "Frais de service retenus par Rallia : {amount}",
+      "refundedLine": "Remboursé : {amount}",
+      "pendingLine": "Paiement en cours : {count}",
+      "netLine": "Ton montant : {amount}",
+      "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
+      "none": "Aucun paiement reçu pour le moment.",
+      "close": "Fermer"
     }
   },
   "tournamentCreation": {
@@ -5336,7 +5524,7 @@
     "step1Title": "Infos de base",
     "step1Description": "Nomme ton tournoi, fixe les dates et ajoute une affiche",
     "step2Title": "Format",
-    "step2Description": "Simple ou double, taille du tableau, pointage et niveau minimum",
+    "step2Description": "Simple ou double, taille du tableau, pointage et cote minimale",
     "step3Title": "Calendrier",
     "step3Description": "Quand le tournoi se déroule",
     "visibilityStepTitle": "Règles et visibilité",
@@ -5357,12 +5545,12 @@
       "descriptionPlaceholder": "Dis aux joueurs à quoi s'attendre (optionnel)",
       "rules": "Règles",
       "rulesPlaceholder": "Format, pointage, présence, conduite… (optionnel)",
-      "minLevel": "Niveau minimum",
+      "minLevel": "Cote minimale",
       "minLevelNone": "Aucun minimum",
-      "minLevelHint": "Les joueurs sous ce niveau ne peuvent pas s'inscrire. Verrouillé dès que le tournoi n'est plus un brouillon.",
-      "maxLevel": "Niveau maximum",
+      "minLevelHint": "Les joueurs sous cette cote ne peuvent pas s'inscrire. Verrouillé dès que les inscriptions ouvrent.",
+      "maxLevel": "Cote maximale",
       "maxLevelNone": "Aucun maximum",
-      "maxLevelHint": "Les joueurs au-dessus de ce niveau ne peuvent pas s'inscrire. Verrouillé dès que le tournoi n'est plus un brouillon.",
+      "maxLevelHint": "Les joueurs au-dessus de cette cote ne peuvent pas s'inscrire. Verrouillé dès que les inscriptions ouvrent.",
       "lockedAfterDraft": "Modifiable seulement tant que le tournoi est en brouillon.",
       "location": "Lieu",
       "locationExact": "Lieu exact",
@@ -5411,7 +5599,12 @@
       "registrationModeApproval": "Approbation",
       "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
       "registrationModeInviteOnly": "Sur invitation",
-      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire"
+      "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire",
+      "matchFormatOneGame": "1 partie",
+      "matchFormatTwoOfThreeGames": "2 de 3",
+      "matchFormatThreeOfFiveGames": "3 de 5",
+      "pointsPerGame": "Points par partie",
+      "pointsPerGameHint": "Points pour gagner une partie, 2 points d'écart"
     },
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",
@@ -9458,6 +9651,20 @@
       "titleMeta": "Paramètres - Admin - Rallia",
       "descriptionMeta": "Gérer les paramètres.",
       "comingSoon": "Interface des paramètres à venir.",
+      "serviceFee": {
+        "title": "Frais de service",
+        "description": "Valeur par défaut appliquée aux tournois et saisons payants. Les exceptions par organisateur ou par événement ont priorité sur cette valeur.",
+        "pctLabel": "Pourcentage",
+        "flatLabel": "Montant fixe",
+        "capLabel": "Plafond",
+        "formulaHint": "Frais = min(plafond, entrée × pourcentage + montant fixe). Les changements s'appliquent immédiatement aux nouveaux paiements; les inscriptions déjà payées gardent les frais facturés.",
+        "save": "Enregistrer",
+        "saving": "Enregistrement...",
+        "saved": "Frais de service mis à jour",
+        "loadError": "Impossible de charger la configuration actuelle.",
+        "saveError": "Impossible d'enregistrer la configuration.",
+        "invalid": "Valeurs invalides : pourcentage entre 0 et 100, montants de 0 ou plus."
+      },
       "alertTypes": {
         "criticalAction": "Actions critiques",
         "userReport": "Signalements d'utilisateurs",

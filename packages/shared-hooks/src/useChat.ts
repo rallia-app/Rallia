@@ -870,13 +870,17 @@ export function useChatRealtime(
 }
 
 /**
- * Subscribe to real-time reaction changes in a conversation
+ * Subscribe to real-time reaction changes in a conversation.
+ * Gated on playerId so we never join the private channel before auth is ready.
  */
-export function useReactionsRealtime(conversationId: string | undefined) {
+export function useReactionsRealtime(
+  conversationId: string | undefined,
+  playerId: string | undefined
+) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !playerId) return;
 
     const channel = subscribeToReactions(conversationId, ({ messageId: _messageId }) => {
       // Invalidate reactions for the affected message
@@ -890,7 +894,7 @@ export function useReactionsRealtime(conversationId: string | undefined) {
     return () => {
       unsubscribeFromChannel(channel);
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, playerId, queryClient]);
 }
 
 /**

@@ -37,6 +37,8 @@ import {
   deriveWinningSideFromSets,
   serializeSets,
   validSetsOf,
+  firstSetFailingFormat,
+  setTargetFor,
   type SetScore,
 } from '@rallia/shared-utils';
 import { useOverrideTournamentMatchScore } from '@rallia/shared-hooks';
@@ -90,6 +92,7 @@ export function TournamentRecordScoreActionSheet({
   const player2Name = payload?.player2Name ?? '';
   const isPickleballSport = payload?.isPickleball ?? false;
   const matchFormat = payload?.matchFormat;
+  const pointsPerGame = payload?.pointsPerGame ?? null;
   const isFinal = payload?.isFinal ?? false;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
@@ -165,6 +168,18 @@ export function TournamentRecordScoreActionSheet({
       setError(t('registerMatchScore.error.noWinner'));
       return;
     }
+    // A score from the other sport (6-4 in a to-11 draw) used to be accepted
+    // outright; the format's target is the only thing that can rule it out.
+    const badSet = firstSetFailingFormat(validSets, matchFormat, pointsPerGame);
+    if (badSet !== null) {
+      setError(
+        t('registerMatchScore.error.formatMismatch', {
+          set: String(badSet),
+          target: String(setTargetFor(matchFormat, pointsPerGame) ?? ''),
+        })
+      );
+      return;
+    }
     Keyboard.dismiss();
     lightHaptic();
     setError(null);
@@ -200,6 +215,8 @@ export function TournamentRecordScoreActionSheet({
     winningSide,
     isPickleballSport,
     isFinal,
+    matchFormat,
+    pointsPerGame,
     override,
     tournamentMatchId,
     tournamentId,

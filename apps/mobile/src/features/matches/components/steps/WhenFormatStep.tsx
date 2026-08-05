@@ -27,6 +27,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 
 import type { TranslationKey } from '#/hooks/useTranslation';
+import { useKeyboardAwareSheetScroll } from '#/hooks/useKeyboardAwareSheetScroll';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 // =============================================================================
@@ -287,6 +288,13 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
     lightHaptic();
   };
 
+  // The margin clears the hint/error lines that sit below the input.
+  const { scrollProps, inputs } = useKeyboardAwareSheetScroll(
+    ['customDuration'],
+    spacingPixels[12]
+  );
+  const [autoFocusCustomDuration, setAutoFocusCustomDuration] = useState(false);
+
   const handleDateCancel = () => {
     setTempDate(dateValue);
     setShowDatePicker(false);
@@ -299,6 +307,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
 
   return (
     <SheetScrollView
+      {...scrollProps}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -653,6 +662,8 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             selected={duration === 'custom'}
             onPress={() => {
               if (isLocked) return;
+              // Mounts the input focused, which scrolls it above the fold.
+              setAutoFocusCustomDuration(true);
               setValue('duration', 'custom', { shouldValidate: true, shouldDirty: true });
             }}
             colors={colors}
@@ -671,6 +682,8 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               ]}
             >
               <TextInput
+                {...inputs.customDuration}
+                autoFocus={autoFocusCustomDuration}
                 style={[styles.customDurationInput, { color: colors.text }]}
                 value={customDurationMinutes?.toString() ?? ''}
                 onChangeText={text => {
@@ -781,7 +794,7 @@ const styles = StyleSheet.create({
   customDurationInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[2],
@@ -790,7 +803,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    padding: 0,
+    // Vertical padding belongs to the input so the whole box is tappable.
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: 0,
   },
   customDurationHint: {
     marginTop: spacingPixels[1],

@@ -68,6 +68,7 @@ import {
   useRatingScoresForSport,
   useFacilitySearch,
   useAdminStatus,
+  useMyServiceFeeParams,
 } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
@@ -129,12 +130,11 @@ const ENTRY_FORMAT_KEYS: Record<EntryFormat, string> = {
   mixed_doubles: 'tournamentDetail.values.mixedDoubles',
 };
 
-const TENNIS_FORMATS: readonly MatchFormat[] = ['one_set', 'two_of_three', 'three_of_five'];
-const PICKLEBALL_FORMATS: readonly MatchFormat[] = [
-  'pickleball_to_11',
-  'pickleball_to_15',
-  'pickleball_to_21',
-];
+// Both sports count the same way now: how many games/sets win the match. How
+// many POINTS take one pickleball game is the separate axis below, which is
+// what makes "2 de 3 a 11" expressible at all.
+const MATCH_FORMATS: readonly MatchFormat[] = ['one_set', 'two_of_three', 'three_of_five'];
+const POINTS_PER_GAME_OPTIONS = [11, 15, 21] as const;
 const MATCH_FORMAT_KEYS: Record<MatchFormat, { label: string; hint: string }> = {
   one_set: {
     label: 'tournamentCreation.fields.matchFormatOneSet',
@@ -148,6 +148,8 @@ const MATCH_FORMAT_KEYS: Record<MatchFormat, { label: string; hint: string }> = 
     label: 'tournamentCreation.fields.matchFormatThreeOfFive',
     hint: 'tournamentCreation.fields.matchFormatThreeOfFiveHint',
   },
+  // Legacy fused labels. Postgres cannot drop an enum value, so an older
+  // tournament can still arrive carrying one; it is never offered.
   pickleball_to_11: {
     label: 'tournamentCreation.fields.matchFormatTo11',
     hint: 'tournamentCreation.fields.matchFormatTo11Hint',
@@ -162,13 +164,31 @@ const MATCH_FORMAT_KEYS: Record<MatchFormat, { label: string; hint: string }> = 
   },
 };
 
-const formatOptionsForSport = (sportName: string | undefined): readonly MatchFormat[] =>
-  sportName === 'pickleball' ? PICKLEBALL_FORMATS : TENNIS_FORMATS;
+/** Pickleball counts games, tennis counts sets; the arithmetic is identical. */
+const MATCH_FORMAT_GAME_KEYS: Record<MatchFormat, string> = {
+  one_set: 'tournamentCreation.fields.matchFormatOneGame',
+  two_of_three: 'tournamentCreation.fields.matchFormatTwoOfThreeGames',
+  three_of_five: 'tournamentCreation.fields.matchFormatThreeOfFiveGames',
+  pickleball_to_11: 'tournamentCreation.fields.matchFormatTwoOfThreeGames',
+  pickleball_to_15: 'tournamentCreation.fields.matchFormatTwoOfThreeGames',
+  pickleball_to_21: 'tournamentCreation.fields.matchFormatTwoOfThreeGames',
+};
+
+/**
+ * A tournament written before the axes were split carries its target inside the
+ * format. Read it back so editing one does not silently retarget it.
+ */
+const LEGACY_FUSED_POINTS: Partial<Record<MatchFormat, number>> = {
+  pickleball_to_11: 11,
+  pickleball_to_15: 15,
+  pickleball_to_21: 21,
+};
 
 const STEP_ANALYTICS_NAMES = ['basics', 'format', 'rules_visibility', 'payments'] as const;
 
-const defaultFormatForSport = (sportName: string | undefined): MatchFormat =>
-  sportName === 'pickleball' ? 'pickleball_to_11' : 'two_of_three';
+/** Best-of-3 is the default for both sports: 2 sets in tennis, 2 games to 11. */
+const DEFAULT_MATCH_FORMAT: MatchFormat = 'two_of_three';
+const DEFAULT_POINTS_PER_GAME = 11;
 
 interface ThemeColors {
   background: string;
@@ -207,6 +227,8 @@ export interface TournamentEditData {
   endDate: string; // ISO
   maxParticipants: number;
   matchFormat: MatchFormat;
+  /** Pickleball only; null on tennis and on rows written before the split. */
+  pointsPerGame: number | null;
   sport: { id: string; name: string; display_name: string };
   // Location (facility OR city) + advertised prize.
   facilityId: string | null;
@@ -947,6 +969,10 @@ const DetailsStep: React.FC<{
   matchFormat: MatchFormat;
   setMatchFormat: (v: MatchFormat) => void;
   formatOptions: readonly MatchFormat[];
+  /** Pickleball only: the points that take one game. */
+  pointsPerGame: number;
+  setPointsPerGame: (v: number) => void;
+  isPickleball: boolean;
   entryFormat: EntryFormat;
   setEntryFormat: (v: EntryFormat) => void;
   /** Entry format is fixed at creation; hidden when editing. */
@@ -985,6 +1011,9 @@ const DetailsStep: React.FC<{
   matchFormat,
   setMatchFormat,
   formatOptions,
+  pointsPerGame,
+  setPointsPerGame,
+  isPickleball,
   entryFormat,
   setEntryFormat,
   canPickEntryFormat,
@@ -1364,16 +1393,70 @@ const DetailsStep: React.FC<{
                           weight={selected ? 'semibold' : 'regular'}
                           color={selected ? colors.buttonActive : colors.text}
                         >
-                          {t(MATCH_FORMAT_KEYS[format].label as TranslationKey)}
+                          {t(
+                            (isPickleball
+                              ? MATCH_FORMAT_GAME_KEYS[format]
+                              : MATCH_FORMAT_KEYS[format].label) as TranslationKey
+                          )}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
-                <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-                  {t(MATCH_FORMAT_KEYS[matchFormat].hint as TranslationKey)}
-                </Text>
+                {!isPickleball && (
+                  <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                    {t(MATCH_FORMAT_KEYS[matchFormat].hint as TranslationKey)}
+                  </Text>
+                )}
               </View>
+
+              {/* The second axis. Picking "to 11" used to pin the event at one
+                  game; the two settings are independent now. */}
+              {isPickleball && (
+                <View style={styles.fieldGroup}>
+                  <FieldLabel colors={colors}>
+                    {t('tournamentCreation.fields.pointsPerGame' as TranslationKey)}
+                  </FieldLabel>
+                  <View style={styles.optionsRow}>
+                    {POINTS_PER_GAME_OPTIONS.map(points => {
+                      const selected = points === pointsPerGame;
+                      return (
+                        <TouchableOpacity
+                          key={points}
+                          onPress={() => {
+                            lightHaptic();
+                            setPointsPerGame(points);
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.bracketChip,
+                            {
+                              backgroundColor: selected
+                                ? `${colors.buttonActive}15`
+                                : colors.buttonInactive,
+                              borderColor: selected ? colors.buttonActive : colors.border,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          testID={`points-per-game-${points}`}
+                        >
+                          <Text
+                            size="base"
+                            weight={selected ? 'semibold' : 'regular'}
+                            color={selected ? colors.buttonActive : colors.text}
+                          >
+                            {String(points)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                    {t('tournamentCreation.fields.pointsPerGameHint' as TranslationKey)}
+                  </Text>
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.fieldGroup}>
@@ -1582,7 +1665,11 @@ const PaymentsStep: React.FC<{
 
   const entryFeeCents = dollarsToCents(entryFeeInput);
   const isPaid = entryFeeCents > 0;
-  const quote = quoteRegistration(entryFeeCents, feePayer);
+  // Preview with the server-resolved fee params (admin-tunable default +
+  // per-organizer override) instead of the hardcoded TS defaults.
+  const { session } = useAuth();
+  const { data: feeParams } = useMyServiceFeeParams(session?.user?.id, isPaid);
+  const quote = quoteRegistration(entryFeeCents, feePayer, feeParams);
   const fmt = (cents: number) => formatPrice(cents, FEE_CURRENCY, { locale });
 
   // Prize money is advertising, not a fee obligation, so it renders even when
@@ -2018,7 +2105,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   // In edit mode the sport is fixed by the tournament; otherwise it follows the
   // selected sport context. Mirrors MatchCreationWizard's editMatch handling.
   const sportName = editTournament?.sport.name ?? selectedSport?.name;
-  const formatOptions = formatOptionsForSport(sportName);
+  const formatOptions = MATCH_FORMATS;
+  const isPickleball = sportName === 'pickleball';
   // Bracket size & match format lock once a tournament leaves draft.
   const canEditStructure = !isEditMode || editTournament?.status === 'draft';
 
@@ -2047,8 +2135,17 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [bracketSize, setBracketSize] = useState<BracketSize>(
     (editTournament?.maxParticipants as BracketSize) ?? 8
   );
-  const [matchFormat, setMatchFormat] = useState<MatchFormat>(
-    () => editTournament?.matchFormat ?? defaultFormatForSport(sportName)
+  const [matchFormat, setMatchFormat] = useState<MatchFormat>(() => {
+    const stored = editTournament?.matchFormat;
+    if (!stored) return DEFAULT_MATCH_FORMAT;
+    // A legacy fused label means best-of-3 at its own target.
+    return LEGACY_FUSED_POINTS[stored] ? DEFAULT_MATCH_FORMAT : stored;
+  });
+  const [pointsPerGame, setPointsPerGame] = useState<number>(
+    () =>
+      editTournament?.pointsPerGame ??
+      (editTournament?.matchFormat ? LEGACY_FUSED_POINTS[editTournament.matchFormat] : undefined) ??
+      DEFAULT_POINTS_PER_GAME
   );
   // Entry format is fixed at creation (the server's tournament_update doesn't
   // accept it), so edit mode never surfaces the picker.
@@ -2420,6 +2517,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (canEditStructure) {
           if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
           if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
+          // Only pickleball carries a target, and only when it changed.
+          const nextPoints = isPickleball ? pointsPerGame : null;
+          if (nextPoints !== (editTournament.pointsPerGame ?? null))
+            patch.pointsPerGame = nextPoints;
           if (minRating !== (editTournament.minRating ?? null)) patch.minRating = minRating;
           if (maxRating !== (editTournament.maxRating ?? null)) patch.maxRating = maxRating;
         }
@@ -2483,6 +2584,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         visibility: visibility as Visibility,
         registrationMode,
         matchFormat,
+        pointsPerGame: isPickleball ? pointsPerGame : undefined,
         entryFormat,
         entryFeeCents: isPaid ? entryFeeCents : 0,
         currency: FEE_CURRENCY,
@@ -2555,7 +2657,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     setCityInput('');
     setPrizeMoneyInput('');
     setBracketSize(8);
-    setMatchFormat(defaultFormatForSport(sportName));
+    setMatchFormat(DEFAULT_MATCH_FORMAT);
+    setPointsPerGame(DEFAULT_POINTS_PER_GAME);
     setEntryFormat('singles');
     setStartDate(null);
     setEndDate(null);
@@ -2610,6 +2713,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       matchFormat,
       setMatchFormat,
       formatOptions,
+      pointsPerGame,
+      setPointsPerGame,
+      isPickleball,
       entryFormat,
       setEntryFormat,
       canPickEntryFormat: !isEditMode,
@@ -2649,6 +2755,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       bracketSize,
       matchFormat,
       formatOptions,
+      pointsPerGame,
+      isPickleball,
       entryFormat,
       isEditMode,
       canEditStructure,

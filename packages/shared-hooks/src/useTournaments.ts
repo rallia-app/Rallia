@@ -16,6 +16,7 @@ import {
   listActiveRegistrations,
   listMyActiveRegistrations,
   getMyRegistration,
+  getRegistrationReceiptUrl,
   openTournamentRegistration,
   closeTournamentRegistration,
   reopenTournamentRegistration,
@@ -24,7 +25,9 @@ import {
   revokeTournamentInvite,
   registerForTournament,
   getTournamentFeeQuote,
+  getEventEarnings,
   getMyPayoutAccount,
+  getServiceFeeParams,
   createTournamentRegistrationPayment,
   refundTournamentRegistration,
   withdrawFromTournament,
@@ -44,6 +47,7 @@ import {
   overrideTournamentMatchScore,
   cancelTournament,
   archiveTournament,
+  unarchiveTournament,
   updateTournament,
   getProfilesByIds,
   getPlayersRatingReputation,
@@ -70,6 +74,7 @@ import {
   type PlayerRatingReputation,
   type PlayerSearchResult,
   type TournamentFeeQuote,
+  type EventEarnings,
   type PayoutAccountStatus,
   type RegistrationPaymentIntent,
   type TournamentRefundResult,
@@ -80,8 +85,8 @@ export const tournamentKeys = {
   lists: () => [...tournamentKeys.all, 'list'] as const,
   publicList: (sportId?: string) =>
     [...tournamentKeys.lists(), 'public', sportId ?? 'all'] as const,
-  myList: (userId: string, sportId?: string) =>
-    [...tournamentKeys.lists(), 'mine', userId, sportId ?? 'all'] as const,
+  myList: (userId: string, sportId?: string, archived = false) =>
+    [...tournamentKeys.lists(), 'mine', userId, sportId ?? 'all', archived] as const,
   detail: (tournamentId: string) => [...tournamentKeys.all, 'detail', tournamentId] as const,
   registrations: (tournamentId: string) =>
     [...tournamentKeys.all, 'registrations', tournamentId] as const,
@@ -91,6 +96,8 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'myRegistration', tournamentId, userId] as const,
   myActiveRegistrations: (userId: string) =>
     [...tournamentKeys.all, 'myActiveRegistrations', userId] as const,
+  registrationReceipt: (registrationId: string) =>
+    [...tournamentKeys.all, 'registrationReceipt', registrationId] as const,
   myUnscheduledMatches: (userId: string, sportId?: string) =>
     [...tournamentKeys.all, 'myUnscheduledMatches', userId, sportId ?? 'all'] as const,
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
@@ -104,7 +111,10 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
+  earnings: (eventId: string) => [...tournamentKeys.all, 'earnings', eventId] as const,
   myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
+  myServiceFeeParams: (userId: string) =>
+    [...tournamentKeys.all, 'myServiceFeeParams', userId] as const,
   certifiedOrganizer: (playerId: string) =>
     [...tournamentKeys.all, 'certifiedOrganizer', playerId] as const,
 };
@@ -201,11 +211,16 @@ export function usePublicTournaments(sportId?: string) {
 /**
  * List the caller's tournaments — organized (incl. drafts) plus registered.
  */
-export function useMyTournaments(userId: string | undefined, sportId?: string) {
+export function useMyTournaments(
+  userId: string | undefined,
+  sportId?: string,
+  opts: { archived?: boolean; enabled?: boolean } = {}
+) {
+  const archived = opts.archived ?? false;
   return useQuery<TournamentListItem[]>({
-    queryKey: tournamentKeys.myList(userId ?? '', sportId),
-    queryFn: () => listMyTournaments(userId!, { sportId }),
-    enabled: !!userId,
+    queryKey: tournamentKeys.myList(userId ?? '', sportId, archived),
+    queryFn: () => listMyTournaments(userId!, { sportId, archived }),
+    enabled: !!userId && (opts.enabled ?? true),
   });
 }
 
@@ -242,6 +257,16 @@ export function useMyTournamentRegistration(
     queryKey: tournamentKeys.myRegistration(tournamentId ?? '', userId ?? ''),
     queryFn: () => getMyRegistration(tournamentId!, userId!),
     enabled: !!tournamentId && !!userId,
+  });
+}
+
+/** Stripe receipt link for the caller's paid registration (null until the
+ *  webhook stores it). Pass enabled=false for free tournaments. */
+export function useRegistrationReceiptUrl(registrationId: string | undefined, enabled = true) {
+  return useQuery<string | null>({
+    queryKey: tournamentKeys.registrationReceipt(registrationId ?? ''),
+    queryFn: () => getRegistrationReceiptUrl(registrationId!),
+    enabled: !!registrationId && enabled,
   });
 }
 
@@ -372,6 +397,27 @@ export function useCancelTournament(options: MutationOptions<Tournament> = {}) {
   };
 }
 
+/** Restores an archived tournament to completed or cancelled, whichever it was. */
+export function useUnarchiveTournament(options: MutationOptions<Tournament> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<Tournament, Error, { tournamentId: string; versionWas: number }>({
+    mutationFn: ({ tournamentId, versionWas }) => unarchiveTournament(tournamentId, versionWas),
+    onSuccess: t => {
+      invalidate(t.id);
+      // Both views change: the row leaves the archive and rejoins the library.
+      qc.invalidateQueries({ queryKey: tournamentKeys.lists() });
+      options.onSuccess?.(t);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
 export function useArchiveTournament(options: MutationOptions<Tournament> = {}) {
   const invalidate = useTournamentDetailInvalidator();
   const qc = useQueryClient();
@@ -407,7 +453,14 @@ export function useAttachMatchToTournamentSlot(options: MutationOptions<Tourname
       invalidate(vars.tournamentId);
       options.onSuccess?.(tm);
     },
-    onError: e => options.onError?.(e),
+    onError: (e, vars) => {
+      // The slot changed under us (opponent linked first / already settled):
+      // refetch so the bracket stops offering it.
+      if (e.message === 'ALREADY_LINKED' || e.message === 'MATCH_NOT_PENDING') {
+        invalidate(vars.tournamentId);
+      }
+      options.onError?.(e);
+    },
   });
   return {
     mutate: mutation.mutate,
@@ -625,6 +678,26 @@ export function useTournamentFeeQuote(tournamentId: string | undefined, enabled 
 }
 
 /**
+ * Organizer-only money summary for one paid event. Pass exactly one id; gate
+ * `enabled` on being the organizer of a paid event — the RPC raises
+ * NOT_ORGANIZER for anyone else.
+ */
+export function useEventEarnings(
+  ids: { tournamentId?: string; seasonId?: string },
+  enabled = true
+) {
+  const eventId = ids.tournamentId ?? ids.seasonId;
+  return useQuery<EventEarnings>({
+    queryKey: tournamentKeys.earnings(eventId ?? ''),
+    queryFn: () =>
+      getEventEarnings(
+        ids.tournamentId ? { tournamentId: ids.tournamentId } : { seasonId: ids.seasonId as string }
+      ),
+    enabled: !!eventId && enabled,
+  });
+}
+
+/**
  * The current organizer's payout (Stripe Express) account status. Drives the
  * payout status pill + manage/onboard affordance on paid events. Returns null
  * when they've never set up payouts. `userId` only scopes the cache key — the
@@ -635,6 +708,21 @@ export function useMyPayoutAccount(userId: string | undefined, enabled = true) {
     queryKey: tournamentKeys.myPayoutAccount(userId ?? ''),
     queryFn: () => getMyPayoutAccount(),
     enabled: !!userId && enabled,
+  });
+}
+
+/**
+ * Effective service-fee parameters for the caller as an organizer (organizer
+ * override → admin-managed global default). Feeds the creation wizards' fee
+ * previews; callers should fall back to DEFAULT_SERVICE_FEE_PARAMS while
+ * loading.
+ */
+export function useMyServiceFeeParams(userId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: tournamentKeys.myServiceFeeParams(userId ?? ''),
+    queryFn: () => getServiceFeeParams(userId!),
+    enabled: !!userId && enabled,
+    staleTime: 1000 * 60 * 10,
   });
 }
 

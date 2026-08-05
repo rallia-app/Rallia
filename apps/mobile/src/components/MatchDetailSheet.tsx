@@ -102,6 +102,7 @@ import { usePlayerInviteSheet } from '#/context/PlayerInviteSheetContext';
 import { useFeedbackSheet } from '#/context/FeedbackSheetContext';
 import { useTranslation, usePermissions, useRequireOnboarding, type TranslationKey } from '#/hooks';
 import { openInMaps } from '#/utils/openInMaps';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { useAppNavigation } from '#/navigation';
 import { shareMatch } from '#/utils';
@@ -935,12 +936,11 @@ export const MatchDetailSheet: React.FC = () => {
     },
     onJoinError: error => {
       errorHaptic();
-      // Handle specific error types with user-friendly messages
-      if (error.message === 'GENDER_MISMATCH') {
-        toast.error(t('matchActions.genderMismatch'));
-      } else {
-        toast.error(error.message);
-      }
+      toast.error(
+        rpcErrorMessage(error, t, 'common.rpcErrors.generic', {
+          GENDER_MISMATCH: 'matchActions.genderMismatch',
+        })
+      );
     },
     onLeaveSuccess: () => {
       successHaptic();
@@ -952,7 +952,7 @@ export const MatchDetailSheet: React.FC = () => {
     onLeaveError: error => {
       errorHaptic();
       setShowLeaveModal(false);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onCancelSuccess: () => {
       Analytics.matchCancelled({
@@ -969,7 +969,7 @@ export const MatchDetailSheet: React.FC = () => {
     onCancelError: error => {
       errorHaptic();
       setShowCancelModal(false);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onAcceptSuccess: participant => {
       successHaptic();
@@ -987,7 +987,7 @@ export const MatchDetailSheet: React.FC = () => {
     onAcceptError: error => {
       errorHaptic();
       setAcceptingRequestId(null);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onRejectSuccess: participant => {
       successHaptic();
@@ -1007,7 +1007,7 @@ export const MatchDetailSheet: React.FC = () => {
       errorHaptic();
       setShowRejectModal(false);
       setRejectingParticipantId(null);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onCancelRequestSuccess: () => {
       successHaptic();
@@ -1018,7 +1018,7 @@ export const MatchDetailSheet: React.FC = () => {
     onCancelRequestError: error => {
       errorHaptic();
       setShowCancelRequestModal(false);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onKickSuccess: participant => {
       successHaptic();
@@ -1038,7 +1038,7 @@ export const MatchDetailSheet: React.FC = () => {
       errorHaptic();
       setShowKickModal(false);
       setKickingParticipantId(null);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onCancelInviteSuccess: participant => {
       successHaptic();
@@ -1058,7 +1058,7 @@ export const MatchDetailSheet: React.FC = () => {
       errorHaptic();
       setShowCancelInviteModal(false);
       setCancellingInvitationId(null);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onDeclineInviteSuccess: () => {
       successHaptic();
@@ -1069,7 +1069,7 @@ export const MatchDetailSheet: React.FC = () => {
     onDeclineInviteError: error => {
       errorHaptic();
       setShowDeclineInviteModal(false);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onResendInviteSuccess: participant => {
       successHaptic();
@@ -1087,7 +1087,7 @@ export const MatchDetailSheet: React.FC = () => {
     onResendInviteError: error => {
       errorHaptic();
       setResendingInvitationId(null);
-      toast.error(error.message);
+      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
     },
     onCheckInSuccess: () => {
       successHaptic();

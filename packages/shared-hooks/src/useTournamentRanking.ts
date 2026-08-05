@@ -16,7 +16,10 @@ import {
   type MyTournamentRanking,
   type PointsToDefendRow,
   type RankingLevelFilter,
+  type RankingBoard,
 } from '@rallia/shared-services';
+
+export type { RankingBoard };
 
 const PAGE_SIZE = 25;
 
@@ -26,7 +29,8 @@ export const tournamentRankingKeys = {
     sportId?: string,
     seasonCode?: string,
     levelFilter?: RankingLevelFilter,
-    ratingScoreFilter?: string
+    ratingScoreFilter?: string,
+    board?: RankingBoard
   ) =>
     [
       ...tournamentRankingKeys.all,
@@ -35,9 +39,10 @@ export const tournamentRankingKeys = {
       seasonCode ?? 'current',
       levelFilter ?? 'all',
       ratingScoreFilter ?? 'all',
+      board ?? 'singles',
     ] as const,
-  myRank: (seasonCode?: string) =>
-    [...tournamentRankingKeys.all, 'my-rank', seasonCode ?? 'current'] as const,
+  myRank: (seasonCode?: string, board?: RankingBoard) =>
+    [...tournamentRankingKeys.all, 'my-rank', seasonCode ?? 'current', board ?? 'singles'] as const,
   toDefend: (withinDays?: number) =>
     [...tournamentRankingKeys.all, 'to-defend', withinDays ?? 'default'] as const,
 };
@@ -51,16 +56,24 @@ export function useTournamentRanking(
   sportId?: string,
   seasonCode?: string,
   levelFilter?: RankingLevelFilter,
-  ratingScoreFilter?: string
+  ratingScoreFilter?: string,
+  board?: RankingBoard
 ) {
   const query = useInfiniteQuery<TournamentRankingPage, Error>({
-    queryKey: tournamentRankingKeys.list(sportId, seasonCode, levelFilter, ratingScoreFilter),
+    queryKey: tournamentRankingKeys.list(
+      sportId,
+      seasonCode,
+      levelFilter,
+      ratingScoreFilter,
+      board
+    ),
     queryFn: ({ pageParam = 0 }) =>
       getTournamentRankingPage({
         sportId: sportId!,
         seasonCode,
         levelFilter,
         ratingScoreFilter,
+        board,
         limit: PAGE_SIZE,
         offset: pageParam as number,
       }),
@@ -107,10 +120,14 @@ export function useTournamentRanking(
  * The caller's own standing on the common board for `sportId` in the season
  * (null when they have no points there yet).
  */
-export function useMyTournamentRanking(sportId?: string, seasonCode?: string) {
+export function useMyTournamentRanking(
+  sportId?: string,
+  seasonCode?: string,
+  board?: RankingBoard
+) {
   const query = useQuery({
-    queryKey: tournamentRankingKeys.myRank(seasonCode),
-    queryFn: () => getMyTournamentRanking({ seasonCode }),
+    queryKey: tournamentRankingKeys.myRank(seasonCode, board),
+    queryFn: () => getMyTournamentRanking({ seasonCode, board }),
     enabled: !!sportId,
     staleTime: 2 * 60 * 1000,
   });

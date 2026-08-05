@@ -771,6 +771,7 @@ export type Database = {
           id: string
           match_id: string | null
           picture_url: string | null
+          session_match_id: string | null
           sport_id: string | null
           title: string | null
           tournament_id: string | null
@@ -784,6 +785,7 @@ export type Database = {
           id?: string
           match_id?: string | null
           picture_url?: string | null
+          session_match_id?: string | null
           sport_id?: string | null
           title?: string | null
           tournament_id?: string | null
@@ -797,6 +799,7 @@ export type Database = {
           id?: string
           match_id?: string | null
           picture_url?: string | null
+          session_match_id?: string | null
           sport_id?: string | null
           title?: string | null
           tournament_id?: string | null
@@ -824,6 +827,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "qualifying_played_game"
             referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "conversation_session_match_id_fkey"
+            columns: ["session_match_id"]
+            isOneToOne: false
+            referencedRelation: "session_matches"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "conversation_sport_id_fkey"
@@ -2729,6 +2739,7 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_payment_intent_id: string | null
           stripe_payout_id: string | null
+          stripe_receipt_url: string | null
           tournament_registration_id: string | null
           updated_at: string
           version: number
@@ -2758,6 +2769,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payout_id?: string | null
+          stripe_receipt_url?: string | null
           tournament_registration_id?: string | null
           updated_at?: string
           version?: number
@@ -2787,6 +2799,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_payout_id?: string | null
+          stripe_receipt_url?: string | null
           tournament_registration_id?: string | null
           updated_at?: string
           version?: number
@@ -3712,6 +3725,8 @@ export type Database = {
           home_region: string | null
           id: string
           langue: string | null
+          liquidity_pct_shown: number | null
+          liquidity_players_shown: number | null
           location_type: string
           match_format: string | null
           match_nature: string | null
@@ -3741,6 +3756,8 @@ export type Database = {
           home_region?: string | null
           id?: string
           langue?: string | null
+          liquidity_pct_shown?: number | null
+          liquidity_players_shown?: number | null
           location_type: string
           match_format?: string | null
           match_nature?: string | null
@@ -3770,6 +3787,8 @@ export type Database = {
           home_region?: string | null
           id?: string
           langue?: string | null
+          liquidity_pct_shown?: number | null
+          liquidity_players_shown?: number | null
           location_type?: string
           match_format?: string | null
           match_nature?: string | null
@@ -8582,6 +8601,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -8609,6 +8629,7 @@ export type Database = {
           name: string
           odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game?: number | null
           published_at?: string | null
           rounds?: number
           scheduled_at: string
@@ -8636,6 +8657,7 @@ export type Database = {
           name?: string
           odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game?: number | null
           published_at?: string | null
           rounds?: number
           scheduled_at?: string
@@ -9127,6 +9149,7 @@ export type Database = {
       }
       tournament_ranking_points: {
         Row: {
+          board: string
           computed_at: string
           earned_at: string
           id: string
@@ -9141,6 +9164,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          board?: string
           computed_at?: string
           earned_at?: string
           id?: string
@@ -9155,6 +9179,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          board?: string
           computed_at?: string
           earned_at?: string
           id?: string
@@ -9394,6 +9419,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -9452,6 +9478,7 @@ export type Database = {
           organizer_display_name?: string | null
           organizer_id: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game?: number | null
           prize_money_cents?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
@@ -9510,6 +9537,7 @@ export type Database = {
           organizer_display_name?: string | null
           organizer_id?: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game?: number | null
           prize_money_cents?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
@@ -10681,7 +10709,7 @@ export type Database = {
         }[]
       }
       get_my_tournament_ranking: {
-        Args: { p_season_code?: string }
+        Args: { p_board?: string; p_season_code?: string }
         Returns: {
           events_played: number
           level_bucket: string
@@ -10768,6 +10796,10 @@ export type Database = {
       }
       get_or_create_player_referral_code: {
         Args: { p_player_id: string }
+        Returns: string
+      }
+      get_or_create_session_pairing_chat: {
+        Args: { p_session_match_id: string }
         Returns: string
       }
       get_or_create_tournament_round_chat: {
@@ -11484,6 +11516,7 @@ export type Database = {
       }
       get_tournament_leaderboard: {
         Args: {
+          p_board?: string
           p_level_filter?: string
           p_limit?: number
           p_offset?: number
@@ -12162,6 +12195,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_waitlist_position: {
+        Args: { p_league_id: string }
+        Returns: {
+          queue_rank: number
+          queue_size: number
+        }[]
+      }
       list_utm_campaigns: {
         Args: { p_include_archived?: boolean }
         Returns: {
@@ -12247,7 +12287,27 @@ export type Database = {
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
       lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
+      lt_event_earnings: {
+        Args: { p_season_id?: string; p_tournament_id?: string }
+        Returns: {
+          charged_cents: number
+          currency: string
+          entry_cents: number
+          fee_tax_cents: number
+          net_to_organizer_cents: number
+          paid_count: number
+          pending_count: number
+          refunded_cents: number
+          refunded_count: number
+          released_count: number
+          service_fee_cents: number
+        }[]
+      }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
+      lt_get_or_create_session_pairing_chat_unchecked: {
+        Args: { p_session_match_id: string }
+        Returns: string
+      }
       lt_get_or_create_tournament_chat: {
         Args: { p_tournament_id: string }
         Returns: string
@@ -12257,6 +12317,11 @@ export type Database = {
         Returns: string
       }
       lt_league_default_rules: { Args: { p_sport_id: string }; Returns: Json }
+      lt_league_promote_waitlist_head: {
+        Args: { p_league_id: string }
+        Returns: boolean
+      }
+      lt_lift_expired_suspensions: { Args: never; Returns: number }
       lt_min_rating_level_multiplier: {
         Args: { p_min_rating: number; p_sport_id: string }
         Returns: number
@@ -12264,6 +12329,10 @@ export type Database = {
       lt_notify_tournament_match_ready: {
         Args: { p_tm_id: string }
         Returns: undefined
+      }
+      lt_order_avoid_repeat: {
+        Args: { p_pool: string[]; p_season_id: string }
+        Returns: string[]
       }
       lt_parse_score: {
         Args: { p_score: string }
@@ -12321,6 +12390,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -13033,6 +13103,12 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      season_ranking_population: {
+        Args: { p_season_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       season_ranking_roster: {
         Args: { p_season_id: string }
         Returns: {
@@ -13179,6 +13255,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      session_attach_match_pre_play: {
+        Args: { p_match_id: string; p_session_match_id: string }
+        Returns: undefined
+      }
       session_cancel: {
         Args: {
           p_reason?: string
@@ -13202,6 +13282,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -13276,6 +13357,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -13312,6 +13394,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -13352,6 +13435,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -13425,6 +13509,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
@@ -13441,6 +13526,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      session_remind_pending: {
+        Args: { p_session_id: string }
+        Returns: number
       }
       session_set_match_lock: {
         Args: {
@@ -13473,6 +13562,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "session_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      session_withdraw_member: {
+        Args: { p_session_id: string; p_user_id: string; p_version_was: number }
+        Returns: {
+          created_at: string
+          guest_invited_by: string | null
+          id: string
+          is_guest: boolean
+          preferred_partner_id: string | null
+          responded_at: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["session_presence_status"]
+          updated_at: string
+          user_id: string
+          version: number
+          waitlist_position: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "session_presence"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -13654,6 +13766,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -13780,6 +13893,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -13847,6 +13961,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -13892,6 +14007,7 @@ export type Database = {
           p_min_rating?: number
           p_name: string
           p_network_id?: string
+          p_points_per_game?: number
           p_prize_money_cents?: number
           p_registration_closes_at?: string
           p_registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
@@ -13939,6 +14055,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14139,6 +14256,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14221,6 +14339,7 @@ export type Database = {
       }
       tournament_ranked_board: {
         Args: {
+          p_board?: string
           p_level_filter?: string
           p_rating_score_id?: string
           p_season_id: string
@@ -14344,6 +14463,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14448,6 +14568,74 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      tournament_unarchive: {
+        Args: { p_tournament_id: string; p_version_was: number }
+        Returns: {
+          archived_at: string | null
+          bracket_locked_at: string | null
+          bracket_type: Database["public"]["Enums"]["bracket_type"]
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          categories: string[]
+          city: string | null
+          completed_at: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          end_date: string
+          entry_fee_cents: number
+          entry_format: Database["public"]["Enums"]["entry_format"]
+          facility_id: string | null
+          fee_cap_cents_override: number | null
+          fee_flat_cents_override: number | null
+          fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
+          fee_pct_bps_override: number | null
+          final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
+          games_per_set: number
+          id: string
+          level: string | null
+          logo_url: string | null
+          match_format: Database["public"]["Enums"]["match_format"]
+          max_participants: number
+          max_rating: number | null
+          max_seeds: number
+          min_rating: number | null
+          min_reputation: number | null
+          name: string
+          network_id: string | null
+          organizer_display_name: string | null
+          organizer_id: string
+          payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
+          prize_money_cents: number | null
+          ranking_draw_size: number | null
+          ranking_multiplier: number | null
+          ranking_points_ceiling: number | null
+          refund_cutoff_at: string | null
+          refund_partial_bps: number | null
+          refund_policy_kind: Database["public"]["Enums"]["refund_policy_kind_enum"]
+          registration_closes_at: string | null
+          registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
+          registration_opens_at: string | null
+          rules: string | null
+          seeding_enabled: boolean
+          sport_id: string
+          start_date: string
+          status: Database["public"]["Enums"]["tournament_status"]
+          surface: string | null
+          updated_at: string
+          venue_address: string | null
+          venue_name: string | null
+          version: number
+          visibility: Database["public"]["Enums"]["tournament_visibility"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournaments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_update: {
         Args: { p_patch: Json; p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -14486,6 +14674,7 @@ export type Database = {
           organizer_display_name: string | null
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
+          points_per_game: number | null
           prize_money_cents: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14889,6 +15078,8 @@ export type Database = {
         | "league_member_approved"
         | "session_confirm_reminder"
         | "tournament_match_ready"
+        | "session_cancelled"
+        | "season_cancelled"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15564,6 +15755,8 @@ export const Constants = {
         "league_member_approved",
         "session_confirm_reminder",
         "tournament_match_ready",
+        "session_cancelled",
+        "season_cancelled",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

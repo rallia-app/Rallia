@@ -126,17 +126,49 @@ Deno.serve(async req => {
         // Already fully onboarded — just reuse it
         stripeAccountId = existing.stripe_account_id;
       } else {
-        // Account exists but onboarding isn't done. Legacy accounts were created
-        // transfers-only (no card_payments) and can't be the settlement merchant
-        // for the on_behalf_of charge — delete and recreate them card-capable.
-        // Otherwise resume the existing account's onboarding.
-        const acct = await stripe.accounts.retrieve(existing.stripe_account_id);
-        if (acct.capabilities?.card_payments == null) {
-          await stripe.accounts.del(existing.stripe_account_id).catch(() => {});
+        // Account exists but onboarding isn't done — per our mirror.
+        let acct = await stripe.accounts.retrieve(existing.stripe_account_id);
+        if ((acct as unknown as { deleted?: boolean }).deleted) {
+          // Gone at Stripe (dashboard delete, test-mode reset): drop the dead
+          // pointer and fall through to create a fresh account below.
           await admin.from('player_stripe_account').delete().eq('player_id', playerId);
-          // stripeAccountId stays undefined → falls through to create below
         } else {
+          // Legacy accounts (court-reimbursement era) were created
+          // transfers-only. Hosted onboarding never ADDS capabilities, so they
+          // can be fully onboarded yet rejected as the on_behalf_of merchant
+          // ("'transfers' but without 'card_payments'"). Upgrade in place —
+          // the old delete-and-recreate here would destroy everything the
+          // organizer already submitted — and pin the manual payout schedule
+          // v0 settlement relies on.
+          if (acct.capabilities?.card_payments == null) {
+            acct = await stripe.accounts.update(existing.stripe_account_id, {
+              capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+              settings: { payouts: { schedule: { interval: 'manual' } } },
+            });
+          }
           stripeAccountId = existing.stripe_account_id;
+          // Reconcile while we hold the fresh account: the mirror is normally
+          // webhook-written, and a missed account.updated leaves a complete
+          // account marked incomplete forever (re-running its onboarding is a
+          // no-op that fires no new event). The payout gate reads the mirror,
+          // so healing it here unblocks publish/season-open on the next try.
+          // Ready = card_payments ACTIVE, not charges_enabled alone — the
+          // latter also goes true on transfers-only accounts.
+          if (acct.charges_enabled === true && acct.capabilities?.card_payments === 'active') {
+            const { error: syncError } = await admin
+              .from('player_stripe_account')
+              .update({
+                onboarding_completed: true,
+                charges_enabled: true,
+                payouts_enabled: acct.payouts_enabled === true,
+                details_submitted: acct.details_submitted === true,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('player_id', playerId);
+            if (syncError) {
+              console.error('[player-stripe-onboard] flag sync failed:', syncError);
+            }
+          }
         }
       }
     }
@@ -229,6 +261,11 @@ Deno.serve(async req => {
       return_url:
         Deno.env.get('STRIPE_CONNECT_RETURN_URL') ?? 'https://rallia.app/stripe-connect-return',
       refresh_url: `${functionUrl}?refresh=1`,
+      // Ask for everything up front. The default (currently_due) collects only the
+      // minimum to get started, so identity verification lands in eventually_due
+      // and Stripe returns the organizer to the app still incomplete — they have to
+      // re-enter onboarding to finish. One pass instead of two.
+      collection_options: { fields: 'eventually_due' },
     });
 
     return json({ url: accountLink.url });

@@ -7,8 +7,20 @@
 -- the "[JDL " test-guide fixtures.
 --
 -- Participants are drawn from the @fake-rallia.com pool so no real user is
--- notified or cluttered. The tester (lefrancmathis@gmail.com) is positioned as
--- organizer, member, and invitee across free and paid leagues.
+-- notified or cluttered.
+--
+-- Two real humans hold positions here, and which one matters:
+--   lefrancmathis@gmail.com  ORGANIZES the "Mathis Hosts" / paid fixtures.
+--   jdl.sonkin@gmail.com     is the TESTER the leagues & tournaments guide
+--                            addresses, so every "you are a member / you have an
+--                            invitation / you belong to a closed league"
+--                            position must include him.
+--
+-- This seed predates the guide handing the tester role to jdl, and the member
+-- and invitee positions still pointed only at Mathis. That produced three
+-- false bug reports on the 2026-07-30 pass ("je n'ai pas trouve cette ligue",
+-- "je n'ai pas vu d'invitation a accepter") against fixtures that were real but
+-- assigned to the other account. Both are seeded now.
 --
 -- Run:  psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -f scripts/seed-leagues-staging.sql
 --   or  npm run db:seed:leagues:staging
@@ -147,7 +159,7 @@ END; $$ LANGUAGE plpgsql;
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
-  v_tennis uuid; v_pickle uuid; v_facility uuid; v_mathis uuid;
+  v_tennis uuid; v_pickle uuid; v_facility uuid; v_mathis uuid; v_tester uuid;
   v_orgs uuid[]; v_pk uuid[]; v_league leagues; v_member league_members; v_season seasons;
   v_paid_org uuid; v_paid_org2 uuid; v_sid uuid; i integer;
 BEGIN
@@ -155,6 +167,7 @@ BEGIN
   SELECT id INTO v_pickle FROM sport WHERE name='pickleball';
   SELECT id INTO v_facility FROM facility WHERE is_active ORDER BY created_at LIMIT 1;
   SELECT id INTO v_mathis FROM auth.users WHERE email='lefrancmathis@gmail.com';
+  SELECT id INTO v_tester FROM auth.users WHERE email='jdl.sonkin@gmail.com';
 
   -- Fake-pool organizers/members (no real user gets noise). 12 tennis, 8 pickle.
   SELECT array_agg(id) INTO v_orgs FROM (
@@ -193,11 +206,18 @@ BEGIN
     INSERT INTO league_members(league_id,user_id,role,status,invited_by)
     VALUES (v_league.id, v_mathis, 'member','pending', v_orgs[3]);
   END IF;
+  IF v_tester IS NOT NULL THEN
+    INSERT INTO league_members(league_id,user_id,role,status,invited_by)
+    VALUES (v_league.id, v_tester, 'member','pending', v_orgs[3])
+    ON CONFLICT (league_id, user_id) DO UPDATE
+      SET status='pending', invited_by=EXCLUDED.invited_by;
+  END IF;
 
   -- 4. Private open — MATHIS is an active member (My Leagues, private)
   v_league := pg_temp.seed_create_league(v_orgs[4], '[SEED] Friends & Family (Private)', v_tennis,
     'private','open','Private league for testing My Leagues without discovery noise.', NULL, NULL);
   IF v_mathis IS NOT NULL THEN PERFORM pg_temp.seed_active_member(v_league.id, v_mathis); END IF;
+  IF v_tester IS NOT NULL THEN PERFORM pg_temp.seed_active_member(v_league.id, v_tester); END IF;
 
   -- 5. Public open pickleball
   IF v_pk IS NOT NULL AND array_length(v_pk,1) >= 4 THEN
@@ -215,9 +235,12 @@ BEGIN
   PERFORM pg_temp.seed_create_league(v_orgs[5], '[SEED] Off-Season Ladder (Paused)', v_tennis,
     'public','open','Paused league — should not accept new joins.','Parc La Fontaine', v_facility, p_status=>'paused');
 
-  -- 8. Closed league
-  PERFORM pg_temp.seed_create_league(v_orgs[6], '[SEED] Archived 2025 League', v_tennis,
+  -- 8. Closed league. The tester is a member: a closed league is excluded from
+  -- discovery by design, so without a membership it is unreachable from every
+  -- list and the active/closed split in My Leagues has nothing to show.
+  v_league := pg_temp.seed_create_league(v_orgs[6], '[SEED] Archived 2025 League', v_tennis,
     'public','open','Closed league for past-season UI.', NULL, NULL, p_status=>'closed');
+  IF v_tester IS NOT NULL THEN PERFORM pg_temp.seed_active_member(v_league.id, v_tester); END IF;
 
   -- 9. Beginner rating cap
   PERFORM pg_temp.seed_create_league(v_orgs[1], '[SEED] Beginner Tennis Circle', v_tennis,
@@ -291,6 +314,7 @@ BEGIN
     'public','open','Someone else organizes this PAID season ($30). Join it to test the payment sheet.',
     'Parc Jarry', v_facility, p_level=>'intermediate');
   IF v_mathis IS NOT NULL THEN PERFORM pg_temp.seed_active_member(v_league.id, v_mathis); END IF;
+  IF v_tester IS NOT NULL THEN PERFORM pg_temp.seed_active_member(v_league.id, v_tester); END IF;
   FOR i IN 1..5 LOOP PERFORM pg_temp.seed_active_member(v_league.id, v_orgs[i]); END LOOP;
   PERFORM pg_temp.seed_set_user(v_paid_org);
   v_season := season_create(p_league_id=>v_league.id, p_name=>'Ligue payante ouverte',

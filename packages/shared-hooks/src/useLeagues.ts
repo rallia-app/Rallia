@@ -18,6 +18,8 @@ import {
   listLinkableMatchesForSessionSlot,
   attachMatchToSessionSlot,
   confirmSessionPresence,
+  withdrawSessionMember,
+  remindPendingSessionMembers,
   createLeague,
   createLeagueSession,
   createSeason,
@@ -26,10 +28,15 @@ import {
   removeSeasonMember,
   listSeasonMembers,
   getMySeasonMembership,
+  getSeasonReceiptUrl,
   generateSessionSheet,
   getLeague,
   getLeagueSession,
   getMyLeagueMembership,
+  getMyLeagueWaitlistStatus,
+  listLeagueWaitlist,
+  type LeagueWaitlistStatus,
+  type LeagueWaitlistEntry,
   getMySessionPresence,
   joinLeague,
   listLeagueMembers,
@@ -89,6 +96,9 @@ export const leagueKeys = {
   members: (leagueId: string) => [...leagueKeys.all, 'members', leagueId] as const,
   myMembership: (leagueId: string, userId: string) =>
     [...leagueKeys.all, 'myMembership', leagueId, userId] as const,
+  waitlist: (leagueId: string) => [...leagueKeys.all, 'waitlist', leagueId] as const,
+  myWaitlistStatus: (leagueId: string, userId: string) =>
+    [...leagueKeys.all, 'myWaitlistStatus', leagueId, userId] as const,
   seasons: (leagueId: string) => [...leagueKeys.all, 'seasons', leagueId] as const,
   seasonFeeQuote: (seasonId: string) => [...leagueKeys.all, 'seasonFeeQuote', seasonId] as const,
   sessions: (seasonId: string) => [...leagueKeys.all, 'sessions', seasonId] as const,
@@ -104,7 +114,17 @@ export const leagueKeys = {
   seasonMembers: (seasonId: string) => [...leagueKeys.all, 'seasonMembers', seasonId] as const,
   mySeasonMembership: (seasonId: string, userId: string) =>
     [...leagueKeys.all, 'mySeasonMembership', seasonId, userId] as const,
+  seasonReceipt: (seasonMemberId: string) =>
+    [...leagueKeys.all, 'seasonReceipt', seasonMemberId] as const,
 };
+
+/**
+ * Opt out of the app-wide 2-minute staleTime (App.tsx) for queries whose value
+ * can change without this device doing anything. The default is right for most
+ * data; these few reflect other people's actions, so a stale copy is a wrong
+ * copy on screen.
+ */
+const ALWAYS_FRESH = { staleTime: 0, refetchOnMount: 'always' } as const;
 
 interface MutationOptions<T> {
   onSuccess?: (result: T) => void;
@@ -118,6 +138,10 @@ function useLeagueDetailInvalidator() {
     qc.invalidateQueries({ queryKey: leagueKeys.members(leagueId) });
     qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) });
     qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+    // Any membership change can reshape the queue (joins queue up, departures
+    // and capacity edits promote).
+    qc.invalidateQueries({ queryKey: leagueKeys.waitlist(leagueId) });
+    qc.invalidateQueries({ queryKey: [...leagueKeys.all, 'myWaitlistStatus', leagueId] });
   };
 }
 
@@ -134,6 +158,11 @@ export function usePublicLeagues(sportId?: string) {
   return useQuery<LeagueListItem[]>({
     queryKey: leagueKeys.publicList(sportId),
     queryFn: () => listPublicLeagues({ sportId }),
+    // A directory is only useful if it lists what exists right now: leagues
+    // appear and fill up without this device doing anything, so opening the
+    // screen always re-reads rather than serving the 2-minute-fresh cache.
+    // Cheap, and confined to the two league list screens (not the nav path).
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -142,6 +171,9 @@ export function useMyLeagues(userId: string | undefined, sportId?: string) {
     queryKey: leagueKeys.myList(userId ?? '', sportId),
     queryFn: () => listMyLeagues(userId!, { sportId }),
     enabled: !!userId,
+    // Being admitted from a waitlist adds a league here with no action from
+    // this device.
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -166,6 +198,35 @@ export function useMyLeagueMembership(leagueId: string | undefined, userId: stri
     queryKey: leagueKeys.myMembership(leagueId ?? '', userId ?? ''),
     queryFn: () => getMyLeagueMembership(leagueId!, userId!),
     enabled: !!leagueId && !!userId,
+    // Promotion off the waitlist, approval, suspension and removal all happen
+    // on someone else's action, so a cached copy can say "in line" long after
+    // you are in. One row; re-read every time the screen opens.
+    ...ALWAYS_FRESH,
+  });
+}
+
+/** Place in line for a queued joiner; null when not queued. */
+export function useMyLeagueWaitlistStatus(
+  leagueId: string | undefined,
+  userId: string | undefined,
+  enabled = true
+) {
+  return useQuery<LeagueWaitlistStatus | null>({
+    queryKey: leagueKeys.myWaitlistStatus(leagueId ?? '', userId ?? ''),
+    queryFn: () => getMyLeagueWaitlistStatus(leagueId!),
+    enabled: enabled && !!leagueId && !!userId,
+    // Your place in line moves as people ahead of you are seated.
+    ...ALWAYS_FRESH,
+  });
+}
+
+/** The un-promoted queue in order (organizer sees all rows; others their own). */
+export function useLeagueWaitlist(leagueId: string | undefined, enabled = true) {
+  return useQuery<LeagueWaitlistEntry[]>({
+    queryKey: leagueKeys.waitlist(leagueId ?? ''),
+    queryFn: () => listLeagueWaitlist(leagueId!),
+    enabled: enabled && !!leagueId,
+    ...ALWAYS_FRESH,
   });
 }
 
@@ -190,6 +251,16 @@ export function useMySeasonMembership(seasonId: string | undefined, userId: stri
     queryKey: leagueKeys.mySeasonMembership(seasonId ?? '', userId ?? ''),
     queryFn: () => getMySeasonMembership(seasonId!, userId!),
     enabled: !!seasonId && !!userId,
+  });
+}
+
+/** Stripe receipt link for the caller's paid season enrollment (null until the
+ *  webhook stores it). Pass enabled=false for free seasons. */
+export function useSeasonReceiptUrl(seasonMemberId: string | undefined, enabled = true) {
+  return useQuery<string | null>({
+    queryKey: leagueKeys.seasonReceipt(seasonMemberId ?? ''),
+    queryFn: () => getSeasonReceiptUrl(seasonMemberId!),
+    enabled: !!seasonMemberId && enabled,
   });
 }
 
@@ -465,6 +536,7 @@ export function useCreateSession(seasonId: string, options: MutationOptions<Sess
       venueName?: string;
       capacity?: number;
       rounds?: number;
+      pairingMode?: Enums<'pairing_mode'>;
     }) => createLeagueSession({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
@@ -492,6 +564,42 @@ export function usePublishSession(seasonId: string, options: MutationOptions<Ses
       invalidate(result.id);
       options.onSuccess?.(result);
     },
+    onError: options.onError,
+  });
+}
+
+/**
+ * Organizer frees a seat by withdrawing a member from a session. The waitlist
+ * promotion happens server-side, so invalidating the session is enough for the
+ * promoted player to appear.
+ */
+export function useWithdrawSessionMember(
+  sessionId: string,
+  options: MutationOptions<SessionPresence> = {}
+) {
+  const invalidate = useSessionInvalidator();
+  return useMutation({
+    mutationFn: ({ userId, versionWas }: { userId: string; versionWas: number }) =>
+      withdrawSessionMember(sessionId, userId, versionWas),
+    onSuccess: result => {
+      invalidate(sessionId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+/**
+ * Nudges the members who have not answered. Sends notifications only, so
+ * nothing local changes and there is nothing to invalidate.
+ */
+export function useRemindPendingSessionMembers(
+  sessionId: string,
+  options: MutationOptions<number> = {}
+) {
+  return useMutation({
+    mutationFn: () => remindPendingSessionMembers(sessionId),
+    onSuccess: options.onSuccess,
     onError: options.onError,
   });
 }
@@ -819,7 +927,18 @@ export function useAttachMatchToSessionSlot(
       qc.invalidateQueries({ queryKey: leagueKeys.rankings(seasonId) });
       options.onSuccess?.(result);
     },
-    onError: options.onError,
+    onError: e => {
+      // The pairing changed under us (opponent linked first / already settled):
+      // refetch so the session stops offering it.
+      if (
+        e instanceof Error &&
+        (e.message === 'ALREADY_LINKED' || e.message === 'MATCH_NOT_PENDING')
+      ) {
+        qc.invalidateQueries({ queryKey: leagueKeys.sessionMatches(sessionId) });
+        qc.invalidateQueries({ queryKey: leagueKeys.session(sessionId) });
+      }
+      options.onError?.(e);
+    },
   });
 }
 

@@ -14,7 +14,7 @@
       "B": {
         "badge": "On organise tout",
         "headline": "On organise ta prochaine partie à ta place.",
-        "subheadline": "Dis-nous quand tu veux jouer et on s'occupe du reste : trouver un joueur compatible, s'entendre sur l'heure et confirmer ta partie.",
+        "subheadline": "Dis-nous quand tu veux jouer et on s'occupe du reste : trouver un joueur compatible et s'entendre sur l'heure et l'endroit.",
         "cta": "Organise ma partie"
       }
     },
@@ -101,6 +101,17 @@
       "timeFlexible": "Flexible : n'importe quand dans les prochaines 48 heures",
       "timeWindow": "{day} · {window}"
     },
+    "liquidity": {
+      "badge": "Bonne nouvelle",
+      "title": "On a trouvé {count} joueurs compatibles.",
+      "subtitle": "Niveau {scale} {rating}, à moins de {km} km, disponibles dans ta plage horaire.",
+      "confidence": {
+        "very_likely": "Ta partie a de très bonnes chances d'avoir lieu.",
+        "likely": "Ta partie a de bonnes chances d'avoir lieu."
+      },
+      "hint": "Basé sur les profils des joueurs et les taux de réponse dans ton coin.",
+      "continueCta": "Continuer"
+    },
     "contact": {
       "badge": "Presque fini",
       "title": "Où veux-tu recevoir ta confirmation ?",
@@ -135,19 +146,19 @@
     "plans": {
       "title": "Choisis ton forfait",
       "subtitle": "Paie à la partie, ou passe en illimité.",
+      "liquidityChip": "{count} joueurs compatibles · {confidence}",
+      "confidence": {
+        "very_likely": "très bonnes chances",
+        "likely": "bonnes chances"
+      },
       "single": {
         "title": "Une partie",
         "description": "On organise une partie pour toi."
       },
-      "unlimited": {
+      "monthly": {
         "title": "Illimité",
         "description": "On organise autant de parties que tu veux."
       },
-      "billing": {
-        "weekly": "Hebdomadaire",
-        "monthly": "Mensuel"
-      },
-      "priceWeek": "{price} / semaine",
       "priceMonth": "{price} / mois",
       "bookingExcluded": "La réservation du terrain n'est pas incluse. Tu réserves ton terrain une fois ta partie confirmée.",
       "refundNote": "Pas de proposition de partie en moins d'une heure? Remboursement automatique à 100 %.",
@@ -157,29 +168,10 @@
       "badge": "Petit mot",
       "headline": "C'était un test, pis t'as rien payé.",
       "message": "Aucun champ de carte n'a été affiché et aucun paiement n'a été ni ne sera prélevé. On valide combien de joueurs veulent qu'on organise leurs parties avant de le bâtir.",
+      "simulatedNote": "Le nombre de joueurs et l'estimation de chances que t'as vus étaient simulés eux aussi.",
       "thanks": "Merci de nous aider à bâtir la vraie affaire.",
       "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville.",
-      "eraseIntro": "Tu veux qu'on efface les infos que t'as données ?",
-      "eraseCta": "Supprimer mes infos",
-      "eraseDeleting": "Suppression…",
-      "eraseDone": "C'est effacé. On garde rien de ce que t'as donné.",
-      "eraseError": "Une erreur est survenue. Réessaie."
-    }
-  },
-  "eraseData": {
-    "title": "Supprime tes infos",
-    "subtitle": "Entre le courriel que tu nous as donné et on efface tout ce qu'on a gardé de ta demande : ton courriel, ton numéro de téléphone et tes préférences.",
-    "emailPlaceholder": "toi@courriel.com",
-    "cta": "Supprimer mes infos",
-    "submitting": "Suppression…",
-    "note": "On garde rien d'autre, et y'a pas de compte à fermer.",
-    "done": {
-      "title": "C'est effacé.",
-      "message": "Si ce courriel-là était dans notre liste, tout ce qui y était rattaché a été supprimé."
-    },
-    "errors": {
-      "email": "Entre une adresse courriel valide.",
-      "generic": "Une erreur est survenue. Réessaie."
+      "deletion": "Tu veux retirer ton courriel et ton téléphone ? Écris à sliceapp29@gmail.com et on les supprime."
     }
   },
   "seo": {

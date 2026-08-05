@@ -31,6 +31,7 @@ import {
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { SearchBar } from '#/components/SearchBar';
 import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 
 const SHEET_ID = 'tournament-co-organizers';
 
@@ -83,13 +84,18 @@ export function TournamentCoOrganizerActionSheet({
     },
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('tournamentDetail.coOrganizers.addFailed'));
+      toast.error(
+        rpcErrorMessage(e, t, 'tournamentDetail.coOrganizers.addFailed', {
+          ALREADY_PRIMARY_ORGANIZER: 'tournamentDetail.coOrganizers.alreadyOrganizer',
+          PLAYER_NOT_FOUND: 'tournamentDetail.coOrganizers.playerNotFound',
+        })
+      );
     },
   });
   const removeCoOrg = useRemoveTournamentCoOrganizer({
     onError: e => {
       warningHaptic();
-      toast.error(e.message || t('tournamentDetail.coOrganizers.removeFailed'));
+      toast.error(rpcErrorMessage(e, t, 'tournamentDetail.coOrganizers.removeFailed'));
     },
   });
 

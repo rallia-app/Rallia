@@ -127,6 +127,14 @@ apps/web/*
 apps/ai-agent/*
 !apps/ai-agent/package.json
 
+# apps/slice — not needed for mobile build/submit
+apps/slice/*
+!apps/slice/package.json
+
+# Store listing screenshots (~77MB) — marketing assets, never bundled.
+# app.json only bundles assets/images and assets/animations.
+apps/mobile/assets/store/
+
 # Docs / specs / repo-level scripts / DB migrations — not needed at build time
 apps/mobile/docs/
 docs/

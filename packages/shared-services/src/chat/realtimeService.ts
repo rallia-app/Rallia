@@ -3,6 +3,7 @@
  * Real-time subscriptions for messages and conversations
  */
 
+import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { supabase } from '../supabase';
@@ -35,18 +36,43 @@ type BroadcastBody<TRecord> = {
   old_record?: TRecord;
 };
 
-/**
- * Ensure the Realtime socket carries the current auth token before joining a
- * private channel. Private channels are authorized via RLS on realtime.messages,
- * and a missing token surfaces as CHANNEL_ERROR. setAuth() with no argument uses
- * the client's current session token.
- */
-function authorizeRealtime(): void {
-  void supabase.realtime.setAuth();
-}
-
 // Pending trailing-edge timers per channel, cleared by unsubscribeFromChannel.
 const channelCleanups = new WeakMap<RealtimeChannel, () => void>();
+
+/**
+ * Join a private channel only after the Realtime socket carries the current
+ * auth token. Private channels are authorized via RLS on realtime.messages;
+ * joining while the session is still hydrating sends the anon key, the policy
+ * denies, and realtime-js then rejoins forever. Deferring subscribe() until
+ * setAuth() settles removes that race, and any Unauthorized that remains means
+ * the viewer isn't a conversation participant: one fresh-token retry, then
+ * leave the channel instead of retrying into the Realtime error logs.
+ */
+function subscribePrivate(channel: RealtimeChannel): RealtimeChannel {
+  let cancelled = false;
+  let unauthorizedCount = 0;
+  channelCleanups.set(channel, () => {
+    cancelled = true;
+  });
+  void supabase.realtime
+    .setAuth()
+    .catch(() => undefined)
+    .then(() => {
+      if (cancelled) return;
+      channel.subscribe((status, err) => {
+        if (status !== REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR) return;
+        const reason = err instanceof Error ? err.message : String(err ?? '');
+        if (!reason.includes('You do not have permissions')) return;
+        unauthorizedCount += 1;
+        if (unauthorizedCount === 1) {
+          void supabase.realtime.setAuth();
+        } else {
+          void channel.unsubscribe();
+        }
+      });
+    });
+  return channel;
+}
 
 /**
  * Leading + trailing throttle: fires immediately when idle, then coalesces any
@@ -102,8 +128,6 @@ export function subscribeToMessages(
       ? { onInsert: onMessageOrCallbacks }
       : onMessageOrCallbacks;
 
-  authorizeRealtime();
-
   const channel = supabase
     .channel(`chat:${conversationId}`, { config: { private: true } })
     // New messages
@@ -126,10 +150,9 @@ export function subscribeToMessages(
       if (oldMsg?.id) {
         callbacks.onDelete?.(oldMsg.id);
       }
-    })
-    .subscribe();
+    });
 
-  return channel;
+  return subscribePrivate(channel);
 }
 
 /**
@@ -149,8 +172,6 @@ export function subscribeToReactions(
     messageId: string;
   }) => void
 ): RealtimeChannel {
-  authorizeRealtime();
-
   const channel = supabase
     .channel(`reactions:${conversationId}`, { config: { private: true } })
     .on('broadcast', { event: 'INSERT' }, message => {
@@ -164,10 +185,9 @@ export function subscribeToReactions(
       if (reaction?.message_id) {
         onReactionChange({ eventType: 'DELETE', reaction, messageId: reaction.message_id });
       }
-    })
-    .subscribe();
+    });
 
-  return channel;
+  return subscribePrivate(channel);
 }
 
 /**
@@ -182,8 +202,6 @@ export function subscribeToMatchVotes(
   conversationId: string,
   onVoteChange: (payload: { eventType: 'INSERT' | 'DELETE'; messageId: string }) => void
 ): RealtimeChannel {
-  authorizeRealtime();
-
   const channel = supabase
     .channel(`votes:${conversationId}`, { config: { private: true } })
     .on('broadcast', { event: 'INSERT' }, message => {
@@ -197,10 +215,9 @@ export function subscribeToMatchVotes(
       if (vote?.message_id) {
         onVoteChange({ eventType: 'DELETE', messageId: vote.message_id });
       }
-    })
-    .subscribe();
+    });
 
-  return channel;
+  return subscribePrivate(channel);
 }
 
 /**

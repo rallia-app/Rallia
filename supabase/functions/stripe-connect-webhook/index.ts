@@ -50,9 +50,14 @@ Deno.serve(async req => {
     const stripeAccountId = account.id;
 
     // The organizer account is the settlement merchant for on_behalf_of charges,
-    // so it must be able to take card payments — charges_enabled reflects that.
+    // so it must be able to take CARD payments. charges_enabled alone is NOT
+    // that: it also goes true on legacy transfers-only accounts once their
+    // requirements are met, and Stripe then rejects the charge with "on_behalf_of
+    // ... 'transfers' but without the 'card_payments' capability" (seen on
+    // staging 2026-08-02). Ready = the capability itself is active.
     // Mirror both directions so a deauthorized account flips back to incomplete.
-    const isReady = account.charges_enabled === true;
+    const isReady =
+      account.charges_enabled === true && account.capabilities?.card_payments === 'active';
     const payoutsEnabled = account.payouts_enabled === true;
     const detailsSubmitted = account.details_submitted === true;
 

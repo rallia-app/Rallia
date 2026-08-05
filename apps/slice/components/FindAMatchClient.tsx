@@ -14,16 +14,16 @@ import {
   MessageSquare,
   ShieldCheck,
   Sparkles,
-  Trash2,
   Users,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { trackSmokeEvent, type SmokeEventContext } from '@/lib/analytics';
-import { SmokeBrandLockup } from '@/lib/brand';
+import { SMOKE_CONTACT_EMAIL, SmokeBrandLockup } from '@/lib/brand';
 import {
+  FUNNEL_VERSION,
   getMatchPlans,
   getRatingOptions,
   ratingScaleLabel,
@@ -64,6 +64,7 @@ import {
   isHourSelectable,
   parseTimeSlot,
 } from '@/lib/time-selection';
+import { estimateLiquidity } from '@/lib/liquidity';
 import { formatPhoneInput } from '@/lib/phone';
 import {
   clearRequestContext,
@@ -78,6 +79,7 @@ const WIZARD_STEPS = [
   'location',
   'day',
   'time',
+  'liquidity',
   'contact',
   'recap',
   'plan',
@@ -418,15 +420,24 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [eraseState, setEraseState] = useState<'idle' | 'deleting' | 'done' | 'error'>('idle');
 
   const facilitySearchRequest = useRef(0);
   const availabilityLoadedFor = useRef<string | null>(null);
   const pageViewFired = useRef(false);
   const prefsCompletedFired = useRef(false);
   const courtsViewedFired = useRef(false);
+  const liquidityViewedFired = useRef(false);
   const pricingViewedFired = useRef(false);
   const revealFired = useRef(false);
+
+  // Simulated liquidity numbers — deterministic from the visitor's own inputs.
+  const liquidity = useMemo(
+    () =>
+      sport && rating && timeSlot
+        ? estimateLiquidity({ sport, rating, maxDistanceKm, timeSlot })
+        : null,
+    [sport, rating, maxDistanceKm, timeSlot]
+  );
 
   const {
     predictions,
@@ -443,8 +454,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const eventContext = useCallback(
     (exp: SmokeExperiment, overrides?: Partial<SmokeEventContext>): SmokeEventContext => ({
       test_id: exp.testId,
+      funnel_version: FUNNEL_VERSION,
       variant_valueprop: exp.variantValueProp,
-      variant_price: exp.variantPriceCents,
       sport,
       // Precise facility city once chosen; otherwise the IP-geo city so early
       // funnel events (page_view, value_prop_click…) still carry a `ville`.
@@ -494,6 +505,10 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   }, [step, timeDay]);
 
   useEffect(() => {
+    if (step === 'liquidity' && !liquidity) setStep(timeDay ? 'time' : 'day');
+  }, [step, liquidity, timeDay]);
+
+  useEffect(() => {
     if (step === 'day' && !selectedFacilityId && !skippedFacility) setStep('location');
   }, [step, selectedFacilityId, skippedFacility]);
 
@@ -514,6 +529,18 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, experiment]);
+
+  // liquidity_viewed — first time the simulated liquidity signal is shown.
+  useEffect(() => {
+    if (step !== 'liquidity' || !experiment || !liquidity || liquidityViewedFired.current) return;
+    liquidityViewedFired.current = true;
+    trackSmokeEvent('liquidity_viewed', eventContext(experiment), {
+      players_shown: liquidity.playerCount,
+      match_likelihood_pct: liquidity.likelihoodPct,
+      confidence_shown: liquidity.confidence,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, experiment, liquidity]);
 
   // pricing_viewed — first time the pricing screen is shown.
   useEffect(() => {
@@ -777,7 +804,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     setTimeSlot(slot);
     setError(null);
     clearAdvanceTimer();
-    setStep('contact');
+    setStep('liquidity');
   };
 
   const handleSubmitContact = async () => {
@@ -817,7 +844,8 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           langue,
           sessionId: experiment.sessionId,
           variantValueProp: experiment.variantValueProp,
-          variantPriceCents: experiment.variantPriceCents,
+          liquidityPlayersShown: liquidity?.playerCount,
+          liquidityPctShown: liquidity?.likelihoodPct,
         }),
       });
 
@@ -849,7 +877,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     if (!experiment) return;
     setSelectedPlanTier(tier);
     setError(null);
-    const plans = getMatchPlans(experiment.variantPriceCents);
+    const plans = getMatchPlans();
     trackSmokeEvent('plan_selected', eventContext(experiment, { forfait: tier }), {
       amount_cents: plans[tier].amountCents,
     });
@@ -857,40 +885,21 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
   const handlePaymentIntent = () => {
     if (!experiment || !selectedPlanTier) return;
-    const plans = getMatchPlans(experiment.variantPriceCents);
+    const plans = getMatchPlans();
     trackSmokeEvent(
       'payment_intent_click',
       eventContext(experiment, { forfait: selectedPlanTier }),
-      { amount_cents: plans[selectedPlanTier].amountCents }
+      {
+        amount_cents: plans[selectedPlanTier].amountCents,
+        players_shown: liquidity?.playerCount ?? null,
+        match_likelihood_pct: liquidity?.likelihoodPct ?? null,
+        confidence_shown: liquidity?.confidence ?? null,
+      }
     );
     clearRequestContext();
     setStep('reveal');
     setError(null);
   };
-
-  /**
-   * The reveal screen already knows which email was captured, so erasing takes
-   * one tap here — the /erase page is for people who ask later.
-   */
-  const handleEraseMyInfo = async () => {
-    const normalized = email.trim().toLowerCase();
-    if (!validateEmail(normalized)) return;
-
-    setEraseState('deleting');
-    try {
-      const response = await fetch('/api/lead/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalized }),
-      });
-      if (!response.ok) throw new Error('delete failed');
-      setEraseState('done');
-    } catch {
-      setEraseState('error');
-    }
-  };
-
-  const erasePath = langue === 'fr' ? '/fr/erase' : '/erase';
 
   const switchLanguage = () => {
     const target = langue === 'fr' ? 'en-US' : 'fr-CA';
@@ -908,8 +917,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
   if (!experiment) return null;
 
-  const plans = getMatchPlans(experiment.variantPriceCents);
-  const unlimitedSelected = selectedPlanTier === 'weekly' || selectedPlanTier === 'monthly';
+  const plans = getMatchPlans();
 
   const renderRecapSummary = () => {
     if (!sport || !rating || !matchNature || !timeSlot) return null;
@@ -1358,6 +1366,57 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
     );
   }
 
+  if (step === 'liquidity' && liquidity && sport && rating) {
+    return (
+      <WizardShell
+        step={step}
+        showBack
+        onBack={() => {
+          setError(null);
+          setStep(timeDay ? 'time' : 'day');
+        }}
+        {...shellProps}
+      >
+        <div className="flex flex-col gap-3">
+          <span className="smk-pill w-fit">
+            <span className="smk-pill-dot" aria-hidden />
+            {t('liquidity.badge')}
+          </span>
+          <h2 className="smk-display text-3xl sm:text-4xl">
+            {t('liquidity.title', { count: liquidity.playerCount })}
+          </h2>
+          <p className="smk-text-muted">
+            {t('liquidity.subtitle', {
+              scale: ratingScaleLabel(sport),
+              rating,
+              km: String(maxDistanceKm),
+            })}
+          </p>
+        </div>
+
+        <div className="smk-panel flex flex-col gap-2 p-5">
+          <span className="flex items-center gap-2 text-base font-semibold text-[color:var(--smk-ink)]">
+            <Users className="h-4 w-4 shrink-0 text-[color:var(--smk-lime-deep)]" />
+            {t(`liquidity.confidence.${liquidity.confidence}`)}
+          </span>
+          <p className="smk-text-muted text-sm">{t('liquidity.hint')}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setStep('contact');
+          }}
+          className="smk-btn w-full"
+        >
+          {t('liquidity.continueCta')}
+          <ArrowRight className="h-5 w-5" />
+        </button>
+      </WizardShell>
+    );
+  }
+
   if (step === 'contact') {
     const emailValid = validateEmail(email.trim());
     const phoneValid = validatePhoneNumber(phoneDigits).length === 10;
@@ -1367,7 +1426,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         showBack
         onBack={() => {
           setError(null);
-          setStep(timeDay ? 'time' : 'day');
+          setStep(liquidity ? 'liquidity' : timeDay ? 'time' : 'day');
         }}
         {...shellProps}
       >
@@ -1432,9 +1491,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           <Lock className="h-3 w-3 shrink-0" />
           <span>{t('contact.privacyNote')}</span>
           <a
-            href={erasePath}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`mailto:${SMOKE_CONTACT_EMAIL}`}
             className="font-semibold underline underline-offset-2 transition-colors hover:text-[color:var(--smk-ink)]"
           >
             {t('contact.eraseLink')}
@@ -1509,6 +1566,15 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
         <div className="flex flex-col gap-3">
           <h2 className="smk-display text-3xl sm:text-4xl">{t('plans.title')}</h2>
           <p className="smk-text-muted">{t('plans.subtitle')}</p>
+          {liquidity && (
+            <span className="smk-pill w-fit">
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              {t('plans.liquidityChip', {
+                count: liquidity.playerCount,
+                confidence: t(`plans.confidence.${liquidity.confidence}`),
+              })}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">
@@ -1536,42 +1602,31 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
             </span>
           </button>
 
-          {/* Unlimited — one plan, choose how you pay */}
-          <div
-            className={`rounded-[1.25rem] border-2 p-5 transition-all duration-200 ${
-              unlimitedSelected
-                ? 'border-[color:var(--smk-ink)] bg-[color:var(--smk-lime-tint)] shadow-[4px_4px_0_var(--smk-ink)]'
-                : 'border-[color:var(--smk-line)] bg-white'
-            }`}
+          {/* Unlimited monthly */}
+          <button
+            type="button"
+            onClick={() => handleSelectPlan('monthly')}
+            className={optionClass(selectedPlanTier === 'monthly')}
           >
-            <div className="flex flex-col gap-1 text-left">
-              <span className="smk-title text-lg">{t('plans.unlimited.title')}</span>
-              <span className="smk-text-muted text-sm">{t('plans.unlimited.description')}</span>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {(['weekly', 'monthly'] as const).map(tier => {
-                const price =
-                  tier === 'weekly'
-                    ? t('plans.priceWeek', {
-                        price: formatMatchPlanPrice(plans.weekly.amountCents, locale),
-                      })
-                    : t('plans.priceMonth', {
-                        price: formatMatchPlanPrice(plans.monthly.amountCents, locale),
-                      });
-                return (
-                  <button
-                    key={tier}
-                    type="button"
-                    onClick={() => handleSelectPlan(tier)}
-                    className={`${chipClass(selectedPlanTier === tier)} h-auto flex-col gap-0.5 px-3 py-2.5`}
-                  >
-                    <span className="text-sm">{t(`plans.billing.${tier}`)}</span>
-                    <span className="text-base font-bold">{price}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <span className="flex items-start justify-between gap-4">
+              <span className="flex flex-col gap-1 text-left">
+                <span className="smk-title text-lg">{t('plans.monthly.title')}</span>
+                <span className="smk-display text-3xl">
+                  {t('plans.priceMonth', {
+                    price: formatMatchPlanPrice(plans.monthly.amountCents, locale),
+                  })}
+                </span>
+                <span className="smk-text-muted text-sm">{t('plans.monthly.description')}</span>
+              </span>
+              <ChevronRight
+                className={`mt-1 h-5 w-5 shrink-0 ${
+                  selectedPlanTier === 'monthly'
+                    ? 'text-[color:var(--smk-ink)]'
+                    : 'text-[color:var(--smk-muted)]'
+                }`}
+              />
+            </span>
+          </button>
         </div>
 
         <div className="smk-note">
@@ -1613,43 +1668,12 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
           <div className="flex flex-col gap-3">
             <h2 className="smk-display text-3xl sm:text-4xl">{t('reveal.headline')}</h2>
             <p className="smk-text-muted">{t('reveal.message')}</p>
+            <p className="smk-text-muted">{t('reveal.simulatedNote')}</p>
             <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
               {t('reveal.thanks')}
             </p>
             <p className="smk-text-muted text-sm">{t('reveal.purpose')}</p>
-          </div>
-
-          <div className="flex w-full flex-col items-center gap-2 border-t border-[color:var(--smk-line-strong)] pt-6">
-            {eraseState === 'done' ? (
-              <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
-                {t('reveal.eraseDone')}
-              </p>
-            ) : (
-              <>
-                <p className="smk-text-muted text-sm">{t('reveal.eraseIntro')}</p>
-                <button
-                  type="button"
-                  onClick={handleEraseMyInfo}
-                  disabled={eraseState === 'deleting'}
-                  className="smk-text-muted inline-flex items-center gap-1.5 text-sm font-semibold underline underline-offset-4 transition-colors hover:text-[color:var(--smk-ink)] disabled:opacity-60"
-                >
-                  {eraseState === 'deleting' ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('reveal.eraseDeleting')}
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4" />
-                      {t('reveal.eraseCta')}
-                    </>
-                  )}
-                </button>
-                {eraseState === 'error' && (
-                  <p className="smk-text-error text-sm font-medium">{t('reveal.eraseError')}</p>
-                )}
-              </>
-            )}
+            <p className="smk-text-muted text-xs">{t('reveal.deletion')}</p>
           </div>
         </div>
       </WizardShell>

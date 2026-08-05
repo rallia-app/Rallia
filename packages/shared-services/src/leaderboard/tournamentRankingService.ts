@@ -11,6 +11,12 @@ import { supabase } from '../supabase';
 
 export type RankingLevelFilter = 'beginner' | 'intermediate' | 'advanced';
 
+/**
+ * Which leaderboard a result ranks on. Derived server-side from the
+ * tournament's entry_format: doubles and mixed_doubles both rank as 'doubles'.
+ */
+export type RankingBoard = 'singles' | 'doubles';
+
 export interface TournamentRankingEntry {
   rank: number;
   userId: string;
@@ -65,10 +71,12 @@ export async function getTournamentRankingPage(params: {
   seasonCode?: string;
   levelFilter?: RankingLevelFilter;
   ratingScoreFilter?: string;
+  /** Doubles results rank on their own board; defaults to singles. */
+  board?: RankingBoard;
   limit: number;
   offset: number;
 }): Promise<TournamentRankingPage> {
-  const { sportId, seasonCode, levelFilter, ratingScoreFilter, limit, offset } = params;
+  const { sportId, seasonCode, levelFilter, ratingScoreFilter, board, limit, offset } = params;
   const { data, error } = await supabase.rpc('get_tournament_leaderboard', {
     p_sport_id: sportId,
     p_season_code: seasonCode,
@@ -76,6 +84,7 @@ export async function getTournamentRankingPage(params: {
     p_rating_score_id: ratingScoreFilter,
     p_limit: limit,
     p_offset: offset,
+    p_board: board ?? 'singles',
   });
 
   if (error) {
@@ -102,10 +111,12 @@ export async function getTournamentRankingPage(params: {
  */
 export async function getMyTournamentRanking(params: {
   seasonCode?: string;
+  board?: RankingBoard;
 }): Promise<MyTournamentRanking[]> {
-  const { seasonCode } = params;
+  const { seasonCode, board } = params;
   const { data, error } = await supabase.rpc('get_my_tournament_ranking', {
     p_season_code: seasonCode,
+    p_board: board ?? 'singles',
   });
 
   if (error) {

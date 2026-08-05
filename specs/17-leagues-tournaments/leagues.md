@@ -70,6 +70,20 @@ When `member_capacity` is set and `waitlist_enabled = true`:
 
 When `waitlist_enabled = false` and capacity is reached, the join RPC returns `LEAGUE_FULL`.
 
+**As built (20260730100300).** `member_capacity` is enforced in _both_ modes — until that migration, `waitlist_enabled = true` made the whole capacity condition false and overflow joined straight through as `active`, so switching the waitlist on switched the cap off.
+
+A queued joiner is held at `league_members.status = 'pending'` (not a new `waitlisted` status) plus a `league_member_waitlist` row carrying the order. `pending` already means exactly this everywhere else — on the roster, excluded from `is_active_league_member` and from the ranking roster — so the organizer's existing Requests tab shows them with no client change; the queue row is what distinguishes "waiting for a seat" from "waiting for approval". `league_join` returns that pending row rather than raising, because a `RAISE` would roll back the queue row written in the same call.
+
+Promotion is `tg_league_member_promote_waitlist`, mirroring `tg_session_presence_promote_waitlist`. On an `open` league the head of the queue is promoted to `active` (and the existing membership trigger sends the "you're in" notification); on `approval` / `invite_only` it stays `pending` for the organizer to confirm.
+
+**Added seats drain the queue (20260730150200).** Raising `member_capacity`, removing it, or resuming a league whose cap was raised while paused promotes queued players into every opened seat — synchronously, inside `league_update` / `league_resume` — before any walk-in can take one. Promotion ignores `waitlist_enabled` (the flag only governs whether new joiners queue); a `NULL` capacity counts as seats-for-everyone on the drain path.
+
+**One open season per league (20260730150100).** `season_open` refuses with `LEAGUE_HAS_OPEN_SEASON` while another season is open; drafting the next season alongside a running one stays legal.
+
+**Lifecycle coherence (20260730120000).** A suspension holds its seat: `suspended` counts against `member_capacity` everywhere (join, approve, promotion re-check), and the trigger fires on any permanent departure — `active → inactive` _or_ `suspended → inactive` — so a seat frees exactly once and a walk-in can never take a suspended member's place. Leaving or being removed while queued deletes the queue entry (no involuntary re-admission later); accepting an invite or being approved consumes it. The trigger independently skips any queue entry whose membership is no longer the `pending` hold, so a stale row can never eat a promotion slot. `league_approve_member` raises `LEAGUE_FULL` at capacity — the cap binds approvals like joins; only the invite-accept path bypasses it (the organizer already chose them).
+
+Not yet surfaced: the mobile league screen has no capacity/waitlist editor and reads a queued player as a plain join request, so the copy says "request sent" rather than showing a queue position.
+
 ### Editing
 
 `default_rules` edits apply to **future** seasons only — existing seasons retain their frozen `rules`. Edits to `name`, `description`, `logo_url`, `facility_id`, `categories`, etc. take immediate effect.
@@ -119,11 +133,13 @@ When a `member` transitions to `inactive` while a season is `open`:
 - Member is removed from any unsent match-sheet drafts (regenerate non-locked rows).
 - `lt-update-attendance` recomputes `sessions_eligible` to exclude post-leave sessions, so participation % isn't unfairly hurt.
 
+Standings rows follow one invariant (20260730120100): `season_rankings` = current roster ∪ result-holders, where a result is a terminal non-drill match or confirmed attendance at a completed session. `recalc_season_ranking` seeds and prunes with that same predicate (`season_ranking_population`), so a player who exits without results drops off the table, while a result that lands _after_ their exit (score entered the day after they withdrew) resurrects their row with the result tallied — without re-inviting them to future sessions, which stays governed by `season_ranking_roster`.
+
 A member who becomes `inactive` during a season **cannot rejoin the same season**. They can rejoin once a new season starts (subject to `join_mode`).
 
 ### Suspension
 
-Organizer-only. Reasons must be recorded in `suspended_reason`. The suspension applies until `suspended_until` (datetime, nullable for indefinite). The cron `lt-lift-suspensions` (hourly) flips expired suspensions back to `active` and notifies the member.
+Organizer-only. Reasons must be recorded in `suspended_reason`. The suspension applies until `suspended_until` (datetime, nullable for indefinite). The cron `lt-lift-suspensions` (hourly, `:40`) calls `lt_lift_expired_suspensions()`, which flips expired suspensions back to `active` and notifies the member. Built 20260730100500 — before that nothing in the database read `suspended_until`, so a "two week" suspension ran until an organizer lifted it by hand.
 
 ## Seasons
 

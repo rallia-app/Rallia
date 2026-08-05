@@ -114,11 +114,20 @@ export interface LeagueMemberWithProfile extends LeagueMember {
 export async function listPublicLeagues(
   opts: { sportId?: string } = {}
 ): Promise<LeagueListItem[]> {
+  // Paused leagues stay listed on purpose. They take no new members (league_join
+  // requires status 'active' and answers LEAGUE_NOT_ACTIVE), but a league that
+  // pauses for a season should not vanish from discovery. 'closed' is excluded:
+  // there is nothing left to join or follow.
+  //
+  // Community visibility is deliberately NOT surfaced here. leagues_select would
+  // permit it (it restricts community leagues to active members of the league's
+  // network), so this is a product decision to park the community concept, not a
+  // limitation. Flipping this back is a one-line change if that decision changes.
   let query = supabase
     .from('leagues')
     .select(LIST_SELECT)
     .eq('visibility', 'public')
-    .eq('status', 'active')
+    .in('status', ['active', 'paused'])
     .eq('league_members.status', 'active')
     .order('created_at', { ascending: false });
   if (opts.sportId) query = query.eq('sport_id', opts.sportId);
@@ -141,10 +150,12 @@ export async function listMyLeagues(
 
   const memberLeagueIds = [...new Set((memberships ?? []).map(m => m.league_id))];
 
+  // Closed leagues are included: a member keeps their history, and hiding them
+  // here left an archived league unreachable from BOTH lists. The caller splits
+  // active from closed for display.
   let query = supabase
     .from('leagues')
     .select(LIST_SELECT)
-    .neq('status', 'closed')
     .eq('league_members.status', 'active')
     .order('created_at', { ascending: false });
 
@@ -375,6 +386,25 @@ export async function createSeasonEnrollmentPayment(
   };
 }
 
+/**
+ * Stripe-hosted receipt page for the caller's paid season enrollment, or null
+ * while the webhook hasn't stored one (or the season was free). Refunded
+ * statuses are included: Stripe updates the same receipt to show the refund.
+ */
+export async function getSeasonReceiptUrl(seasonMemberId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lt_registration_payment')
+    .select('stripe_receipt_url')
+    .eq('season_user_id', seasonMemberId)
+    .in('status', ['succeeded', 'partially_refunded', 'refunded'])
+    .not('stripe_receipt_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.stripe_receipt_url ?? null;
+}
+
 /** Withdraw from a paid season and refund per policy. The entry only — the
  *  service fee and its tax are never returned. */
 export async function refundSeasonEnrollment(
@@ -515,6 +545,45 @@ export async function getMyLeagueMembership(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as LeagueMember | null;
+}
+
+export interface LeagueWaitlistStatus {
+  queueRank: number;
+  queueSize: number;
+}
+
+/**
+ * The caller's live place in a capped league's waitlist, or null when not
+ * queued. RLS hides other rows, so the rank comes from a definer RPC rather
+ * than a count.
+ */
+export async function getMyLeagueWaitlistStatus(
+  leagueId: string
+): Promise<LeagueWaitlistStatus | null> {
+  const { data, error } = await supabase.rpc('league_waitlist_position', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  const row = (data as { queue_rank: number; queue_size: number }[] | null)?.[0];
+  return row ? { queueRank: row.queue_rank, queueSize: row.queue_size } : null;
+}
+
+export type LeagueWaitlistEntry = Tables<'league_member_waitlist'>;
+
+/**
+ * The un-promoted queue in promotion order. RLS scopes this to the whole
+ * queue for the organizer and to the caller's own row otherwise.
+ */
+export async function listLeagueWaitlist(leagueId: string): Promise<LeagueWaitlistEntry[]> {
+  const { data, error } = await supabase
+    .from('league_member_waitlist')
+    .select('*')
+    .eq('league_id', leagueId)
+    .is('promoted_at', null)
+    .order('position', { ascending: true })
+    .order('joined_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LeagueWaitlistEntry[];
 }
 
 export async function listSeasons(leagueId: string): Promise<Season[]> {
@@ -767,6 +836,34 @@ export async function publishSession(
   });
   if (error) throw new Error(error.message);
   return data as Session;
+}
+
+/**
+ * Organizer withdraws a member from a published session (confirmed or
+ * waitlisted -> declined). Frees a seat, which lets the waitlist trigger
+ * promote the next player. Cannot seat anyone.
+ */
+export async function withdrawSessionMember(
+  sessionId: string,
+  userId: string,
+  versionWas: number
+): Promise<SessionPresence> {
+  const { data, error } = await supabase.rpc('session_withdraw_member', {
+    p_session_id: sessionId,
+    p_user_id: userId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as SessionPresence;
+}
+
+/** Nudges every member who has not answered yet. Returns how many were reached. */
+export async function remindPendingSessionMembers(sessionId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('session_remind_pending', {
+    p_session_id: sessionId,
+  });
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
 }
 
 export async function confirmSessionPresence(

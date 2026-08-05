@@ -27,6 +27,7 @@ import {
   Alert,
   RefreshControl,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,8 +67,10 @@ import {
   useTournament,
   useTournamentRegistrations,
   useMyTournamentRegistration,
+  useRegistrationReceiptUrl,
   useTournamentFeeQuote,
   useMyPayoutAccount,
+  useEventEarnings,
   useCreateRegistrationPayment,
   useRefundRegistration,
   useOpenTournamentRegistration,
@@ -87,6 +90,7 @@ import {
   useIsCertifiedOrganizer,
   useCancelTournament,
   useArchiveTournament,
+  useUnarchiveTournament,
   useProfilesByIds,
   useTournamentParticipants,
   useSports,
@@ -96,7 +100,12 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import type { Enums, Tables } from '@rallia/shared-types';
 import * as WebBrowser from 'expo-web-browser';
-import { getTournamentChat, TournamentPaymentError, supabase } from '@rallia/shared-services';
+import {
+  getTournamentChat,
+  getMyPayoutAccount,
+  TournamentPaymentError,
+  supabase,
+} from '@rallia/shared-services';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 
 import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
@@ -1428,6 +1437,8 @@ export const TournamentDetail: React.FC = () => {
     [t, toast]
   );
 
+  const queryClient = useQueryClient();
+
   // Organizer payout onboarding: a card-capable Stripe Express account (manual
   // payouts) that becomes the settlement merchant for paid registrations.
   // Organizers must finish this before a paid event can open.
@@ -1446,20 +1457,36 @@ export const TournamentDetail: React.FC = () => {
           data.url,
           'rallia://stripe-connect-return'
         );
-        if (result.type === 'success') {
-          // stripe-connect-webhook flips onboarding_completed once charges are
-          // enabled; refetch to clear the organizer payout gate. It settles
-          // asynchronously, so refetch again shortly after.
+        if (result.type === 'success' && userId) {
+          // stripe-connect-webhook flips the mirror asynchronously (usually
+          // well under 30 s); poll it so the payout badge updates without the
+          // user leaving and reopening the screen.
           successHaptic();
-          void refetch();
-          setTimeout(() => void refetch(), 2500);
+          toast.info(t('tournamentDetail.payments.payoutSyncWait'));
+          void (async () => {
+            for (let attempt = 0; attempt < 10; attempt++) {
+              const status = await queryClient
+                .fetchQuery({
+                  queryKey: tournamentKeys.myPayoutAccount(userId),
+                  queryFn: getMyPayoutAccount,
+                  staleTime: 0,
+                })
+                .catch(() => null);
+              if (status?.chargesEnabled) {
+                successHaptic();
+                toast.success(t('tournamentDetail.payments.payoutsConnectedToast'));
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+          })();
         }
       } catch {
         warningHaptic();
         toast.error(t('tournamentDetail.payments.onboardingError'));
       }
     },
-    [toast, t, refetch]
+    [toast, t, userId, queryClient]
   );
 
   // Confirm, then kick off Stripe onboarding. Everyone onboards as an individual
@@ -1526,17 +1553,32 @@ export const TournamentDetail: React.FC = () => {
 
   // Paid-registration flow (Stripe PaymentSheet). isPaidTournament gates the
   // price display + the payment branch in onRegister.
-  const queryClient = useQueryClient();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const isPaidTournament = (tournament?.entry_fee_cents ?? 0) > 0;
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
   // Organizer payout status drives the manage/onboard card on paid events.
   const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
+  // What this event has collected — the organizer's only in-app money view
+  // (the Stripe dashboard is account-wide and can't be tied back to one event).
+  const { data: earnings } = useEventEarnings(
+    { tournamentId: params.tournamentId },
+    isOrganizer && isPaidTournament
+  );
+  // Stripe-hosted receipt for the payer's own paid registration.
+  const { data: receiptUrl } = useRegistrationReceiptUrl(
+    myRegistration?.id,
+    isPaidTournament && myRegistration?.status === 'registered' && myRegistration.user_id === userId
+  );
 
   // Post-onboarding management: opens the Stripe Express dashboard (update bank
   // details, view payouts) when ready, or resumes onboarding when unfinished.
   // The webhook refreshes account status, so invalidate on return.
+  // player-stripe-manage makes several sequential Stripe calls before returning
+  // the link, so the row shows a transient state and blocks re-taps meanwhile.
+  const [isOpeningPayoutDashboard, setIsOpeningPayoutDashboard] = useState(false);
   const handleManagePayouts = useCallback(async () => {
+    if (isOpeningPayoutDashboard) return;
+    setIsOpeningPayoutDashboard(true);
     try {
       const { data, error } = await supabase.functions.invoke('player-stripe-manage');
       if (error || !data?.url) throw new Error(error?.message);
@@ -1550,7 +1592,59 @@ export const TournamentDetail: React.FC = () => {
       warningHaptic();
       toast.error(t('tournamentDetail.payments.manageError'));
     }
-  }, [toast, t, userId, queryClient]);
+    setIsOpeningPayoutDashboard(false);
+  }, [toast, t, userId, queryClient, isOpeningPayoutDashboard]);
+
+  // Money summary for this event, from the payment ledger. Alert keeps it
+  // glanceable; the Stripe dashboard (payout row) remains the detailed view.
+  const showEarnings = useCallback(() => {
+    if (!earnings) return;
+    const cur = earnings.currency ?? 'CAD';
+    const money = (cents: number) => formatPrice(cents, cur, { locale });
+    const lines =
+      earnings.paidCount === 0 && earnings.pendingCount === 0 && earnings.refundedCount === 0
+        ? [t('tournamentDetail.earnings.none')]
+        : [
+            t('tournamentDetail.earnings.paidLine')
+              .replace('{count}', String(earnings.paidCount))
+              .replace('{amount}', money(earnings.entryCents)),
+            t('tournamentDetail.earnings.feesLine').replace(
+              '{amount}',
+              money(earnings.serviceFeeCents + earnings.feeTaxCents)
+            ),
+            ...(earnings.refundedCents > 0
+              ? [
+                  t('tournamentDetail.earnings.refundedLine').replace(
+                    '{amount}',
+                    money(earnings.refundedCents)
+                  ),
+                ]
+              : []),
+            ...(earnings.pendingCount > 0
+              ? [
+                  t('tournamentDetail.earnings.pendingLine').replace(
+                    '{count}',
+                    String(earnings.pendingCount)
+                  ),
+                ]
+              : []),
+            t('tournamentDetail.earnings.netLine').replace(
+              '{amount}',
+              money(earnings.netToOrganizerCents)
+            ),
+            ...(earnings.releasedCount > 0
+              ? [
+                  t('tournamentDetail.earnings.releasedLine').replace(
+                    '{count}',
+                    String(earnings.releasedCount)
+                  ),
+                ]
+              : []),
+          ];
+    Alert.alert(t('tournamentDetail.earnings.title'), lines.join('\n'), [
+      { text: t('tournamentDetail.earnings.close') },
+    ]);
+  }, [earnings, t, locale]);
 
   const createRegistrationPayment = useCreateRegistrationPayment();
 
@@ -1587,7 +1681,13 @@ export const TournamentDetail: React.FC = () => {
               queryKey: tournamentKeys.registrations(tournament.id),
             });
             void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.participants(tournament.id),
+            });
+            void queryClient.invalidateQueries({
               queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
+            });
+            void queryClient.invalidateQueries({
+              queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
             });
             // Paying takes a slot, so the card's count chip moves too.
             void queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
@@ -1604,27 +1704,52 @@ export const TournamentDetail: React.FC = () => {
         }
       };
 
-      // Point-of-sale disclosure before any charge: what they pay, the refund
-      // policy, that the service fee isn't refundable, and that Rallia only
-      // facilitates (the organizer, not Rallia, owns the event).
-      const totalLabel = feeQuote
-        ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
-        : null;
-      // GST/QST rides on Rallia's service fee; the player only pays it in
-      // player_pays mode (organizer_absorbs nets it from the organizer's take).
-      const taxLabel =
-        feeQuote && feeQuote.feePayer === 'player_pays' && feeQuote.feeTaxCents > 0
-          ? formatPrice(feeQuote.feeTaxCents, feeQuote.currency, { locale })
-          : null;
+      // Point-of-sale disclosure before any charge: the full price breakdown,
+      // the refund policy, that the service fee isn't refundable, and that
+      // Rallia only facilitates (the organizer, not Rallia, owns the event).
+      // GST/QST rides on Rallia's service fee; the player only pays the fee and
+      // its tax in player_pays mode (organizer_absorbs nets them from the
+      // organizer's take, so the player sees the entry price and nothing else).
+      const money = (cents: number) =>
+        feeQuote ? formatPrice(cents, feeQuote.currency, { locale }) : '';
+      const playerPaysFee = !!feeQuote && feeQuote.feePayer === 'player_pays';
+      const breakdown = !feeQuote
+        ? null
+        : playerPaysFee
+          ? [
+              t('tournamentDetail.payments.breakdownEntry').replace(
+                '{amount}',
+                money(feeQuote.entryCents)
+              ),
+              t('tournamentDetail.payments.breakdownServiceFee').replace(
+                '{amount}',
+                money(feeQuote.serviceFeeCents)
+              ),
+              feeQuote.feeTaxCents > 0
+                ? t('tournamentDetail.payments.breakdownFeeTax').replace(
+                    '{amount}',
+                    money(feeQuote.feeTaxCents)
+                  )
+                : null,
+              t('tournamentDetail.payments.breakdownTotal').replace(
+                '{amount}',
+                money(feeQuote.totalCents)
+              ),
+            ]
+              .filter(Boolean)
+              .join('\n')
+          : [
+              t('tournamentDetail.payments.breakdownTotal').replace(
+                '{amount}',
+                money(feeQuote.totalCents)
+              ),
+              t('tournamentDetail.payments.feeCoveredByOrganizer'),
+            ].join('\n');
+      const totalLabel = feeQuote ? money(feeQuote.totalCents) : null;
       const message = [
-        totalLabel
-          ? t('tournamentDetail.payments.confirmAmount').replace('{amount}', totalLabel)
-          : null,
-        taxLabel
-          ? t('tournamentDetail.payments.confirmFeeTax').replace('{amount}', taxLabel)
-          : null,
+        breakdown,
         refundPolicyLine(feeQuote, t, locale),
-        t('tournamentDetail.payments.confirmFeeNonRefundable'),
+        playerPaysFee ? t('tournamentDetail.payments.confirmFeeNonRefundable') : null,
         t('tournamentDetail.payments.liabilityNotice'),
       ]
         .filter(Boolean)
@@ -1762,6 +1887,30 @@ export const TournamentDetail: React.FC = () => {
     },
   });
 
+  const unarchive = useUnarchiveTournament({
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('tournamentDetail.archiveModal.restoredToast'));
+    },
+    onError: e => {
+      const msg = e.message.toLowerCase();
+      warningHaptic();
+      toast.error(
+        t(
+          msg.includes('optimistic_lock')
+            ? 'tournamentDetail.archiveModal.errorLockConflict'
+            : 'tournamentDetail.archiveModal.errorGeneric'
+        )
+      );
+    },
+  });
+
+  const onUnarchive = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    unarchive.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, unarchive]);
+
   const onOpen = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
@@ -1884,26 +2033,64 @@ export const TournamentDetail: React.FC = () => {
           : feeQuote.refundPolicyKind === 'full'
             ? feeQuote.entryCents
             : Math.round((feeQuote.entryCents * (feeQuote.refundPartialBps ?? 0)) / 10000);
-      const amountLabel = formatPrice(estimateCents, tournament.currency ?? 'CAD', { locale });
-      Alert.alert(
-        t('tournamentDetail.payments.withdrawConfirmTitle'),
+      const currency = tournament.currency ?? 'CAD';
+      const money = (cents: number) => formatPrice(cents, currency, { locale });
+      // What the player was charged vs what comes back. The fee + its GST/QST
+      // only exist on the player's side in player_pays mode.
+      const feesKeptCents = feeQuote ? feeQuote.serviceFeeCents + feeQuote.feeTaxCents : 0;
+      const playerPaidFee = !!feeQuote && feeQuote.feePayer === 'player_pays' && feesKeptCents > 0;
+      const cutoffLabel = feeQuote?.refundCutoffAt
+        ? new Date(feeQuote.refundCutoffAt).toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      // Deadline passed reads differently from a no-refund policy: the player
+      // had a refund window and missed it, so say that instead of "not
+      // refundable" and let them confirm the withdrawal knowingly.
+      const zeroLine =
+        pastCutoff && feeQuote?.refundPolicyKind !== 'none'
+          ? t('tournamentDetail.payments.withdrawConfirmCutoffPassed').replace(
+              '{date}',
+              cutoffLabel
+            )
+          : t('tournamentDetail.payments.withdrawConfirmNoRefund');
+      const message = [
+        feeQuote
+          ? t('tournamentDetail.payments.withdrawConfirmPaid').replace(
+              '{amount}',
+              money(feeQuote.totalCents)
+            )
+          : null,
         estimateCents > 0
-          ? t('tournamentDetail.payments.withdrawConfirmRefund').replace('{amount}', amountLabel)
-          : t('tournamentDetail.payments.withdrawConfirmNoRefund'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('tournamentDetail.actions.withdraw'),
-            style: 'destructive',
-            onPress: () =>
-              refundRegistration.mutate({
-                registrationId: myActiveRegistration.id,
-                versionWas: myActiveRegistration.version,
-                tournamentId: tournament.id,
-              }),
-          },
-        ]
-      );
+          ? t('tournamentDetail.payments.withdrawConfirmRefund').replace(
+              '{amount}',
+              money(estimateCents)
+            )
+          : zeroLine,
+        estimateCents > 0 && playerPaidFee
+          ? t('tournamentDetail.payments.withdrawConfirmFeesKept').replace(
+              '{amount}',
+              money(feesKeptCents)
+            )
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      Alert.alert(t('tournamentDetail.payments.withdrawConfirmTitle'), message, [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('tournamentDetail.actions.withdraw'),
+          style: 'destructive',
+          onPress: () =>
+            refundRegistration.mutate({
+              registrationId: myActiveRegistration.id,
+              versionWas: myActiveRegistration.version,
+              tournamentId: tournament.id,
+            }),
+        },
+      ]);
       return;
     }
 
@@ -2414,6 +2601,7 @@ export const TournamentDetail: React.FC = () => {
           player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
           isPickleball: sportName === 'pickleball',
           matchFormat: tournament.match_format,
+          pointsPerGame: tournament.points_per_game,
           isFinal: !!totalRounds && match?.round_number === totalRounds,
           onSuccess: () => {
             successHaptic();
@@ -2472,6 +2660,9 @@ export const TournamentDetail: React.FC = () => {
       s === 'registration_closed' ||
       s === 'in_progress';
     const canArchive = s === 'completed' || s === 'cancelled';
+    // Archiving used to be a one-way door: the row left every list with no way
+    // back. It restores to whichever status it was archived from.
+    const canUnarchive = s === 'archived';
     // Reopen a closed window for late entrants, while the bracket isn't generated.
     const canReopen = s === 'registration_closed' && !tournament?.bracket_locked_at;
     // The shareable invite link stays active until the bracket is published: even
@@ -2479,8 +2670,24 @@ export const TournamentDetail: React.FC = () => {
     // link (draft/open already reach the link through the "Invite players" sheet).
     const canShareLink = s === 'registration_closed' && !tournament?.bracket_locked_at;
     const enabled =
-      isOrganizer && (canEdit || canInvite || canReopen || canShareLink || canCancel || canArchive);
-    return { canEdit, canInvite, canReopen, canShareLink, canCancel, canArchive, enabled };
+      isOrganizer &&
+      (canEdit ||
+        canInvite ||
+        canReopen ||
+        canShareLink ||
+        canCancel ||
+        canArchive ||
+        canUnarchive);
+    return {
+      canEdit,
+      canInvite,
+      canReopen,
+      canShareLink,
+      canCancel,
+      canArchive,
+      canUnarchive,
+      enabled,
+    };
   }, [isOrganizer, tournament?.status, tournament?.bracket_locked_at]);
 
   // Creation-success handoff: land here with openInviteSheet=true and the
@@ -2524,6 +2731,7 @@ export const TournamentDetail: React.FC = () => {
       endDate: tournament.end_date,
       maxParticipants: tournament.max_participants,
       matchFormat: tournament.match_format,
+      pointsPerGame: tournament.points_per_game,
       sport: {
         id: tournament.sport_id,
         name: sport?.name ?? '',
@@ -2933,13 +3141,28 @@ export const TournamentDetail: React.FC = () => {
         icon: 'wallet-outline',
         label: t('tournamentDetail.payments.payoutRow.label'),
         onPress: payoutAccount === null ? promptOnboardPayouts : () => void handleManagePayouts(),
-        badge:
-          payoutAccount === null
+        badge: isOpeningPayoutDashboard
+          ? { label: t('tournamentDetail.payments.payoutRow.opening'), tone: 'muted' }
+          : payoutAccount === null
             ? { label: t('tournamentDetail.payments.payoutRow.setup'), tone: 'muted' }
             : !payoutAccount.chargesEnabled
               ? { label: t('tournamentDetail.payments.payoutRow.actionNeeded'), tone: 'warning' }
               : { label: t('tournamentDetail.payments.payoutRow.ready'), tone: 'positive' },
         testID: 'action-payouts',
+      });
+    }
+    // Per-event money summary. Only in-app place an organizer can see what
+    // this event collected; the Stripe dashboard is account-wide.
+    if (isPaidTournament && earnings !== undefined) {
+      organizerRows.push({
+        icon: 'cash-outline',
+        label: t('tournamentDetail.earnings.row'),
+        onPress: showEarnings,
+        badge: {
+          label: formatPrice(earnings.netToOrganizerCents, earnings.currency ?? 'CAD', { locale }),
+          tone: earnings.paidCount > 0 ? 'positive' : 'muted',
+        },
+        testID: 'action-earnings',
       });
     }
     if (adminActions.canEdit) {
@@ -3188,6 +3411,15 @@ export const TournamentDetail: React.FC = () => {
                   colors={colors}
                   onPress={handleOpenChat}
                   label={t('tournamentDetail.chat.open')}
+                />
+              ) : null}
+              {receiptUrl ? (
+                <HeroChip
+                  icon="receipt-outline"
+                  tone="outline"
+                  colors={colors}
+                  onPress={() => void Linking.openURL(receiptUrl)}
+                  label={t('tournamentDetail.actions.viewReceipt')}
                 />
               ) : null}
             </View>
@@ -4018,6 +4250,18 @@ export const TournamentDetail: React.FC = () => {
                 colors={colors}
               />
             )}
+            {adminActions.canUnarchive && (
+              <MenuItem
+                icon="arrow-undo-outline"
+                label={t('tournamentDetail.actions.unarchiveTournament')}
+                testID="menu-unarchive-tournament"
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  onUnarchive();
+                }}
+                colors={colors}
+              />
+            )}
             {adminActions.canArchive && (
               <MenuItem
                 icon="archive-outline"
@@ -4039,7 +4283,20 @@ export const TournamentDetail: React.FC = () => {
       <ConfirmationModal
         visible={showCancelModal && !!tournament}
         title={t('tournamentDetail.cancelModal.title')}
-        message={t('tournamentDetail.cancelModal.description')}
+        message={
+          // Cancelling a paid event refunds every entry; say so with the real
+          // numbers instead of letting the organizer confirm a silent refund.
+          isPaidTournament && (earnings?.paidCount ?? 0) > 0
+            ? `${t('tournamentDetail.cancelModal.description')}\n\n${t(
+                'tournamentDetail.cancelModal.paidRefundWarning'
+              )
+                .replace('{count}', String(earnings?.paidCount ?? 0))
+                .replace(
+                  '{amount}',
+                  formatPrice(earnings?.entryCents ?? 0, earnings?.currency ?? 'CAD', { locale })
+                )}`
+            : t('tournamentDetail.cancelModal.description')
+        }
         confirmLabel={t('tournamentDetail.cancelModal.confirm')}
         cancelLabel={t('tournamentDetail.cancelModal.keepIt')}
         confirmTestID="confirm-cancel-tournament"

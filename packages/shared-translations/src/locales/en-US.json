@@ -16,6 +16,13 @@
   "common": {
     "loading": "Loading...",
     "error": "Error",
+    "rpcErrors": {
+      "notAuthenticated": "You need to be signed in to do that.",
+      "notOrganizer": "Only the organizer can do that.",
+      "staleWrite": "Someone else just changed this. Refresh and try again.",
+      "rateLimited": "Too many attempts. Wait a moment and try again.",
+      "generic": "Something went wrong. Try again."
+    },
     "retry": "Try again",
     "tryAgain": "Try Again",
     "tryDifferentSearch": "Try a different search term",
@@ -3540,7 +3547,8 @@
       "noWinner": "Scores must determine a winner (one team must win more sets).",
       "selectPartner": "Please select your partner.",
       "tennisScoreRange": "Tennis set scores are typically 0–7.",
-      "pickleballScoreRange": "Pickleball game scores are typically 0–25."
+      "pickleballScoreRange": "Pickleball game scores are typically 0–25.",
+      "formatMismatch": "Set {set} doesn't match this format: the winner needs at least {target}."
     }
   },
   "matchFeedback": {
@@ -4198,7 +4206,11 @@
       "description": "Enter a tournament to earn your first points and land on the board."
     },
     "seasonSpringSummer": "Spring/Summer {year}",
-    "seasonFallWinter": "Fall/Winter {year}"
+    "seasonFallWinter": "Fall/Winter {year}",
+    "boards": {
+      "singles": "Singles",
+      "doubles": "Doubles"
+    }
   },
   "leagueList": {
     "title": "Leagues",
@@ -4228,6 +4240,10 @@
     "emptyMy": {
       "title": "No leagues yet",
       "description": "Leagues you join or organize will show up here. Create one from the action menu."
+    },
+    "tabs": {
+      "active": "Active",
+      "closed": "Closed"
     }
   },
   "leagueDetail": {
@@ -4239,6 +4255,7 @@
     "joinSuccess": "You joined the league",
     "joinPending": "Your request is pending organizer approval",
     "membershipPending": "Your membership is pending approval",
+    "queuedInLine": "#{rank} in line for a spot",
     "memberActive": "You're an active member",
     "memberApproved": "Member approved",
     "inviteAccepted": "Invitation accepted — you're in!",
@@ -4296,7 +4313,9 @@
         "notCancellable": "This season can't be cancelled anymore.",
         "stale": "Something changed. Refresh and try again.",
         "cancelFailed": "Couldn't cancel the season. Please try again."
-      }
+      },
+      "cancelReasonPlaceholder": "Reason (optional), members will see it",
+      "cancelAmounts": "{count} paid enrollment(s), {amount} in total."
     },
     "joinErrors": {
       "ratingRequired": "You need a rating in this sport to join this league.",
@@ -4309,6 +4328,17 @@
       "leagueFull": "This league is full.",
       "notInvited": "This league is invite-only.",
       "sportMismatch": "Add this sport to your profile before joining."
+    },
+    "memberErrors": {
+      "memberNotFound": "This member is no longer in the league.",
+      "notRevocable": "This invitation can't be revoked anymore.",
+      "organizerImmune": "The organizer can't be removed from their own league."
+    },
+    "createErrors": {
+      "invalidName": "That name won't work. Try a different one.",
+      "invalidDates": "Those dates don't work. Check the start and end.",
+      "invalidFee": "That entry fee isn't valid.",
+      "invalidSchedule": "That schedule doesn't work. Check the date and time."
     },
     "seasonErrors": {
       "notOrganizer": "Only the organizer can do that.",
@@ -4385,7 +4415,8 @@
       },
       "pendingRequests": {
         "title": "Pending approval ({count})",
-        "approveLabel": "Approve {name}"
+        "approveLabel": "Approve {name}",
+        "queuedAt": "#{rank} in line for a spot"
       },
       "invited": {
         "title": "Invited · awaiting response ({count})",
@@ -4451,8 +4482,11 @@
       "enrollFor": "Join for {amount}",
       "pay": "Pay",
       "confirmTitle": "Confirm your spot",
-      "confirmAmount": "You'll be charged {amount}.",
-      "confirmFeeTax": "Includes {amount} GST/QST on the Rallia service fee.",
+      "breakdownEntry": "Entry fee: {amount}",
+      "breakdownServiceFee": "Rallia service fee: {amount}",
+      "breakdownFeeTax": "GST + QST on the service fee: {amount}",
+      "breakdownTotal": "Total: {amount}",
+      "feeCoveredByOrganizer": "The organizer covers the Rallia service fee, so you pay the entry fee and nothing more.",
       "confirmFeeNonRefundable": "The Rallia service fee isn't refundable.",
       "liabilityNotice": "The organizer runs this season, not Rallia. Rallia only handles the payment.",
       "refundNone": "No refunds once you've joined.",
@@ -4461,8 +4495,11 @@
       "refundPartial": "{pct}% of the entry is refunded if you withdraw.",
       "refundPartialUntil": "{pct}% of the entry is refunded if you withdraw before {date}.",
       "withdrawConfirmTitle": "Leave this season?",
-      "withdrawConfirmRefund": "You'll get {amount} back. The service fee isn't refunded.",
-      "withdrawConfirmNoRefund": "This season's refund window has closed, so you won't get money back.",
+      "withdrawConfirmPaid": "You paid {amount}.",
+      "withdrawConfirmRefund": "You'll get {amount} back.",
+      "withdrawConfirmFeesKept": "The service fee and its GST/QST ({amount}) aren't refunded.",
+      "withdrawConfirmCutoffPassed": "The refund deadline ({date}) has passed, so no refund applies. You can still leave.",
+      "withdrawConfirmNoRefund": "This season has a no-refund policy, so you won't get money back.",
       "refunded": "You're out. {amount} is on its way back.",
       "errors": {
         "seasonNotOpen": "This season isn't open for sign-ups.",
@@ -4481,10 +4518,13 @@
       "onboardTypeBusiness": "I'm a business or club",
       "onboardingError": "Couldn't start payout setup. Please try again.",
       "manageError": "Couldn't open your payout account. Please try again.",
+      "payoutsConnectedToast": "Payout account connected!",
+      "payoutSyncWait": "Stripe is confirming your account. This takes about 30 seconds; the status updates by itself.",
       "payoutRow": {
         "label": "Payouts",
         "setup": "Set up",
         "actionNeeded": "Action needed",
+        "opening": "Opening...",
         "ready": "Ready"
       }
     },
@@ -4520,6 +4560,21 @@
       "publish": "Publish",
       "created": "Session created",
       "published": "Session published",
+      "pairing": {
+        "label": "Pairing",
+        "by_rank": {
+          "title": "By standing",
+          "description": "Players of similar level meet. The sheet stays the same if you regenerate it."
+        },
+        "random": {
+          "title": "Random",
+          "description": "Pairings drawn at random. Regenerate to reshuffle."
+        },
+        "avoid_repeat": {
+          "title": "Avoid repeats",
+          "description": "Favours opponents each player has not faced yet this season."
+        }
+      },
       "validation": {
         "nameRequired": "Session name is required",
         "future": "Pick a date and time in the future"
@@ -4558,7 +4613,8 @@
       "removeConfirmTitle": "Remove {name}?",
       "removeConfirmFree": "They'll be removed from the season roster.",
       "removeConfirmRefund": "They'll be removed and refunded {amount} per the season's policy (the Rallia service fee isn't refunded). It can take a few days to land on their card.",
-      "removeConfirmNoRefund": "They'll be removed. This season's refund window has closed, so no money goes back.",
+      "removeConfirmNoRefund": "They'll be removed. This season has a no-refund policy, so no money goes back.",
+      "removeConfirmCutoffPassed": "They'll be removed. The refund deadline has passed, so no money goes back.",
       "keepMember": "Keep",
       "removeConfirm": "Remove",
       "removed": "Removed from the season",
@@ -4571,6 +4627,21 @@
     },
     "createSeason": {
       "title": "Create a season",
+      "formatLabel": "Play format",
+      "format": {
+        "singles": {
+          "title": "Singles",
+          "description": "1 on 1 games"
+        },
+        "doubles": {
+          "title": "Doubles",
+          "description": "2 on 2 games, teams formed each session"
+        },
+        "mixed_doubles": {
+          "title": "Mixed doubles",
+          "description": "2 on 2 games with mixed teams"
+        }
+      },
       "namePlaceholder": "e.g., Summer 2026",
       "startDate": "Start",
       "endDate": "End",
@@ -4611,7 +4682,21 @@
     },
     "errors": {
       "generic": "Something went wrong. Try again."
-    }
+    },
+    "earnings": {
+      "row": "Earnings",
+      "title": "Season earnings",
+      "paidLine": "{count} paid enrollment(s) · {amount} in entries",
+      "feesLine": "Service fees withheld by Rallia: {amount}",
+      "refundedLine": "Refunded: {amount}",
+      "pendingLine": "Payment in progress: {count}",
+      "netLine": "Your amount: {amount}",
+      "releasedLine": "Already paid out to your Stripe account: {count} payment(s)",
+      "none": "No payments received yet.",
+      "close": "Close"
+    },
+    "seasonEntryFee": "Entry: {amount}",
+    "viewReceipt": "View receipt"
   },
   "sessionDetail": {
     "title": "Session",
@@ -4636,11 +4721,23 @@
       "confirm": "I'm in",
       "decline": "Can't make it"
     },
+    "partner": {
+      "label": "Preferred partner (optional)",
+      "none": "No preference",
+      "hint": "You team up when your pick chooses you back."
+    },
     "roster": {
       "confirmed": "Confirmed",
       "waitlisted": "Waitlist",
-      "pending": "No response",
-      "declined": "Declined"
+      "pending": "Pending",
+      "declined": "Declined",
+      "withdraw": "Remove from this session",
+      "withdrawn": "Removed. The next player on the waitlist moves up.",
+      "remind": "Remind",
+      "reminding": "Sending...",
+      "reminded": "Reminder sent to {{count}} player(s)",
+      "remindTooSoon": "You already sent a reminder recently. Try again in a few hours.",
+      "remindNobody": "Everyone has answered."
     },
     "actions": {
       "publish": "Publish session",
@@ -4666,7 +4763,12 @@
       "vs": "vs",
       "bye": "Bye: {names}",
       "lock": "Lock game",
-      "unlock": "Unlock game"
+      "unlock": "Unlock game",
+      "oddRoster": {
+        "title": "Someone will sit out",
+        "message": "{count} players confirmed, which is an odd number, so one of them gets a bye this session. Remove or add a player first if you would rather they all play.",
+        "cta": "Generate anyway"
+      }
     },
     "score": {
       "title": "Enter score",
@@ -4675,7 +4777,23 @@
       "edit": "Edit score",
       "save": "Save",
       "saved": "Score saved 🙌",
-      "played": "Played"
+      "played": "Played",
+      "confirmLast": {
+        "title": "Close the session?",
+        "message": "This is the last result. Saving it closes the session and updates the standings. You can still fix any score for 24 hours.",
+        "cta": "Save and close"
+      },
+      "errors": {
+        "correctionWindowClosed": "The 24-hour window to correct this session has closed. Ask an admin for help."
+      }
+    },
+    "rpcErrors": {
+      "startPassed": "The session start time has already passed.",
+      "sessionPast": "This session is already over.",
+      "notCancellable": "This session can't be cancelled anymore.",
+      "notWithdrawable": "This member can't be withdrawn at this point.",
+      "notEnoughConfirmed": "Not enough confirmed players to build the match sheet.",
+      "sheetLocked": "Some games are locked or already scored, so the sheet can't be regenerated."
     },
     "linkPicker": {
       "title": "Link a played match",
@@ -4684,10 +4802,40 @@
       "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match",
       "linkCta": "Link this game",
-      "addResult": "Add result"
+      "addResult": "Add result",
+      "errors": {
+        "alreadyLinked": "A game is already linked to this matchup.",
+        "notPending": "This matchup is already settled.",
+        "matchAlreadyLinked": "That game is already linked to another result.",
+        "matchNotVerified": "That game's score isn't confirmed yet.",
+        "participantsMismatch": "The players in that game don't match this matchup."
+      }
+    },
+    "pairingChat": {
+      "organize": "Organize your game",
+      "error": "Couldn't open the game chat. Please try again."
     },
     "errors": {
       "generic": "Something went wrong. Try again."
+    },
+    "publishModal": {
+      "title": "Publish this session?",
+      "description": "Members get a notification and can confirm until the deadline you set.",
+      "confirm": "Publish",
+      "deadlineDate": "Confirm by",
+      "deadlineTime": "Time",
+      "invalidDeadline": "The deadline must be in the future and no later than the session start."
+    },
+    "cancelModal": {
+      "title": "Cancel this session?",
+      "description": "Members who confirmed will be told it is off. Add a reason so they know why.",
+      "confirm": "Cancel the session",
+      "keepIt": "Keep it",
+      "reasonPlaceholder": "Reason (optional), e.g. rain"
+    },
+    "cancelledNotice": {
+      "title": "Session cancelled",
+      "reason": "Reason: {reason}"
     }
   },
   "leagueCreation": {
@@ -4737,12 +4885,18 @@
       "maxRating": "Maximum rating",
       "maxRatingNone": "No maximum",
       "ratingGateHint": "Players outside this range can't join — this is enforced automatically, not left to you to approve.",
-      "ratingGateUnavailable": "Rating gating isn't available for this sport yet."
+      "ratingGateUnavailable": "Rating gating isn't available for this sport yet.",
+      "memberCapacity": "Member limit",
+      "memberCapacityPlaceholder": "Unlimited",
+      "memberCapacityHint": "How many players can hold a spot, including you. Leave empty for no limit.",
+      "waitlistTitle": "Waitlist",
+      "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens."
     },
     "validation": {
       "nameRequired": "League name is required",
       "nameTooLong": "Name must be 100 characters or fewer",
-      "ratingRangeInvalid": "Maximum rating must be at or above the minimum"
+      "ratingRangeInvalid": "Maximum rating must be at or above the minimum",
+      "capacityInvalid": "Enter a number of 1 or more"
     },
     "errors": {
       "sportMismatch": "Switch to a sport on your profile before creating a league",
@@ -4786,7 +4940,8 @@
       "organizing": "Organizing",
       "drafts": "Drafts",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "archived": "Archived"
     },
     "emptyUpcoming": {
       "title": "No upcoming tournaments",
@@ -4837,14 +4992,21 @@
       "refundIssued": "Withdrawn — {amount} refunded.",
       "withdrawnNoRefund": "You've withdrawn. No refund applies.",
       "confirmTitle": "Confirm registration",
-      "confirmAmount": "You'll pay {amount} to register.",
-      "confirmFeeTax": "Includes {amount} in GST + QST on the service fee.",
+      "breakdownEntry": "Entry fee: {amount}",
+      "breakdownServiceFee": "Service fee: {amount}",
+      "breakdownFeeTax": "GST + QST on the service fee: {amount}",
+      "breakdownTotal": "Total: {amount}",
+      "feeCoveredByOrganizer": "The organizer covers the Rallia service fee, so you pay the entry fee and nothing more.",
       "confirmFeeNonRefundable": "The service fee is non-refundable.",
       "liabilityNotice": "Rallia facilitates tournament organization. The organizer is responsible for the event, not Rallia.",
       "confirmPay": "Pay",
+      "payoutSyncWait": "Stripe is confirming your account. This takes about 30 seconds; the status updates by itself.",
       "withdrawConfirmTitle": "Withdraw from this tournament?",
-      "withdrawConfirmRefund": "You'll be refunded {amount} (the service fee isn't refundable).",
-      "withdrawConfirmNoRefund": "This entry isn't refundable, so you won't get money back.",
+      "withdrawConfirmPaid": "You paid {amount}.",
+      "withdrawConfirmRefund": "You'll get {amount} back.",
+      "withdrawConfirmFeesKept": "The service fee and its GST/QST ({amount}) aren't refunded.",
+      "withdrawConfirmCutoffPassed": "The refund deadline ({date}) has passed, so no refund applies. You can still withdraw.",
+      "withdrawConfirmNoRefund": "This tournament has a no-refund policy, so you won't get money back.",
       "errors": {
         "full": "This tournament is full.",
         "alreadyRegistered": "You're already registered.",
@@ -4856,6 +5018,7 @@
         "label": "Payouts",
         "setup": "Set up",
         "actionNeeded": "Action needed",
+        "opening": "Opening...",
         "ready": "Ready"
       }
     },
@@ -5020,7 +5183,7 @@
       "registrationCloses": "Registration closes",
       "description": "Description",
       "location": "Location",
-      "ratingRange": "Level",
+      "ratingRange": "Rating range",
       "entryFee": "Entry fee",
       "youPay": "You pay",
       "refundPolicy": "Refund policy"
@@ -5069,7 +5232,9 @@
       "archiveTournament": "Archive tournament",
       "editDetails": "Edit details",
       "invitePlayers": "Invite players",
-      "manageCoOrganizers": "Manage co-organizers"
+      "manageCoOrganizers": "Manage co-organizers",
+      "unarchiveTournament": "Restore tournament",
+      "viewReceipt": "View receipt"
     },
     "coOrganizers": {
       "ctaTitle": "Co-organizers",
@@ -5082,7 +5247,9 @@
       "noResults": "No players found",
       "remove": "Remove",
       "addFailed": "Couldn't add that co-organizer",
-      "removeFailed": "Couldn't remove that co-organizer"
+      "removeFailed": "Couldn't remove that co-organizer",
+      "alreadyOrganizer": "This player already organizes this tournament.",
+      "playerNotFound": "Couldn't find that player."
     },
     "invite": {
       "title": "Invite players",
@@ -5142,7 +5309,8 @@
       "keepIt": "Keep it",
       "errorGeneric": "Couldn't cancel the tournament. Please try again.",
       "errorNotCancellable": "This tournament can't be cancelled in its current state.",
-      "errorLockConflict": "Someone else made changes — please refresh and try again."
+      "errorLockConflict": "Someone else made changes — please refresh and try again.",
+      "paidRefundWarning": "{count} paid registration(s) will be refunded, {amount} in total. Rallia service fees are not refunded."
     },
     "archiveModal": {
       "title": "Archive this tournament?",
@@ -5152,7 +5320,8 @@
       "errorGeneric": "Couldn't archive the tournament. Please try again.",
       "errorNotArchivable": "This tournament can't be archived yet.",
       "errorSettlementPending": "Refunds or payouts are still going through. You can archive once they're done.",
-      "errorLockConflict": "Someone else made changes — please refresh and try again."
+      "errorLockConflict": "Someone else made changes — please refresh and try again.",
+      "restoredToast": "Tournament restored"
     },
     "removeModal": {
       "title": "Remove this player?",
@@ -5197,7 +5366,14 @@
       "emptyHint": "Create a match with your bracket opponent and submit a confirmed score, then come back to link it here.",
       "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match",
-      "linkCta": "Link this game"
+      "linkCta": "Link this game",
+      "errors": {
+        "alreadyLinked": "A game is already linked to this matchup.",
+        "notPending": "This matchup is already settled.",
+        "matchAlreadyLinked": "That game is already linked to another result.",
+        "matchNotVerified": "That game's score isn't confirmed yet.",
+        "participantsMismatch": "The players in that game don't match this matchup."
+      }
     },
     "partner": {
       "title": "Pick your partner",
@@ -5285,6 +5461,18 @@
     "overview": {
       "readMore": "Read more",
       "infoTitle": "Event info"
+    },
+    "earnings": {
+      "row": "Earnings",
+      "title": "Event earnings",
+      "paidLine": "{count} paid registration(s) · {amount} in entries",
+      "feesLine": "Service fees withheld by Rallia: {amount}",
+      "refundedLine": "Refunded: {amount}",
+      "pendingLine": "Payment in progress: {count}",
+      "netLine": "Your amount: {amount}",
+      "releasedLine": "Already paid out to your Stripe account: {count} payment(s)",
+      "none": "No payments received yet.",
+      "close": "Close"
     }
   },
   "tournamentCreation": {
@@ -5357,10 +5545,10 @@
       "descriptionPlaceholder": "Tell players what to expect (optional)",
       "rules": "Rules",
       "rulesPlaceholder": "Format, scoring, check-in, conduct… (optional)",
-      "minLevel": "Minimum level",
+      "minLevel": "Minimum rating",
       "minLevelNone": "No minimum",
       "minLevelHint": "Players below this level can't register. Locked once the tournament leaves draft.",
-      "maxLevel": "Maximum level",
+      "maxLevel": "Maximum rating",
       "maxLevelNone": "No maximum",
       "maxLevelHint": "Players above this level can't register. Locked once the tournament leaves draft.",
       "lockedAfterDraft": "You can only change this while the tournament is a draft.",
@@ -5411,7 +5599,12 @@
       "registrationModeApproval": "Approval",
       "registrationModeApprovalDescription": "You approve each registration",
       "registrationModeInviteOnly": "Invite only",
-      "registrationModeInviteOnlyDescription": "Only people you invite can register"
+      "registrationModeInviteOnlyDescription": "Only people you invite can register",
+      "matchFormatOneGame": "1 game",
+      "matchFormatTwoOfThreeGames": "Best of 3",
+      "matchFormatThreeOfFiveGames": "Best of 5",
+      "pointsPerGame": "Points per game",
+      "pointsPerGameHint": "Points to win a game, win by 2"
     },
     "validation": {
       "nameRequired": "Tournament name is required",
@@ -9458,6 +9651,20 @@
       "titleMeta": "Settings - Admin - Rallia",
       "descriptionMeta": "Manage settings.",
       "comingSoon": "Settings interface coming soon.",
+      "serviceFee": {
+        "title": "Service fee",
+        "description": "Platform-wide default applied to paid tournaments and seasons. Per-organizer and per-event overrides still take priority over this default.",
+        "pctLabel": "Percentage",
+        "flatLabel": "Flat add-on",
+        "capLabel": "Cap",
+        "formulaHint": "Fee = min(cap, entry × percentage + flat add-on). Changes apply to new payments immediately; already-paid registrations keep the fee they were charged.",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Service fee updated",
+        "loadError": "Couldn't load the current fee settings.",
+        "saveError": "Couldn't save the fee settings.",
+        "invalid": "Enter valid values: percentage between 0 and 100, amounts of 0 or more."
+      },
       "alertTypes": {
         "criticalAction": "Critical Actions",
         "userReport": "User Reports",

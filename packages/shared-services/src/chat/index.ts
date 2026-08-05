@@ -41,6 +41,7 @@ export {
   getMatchChat,
   getTournamentChat,
   getOrCreateTournamentRoundChat,
+  getOrCreateSessionPairingChat,
   syncMatchConversationTitle,
   setActiveConversation,
   clearActiveConversation,
@@ -97,6 +98,7 @@ export {
   toggleMatchTimeVote,
   createCasualMatch,
   getTournamentMatchSportId,
+  getSessionMatchSportId,
   type OrganizerSport,
   type MatchTimeVote,
 

@@ -7,6 +7,7 @@
 
 import type { Database, Tables, Enums } from '@rallia/shared-types';
 import type { UtmParams } from '@rallia/shared-utils';
+import { DEFAULT_SERVICE_FEE_PARAMS, type ServiceFeeParams } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
 import type { PlayerSearchResult } from '../players/playerService';
@@ -102,6 +103,8 @@ export interface CreateTournamentInput {
   registrationMode?: Enums<'tournament_registration_mode'>;
   bracketType?: Enums<'bracket_type'>;
   matchFormat?: Enums<'match_format'>;
+  /** Pickleball only: points that take one game (11/15/21). */
+  pointsPerGame?: number;
   entryFormat?: Enums<'entry_format'>;
   facilityId?: string;
   venueName?: string;
@@ -173,11 +176,16 @@ export async function listPublicTournaments(
 /**
  * List the caller's tournaments — ones they organize (any status, incl.
  * drafts) plus ones they hold an active registration in (as captain or
- * doubles partner). Archived rows are excluded; most-recent first.
+ * doubles partner). Most-recent first.
+ *
+ * Archived rows are excluded by default and are the ONLY thing returned when
+ * `archived` is set, so the archive is its own view rather than clutter mixed
+ * into the live library. Before this existed, archiving hid a tournament with
+ * no screen anywhere that could show it again.
  */
 export async function listMyTournaments(
   userId: string,
-  opts: { sportId?: string } = {}
+  opts: { sportId?: string; archived?: boolean } = {}
 ): Promise<TournamentListItem[]> {
   // Imperative refetches bypass the hook's enabled:!!userId gate — never interpolate undefined.
   if (!userId) return [];
@@ -185,7 +193,10 @@ export async function listMyTournaments(
     .from('tournament_registrations')
     .select('tournament_id')
     .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
-    .in('status', ['registered', 'pending']);
+    // payment_pending: checkout in flight (webhook flips it to registered
+    // seconds later). Excluding it made a tournament vanish from "My
+    // tournaments" right after paying, until the post-webhook refetch.
+    .in('status', ['registered', 'pending', 'payment_pending']);
   if (regsError) throw new Error(regsError.message);
 
   const registeredIds = [...new Set((regs ?? []).map(r => r.tournament_id))];
@@ -204,9 +215,9 @@ export async function listMyTournaments(
   let query = supabase
     .from('tournaments')
     .select(LIST_SELECT)
-    .neq('status', 'archived')
     .eq('tournament_registrations.status', 'registered')
     .order('created_at', { ascending: false });
+  query = opts.archived ? query.eq('status', 'archived') : query.neq('status', 'archived');
   query = relatedIds.length
     ? query.or(`organizer_id.eq.${userId},id.in.(${relatedIds.join(',')})`)
     : query.eq('organizer_id', userId);
@@ -257,6 +268,7 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_registration_mode: input.registrationMode,
     p_bracket_type: input.bracketType,
     p_match_format: input.matchFormat,
+    p_points_per_game: input.pointsPerGame,
     p_entry_format: input.entryFormat,
     p_facility_id: input.facilityId,
     p_venue_name: input.venueName,
@@ -297,6 +309,7 @@ export interface TournamentUpdatePatch {
   maxParticipants?: 4 | 8 | 16 | 32 | 64 | 128;
   bracketType?: Enums<'bracket_type'>;
   matchFormat?: Enums<'match_format'>;
+  pointsPerGame?: number | null;
   facilityId?: string | null;
   venueName?: string | null;
   venueAddress?: string | null;
@@ -328,6 +341,7 @@ const UPDATE_PATCH_COLUMNS: Record<keyof TournamentUpdatePatch, string> = {
   maxParticipants: 'max_participants',
   bracketType: 'bracket_type',
   matchFormat: 'match_format',
+  pointsPerGame: 'points_per_game',
   facilityId: 'facility_id',
   venueName: 'venue_name',
   venueAddress: 'venue_address',
@@ -585,7 +599,9 @@ export async function listMyActiveRegistrations(userId: string): Promise<Tournam
     .from('tournament_registrations')
     .select('*')
     .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
-    .in('status', ['registered', 'pending']);
+    // payment_pending keeps a mid-checkout tournament in "mine" (see
+    // listMyTournaments).
+    .in('status', ['registered', 'pending', 'payment_pending']);
   if (error) throw new Error(error.message);
   return (data ?? []) as TournamentRegistration[];
 }
@@ -775,6 +791,69 @@ export async function getTournamentFeeQuote(
   };
 }
 
+/**
+ * Effective service-fee parameters for an organizer (organizer override →
+ * global default, both admin-managed in the database). Feeds the creation
+ * wizards' fee previews so they match what the server will actually charge
+ * instead of the hardcoded TS defaults.
+ */
+export async function getServiceFeeParams(organizerId: string): Promise<ServiceFeeParams> {
+  const { data, error } = await supabase.rpc('resolve_service_fee_policy', {
+    p_organizer_id: organizerId,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return DEFAULT_SERVICE_FEE_PARAMS;
+  return { pctBps: row.pct_bps, flatCents: row.flat_cents, capCents: row.cap_cents };
+}
+
+/** What a paid event has collected, for its organizer. Mirrors lt_event_earnings. */
+export interface EventEarnings {
+  paidCount: number;
+  pendingCount: number;
+  refundedCount: number;
+  /** Entry money collected across succeeded payments. */
+  entryCents: number;
+  serviceFeeCents: number;
+  feeTaxCents: number;
+  chargedCents: number;
+  refundedCents: number;
+  /** What settlement will (or did) release to the organizer. */
+  netToOrganizerCents: number;
+  releasedCount: number;
+  currency: string | null;
+}
+
+/**
+ * Organizer-only money summary for one paid event (tournament or season).
+ * Server-authoritative: aggregates the payment ledger, so it reflects refunds
+ * and in-flight checkouts the client never saw. Raises NOT_ORGANIZER for
+ * anyone else.
+ */
+export async function getEventEarnings(
+  ids: { tournamentId: string } | { seasonId: string }
+): Promise<EventEarnings> {
+  const { data, error } = await supabase.rpc('lt_event_earnings', {
+    p_tournament_id: 'tournamentId' in ids ? ids.tournamentId : undefined,
+    p_season_id: 'seasonId' in ids ? ids.seasonId : undefined,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    paidCount: row?.paid_count ?? 0,
+    pendingCount: row?.pending_count ?? 0,
+    refundedCount: row?.refunded_count ?? 0,
+    entryCents: Number(row?.entry_cents ?? 0),
+    serviceFeeCents: Number(row?.service_fee_cents ?? 0),
+    feeTaxCents: Number(row?.fee_tax_cents ?? 0),
+    chargedCents: Number(row?.charged_cents ?? 0),
+    refundedCents: Number(row?.refunded_cents ?? 0),
+    netToOrganizerCents: Number(row?.net_to_organizer_cents ?? 0),
+    releasedCount: row?.released_count ?? 0,
+    currency: row?.currency ?? null,
+  };
+}
+
 /** The caller's payout (Stripe Express) account status, mirrored from Stripe by
  *  stripe-connect-webhook. `null` when the organizer has never onboarded. */
 export interface PayoutAccountStatus {
@@ -865,6 +944,26 @@ export async function createTournamentRegistrationPayment(
     amountChargedCents: data.amountChargedCents,
     currency: data.currency,
   };
+}
+
+/**
+ * Stripe-hosted receipt page for the caller's paid registration, or null while
+ * the webhook hasn't stored one (or the entry was free). Refunded statuses are
+ * included: Stripe updates the same receipt to show the refund. RLS scopes the
+ * ledger to the payer/organizer.
+ */
+export async function getRegistrationReceiptUrl(registrationId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lt_registration_payment')
+    .select('stripe_receipt_url')
+    .eq('tournament_registration_id', registrationId)
+    .in('status', ['succeeded', 'partially_refunded', 'refunded'])
+    .not('stripe_receipt_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.stripe_receipt_url ?? null;
 }
 
 export interface TournamentRefundResult {
@@ -1281,6 +1380,18 @@ export async function cancelTournament(
  * Organizer archives a completed or cancelled tournament — hides it from
  * active discovery feeds.
  */
+export async function unarchiveTournament(
+  tournamentId: string,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_unarchive', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
 export async function archiveTournament(
   tournamentId: string,
   versionWas: number

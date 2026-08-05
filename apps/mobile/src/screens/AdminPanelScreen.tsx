@@ -38,6 +38,7 @@ import { lightHaptic } from '@rallia/shared-utils';
 
 import { useAdminPush } from '#/hooks/useAdminPush';
 import { useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -314,7 +315,7 @@ const AdminPanelScreen: React.FC = () => {
             {t('admin.errors.loadFailed')}
           </Text>
           <Text size="base" color={colors.textSecondary} style={styles.errorDescription}>
-            {error.message}
+            {rpcErrorMessage(error, t, 'common.rpcErrors.generic')}
           </Text>
         </View>
       </SafeAreaView>

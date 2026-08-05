@@ -183,6 +183,7 @@ export async function getConversation(
       picture_url,
       match_id,
       tournament_match_id,
+      session_match_id,
       created_by,
       created_at,
       updated_at
@@ -450,6 +451,27 @@ export async function getOrCreateTournamentRoundChat(tournamentMatchId: string):
   }
 
   return data as string;
+}
+
+/**
+ * Get or create the per-pairing chat for a league session sheet match. The
+ * league twin of getOrCreateTournamentRoundChat: idempotent, both sides share
+ * one conversation, and the caller must be one of the pairing's players.
+ * Returns null for a pairing that has no game to organize (drill, 3-player).
+ */
+export async function getOrCreateSessionPairingChat(
+  sessionMatchId: string
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_or_create_session_pairing_chat', {
+    p_session_match_id: sessionMatchId,
+  });
+
+  if (error) {
+    console.error('Error getting/creating session pairing chat:', error);
+    throw error;
+  }
+
+  return (data as string | null) ?? null;
 }
 
 // ============================================================================
@@ -931,6 +953,12 @@ export async function getConversationUnreadCountLast7Days(
  * the server treats the active state as valid for 60 seconds.
  */
 export async function setActiveConversation(conversationId: string): Promise<void> {
+  // Suppression is per-user; without a session the RPC would run with a null
+  // auth.uid() and there is nothing to suppress.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return;
   const { error } = await supabase.rpc('set_active_conversation', {
     p_conversation_id: conversationId,
   });
@@ -944,6 +972,10 @@ export async function setActiveConversation(conversationId: string): Promise<voi
  * Call on screen blur and when the app goes to the background.
  */
 export async function clearActiveConversation(conversationId: string): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return;
   const { error } = await supabase.rpc('clear_active_conversation', {
     p_conversation_id: conversationId,
   });

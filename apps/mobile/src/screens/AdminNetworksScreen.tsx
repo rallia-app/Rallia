@@ -64,6 +64,7 @@ import { getCoverImageUrl, lightHaptic, selectionHaptic } from '@rallia/shared-u
 
 import { SportIcon } from '#/components/SportIcon';
 import { useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -1147,7 +1148,7 @@ const AdminNetworksScreen: React.FC = () => {
             {t('common.error')}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.errorText}>
-            {error.message}
+            {rpcErrorMessage(error, t, 'common.rpcErrors.generic')}
           </Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: colors.accent }]}

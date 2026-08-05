@@ -10,7 +10,6 @@ import {
   LOCATION_OPTIONS,
   MATCH_NATURE_OPTIONS,
   SPORT_OPTIONS,
-  isValidMonthlyPrice,
   type FacilityPreference,
   type LocationOption,
   type MatchNatureOption,
@@ -50,7 +49,8 @@ export async function POST(request: NextRequest) {
       langue,
       sessionId,
       variantValueProp,
-      variantPriceCents,
+      liquidityPlayersShown,
+      liquidityPctShown,
     } = body;
 
     if (!sport || !SPORT_OPTIONS.includes(sport as SportOption)) {
@@ -109,9 +109,18 @@ export async function POST(request: NextRequest) {
     const normalizedSessionId = sessionId ? String(sessionId).slice(0, 80) : null;
     const normalizedVariantValueProp =
       variantValueProp === 'A' || variantValueProp === 'B' ? variantValueProp : null;
-    const normalizedVariantPrice = isValidMonthlyPrice(variantPriceCents)
-      ? variantPriceCents
-      : null;
+    // Simulated liquidity numbers shown to this visitor (bounds match the
+    // estimator's clamps) — kept so payment intent can be read against them.
+    const normalizedLiquidityPlayers =
+      Number.isInteger(liquidityPlayersShown) &&
+      liquidityPlayersShown >= 1 &&
+      liquidityPlayersShown <= 60
+        ? liquidityPlayersShown
+        : null;
+    const normalizedLiquidityPct =
+      Number.isInteger(liquidityPctShown) && liquidityPctShown >= 50 && liquidityPctShown <= 99
+        ? liquidityPctShown
+        : null;
 
     const supabase = getAdminClient();
     const { error: upsertError } = await supabase.from('match_smoke_test_lead').upsert(
@@ -134,7 +143,8 @@ export async function POST(request: NextRequest) {
         langue: normalizedLangue,
         session_id: normalizedSessionId,
         variant_valueprop: normalizedVariantValueProp,
-        variant_price_cents: normalizedVariantPrice,
+        liquidity_players_shown: normalizedLiquidityPlayers,
+        liquidity_pct_shown: normalizedLiquidityPct,
       },
       { onConflict: 'email' }
     );

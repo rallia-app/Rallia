@@ -19,6 +19,7 @@ import {
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { SearchBar } from '#/components/SearchBar';
 
 // Translation function type that accepts any key (for internal use)
@@ -189,7 +190,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
                 toast.success(t('groups.memberPromoted'));
                 onMemberRemoved?.();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : t('groups.failedToPromote'));
+                toast.error(rpcErrorMessage(error, t, 'groups.failedToPromote'));
               }
             },
           });
@@ -210,7 +211,7 @@ export function MemberListActionSheet({ payload }: SheetProps<'member-list'>) {
                 toast.success(t('groups.moderatorDemoted'));
                 onMemberRemoved?.();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : t('groups.failedToDemote'));
+                toast.error(rpcErrorMessage(error, t, 'groups.failedToDemote'));
               }
             },
           });

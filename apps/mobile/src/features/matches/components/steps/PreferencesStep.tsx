@@ -27,6 +27,7 @@ import { useRatingScoresForSport, useFacilityReservationContact } from '@rallia/
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 
 import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
+import { useKeyboardAwareSheetScroll } from '#/hooks/useKeyboardAwareSheetScroll';
 
 // =============================================================================
 // TYPES
@@ -297,6 +298,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
 
   // Track if we've set the default rating to avoid overwriting user selection
   const hasSetDefaultRating = useRef(false);
+  const { scrollProps, inputs } = useKeyboardAwareSheetScroll(['cost', 'notes']);
+
   const ratingScrollRef = useRef<ScrollView>(null);
   const [ratingScrollViewWidth, setRatingScrollViewWidth] = useState(0);
 
@@ -360,6 +363,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
 
   return (
     <SheetScrollView
+      {...scrollProps}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
@@ -541,6 +545,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 $
               </Text>
               <TextInput
+                {...inputs.cost}
                 style={[styles.costInput, { color: colors.text }]}
                 value={estimatedCost?.toString() ?? ''}
                 onChangeText={text => {
@@ -909,6 +914,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {t('matchCreation.fields.notes')}
         </Text>
         <TextInput
+          {...inputs.notes}
           style={[
             styles.notesInput,
             {
@@ -1033,7 +1039,7 @@ const styles = StyleSheet.create({
   costInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[2],
@@ -1042,7 +1048,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    padding: 0,
+    // Vertical padding belongs to the input so the whole box is tappable.
+    paddingVertical: spacingPixels[4],
+    paddingHorizontal: 0,
   },
   costHelperText: {
     marginTop: spacingPixels[1],

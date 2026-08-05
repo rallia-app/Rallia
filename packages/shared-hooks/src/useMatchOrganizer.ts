@@ -15,6 +15,8 @@ import {
   createCasualMatch,
   getOrCreateTournamentRoundChat,
   getTournamentMatchSportId,
+  getOrCreateSessionPairingChat,
+  getSessionMatchSportId,
   subscribeToMatchVotes,
   unsubscribeFromChannel,
 } from '@rallia/shared-services';
@@ -36,6 +38,8 @@ export const matchOrganizerKeys = {
   votes: (messageId: string) => [...matchOrganizerKeys.all, 'votes', messageId] as const,
   tournamentSport: (tournamentMatchId: string) =>
     [...matchOrganizerKeys.all, 'tournamentSport', tournamentMatchId] as const,
+  sessionSport: (sessionMatchId: string) =>
+    [...matchOrganizerKeys.all, 'sessionSport', sessionMatchId] as const,
 };
 
 // ============================================================================
@@ -62,6 +66,20 @@ export function useTournamentMatchSport(tournamentMatchId: string | null | undef
     queryKey: matchOrganizerKeys.tournamentSport(tournamentMatchId ?? ''),
     queryFn: () => getTournamentMatchSportId(tournamentMatchId ?? ''),
     enabled: !!tournamentMatchId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * The league's sport behind a session pairing chat. Used to force the organizer
+ * flow onto the league sport instead of a guessed shared one. Enabled only when
+ * a session_match_id is present (i.e. the chat is a session pairing chat).
+ */
+export function useSessionMatchSport(sessionMatchId: string | null | undefined) {
+  return useQuery({
+    queryKey: matchOrganizerKeys.sessionSport(sessionMatchId ?? ''),
+    queryFn: () => getSessionMatchSportId(sessionMatchId ?? ''),
+    enabled: !!sessionMatchId,
     staleTime: 10 * 60 * 1000,
   });
 }
@@ -136,12 +154,16 @@ export function useToggleMatchTimeVote() {
 /**
  * Subscribe to live vote changes in a conversation. Both players see each
  * other's option votes refresh in real time (no polling).
+ * Gated on playerId so we never join the private channel before auth is ready.
  */
-export function useMatchVotesRealtime(conversationId: string | undefined) {
+export function useMatchVotesRealtime(
+  conversationId: string | undefined,
+  playerId: string | undefined
+) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !playerId) return;
 
     const channel = subscribeToMatchVotes(conversationId, ({ messageId }) => {
       queryClient.invalidateQueries({
@@ -152,7 +174,7 @@ export function useMatchVotesRealtime(conversationId: string | undefined) {
     return () => {
       unsubscribeFromChannel(channel);
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, playerId, queryClient]);
 }
 
 // ============================================================================
@@ -166,6 +188,17 @@ export function useMatchVotesRealtime(conversationId: string | undefined) {
 export function useOpenTournamentRoundChat() {
   return useMutation({
     mutationFn: (tournamentMatchId: string) => getOrCreateTournamentRoundChat(tournamentMatchId),
+  });
+}
+
+/**
+ * Open (get-or-create) the per-pairing chat for a league session sheet match.
+ * Returns the conversation id to navigate to, or null when the pairing has no
+ * game to organize (a drill or a 3-player rotation).
+ */
+export function useOpenSessionPairingChat() {
+  return useMutation({
+    mutationFn: (sessionMatchId: string) => getOrCreateSessionPairingChat(sessionMatchId),
   });
 }
 
