@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@rallia/shared-translations';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import CommunityList from './_components/community-list';
 import type { PublicCommunity } from './_components/community-card';
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { buildPageMetadata } from '@/lib/seo';
+
+// Public directory — same first page for every visitor, so serve it from the
+// ISR cache instead of a function invocation per hit.
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -34,7 +38,10 @@ async function getInitialCommunities(): Promise<PublicCommunity[]> {
   return data as PublicCommunity[];
 }
 
-export default async function CommunitiesPage() {
+export default async function CommunitiesPage({ params }: { params: Promise<{ locale: Locale }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
   const t = await getTranslations('communitiesPage');
   const communities = await getInitialCommunities();
 

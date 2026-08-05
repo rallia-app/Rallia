@@ -1,23 +1,29 @@
 import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Calendar, CircleDollarSign, Clock, MapPin, Swords, User, Users } from 'lucide-react';
 import { getStorageImageUrl } from '@rallia/shared-utils';
 
 import { getRelativeDateLabel, formatDuration } from '../../play/_components/utils';
 
+import { MatchLandingClient } from './_components/match-landing-client';
 import { getMatch } from './_lib/get-match';
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { getLandingContext } from '@/lib/landing-attribution';
-import { logReferralClick, buildPlayStoreUrl } from '@/lib/referral-tracking';
-import { TrackedStoreBadges } from '@/components/tracked-store-badges';
-import { InviteLandingTracker } from '@/components/invite-landing-tracker';
+
+// Invite links get hammered by link-preview bots; a short ISR window serves
+// them from the cache instead of a function invocation. Kept short because
+// the card shows live participant slots.
+export const revalidate = 60;
+
+// No ids at build time — each match page is generated on first request and
+// then served from the ISR cache (this is what opts the route into caching).
+export function generateStaticParams() {
+  return [];
+}
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -73,21 +79,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function MatchPage({ params, searchParams }: Props) {
+export default async function MatchPage({ params }: Props) {
   const { id, locale } = await params;
-  const query = await searchParams;
+  setRequestLocale(locale);
 
-  // Attribution: log click and detect platform
-  const { platform, ip, userAgent, webDistinctId, utm } = await getLandingContext(query);
-
-  // Log click for analytics (non-blocking, no referral code)
-  logReferralClick('', ip, userAgent, 'match', id, webDistinctId, utm).catch(() => {});
-
-  // Android: redirect to Play Store with match ID in install referrer
-  if (platform === 'android') {
-    redirect(buildPlayStoreUrl(undefined, 'match', id, { webDistinctId, utm }));
-  }
-
+  // Attribution, click logging and the Android Play Store redirect all moved
+  // into MatchLandingClient so this page renders visitor-agnostic (cacheable).
   const match = await getMatch(id);
   const t = await getTranslations({ locale, namespace: 'matchPage' });
   const tGames = await getTranslations({ locale, namespace: 'gamesPage' });
@@ -167,12 +164,6 @@ export default async function MatchPage({ params, searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-8 py-12 w-full max-w-3xl mx-auto">
-      <InviteLandingTracker
-        surface="match"
-        invitationType="match"
-        platform={platform ?? 'desktop'}
-        targetId={id}
-      />
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">{t('subtitle')}</p>
@@ -311,14 +302,10 @@ export default async function MatchPage({ params, searchParams }: Props) {
             <h2 className="text-xl font-bold">{t('downloadTitle')}</h2>
             <p className="text-sm text-muted-foreground">{t('downloadDescription')}</p>
 
-            <TrackedStoreBadges
-              placement="match_page"
-              playStoreUrl={buildPlayStoreUrl(undefined, 'match', id, { webDistinctId, utm })}
-              hidePlayStore={platform === 'ios'}
+            <MatchLandingClient
+              matchId={id}
               appStoreLabel={t('appStore')}
               playStoreLabel={t('googlePlay')}
-              matchId={id}
-              referral={{ type: 'match', targetId: id }}
             />
           </div>
         </section>
