@@ -167,8 +167,14 @@ function parseInitialParams(sp: Record<string, string | string[] | undefined>): 
   const kindParam = first(sp.kind);
   const viewParam = first(sp.view);
   const dateParam = first(sp.date);
-  const kind: PlayKind = kindParam === 'games' || kindParam === 'courts' ? kindParam : 'all';
   const view: ViewMode = viewParam === 'map' ? 'map' : 'list';
+  // Lists are single-kind; "all" is only valid on the map.
+  const kind: PlayKind =
+    kindParam === 'games' || kindParam === 'courts'
+      ? kindParam
+      : view === 'map'
+        ? 'all'
+        : 'games';
   const date: DateChip =
     dateParam === 'today' || dateParam === 'tomorrow' || dateParam === 'weekend'
       ? dateParam
