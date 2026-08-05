@@ -6235,6 +6235,7 @@
     "empty": {
       "title": "Aucune partie trouvée",
       "description": "Essayez d'ajuster vos filtres ou revenez plus tard",
+      "helper": "Créez la vôtre et on vous aidera à la remplir 💪",
       "noFilters": {
         "title": "Aucune partie publique à proximité",
         "description": "Soyez le premier à créer une partie dans votre région!"

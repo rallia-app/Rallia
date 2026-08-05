@@ -6235,6 +6235,7 @@
     "empty": {
       "title": "No games found",
       "description": "Try adjusting your filters or check back later",
+      "helper": "Create yours and we'll help you fill it 💪",
       "noFilters": {
         "title": "No public games nearby",
         "description": "Be the first to create a game in your area!"

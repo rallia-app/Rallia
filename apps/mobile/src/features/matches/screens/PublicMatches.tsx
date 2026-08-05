@@ -56,34 +56,50 @@ const FEED_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTi
 
 interface EmptyStateProps {
   hasFilters: boolean;
-  textMutedColor: string;
+  colors: {
+    primary: string;
+    text: string;
+    textMuted: string;
+  };
+  sportName: string;
   t: (key: TranslationKey) => string;
   onCreatePress: () => void;
 }
 
-function EmptyState({ hasFilters, textMutedColor, t, onCreatePress }: EmptyStateProps) {
+function EmptyState({ hasFilters, colors, sportName, t, onCreatePress }: EmptyStateProps) {
   return (
-    <View style={styles.emptyWrapper}>
-      <View style={styles.inlineEmpty}>
-        <Ionicons
-          name={hasFilters ? 'filter-outline' : 'search-outline'}
-          size={20}
-          color={textMutedColor}
-        />
-        <Text size="sm" color={textMutedColor} style={styles.inlineEmptyText}>
-          {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
-        </Text>
+    <View style={styles.emptyHero}>
+      {/* Big tinted sport badge with a small status mark */}
+      <View style={[styles.emptyHeroBadge, { backgroundColor: `${colors.primary}14` }]}>
+        <SportIcon sportName={sportName} size={64} color={colors.primary} />
+        <View style={[styles.emptyHeroBadgeMark, { backgroundColor: colors.primary }]}>
+          <Ionicons name={hasFilters ? 'filter' : 'search'} size={14} color="#FFFFFF" />
+        </View>
       </View>
-      <Text size="sm" color={textMutedColor} style={styles.emptyDescription}>
+
+      <Text size="xl" weight="bold" color={colors.text} style={styles.emptyHeroTitle}>
+        {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
+      </Text>
+      <Text size="base" color={colors.textMuted} style={styles.emptyHeroDescription}>
         {hasFilters
           ? t('publicMatches.empty.description')
           : t('publicMatches.empty.noFilters.description')}
       </Text>
-      <View style={styles.emptyCtaRow}>
-        <Button variant="primary" size="sm" onPress={onCreatePress}>
-          {t('matches.createMatch')}
-        </Button>
-      </View>
+
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        rounded
+        onPress={onCreatePress}
+        leftIcon={<Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />}
+        style={styles.emptyHeroButton}
+      >
+        {t('matches.createMatch')}
+      </Button>
+      <Text size="sm" color={colors.textMuted} style={styles.emptyHeroHelper}>
+        {t('publicMatches.empty.helper')}
+      </Text>
     </View>
   );
 }
@@ -544,7 +560,8 @@ export default function PublicMatches() {
     return (
       <EmptyState
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
-        textMutedColor={colors.textMuted}
+        colors={{ primary: colors.primary, text: colors.text, textMuted: colors.textMuted }}
+        sportName={selectedSport?.name ?? 'tennis'}
         t={t}
         onCreatePress={() => handleCreateGamePress('empty_state')}
       />
@@ -554,7 +571,10 @@ export default function PublicMatches() {
     isSearching,
     hasActiveFilters,
     debouncedSearchQuery,
+    colors.primary,
+    colors.text,
     colors.textMuted,
+    selectedSport?.name,
     t,
     handleCreateGamePress,
   ]);
@@ -816,7 +836,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[5],
   },
   emptyListContent: {
-    flexGrow: 0,
+    // Let the hero empty state own the viewport below the filters.
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   emptyWrapper: {
     paddingTop: spacingPixels[2],
@@ -833,9 +855,46 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'center',
   },
-  emptyCtaRow: {
+  emptyHero: {
     alignItems: 'center',
-    paddingTop: spacingPixels[4],
+    paddingVertical: spacingPixels[8],
+    paddingHorizontal: spacingPixels[6],
+    gap: spacingPixels[2],
+  },
+  emptyHeroBadge: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  emptyHeroBadgeMark: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  emptyHeroTitle: {
+    textAlign: 'center',
+  },
+  emptyHeroDescription: {
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  emptyHeroButton: {
+    marginTop: spacingPixels[6],
+  },
+  emptyHeroHelper: {
+    textAlign: 'center',
+    marginTop: spacingPixels[1],
   },
   endOfListCta: {
     alignItems: 'center',
