@@ -2846,6 +2846,7 @@ export type Database = {
         Row: {
           booking_captain_id: string | null
           booking_id: string | null
+          booking_nudge_sent_at: string | null
           cancelled_at: string | null
           closed_at: string | null
           cost_split_type:
@@ -2895,6 +2896,7 @@ export type Database = {
         Insert: {
           booking_captain_id?: string | null
           booking_id?: string | null
+          booking_nudge_sent_at?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
           cost_split_type?:
@@ -2944,6 +2946,7 @@ export type Database = {
         Update: {
           booking_captain_id?: string | null
           booking_id?: string | null
+          booking_nudge_sent_at?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
           cost_split_type?:
@@ -13252,6 +13255,7 @@ export type Database = {
         }
         Returns: Json
       }
+      send_court_booking_nudges: { Args: never; Returns: number }
       session_attach_match: {
         Args: { p_match_id: string; p_session_match_id: string }
         Returns: {
@@ -15108,6 +15112,7 @@ export type Database = {
         | "tournament_match_ready"
         | "session_cancelled"
         | "season_cancelled"
+        | "court_booking_nudge"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15785,6 +15790,7 @@ export const Constants = {
         "tournament_match_ready",
         "session_cancelled",
         "season_cancelled",
+        "court_booking_nudge",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

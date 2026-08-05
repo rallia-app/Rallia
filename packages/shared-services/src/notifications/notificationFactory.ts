@@ -363,6 +363,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   match_player_joined: 'high',
   match_new_available: 'high',
   match_spot_opened: 'high',
+  court_booking_nudge: 'high',
   match_completed: 'normal',
   nearby_match_available: 'normal',
   player_kicked: 'high',
@@ -475,6 +476,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_player_joined: 'New player joined!',
   match_new_available: 'New game nearby',
   match_spot_opened: 'A spot opened up!',
+  court_booking_nudge: 'Courts are open at {facilityName}',
   nearby_match_available: 'New match nearby',
   match_cancelled: 'Game cancelled',
   match_updated: 'Game updated',
@@ -586,6 +588,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   match_new_available:
     'A new {sportName} game was created in a group you belong to. Tap to view and join!',
   match_spot_opened: 'A spot opened in a {sportName} match{startTime}{locationName}. Join now!',
+  court_booking_nudge: "Games with a booked court fill faster. Grab yours while it's open.",
   nearby_match_available: 'A {sportName} match is available near you{startTime}{locationName}',
   match_cancelled:
     'The {sportName} game on {matchDate} at {locationName} has been cancelled. We hope to see you playing soon!',
