@@ -31,15 +31,29 @@ async function extractErrorCode(error: {
   message?: string;
 }): Promise<PhoneVerificationErrorCode> {
   // FunctionsHttpError stores the raw Response in `context`; `data` is null on non-2xx.
-  if (error.context && typeof error.context.json === 'function') {
-    try {
-      const body = await error.context.json();
-      if (KNOWN_ERROR_CODES.includes(body?.error)) {
-        return body.error;
-      }
-    } catch {
-      // fall through
+  const ctx = error.context;
+  if (!ctx) {
+    return 'unknown';
+  }
+
+  // Read via clone()+text(): on React Native the body may already be consumed,
+  // which makes a bare .json() throw and swallow the real code.
+  try {
+    const source = typeof ctx.clone === 'function' ? ctx.clone() : ctx;
+    const raw = typeof source.text === 'function' ? await source.text() : '';
+    const code = raw ? JSON.parse(raw)?.error : undefined;
+    if (KNOWN_ERROR_CODES.includes(code)) {
+      return code;
     }
+  } catch {
+    // fall through to the status-based mapping
+  }
+
+  if (ctx.status === 401) {
+    return 'unauthorized';
+  }
+  if (ctx.status === 429) {
+    return 'rate_limited';
   }
   return 'unknown';
 }
