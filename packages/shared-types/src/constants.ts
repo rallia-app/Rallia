@@ -348,6 +348,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_registration_approved: 'checkmark-circle-outline',
   tournament_registration_removed: 'remove-circle-outline',
   tournament_bracket_published: 'git-network-outline',
+  tournament_registration_open: 'trophy-outline',
   tournament_match_completed: 'podium-outline',
   tournament_match_ready: 'flash-outline',
   tournament_updated: 'create-outline',
@@ -459,6 +460,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_approved: '#4CAF50', // Green
   tournament_registration_removed: '#F44336', // Red
   tournament_bracket_published: '#4DB8A8', // Teal
+  tournament_registration_open: '#E57373', // Coral (tournament)
   tournament_match_completed: '#4DB8A8', // Teal
   tournament_match_ready: '#4DB8A8', // Teal
   tournament_updated: '#FF9800', // Orange — details changed
@@ -566,6 +568,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_approved: 'Registration Approved',
   tournament_registration_removed: 'Removed from Tournament',
   tournament_bracket_published: 'Bracket Published',
+  tournament_registration_open: 'Registration Open',
   tournament_match_completed: 'Tournament Result',
   tournament_match_ready: 'Next Match',
   tournament_updated: 'Tournament Updated',
@@ -683,6 +686,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_registration_approved: 'leagues',
   tournament_registration_removed: 'leagues',
   tournament_bracket_published: 'leagues',
+  tournament_registration_open: 'leagues',
   tournament_match_completed: 'leagues',
   tournament_match_ready: 'leagues',
   tournament_updated: 'leagues',
@@ -842,6 +846,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_registration_approved: { email: false, push: true, sms: false },
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
+  tournament_registration_open: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
@@ -916,6 +921,7 @@ export const REFERENCE_RESPONSE_NOTIFICATION_TYPES: readonly ExtendedNotificatio
 
 /** Tournament notifications — target_id is always the tournament id. */
 export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'tournament_registration_open',
   'tournament_partner_registered',
   'tournament_partner_withdrew',
   'tournament_registration_received',

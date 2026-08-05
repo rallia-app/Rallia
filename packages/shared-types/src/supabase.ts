@@ -8928,6 +8928,50 @@ export type Database = {
           },
         ]
       }
+      tournament_fanout_job: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          last_error: string | null
+          last_player_id: string | null
+          notified_count: number
+          status: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_fanout_job_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_invite_links: {
         Row: {
           created_at: string
@@ -9450,8 +9494,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -9509,8 +9555,10 @@ export type Database = {
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
+          latitude?: number | null
           level?: string | null
           logo_url?: string | null
+          longitude?: number | null
           match_format?: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating?: number | null
@@ -9568,8 +9616,10 @@ export type Database = {
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
+          latitude?: number | null
           level?: string | null
           logo_url?: string | null
+          longitude?: number | null
           match_format?: Database["public"]["Enums"]["match_format"]
           max_participants?: number
           max_rating?: number | null
@@ -12575,6 +12625,10 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: number
       }
+      process_tournament_registration_fanout: {
+        Args: { p_batch_size?: number }
+        Returns: number
+      }
       propose_rebuttal_score: {
         Args: {
           p_match_result_id: string
@@ -13791,8 +13845,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -13918,8 +13974,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -13986,8 +14044,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14080,8 +14140,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14281,8 +14343,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14488,8 +14552,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14631,8 +14697,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14699,8 +14767,10 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -15122,6 +15192,7 @@ export type Database = {
         | "match_last_minute_spots"
         | "match_unfilled_recovery"
         | "play_rhythm_nudge"
+        | "tournament_registration_open"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15803,6 +15874,7 @@ export const Constants = {
         "match_last_minute_spots",
         "match_unfilled_recovery",
         "play_rhythm_nudge",
+        "tournament_registration_open",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
