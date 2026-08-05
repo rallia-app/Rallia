@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 import type { Match } from '@rallia/shared-types';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
@@ -23,7 +25,8 @@ export type MatchWithRelations = Match & {
     | null;
 };
 
-export async function getMatch(id: string): Promise<MatchWithRelations | null> {
+// cache() dedupes the generateMetadata + page render pair into one query.
+export const getMatch = cache(async (id: string): Promise<MatchWithRelations | null> => {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from('match')
@@ -33,4 +36,4 @@ export async function getMatch(id: string): Promise<MatchWithRelations | null> {
     .eq('id', id)
     .single();
   return data as MatchWithRelations | null;
-}
+});

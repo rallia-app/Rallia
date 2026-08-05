@@ -32,18 +32,6 @@ import { cn } from '@/lib/utils';
 export type ViewMode = 'list' | 'map';
 export type PlayKind = 'all' | 'games' | 'courts';
 
-/** Filter state hydrated from the URL by the server page (deep links). */
-export interface PlayInitialParams {
-  kind: PlayKind;
-  view: ViewMode;
-  sportSlug: string | null;
-  date: DateChip;
-  mine: boolean;
-  openOnly: boolean;
-  bookableOnly: boolean;
-  query: string;
-}
-
 /** A map query origin: center + radius derived from the viewport. */
 export interface MapArea {
   lat: number;
@@ -69,19 +57,12 @@ interface Sport {
 }
 
 interface PlayExplorerProps {
+  /** Location-neutral first page rendered into the ISR shell (SEO + first paint). */
   initialMatches: PublicMatch[];
   initialFacilities: FacilitySearchResult[];
-  /** Approximate visitor location resolved server-side from request geo headers. */
-  initialCoords: { latitude: number; longitude: number } | null;
-  initialParams: PlayInitialParams;
 }
 
-export default function PlayExplorer({
-  initialMatches,
-  initialFacilities,
-  initialCoords,
-  initialParams,
-}: PlayExplorerProps) {
+export default function PlayExplorer({ initialMatches, initialFacilities }: PlayExplorerProps) {
   const t = useTranslations('playPage');
   const tGames = useTranslations('gamesPage');
   const tCourts = useTranslations('courtsPage');
@@ -90,17 +71,18 @@ export default function PlayExplorer({
   const supabase = useMemo(() => createClient(), []);
 
   // Shared state ------------------------------------------------------------
-  const [kind, setKind] = useState<PlayKind>(initialParams.kind);
-  const [viewMode, setViewMode] = useState<ViewMode>(initialParams.view);
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(
-    initialCoords
-  );
-  const [locationResolved, setLocationResolved] = useState(initialCoords != null);
+  // Defaults are the neutral shell the server rendered; the URL-parse effect
+  // below applies deep-link params on mount, before any URL mirroring.
+  const [kind, setKind] = useState<PlayKind>('games');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [paramsApplied, setParamsApplied] = useState(false);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationResolved, setLocationResolved] = useState(false);
   const [locating, setLocating] = useState(false);
   const [usedPreciseLocation, setUsedPreciseLocation] = useState(false);
   const [geoFailed, setGeoFailed] = useState(false);
   const [sports, setSports] = useState<Sport[]>([]);
-  const [activeSportSlug, setActiveSportSlug] = useState<string | null>(initialParams.sportSlug);
+  const [activeSportSlug, setActiveSportSlug] = useState<string | null>(null);
   const [viewerPlayerId, setViewerPlayerId] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -110,9 +92,9 @@ export default function PlayExplorer({
   const [matchesOffset, setMatchesOffset] = useState(initialMatches.length);
   const [matchesLoaded, setMatchesLoaded] = useState(true);
   const [matchesWidened, setMatchesWidened] = useState(false);
-  const [dateFilter, setDateFilter] = useState<DateChip>(initialParams.date);
-  const [mineOnly, setMineOnly] = useState(initialParams.mine);
-  const [openOnly, setOpenOnly] = useState(initialParams.openOnly);
+  const [dateFilter, setDateFilter] = useState<DateChip>('all');
+  const [mineOnly, setMineOnly] = useState(false);
+  const [openOnly, setOpenOnly] = useState(false);
 
   // Courts state ------------------------------------------------------------
   const [facilities, setFacilities] = useState<PublicFacility[]>(initialFacilities);
@@ -122,9 +104,9 @@ export default function PlayExplorer({
   const [facilitiesOffset, setFacilitiesOffset] = useState(initialFacilities.length);
   const [facilitiesLoaded, setFacilitiesLoaded] = useState(true);
   const [facilitiesWidened, setFacilitiesWidened] = useState(false);
-  const [bookableOnly, setBookableOnly] = useState(initialParams.bookableOnly);
-  const [searchInput, setSearchInput] = useState(initialParams.query);
-  const [query, setQuery] = useState(initialParams.query);
+  const [bookableOnly, setBookableOnly] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [query, setQuery] = useState('');
 
   // Map state — loaded per queried area, not paginated to completion.
   const [mapMatches, setMapMatches] = useState<PublicMatch[]>([]);
@@ -173,11 +155,43 @@ export default function PlayExplorer({
     })();
   }, []);
 
-  // Location: the server already resolved an approximate position from the
-  // request when it could; otherwise fall back to IP lookup. Precise browser
-  // geolocation is only requested when the visitor asks for it.
+  // Deep links: apply URL filter params on mount. The server shell is
+  // param-neutral (it renders from a shared ISR cache), so this runs before
+  // the URL-mirror effect below — which stays disabled until it has.
   useEffect(() => {
-    if (initialCoords != null) return;
+    const sp = new URLSearchParams(window.location.search);
+    const viewParam = sp.get('view');
+    const kindParam = sp.get('kind');
+    const dateParam = sp.get('date');
+    const view: ViewMode = viewParam === 'map' ? 'map' : 'list';
+    // Lists are single-kind; "all" is only valid on the map.
+    const parsedKind: PlayKind =
+      kindParam === 'games' || kindParam === 'courts'
+        ? kindParam
+        : view === 'map'
+          ? 'all'
+          : 'games';
+    setViewMode(view);
+    setKind(parsedKind);
+    setActiveSportSlug(sp.get('sport') || null);
+    setDateFilter(
+      dateParam === 'today' || dateParam === 'tomorrow' || dateParam === 'weekend'
+        ? dateParam
+        : 'all'
+    );
+    setMineOnly(sp.get('mine') === '1');
+    setOpenOnly(sp.get('open') === '1');
+    setBookableOnly(sp.get('bookable') === '1');
+    const q = parsedKind === 'courts' ? (sp.get('q') ?? '') : '';
+    setSearchInput(q);
+    setQuery(q);
+    setParamsApplied(true);
+  }, []);
+
+  // Location: resolve an approximate position via IP lookup (the ISR shell is
+  // location-neutral by design). Precise browser geolocation is only
+  // requested when the visitor asks for it.
+  useEffect(() => {
     let cancelled = false;
 
     (async () => {
@@ -199,7 +213,7 @@ export default function PlayExplorer({
     return () => {
       cancelled = true;
     };
-  }, [initialCoords]);
+  }, []);
 
   const requestPreciseLocation = useCallback(() => {
     if (!('geolocation' in navigator)) {
@@ -227,6 +241,9 @@ export default function PlayExplorer({
   // so views are shareable and survive refresh — replaceState avoids a server
   // round-trip and keeps scroll position.
   useEffect(() => {
+    // Don't mirror until the deep-link params have been applied — mirroring
+    // the neutral defaults first would strip them from the URL.
+    if (!paramsApplied) return;
     const url = new URL(window.location.href);
     const assign = (key: string, value: string | null) => {
       if (value == null || value === '') url.searchParams.delete(key);
@@ -244,7 +261,17 @@ export default function PlayExplorer({
     const next = `${url.pathname}${qs ? `?${qs}` : ''}${url.hash}`;
     const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (next !== current) window.history.replaceState(null, '', next);
-  }, [kind, viewMode, activeSportSlug, dateFilter, mineOnly, openOnly, bookableOnly, query]);
+  }, [
+    paramsApplied,
+    kind,
+    viewMode,
+    activeSportSlug,
+    dateFilter,
+    mineOnly,
+    openOnly,
+    bookableOnly,
+    query,
+  ]);
 
   // Fetchers ----------------------------------------------------------------
   const fetchMatches = useCallback(
