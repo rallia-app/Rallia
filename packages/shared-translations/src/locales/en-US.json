@@ -4192,7 +4192,7 @@
         "responsive": "Responsive",
         "sameRating": "Same level",
         "activeRecently": "Active this week",
-        "playsHere": "Plays here often"
+        "playsHere": "Preferred venue"
       }
     }
   },
@@ -11653,6 +11653,32 @@
       "singles": "Singles",
       "doubles": "Doubles"
     }
+  },
+  "playerPage": {
+    "title": "Player Profile",
+    "subtitle": "Download Rallia to play with this player and discover more games near you.",
+    "notFound": "Player not found",
+    "notFoundDescription": "This player may have left Rallia or the link is invalid.",
+    "joined": "On Rallia since {date}",
+    "statGamesPlayed": "Games played",
+    "statHoursPlayed": "Hours played",
+    "statWeekStreak": "Week streak",
+    "certified": "Certified",
+    "reputationLabel": "Reputation",
+    "tier": {
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum"
+    },
+    "downloadTitle": "Play with {name}",
+    "downloadDescription": "Download Rallia to invite this player to a game and find players near you.",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play",
+    "ogEyebrow": "Player Profile",
+    "ogTitle": "{name} on Rallia",
+    "ogGamesPlayed": "{count, plural, one {1 game played} other {# games played}}",
+    "ogCta": "Download Rallia to play together"
   },
   "inviteScanner": {
     "title": "Scan QR Code",

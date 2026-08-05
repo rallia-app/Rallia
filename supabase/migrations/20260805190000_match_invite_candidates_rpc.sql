@@ -83,6 +83,10 @@ DECLARE
   v_point extensions.geography;
   v_day text;
   v_hour int;
+  v_start_hour int;
+  v_end_hour int;
+  v_hours_total int;
+  v_end_time time;
   v_gate_rating_score_id uuid;
   v_gate_rating_value double precision;
   v_host_badge badge_status_enum;
@@ -118,6 +122,17 @@ BEGIN
     WHEN 4 THEN 'thursday' WHEN 5 THEN 'friday' WHEN 6 THEN 'saturday'
     WHEN 7 THEN 'sunday' END;
   v_hour := EXTRACT(hour FROM v_m.start_time)::int;
+
+  -- Every clock hour the game actually touches, not just the one it starts in:
+  -- a 17:00-18:30 game needs the player free at 17 AND 18. The -1 minute keeps
+  -- an exact 17:00-18:00 game from demanding hour 18.
+  v_end_time := COALESCE(v_m.end_time, v_m.start_time + interval '90 minutes');
+  v_start_hour := EXTRACT(hour FROM v_m.start_time)::int;
+  v_end_hour := EXTRACT(hour FROM (v_end_time - interval '1 minute'))::int;
+  IF v_end_hour < v_start_hour THEN
+    v_end_hour := v_start_hour;  -- guards a game crossing midnight
+  END IF;
+  v_hours_total := v_end_hour - v_start_hour + 1;
 
   -- Gate rating: explicit match minimum, else the host's active rating.
   IF v_m.min_rating_score_id IS NOT NULL THEN
@@ -343,15 +358,38 @@ BEGIN
       er.rating_label,
       er.badge_status,
       -- reason primitives
-      EXISTS (
-        SELECT 1 FROM player_availability pa
-        WHERE pa.player_id = po.pid AND pa.is_active
-          AND pa.day::text = v_day AND pa.hour_of_day = v_hour
-      ) AS avail_cell,
+      -- How many of the game's hours their declared schedule covers. Stale
+      -- declarations (unconfirmed for 60d) are treated as no data rather than
+      -- as fact, matching the freshness gate the play-rhythm nudge uses.
+      (
+        SELECT count(*)
+        FROM generate_series(v_start_hour, v_end_hour) AS h
+        WHERE EXISTS (
+          SELECT 1 FROM player_availability pa
+          WHERE pa.player_id = po.pid AND pa.is_active
+            AND pa.day::text = v_day AND pa.hour_of_day = h
+            AND COALESCE(pa.last_confirmed_at, pa.updated_at) >= now() - interval '60 days'
+        )
+      ) AS avail_hours,
       EXISTS (
         SELECT 1 FROM player_availability pa2
         WHERE pa2.player_id = po.pid AND pa2.is_active
+          AND COALESCE(pa2.last_confirmed_at, pa2.updated_at) >= now() - interval '60 days'
       ) AS has_avail_rows,
+      -- Already committed to something overlapping this game's window: they
+      -- are not free, whatever their weekly schedule says.
+      EXISTS (
+        SELECT 1
+        FROM match_participant cmp
+        JOIN match cm ON cm.id = cmp.match_id
+        WHERE cmp.player_id = po.pid
+          AND cmp.status IN ('joined', 'requested', 'pending', 'waitlisted')
+          AND cm.cancelled_at IS NULL
+          AND cm.id <> p_match_id
+          AND cm.match_date = v_m.match_date
+          AND cm.start_time < v_end_time
+          AND COALESCE(cm.end_time, cm.start_time + interval '90 minutes') > v_m.start_time
+      ) AS has_conflict,
       COALESCE(r.received, 0) AS resp_received,
       CASE
         WHEN COALESCE(r.received, 0) >= 3 THEN
@@ -433,7 +471,11 @@ BEGIN
     SELECT
       s.*,
       LEAST(1.5, GREATEST(0.0,
-        ( 0.25 * (CASE WHEN s.avail_cell THEN 1.0 WHEN s.has_avail_rows THEN 0.0 ELSE 0.4 END)
+        ( 0.25 * (CASE
+            WHEN s.has_conflict THEN 0.0
+            WHEN NOT s.has_avail_rows THEN 0.4
+            ELSE s.avail_hours::numeric / GREATEST(v_hours_total, 1)
+          END)
         + 0.18 * s.score_skill
         + 0.17 * s.score_responsiveness
         + 0.10 * s.score_match_type
@@ -475,9 +517,11 @@ BEGIN
     f.rep_public,
     f.dist_m,
     f.compat,
-    f.avail_cell,
+    (NOT f.has_conflict AND v_hours_total > 0 AND f.avail_hours = v_hours_total),
     (f.resp_received >= 3 AND f.score_responsiveness >= 0.7),
-    (f.score_activity >= 0.85),
+    -- 1.0 is the 7-day bucket: the UI says "Active this week", so the flag has
+    -- to mean this week (0.85 was the 14-day bucket).
+    (f.score_activity >= 1.0),
     (f.pair_count >= 1),
     (v_gate_rating_score_id IS NOT NULL AND f.rating_score_id = v_gate_rating_score_id),
     (f.fav_facility OR f.plays_here >= 2),
