@@ -52,9 +52,6 @@ export interface MapArea {
 
 const MATCH_PAGE_SIZE = 36;
 const FACILITY_PAGE_SIZE = 24;
-// The "all" list shows a short preview of each dataset; "see all" jumps to the
-// dedicated view.
-const ALL_VIEW_SECTION_SIZE = 6;
 /** Results beyond this radius aren't "near you" — lists cap here and only
  * widen (with a notice) when the capped search comes back empty. */
 export const SEARCH_RADIUS_KM = 100;
@@ -233,7 +230,7 @@ export default function PlayExplorer({
       if (value == null || value === '') url.searchParams.delete(key);
       else url.searchParams.set(key, value);
     };
-    assign('kind', kind === 'all' ? null : kind);
+    assign('kind', kind === (viewMode === 'map' ? 'all' : 'games') ? null : kind);
     assign('view', viewMode === 'list' ? null : viewMode);
     assign('sport', activeSportSlug);
     assign('date', dateFilter === 'all' ? null : dateFilter);
@@ -422,6 +419,13 @@ export default function PlayExplorer({
     }
   };
 
+  // "All" only exists on the map (the one surface that mixes both datasets);
+  // lists are always a single kind.
+  const handleViewChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (mode === 'list' && kind === 'all') setKind('games');
+  };
+
   // Map data — one page per dataset around the queried area (the visitor's
   // location by default, or wherever they last hit "search this area").
   useEffect(() => {
@@ -605,14 +609,6 @@ export default function PlayExplorer({
     return list;
   }, [mapMatches, dateFilter, kind, openOnly]);
 
-  // The "all" preview surfaces joinable games before full ones.
-  const previewMatches = useMemo(() => {
-    const open: PublicMatch[] = [];
-    const full: PublicMatch[] = [];
-    for (const m of availableMatches) (getMatchCounts(m).isFull ? full : open).push(m);
-    return [...open, ...full].slice(0, ALL_VIEW_SECTION_SIZE);
-  }, [availableMatches]);
-
   // Date-grouped games (games-only list view).
   const dateGroups = useMemo(() => {
     const groups: Array<{
@@ -652,7 +648,7 @@ export default function PlayExplorer({
     (kind !== 'courts' && !matchesLoaded && matches.length === 0) ||
     (kind !== 'games' && !facilitiesLoaded && facilities.length === 0);
 
-  // The "all" list is a fixed preview of each section — no pagination there.
+  // List views are always a single kind ("all" exists only on the map).
   const hasMore =
     (kind === 'games' && matchesHasMore) || (kind === 'courts' && facilitiesHasMore);
 
@@ -660,21 +656,13 @@ export default function PlayExplorer({
     !isLoading &&
     matchesLoaded &&
     facilitiesLoaded &&
-    (kind === 'games'
-      ? matches.length === 0
-      : kind === 'courts'
-        ? facilities.length === 0
-        : matches.length === 0 && facilities.length === 0);
+    (kind === 'courts' ? facilities.length === 0 : matches.length === 0);
 
   const showWidenedNotice =
     coords != null &&
     !isLoading &&
     !isEmpty &&
-    (kind === 'games'
-      ? matchesWidened
-      : kind === 'courts'
-        ? facilitiesWidened
-        : matchesWidened || facilitiesWidened);
+    (kind === 'courts' ? facilitiesWidened : matchesWidened);
 
   // Auto-load the next page as the sentinel scrolls into range (button kept
   // as a no-JS-observer fallback).
@@ -696,12 +684,12 @@ export default function PlayExplorer({
   const filterControls = (
     <div className="sticky top-3 z-40 flex w-full flex-col items-center gap-3">
       <div className="flex w-full max-w-full flex-nowrap items-center justify-start gap-x-2 gap-y-2 overflow-x-auto rounded-2xl border border-border/70 bg-background/85 px-3 py-2 shadow-lg shadow-black/5 backdrop-blur-md [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:justify-center sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-        <KindChips kind={kind} onChange={handleKindChange} />
+        <KindChips kind={kind} includeAll={viewMode === 'map'} onChange={handleKindChange} />
 
         <ControlDivider />
         <ViewToggle
           viewMode={viewMode}
-          onChange={setViewMode}
+          onChange={handleViewChange}
           listLabel={tGames('listView')}
           mapLabel={tGames('mapView')}
         />
@@ -837,17 +825,17 @@ export default function PlayExplorer({
           </div>
           <div className="max-w-md space-y-2">
             <h2 className="text-2xl font-bold">
-              {kind === 'games' && mineOnly
-                ? tGames('myGamesEmptyTitle')
-                : kind === 'courts'
-                  ? tCourts('emptyTitle')
+              {kind === 'courts'
+                ? tCourts('emptyTitle')
+                : mineOnly
+                  ? tGames('myGamesEmptyTitle')
                   : t('emptyTitle')}
             </h2>
             <p className="text-muted-foreground">
-              {kind === 'games' && mineOnly
-                ? tGames('myGamesEmptyDescription')
-                : kind === 'courts'
-                  ? tCourts('emptyDescription')
+              {kind === 'courts'
+                ? tCourts('emptyDescription')
+                : mineOnly
+                  ? tGames('myGamesEmptyDescription')
                   : t('emptyDescription')}
             </p>
           </div>
@@ -886,63 +874,6 @@ export default function PlayExplorer({
             {tGames('clearFilters')}
           </Button>
         </div>
-      )}
-
-      {/* All view: separate games and courts sections — only the map mixes both */}
-      {kind === 'all' && !isLoading && !isEmpty && (
-        <>
-          {previewMatches.length > 0 && (
-            <section className="flex w-full flex-col gap-4">
-              <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="text-xl font-bold tracking-tight">{t('gamesSectionTitle')}</h2>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                  {matchesHasMore
-                    ? t('gamesTotalPlus', { count: matches.length })
-                    : t('gamesTotal', { count: matches.length })}
-                </span>
-                <button
-                  onClick={() => handleKindChange('games')}
-                  className="ml-auto text-sm font-medium text-primary hover:underline"
-                >
-                  {t('seeAllGames')}
-                </button>
-              </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {previewMatches.map(match => (
-                  <PublicMatchCard
-                    key={match.id}
-                    match={match}
-                    viewerPlayerId={viewerPlayerId}
-                    onJoin={handleJoin}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-          {facilities.length > 0 && (
-            <section className="flex w-full flex-col gap-4">
-              <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="text-xl font-bold tracking-tight">{t('courtsSectionTitle')}</h2>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                  {facilitiesHasMore
-                    ? t('courtsTotalPlus', { count: facilities.length })
-                    : t('courtsTotal', { count: facilities.length })}
-                </span>
-                <button
-                  onClick={() => handleKindChange('courts')}
-                  className="ml-auto text-sm font-medium text-primary hover:underline"
-                >
-                  {t('seeAllCourts')}
-                </button>
-              </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {facilities.slice(0, ALL_VIEW_SECTION_SIZE).map(facility => (
-                  <FacilityCard key={facility.id} facility={facility} onBook={handleBook} />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
       )}
 
       {/* Games view: date-grouped carousels */}
@@ -1002,10 +933,19 @@ export default function PlayExplorer({
 // Kind chips (All / Games / Courts)
 // ---------------------------------------------------------------------------
 
-function KindChips({ kind, onChange }: { kind: PlayKind; onChange: (kind: PlayKind) => void }) {
+function KindChips({
+  kind,
+  includeAll,
+  onChange,
+}: {
+  kind: PlayKind;
+  /** "All" is only offered on the map — lists show one kind at a time. */
+  includeAll: boolean;
+  onChange: (kind: PlayKind) => void;
+}) {
   const t = useTranslations('playPage');
   const chips: Array<{ key: PlayKind; label: string }> = [
-    { key: 'all', label: t('filterAll') },
+    ...(includeAll ? [{ key: 'all' as const, label: t('filterAll') }] : []),
     { key: 'games', label: t('filterGames') },
     { key: 'courts', label: t('filterCourts') },
   ];
