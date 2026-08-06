@@ -14,10 +14,12 @@ export const SMOKE_TEST_ID = 'wtp_smoke_v3_slice_2026';
 /**
  * Funnel revision, carried on every event. v3.1 added the simulated liquidity
  * signal before the contact ask; v3.2 dropped the price A/B and the weekly
- * tier for fixed $1.99 / $6.99-month pricing. Each revision shifts conversion,
- * so cohorts must never be pooled — analysis filters on this.
+ * tier for fixed $1.99 / $6.99-month pricing; v3.3 added the decline button on
+ * the price screen, so earlier cohorts had no way to say no but leaving. Each
+ * revision shifts conversion, so cohorts must never be pooled — analysis
+ * filters on this.
  */
-export const FUNNEL_VERSION = 'v3.2_fixed_pricing';
+export const FUNNEL_VERSION = 'v3.3_decline_option';
 
 // ---- Sport ----
 
