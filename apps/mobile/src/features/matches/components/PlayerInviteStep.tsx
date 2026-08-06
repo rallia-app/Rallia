@@ -110,10 +110,13 @@ function getInitials(name: string): string {
 }
 
 // =============================================================================
-// PLAYER CARD COMPONENT
+// PLAYER ROW COMPONENT
 // =============================================================================
+// Mirrors ParticipantRow (tournament/league rosters): flat surface, hairline
+// dividers, 40pt avatar, badges under the name — no card chrome. The invite
+// additions are the trailing distance + selection checkbox and reason badges.
 
-interface PlayerCardProps {
+interface PlayerRowProps {
   player: PlayerSearchResult;
   isSelected: boolean;
   onToggle: (player: PlayerSearchResult) => void;
@@ -124,9 +127,11 @@ interface PlayerCardProps {
   reasons?: { key: ReasonKey; label: string }[];
   /** Pre-formatted distance from the game (e.g. "12 km") */
   distanceLabel?: string;
+  /** Hairline separator above the row; set on every row after the first. */
+  showDivider?: boolean;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({
+const PlayerRow: React.FC<PlayerRowProps> = ({
   player,
   isSelected,
   onToggle,
@@ -135,6 +140,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   reputationDisplay,
   reasons,
   distanceLabel,
+  showDivider,
 }) => {
   const handlePress = () => {
     selectionHaptic();
@@ -146,12 +152,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <TouchableOpacity
       style={[
-        styles.playerCard,
-        {
-          backgroundColor: isSelected ? `${colors.buttonActive}12` : colors.cardBackground,
-          borderColor: isSelected ? colors.buttonActive : colors.border,
-          borderWidth: isSelected ? 1.5 : StyleSheet.hairlineWidth,
+        styles.playerRow,
+        showDivider && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.border,
         },
+        isSelected && { backgroundColor: `${colors.buttonActive}0D` },
       ]}
       onPress={handlePress}
       activeOpacity={0.7}
@@ -159,57 +165,29 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       accessibilityState={{ checked: isSelected }}
       accessibilityLabel={fullName}
     >
-      {/* Avatar keeps its own column on the left */}
-      <View
-        style={[
-          styles.avatarRing,
-          { borderColor: isSelected ? colors.buttonActive : 'transparent' },
-        ]}
-      >
-        {player.profile_picture_url ? (
-          <Image
-            source={{ uri: getProfilePictureUrl(player.profile_picture_url) || '' }}
-            style={styles.avatar}
-          />
-        ) : (
-          <View style={[styles.avatarFallback, { backgroundColor: `${colors.buttonActive}1A` }]}>
-            <Text size="base" weight="semibold" color={colors.buttonActive}>
-              {getInitials(fullName)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Right column: name + distance on one row, badges on the next */}
-      <View style={styles.playerInfo}>
-        <View style={styles.nameRow}>
-          <Text
-            size="base"
-            weight="semibold"
-            color={colors.text}
-            numberOfLines={1}
-            style={styles.nameText}
-          >
-            {fullName}
+      {player.profile_picture_url ? (
+        <Image
+          source={{ uri: getProfilePictureUrl(player.profile_picture_url) || '' }}
+          style={styles.avatar}
+        />
+      ) : (
+        <View
+          style={[
+            styles.avatar,
+            styles.avatarFallback,
+            { backgroundColor: `${colors.buttonActive}1A` },
+          ]}
+        >
+          <Text size="sm" weight="semibold" color={colors.buttonActive}>
+            {getInitials(fullName)}
           </Text>
-          {distanceLabel && (
-            <Text size="xs" color={colors.textMuted}>
-              {distanceLabel}
-            </Text>
-          )}
-          <View
-            style={[
-              styles.checkCircle,
-              {
-                backgroundColor: isSelected ? colors.buttonActive : 'transparent',
-                borderColor: isSelected ? colors.buttonActive : colors.border,
-              },
-            ]}
-          >
-            {isSelected && <Ionicons name="checkmark" size={15} color={colors.buttonTextActive} />}
-          </View>
         </View>
+      )}
 
+      <View style={styles.playerInfo}>
+        <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+          {fullName}
+        </Text>
         {(player.rating || reputationDisplay || (reasons && reasons.length > 0)) && (
           <View style={styles.badgesRow}>
             {player.rating && (
@@ -235,6 +213,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             ))}
           </View>
         )}
+      </View>
+
+      <View style={styles.trailing}>
+        {distanceLabel && (
+          <Text size="xs" color={colors.textMuted}>
+            {distanceLabel}
+          </Text>
+        )}
+        <View
+          style={[
+            styles.checkCircle,
+            {
+              backgroundColor: isSelected ? colors.buttonActive : 'transparent',
+              borderColor: isSelected ? colors.buttonActive : colors.border,
+            },
+          ]}
+        >
+          {isSelected && <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -526,8 +523,8 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
 
   // Render player item
   const renderPlayer = useCallback(
-    ({ item }: { item: PlayerSearchResult }) => (
-      <PlayerCard
+    ({ item, index }: { item: PlayerSearchResult; index: number }) => (
+      <PlayerRow
         player={item}
         isSelected={selectedPlayerIds.has(item.id)}
         onToggle={handleTogglePlayer}
@@ -536,6 +533,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         reputationDisplay={getReputationDisplay(item)}
         reasons={getReasons(item)}
         distanceLabel={getDistanceLabel(item)}
+        showDivider={index > 0}
       />
     ),
     [
@@ -835,61 +833,43 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  // ---- Player card ----
-  playerCard: {
+  // ---- Player row (mirrors ParticipantRow: flat, hairline dividers) ----
+  playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.xl,
-    marginBottom: spacingPixels[2],
     gap: spacingPixels[3],
-  },
-  // Ring is always laid out (transparent when unselected) so selecting a
-  // card never shifts the row's layout.
-  avatarRing: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Right column stacks the name row over the badge row.
   playerInfo: {
     flex: 1,
-    gap: spacingPixels[2],
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-  nameText: {
-    flex: 1,
+    minWidth: 0,
+    gap: spacingPixels[1],
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
+    gap: spacingPixels[1.5],
     flexWrap: 'wrap',
   },
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    flexShrink: 0,
+  },
   checkCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
