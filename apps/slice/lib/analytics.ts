@@ -26,6 +26,7 @@ export type SmokeEventName =
   | 'pricing_viewed'
   | 'plan_selected'
   | 'payment_intent_click'
+  | 'plan_declined'
   | 'test_reveal_shown';
 
 /** The attributes joined to every smoke-test event (brief §4.3). */
