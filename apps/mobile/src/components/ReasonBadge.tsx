@@ -12,7 +12,14 @@ import { StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, accent, status } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  accent,
+  secondary,
+  status,
+} from '@rallia/design-system';
 
 export type ReasonKey =
   | 'playedTogether'
@@ -20,7 +27,8 @@ export type ReasonKey =
   | 'responsive'
   | 'sameRating'
   | 'activeRecently'
-  | 'favoriteFacility';
+  | 'favoriteFacility'
+  | 'nearby';
 
 /** Accent + icon per reason. Colors come from the design system scales. */
 export const REASON_BADGE_CONFIG: Record<
@@ -34,6 +42,7 @@ export const REASON_BADGE_CONFIG: Record<
   sameRating: { color: primary[500], icon: 'git-compare' },
   activeRecently: { color: status.success.light, icon: 'pulse' },
   favoriteFacility: { color: accent[600], icon: 'location' },
+  nearby: { color: secondary[500], icon: 'navigate' },
 };
 
 function withAlpha(hex: string, alpha: number): string {

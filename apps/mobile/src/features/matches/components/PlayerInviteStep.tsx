@@ -114,7 +114,8 @@ function getInitials(name: string): string {
 // =============================================================================
 // Mirrors ParticipantRow (tournament/league rosters): flat surface, hairline
 // dividers, 40pt avatar, badges under the name — no card chrome. The invite
-// additions are the trailing distance + selection checkbox and reason badges.
+// additions are the trailing selection checkbox and the reason badges
+// (proximity shows as a "Nearby" badge under 5 km, not as a distance).
 
 interface PlayerRowProps {
   player: PlayerSearchResult;
@@ -125,8 +126,6 @@ interface PlayerRowProps {
   reputationDisplay?: ReputationDisplay;
   /** Why this player is suggested — rendered as badges in the same family */
   reasons?: { key: ReasonKey; label: string }[];
-  /** Pre-formatted distance from the game (e.g. "12 km") */
-  distanceLabel?: string;
   /** Hairline separator above the row; set on every row after the first. */
   showDivider?: boolean;
 }
@@ -139,7 +138,6 @@ const PlayerRow: React.FC<PlayerRowProps> = ({
   isDark,
   reputationDisplay,
   reasons,
-  distanceLabel,
   showDivider,
 }) => {
   const handlePress = () => {
@@ -216,11 +214,6 @@ const PlayerRow: React.FC<PlayerRowProps> = ({
       </View>
 
       <View style={styles.trailing}>
-        {distanceLabel && (
-          <Text size="xs" color={colors.textMuted}>
-            {distanceLabel}
-          </Text>
-        )}
         <View
           style={[
             styles.checkCircle,
@@ -507,19 +500,17 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       if (reasons.favoriteFacility)
         out.push({ key: 'favoriteFacility', label: t('matchCreation.invite.chips.playsHere') });
       // Two strongest reasons only: more than that wraps into a third row and
-      // makes every card tall without adding decision value.
-      return out.slice(0, 2);
+      // makes every row tall without adding decision value.
+      const capped = out.slice(0, 2);
+      // Nearby sits outside the cap: it replaces the always-visible distance
+      // text, so it must show whenever the player is under 5 km from the game.
+      if (item.distance_meters != null && item.distance_meters < 5000) {
+        capped.push({ key: 'nearby', label: t('matchCreation.invite.chips.nearby') });
+      }
+      return capped;
     },
     [t]
   );
-
-  // Distance from the game, rounded for glanceability.
-  const getDistanceLabel = useCallback((item: PlayerSearchResult): string | undefined => {
-    const meters = item.distance_meters;
-    if (meters == null) return undefined;
-    const km = meters / 1000;
-    return km < 1 ? '<1 km' : `${Math.round(km)} km`;
-  }, []);
 
   // Render player item
   const renderPlayer = useCallback(
@@ -532,19 +523,10 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         isDark={isDark}
         reputationDisplay={getReputationDisplay(item)}
         reasons={getReasons(item)}
-        distanceLabel={getDistanceLabel(item)}
         showDivider={index > 0}
       />
     ),
-    [
-      selectedPlayerIds,
-      handleTogglePlayer,
-      colors,
-      isDark,
-      getReputationDisplay,
-      getReasons,
-      getDistanceLabel,
-    ]
+    [selectedPlayerIds, handleTogglePlayer, colors, isDark, getReputationDisplay, getReasons]
   );
 
   // Render footer (loading indicator for infinite scroll)
@@ -839,6 +821,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[3],
     paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[2],
   },
   avatar: {
     width: 40,
