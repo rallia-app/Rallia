@@ -147,6 +147,55 @@ function fetchSignal(parent?: AbortSignal): AbortSignal {
   return parent ? AbortSignal.any([timeout, parent]) : timeout;
 }
 
+/** How many redirect hops we re-issue a POST across before giving up. */
+const MAX_POST_REDIRECTS = 3;
+
+/**
+ * POST JSON, following redirects ourselves so the method and body survive.
+ *
+ * Default `fetch` follows a 301/302 on a POST by re-issuing it as a bodyless
+ * GET (WHATWG spec), which a POST-only API answers with 405. Loisirs Montréal
+ * did exactly this on 2026-08-05 by adding a trailing-slash redirect: every
+ * Montréal facility silently stopped refreshing for two days behind a
+ * misleading `IC3 HTTP 405`. Following the chain by hand keeps a future
+ * provider move working, and an unfollowable redirect surfaces as itself
+ * instead of as a downstream status code.
+ */
+async function postJsonFollowingRedirects(
+  url: string,
+  body: unknown,
+  label: string,
+  signal?: AbortSignal
+): Promise<Response> {
+  const payload = JSON.stringify(body);
+  let target = url;
+
+  for (let hop = 0; hop < MAX_POST_REDIRECTS; hop++) {
+    const res = await fetch(target, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      redirect: 'manual',
+      signal: fetchSignal(signal),
+    });
+    if (res.status < 300 || res.status >= 400) return res;
+
+    const location = res.headers.get('location');
+    await res.body?.cancel();
+    if (!location) {
+      throw new Error(`${label} HTTP ${res.status} redirect with no Location header`);
+    }
+    // 303 means "GET this other resource" and carries no promise that the
+    // target accepts our payload, so re-POSTing it would be wrong.
+    if (res.status === 303) {
+      throw new Error(`${label} HTTP 303 redirect to ${location}: cannot re-POST`);
+    }
+    target = new URL(location, target).toString();
+  }
+
+  throw new Error(`${label}: more than ${MAX_POST_REDIRECTS} redirects, gave up at ${target}`);
+}
+
 // =============================================================================
 // IC3 / Otium
 // =============================================================================
@@ -169,9 +218,20 @@ interface IC3SearchResponse {
   results?: IC3Slot[];
 }
 
+/** Canonical IC3 search path: always trailing-slashed, query string excluded.
+ *  Exported for the provider tests. */
+export function normalizeIC3SearchPath(configured: string | undefined): string {
+  const path = configured && configured.length > 0 ? configured : '/public/search';
+  return path.endsWith('/') ? path : `${path}/`;
+}
+
 async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<FetchResult> {
-  const searchPath = (config.apiConfig.searchPath as string | undefined) ?? '/public/search';
   const pageSize = (config.apiConfig.defaultLimit as number | undefined) ?? 500;
+  // IC3 hosts canonicalize the search endpoint to a trailing slash and 301 the
+  // slash-less form. Every municipality accepts the canonical form directly
+  // (verified against Montréal, Boucherville, Blainville), so normalize rather
+  // than pay a redirect per page.
+  const searchPath = normalizeIC3SearchPath(config.apiConfig.searchPath as string | undefined);
   const url = `${config.apiBaseUrl}${searchPath}?_=${Date.now()}`;
   const siteId = parseInt(params.externalProviderId, 10);
   // Date format the IC3 endpoints expect — Eastern Time offset, midnight.
@@ -197,12 +257,7 @@ async function fetchIC3(config: ProviderConfig, params: FetchParams): Promise<Fe
       isSortOrderAsc: true,
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: fetchSignal(params.signal),
-    });
+    const res = await postJsonFollowingRedirects(url, body, 'IC3', params.signal);
     if (!res.ok) throw new Error(`IC3 HTTP ${res.status}`);
     const json: IC3SearchResponse = await res.json();
 

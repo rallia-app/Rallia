@@ -38,6 +38,37 @@ export function parseJsonResponse<T>(raw: string): T {
   return JSON.parse(s) as T;
 }
 
+/** Raw outcome of one XHR round trip, before any status interpretation. */
+interface XhrResult {
+  status: number;
+  statusText: string;
+  responseText: string;
+  /** Final URL after any redirects the XHR layer followed on its own. */
+  responseURL?: string;
+}
+
+function isSuccessStatus(status: number): boolean {
+  return status >= 200 && status < 300;
+}
+
+function parseXhrBody<T>(result: XhrResult): T {
+  try {
+    return parseJsonResponse<T>(result.responseText);
+  } catch (parseErr) {
+    const raw = result.responseText;
+    const char0 = raw.charCodeAt(0);
+    const parseMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    // tail tells us whether the body is truncated (ends mid-value) vs
+    // genuinely malformed (ends with `}` but invalid somewhere inside).
+    // parseMessage typically includes the position where parsing failed.
+    const head = raw.slice(0, 50);
+    const tail = raw.slice(-50);
+    throw new Error(
+      `Provider API returned non-JSON response (${raw.length} chars, char0=0x${char0.toString(16)}, parseError="${parseMessage}", head=${JSON.stringify(head)}, tail=${JSON.stringify(tail)})`
+    );
+  }
+}
+
 /**
  * Abstract base class for availability providers.
  *
@@ -122,44 +153,67 @@ export abstract class BaseAvailabilityProvider {
     const body =
       options.method === 'POST' && options.body ? JSON.stringify(options.body) : undefined;
 
-    // Use XMLHttpRequest instead of fetch — React Native's fetch on Android/Hermes
-    // truncates response bodies, causing JSON parse failures
-    return new Promise<T>((resolve, reject) => {
+    const first = await this.sendXhr(url, options.method, allHeaders, body, timeout);
+    if (isSuccessStatus(first.status)) {
+      return parseXhrBody<T>(first);
+    }
+
+    // XMLHttpRequest follows redirects itself, and per spec a 301/302 on a POST
+    // is re-issued as a bodyless GET — which a POST-only endpoint answers with
+    // 405. There is no `redirect: 'manual'` escape hatch for XHR, so detect the
+    // hop after the fact via responseURL and re-issue the POST against the
+    // resolved URL. Loisirs Montréal added exactly such a redirect on
+    // 2026-08-05 and every Montréal facility went dark behind a bare 405.
+    const redirectedTo =
+      first.responseURL && first.responseURL !== url ? first.responseURL : undefined;
+    if (redirectedTo && options.method === 'POST') {
+      const retry = await this.sendXhr(redirectedTo, 'POST', allHeaders, body, timeout);
+      if (isSuccessStatus(retry.status)) {
+        return parseXhrBody<T>(retry);
+      }
+      throw new Error(
+        `Provider API error after redirect (${url} -> ${redirectedTo}): ${retry.status} ${retry.statusText} - ${(retry.responseText || '').slice(0, 200)}`
+      );
+    }
+
+    throw new Error(
+      `Provider API error: ${first.status} ${first.statusText} - ${(first.responseText || '').slice(0, 200)}`
+    );
+  }
+
+  /**
+   * One XHR round trip. Resolves for any HTTP status (the caller decides what
+   * counts as a failure) and rejects only on timeout or transport error.
+   *
+   * Uses XMLHttpRequest instead of fetch — React Native's fetch on
+   * Android/Hermes truncates response bodies, causing JSON parse failures.
+   */
+  private sendXhr(
+    url: string,
+    method: 'GET' | 'POST',
+    headers: Record<string, string>,
+    body: string | undefined,
+    timeout: number
+  ): Promise<XhrResult> {
+    return new Promise<XhrResult>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open(options.method, url, true);
+      xhr.open(method, url, true);
       xhr.timeout = timeout;
       xhr.responseType = 'text';
 
-      for (const [key, value] of Object.entries(allHeaders)) {
+      for (const [key, value] of Object.entries(headers)) {
         xhr.setRequestHeader(key, value);
       }
 
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            resolve(parseJsonResponse<T>(xhr.responseText));
-          } catch (parseErr) {
-            const raw = xhr.responseText;
-            const char0 = raw.charCodeAt(0);
-            const parseMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
-            // tail tells us whether the body is truncated (ends mid-value) vs
-            // genuinely malformed (ends with `}` but invalid somewhere inside).
-            // parseMessage typically includes the position where parsing failed.
-            const head = raw.slice(0, 50);
-            const tail = raw.slice(-50);
-            reject(
-              new Error(
-                `Provider API returned non-JSON response (${raw.length} chars, char0=0x${char0.toString(16)}, parseError="${parseMessage}", head=${JSON.stringify(head)}, tail=${JSON.stringify(tail)})`
-              )
-            );
-          }
-        } else {
-          reject(
-            new Error(
-              `Provider API error: ${xhr.status} ${xhr.statusText} - ${(xhr.responseText || '').slice(0, 200)}`
-            )
-          );
-        }
+        resolve({
+          status: xhr.status,
+          statusText: xhr.statusText,
+          responseText: xhr.responseText,
+          // Not implemented on every RN/XHR version; absent means "unknown",
+          // which the caller treats as "no redirect detected".
+          responseURL: xhr.responseURL || undefined,
+        });
       };
 
       xhr.ontimeout = () => {
