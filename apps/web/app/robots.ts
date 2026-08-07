@@ -12,6 +12,7 @@ const DISALLOW_PRIVATE = [
   '/*/onboarding/',
   '/*/sign-in',
   '/*/match/',
+  '/*/player/',
   '/*/invite/',
   '/*/join/',
   '/*/match-invite/',

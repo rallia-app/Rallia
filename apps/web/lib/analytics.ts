@@ -37,6 +37,7 @@ export type AppStorePlacement =
   | 'hero'
   | 'download_dialog'
   | 'match_page'
+  | 'player_page'
   | 'invite_page'
   | 'join_dialog'
   | 'web_book';
