@@ -1643,11 +1643,9 @@ export const LeagueDetail: React.FC = () => {
     { seasonId: openSeasonId },
     isOrganizer && isPaidSeason
   );
-  // Stripe-hosted receipt for the viewer's own paid enrollment.
-  const { data: seasonReceiptUrl } = useSeasonReceiptUrl(
-    mySeasonMembership?.id,
-    isPaidSeason && isEnrolledInSeason
-  );
+  // Stripe-hosted receipt for the viewer's own paid enrollment. Not gated on
+  // enrollment: after a withdrawal that same receipt is where the refund shows up.
+  const { data: seasonReceiptUrl } = useSeasonReceiptUrl(mySeasonMembership?.id, isPaidSeason);
   const { mutateAsync: createSeasonPayment, isPending: isPayingSeason } =
     useCreateSeasonEnrollmentPayment();
   const { mutateAsync: refundSeasonEnrollmentAsync, isPending: isRefundingSeason } =

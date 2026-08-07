@@ -1564,10 +1564,11 @@ export const TournamentDetail: React.FC = () => {
     { tournamentId: params.tournamentId },
     isOrganizer && isPaidTournament
   );
-  // Stripe-hosted receipt for the payer's own paid registration.
+  // Stripe-hosted receipt for the payer's own paid registration. Not gated on
+  // status: after a withdrawal that same receipt is where the refund shows up.
   const { data: receiptUrl } = useRegistrationReceiptUrl(
     myRegistration?.id,
-    isPaidTournament && myRegistration?.status === 'registered' && myRegistration.user_id === userId
+    isPaidTournament && myRegistration?.user_id === userId
   );
 
   // Post-onboarding management: opens the Stripe Express dashboard (update bank
@@ -3382,8 +3383,9 @@ export const TournamentDetail: React.FC = () => {
             </LinearGradient>
           </View>
 
-          {/* One chip row replaces the registered band and the chat button. */}
-          {showRegisteredChip || !!chatConversationId ? (
+          {/* One chip row replaces the registered band and the chat button. The
+              receipt keeps the row alive on its own once the player has withdrawn. */}
+          {showRegisteredChip || !!chatConversationId || !!receiptUrl ? (
             <View style={styles.heroChipRow}>
               {showRegisteredChip ? (
                 <HeroChip

@@ -104,6 +104,11 @@
         color: #4b5563;
       }
 
+      .pill.new {
+        background: #eef2ff;
+        color: #4338ca;
+      }
+
       .fixtures-table {
         width: 100%;
         border-collapse: collapse;
@@ -186,7 +191,16 @@
     <h1>Protocole de test des paiements</h1>
     <p class="meta">
       Compte de test : <strong>jdl.sonkin+10@gmail.com</strong> · Environnement :
-      <strong>staging</strong> · Stripe en mode <strong>test (sandbox)</strong> · 2 août 2026
+      <strong>staging</strong> · Stripe en mode <strong>test (sandbox)</strong> · 2 août 2026,
+      mis à jour le 7 août 2026
+    </p>
+
+    <p class="lifecycle">
+      <strong>Ce qui change depuis la dernière passe.</strong> Les fixtures ont été remises à zéro :
+      tout le protocole se rejoue au complet, y compris les scénarios à usage unique de la section 1.
+      Nouveauté à valider cette fois : <strong>les reçus</strong>. Les étapes concernées portent la
+      pastille <span class="pill new">nouveau</span> (4.1, 4.2, 4.3, 4.6 et 5.2). Si ton temps est
+      limité, ce sont celles-là qui comptent le plus.
     </p>
 
     <p class="section-intro">
@@ -221,10 +235,24 @@
       sont <strong>jamais</strong> remboursés, même sur un remboursement complet.
     </p>
 
+    <p class="lifecycle">
+      <strong>Les reçus <span class="pill new">nouveau</span> :</strong> chaque fois qu'un joueur paie
+      pour de vrai, Stripe produit un reçu. L'app garde le lien et l'affiche sur l'événement, dans la
+      rangée de pastilles en haut de l'écran : <strong>Voir le reçu</strong>. Le reçu porte le nom de
+      l'événement, le montant réellement payé, et il se met à jour tout seul si tu te fais rembourser
+      plus tard. C'est le même bouton sur un tournoi et sur une saison de ligue.
+    </p>
+
     <h2>0. Avant de commencer</h2>
 
     <ul>
       <li>Utilise le build <strong>preview</strong> (pas production). Il pointe vers staging et vers Stripe en mode test.</li>
+      <li>
+        <strong>Ouvre et ferme l'app une fois avant de commencer</strong>, puis rouvre-la. Les
+        nouveautés arrivent par mise à jour automatique : elle se télécharge au premier lancement et
+        s'applique seulement au suivant. Sans ça, tu testerais l'app d'avant et le bouton
+        <strong>Voir le reçu</strong> n'existerait nulle part.
+      </li>
       <li>Carte de test : <strong>4242 4242 4242 4242</strong>, n'importe quelle date future, n'importe quel CVC, code postal <strong>H3T 1X8</strong>.</li>
       <li>Aucune vraie carte, aucun vrai compte bancaire. Stripe affiche « You're using a test account with test data » en haut de ses écrans : si tu ne vois pas ça, arrête et signale-le.</li>
       <li>Les montants sont fictifs mais les écrans sont les vrais. Prends une capture d'écran de tout ce qui te semble croche.</li>
@@ -421,12 +449,30 @@
         <li>Vérifie le détail avant de payer : entrée 15,00 $ + frais de service 0,75 $ + taxes sur les frais 0,11 $. Le total doit être exactement <strong>15,86 $</strong>.</li>
         <li>Paie avec <strong>4242 4242 4242 4242</strong>.</li>
         <li>Attends le retour dans l'app sans fermer l'écran.</li>
+        <li>
+          <span class="pill new">nouveau</span> Une pastille <strong>Voir le reçu</strong> apparaît en
+          haut de l'écran du tournoi, à côté de <strong>Inscrit</strong>. Touche-la : ton navigateur
+          ouvre le reçu Stripe.
+        </li>
+        <li>
+          Sur le reçu, vérifie deux choses : le montant est bien <strong>15,86 $</strong>, et la
+          description nomme l'événement, soit
+          <span class="fixture">Rallia · [PAYUI-JDL] LIVE register + pay</span>. Un reçu qui dirait
+          seulement « Rallia » ou « tournament registration » est un défaut : signale-le.
+        </li>
       </ol>
       <p class="check">
         <strong>Attendu :</strong> confirmation de paiement, puis ton statut passe à
         <strong>inscrit</strong> et le compteur de places monte de 1. Si tu restes en
         « paiement en attente » plus d'une minute, signale-le : ça veut dire que le webhook de paiement
         n'a pas conclu l'inscription.
+      </p>
+      <p class="check">
+        <strong>Attendu pour le reçu :</strong> la pastille apparaît dans la minute qui suit le
+        paiement. C'est le même webhook qui t'inscrit et qui enregistre le reçu, donc un reçu qui ne
+        vient jamais alors que l'inscription a fonctionné est une anomalie à part entière : note
+        l'heure et signale-la. Si la pastille tarde, ferme et rouvre l'écran du tournoi avant de
+        conclure.
       </p>
     </section>
 
@@ -437,8 +483,14 @@
         <li>Ouvre l'écran de paiement.</li>
         <li>Compare avec le scénario 4.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 2,00 $ de frais et les 0,30 $ de taxes : il reçoit 37,70 $.</li>
         <li>Paie avec la carte de test.</li>
+        <li>
+          <span class="pill new">nouveau</span> Ouvre <strong>Voir le reçu</strong> et compare-le à
+          celui du scénario 4.1. Ici le reçu doit afficher <strong>40,00 $</strong> tout rond, alors
+          que celui de 4.1 affichait 15,86 $. Le reçu montre ce que <em>toi</em> tu as payé : les
+          2,00 $ de frais absorbés par l'organisateur n'ont pas à y paraître.
+        </li>
       </ol>
-      <p class="check"><strong>Attendu :</strong> le total est le prix affiché, ni plus ni moins. C'est la différence visible entre les deux modes de frais.</p>
+      <p class="check"><strong>Attendu :</strong> le total est le prix affiché, ni plus ni moins. C'est la différence visible entre les deux modes de frais, et le reçu doit raconter la même histoire que l'écran de paiement.</p>
     </section>
 
     <section class="block">
@@ -448,14 +500,31 @@
         <span class="pill sim">affichage</span>.
       </p>
       <ol>
+        <li>
+          <span class="pill new">nouveau</span> <strong>Avant de te retirer</strong>, ouvre
+          <strong>Voir le reçu</strong> et note le montant. Tu vas revenir sur cette même page dans
+          deux minutes.
+        </li>
         <li>Retire-toi du tournoi.</li>
         <li>L'app doit annoncer le montant remboursé <strong>avant</strong> de confirmer, et rappeler que les frais de service ne sont pas remboursés.</li>
         <li>Confirme.</li>
+        <li>
+          <span class="pill new">nouveau</span> La pastille <strong>Voir le reçu</strong> doit
+          <strong>rester en place</strong> même si tu n'es plus inscrit au tournoi. Rouvre-la : le
+          remboursement figure maintenant sur la page. C'est le même reçu qui se met à jour, pas un
+          nouveau document.
+        </li>
       </ol>
       <p class="check">
         <strong>Attendu :</strong> ton inscription disparaît, la place se libère, et le remboursement
         annoncé correspond à la politique de l'événement. Le remboursement apparaît dans Stripe en
         quelques secondes.
+      </p>
+      <p class="check">
+        <strong>Attendu pour le reçu :</strong> la pastille survit au retrait, et le montant remboursé
+        affiché sur le reçu est celui que l'app t'avait annoncé, entrée seulement, jamais les frais de
+        service. Une pastille qui disparaît une fois le retrait confirmé est un défaut : c'est
+        précisément au moment où on se fait rembourser qu'on veut pouvoir montrer son reçu.
       </p>
     </section>
 
@@ -482,6 +551,56 @@
         <li><span class="fixture">[PAYUI-JDL] Withdraw → full refund</span>, <span class="fixture">→ 50% refund</span> et <span class="fixture">→ no refund</span> : ouvre-les et lis le montant de remboursement annoncé. Il doit correspondre à la politique de chacun (100 %, 50 %, puis 0 % du prix d'entrée, jamais des frais). <strong>Ne confirme pas le retrait</strong> sur ces trois-là.</li>
         <li><span class="fixture">[PAYUI-JDL] Doubles paid (you + partner)</span> : tournoi en double, 40 $, mode <strong>organisateur absorbe</strong>. Vérifie que ton partenaire apparaît avec toi et qu'une seule inscription payée couvre l'équipe.</li>
       </ol>
+    </section>
+
+    <section class="block">
+      <h3>4.6 Le reçu en détail <span class="pill new">nouveau</span></h3>
+      <p>
+        Reprends un des reçus ouverts aux scénarios 4.1 ou 4.2 et lis la page au complet. C'est un
+        document que de vrais joueurs vont recevoir : s'il a l'air amateur ou incomplet, c'est un
+        problème même si les montants sont bons.
+      </p>
+      <ol>
+        <li>Le nom de l'événement est lisible et c'est le bon.</li>
+        <li>Le montant correspond à ce que tu as payé.</li>
+        <li>La date, le numéro de reçu et les 4 derniers chiffres de la carte sont là.</li>
+        <li>Les coordonnées en bas de page (nom légal, adresse de soutien, courriel, politique de confidentialité) sont présentes et écrites correctement.</li>
+      </ol>
+      <p class="check">
+        <strong>Ce qui est normal, et qui n'est pas un bogue :</strong>
+      </p>
+      <ul>
+        <li>
+          <strong>Le reçu est au nom de Rallia</strong>, pas à celui de l'organisateur. C'est Rallia
+          qui encaisse la carte avant de reverser à l'organisateur, donc c'est notre nom, notre logo
+          et nos coordonnées qui apparaissent. Le nom de l'organisateur, lui, apparaît sur le relevé
+          de carte de crédit.
+        </li>
+        <li>
+          <strong>Aucun courriel de reçu ne t'arrive.</strong> En mode test, Stripe n'envoie jamais de
+          reçu par courriel. Le lien dans l'app est donc la seule chose testable ici : ne cherche pas
+          le courriel, il ne viendra pas.
+        </li>
+        <li>
+          <strong>Pas de pastille Voir le reçu sur les fixtures</strong>
+          <span class="pill sim">affichage</span>. Ces inscriptions ont été créées directement en
+          base : aucun paiement n'existe chez Stripe, donc il n'y a aucun reçu à montrer. Les seules
+          pastilles attendues sont celles des scénarios 4.1, 4.2 et 5.2.
+        </li>
+        <li>
+          <strong>Pas de pastille sur tes propres tournois</strong> (section 3). Le reçu appartient à
+          celui qui a payé : comme organisateur, tu n'as rien payé.
+        </li>
+        <li>
+          Le reçu affiche un seul total et ne détaille pas la part de Rallia et celle de
+          l'organisateur. C'est voulu.
+        </li>
+      </ul>
+      <p class="stop">
+        <strong>Ce qu'il faut signaler :</strong> une pastille qui n'apparaît jamais après un paiement
+        réussi, un lien qui ouvre une page d'erreur, un reçu au nom du mauvais événement, un montant
+        qui ne concorde pas avec ce que tu as payé, ou des coordonnées manquantes en bas du reçu.
+      </p>
     </section>
 
     <h2>5. Ligues payantes</h2>
@@ -525,10 +644,22 @@
         </li>
         <li>Inscris-toi pour de vrai. Vérifie le détail du montant, puis paie avec la carte de test.</li>
         <li>Reviens au classement de la saison.</li>
+        <li>
+          <span class="pill new">nouveau</span> La pastille <strong>Voir le reçu</strong> doit
+          apparaître en haut de l'écran de la ligue, exactement comme sur un tournoi. Ouvre-la : le
+          montant est <strong>42,30 $</strong> (40,00 $ d'entrée + 2,00 $ de frais + 0,30 $ de taxes,
+          mode joueur paie) et la description doit nommer la ligue et la saison, soit
+          <span class="fixture">Rallia · [SEED] Paid League — Demo Hosts · Saison payante</span>.
+        </li>
       </ol>
       <p class="check">
         <strong>Attendu :</strong> tu apparais comme <strong>inscrit</strong> et tu entres dans le
         classement de la saison. Les 5 joueurs fictifs déjà payés y sont aussi.
+      </p>
+      <p class="check">
+        <strong>Pourquoi ça compte :</strong> tournoi et ligue passent par deux chemins de code
+        différents pour arriver au même reçu. Un reçu correct sur un tournoi ne prouve rien pour une
+        ligue, alors ne saute pas cette étape même si 4.1 a bien été.
       </p>
     </section>
 
@@ -546,17 +677,26 @@
     <ul>
       <li><strong>Le versement final à l'organisateur.</strong> L'argent est libéré 24 h après la fin de l'événement par une tâche horaire, et seulement pour un tournoi <strong>terminé</strong>. Aucun fixture n'est dans cet état, donc le versement ne se vérifie pas dans une session de test normale.</li>
       <li><strong>Les remboursements sur les inscriptions pré-payées</strong> (<span class="fixture">pi_sim…</span>). Ils échouent chez Stripe par construction. Utilise les scénarios <span class="pill live">vrai paiement</span> pour valider un vrai remboursement.</li>
+      <li>
+        <strong>Le reçu envoyé par courriel.</strong> En mode test, Stripe n'envoie pas de reçu par
+        courriel : seul le lien dans l'app se vérifie ici. L'envoi automatique se validera en
+        production, une fois l'option activée dans Stripe.
+      </li>
       <li><strong>Le paiement par lien de partage</strong> sur un tournoi payant : le parcours n'aboutit pas encore.</li>
       <li><strong>La création d'un tournoi payant depuis zéro</strong> est réservée aux administrateurs. Ton compte de test l'est, mais un organisateur ordinaire ne verra pas l'option.</li>
     </ul>
 
     <h2>7. Quoi noter en cas de problème</h2>
-    <p class="section-intro">Pour chaque anomalie, note ces quatre choses. Sans elles, un bogue de paiement est très difficile à retracer.</p>
+    <p class="section-intro">Pour chaque anomalie, note ces choses. Sans elles, un bogue de paiement est très difficile à retracer.</p>
     <ol>
       <li><strong>L'heure exacte</strong> (à la minute près).</li>
       <li><strong>Le nom exact du fixture</strong>, tel qu'écrit dans ce document.</li>
       <li><strong>Le montant affiché</strong> à l'écran au moment du problème, et celui que tu attendais.</li>
       <li><strong>Une capture d'écran</strong>, incluant les messages d'erreur ou les toasts.</li>
+      <li>
+        Pour un problème de <strong>reçu</strong> : ajoute l'adresse de la page du reçu, ou une
+        capture de la page si elle s'ouvre.
+      </li>
     </ol>
     <p class="check">
       Si un paiement reste bloqué en « en attente », ne réessaie pas plusieurs fois de suite : chaque
