@@ -188,7 +188,7 @@ const LocationTypeCard: React.FC<LocationTypeCardProps> = ({
     >
       <Ionicons
         name={icon}
-        size={24}
+        size={18}
         color={selected ? colors.buttonTextActive : colors.textMuted}
       />
     </View>
@@ -197,14 +197,17 @@ const LocationTypeCard: React.FC<LocationTypeCardProps> = ({
         size="base"
         weight={selected ? 'semibold' : 'regular'}
         color={selected ? colors.buttonActive : colors.text}
+        numberOfLines={1}
       >
         {title}
       </Text>
-      <Text size="xs" color={colors.textMuted}>
-        {description}
-      </Text>
+      {selected && (
+        <Text size="xs" color={colors.textMuted}>
+          {description}
+        </Text>
+      )}
     </View>
-    {selected && <Ionicons name="checkmark-circle" size={22} color={colors.buttonActive} />}
+    {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
   </TouchableOpacity>
 );
 
@@ -1631,19 +1634,20 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
   },
   locationCards: {
-    gap: spacingPixels[3],
+    gap: spacingPixels[2],
   },
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.xl,
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    gap: spacingPixels[3],
+    gap: spacingPixels[2.5],
   },
   locationIconContainer: {
-    width: 44,
-    height: 44,
+    width: 32,
+    height: 32,
     borderRadius: radiusPixels.full,
     alignItems: 'center',
     justifyContent: 'center',
