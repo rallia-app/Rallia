@@ -55,6 +55,14 @@ UPDATE match SET booking_nudge_sent_at = NULL, unfilled_recovery_sent_at = NULL
 UPDATE player SET push_notifications_enabled = true
  WHERE id = '4ed1fa69-c3c4-4d24-83bf-948fb5a9a537';
 
+-- A declared slot counts as fact for 14 days (tightened from 60 on 2026-08-07).
+-- His schedule was last confirmed 2026-07-28, so it goes stale mid-test and the
+-- play-rhythm nudge would silently stop firing. Re-arming refreshes it.
+-- Testing the real path instead means having him re-save his availability
+-- through the check-in flow, which bumps the same column.
+UPDATE player_availability SET last_confirmed_at = now()
+ WHERE player_id = '4ed1fa69-c3c4-4d24-83bf-948fb5a9a537';
+
 -- ------------------------------------------- 1. invite-ranking badge signals --
 -- Hugo Menard: played together 3x + favourite venue + free at the game hour.
 INSERT INTO match (id, created_by, sport_id, match_date, start_time, end_time,
