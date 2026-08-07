@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, CalendarX, Loader2, MapPin, MapPinned, Users } from 'lucide-react';
+import { Building2, CalendarX, Loader2, MapPin, MapPinned, RotateCw, Users } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -17,9 +17,9 @@ import {
 } from './match-card-parts';
 import { MatchChipRow } from './match-chip';
 import { getViewerMatchStatus, getViewerParticipant } from './match-viewer-status';
-import type { PlayKind } from './play-explorer';
+import type { MapArea, PlayKind } from './play-explorer';
 import type { PublicMatch } from './public-match-card';
-import { formatDuration, resolveMatchCoords } from './utils';
+import { displayableKm, formatDuration, resolveMatchCoords } from './utils';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,10 @@ interface PlayMapProps {
   isLoading?: boolean;
   viewerPlayerId?: string | null;
   center: [number, number] | null;
+  /** Bumped when the map should re-frame to its markers. */
+  fitNonce: number;
+  /** Re-query the datasets around a viewport the visitor panned to. */
+  onSearchArea: (area: MapArea) => void;
   onJoin: (matchId: string) => void;
   onBook: (facility: PublicFacility, slot: SlotGroupRef | null) => void;
 }
@@ -62,6 +66,8 @@ export default function PlayMap({
   isLoading = false,
   viewerPlayerId,
   center,
+  fitNonce,
+  onSearchArea,
   onJoin,
   onBook,
 }: PlayMapProps) {
@@ -69,6 +75,8 @@ export default function PlayMap({
   const tGames = useTranslations('gamesPage');
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  // Set after a user pan/zoom; cleared when they run the area search.
+  const [pendingArea, setPendingArea] = useState<MapArea | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number; ts: number } | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -259,12 +267,14 @@ export default function PlayMap({
         </div>
 
         {/* Map */}
-        <div className="h-[65vh] min-h-[420px] w-full min-w-0 flex-1 lg:h-full">
+        <div className="relative h-[65vh] min-h-[420px] w-full min-w-0 flex-1 lg:h-full">
           <PlayMapInner
             matches={mappableMatches}
             facilities={mappableFacilities}
             viewerPlayerId={viewerPlayerId}
             center={center}
+            fitNonce={fitNonce}
+            onUserMove={setPendingArea}
             onJoin={onJoin}
             onBook={onBook}
             panelMode={isDesktop}
@@ -273,6 +283,23 @@ export default function PlayMap({
             onMarkerClick={handleMarkerClick}
             flyTo={flyTo}
           />
+          {pendingArea && (
+            <button
+              onClick={() => {
+                onSearchArea(pendingArea);
+                setPendingArea(null);
+              }}
+              disabled={isLoading}
+              className="absolute left-1/2 top-3 z-[1000] inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-border/70 bg-background/95 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur transition-colors hover:bg-background disabled:opacity-60"
+            >
+              {isLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RotateCw className="size-4" />
+              )}
+              {t('searchThisArea')}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -383,7 +410,9 @@ function MapPanelMatchCard({
             {[
               courtName,
               city,
-              match.distance != null ? t('kmAway', { distance: Math.round(match.distance) }) : null,
+              displayableKm(match.distance) != null
+                ? t('kmAway', { distance: Math.round(displayableKm(match.distance)!) })
+                : null,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -463,7 +492,9 @@ function MapPanelFacilityCard({
   const t = useTranslations('courtsPage');
 
   const addressLine = [facility.address, facility.city].filter(Boolean).join(', ');
-  const distanceKm = facility.distance_meters != null ? facility.distance_meters / 1000 : null;
+  const distanceKm = displayableKm(
+    facility.distance_meters != null ? facility.distance_meters / 1000 : null
+  );
   const canBookOnline = !!facility.booking_url_template && !!facility.external_provider_id;
 
   return (

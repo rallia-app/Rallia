@@ -11466,6 +11466,9 @@
     "filterAll": "Tout",
     "filterGames": "Parties",
     "filterCourts": "Terrains",
+    "useMyLocation": "Utiliser ma position",
+    "searchWidened": "Rien dans un rayon de {km} km, alors voici des résultats plus loin.",
+    "searchThisArea": "Chercher dans cette zone",
     "legendCourts": "Terrains",
     "mapCourtsShown": "{count, plural, =0 {Aucun terrain à afficher sur la carte ici} =1 {1 terrain sur la carte} other {# terrains sur la carte}}",
     "mapSummary": "{games, plural, =1 {1 partie} other {# parties}} · {courts, plural, =1 {1 terrain} other {# terrains}}",
@@ -11485,6 +11488,7 @@
     "badgePrivate": "Privé",
     "badgeFirstCome": "Premier arrivé, premier servi",
     "badgeBookable": "Réservable",
+    "bookableOnly": "Réservable",
     "badgeMembership": "Membres seulement",
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
@@ -11493,10 +11497,20 @@
     "loadMore": "Voir plus",
     "emptyTitle": "Aucun terrain trouvé",
     "emptyDescription": "On n'a pas trouvé de terrains ici pour l'instant. Essaie une autre recherche ou télécharge l'app pour en voir plus.",
+    "bookableEmptyDescription": "Aucun terrain réservable ici pour le moment. Enlève le filtre pour voir tous les terrains autour de toi.",
     "emptyCta": "Télécharger l'app",
     "bookSlotAria": "Réserver la plage de {time}",
     "justShowUp": "Présente-toi pis joue",
-    "noOnlineBooking": "Pas de réservation en ligne pour ce terrain"
+    "noOnlineBooking": "Pas de réservation en ligne pour ce terrain",
+    "viewDetails": "Voir les détails"
+  },
+  "facilityPage": {
+    "backToCourts": "Tous les terrains",
+    "availabilityHeading": "Réserver un terrain",
+    "upcomingGames": "Parties à venir ici",
+    "noUpcomingGames": "Aucune partie publique prévue ici pour l'instant.",
+    "metaDescription": "Terrains, plages libres et parties à venir à {name}. Réservez et jouez avec Rallia.",
+    "metaDescriptionCity": "Terrains, plages libres et parties à venir à {name}, à {city}. Réservez et jouez avec Rallia."
   },
   "gamesPage": {
     "title": "Parties à venir",
@@ -11508,6 +11522,7 @@
     "kmAway": "{distance} km",
     "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
     "matchFull": "Complet",
+    "openSpotsOnly": "Places libres",
     "playersJoined": "joueurs inscrits",
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
@@ -11582,6 +11597,32 @@
       "singles": "Simple",
       "doubles": "Double"
     }
+  },
+  "playerPage": {
+    "title": "Profil du joueur",
+    "subtitle": "Téléchargez Rallia pour jouer avec ce joueur et découvrir d'autres parties près de chez vous.",
+    "notFound": "Joueur introuvable",
+    "notFoundDescription": "Ce joueur a peut-être quitté Rallia ou le lien est invalide.",
+    "joined": "Sur Rallia depuis {date}",
+    "statGamesPlayed": "Parties jouées",
+    "statHoursPlayed": "Heures jouées",
+    "statWeekStreak": "Streak (semaines)",
+    "certified": "Certifié",
+    "reputationLabel": "Réputation",
+    "tier": {
+      "bronze": "Bronze",
+      "silver": "Argent",
+      "gold": "Or",
+      "platinum": "Platine"
+    },
+    "downloadTitle": "Jouez avec {name}",
+    "downloadDescription": "Téléchargez Rallia pour inviter ce joueur à une partie et trouver des joueurs près de chez vous.",
+    "appStore": "Télécharger dans l'App Store",
+    "googlePlay": "Télécharger sur Google Play",
+    "ogEyebrow": "Profil de joueur",
+    "ogTitle": "{name} sur Rallia",
+    "ogGamesPlayed": "{count, plural, one {1 partie jouée} other {# parties jouées}}",
+    "ogCta": "Téléchargez Rallia pour jouer ensemble"
   },
   "inviteScanner": {
     "title": "Scanner un code QR",

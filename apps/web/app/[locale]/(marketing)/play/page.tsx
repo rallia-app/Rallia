@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@rallia/shared-translations';
 import type { FacilitySearchResult } from '@rallia/shared-types';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import PlayExplorer from './_components/play-explorer';
 import type { PublicMatch } from './_components/public-match-card';
@@ -9,6 +9,12 @@ import type { PublicMatch } from './_components/public-match-card';
 import { JsonLd, sportsEventJsonLd } from '@/components/json-ld';
 import { buildPageMetadata, SITE_URL } from '@/lib/seo';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+
+// Location-neutral ISR shell: the RPCs order by date first, so the cached
+// page is sensible everywhere; the client resolves the visitor's location
+// and refetches nearby results after hydration (PlayExplorer already did
+// this for localhost, where geo headers never existed).
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -28,7 +34,7 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
 
   // Step 1: Call RPC to get match IDs (handles timezone-aware filtering, excludes full/past matches)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rpcData, error: rpcError } = await (supabase as any).rpc('search_public_matches', {
+  const { data, error } = await (supabase as any).rpc('search_public_matches', {
     p_latitude: 0,
     p_longitude: 0,
     p_max_distance_km: null,
@@ -36,10 +42,10 @@ async function getInitialMatches(): Promise<PublicMatch[]> {
     p_limit: MATCH_PAGE_SIZE,
     p_offset: 0,
   });
+  const rpcData = error || !data ? [] : (data as Array<{ match_id: string }>);
+  if (rpcData.length === 0) return [];
 
-  if (rpcError || !rpcData?.length) return [];
-
-  const matchIds = (rpcData as Array<{ match_id: string }>).map(r => r.match_id);
+  const matchIds = rpcData.map(r => r.match_id);
 
   // Step 2: Hydrate full match details
   const { data: matches } = await supabase
@@ -63,23 +69,22 @@ async function getInitialFacilities(): Promise<FacilitySearchResult[]> {
   const sportIds = (sports ?? []).map(s => s.id);
   if (sportIds.length === 0) return [];
 
-  // Distance ordering from (0,0) is arbitrary for the SSR paint — the client
-  // immediately re-fetches sorted by the visitor's real location. This just
-  // gives crawlers and the first paint a populated list.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc('search_facilities_nearby', {
     p_sport_ids: sportIds,
     p_latitude: 0,
     p_longitude: 0,
+    p_max_distance_km: null,
+    p_has_availabilities: null,
     p_limit: FACILITY_PAGE_SIZE,
     p_offset: 0,
   });
+  const rows = error || !data ? [] : (data as FacilitySearchResult[]);
 
-  if (error || !data) return [];
-  // The SSR origin is a placeholder (0,0), so the RPC's distance is meaningless
-  // here — strip it and let the client fill in real distances after it resolves
-  // the visitor's location.
-  return (data as FacilitySearchResult[]).map(f => ({ ...f, distance_meters: null }));
+  // Without a real origin the RPC's distance is measured from (0,0) and
+  // meaningless — strip it and let the client fill in real distances once it
+  // resolves the visitor's location.
+  return rows.map(f => ({ ...f, distance_meters: null }));
 }
 
 function matchesToSportsEvents(matches: PublicMatch[]) {
@@ -119,11 +124,14 @@ function facilitiesToJsonLd(facilities: FacilitySearchResult[]) {
     ...(f.latitude != null && f.longitude != null
       ? { geo: { '@type': 'GeoCoordinates', latitude: f.latitude, longitude: f.longitude } }
       : {}),
-    url: `${SITE_URL}/en-US/play`,
+    url: `${SITE_URL}/en-US/play/courts/${f.id}`,
   }));
 }
 
-export default async function PlayPage() {
+export default async function PlayPage({ params }: { params: Promise<{ locale: Locale }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
   const t = await getTranslations('playPage');
   const [matches, facilities] = await Promise.all([getInitialMatches(), getInitialFacilities()]);
   const jsonLd = [...matchesToSportsEvents(matches), ...facilitiesToJsonLd(facilities)];

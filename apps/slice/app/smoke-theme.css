@@ -129,6 +129,15 @@ body:has(.smk) {
   box-shadow: none;
 }
 
+/* Same size and reach as the primary, without competing for the eye. */
+.smk-btn--ghost {
+  background: var(--smk-card);
+}
+
+.smk-btn--ghost:hover:not(:disabled) {
+  background: var(--smk-paper);
+}
+
 /* ---- Option cards ---- */
 
 .smk-option {

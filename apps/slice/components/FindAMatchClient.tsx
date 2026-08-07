@@ -418,6 +418,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   const [phoneDigits, setPhoneDigits] = useState('');
 
   const [selectedPlanTier, setSelectedPlanTier] = useState<MatchPlanTier | null>(null);
+  const [didDecline, setDidDecline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -554,7 +555,7 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
   useEffect(() => {
     if (step !== 'reveal' || !experiment || revealFired.current) return;
     revealFired.current = true;
-    trackSmokeEvent('test_reveal_shown', eventContext(experiment));
+    trackSmokeEvent('test_reveal_shown', eventContext(experiment), { declined: didDecline });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, experiment]);
 
@@ -897,6 +898,23 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
       }
     );
     clearRequestContext();
+    setStep('reveal');
+    setError(null);
+  };
+
+  // Declining has to be one click, like paying — otherwise the only way out of
+  // the price screen is closing the tab, and sunk cost inflates intent.
+  const handleDecline = () => {
+    if (!experiment) return;
+    const plans = getMatchPlans();
+    trackSmokeEvent('plan_declined', eventContext(experiment, { forfait: selectedPlanTier }), {
+      amount_cents: selectedPlanTier ? plans[selectedPlanTier].amountCents : null,
+      players_shown: liquidity?.playerCount ?? null,
+      match_likelihood_pct: liquidity?.likelihoodPct ?? null,
+      confidence_shown: liquidity?.confidence ?? null,
+    });
+    clearRequestContext();
+    setDidDecline(true);
     setStep('reveal');
     setError(null);
   };
@@ -1641,15 +1659,21 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
 
         {error && <p className="smk-text-error text-sm font-medium">{error}</p>}
 
-        <button
-          type="button"
-          onClick={handlePaymentIntent}
-          disabled={!selectedPlanTier}
-          className="smk-btn w-full"
-        >
-          {t('plans.proceedCta')}
-          <ArrowRight className="h-5 w-5" />
-        </button>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={handlePaymentIntent}
+            disabled={!selectedPlanTier}
+            className="smk-btn w-full"
+          >
+            {t('plans.proceedCta')}
+            <ArrowRight className="h-5 w-5" />
+          </button>
+
+          <button type="button" onClick={handleDecline} className="smk-btn smk-btn--ghost w-full">
+            {t('plans.declineCta')}
+          </button>
+        </div>
       </WizardShell>
     );
   }
@@ -1672,7 +1696,9 @@ export default function FindAMatchClient({ geoCity = null }: { geoCity?: string 
             <p className="text-sm font-semibold text-[color:var(--smk-ink)]">
               {t('reveal.thanks')}
             </p>
-            <p className="smk-text-muted text-sm">{t('reveal.purpose')}</p>
+            <p className="smk-text-muted text-sm">
+              {didDecline ? t('reveal.purposeDeclined') : t('reveal.purpose')}
+            </p>
             <p className="smk-text-muted text-xs">{t('reveal.deletion')}</p>
           </div>
         </div>
