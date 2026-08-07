@@ -554,6 +554,7 @@ export default function PublicMatches() {
     if (incoming.ratingScoreId) setRating([incoming.ratingScoreId]);
     if (incoming.distanceKm) setDistance(incoming.distanceKm as DistanceFilter);
     if (incoming.dateRange) setDateRange(incoming.dateRange);
+    if (incoming.spotsAvailable) setSpotsAvailable(incoming.spotsAvailable);
     navigation.setParams({ initialFilters: undefined } as never);
   }, [
     route.params?.initialFilters,
@@ -562,6 +563,7 @@ export default function PublicMatches() {
     setRating,
     setDistance,
     setDateRange,
+    setSpotsAvailable,
   ]);
 
   // "Create your own game" CTA — shared by the empty state and the end-of-list footer.

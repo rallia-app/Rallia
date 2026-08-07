@@ -6246,6 +6246,7 @@
         "3": "3 spots",
         "label": "Spots",
         "all": "All",
+        "any": "Not full",
         "undefined": "All"
       },
       "favorites": {

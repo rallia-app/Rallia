@@ -1,9 +1,10 @@
-import type { DateRangeFilter } from '@rallia/shared-types';
+import type { DateRangeFilter, SpotsAvailableFilter } from '@rallia/shared-types';
 
 export type RecoveryFilters = {
   ratingScoreId?: string;
   distanceKm?: number;
   dateRange?: DateRangeFilter;
+  spotsAvailable?: SpotsAvailableFilter;
 };
 
 const ALLOWED_DISTANCES = [2, 5, 10];
@@ -37,5 +38,12 @@ export function buildRecoveryFilters(
     filters.dateRange = 'week';
   }
 
-  return Object.keys(filters).length > 0 ? filters : undefined;
+  if (Object.keys(filters).length === 0) return undefined;
+
+  // Constant for this notification rather than a payload field: the sweep never
+  // counts a full game, so the list must never show one. Sending it would just
+  // be a round trip for a value that cannot vary.
+  filters.spotsAvailable = 'any';
+
+  return filters;
 }

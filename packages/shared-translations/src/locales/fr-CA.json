@@ -6246,6 +6246,7 @@
         "3": "3 places",
         "label": "Places",
         "all": "Toutes",
+        "any": "Places libres",
         "undefined": "Toutes"
       },
       "favorites": {

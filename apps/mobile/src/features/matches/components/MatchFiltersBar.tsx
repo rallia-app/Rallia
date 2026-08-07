@@ -110,7 +110,7 @@ const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
 const COST_OPTIONS: CostFilter[] = ['all', 'free', 'under_5', 'under_10', 'under_20', '20_plus'];
 const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
 const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
-const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', '1', '2', '3'];
+const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', 'any', '1', '2', '3'];
 const REPUTATION_OPTIONS: ReputationFilter[] = ['all', 'bronze', 'silver', 'gold', 'platinum'];
 
 // =============================================================================

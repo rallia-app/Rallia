@@ -18,6 +18,7 @@ import type {
   SportProfileScreenParams,
   FacilityDetailScreenParams,
   DateRangeFilter,
+  SpotsAvailableFilter,
 } from '@rallia/shared-types';
 
 // =============================================================================
@@ -164,6 +165,7 @@ export type HomeStackParamList = {
           ratingScoreId?: string;
           distanceKm?: number;
           dateRange?: DateRangeFilter;
+          spotsAvailable?: SpotsAvailableFilter;
         };
       }
     | undefined;
