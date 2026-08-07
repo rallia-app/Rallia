@@ -38,12 +38,9 @@ export function buildRecoveryFilters(
     filters.dateRange = 'week';
   }
 
-  if (Object.keys(filters).length === 0) return undefined;
+  if (payload.spotsAvailable === 'any') {
+    filters.spotsAvailable = 'any';
+  }
 
-  // Constant for this notification rather than a payload field: the sweep never
-  // counts a full game, so the list must never show one. Sending it would just
-  // be a round trip for a value that cannot vary.
-  filters.spotsAvailable = 'any';
-
-  return filters;
+  return Object.keys(filters).length > 0 ? filters : undefined;
 }
