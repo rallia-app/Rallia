@@ -233,6 +233,11 @@
       "match_check_in_available": "Check-in disponible",
       "match_new_available": "Nouvelle partie de groupe",
       "match_spot_opened": "Place libérée",
+      "court_booking_nudge": "Réserver ton terrain",
+      "match_last_minute_spots": "Ça commence bientôt",
+      "match_unfilled_recovery": "Relance de partie",
+      "play_rhythm_nudge": "Créneau habituel libre",
+      "tournament_registration_open": "Inscriptions au tournoi ouvertes",
       "nearby_match_available": "Partie à proximité",
       "player_kicked": "Retiré de la partie",
       "player_left": "Joueur parti",
@@ -444,6 +449,26 @@
       "match_spot_opened": {
         "title": "Une place s'est libérée en {sportName}",
         "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Touche pour la prendre avant qu'elle disparaisse."
+      },
+      "court_booking_nudge": {
+        "title": "Des terrains sont libres à {facilityName}",
+        "body": "Une partie avec terrain réservé attire les joueurs plus vite. Réserve le tien pendant qu'il est libre."
+      },
+      "match_last_minute_spots": {
+        "title": "Ça commence bientôt · {sportName} à {locationName}",
+        "body": "Une partie près de toi commence bientôt et il reste des places. Touche pour rejoindre."
+      },
+      "match_unfilled_recovery": {
+        "title": "Ta partie ne s'est pas remplie",
+        "body": "Ça arrive. Touche pour voir les parties ouvertes et te remettre en jeu."
+      },
+      "play_rhythm_nudge": {
+        "title": "Ton créneau habituel est libre",
+        "body": "Une partie de {sportName}{locationName} cherche encore des joueurs. Touche pour rejoindre."
+      },
+      "tournament_registration_open": {
+        "title": "Inscriptions ouvertes · {tournamentName}",
+        "body": "Les places sont limitées. Touche pour t'inscrire."
       },
       "nearby_match_available": {
         "title": "Nouvelle partie de {sportName} près de toi",
@@ -3558,6 +3583,13 @@
       "outcome": "Résultat du match",
       "feedback": "Évaluation"
     },
+    "nextPrompt": {
+      "title": "Évaluation envoyée. Belle partie!",
+      "subtitle": "Gardez le rythme et planifiez la prochaine dès maintenant.",
+      "playAgain": "Rejouer la semaine prochaine",
+      "joinAnother": "Rejoindre une autre partie",
+      "done": "Terminé"
+    },
     "matchContext": {
       "vsPlayer": "avec {name}",
       "vsPlayers": "avec {names}",
@@ -4149,7 +4181,20 @@
       "invitationsSent": "Invitations envoyées!",
       "invitationsSentCount": "{count} invitation(s) envoyée(s)",
       "shareWithContacts": "Partager avec {count} contact(s)",
-      "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
+      "selectContactsFromLists": "Sélectionner des contacts dans vos listes",
+      "greatFits": "De bons choix pour cette partie",
+      "morePlayers": "Plus de joueurs",
+      "freeAtGameTime": "Libre à l'heure de la partie",
+      "suggestedForGame": "Suggérés pour cette partie",
+      "gameCreatedNote": "Partie créée! Invitez maintenant vos joueurs.",
+      "chips": {
+        "playedTogether": "Déjà joué ensemble",
+        "responsive": "Répond souvent",
+        "sameRating": "Même niveau",
+        "activeRecently": "Actif cette semaine",
+        "playsHere": "Terrain favori",
+        "nearby": "À proximité"
+      }
     }
   },
   "leaderboard": {
@@ -6200,10 +6245,22 @@
     "empty": {
       "title": "Aucune partie trouvée",
       "description": "Essayez d'ajuster vos filtres ou revenez plus tard",
+      "helper": "Créez la vôtre et on vous aidera à la remplir 💪",
       "noFilters": {
         "title": "Aucune partie publique à proximité",
         "description": "Soyez le premier à créer une partie dans votre région!"
       }
+    },
+    "endOfList": {
+      "title": "Aucune de ces parties ne vous convient?"
+    },
+    "cancelledBanner": {
+      "title": "Votre partie a été annulée",
+      "description": "Voici d'autres parties ouvertes que vous pourriez rejoindre."
+    },
+    "unfilledBanner": {
+      "title": "Votre partie ne s'est pas remplie",
+      "description": "Rejoignez une partie ouverte ci-dessous, ou créez la prochaine et on vous aidera à la remplir."
     },
     "results": {
       "count": "{count} parties",
@@ -11488,6 +11545,7 @@
     "badgePrivate": "Privé",
     "badgeFirstCome": "Premier arrivé, premier servi",
     "badgeBookable": "Réservable",
+    "bookableOnly": "Réservable",
     "badgeMembership": "Membres seulement",
     "today": "Aujourd'hui",
     "tomorrow": "Demain",
@@ -11496,6 +11554,7 @@
     "loadMore": "Voir plus",
     "emptyTitle": "Aucun terrain trouvé",
     "emptyDescription": "On n'a pas trouvé de terrains ici pour l'instant. Essaie une autre recherche ou télécharge l'app pour en voir plus.",
+    "bookableEmptyDescription": "Aucun terrain réservable ici pour le moment. Enlève le filtre pour voir tous les terrains autour de toi.",
     "emptyCta": "Télécharger l'app",
     "bookSlotAria": "Réserver la plage de {time}",
     "justShowUp": "Présente-toi pis joue",
@@ -11595,6 +11654,32 @@
       "singles": "Simple",
       "doubles": "Double"
     }
+  },
+  "playerPage": {
+    "title": "Profil du joueur",
+    "subtitle": "Téléchargez Rallia pour jouer avec ce joueur et découvrir d'autres parties près de chez vous.",
+    "notFound": "Joueur introuvable",
+    "notFoundDescription": "Ce joueur a peut-être quitté Rallia ou le lien est invalide.",
+    "joined": "Sur Rallia depuis {date}",
+    "statGamesPlayed": "Parties jouées",
+    "statHoursPlayed": "Heures jouées",
+    "statWeekStreak": "Streak (semaines)",
+    "certified": "Certifié",
+    "reputationLabel": "Réputation",
+    "tier": {
+      "bronze": "Bronze",
+      "silver": "Argent",
+      "gold": "Or",
+      "platinum": "Platine"
+    },
+    "downloadTitle": "Jouez avec {name}",
+    "downloadDescription": "Téléchargez Rallia pour inviter ce joueur à une partie et trouver des joueurs près de chez vous.",
+    "appStore": "Télécharger dans l'App Store",
+    "googlePlay": "Télécharger sur Google Play",
+    "ogEyebrow": "Profil de joueur",
+    "ogTitle": "{name} sur Rallia",
+    "ogGamesPlayed": "{count, plural, one {1 partie jouée} other {# parties jouées}}",
+    "ogCta": "Téléchargez Rallia pour jouer ensemble"
   },
   "inviteScanner": {
     "title": "Scanner un code QR",
@@ -12243,6 +12328,22 @@
       "acceptError": "On n'a pas pu enregistrer ton acceptation. Vérifie ta connexion et réessaie.",
       "signOutConfirmTitle": "Se déconnecter?",
       "signOutConfirmMessage": "Tu devras accepter la politique mise à jour lors de ta prochaine connexion."
+    }
+  },
+  "phoneVerification": {
+    "verify": "Vérifier",
+    "enterCode": "Entre le code à 6 chiffres qu'on t'a texté au {phone}",
+    "resend": "Renvoyer le code",
+    "resendIn": "Renvoyer dans {seconds}s",
+    "success": "Numéro de téléphone vérifié",
+    "consentNotice": "En vérifiant ton numéro, tu acceptes que Rallia puisse te texter à propos de tes parties. Des frais de messagerie peuvent s'appliquer. Réponds STOP en tout temps pour te désinscrire.",
+    "errors": {
+      "invalidPhone": "Entre un numéro de téléphone valide",
+      "incorrectCode": "Ce code n'est pas bon. Réessaie.",
+      "codeExpired": "Ce code est expiré. Demandes-en un nouveau.",
+      "rateLimited": "Trop d'essais. Attends quelques minutes.",
+      "sessionExpired": "Ta session est expirée. Reconnecte-toi pour vérifier ton numéro.",
+      "generic": "Une erreur est survenue. Réessaie."
     }
   }
 }

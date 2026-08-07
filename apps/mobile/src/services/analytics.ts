@@ -58,6 +58,18 @@ export function onboardingAbandoned(props: {
   capture('onboarding_abandoned', props);
 }
 
+export function phoneCodeSent(props: { source: 'onboarding' | 'settings' }): void {
+  capture('phone_code_sent', props);
+}
+
+export function phoneVerified(props: { source: 'onboarding' | 'settings' }): void {
+  capture('phone_verified', props);
+}
+
+export function phoneCaptureSkipped(props: { source: 'onboarding'; had_number: boolean }): void {
+  capture('phone_capture_skipped', props);
+}
+
 // ---- Core Loop ----
 
 export function matchCreated(props: {
@@ -226,8 +238,33 @@ export function matchDeclined(props: {
   capture('match_declined', props);
 }
 
-export function matchCreationStarted(): void {
-  capture('match_creation_started');
+export type MatchCreationSource =
+  | 'plus_menu'
+  | 'empty_feed'
+  | 'feed_footer'
+  | 'home_nearby_empty'
+  | 'post_feedback'
+  | 'direct';
+
+export function matchCreationStarted(props?: { source?: MatchCreationSource }): void {
+  capture('match_creation_started', props);
+}
+
+/** Fired when a "create your own game" CTA is pressed on a browse surface. */
+export function createGameCtaPressed(props: {
+  placement: 'empty_state' | 'feed_footer' | 'home_nearby_empty';
+  has_active_filters: boolean;
+}): void {
+  capture('create_game_cta_pressed', props);
+}
+
+/** Fired when the post-feedback "what's next" prompt is answered. */
+export function postFeedbackPromptAction(props: {
+  action: 'create' | 'join' | 'dismiss';
+  match_id: string;
+  sport_id: string;
+}): void {
+  capture('post_feedback_prompt_action', props);
 }
 
 export type MatchCreationSuccessAction =

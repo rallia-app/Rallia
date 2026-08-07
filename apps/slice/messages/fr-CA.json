@@ -162,7 +162,8 @@
       "priceMonth": "{price} / mois",
       "bookingExcluded": "La réservation du terrain n'est pas incluse. Tu réserves ton terrain une fois ta partie confirmée.",
       "refundNote": "Pas de proposition de partie en moins d'une heure? Remboursement automatique à 100 %.",
-      "proceedCta": "Procéder au paiement"
+      "proceedCta": "Procéder au paiement",
+      "declineCta": "Non merci, pas pour l'instant"
     },
     "reveal": {
       "badge": "Petit mot",
@@ -171,6 +172,7 @@
       "simulatedNote": "Le nombre de joueurs et l'estimation de chances que t'as vus étaient simulés eux aussi.",
       "thanks": "Merci de nous aider à bâtir la vraie affaire.",
       "purpose": "Ton intérêt nous dit que ça vaut la peine de le construire pour ta ville.",
+      "purposeDeclined": "Ta réponse honnête nous aide autant que si t'avais dit oui.",
       "deletion": "Tu veux retirer ton courriel et ton téléphone ? Écris à sliceapp29@gmail.com et on les supprime."
     }
   },

@@ -57,7 +57,7 @@ import { shareMatch } from '#/utils';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 import * as Analytics from '#/services/analytics';
-import { useSport, type MatchDetailData } from '#/context';
+import { useSport, type MatchDetailData, type MatchCreationPrefill } from '#/context';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
@@ -94,6 +94,10 @@ interface MatchCreationWizardProps {
   initialBookingForWizard?: InitialBookingForWizard | null;
   /** Called after applying initialBookingForWizard so context can clear it */
   onConsumeInitialBooking?: () => void;
+  /** When set, wizard pre-fills fields from a previous match (e.g. post-feedback "Play again") */
+  matchCreationPrefill?: MatchCreationPrefill | null;
+  /** Called after applying matchCreationPrefill so context can clear it */
+  onConsumePrefill?: () => void;
 }
 
 interface ThemeColors {
@@ -282,6 +286,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   editMatch,
   initialBookingForWizard,
   onConsumeInitialBooking,
+  matchCreationPrefill,
+  onConsumePrefill,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -576,10 +582,41 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     formatDateLocal,
   ]);
 
+  // Apply a "play again" style prefill (post-feedback rematch). Unlike the
+  // booking prefill, nothing is locked and the user starts at step 1.
+  const hasAppliedPrefill = useRef(false);
+  useEffect(() => {
+    if (!matchCreationPrefill || hasAppliedPrefill.current || isEditMode) {
+      return;
+    }
+    const p = matchCreationPrefill;
+    form.setValue('locationType', p.locationType, { shouldDirty: true });
+    if (p.facilityId) form.setValue('facilityId', p.facilityId, { shouldDirty: true });
+    if (p.locationName) form.setValue('locationName', p.locationName, { shouldDirty: true });
+    if (p.locationAddress) {
+      form.setValue('locationAddress', p.locationAddress, { shouldDirty: true });
+    }
+    form.setValue('matchDate', p.matchDate, { shouldDirty: true });
+    form.setValue('startTime', p.startTime, { shouldDirty: true });
+    if (p.endTime) form.setValue('endTime', p.endTime, { shouldDirty: true });
+    if (p.timezone) form.setValue('timezone', p.timezone, { shouldDirty: true });
+    if (p.format) form.setValue('format', p.format, { shouldDirty: true });
+    if (p.playerExpectation) {
+      form.setValue('playerExpectation', p.playerExpectation, { shouldDirty: true });
+    }
+    if (p.duration) form.setValue('duration', p.duration as never, { shouldDirty: true });
+    if (p.customDurationMinutes != null) {
+      form.setValue('customDurationMinutes', p.customDurationMinutes, { shouldDirty: true });
+    }
+    hasAppliedPrefill.current = true;
+    onConsumePrefill?.();
+  }, [matchCreationPrefill, onConsumePrefill, isEditMode, form]);
+
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
-  // Player invitation step (shown after success for new matches)
+  // Player invitation step (edit-mode success panel only; new matches render
+  // the invite list directly as their success screen)
   const [showInviteStep, setShowInviteStep] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
@@ -1118,7 +1155,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       // Fade in and scale up success view - snappy with no bounce
       successOpacity.value = withTiming(1, { duration: 250 });
       successScale.value = withTiming(1, { duration: 250 });
-      // Reset post-success position
+      // Reset post-success position (edit-mode panel)
       postSuccessTranslateX.value = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1161,7 +1198,77 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     transform: [{ translateX: postSuccessTranslateX.value }],
   }));
 
-  // Success and Invite steps - horizontal slide animation between them
+  // New matches: the invite list IS the success screen. Secondary actions
+  // (share, Facebook, view game, create another) live inside it as chips, so
+  // there is no separate options panel to navigate to.
+  if (showSuccess && successMatchId && !isEditMode && selectedSport?.id && session?.user?.id) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+        <PlayerInviteStep
+          matchId={successMatchId}
+          sportId={selectedSport.id}
+          hostId={session.user.id}
+          successNote={t('matchCreation.invite.gameCreatedNote')}
+          secondaryActions={[
+            {
+              key: 'share',
+              label: t('matchDetail.inviteFriends'),
+              icon: 'share-social-outline',
+              onPress: handleShareSuccess,
+              tint: secondary[500],
+              loading: isSharing,
+            },
+            {
+              key: 'facebook',
+              label: t('matchCreation.shareToFacebook.button'),
+              icon: 'logo-facebook',
+              tint: '#1877F2',
+              onPress: () => {
+                Analytics.matchCreationSuccessAction({
+                  match_id: successMatchId,
+                  action: 'share_facebook',
+                  is_edit_mode: false,
+                });
+                SheetManager.show('share-to-facebook', {
+                  payload: { matchId: successMatchId },
+                });
+              },
+            },
+            {
+              key: 'create_another',
+              label: t('matchCreation.createAnother'),
+              icon: 'add-circle-outline',
+              onPress: () => {
+                Analytics.matchCreationSuccessAction({
+                  match_id: successMatchId,
+                  action: 'create_another',
+                  is_edit_mode: false,
+                });
+                // Reset animations and state for the next creation
+                successOpacity.value = 0;
+                successScale.value = 0.8;
+                formOpacity.value = 1;
+                postSuccessTranslateX.value = 0;
+                setShowSuccess(false);
+                setSuccessMatchId(null);
+                setShowInviteStep(false);
+                resetForm();
+                setCurrentStep(1);
+                setHighestStepVisited(1);
+              },
+            },
+          ]}
+          onComplete={() => onSuccess?.(successMatchId)}
+          colors={{ ...colors, background: colors.cardBackground }}
+          t={t}
+          isDark={isDark}
+          showCloseButton
+        />
+      </View>
+    );
+  }
+
+  // Edit mode keeps the classic confirmation screen (no invite step).
   if (showSuccess && successMatchId) {
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
@@ -1350,29 +1457,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 )}
               </View>
             </Animated.View>
-          </View>
-
-          {/* Player Invite Step */}
-          <View style={[styles.postSuccessStep, { width: SCREEN_WIDTH }]}>
-            {selectedSport?.id && session?.user?.id && (
-              <PlayerInviteStep
-                matchId={successMatchId}
-                sportId={selectedSport.id}
-                hostId={session.user.id}
-                onComplete={() => {
-                  // Close invite step and go to match detail
-                  onSuccess?.(successMatchId);
-                }}
-                onBack={() => setShowInviteStep(false)}
-                colors={{
-                  ...colors,
-                  background: colors.cardBackground,
-                }}
-                t={t}
-                isDark={isDark}
-                showCloseButton
-              />
-            )}
           </View>
         </Animated.View>
       </View>

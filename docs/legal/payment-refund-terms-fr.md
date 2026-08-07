@@ -8,10 +8,11 @@
 
 ## 1. De qui achetez-vous
 
-Les événements payants sur Rallia (tournois et saisons de ligue) sont organisés et vendus par des **organisateurs** indépendants (personnes ou clubs). Quand vous vous inscrivez à un événement payant :
+Chaque événement payant sur Rallia (tournoi ou saison de ligue) a un **organisateur** : soit un organisateur indépendant (une personne ou un club), soit Rallia elle-même pour les événements qu'elle organise directement. La page de l'événement identifie l'organisateur. Quand vous vous inscrivez à un événement payant :
 
-- L'**organisateur** est le vendeur de votre inscription. Les frais d'inscription sont fixés par l'organisateur, lui sont versés, et l'organisateur est responsable de la tenue de l'événement ainsi que des taxes applicables aux frais d'inscription. Le montant apparaissant sur votre relevé est traité pour le compte de l'organisateur.
-- **Rallia** fournit la plateforme et le service d'inscription. Rallia n'est pas le vendeur de l'événement et ne détient jamais votre argent d'inscription : les paiements sont traités par notre fournisseur de paiement, **Stripe**, et les frais d'inscription sont versés à l'organisateur.
+- L'**organisateur** est le vendeur de votre inscription. Les frais d'inscription sont fixés par l'organisateur, lui sont versés, et l'organisateur est responsable de la tenue de l'événement ainsi que des taxes applicables aux frais d'inscription.
+- Pour les événements tenus par un organisateur indépendant, **Rallia** fournit uniquement la plateforme et le service d'inscription. Rallia n'est pas le vendeur de ces événements et ne détient pas votre argent d'inscription : les paiements sont traités par notre fournisseur de paiement, **Stripe**, et les frais d'inscription sont versés à l'organisateur. Le montant apparaissant sur votre relevé est traité pour le compte de l'organisateur.
+- Pour les événements organisés par Rallia, Rallia est l'organisateur et le vendeur, et tout ce que les présentes modalités prévoient au sujet de « l'organisateur » s'applique à Rallia.
 
 ## 2. Ce que vous payez
 
@@ -55,7 +56,7 @@ Les remboursements approuvés sont émis sur votre **mode de paiement d'origine*
 
 En cas de problème (un événement qui diffère substantiellement de sa description, un remboursement auquel vous croyez avoir droit qui n'est pas arrivé), écrivez-nous d'abord à **contact@rallia.ca**. La plupart des situations se règlent plus rapidement avec nous qu'avec votre banque.
 
-Comme l'organisateur est le vendeur de l'inscription, les litiges de paiement concernant les frais d'inscription relèvent ultimement de vous et de l'organisateur; Rallia vous assistera de bonne foi. Une rétrofacturation visant un montant conforme aux présentes modalités et à la politique de remboursement affichée de l'événement peut entraîner la suspension de votre accès aux inscriptions payantes.
+Comme l'organisateur est le vendeur de l'inscription, les litiges de paiement concernant les frais d'inscription relèvent ultimement de vous et de l'organisateur de l'événement (Rallia elle-même, pour les événements qu'elle organise); pour les événements tenus par des organisateurs indépendants, Rallia vous assistera de bonne foi. Une rétrofacturation visant un montant conforme aux présentes modalités et à la politique de remboursement affichée de l'événement peut entraîner la suspension de votre accès aux inscriptions payantes.
 
 ## 8. Vos droits
 

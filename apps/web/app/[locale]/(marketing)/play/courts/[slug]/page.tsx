@@ -2,8 +2,9 @@ import { ArrowLeft, Building2, CalendarClock, Footprints, Lock, MapPin, Users } 
 import type { Metadata } from 'next';
 import type { Locale } from '@rallia/shared-translations';
 import type { FacilitySearchResult } from '@rallia/shared-types';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound, permanentRedirect } from 'next/navigation';
+import { cache } from 'react';
 
 import { getRelativeDateLabel, formatDuration } from '../../_components/utils';
 
@@ -16,6 +17,17 @@ import { buildAlternates, SITE_URL } from '@/lib/seo';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ISR: ~700 facility pages enter the sitemap; the crawler wave must hit the
+// cache, not a function invocation per page. Availability snapshots refresh
+// on this cadence too.
+export const revalidate = 300;
+
+// No slugs at build time — each facility page is generated on first request
+// and then served from the ISR cache (this is what opts the route into caching).
+export function generateStaticParams() {
+  return [];
+}
 
 interface FacilityRow {
   id: string;
@@ -33,8 +45,9 @@ interface FacilityRow {
   organization: { name: string; nature: string } | null;
 }
 
-/** Cards link by id; the canonical URL is the slug — id hits redirect. */
-async function getFacility(slugOrId: string): Promise<FacilityRow | null> {
+/** Cards link by id; the canonical URL is the slug — id hits redirect.
+ * cache() dedupes the generateMetadata + page render pair into one query. */
+const getFacility = cache(async (slugOrId: string): Promise<FacilityRow | null> => {
   const supabase = createServiceRoleClient();
   let query = supabase
     .from('facility')
@@ -46,7 +59,7 @@ async function getFacility(slugOrId: string): Promise<FacilityRow | null> {
   query = UUID_RE.test(slugOrId) ? query.eq('id', slugOrId) : query.eq('slug', slugOrId);
   const { data } = await query.maybeSingle();
   return data;
-}
+});
 
 interface SportRow {
   id: string;
@@ -81,8 +94,7 @@ async function getEnrichedRow(
     p_limit: 50,
     p_offset: 0,
   });
-  const row =
-    ((data ?? []) as FacilitySearchResult[]).find(f => f.id === facility.id) ?? null;
+  const row = ((data ?? []) as FacilitySearchResult[]).find(f => f.id === facility.id) ?? null;
   return { row, sports: sportRows };
 }
 
@@ -151,6 +163,7 @@ export default async function FacilityPage({
   params: Promise<{ locale: Locale; slug: string }>;
 }) {
   const { locale, slug } = await params;
+  setRequestLocale(locale);
   const facility = await getFacility(slug);
   if (!facility) notFound();
   // Canonicalize id-based links onto the slug URL.

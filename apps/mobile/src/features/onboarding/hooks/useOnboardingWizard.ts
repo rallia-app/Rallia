@@ -55,6 +55,8 @@ export interface OnboardingFormData {
   lastName: string;
   dateOfBirth: Date | null;
   gender: string;
+  phoneNumber: string;
+  phoneVerified: boolean;
   profileImage: string | null;
   /** URL of the already-saved profile picture from DB (to avoid re-uploading) */
   savedProfilePictureUrl: string | null;
@@ -133,6 +135,8 @@ const INITIAL_FORM_DATA: OnboardingFormData = {
   lastName: '',
   dateOfBirth: null,
   gender: '',
+  phoneNumber: '',
+  phoneVerified: false,
   profileImage: null,
   savedProfilePictureUrl: null,
   address: '',
@@ -387,6 +391,8 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           updates.dateOfBirth = profileRes.data.birth_date
             ? new Date(profileRes.data.birth_date)
             : null;
+          updates.phoneNumber = profileRes.data.phone || '';
+          updates.phoneVerified = !!profileRes.data.phone_verified;
           // Store the saved URL - we'll display this but not re-upload it
           if (profileRes.data.profile_picture_url) {
             updates.savedProfilePictureUrl = profileRes.data.profile_picture_url;

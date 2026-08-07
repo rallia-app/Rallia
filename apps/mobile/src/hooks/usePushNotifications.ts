@@ -347,6 +347,27 @@ export function usePushNotifications(
     // target_id (no matchId field), so fall back to targetId; the type-membership
     // check below keeps non-match notifications from matching.
     const matchId = (data.matchId ?? data.targetId) as string | undefined;
+
+    // Cancelled/unfilled-game taps recover instead of dead-ending: land on
+    // Public Games with context so the player immediately sees alternatives.
+    if (notificationType === 'match_cancelled' || notificationType === 'match_unfilled_recovery') {
+      navigateFromOutside('PublicMatches', {
+        cancelledContext: {
+          matchId,
+          matchDate: data.matchDate as string | undefined,
+          startTime: data.startTime as string | undefined,
+          sportName: data.sportName as string | undefined,
+          reason: notificationType === 'match_cancelled' ? 'cancelled' : 'unfilled',
+        },
+      });
+      Logger.logUserAction('push_notification_deep_link', {
+        matchId,
+        type: notificationType,
+        redirect: 'public_matches',
+      });
+      return;
+    }
+
     if (matchId && notificationType) {
       const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(
         notificationType as (typeof MATCH_NOTIFICATION_TYPES)[number]

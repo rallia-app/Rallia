@@ -513,3 +513,127 @@ export async function getPlayersRatingReputation(
   }
   return byId;
 }
+
+// =============================================================================
+// COMPATIBILITY-RANKED INVITE CANDIDATES
+// =============================================================================
+
+/** Why a candidate ranks where they do (chips in the invite UI). */
+export interface InviteCandidateReasons {
+  availableAtSlot: boolean;
+  respondsFast: boolean;
+  activeRecently: boolean;
+  playedTogether: boolean;
+  sameRating: boolean;
+  favoriteFacility: boolean;
+}
+
+/** A ranked invite candidate: PlayerSearchResult shape + compatibility extras. */
+export interface InviteCandidate extends PlayerSearchResult {
+  compatScore: number;
+  reasons: InviteCandidateReasons;
+}
+
+export interface InviteCandidatesPage {
+  players: InviteCandidate[];
+  hasMore: boolean;
+  nextOffset: number | null;
+  totalCount: number;
+}
+
+/**
+ * Compatibility-ranked invite candidates for a match the caller hosts.
+ * Backed by get_match_invite_candidates (JFY-style behavioral scoring with
+ * invite-specific weights + reason flags). Host-only: other callers get [].
+ */
+export async function getMatchInviteCandidates(params: {
+  matchId: string;
+  limit?: number;
+  offset?: number;
+}): Promise<InviteCandidatesPage> {
+  const limit = params.limit ?? 20;
+  const offset = params.offset ?? 0;
+
+  const { data, error } = await supabase.rpc('get_match_invite_candidates', {
+    p_match_id: params.matchId,
+    p_limit: limit,
+    p_offset: offset,
+  });
+
+  if (error) {
+    console.error('[playerService] Failed to get invite candidates:', error);
+    throw new Error(`Failed to get invite candidates: ${error.message}`);
+  }
+
+  type CandidateRow = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    display_name: string | null;
+    profile_picture_url: string | null;
+    city: string | null;
+    gender: string | null;
+    rating_label: string | null;
+    rating_value: number | null;
+    badge_status: string | null;
+    reputation_tier: string | null;
+    reputation_score: number | null;
+    reputation_is_public: boolean;
+    distance_meters: number | null;
+    compat_score: number;
+    available_at_slot: boolean;
+    responds_fast: boolean;
+    active_recently: boolean;
+    played_together: boolean;
+    same_rating: boolean;
+    favorite_facility: boolean;
+    total_count: number;
+  };
+  const rows = (data ?? []) as CandidateRow[];
+  const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+
+  const players: InviteCandidate[] = rows.map(row => ({
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    display_name: row.display_name,
+    profile_picture_url: row.profile_picture_url,
+    city: row.city,
+    gender: row.gender,
+    rating: row.rating_label
+      ? {
+          label: row.rating_label,
+          value: row.rating_value,
+          is_certified: row.badge_status === 'certified',
+          badge_status: (row.badge_status ?? 'self_declared') as
+            | 'self_declared'
+            | 'certified'
+            | 'disputed',
+        }
+      : null,
+    latitude: null,
+    longitude: null,
+    distance_meters: row.distance_meters,
+    reputation_tier: row.reputation_tier,
+    reputation_score: row.reputation_score,
+    reputation_is_public: row.reputation_is_public,
+    last_seen_at: null,
+    compatScore: Number(row.compat_score),
+    reasons: {
+      availableAtSlot: row.available_at_slot,
+      respondsFast: row.responds_fast,
+      activeRecently: row.active_recently,
+      playedTogether: row.played_together,
+      sameRating: row.same_rating,
+      favoriteFacility: row.favorite_facility,
+    },
+  }));
+
+  const hasMore = offset + rows.length < totalCount;
+  return {
+    players,
+    hasMore,
+    nextOffset: hasMore ? offset + rows.length : null,
+    totalCount,
+  };
+}

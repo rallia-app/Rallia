@@ -4,11 +4,18 @@
  */
 
 import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { useNavigation, useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
+import { Button, MatchCard, Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -34,7 +41,8 @@ import {
   useImpressionTracker,
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
-import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import { useActionsSheet, useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import type { HomeStackParamList } from '#/navigation/types';
 import { SportIcon } from '#/components/SportIcon';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
 
@@ -48,23 +56,50 @@ const FEED_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTi
 
 interface EmptyStateProps {
   hasFilters: boolean;
-  textMutedColor: string;
+  colors: {
+    primary: string;
+    text: string;
+    textMuted: string;
+  };
+  sportName: string;
   t: (key: TranslationKey) => string;
+  onCreatePress: () => void;
 }
 
-function EmptyState({ hasFilters, textMutedColor, t }: EmptyStateProps) {
+function EmptyState({ hasFilters, colors, sportName, t, onCreatePress }: EmptyStateProps) {
   return (
-    <View style={styles.emptyWrapper}>
-      <View style={styles.inlineEmpty}>
-        <Ionicons
-          name={hasFilters ? 'filter-outline' : 'search-outline'}
-          size={20}
-          color={textMutedColor}
-        />
-        <Text size="sm" color={textMutedColor} style={styles.inlineEmptyText}>
-          {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
-        </Text>
+    <View style={styles.emptyHero}>
+      {/* Big tinted sport badge with a small status mark */}
+      <View style={[styles.emptyHeroBadge, { backgroundColor: `${colors.primary}14` }]}>
+        <SportIcon sportName={sportName} size={64} color={colors.primary} />
+        <View style={[styles.emptyHeroBadgeMark, { backgroundColor: colors.primary }]}>
+          <Ionicons name={hasFilters ? 'filter' : 'search'} size={14} color="#FFFFFF" />
+        </View>
       </View>
+
+      <Text size="xl" weight="bold" color={colors.text} style={styles.emptyHeroTitle}>
+        {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
+      </Text>
+      <Text size="base" color={colors.textMuted} style={styles.emptyHeroDescription}>
+        {hasFilters
+          ? t('publicMatches.empty.description')
+          : t('publicMatches.empty.noFilters.description')}
+      </Text>
+
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        rounded
+        onPress={onCreatePress}
+        leftIcon={<Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />}
+        style={styles.emptyHeroButton}
+      >
+        {t('matches.createMatch')}
+      </Button>
+      <Text size="sm" color={colors.textMuted} style={styles.emptyHeroHelper}>
+        {t('publicMatches.empty.helper')}
+      </Text>
     </View>
   );
 }
@@ -88,6 +123,8 @@ export default function PublicMatches() {
     navigation.setOptions({ headerTitle: t('screens.publicMatches') });
   }, [navigation, t]);
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { openSheetForMatchCreation } = useActionsSheet();
+  const route = useRoute<RouteProp<HomeStackParamList, 'PublicMatches'>>();
   const isDark = theme === 'dark';
 
   // Get user location and preferences
@@ -485,19 +522,64 @@ export default function PublicMatches() {
   // Check if we're loading due to filter/search changes (not initial load or pagination)
   const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
+  // Recovery context from a match_cancelled notification tap: show a banner and
+  // prefilter to the cancelled game's date (if still upcoming) so alternatives
+  // for the freed-up slot surface first.
+  const [cancelledContext, setCancelledContext] = useState<
+    NonNullable<HomeStackParamList['PublicMatches']>['cancelledContext'] | null
+  >(null);
+  useEffect(() => {
+    const ctx = route.params?.cancelledContext;
+    if (!ctx) return;
+    setCancelledContext(ctx);
+    // Prefilter to the freed-up date only for cancellations; an unfilled game's
+    // slot has already passed, so leave the feed open to the coming days.
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if (ctx.reason !== 'unfilled' && ctx.matchDate && ctx.matchDate >= todayIso) {
+      setSpecificDate(ctx.matchDate);
+    }
+    // Consume the param so re-focusing the screen doesn't replay the banner.
+    navigation.setParams({ cancelledContext: undefined } as never);
+  }, [route.params?.cancelledContext, navigation, setSpecificDate]);
+
+  // "Create your own game" CTA — shared by the empty state and the end-of-list footer.
+  const handleCreateGamePress = useCallback(
+    (placement: 'empty_state' | 'feed_footer') => {
+      Analytics.createGameCtaPressed({
+        placement,
+        has_active_filters: hasActiveFilters || debouncedSearchQuery.length > 0,
+      });
+      openSheetForMatchCreation(placement === 'feed_footer' ? 'feed_footer' : 'empty_feed');
+    },
+    [hasActiveFilters, debouncedSearchQuery, openSheetForMatchCreation]
+  );
+
   // Render empty state — shows once matches have settled and there are none.
   const renderEmptyComponent = useCallback(() => {
     if (isLoading || isSearching) return null;
     return (
       <EmptyState
         hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
-        textMutedColor={colors.textMuted}
+        colors={{ primary: colors.primary, text: colors.text, textMuted: colors.textMuted }}
+        sportName={selectedSport?.name ?? 'tennis'}
         t={t}
+        onCreatePress={() => handleCreateGamePress('empty_state')}
       />
     );
-  }, [isLoading, isSearching, hasActiveFilters, debouncedSearchQuery, colors.textMuted, t]);
+  }, [
+    isLoading,
+    isSearching,
+    hasActiveFilters,
+    debouncedSearchQuery,
+    colors.primary,
+    colors.text,
+    colors.textMuted,
+    selectedSport?.name,
+    t,
+    handleCreateGamePress,
+  ]);
 
-  // Render footer — pagination spinner only.
+  // Render footer — pagination spinner, or a create-your-own prompt at the end of the list.
   const renderFooter = useCallback(() => {
     if (isFetchingNextPage) {
       return (
@@ -506,8 +588,28 @@ export default function PublicMatches() {
         </View>
       );
     }
+    if (!hasNextPage && sortedMatches.length > 0) {
+      return (
+        <View style={styles.endOfListCta}>
+          <Text size="sm" color={colors.textMuted} style={styles.inlineEmptyText}>
+            {t('publicMatches.endOfList.title')}
+          </Text>
+          <Button variant="outline" size="sm" onPress={() => handleCreateGamePress('feed_footer')}>
+            {t('matches.createMatch')}
+          </Button>
+        </View>
+      );
+    }
     return null;
-  }, [isFetchingNextPage, colors.primary]);
+  }, [
+    isFetchingNextPage,
+    hasNextPage,
+    sortedMatches.length,
+    colors.primary,
+    colors.textMuted,
+    t,
+    handleCreateGamePress,
+  ]);
 
   // Loading state for initial data
   const isInitialLoading = playerLoading || sportLoading;
@@ -538,6 +640,43 @@ export default function PublicMatches() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      {/* Recovery banner after a cancelled-game notification tap */}
+      {cancelledContext && (
+        <View
+          style={[
+            styles.cancelledBanner,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons
+            name={
+              cancelledContext.reason === 'unfilled' ? 'refresh-outline' : 'close-circle-outline'
+            }
+            size={22}
+            color={colors.textMuted}
+          />
+          <View style={styles.cancelledBannerTextWrap}>
+            <Text size="sm" weight="semibold" color={colors.text}>
+              {cancelledContext.reason === 'unfilled'
+                ? t('publicMatches.unfilledBanner.title')
+                : t('publicMatches.cancelledBanner.title')}
+            </Text>
+            <Text size="xs" color={colors.textMuted}>
+              {cancelledContext.reason === 'unfilled'
+                ? t('publicMatches.unfilledBanner.description')
+                : t('publicMatches.cancelledBanner.description')}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setCancelledContext(null)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('common.close')}
+          >
+            <Ionicons name="close" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Fixed Header - Search and Filters always visible */}
       <View style={styles.headerContainer}>
         {/* Search Bar */}
@@ -697,7 +836,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[5],
   },
   emptyListContent: {
-    flexGrow: 0,
+    // Let the hero empty state own the viewport below the filters.
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   emptyWrapper: {
     paddingTop: spacingPixels[2],
@@ -713,6 +854,67 @@ const styles = StyleSheet.create({
   inlineEmptyText: {
     flexShrink: 1,
     textAlign: 'center',
+  },
+  emptyHero: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[8],
+    paddingHorizontal: spacingPixels[6],
+    gap: spacingPixels[2],
+  },
+  emptyHeroBadge: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacingPixels[4],
+  },
+  emptyHeroBadgeMark: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  emptyHeroTitle: {
+    textAlign: 'center',
+  },
+  emptyHeroDescription: {
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  emptyHeroButton: {
+    marginTop: spacingPixels[6],
+  },
+  emptyHeroHelper: {
+    textAlign: 'center',
+    marginTop: spacingPixels[1],
+  },
+  endOfListCta: {
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[6],
+    paddingHorizontal: spacingPixels[6],
+  },
+  cancelledBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[4],
+    padding: spacingPixels[3],
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  cancelledBannerTextWrap: {
+    flex: 1,
+    gap: 2,
   },
   emptyContainer: {
     padding: spacingPixels[8],

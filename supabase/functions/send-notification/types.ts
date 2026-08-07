@@ -54,6 +54,10 @@ export type NotificationType =
   | 'org_announcement'
   // Match discovery notifications
   | 'match_spot_opened'
+  | 'court_booking_nudge'
+  | 'match_last_minute_spots'
+  | 'match_unfilled_recovery'
+  | 'play_rhythm_nudge'
   | 'nearby_match_available'
   // Match time-suggestion (counter-proposal) flow
   | 'match_time_suggested'
@@ -68,6 +72,7 @@ export type NotificationType =
   | 'tournament_registration_approved'
   | 'tournament_registration_removed'
   | 'tournament_bracket_published'
+  | 'tournament_registration_open'
   | 'tournament_match_completed'
   | 'tournament_match_ready'
   | 'tournament_updated'
@@ -208,6 +213,10 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_check_in_available: { email: true, push: true, sms: false },
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
+  court_booking_nudge: { email: false, push: true, sms: false },
+  match_last_minute_spots: { email: false, push: true, sms: false },
+  match_unfilled_recovery: { email: false, push: true, sms: false },
+  play_rhythm_nudge: { email: false, push: true, sms: false },
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false },
@@ -260,6 +269,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   tournament_registration_approved: { email: false, push: true, sms: false },
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
+  tournament_registration_open: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },

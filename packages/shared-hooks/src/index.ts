@@ -87,3 +87,4 @@ export * from './useCoverageCheck';
 // Web bundlers will use the stub .ts files which throw helpful errors at runtime
 export * from './useTheme';
 export * from './useThemeStyles';
+export * from './useMatchInviteCandidates';

@@ -233,6 +233,11 @@
       "match_check_in_available": "Check-in available",
       "match_new_available": "New game in group",
       "match_spot_opened": "Spot opened",
+      "court_booking_nudge": "Book your court",
+      "match_last_minute_spots": "Starting soon",
+      "match_unfilled_recovery": "Game recovery",
+      "play_rhythm_nudge": "Usual slot open",
+      "tournament_registration_open": "Tournament registration open",
       "nearby_match_available": "Nearby game",
       "player_kicked": "Removed from game",
       "player_left": "Player left",
@@ -444,6 +449,26 @@
       "match_spot_opened": {
         "title": "A spot opened in a {sportName} game",
         "body": "A spot just opened on {matchDate}{startTime}{locationName}. Tap to claim it before it's gone."
+      },
+      "court_booking_nudge": {
+        "title": "Courts are open at {facilityName}",
+        "body": "Games with a booked court fill faster. Grab yours while it's open."
+      },
+      "match_last_minute_spots": {
+        "title": "Starting soon · {sportName} at {locationName}",
+        "body": "A game near you starts soon and still has open spots. Tap to join."
+      },
+      "match_unfilled_recovery": {
+        "title": "Your game didn't fill this time",
+        "body": "It happens. Tap to browse open games and get back out there."
+      },
+      "play_rhythm_nudge": {
+        "title": "Your usual slot is open",
+        "body": "A {sportName} game{locationName} still needs players. Tap to join."
+      },
+      "tournament_registration_open": {
+        "title": "Registration is open · {tournamentName}",
+        "body": "Spots are limited. Tap to register."
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",
@@ -3558,6 +3583,13 @@
       "outcome": "Match Outcome",
       "feedback": "Feedback"
     },
+    "nextPrompt": {
+      "title": "Feedback sent. Nice game!",
+      "subtitle": "Keep the momentum going and line up your next one now.",
+      "playAgain": "Play again next week",
+      "joinAnother": "Join another game",
+      "done": "Done"
+    },
     "matchContext": {
       "vsPlayer": "vs {name}",
       "vsPlayers": "vs {names}",
@@ -4149,7 +4181,20 @@
       "invitationsSent": "Invitations sent!",
       "invitationsSentCount": "Sent {count} invitation(s)",
       "shareWithContacts": "Share with {count} contact(s)",
-      "selectContactsFromLists": "Select contacts from your lists"
+      "selectContactsFromLists": "Select contacts from your lists",
+      "greatFits": "Great fits for this game",
+      "morePlayers": "More players",
+      "freeAtGameTime": "Free at game time",
+      "suggestedForGame": "Suggested for this game",
+      "gameCreatedNote": "Game created! Now line up your players.",
+      "chips": {
+        "playedTogether": "Played together",
+        "responsive": "Responsive",
+        "sameRating": "Same level",
+        "activeRecently": "Active this week",
+        "playsHere": "Favorite venue",
+        "nearby": "Nearby"
+      }
     }
   },
   "leaderboard": {
@@ -6200,10 +6245,22 @@
     "empty": {
       "title": "No games found",
       "description": "Try adjusting your filters or check back later",
+      "helper": "Create yours and we'll help you fill it 💪",
       "noFilters": {
         "title": "No public games nearby",
         "description": "Be the first to create a game in your area!"
       }
+    },
+    "endOfList": {
+      "title": "None of these work for you?"
+    },
+    "cancelledBanner": {
+      "title": "Your game was cancelled",
+      "description": "Here are other open games you could join instead."
+    },
+    "unfilledBanner": {
+      "title": "Your game didn't fill this time",
+      "description": "Join an open game below, or create your next one and we'll help fill it."
     },
     "results": {
       "count": "{count} games",
@@ -11488,6 +11545,7 @@
     "badgePrivate": "Private",
     "badgeFirstCome": "First come, first served",
     "badgeBookable": "Bookable",
+    "bookableOnly": "Bookable",
     "badgeMembership": "Members only",
     "today": "Today",
     "tomorrow": "Tomorrow",
@@ -11496,6 +11554,7 @@
     "loadMore": "Load more",
     "emptyTitle": "No courts found",
     "emptyDescription": "We couldn't find courts here yet. Try a different search, or get the app to explore more.",
+    "bookableEmptyDescription": "No bookable courts here yet. Clear the filter to see every court around you.",
     "emptyCta": "Get the app",
     "bookSlotAria": "Book the {time} slot",
     "justShowUp": "Just show up and play",
@@ -11595,6 +11654,32 @@
       "singles": "Singles",
       "doubles": "Doubles"
     }
+  },
+  "playerPage": {
+    "title": "Player Profile",
+    "subtitle": "Download Rallia to play with this player and discover more games near you.",
+    "notFound": "Player not found",
+    "notFoundDescription": "This player may have left Rallia or the link is invalid.",
+    "joined": "On Rallia since {date}",
+    "statGamesPlayed": "Games played",
+    "statHoursPlayed": "Hours played",
+    "statWeekStreak": "Week streak",
+    "certified": "Certified",
+    "reputationLabel": "Reputation",
+    "tier": {
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum"
+    },
+    "downloadTitle": "Play with {name}",
+    "downloadDescription": "Download Rallia to invite this player to a game and find players near you.",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play",
+    "ogEyebrow": "Player Profile",
+    "ogTitle": "{name} on Rallia",
+    "ogGamesPlayed": "{count, plural, one {1 game played} other {# games played}}",
+    "ogCta": "Download Rallia to play together"
   },
   "inviteScanner": {
     "title": "Scan QR Code",
@@ -12243,6 +12328,22 @@
       "acceptError": "We couldn't save your acceptance. Please check your connection and try again.",
       "signOutConfirmTitle": "Sign Out?",
       "signOutConfirmMessage": "You'll need to accept the updated policy the next time you sign in."
+    }
+  },
+  "phoneVerification": {
+    "verify": "Verify",
+    "enterCode": "Enter the 6-digit code we texted to {phone}",
+    "resend": "Resend code",
+    "resendIn": "Resend in {seconds}s",
+    "success": "Phone number verified",
+    "consentNotice": "By verifying your number, you agree that Rallia may text you about your games. Message and data rates may apply. Reply STOP anytime to opt out.",
+    "errors": {
+      "invalidPhone": "Please enter a valid phone number",
+      "incorrectCode": "That code isn't right. Give it another try.",
+      "codeExpired": "This code has expired. Request a new one.",
+      "rateLimited": "Too many attempts. Please wait a few minutes.",
+      "sessionExpired": "Your session expired. Sign in again to verify your number.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }

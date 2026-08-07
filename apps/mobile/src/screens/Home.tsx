@@ -2234,6 +2234,19 @@ const Home = () => {
                 <Text size="sm" color={colors.textMuted} style={styles.jfyEmptyText}>
                   {t('home.nearbyEmpty.title')}
                 </Text>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={() => {
+                    Analytics.createGameCtaPressed({
+                      placement: 'home_nearby_empty',
+                      has_active_filters: false,
+                    });
+                    openSheetForMatchCreation('home_nearby_empty');
+                  }}
+                >
+                  {t('matches.createMatch')}
+                </Button>
               </View>
             ) : showJfyLoading ? (
               <ScrollView
@@ -2415,6 +2428,7 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.xl,
     borderWidth: 1,
     alignItems: 'center',
+    gap: spacingPixels[3],
   },
   matchesSectionIconWrap: {
     width: 80,

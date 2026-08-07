@@ -40,6 +40,7 @@ import { useAuth, useRequireOnboarding, useScrollBottomInset } from '#/hooks';
 import { useTranslation, type TranslationOptions } from '#/hooks/useTranslation';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
 import { useCommunityNavigation, useAppNavigation } from '#/navigation/hooks';
+import { navigateFromOutside } from '#/navigation/navigationRef';
 import SignInPrompt from '#/components/SignInPrompt';
 import { SportIcon } from '#/components/SportIcon';
 import { renderNearbyMatchCard } from './nearbyNotificationCard';
@@ -432,6 +433,30 @@ const Notifications: React.FC = () => {
 
       // Navigate to target based on notification type and target_id
       if (notification.target_id && notification.type) {
+        // Cancelled/unfilled games recover to Public Games with context instead
+        // of the dead detail sheet (every action is disabled on those matches).
+        if (
+          notification.type === 'match_cancelled' ||
+          notification.type === 'match_unfilled_recovery'
+        ) {
+          const payload = notification.payload as Record<string, unknown> | null;
+          Logger.logUserAction('notification_match_cancelled_redirect', {
+            notificationId: notification.id,
+            matchId: notification.target_id,
+            type: notification.type,
+          });
+          navigateFromOutside('PublicMatches', {
+            cancelledContext: {
+              matchId: notification.target_id,
+              matchDate: payload?.matchDate as string | undefined,
+              startTime: payload?.startTime as string | undefined,
+              sportName: payload?.sportName as string | undefined,
+              reason: notification.type === 'match_cancelled' ? 'cancelled' : 'unfilled',
+            },
+          });
+          return;
+        }
+
         const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(notification.type);
 
         if (isMatchNotification) {

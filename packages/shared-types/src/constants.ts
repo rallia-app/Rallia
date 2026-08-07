@@ -274,6 +274,10 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_check_in_available: 'checkmark-circle-outline',
   match_new_available: 'add-circle-outline',
   match_spot_opened: 'enter-outline',
+  court_booking_nudge: 'calendar-outline',
+  match_last_minute_spots: 'flash-outline',
+  match_unfilled_recovery: 'refresh-outline',
+  play_rhythm_nudge: 'repeat-outline',
   nearby_match_available: 'location-outline',
   match_completed: 'trophy-outline',
   player_kicked: 'remove-circle-outline',
@@ -344,6 +348,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_registration_approved: 'checkmark-circle-outline',
   tournament_registration_removed: 'remove-circle-outline',
   tournament_bracket_published: 'git-network-outline',
+  tournament_registration_open: 'trophy-outline',
   tournament_match_completed: 'podium-outline',
   tournament_match_ready: 'flash-outline',
   tournament_updated: 'create-outline',
@@ -381,6 +386,10 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_check_in_available: '#4CAF50', // Green
   match_new_available: '#4DB8A8', // Teal
   match_spot_opened: '#4CAF50', // Green
+  court_booking_nudge: '#FF9800', // Orange
+  match_last_minute_spots: '#F44336', // Red (urgency)
+  match_unfilled_recovery: '#4DB8A8', // Teal (supportive)
+  play_rhythm_nudge: '#9C27B0', // Purple (habit)
   nearby_match_available: '#2196F3', // Blue
   match_completed: '#4CAF50', // Green
   player_kicked: '#F44336', // Red
@@ -451,6 +460,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_approved: '#4CAF50', // Green
   tournament_registration_removed: '#F44336', // Red
   tournament_bracket_published: '#4DB8A8', // Teal
+  tournament_registration_open: '#E57373', // Coral (tournament)
   tournament_match_completed: '#4DB8A8', // Teal
   tournament_match_ready: '#4DB8A8', // Teal
   tournament_updated: '#FF9800', // Orange — details changed
@@ -486,6 +496,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_check_in_available: 'Check-in Available',
   match_new_available: 'New Game in Group',
   match_spot_opened: 'Spot Opened',
+  court_booking_nudge: 'Book Your Court',
+  match_last_minute_spots: 'Starting Soon',
+  match_unfilled_recovery: 'Game Recovery',
+  play_rhythm_nudge: 'Usual Slot Open',
   nearby_match_available: 'Nearby Match',
   match_completed: 'Match Completed',
   player_kicked: 'Removed from Match',
@@ -554,6 +568,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_approved: 'Registration Approved',
   tournament_registration_removed: 'Removed from Tournament',
   tournament_bracket_published: 'Bracket Published',
+  tournament_registration_open: 'Registration Open',
   tournament_match_completed: 'Tournament Result',
   tournament_match_ready: 'Next Match',
   tournament_updated: 'Tournament Updated',
@@ -590,6 +605,10 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_check_in_available: 'match',
   match_new_available: 'match',
   match_spot_opened: 'match',
+  court_booking_nudge: 'match',
+  match_last_minute_spots: 'match',
+  match_unfilled_recovery: 'match',
+  play_rhythm_nudge: 'match',
   nearby_match_available: 'match',
   match_completed: 'match',
   player_kicked: 'match',
@@ -667,6 +686,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_registration_approved: 'leagues',
   tournament_registration_removed: 'leagues',
   tournament_bracket_published: 'leagues',
+  tournament_registration_open: 'leagues',
   tournament_match_completed: 'leagues',
   tournament_match_ready: 'leagues',
   tournament_updated: 'leagues',
@@ -742,6 +762,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_check_in_available: { email: true, push: true, sms: false },
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
+  court_booking_nudge: { email: false, push: true, sms: false },
+  match_last_minute_spots: { email: false, push: true, sms: false },
+  match_unfilled_recovery: { email: false, push: true, sms: false },
+  play_rhythm_nudge: { email: false, push: true, sms: false },
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false }, // Push only for player leaves
@@ -822,6 +846,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_registration_approved: { email: false, push: true, sms: false },
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
+  tournament_registration_open: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
@@ -861,6 +886,9 @@ export const MATCH_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] =
   'match_check_in_available',
   'match_new_available',
   'match_spot_opened',
+  'court_booking_nudge',
+  'match_last_minute_spots',
+  'play_rhythm_nudge',
   'nearby_match_available',
   'player_kicked',
   'player_left',
@@ -893,6 +921,7 @@ export const REFERENCE_RESPONSE_NOTIFICATION_TYPES: readonly ExtendedNotificatio
 
 /** Tournament notifications — target_id is always the tournament id. */
 export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'tournament_registration_open',
   'tournament_partner_registered',
   'tournament_partner_withdrew',
   'tournament_registration_received',

@@ -17,13 +17,6 @@ import type { UtmParams } from '@rallia/shared-utils';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { InvitationType } from '@/lib/store-urls';
 
-export function detectPlatform(userAgent: string): 'ios' | 'android' | null {
-  const ua = userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-  if (/android/.test(ua)) return 'android';
-  return null;
-}
-
 export async function logReferralClick(
   code: string,
   ip: string,
@@ -53,4 +46,4 @@ export async function logReferralClick(
 
 // buildPlayStoreUrl moved to store-urls.ts (client-safe); re-exported here
 // so existing server-side callers keep working.
-export { APP_STORE_URL, PLAY_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
+export { APP_STORE_URL, PLAY_STORE_URL, buildPlayStoreUrl, detectPlatform } from '@/lib/store-urls';

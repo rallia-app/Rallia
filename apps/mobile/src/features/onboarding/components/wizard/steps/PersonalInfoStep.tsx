@@ -16,6 +16,7 @@ import {
   Pressable,
   LayoutAnimation,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -39,6 +40,11 @@ import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardi
 import { useLocale } from '#/context';
 import { PENDING_REFERRAL_KEY } from '#/navigation/deepLinkStore';
 import * as Analytics from '#/services/analytics';
+import { usePhoneVerification } from '#/hooks/usePhoneVerification';
+import { PhoneInput } from '#/components/PhoneInput';
+import { OtpCodeInput } from '#/components/OtpCodeInput';
+
+const E164_REGEX = /^\+[1-9]\d{6,14}$/;
 
 interface ThemeColors {
   background: string;
@@ -53,6 +59,7 @@ interface ThemeColors {
   inputBackground: string;
   inputBorder: string;
   error: string;
+  success: string;
 }
 
 interface PersonalInfoStepProps {
@@ -88,6 +95,33 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
   // Field validation errors
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  // Phone verification (optional field; skippable at every point)
+  const [otpCode, setOtpCode] = useState('');
+  const {
+    status: phoneVerifyStatus,
+    errorKey: phoneVerifyErrorKey,
+    resendCooldown,
+    canResend,
+    sendCode,
+    checkCode,
+    reset: resetPhoneVerification,
+  } = usePhoneVerification({
+    source: 'onboarding',
+    onVerified: verifiedPhone => {
+      onUpdateFormData({ phoneNumber: verifiedPhone, phoneVerified: true });
+      setOtpCode('');
+    },
+  });
+
+  const handlePhoneNumberChange = useCallback(
+    (fullNumber: string, _countryCode: string, _localNumber: string) => {
+      onUpdateFormData({ phoneNumber: fullNumber, phoneVerified: false });
+      setOtpCode('');
+      resetPhoneVerification();
+    },
+    [onUpdateFormData, resetPhoneVerification]
+  );
 
   // Refs for keyboard visibility handling
   const scrollViewRef = useRef<any>(null);
@@ -513,6 +547,120 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         </View>
       </View>
 
+      {/* Phone Number (optional, with inline verification) */}
+      <View
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.phoneNumber = e.nativeEvent.layout.y;
+        }}
+      >
+        <PhoneInput
+          value={formData.phoneNumber}
+          onChangePhone={handlePhoneNumberChange}
+          label={t('onboarding.personalInfoStep.phoneNumber')}
+          placeholder={t('onboarding.personalInfoStep.phoneNumber')}
+          required={false}
+          colors={{
+            text: colors.text,
+            textMuted: colors.textMuted,
+            textSecondary: colors.textSecondary,
+            background: colors.background,
+            inputBackground: colors.inputBackground,
+            inputBorder: colors.inputBorder,
+            primary: colors.buttonActive,
+            error: colors.error,
+            card: colors.cardBackground,
+          }}
+          onFocus={() => scrollToField('phoneNumber')}
+          TextInputComponent={TextInput}
+        />
+        {formData.phoneVerified ? (
+          <View style={[styles.verifiedPill, { backgroundColor: colors.success }]}>
+            <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+            <Text size="sm" weight="semibold" style={{ color: '#FFFFFF' }}>
+              {t('common.verified')}
+            </Text>
+          </View>
+        ) : E164_REGEX.test(formData.phoneNumber.replace(/[\s\-()]/g, '')) ? (
+          <View style={styles.verifySection}>
+            {phoneVerifyStatus === 'idle' || phoneVerifyStatus === 'sending' ? (
+              <>
+                <Text size="xs" color={colors.textMuted} style={styles.consentNotice}>
+                  {t('phoneVerification.consentNotice')}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.verifyButton, { backgroundColor: colors.buttonActive }]}
+                  onPress={() => sendCode(formData.phoneNumber.replace(/[\s\-()]/g, ''))}
+                  disabled={phoneVerifyStatus === 'sending'}
+                  activeOpacity={0.8}
+                >
+                  {phoneVerifyStatus === 'sending' ? (
+                    <ActivityIndicator size="small" color={colors.buttonTextActive} />
+                  ) : (
+                    <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
+                      {t('phoneVerification.verify')}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text size="sm" color={colors.textSecondary} style={styles.consentNotice}>
+                  {t('phoneVerification.enterCode').replace('{phone}', formData.phoneNumber)}
+                </Text>
+                <OtpCodeInput
+                  code={otpCode}
+                  onCodeChange={setOtpCode}
+                  onComplete={checkCode}
+                  colors={{
+                    text: colors.text,
+                    cardBackground: colors.cardBackground,
+                    inputBackground: colors.inputBackground,
+                    inputBorder: colors.inputBorder,
+                    buttonActive: colors.buttonActive,
+                  }}
+                  TextInputComponent={TextInput}
+                />
+                {phoneVerifyStatus === 'checking' ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.buttonActive}
+                    style={styles.otpSpinner}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setOtpCode('');
+                      sendCode(formData.phoneNumber.replace(/[\s\-()]/g, ''));
+                    }}
+                    disabled={!canResend}
+                    style={styles.resendLink}
+                  >
+                    <Text
+                      size="sm"
+                      weight="semibold"
+                      color={canResend ? colors.buttonActive : colors.textMuted}
+                    >
+                      {canResend
+                        ? t('phoneVerification.resend')
+                        : t('phoneVerification.resendIn').replace(
+                            '{seconds}',
+                            String(resendCooldown)
+                          )}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+            {phoneVerifyErrorKey ? (
+              <Text size="xs" color={colors.error} style={styles.verifyError}>
+                {t(phoneVerifyErrorKey)}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+
       {/* Referral Code */}
       <View style={styles.inputContainer}>
         <View style={styles.referralLabelRow}>
@@ -633,6 +781,39 @@ const styles = StyleSheet.create({
   },
   errorText: {
     marginTop: spacingPixels[1],
+  },
+  verifiedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1],
+    marginTop: spacingPixels[2],
+  },
+  verifySection: {
+    marginTop: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  consentNotice: {
+    lineHeight: 16,
+  },
+  verifyButton: {
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[2],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resendLink: {
+    alignSelf: 'center',
+    paddingVertical: spacingPixels[1],
+  },
+  otpSpinner: {
+    paddingVertical: spacingPixels[1],
+  },
+  verifyError: {
+    textAlign: 'center',
   },
   inputLabel: {
     marginBottom: spacingPixels[2],

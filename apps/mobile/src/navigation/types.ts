@@ -144,7 +144,18 @@ export type BottomTabParamList = {
 export type HomeStackParamList = {
   HomeScreen: undefined;
   PlayerMatches: undefined;
-  PublicMatches: undefined;
+  PublicMatches:
+    | {
+        /** Context shown when arriving from a cancelled/unfilled-game notification tap. */
+        cancelledContext?: {
+          matchId?: string;
+          matchDate?: string;
+          startTime?: string;
+          sportName?: string;
+          reason?: 'cancelled' | 'unfilled';
+        };
+      }
+    | undefined;
 };
 
 /**
