@@ -4704,6 +4704,8 @@
     },
     "createSeason": {
       "title": "Create a season",
+      "gamesPerPlayerLabel": "Games per player, per session",
+      "gamesPerPlayerHint": "Some leagues play more than one game a night. Sessions open on this and can still differ.",
       "presets": {
         "hint": "Start from one of the four seasons, then adjust anything.",
         "winter": "Winter",
@@ -4975,13 +4977,21 @@
       "memberCapacityPlaceholder": "Unlimited",
       "memberCapacityHint": "How many players can hold a spot, including you. Leave empty for no limit.",
       "waitlistTitle": "Waitlist",
-      "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens."
+      "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens.",
+      "pointsTitle": "Points system",
+      "points": {
+        "pointWin": "Win",
+        "pointLoss": "Loss",
+        "pointBye": "Bye"
+      },
+      "pointsHint": "What each result is worth in the standings. Seasons keep the values they were created with."
     },
     "validation": {
       "nameRequired": "League name is required",
       "nameTooLong": "Name must be 100 characters or fewer",
       "ratingRangeInvalid": "Maximum rating must be at or above the minimum",
-      "capacityInvalid": "Enter a number of 1 or more"
+      "capacityInvalid": "Enter a number of 1 or more",
+      "pointsInvalid": "Points must be whole numbers between -100 and 100"
     },
     "errors": {
       "sportMismatch": "Switch to a sport on your profile before creating a league",

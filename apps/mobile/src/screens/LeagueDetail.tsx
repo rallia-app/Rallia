@@ -149,12 +149,13 @@ const MATCH_FORMAT_KEY: Record<string, string> = {
   pickleball_to_21: 'leagueDetail.values.twoOfThree',
 };
 
-/** The subset of the rules jsonb the Overview explains. */
+/** The subset of the rules jsonb the client reads. */
 type LeagueRulesSummary = {
   matchFormat?: string;
   pointWin?: number;
   pointLoss?: number;
   pointBye?: number;
+  gamesPerPlayer?: number;
 };
 
 function readRules(value: unknown): LeagueRulesSummary {
@@ -2354,6 +2355,7 @@ export const LeagueDetail: React.FC = () => {
           logoUrl: league.logo_url,
           memberCapacity: league.member_capacity,
           waitlistEnabled: league.waitlist_enabled,
+          defaultRules: readRules(league.default_rules) as Record<string, unknown>,
         },
       },
     });
@@ -2460,8 +2462,13 @@ export const LeagueDetail: React.FC = () => {
   const handleOpenCreateSession = useCallback(() => {
     if (!openSeason) return;
     lightHaptic();
+    const seasonRules = readRules(openSeason.rules);
     void SheetManager.show('create-session', {
-      payload: { seasonId: openSeason.id, leagueId },
+      payload: {
+        seasonId: openSeason.id,
+        leagueId,
+        defaultRounds: seasonRules.gamesPerPlayer,
+      },
     });
   }, [openSeason, leagueId]);
 

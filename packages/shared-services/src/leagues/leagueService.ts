@@ -4,7 +4,7 @@
  * Wraps the L&T Postgres RPCs for leagues and seasons (V6 slice).
  */
 
-import type { Tables, Enums } from '@rallia/shared-types';
+import type { Tables, Enums, Json } from '@rallia/shared-types';
 
 import {
   getProfilesByIds,
@@ -105,6 +105,8 @@ export interface CreateLeagueInput {
   maxRating?: number;
   minReputation?: number;
   logoUrl?: string;
+  /** Merged over the sport defaults server-side, then validated. */
+  rulesOverride?: Record<string, unknown>;
 }
 
 export interface LeagueMemberWithProfile extends LeagueMember {
@@ -193,6 +195,7 @@ export async function createLeague(input: CreateLeagueInput): Promise<League> {
     p_max_rating: input.maxRating ?? null,
     p_min_reputation: input.minReputation ?? null,
     p_logo_url: input.logoUrl ?? null,
+    p_rules_override: (input.rulesOverride ?? null) as Json,
   });
   if (error) throw new Error(error.message);
   return data as League;

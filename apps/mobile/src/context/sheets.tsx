@@ -482,6 +482,8 @@ declare module 'react-native-actions-sheet' {
       payload: {
         seasonId: string;
         leagueId: string;
+        /** The season's gamesPerPlayer rule, so the form opens on it. */
+        defaultRounds?: number;
       };
     }>;
     'court-selection': SheetDefinition<{

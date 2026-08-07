@@ -4704,6 +4704,8 @@
     },
     "createSeason": {
       "title": "Créer une saison",
+      "gamesPerPlayerLabel": "Parties par joueur, par séance",
+      "gamesPerPlayerHint": "Certaines ligues jouent plus d'une partie par soir. Les séances ouvrent là-dessus et peuvent quand même différer.",
       "presets": {
         "hint": "Pars d'une des quatre saisons, pis ajuste ce que tu veux.",
         "winter": "Hiver",
@@ -4974,6 +4976,13 @@
       "memberCapacity": "Limite de membres",
       "memberCapacityPlaceholder": "Illimité",
       "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, vous compris. Laissez vide pour aucune limite.",
+      "pointsTitle": "Système de pointage",
+      "points": {
+        "pointWin": "Victoire",
+        "pointLoss": "Défaite",
+        "pointBye": "Bye"
+      },
+      "pointsHint": "Ce que chaque résultat vaut au classement. Les saisons gardent les valeurs qu'elles avaient à leur création.",
       "waitlistTitle": "Liste d'attente",
       "waitlistDescription": "Quand la ligue est pleine, les nouveaux se placent en file et entrent automatiquement dès qu'une place se libère."
     },
@@ -4981,7 +4990,8 @@
       "nameRequired": "Le nom de la ligue est requis",
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
       "ratingRangeInvalid": "La cote maximale doit être égale ou supérieure à la minimale",
-      "capacityInvalid": "Entrez un nombre de 1 ou plus"
+      "capacityInvalid": "Entrez un nombre de 1 ou plus",
+      "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100"
     },
     "errors": {
       "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",

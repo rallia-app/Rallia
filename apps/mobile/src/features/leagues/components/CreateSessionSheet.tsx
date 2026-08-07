@@ -55,7 +55,8 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState('');
   const [pairingMode, setPairingMode] = useState<Enums<'pairing_mode'>>('by_rank');
-  const [rounds, setRounds] = useState<number>(1);
+  // Opens on the season's own games-per-player, still overridable per session.
+  const [rounds, setRounds] = useState<number>(payload?.defaultRounds ?? 1);
   const [scheduledAt, setScheduledAt] = useState<Date>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);

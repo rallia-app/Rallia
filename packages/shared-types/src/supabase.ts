@@ -11984,6 +11984,7 @@ export type Database = {
           p_min_reputation?: number
           p_name: string
           p_network_id?: string
+          p_rules_override?: Json
           p_sport_id: string
           p_venue_name?: string
           p_visibility?: Database["public"]["Enums"]["tournament_visibility"]
@@ -12372,6 +12373,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_assert_league_rules: { Args: { p_rules: Json }; Returns: undefined }
       lt_assert_rating_band: {
         Args: {
           p_max: number

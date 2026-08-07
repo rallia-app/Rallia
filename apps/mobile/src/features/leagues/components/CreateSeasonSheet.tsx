@@ -96,6 +96,10 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
   // generator pairs 1v1 for singles and 2v2 for doubles/mixed.
   const [format, setFormat] = useState<SeasonFormat>('singles');
 
+  // Games each player plays per session. Asked once here rather than at every
+  // session; the create-session sheet opens on this and can still override it.
+  const [gamesPerPlayer, setGamesPerPlayer] = useState(1);
+
   // Fee settings. Empty/0 = free season, which is the default.
   const [entryFee, setEntryFee] = useState('');
   const [feePayer, setFeePayer] = useState<FeePayer>('player_pays');
@@ -200,9 +204,15 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
       name: trimmed,
       startDate: startDate.toISOString().slice(0, 10),
       endDate: endDate.toISOString().slice(0, 10),
-      // Only a non-default format needs an override; the league's default
-      // rules already say singles.
-      rulesOverride: format !== 'singles' ? { formatsAllowed: [format] } : undefined,
+      // Only non-default choices need an override; the league's default rules
+      // already say singles, and one game per player is the server default.
+      rulesOverride:
+        format !== 'singles' || gamesPerPlayer > 1
+          ? {
+              ...(format !== 'singles' ? { formatsAllowed: [format] } : {}),
+              ...(gamesPerPlayer > 1 ? { gamesPerPlayer } : {}),
+            }
+          : undefined,
       entryFeeCents,
       feePayer: isPaid ? feePayer : 'player_pays',
       refundPolicyKind: isPaid ? refundKind : 'none',
@@ -214,6 +224,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     startDate,
     endDate,
     format,
+    gamesPerPlayer,
     createSeason,
     toast,
     t,
@@ -322,6 +333,41 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
               testID={`season-format-${f}`}
             />
           ))}
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.text}>
+            {t('leagueDetail.createSeason.gamesPerPlayerLabel')}
+          </Text>
+          <Text size="xs" color={colors.textMuted}>
+            {t('leagueDetail.createSeason.gamesPerPlayerHint')}
+          </Text>
+          <View style={styles.presetRow}>
+            {[1, 2, 3, 4].map(n => (
+              <TouchableOpacity
+                key={n}
+                onPress={() => {
+                  lightHaptic();
+                  setGamesPerPlayer(n);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: gamesPerPlayer === n }}
+                testID={`season-games-per-player-${n}`}
+                style={[
+                  styles.presetChip,
+                  { borderColor: gamesPerPlayer === n ? colors.primary : colors.border },
+                ]}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={gamesPerPlayer === n ? colors.primary : colors.text}
+                >
+                  {String(n)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Entry & payments. Leaving the fee empty keeps the season free, which

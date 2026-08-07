@@ -78,6 +78,26 @@ export interface LeagueEditData {
   logoUrl?: string | null;
   memberCapacity?: number | null;
   waitlistEnabled?: boolean;
+  /** leagues.default_rules, so the points fields open on what the league runs. */
+  defaultRules?: Record<string, unknown> | null;
+}
+
+/**
+ * The three point values worth an organizer's attention. The rules jsonb holds
+ * six more (draw, no-show, retirement and walkover variants); those keep the
+ * sport defaults until someone asks for them.
+ */
+const POINT_FIELDS = ['pointWin', 'pointLoss', 'pointBye'] as const;
+type PointsForm = Record<(typeof POINT_FIELDS)[number], string>;
+
+/** Mirrors lt_league_default_rules, which seeds these at league_create. */
+const DEFAULT_POINTS: PointsForm = { pointWin: '10', pointLoss: '1', pointBye: '1' };
+
+function pointsFromRules(rules: Record<string, unknown> | null | undefined): PointsForm {
+  if (!rules) return { ...DEFAULT_POINTS };
+  const read = (k: (typeof POINT_FIELDS)[number]): string =>
+    typeof rules[k] === 'number' ? String(rules[k]) : DEFAULT_POINTS[k];
+  return { pointWin: read('pointWin'), pointLoss: read('pointLoss'), pointBye: read('pointBye') };
 }
 
 export interface LeagueCreationWizardProps {
@@ -598,6 +618,8 @@ const EligibilityStep: React.FC<{
   setCapacityInput: (v: string) => void;
   waitlistEnabled: boolean;
   setWaitlistEnabled: (v: boolean) => void;
+  points: PointsForm;
+  setPoints: (v: PointsForm) => void;
   errors: Record<string, string | undefined>;
   colors: ThemeColors;
   t: (k: TranslationKey) => string;
@@ -611,6 +633,8 @@ const EligibilityStep: React.FC<{
   setCapacityInput,
   waitlistEnabled,
   setWaitlistEnabled,
+  points,
+  setPoints,
   errors,
   colors,
   t,
@@ -711,6 +735,47 @@ const EligibilityStep: React.FC<{
         />
       </View>
     )}
+
+    {/* Points system. Seasons snapshot these at creation, so an edit here only
+        reaches seasons created afterwards. */}
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('leagueCreation.fields.pointsTitle' as TranslationKey)}
+      </FieldLabel>
+      <View style={styles.pointsRow}>
+        {POINT_FIELDS.map(field => (
+          <View key={field} style={styles.pointsField}>
+            <Text size="xs" color={colors.textMuted}>
+              {t(`leagueCreation.fields.points.${field}` as TranslationKey)}
+            </Text>
+            <TextInput
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: errors.points ? colors.error : colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
+              value={points[field]}
+              onChangeText={v => setPoints({ ...points, [field]: v })}
+              keyboardType="number-pad"
+              maxLength={3}
+              returnKeyType="done"
+              testID={`league-points-${field}`}
+            />
+          </View>
+        ))}
+      </View>
+      {errors.points && (
+        <Text size="xs" color={colors.error} style={styles.errorText}>
+          {errors.points}
+        </Text>
+      )}
+      <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+        {t('leagueCreation.fields.pointsHint' as TranslationKey)}
+      </Text>
+    </View>
   </SheetScrollView>
 );
 
@@ -774,6 +839,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     editLeague?.memberCapacity != null ? String(editLeague.memberCapacity) : ''
   );
   const [waitlistEnabled, setWaitlistEnabled] = useState(editLeague?.waitlistEnabled ?? false);
+  const [points, setPoints] = useState<PointsForm>(() => pointsFromRules(editLeague?.defaultRules));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -854,10 +920,20 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
           next.memberCapacity = t('leagueCreation.validation.capacityInvalid' as TranslationKey);
         }
       }
+      // Mirrors lt_assert_league_rules, so a bad value is caught before the RPC.
+      if (
+        step === 3 &&
+        POINT_FIELDS.some(f => {
+          const v = Number(points[f].trim());
+          return !Number.isInteger(v) || v < -100 || v > 100;
+        })
+      ) {
+        next.points = t('leagueCreation.validation.pointsInvalid' as TranslationKey);
+      }
       setErrors(next);
       return Object.values(next).every(v => !v);
     },
-    [name, minRating, maxRating, capacityInput, t]
+    [name, minRating, maxRating, capacityInput, points, t]
   );
 
   const goNext = useCallback(() => {
@@ -917,6 +993,17 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     const memberCapacity = capacityInput.trim() === '' ? null : Number(capacityInput.trim());
     const effectiveWaitlist = memberCapacity === null ? false : waitlistEnabled;
 
+    // Only the point values that actually moved travel: league_update merges
+    // default_rules server-side, so an untouched key keeps whatever it had.
+    const baseline = pointsFromRules(editLeague?.defaultRules);
+    const changedPoints: Record<string, number> = {};
+    for (const field of POINT_FIELDS) {
+      if (points[field].trim() !== baseline[field]) {
+        changedPoints[field] = Number(points[field].trim());
+      }
+    }
+    const hasPointChanges = Object.keys(changedPoints).length > 0;
+
     // ---- Edit mode: diff against the original and PATCH only what changed ----
     if (isEditMode && editLeague) {
       try {
@@ -934,6 +1021,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
           patch.memberCapacity = memberCapacity;
         if (effectiveWaitlist !== (editLeague.waitlistEnabled ?? false))
           patch.waitlistEnabled = effectiveWaitlist;
+        if (hasPointChanges) patch.defaultRules = changedPoints;
 
         // The server rejects an empty patch, so a no-op save just closes.
         if (Object.keys(patch).length === 0) {
@@ -972,6 +1060,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         minRating: minRating ?? undefined,
         maxRating: maxRating ?? undefined,
         logoUrl: resolvedLogoUrl ?? undefined,
+        rulesOverride: hasPointChanges ? changedPoints : undefined,
       });
       // league_create has no capacity params; apply them with a follow-up
       // patch. If this second call fails the league still exists (the update
@@ -1139,6 +1228,8 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
             setCapacityInput={setCapacityInput}
             waitlistEnabled={waitlistEnabled}
             setWaitlistEnabled={setWaitlistEnabled}
+            points={points}
+            setPoints={setPoints}
             errors={errors}
             colors={colors}
             t={t}
@@ -1256,6 +1347,14 @@ const styles = StyleSheet.create({
   },
   fieldHint: {
     marginTop: spacingPixels[2],
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  pointsField: {
+    flex: 1,
+    gap: spacingPixels[1],
   },
   ratingScrollContent: {
     gap: spacingPixels[2],
