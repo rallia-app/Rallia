@@ -38,6 +38,7 @@ import { Camera } from 'expo-camera';
 import { getTrackingPermissionsAsync } from 'expo-tracking-transparency';
 
 import { useTranslation } from '#/hooks';
+import { requestPushTokenRegistration } from '#/hooks/usePushNotifications';
 import { requestATTAndConfigureMeta } from '#/lib/meta';
 
 const BASE_WHITE = '#ffffff';
@@ -320,6 +321,11 @@ const PermissionsScreen: React.FC = () => {
         case 'notifications': {
           const { status } = await Notifications.requestPermissionsAsync();
           newStatus = mapExpoStatus(status);
+          // Permission alone stores no token — register now rather than
+          // leaving the user pushable only after the next cold start.
+          if (newStatus === 'granted') {
+            await requestPushTokenRegistration();
+          }
           break;
         }
         case 'location': {

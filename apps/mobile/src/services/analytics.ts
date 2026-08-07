@@ -608,6 +608,44 @@ export function notificationPermissionResult(props: {
 }
 
 /**
+ * Why a device ended up without a stored Expo push token.
+ *
+ * - `not_physical_device` — simulator/emulator, dev only, never fires in prod
+ * - `permission_denied`   — OS notification permission refused (or previously
+ *                           refused, so the prompt returns denied immediately)
+ * - `token_fetch_failed`  — Expo's token endpoint failed after retries
+ * - `missing_player_row`  — the token write matched no player row, because
+ *                           onboarding had not created it yet
+ * - `write_failed`        — the database write itself errored
+ */
+export type PushTokenFailureReason =
+  | 'not_physical_device'
+  | 'permission_denied'
+  | 'token_fetch_failed'
+  | 'missing_player_row'
+  | 'write_failed';
+
+/**
+ * Emitted on every completed registration attempt. Paired with
+ * `push_token_registered` these give a measurable success rate — the previous
+ * Logger.warn paths reached only Sentry breadcrumbs, so silent token loss was
+ * invisible in product analytics.
+ */
+export function pushTokenRegistrationFailed(props: {
+  reason: PushTokenFailureReason;
+  /** Attempt index within this session, 0 for the first try. */
+  attempt: number;
+  /** Present for token_fetch_failed and write_failed. */
+  message?: string;
+}): void {
+  capture('push_token_registration_failed', props);
+}
+
+export function pushTokenRegistered(props: { attempt: number }): void {
+  capture('push_token_registered', props);
+}
+
+/**
  * Fires after the user resolves Apple's ATT (App Tracking Transparency)
  * prompt — or skips the pre-prompt screen without triggering the system
  * dialog. `skipped: true` means the user dismissed the pre-prompt, so the

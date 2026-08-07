@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { registerPushToken, unregisterPushToken, Logger } from '@rallia/shared-services';
 import {
   MATCH_NOTIFICATION_TYPES,
@@ -31,6 +31,7 @@ import {
   navigateToIncomingReferenceRequestsFromOutside,
 } from '#/navigation/navigationRef';
 import * as Analytics from '#/services/analytics';
+import { buildRecoveryFilters } from '#/utils/recoveryFilters';
 
 // =============================================================================
 // TYPES
@@ -99,6 +100,29 @@ export interface PushNotificationState {
 }
 
 /**
+ * The player row is created during onboarding, so a registration that fires at
+ * auth time can land before the row exists. Retry across a window wide enough
+ * to cover one uninterrupted onboarding session.
+ */
+const MISSING_PLAYER_ROW_RETRY_MS = [3000, 10000, 30000, 60000, 120000];
+
+/**
+ * Module-level handle to the single mounted hook instance's register function,
+ * mirroring the navigationRef pattern. Screens outside the App root (the
+ * permissions screen) need to trigger registration after granting permission,
+ * and cannot reach the hook instance any other way.
+ */
+let activeRegisterHandler: (() => Promise<void>) | null = null;
+
+/**
+ * Ask the mounted usePushNotifications instance to (re)attempt registration.
+ * No-op when the app root has not mounted the hook yet.
+ */
+export async function requestPushTokenRegistration(): Promise<void> {
+  await activeRegisterHandler?.();
+}
+
+/**
  * Options for the usePushNotifications hook
  */
 export interface UsePushNotificationsOptions {
@@ -135,13 +159,24 @@ async function getExpoPushTokenWithRetry(
 }
 
 /**
+ * Result of a token fetch. The failure branches are distinguished so the
+ * caller can report *why* a device ended up unpushable — collapsing them to
+ * null is what made this invisible in analytics.
+ */
+type ExpoTokenResult =
+  | { status: 'ok'; token: string }
+  | { status: 'not_physical_device' }
+  | { status: 'permission_denied' }
+  | { status: 'token_fetch_failed'; message: string };
+
+/**
  * Get the Expo push token for this device
  */
-async function getExpoPushToken(): Promise<string | null> {
+async function getExpoPushToken(): Promise<ExpoTokenResult> {
   // Must be a physical device
   if (!isPhysicalDevice()) {
     Logger.warn('Push notifications require a physical device');
-    return null;
+    return { status: 'not_physical_device' };
   }
 
   // Check/request permissions
@@ -155,7 +190,7 @@ async function getExpoPushToken(): Promise<string | null> {
 
   if (finalStatus !== 'granted') {
     Logger.warn('Push notification permission not granted');
-    return null;
+    return { status: 'permission_denied' };
   }
 
   // Get the token
@@ -166,20 +201,19 @@ async function getExpoPushToken(): Promise<string | null> {
       Logger.warn('EAS project ID not found in app config');
       // Fallback for development
       const token = await getExpoPushTokenWithRetry();
-      return token.data;
+      return { status: 'ok', token: token.data };
     }
 
     const token = await getExpoPushTokenWithRetry({ projectId });
 
-    return token.data;
+    return { status: 'ok', token: token.data };
   } catch (error) {
     // After retries this is Expo-side / network flakiness, not an app bug —
     // warn so it stays a breadcrumb instead of opening a Sentry issue. Push
     // simply won't register this session; the app degrades gracefully.
-    Logger.warn('Failed to get Expo push token after retries', {
-      message: error instanceof Error ? error.message : String(error),
-    });
-    return null;
+    const message = error instanceof Error ? error.message : String(error);
+    Logger.warn('Failed to get Expo push token after retries', { message });
+    return { status: 'token_fetch_failed', message };
   }
 }
 
@@ -241,6 +275,7 @@ export function usePushNotifications(
   options: UsePushNotificationsOptions = {}
 ): PushNotificationState & {
   requestPermissions: () => Promise<boolean>;
+  registerNow: () => Promise<void>;
   unregister: () => Promise<void>;
 } {
   const {
@@ -258,64 +293,154 @@ export function usePushNotifications(
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   const previousUserId = useRef<string | null>(null);
+  // Mirrors state.isRegistered so registration can be re-triggered from
+  // listeners and timers without putting state in the effect deps.
+  const isRegisteredRef = useRef(false);
+  const inFlightRef = useRef(false);
+  const retryAttemptRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const registerNowRef = useRef<(() => Promise<void>) | null>(null);
+
+  const scheduleMissingPlayerRowRetry = useCallback(() => {
+    const attempt = retryAttemptRef.current;
+    if (attempt >= MISSING_PLAYER_ROW_RETRY_MS.length) {
+      return;
+    }
+    retryAttemptRef.current = attempt + 1;
+
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+    }
+    retryTimerRef.current = setTimeout(() => {
+      void registerNowRef.current?.();
+    }, MISSING_PLAYER_ROW_RETRY_MS[attempt]);
+  }, []);
+
+  const registerNow = useCallback(async (): Promise<void> => {
+    if (!enabled || !userId) {
+      return;
+    }
+    // Skip if already registered for this user
+    if (previousUserId.current === userId && isRegisteredRef.current) {
+      return;
+    }
+    if (inFlightRef.current) {
+      return;
+    }
+
+    inFlightRef.current = true;
+    const attempt = retryAttemptRef.current;
+    setState(prev => ({ ...prev, isRegistering: true, error: null }));
+
+    try {
+      // Set up Android channels first
+      await setupAndroidChannel();
+
+      // Get push token
+      const tokenResult = await getExpoPushToken();
+
+      if (tokenResult.status !== 'ok') {
+        Analytics.pushTokenRegistrationFailed({
+          reason: tokenResult.status,
+          attempt,
+          message: tokenResult.status === 'token_fetch_failed' ? tokenResult.message : undefined,
+        });
+        setState(prev => ({
+          ...prev,
+          isRegistering: false,
+          error: 'Could not get push token',
+        }));
+        return;
+      }
+
+      const token = tokenResult.token;
+
+      // Register token with backend
+      const result = await registerPushToken(userId, token);
+
+      if (result.status === 'missing_player_row') {
+        // Onboarding has not created the player row yet, so the UPDATE matched
+        // nothing. Stay unregistered so the retry timer, the AppState listener
+        // and requestPushTokenRegistration can all still land the token.
+        Analytics.pushTokenRegistrationFailed({ reason: 'missing_player_row', attempt });
+        setState(prev => ({
+          ...prev,
+          isRegistering: false,
+          error: 'Player row not ready',
+        }));
+        scheduleMissingPlayerRowRetry();
+        return;
+      }
+
+      previousUserId.current = userId;
+      isRegisteredRef.current = true;
+      setState({
+        expoPushToken: token,
+        isRegistered: true,
+        isRegistering: false,
+        error: null,
+      });
+
+      Analytics.pushTokenRegistered({ attempt });
+      Logger.logUserAction('push_notifications_registered', {
+        token: token.substring(0, 20) + '...',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      Analytics.pushTokenRegistrationFailed({ reason: 'write_failed', attempt, message });
+      Logger.error('Failed to register push notifications', error as Error);
+      setState(prev => ({
+        ...prev,
+        isRegistering: false,
+        error: message,
+      }));
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, [userId, enabled, scheduleMissingPlayerRowRetry]);
+
+  // Keep the retry timer and the module-level handle pointed at the current
+  // registerNow closure.
+  useEffect(() => {
+    registerNowRef.current = registerNow;
+    activeRegisterHandler = registerNow;
+    return () => {
+      if (activeRegisterHandler === registerNow) {
+        activeRegisterHandler = null;
+      }
+    };
+  }, [registerNow]);
 
   // Register push token when user logs in
+  useEffect(() => {
+    retryAttemptRef.current = 0;
+    void registerNow();
+
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [registerNow]);
+
+  // Recover registrations that could not complete on the first attempt: a
+  // permission granted in the OS settings, or a player row created after the
+  // initial try. Both only become observable when the app is foregrounded.
   useEffect(() => {
     if (!enabled || !userId) {
       return;
     }
 
-    // Skip if already registered for this user
-    if (previousUserId.current === userId && state.isRegistered) {
-      return;
-    }
-
-    const register = async () => {
-      setState(prev => ({ ...prev, isRegistering: true, error: null }));
-
-      try {
-        // Set up Android channels first
-        await setupAndroidChannel();
-
-        // Get push token
-        const token = await getExpoPushToken();
-
-        if (!token) {
-          setState(prev => ({
-            ...prev,
-            isRegistering: false,
-            error: 'Could not get push token',
-          }));
-          return;
-        }
-
-        // Register token with backend
-        await registerPushToken(userId, token);
-
-        previousUserId.current = userId;
-        setState({
-          expoPushToken: token,
-          isRegistered: true,
-          isRegistering: false,
-          error: null,
-        });
-
-        Logger.logUserAction('push_notifications_registered', {
-          token: token.substring(0, 20) + '...',
-        });
-      } catch (error) {
-        Logger.error('Failed to register push notifications', error as Error);
-        setState(prev => ({
-          ...prev,
-          isRegistering: false,
-          error: (error as Error).message,
-        }));
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active' && !isRegisteredRef.current) {
+        retryAttemptRef.current = 0;
+        void registerNow();
       }
-    };
+    });
 
-    register();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, enabled]);
+    return () => subscription.remove();
+  }, [registerNow, enabled, userId]);
 
   // Ref to store the latest callback to avoid stale closures
   const onMatchNotificationTappedRef = useRef(onMatchNotificationTapped);
@@ -359,6 +484,11 @@ export function usePushNotifications(
           sportName: data.sportName as string | undefined,
           reason: notificationType === 'match_cancelled' ? 'cancelled' : 'unfilled',
         },
+        // Only the recovery push counts a set of games, so only it carries the
+        // filters that reproduce them.
+        ...(notificationType === 'match_unfilled_recovery'
+          ? { initialFilters: buildRecoveryFilters(data) }
+          : {}),
       });
       Logger.logUserAction('push_notification_deep_link', {
         matchId,
@@ -599,6 +729,8 @@ export function usePushNotifications(
   useEffect(() => {
     if (!userId && previousUserId.current) {
       previousUserId.current = null;
+      isRegisteredRef.current = false;
+      retryAttemptRef.current = 0;
       setState({
         expoPushToken: null,
         isRegistered: false,
@@ -608,15 +740,27 @@ export function usePushNotifications(
     }
   }, [userId]);
 
+  // Granting permission is only half the job — the token still has to be
+  // fetched and written, so register straight away instead of waiting for the
+  // next cold start.
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     const { status } = await Notifications.requestPermissionsAsync();
-    return status === 'granted';
-  }, []);
+    const granted = status === 'granted';
+
+    if (granted) {
+      retryAttemptRef.current = 0;
+      await registerNow();
+    }
+
+    return granted;
+  }, [registerNow]);
 
   const unregister = useCallback(async (): Promise<void> => {
     if (userId) {
       await unregisterPushToken(userId);
       previousUserId.current = null;
+      isRegisteredRef.current = false;
+      retryAttemptRef.current = 0;
       setState({
         expoPushToken: null,
         isRegistered: false,
@@ -629,6 +773,7 @@ export function usePushNotifications(
   return {
     ...state,
     requestPermissions,
+    registerNow,
     unregister,
   };
 }
