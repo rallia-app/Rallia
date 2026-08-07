@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<title>Protocole de test des nouveautés</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt; line-height: 1.5; color: #1f2933; margin: 0;
+  }
+  h1 { font-size: 20pt; margin: 0 0 6px; letter-spacing: -0.4px; }
+  .meta { font-size: 9pt; color: #52606d; margin-bottom: 18px; }
+  .meta code { font-size: 8.6pt; }
+  h2 {
+    font-size: 13pt; color: #17706b; margin: 26px 0 10px;
+    padding-bottom: 5px; border-bottom: 2px solid #56bcb7;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 10.8pt; margin: 16px 0 6px; page-break-after: avoid; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt;
+    background: #eef2f5; padding: 1px 5px; border-radius: 3px; color: #243b53;
+  }
+  .box {
+    border-radius: 6px; padding: 10px 13px; margin: 12px 0; font-size: 9.7pt;
+    page-break-inside: avoid;
+  }
+  .box.warn   { background: #fdf6e3; border: 1px solid #e8d9a8; color: #7a5c17; }
+  .box.info   { background: #eaf7f6; border: 1px solid #b3e0dd; color: #14615d; }
+  .box.danger { background: #fdeeee; border: 1px solid #efc0c0; color: #8c2f2f; }
+  .box b { color: inherit; }
+  .expect {
+    border-left: 3px solid #56bcb7; padding: 4px 0 4px 11px; margin: 9px 0;
+    font-size: 9.7pt; color: #35434f; page-break-inside: avoid;
+  }
+  .expect b { color: #17706b; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 11px 0; font-size: 9.4pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #e6f4f3; text-align: left; padding: 6px 9px;
+    border: 1px solid #cfe3e1; font-weight: 600;
+  }
+  td { padding: 6px 9px; border: 1px solid #dde5e9; vertical-align: top; }
+  .pill {
+    display: inline-block; font-size: 7.8pt; padding: 1px 7px; border-radius: 9px;
+    vertical-align: middle; margin-left: 4px; font-weight: 600;
+  }
+  .pill.push  { background: #dff3e6; color: #1c6b3a; }
+  .pill.ui    { background: #e8eaed; color: #4a5560; }
+  .pill.admin { background: #fdf0dc; color: #8a5a12; }
+  .pill.sms   { background: #e5eefc; color: #1e4f9c; }
+  .quote {
+    background: #f7f9fa; border: 1px solid #e2e8ec; border-radius: 5px;
+    padding: 8px 11px; margin: 8px 0; font-size: 9.5pt; color: #22303c;
+  }
+  .quote .t { font-weight: 600; }
+  .foot { margin-top: 26px; font-size: 8.6pt; color: #7b8794;
+          border-top: 1px solid #e2e8ec; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Protocole de test des nouveautés</h1>
+<div class="meta">
+  Compte de test : <code>jdl.sonkin@gmail.com</code> · Environnement : <b>staging</b> ·
+  Build <b>preview</b> · 7 août 2026
+</div>
+
+<p>
+  Connecte-toi avec <code>jdl.sonkin@gmail.com</code> pour tous les scénarios ci-dessous.
+  Ce document couvre deux blocs : les <b>notifications de momentum</b> (cinq nouveaux types
+  qui poussent une action au bon moment) et la <b>vérification du numéro de téléphone</b>.
+  Les fixtures qui te concernent portent toutes la mention <code>[MOMENTUM]</code>.
+</p>
+
+<div class="box danger">
+  <b>Étape zéro obligatoire : accepte les notifications push.</b> Ton compte n'avait aucun
+  jeton push enregistré. Tant que tu n'as pas ouvert l'app et accepté la permission du
+  système, <b>aucune</b> des cinq notifications ne peut t'arriver sur ton écran verrouillé.
+  Si tu rates la fenêtre de permission, va dans les réglages iOS/Android de l'app et
+  active-les à la main, pis rouvre Rallia.
+</div>
+
+<div class="box info">
+  <b>Deux endroits où regarder.</b> Chaque notification est écrite en base <i>et</i> envoyée
+  en push. Même si le push ne rentre pas, la ligne apparaît dans l'écran
+  <b>Notifications</b> de l'app. Si tu ne vois rien sur l'écran verrouillé mais que la ligne
+  est dans la liste, c'est un problème de push, pas de logique : note-le tel quel.
+</div>
+
+<div class="box warn">
+  <b>Les fixtures ont une date de péremption.</b> Deux scénarios dépendent de l'heure qu'il
+  est : les places de dernière minute (partie qui commence dans 2 à 6 h) et la partie restée
+  incomplète (partie commencée il y a moins de 6 h). Elles ont été armées le 7 août vers
+  2 h du matin. Si tu testes plus tard, demande à Mathis de relancer le script d'armement :
+  ça prend dix secondes et ça remet tout à neuf.
+</div>
+
+<h2>0. Avant de commencer</h2>
+<ul>
+  <li>Utilise le build <b>preview</b>, pas production. Il pointe vers staging.</li>
+  <li>Ton profil est à <b>Côte Saint-Luc</b>, tennis <b>NTRP 3.0</b>, rayon de 30 km. Ne change
+      pas ta ville ni ton rayon : plusieurs scénarios en dépendent.</li>
+  <li>Les parties de test sont au <b>Parc Saint-Jean-de-Matha</b> et au
+      <b>Parc Warren-Allmand</b>. Ce sont de vrais terrains avec de vraies plages horaires.</li>
+  <li>Prends une capture d'écran de tout ce qui te semble croche, avec l'heure.</li>
+</ul>
+
+<h2>1. Vérification du numéro de téléphone <span class="pill sms">vrai SMS</span></h2>
+
+<div class="box warn">
+  Ce scénario envoie un <b>vrai message texte</b> à ton vrai numéro, par Twilio. C'est voulu.
+  C'est le seul parcours de tout le lot qui n'a jamais été fait de bout en bout dans l'app.
+</div>
+
+<h3>1.1 Vérifier depuis le profil</h3>
+<ol>
+  <li>Va dans <b>Profil</b>, puis modifie tes informations personnelles.</li>
+  <li>Entre ton numéro de téléphone au complet. Dès qu'il devient valide, un
+      <b>avis de consentement</b> et un bouton <b>Vérifier</b> apparaissent.</li>
+  <li>Lis l'avis de consentement au complet. Il doit dire à quoi tu consens et être en
+      français.</li>
+  <li>Touche <b>Vérifier</b>. Tu reçois un code à 6 chiffres par texto.</li>
+  <li>Entre le code dans les cases.</li>
+</ol>
+<div class="expect">
+  <b>Attendu :</b> une pastille <b>vérifié</b> s'affiche à côté du numéro et elle survit si tu
+  fermes et rouvres l'écran. Le bouton Vérifier disparaît.
+</div>
+
+<h3>1.2 Les cas d'erreur</h3>
+<ol>
+  <li>Entre un <b>mauvais code</b> volontairement. Le message doit être précis, pas un
+      « Une erreur est survenue » générique.</li>
+  <li>Modifie ton numéro après l'avoir vérifié.</li>
+</ol>
+<div class="expect">
+  <b>Attendu :</b> changer le numéro <b>retire</b> le statut vérifié. C'est une protection
+  volontaire : un numéro modifié côté app n'est plus de confiance tant qu'il n'est pas
+  revérifié.
+</div>
+
+<div class="box info">
+  Le champ téléphone est aussi dans l'onboarding, et il reste <b>optionnel</b> partout. Si tu
+  as la chance de repasser par une inscription, vérifie que tu peux sauter l'étape sans être
+  bloqué.
+</div>
+
+<h2>2. L'écran d'invitation après la création <span class="pill ui">écran</span></h2>
+
+<p>
+  C'est le plus gros changement visuel du lot. Avant, la liste d'invitation était triée par
+  ordre d'identifiant, donc essentiellement au hasard. Elle est maintenant classée par
+  compatibilité avec la partie précise que tu viens de créer.
+</p>
+
+<h3>2.1 Créer la partie</h3>
+<ol>
+  <li>Crée une partie de <b>tennis</b>.</li>
+  <li>Lieu : <b>Parc Saint-Jean-de-Matha</b>. Choisis <b>« à réserver »</b> pour le terrain,
+      pas « réservé ». C'est ce qui déclenche le scénario 3.</li>
+  <li>Date : <b>samedi</b>. Heure : <b>20 h 00</b>, durée 90 minutes.</li>
+  <li>Termine la création.</li>
+</ol>
+<div class="expect">
+  <b>Attendu :</b> tu atterris directement sur la <b>liste d'invitation</b>, pas sur un écran
+  de confirmation avec un chevron. La liste <i>est</i> l'écran de succès. Les autres options
+  (Partager, Facebook, Créer une autre) sont sur une rangée de pastilles sur ce même écran.
+</div>
+
+<h3>2.2 Lire les badges</h3>
+<p>
+  Chaque joueur est une <b>rangée plate</b> avec un séparateur fin, pas une carte. Sous le
+  nom, au plus <b>deux badges</b> expliquent pourquoi il est suggéré. Ces quatre joueurs ont
+  été préparés pour porter chacun un signal différent :
+</p>
+<table>
+  <tr><th>Joueur</th><th>Badge à vérifier</th><th>Pourquoi il l'a</th></tr>
+  <tr><td><b>Hugo Ménard</b></td><td>Joué ensemble · Terrain favori</td>
+      <td>3 parties avec toi, et Saint-Jean-de-Matha est dans ses favoris</td></tr>
+  <tr><td><b>Marie Côté</b></td><td>Libre à l'heure du match</td>
+      <td>Elle a déclaré être libre le samedi de 20 h à 21 h</td></tr>
+  <tr><td><b>Alain Séguin</b></td><td>Répond souvent</td>
+      <td>4 invitations reçues, 4 réponses</td></tr>
+  <tr><td><b>Wei Chen</b></td><td>Actif cette semaine</td>
+      <td>2 parties dans les 7 derniers jours</td></tr>
+</table>
+
+<div class="expect">
+  <b>Attendu :</b> <b>Hugo Ménard</b> se trouve dans les premiers de la liste. Les badges se
+  ressemblent tous visuellement (même pilule, même famille), et un joueur n'en montre jamais
+  plus de deux même s'il en mérite plus.
+</div>
+
+<div class="box warn">
+  <b>Tu vas voir d'autres noms en haut de la liste.</b> Des comptes de test plus vieux
+  (Mathis Lefranc, Alex Monza) ont un historique plus riche et sortent parfois devant Hugo.
+  C'est normal, ce n'est pas un bogue : le classement lit de vraies données. Ce qui compte,
+  c'est que les quatre joueurs du tableau portent bien le badge indiqué.
+</div>
+
+<h3>2.3 Les détails qui ont changé</h3>
+<ul>
+  <li>La distance ne s'affiche plus en chiffres. Un badge <b>À proximité</b> apparaît
+      seulement sous 5 km.</li>
+  <li>La bande d'avatars des joueurs sélectionnés au-dessus de la recherche a été
+      <b>retirée</b>. La sélection se lit sur la rangée elle-même.</li>
+  <li>Tape du texte dans la recherche : la liste bascule en recherche par nom, et le
+      classement par compatibilité disparaît. C'est voulu.</li>
+</ul>
+
+<h2>3. Terrains libres à réserver <span class="pill push">push</span></h2>
+<p>
+  Suite directe du scénario 2. Tu viens de créer une partie dans un parc sans réserver de
+  terrain, alors qu'il en reste de libres à cette heure-là.
+</p>
+<ol>
+  <li>Ne fais rien. Attends entre <b>10 et 15 minutes</b> après la création.</li>
+</ol>
+<div class="quote">
+  <span class="t">Des terrains sont libres à Parc Saint-Jean-de-Matha</span><br>
+  Une partie avec terrain réservé attire les joueurs plus vite. Réserve le tien pendant qu'il
+  est libre.
+</div>
+<div class="expect">
+  <b>Attendu :</b> la notification arrive une seule fois, jamais deux. Elle ouvre ta partie.
+  Si tu marques le terrain comme réservé avant les 10 minutes, elle ne doit <b>pas</b> partir.
+</div>
+
+<h2>4. Places de dernière minute <span class="pill push">push</span></h2>
+<p>
+  Une partie publique au <b>Parc Warren-Allmand</b> (2,8 km de chez toi) commence dans
+  quelques heures et il reste une place. Tu n'as rien à créer.
+</p>
+<div class="expect">
+  <b>Attendu :</b> une notification du genre
+  <i>« Ça commence bientôt · tennis à Parc Warren-Allmand »</i>, avec l'heure et le nombre de
+  places libres. Elle ouvre la partie et tu dois pouvoir la rejoindre directement.
+</div>
+<div class="box info">
+  Le balayage tourne à <b>:07, :22, :37 et :52</b> de chaque heure, et la partie doit commencer
+  dans 2 à 6 h. Si la fenêtre est passée, demande le réarmement à Mathis.
+</div>
+
+<h2>5. Ta partie ne s'est pas remplie <span class="pill push">push</span></h2>
+<p>
+  Une partie que <b>tu organises</b> a commencé il y a quelques heures sans que personne ne se
+  joigne. Elle est déjà en base à ton nom.
+</p>
+<div class="quote">
+  <span class="t">Ta partie ne s'est pas remplie</span><br>
+  Ça arrive. Il y a 3 parties ouvertes près de toi dans les prochains jours. Touche pour
+  trouver la prochaine.
+</div>
+<div class="expect">
+  <b>Attendu :</b> le message ne te culpabilise pas et propose une <b>suite concrète</b>. En
+  touchant, tu arrives sur les parties publiques avec une bannière de récupération, pas sur la
+  fiche de la partie morte. Le nombre annoncé doit correspondre à ce que tu vois ensuite.
+</div>
+<div class="box info">
+  Le balayage tourne à <b>:25</b> de chaque heure.
+</div>
+
+<h2>6. Ton créneau habituel est libre <span class="pill push">push</span></h2>
+<p>
+  Tu as déclaré jouer le samedi. Une partie compatible cherche des joueurs à un de ces
+  créneaux, et tu n'as rien de prévu à cette heure-là.
+</p>
+<div class="quote">
+  <span class="t">Ton créneau du samedi est libre</span><br>
+  Tu joues d'habitude le samedi. Une partie de tennis à Parc Saint-Jean-de-Matha à 16:00
+  cherche encore des joueurs. Touche pour rejoindre.
+</div>
+<div class="expect">
+  <b>Attendu :</b> le jour nommé dans le message correspond vraiment à un de tes créneaux
+  déclarés, et l'heure correspond à la partie proposée. Maximum <b>une fois par semaine</b>.
+</div>
+<div class="box warn">
+  Ce balayage tourne <b>une fois par jour, vers 9 h du matin</b>. Tu ne peux pas le forcer
+  depuis l'app : ou bien tu attends le lendemain matin, ou bien tu demandes à Mathis de le
+  déclencher.
+</div>
+
+<h2>7. Inscriptions de tournoi ouvertes <span class="pill push">push</span> <span class="pill admin">Mathis déclenche</span></h2>
+<p>
+  Un tournoi de tennis près de chez toi, <code>[MOMENTUM] Tournoi test notification</code>,
+  attend en brouillon. Quand Mathis l'ouvre aux inscriptions, la notification part vers les
+  joueurs de la région.
+</p>
+<ol>
+  <li>Écris à Mathis quand tu es prêt, l'app ouverte.</li>
+  <li>Il passe le tournoi en inscriptions ouvertes.</li>
+</ol>
+<div class="expect">
+  <b>Attendu :</b> une notification <i>« Inscriptions ouvertes · [MOMENTUM] Tournoi test
+  notification »</i> dans la minute qui suit. Elle ouvre la fiche du tournoi, et tu dois
+  pouvoir t'inscrire (l'entrée est gratuite). Tu ne dois la recevoir <b>qu'une seule fois</b>,
+  même si Mathis referme et rouvre les inscriptions.
+</div>
+
+<h2>8. Ce qu'il faut noter</h2>
+<table>
+  <tr><th>À surveiller</th><th>Pourquoi ça compte</th></tr>
+  <tr><td>Une notification reçue <b>deux fois</b></td>
+      <td>Chaque type a un verrou anti-doublon. Un doublon est un vrai bogue.</td></tr>
+  <tr><td>Un badge qui <b>ment</b></td>
+      <td>« Libre à l'heure » sur quelqu'un qui ne l'est pas, « Joué ensemble » avec un
+          inconnu : signale-le avec le nom du joueur.</td></tr>
+  <tr><td>Trop de notifications</td>
+      <td>Note combien tu en reçois par jour, tous types confondus. Il n'y a pas encore de
+          plafond global.</td></tr>
+  <tr><td>Un texte en <b>anglais</b></td>
+      <td>Ton compte est en français. Tout doit l'être, titres et corps.</td></tr>
+  <tr><td>Une notification qui ouvre le <b>mauvais écran</b></td>
+      <td>Chaque type a une destination précise, décrite plus haut.</td></tr>
+</table>
+
+<h2>Annexe · pour Mathis</h2>
+<p>Tout se fait dans l'éditeur SQL de <b>rallia-staging</b>.</p>
+<ul>
+  <li><b>Réarmer les fixtures :</b> réexécuter
+      <code>scripts/momentum/seed-staging-jdl.sql</code>. Idempotent, remet les fenêtres
+      temporelles à neuf.</li>
+  <li><b>Publier le tournoi (scénario 7) :</b>
+      <code>UPDATE tournaments SET status='registration_open' WHERE id='cccc0000-0000-0000-0000-00000000c001';</code>
+      Le worker passe à la minute.</li>
+  <li><b>Forcer le nudge de rythme (scénario 6) :</b>
+      <code>SELECT public.send_play_rhythm_nudges();</code></li>
+  <li><b>Forcer les autres :</b> <code>send_court_booking_nudges()</code>,
+      <code>send_last_minute_spot_pushes()</code>, <code>send_unfilled_host_recovery()</code>.</li>
+  <li><b>Couper un type (test de la porte d'expérience) :</b>
+      passer <code>rollout_pct</code> à 0 dans <code>admin_settings</code> pour la clé
+      <code>momentum_&lt;type&gt;</code>, relancer le balayage, confirmer qu'aucune ligne
+      n'est écrite.</li>
+  <li><b>Tout effacer :</b> supprimer les parties dont les <code>notes</code> commencent par
+      <code>[MOMENTUM]</code> et le tournoi du même nom.</li>
+</ul>
+
+<div class="foot">
+  Fixtures posées et vérifiées sur staging le 7 août 2026. Les cinq types de notification ont
+  été déclenchés une fois en conditions réelles avant d'être remis à zéro pour ce test.
+</div>
+
+</body>
+</html>
