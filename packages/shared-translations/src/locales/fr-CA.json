@@ -4307,6 +4307,7 @@
     "inviteRevoked": "Invitation retirée",
     "leftLeague": "T'as quitté la ligue",
     "requestCancelled": "Demande retirée",
+    "requestRejected": "Demande refusée",
     "memberRemoved": "Membre retiré",
     "memberSuspended": "Membre suspendu",
     "memberReinstated": "Membre réactivé",
@@ -4323,6 +4324,12 @@
       "removeTitle": "Retirer {name}?",
       "removeMessage": "{name} va perdre l'accès à la ligue. Cette personne peut revenir plus tard.",
       "removeConfirm": "Retirer",
+      "rejectTitle": "Refuser {name}?",
+      "rejectMessage": "{name} ne rejoindra pas la ligue. Cette personne pourra redemander plus tard.",
+      "rejectConfirm": "Refuser",
+      "closeSeasonTitle": "Fermer {name}?",
+      "closeSeasonMessage": "Le classement devient final quand la saison ferme, pis tu ne pourras pas la rouvrir.",
+      "closeSeasonConfirm": "Fermer la saison",
       "suspendTitle": "Suspendre {name}?",
       "suspendMessage": "{name} reste dans la ligue mais ne peut pas rejoindre de session tant que tu ne l'as pas réactivée.",
       "suspendConfirm": "Suspendre"
@@ -4436,7 +4443,11 @@
       "ratingRange": "Plage de cote"
     },
     "overview": {
-      "infoTitle": "Infos de la ligue"
+      "infoTitle": "Infos de la ligue",
+      "rulesTitle": "Comment ça marche",
+      "rulesScoring": "Format de pointage",
+      "rulesPoints": "Victoire {win} · Défaite {loss} · Bye {bye}",
+      "rulesPointsHint": "Points au classement"
     },
     "dashboard": {
       "organizedBy": "Organisée par {name}",
@@ -4461,6 +4472,7 @@
       "pendingRequests": {
         "title": "En attente ({count})",
         "approveLabel": "Approuver {name}",
+        "rejectLabel": "Refuser {name}",
         "queuedAt": "{rank}e en file pour une place"
       },
       "invited": {
@@ -4605,6 +4617,10 @@
       "publish": "Publier",
       "created": "Séance créée",
       "published": "Séance publiée",
+      "rounds": {
+        "label": "Parties par joueur",
+        "hint": "Combien de parties chaque joueur dispute pendant cette séance."
+      },
       "pairing": {
         "label": "Pairage",
         "by_rank": {
@@ -4631,7 +4647,10 @@
       "community": "Communauté",
       "open": "Ouverte",
       "approval": "Approbation requise",
-      "inviteOnly": "Sur invitation"
+      "inviteOnly": "Sur invitation",
+      "oneSet": "Une manche",
+      "twoOfThree": "2 de 3",
+      "threeOfFive": "3 de 5"
     },
     "actions": {
       "join": "Rejoindre la ligue",
@@ -4649,6 +4668,7 @@
       "enroll": "Rejoindre la saison",
       "enrolling": "Adhésion...",
       "enrolled": "Tu es de la partie cette saison",
+      "autoEnrolled": "Tous les membres actifs jouent cette saison. Confirme les séances où tu es disponible.",
       "leave": "Quitter la saison",
       "leaving": "Retrait...",
       "withdrew": "Tu as quitté la saison",
@@ -4802,6 +4822,7 @@
       "empty": "Aucune feuille de match générée",
       "generate": "Générer la feuille",
       "regenerate": "Régénérer la feuille",
+      "regenerateHint": "Refait les pairages, sauf les parties que t'as verrouillées. Ça ne marche plus dès qu'un score est entré.",
       "generating": "Génération...",
       "ready": "Feuille de match prête 🙌",
       "round": "Ronde {n}",

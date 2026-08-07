@@ -138,6 +138,31 @@ const VISIBILITY_KEY: Record<Visibility, string> = {
   public: 'leagueDetail.values.public',
   community: 'leagueDetail.values.community',
 };
+/** Scoring labels for the rules card. The fused pickleball values are legacy:
+ *  nothing writes them since the games/points split, but old rows carry them. */
+const MATCH_FORMAT_KEY: Record<string, string> = {
+  one_set: 'leagueDetail.values.oneSet',
+  two_of_three: 'leagueDetail.values.twoOfThree',
+  three_of_five: 'leagueDetail.values.threeOfFive',
+  pickleball_to_11: 'leagueDetail.values.twoOfThree',
+  pickleball_to_15: 'leagueDetail.values.twoOfThree',
+  pickleball_to_21: 'leagueDetail.values.twoOfThree',
+};
+
+/** The subset of the rules jsonb the Overview explains. */
+type LeagueRulesSummary = {
+  matchFormat?: string;
+  pointWin?: number;
+  pointLoss?: number;
+  pointBye?: number;
+};
+
+function readRules(value: unknown): LeagueRulesSummary {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as LeagueRulesSummary)
+    : {};
+}
+
 const LEAGUE_STATUS_KEY: Record<LeagueStatus, string> = {
   active: 'leagueDetail.status.active',
   paused: 'leagueDetail.status.paused',
@@ -878,9 +903,10 @@ const PendingMembersSection: React.FC<{
   rows: PendingMemberRow[];
   onPlayerPress: (player: PlayerSearchResult) => void;
   onApprove: (memberId: string, version: number) => void;
+  onReject: (memberId: string, version: number, name: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
-}> = ({ rows, onPlayerPress, onApprove, colors, t }) => {
+}> = ({ rows, onPlayerPress, onApprove, onReject, colors, t }) => {
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
@@ -905,6 +931,19 @@ const PendingMembersSection: React.FC<{
                     name: getHumanName(player, ''),
                   }),
                   onPress: () => onApprove(memberId, version),
+                },
+                {
+                  icon: 'close-circle',
+                  color: colors.danger,
+                  accessibilityLabel: t('leagueDetail.dashboard.pendingRequests.rejectLabel', {
+                    name: getHumanName(player, ''),
+                  }),
+                  onPress: () =>
+                    onReject(
+                      memberId,
+                      version,
+                      getHumanName(player, t('leagueDetail.unknownMember'))
+                    ),
                 },
               ]}
             />
@@ -1262,13 +1301,25 @@ export const LeagueDetail: React.FC = () => {
     onError: onMemberLifecycleError,
   });
 
+  // Rejecting a join request is the same RPC as removing a member (it accepts a
+  // 'pending' row); only the confirmation the organizer gets differs.
+  const isRejectingRequest = useRef(false);
+
   const { mutate: removeMemberMut, isPending: isRemovingMember } = useRemoveLeagueMember(leagueId, {
     onSuccess: () => {
       successHaptic();
-      toast.success(t('leagueDetail.memberRemoved'));
+      toast.success(
+        t(
+          isRejectingRequest.current ? 'leagueDetail.requestRejected' : 'leagueDetail.memberRemoved'
+        )
+      );
+      isRejectingRequest.current = false;
       invalidateAll();
     },
-    onError: onMemberLifecycleError,
+    onError: e => {
+      isRejectingRequest.current = false;
+      onMemberLifecycleError(e);
+    },
   });
 
   const { mutate: suspendMemberMut, isPending: isSuspendingMember } = useSuspendLeagueMember(
@@ -1902,6 +1953,30 @@ export const LeagueDetail: React.FC = () => {
     },
   });
 
+  // Closing freezes the final standings and cannot be undone, so it asks first,
+  // the way cancelling a season and closing the league already do.
+  const handleCloseSeasonPress = useCallback(
+    (seasonId: string, versionWas: number, name: string) => {
+      if (isClosingSeason) return;
+      Alert.alert(
+        t('leagueDetail.confirm.closeSeasonTitle', { name }),
+        t('leagueDetail.confirm.closeSeasonMessage'),
+        [
+          { text: t('leagueDetail.confirm.cancel'), style: 'cancel' },
+          {
+            text: t('leagueDetail.confirm.closeSeasonConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              warningHaptic();
+              closeSeasonMut({ seasonId, versionWas });
+            },
+          },
+        ]
+      );
+    },
+    [closeSeasonMut, isClosingSeason, t]
+  );
+
   const { cancelSeasonAsync, isCancellingSeason } = useCancelSeason({
     onSuccess: () => {
       successHaptic();
@@ -2096,6 +2171,29 @@ export const LeagueDetail: React.FC = () => {
       approveMember({ memberId, versionWas: version });
     },
     [approveMember, isApproving]
+  );
+
+  const handleRejectPress = useCallback(
+    (memberId: string, version: number, name: string) => {
+      if (isRemovingMember) return;
+      Alert.alert(
+        t('leagueDetail.confirm.rejectTitle', { name }),
+        t('leagueDetail.confirm.rejectMessage', { name }),
+        [
+          { text: t('leagueDetail.confirm.cancel'), style: 'cancel' },
+          {
+            text: t('leagueDetail.confirm.rejectConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              warningHaptic();
+              isRejectingRequest.current = true;
+              removeMemberMut({ memberId, versionWas: version });
+            },
+          },
+        ]
+      );
+    },
+    [isRemovingMember, removeMemberMut, t]
   );
 
   const handleRevokePress = useCallback(
@@ -2459,6 +2557,20 @@ export const LeagueDetail: React.FC = () => {
 
   const ratingRangeLabel = formatRatingRange(league.min_rating, league.max_rating);
 
+  // How the league actually runs, read off the rules the standings use. The open
+  // season wins: its rules are snapshotted at creation and can drift from the
+  // league defaults afterwards.
+  const rules = readRules(openSeason?.rules ?? league.default_rules);
+  const scoringLabel = rules.matchFormat ? MATCH_FORMAT_KEY[rules.matchFormat] : undefined;
+  const pointsLabel =
+    rules.pointWin != null && rules.pointLoss != null
+      ? t('leagueDetail.overview.rulesPoints', {
+          win: String(rules.pointWin),
+          loss: String(rules.pointLoss),
+          bye: String(rules.pointBye ?? 0),
+        })
+      : undefined;
+
   /** Organizer utilities, rendered as one quiet grouped list in the Overview. */
   const organizerRows: Array<{
     icon: keyof typeof Ionicons.glyphMap;
@@ -2579,11 +2691,14 @@ export const LeagueDetail: React.FC = () => {
         testID: 'cta-join-league',
       };
     }
-    // Active member with an open season they haven't enrolled in yet.
+    // Active member with a PAID open season they haven't paid into yet. A free
+    // season needs no such step: opening it seeds every active member into the
+    // standings, and confirming a session enrolls the player on its own.
     if (
       !isOrganizer &&
       league.status === 'active' &&
       openSeason &&
+      isPaidSeason &&
       canParticipateInSeason &&
       !isEnrolledInSeason
     ) {
@@ -3035,6 +3150,38 @@ export const LeagueDetail: React.FC = () => {
               ) : null}
             </Section>
 
+            {/* How it works: the blurb plus the rules the standings run on, so a
+                player does not have to ask the organizer how points are counted. */}
+            {league.description?.trim() || scoringLabel || pointsLabel ? (
+              <Section title={t('leagueDetail.overview.rulesTitle')} colors={colors}>
+                {league.description?.trim() ? (
+                  <View style={styles.overviewDescription}>
+                    <Text size="sm" color={colors.textMuted}>
+                      {league.description}
+                    </Text>
+                  </View>
+                ) : null}
+                {scoringLabel ? (
+                  <OverviewInfoRow
+                    icon="options-outline"
+                    text={t(scoringLabel as TranslationKey)}
+                    subText={t('leagueDetail.overview.rulesScoring')}
+                    colors={colors}
+                    showDivider={!!league.description?.trim()}
+                  />
+                ) : null}
+                {pointsLabel ? (
+                  <OverviewInfoRow
+                    icon="trophy-outline"
+                    text={pointsLabel}
+                    subText={t('leagueDetail.overview.rulesPointsHint')}
+                    colors={colors}
+                    showDivider={!!league.description?.trim() || !!scoringLabel}
+                  />
+                ) : null}
+              </Section>
+            ) : null}
+
             {/* Who's in: social proof, tappable through to the Members tab */}
             {activeMembers.length > 0 && (
               <Section title={t('leagueDetail.tabs.members')} colors={colors}>
@@ -3168,6 +3315,7 @@ export const LeagueDetail: React.FC = () => {
                 rows={pendingMemberRows}
                 onPlayerPress={handlePlayerPress}
                 onApprove={handleApprovePress}
+                onReject={handleRejectPress}
                 colors={colors}
                 t={t}
               />
@@ -3299,10 +3447,7 @@ export const LeagueDetail: React.FC = () => {
                         )}
                       {isOrganizer && s.status === 'open' && (
                         <TouchableOpacity
-                          onPress={() => {
-                            warningHaptic();
-                            closeSeasonMut({ seasonId: s.id, versionWas: s.version });
-                          }}
+                          onPress={() => handleCloseSeasonPress(s.id, s.version, s.name)}
                           disabled={isClosingSeason}
                           testID="cta-close-season"
                           style={[styles.seasonCtaButton, { borderColor: colors.danger }]}
@@ -3394,6 +3539,12 @@ export const LeagueDetail: React.FC = () => {
                           : t('leagueDetail.roster.leave')}
                       </Text>
                     </TouchableOpacity>
+                  ) : !isPaidSeason ? (
+                    // Free season: membership is the enrolment. Say so instead of
+                    // offering a step that changes nothing.
+                    <Text size="xs" color={colors.textMuted} testID="season-auto-enrolled-note">
+                      {t('leagueDetail.roster.autoEnrolled')}
+                    </Text>
                   ) : (
                     <TouchableOpacity
                       onPress={() => {
@@ -3926,6 +4077,10 @@ const styles = StyleSheet.create({
   overviewInfoTexts: {
     flex: 1,
     gap: 1,
+  },
+  overviewDescription: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
   },
   membersPreviewRow: {
     flexDirection: 'row',

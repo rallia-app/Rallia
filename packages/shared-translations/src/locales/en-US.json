@@ -4307,6 +4307,7 @@
     "inviteRevoked": "Invitation revoked",
     "leftLeague": "You left the league",
     "requestCancelled": "Request withdrawn",
+    "requestRejected": "Request turned down",
     "memberRemoved": "Member removed",
     "memberSuspended": "Member suspended",
     "memberReinstated": "Member reinstated",
@@ -4323,6 +4324,12 @@
       "removeTitle": "Remove {name}?",
       "removeMessage": "{name} will lose access to this league. They can rejoin later.",
       "removeConfirm": "Remove",
+      "rejectTitle": "Turn down {name}?",
+      "rejectMessage": "{name} won't join the league. They can ask again later.",
+      "rejectConfirm": "Turn down",
+      "closeSeasonTitle": "Close {name}?",
+      "closeSeasonMessage": "The standings are final once the season closes, and you can't reopen it.",
+      "closeSeasonConfirm": "Close season",
       "suspendTitle": "Suspend {name}?",
       "suspendMessage": "{name} stays in the league but can't join sessions until you reinstate them.",
       "suspendConfirm": "Suspend"
@@ -4436,7 +4443,11 @@
       "ratingRange": "Rating range"
     },
     "overview": {
-      "infoTitle": "League info"
+      "infoTitle": "League info",
+      "rulesTitle": "How it works",
+      "rulesScoring": "Scoring format",
+      "rulesPoints": "Win {win} · Loss {loss} · Bye {bye}",
+      "rulesPointsHint": "Standings points"
     },
     "dashboard": {
       "organizedBy": "Organized by {name}",
@@ -4461,6 +4472,7 @@
       "pendingRequests": {
         "title": "Pending approval ({count})",
         "approveLabel": "Approve {name}",
+        "rejectLabel": "Turn down {name}",
         "queuedAt": "#{rank} in line for a spot"
       },
       "invited": {
@@ -4605,6 +4617,10 @@
       "publish": "Publish",
       "created": "Session created",
       "published": "Session published",
+      "rounds": {
+        "label": "Games per player",
+        "hint": "How many games each player plays during this session."
+      },
       "pairing": {
         "label": "Pairing",
         "by_rank": {
@@ -4631,7 +4647,10 @@
       "community": "Community",
       "open": "Open join",
       "approval": "Approval required",
-      "inviteOnly": "Invite only"
+      "inviteOnly": "Invite only",
+      "oneSet": "Single set",
+      "twoOfThree": "Best of 3",
+      "threeOfFive": "Best of 5"
     },
     "actions": {
       "join": "Join league",
@@ -4649,6 +4668,7 @@
       "enroll": "Join this season",
       "enrolling": "Joining...",
       "enrolled": "You're in for this season",
+      "autoEnrolled": "Every active member plays this season. Confirm the sessions you can make.",
       "leave": "Leave season",
       "leaving": "Leaving...",
       "withdrew": "You've left the season",
@@ -4802,6 +4822,7 @@
       "empty": "No match sheet generated yet",
       "generate": "Generate sheet",
       "regenerate": "Regenerate sheet",
+      "regenerateHint": "Re-pairs everyone except the games you locked. Stops working once a score is in.",
       "generating": "Generating...",
       "ready": "Match sheet ready 🙌",
       "round": "Round {n}",

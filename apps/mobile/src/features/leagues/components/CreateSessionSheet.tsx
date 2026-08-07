@@ -38,6 +38,12 @@ const PAIRING_MODES = [
   'avoid_repeat',
 ] as const satisfies readonly Enums<'pairing_mode'>[];
 
+/**
+ * Games each player plays during the session. It is the generator's round count:
+ * every round pairs the whole confirmed roster once. The column accepts 1 to 6.
+ */
+const ROUND_OPTIONS = [1, 2, 3, 4] as const;
+
 export function CreateSessionActionSheet({ payload }: SheetProps<'create-session'>) {
   const seasonId = payload?.seasonId ?? '';
   const leagueId = payload?.leagueId ?? '';
@@ -49,6 +55,7 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState('');
   const [pairingMode, setPairingMode] = useState<Enums<'pairing_mode'>>('by_rank');
+  const [rounds, setRounds] = useState<number>(1);
   const [scheduledAt, setScheduledAt] = useState<Date>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -122,9 +129,10 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
       scheduledAt: scheduledAt.toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       capacity: Number.isFinite(parsedCapacity) && parsedCapacity > 0 ? parsedCapacity : undefined,
+      rounds,
       pairingMode,
     });
-  }, [name, scheduledAt, capacity, pairingMode, createSession, toast, t]);
+  }, [name, scheduledAt, capacity, rounds, pairingMode, createSession, toast, t]);
 
   return (
     <BaseActionSheet
@@ -206,6 +214,41 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
 
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.text}>
+            {t('leagueDetail.sessions.rounds.label')}
+          </Text>
+          <Text size="xs" color={colors.textMuted}>
+            {t('leagueDetail.sessions.rounds.hint')}
+          </Text>
+          <View style={styles.chipRow}>
+            {ROUND_OPTIONS.map(value => (
+              <TouchableOpacity
+                key={value}
+                onPress={() => {
+                  lightHaptic();
+                  setRounds(value);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: rounds === value }}
+                testID={`session-rounds-${value}`}
+                style={[
+                  styles.chip,
+                  { borderColor: rounds === value ? colors.primary : colors.border },
+                ]}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={rounds === value ? colors.primary : colors.text}
+                >
+                  {String(value)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.text}>
             {t('leagueDetail.sessions.pairing.label')}
           </Text>
           {PAIRING_MODES.map(mode => (
@@ -274,6 +317,18 @@ const styles = StyleSheet.create({
   optionText: {
     flex: 1,
     gap: spacingPixels[1],
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  chip: {
+    minWidth: 52,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
   },
 });
 

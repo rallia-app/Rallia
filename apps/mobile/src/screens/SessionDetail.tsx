@@ -1025,6 +1025,13 @@ export const SessionDetail: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             )}
+            {/* Regenerate read as dangerous because nothing said what it spares.
+                It re-pairs the unlocked rows only, and refuses once a score is in. */}
+            {isOrganizer && sess.status === 'published' && hasSheet && (
+              <Text size="xs" color={colors.textMuted} style={styles.sheetHint}>
+                {t('sessionDetail.sheet.regenerateHint')}
+              </Text>
+            )}
           </View>
         )}
 
@@ -1296,6 +1303,7 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[2],
   },
   sheetButton: { marginTop: spacingPixels[3] },
+  sheetHint: { marginTop: spacingPixels[2], textAlign: 'center' },
   fullButton: {
     flexDirection: 'row',
     alignItems: 'center',
