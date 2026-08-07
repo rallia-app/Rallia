@@ -19,6 +19,8 @@ export interface RankingRules {
   pointRetirementLoser: number;
   pointWalkoverWinner: number;
   pointWalkoverLoser: number;
+  /** Points per GAME won, added on top of the result. 0 = result-only. */
+  pointPerGameWon?: number;
 }
 
 /** Terminal session-match statuses that award points. */
@@ -45,6 +47,20 @@ export function outcomePoints(
     default:
       return 0;
   }
+}
+
+/**
+ * Total points one player takes from one match: the result, plus
+ * pointPerGameWon for every game they won. Mirrors the `contrib` CTE in
+ * recalc_season_ranking, which adds the same term to its per-side points.
+ */
+export function matchPoints(
+  rules: RankingRules,
+  status: ScoredStatus,
+  isWinner: boolean,
+  gamesWon = 0
+): number {
+  return outcomePoints(rules, status, isWinner) + (rules.pointPerGameWon ?? 0) * gamesWon;
 }
 
 export interface ParsedScore {
