@@ -75,7 +75,7 @@
 
 <p>
   Connecte-toi avec <code>jdl.sonkin@gmail.com</code> pour tous les scénarios ci-dessous.
-  Ce document couvre deux blocs : les <b>notifications de momentum</b> (cinq nouveaux types
+  Ce document couvre deux blocs : les <b>notifications de momentum</b> (quatre nouveaux types
   qui poussent une action au bon moment) et la <b>vérification du numéro de téléphone</b>.
   Les fixtures qui te concernent portent toutes la mention <code>[MOMENTUM]</code>.
 </p>
@@ -83,7 +83,7 @@
 <div class="box danger">
   <b>Étape zéro obligatoire : accepte les notifications push.</b> Ton compte n'avait aucun
   jeton push enregistré. Tant que tu n'as pas ouvert l'app et accepté la permission du
-  système, <b>aucune</b> des cinq notifications ne peut t'arriver sur ton écran verrouillé.
+  système, <b>aucune</b> des quatre notifications ne peut t'arriver sur ton écran verrouillé.
   Si tu rates la fenêtre de permission, va dans les réglages iOS/Android de l'app et
   active-les à la main, pis rouvre Rallia.
 </div>
@@ -96,10 +96,9 @@
 </div>
 
 <div class="box warn">
-  <b>Les fixtures ont une date de péremption.</b> Deux scénarios dépendent de l'heure qu'il
-  est : les places de dernière minute (partie qui commence dans 2 à 6 h) et la partie restée
-  incomplète (partie commencée il y a moins de 6 h). Elles ont été armées le 7 août vers
-  2 h du matin. Si tu testes plus tard, demande à Mathis de relancer le script d'armement :
+  <b>Les fixtures ont une date de péremption.</b> Un scénario dépend de l'heure qu'il est :
+  la partie restée incomplète (partie commencée il y a moins de 6 h). Elle a été armée le
+  7 août vers 2 h du matin. Si tu testes plus tard, demande à Mathis de relancer le script d'armement :
   ça prend dix secondes et ça remet tout à neuf.
 </div>
 
@@ -108,8 +107,8 @@
   <li>Utilise le build <b>preview</b>, pas production. Il pointe vers staging.</li>
   <li>Ton profil est à <b>Côte Saint-Luc</b>, tennis <b>NTRP 3.0</b>, rayon de 30 km. Ne change
       pas ta ville ni ton rayon : plusieurs scénarios en dépendent.</li>
-  <li>Les parties de test sont au <b>Parc Saint-Jean-de-Matha</b> et au
-      <b>Parc Warren-Allmand</b>. Ce sont de vrais terrains avec de vraies plages horaires.</li>
+  <li>Les parties de test sont au <b>Parc Saint-Jean-de-Matha</b>. C'est un vrai terrain avec
+      de vraies plages horaires.</li>
   <li>Prends une capture d'écran de tout ce qui te semble croche, avec l'heure.</li>
 </ul>
 
@@ -234,22 +233,7 @@
   Si tu marques le terrain comme réservé avant les 10 minutes, elle ne doit <b>pas</b> partir.
 </div>
 
-<h2>4. Places de dernière minute <span class="pill push">push</span></h2>
-<p>
-  Une partie publique au <b>Parc Warren-Allmand</b> (2,8 km de chez toi) commence dans
-  quelques heures et il reste une place. Tu n'as rien à créer.
-</p>
-<div class="expect">
-  <b>Attendu :</b> une notification du genre
-  <i>« Ça commence bientôt · tennis à Parc Warren-Allmand »</i>, avec l'heure et le nombre de
-  places libres. Elle ouvre la partie et tu dois pouvoir la rejoindre directement.
-</div>
-<div class="box info">
-  Le balayage tourne à <b>:07, :22, :37 et :52</b> de chaque heure, et la partie doit commencer
-  dans 2 à 6 h. Si la fenêtre est passée, demande le réarmement à Mathis.
-</div>
-
-<h2>5. Ta partie ne s'est pas remplie <span class="pill push">push</span></h2>
+<h2>4. Ta partie ne s'est pas remplie <span class="pill push">push</span></h2>
 <p>
   Une partie que <b>tu organises</b> a commencé il y a quelques heures sans que personne ne se
   joigne. Elle est déjà en base à ton nom.
@@ -268,7 +252,7 @@
   Le balayage tourne à <b>:25</b> de chaque heure.
 </div>
 
-<h2>6. Ton créneau habituel est libre <span class="pill push">push</span></h2>
+<h2>5. Ton créneau habituel est libre <span class="pill push">push</span></h2>
 <p>
   Tu as déclaré jouer le samedi. Une partie compatible cherche des joueurs à un de ces
   créneaux, et tu n'as rien de prévu à cette heure-là.
@@ -288,7 +272,7 @@
   déclencher.
 </div>
 
-<h2>7. Inscriptions de tournoi ouvertes <span class="pill push">push</span> <span class="pill admin">Mathis déclenche</span></h2>
+<h2>6. Inscriptions de tournoi ouvertes <span class="pill push">push</span> <span class="pill admin">Mathis déclenche</span></h2>
 <p>
   Un tournoi de tennis près de chez toi, <code>[MOMENTUM] Tournoi test notification</code>,
   attend en brouillon. Quand Mathis l'ouvre aux inscriptions, la notification part vers les
@@ -305,7 +289,7 @@
   même si Mathis referme et rouvre les inscriptions.
 </div>
 
-<h2>8. Ce qu'il faut noter</h2>
+<h2>7. Ce qu'il faut noter</h2>
 <table>
   <tr><th>À surveiller</th><th>Pourquoi ça compte</th></tr>
   <tr><td>Une notification reçue <b>deux fois</b></td>
@@ -328,13 +312,13 @@
   <li><b>Réarmer les fixtures :</b> réexécuter
       <code>scripts/momentum/seed-staging-jdl.sql</code>. Idempotent, remet les fenêtres
       temporelles à neuf.</li>
-  <li><b>Publier le tournoi (scénario 7) :</b>
+  <li><b>Publier le tournoi (scénario 6) :</b>
       <code>UPDATE tournaments SET status='registration_open' WHERE id='cccc0000-0000-0000-0000-00000000c001';</code>
       Le worker passe à la minute.</li>
-  <li><b>Forcer le nudge de rythme (scénario 6) :</b>
+  <li><b>Forcer le nudge de rythme (scénario 5) :</b>
       <code>SELECT public.send_play_rhythm_nudges();</code></li>
   <li><b>Forcer les autres :</b> <code>send_court_booking_nudges()</code>,
-      <code>send_last_minute_spot_pushes()</code>, <code>send_unfilled_host_recovery()</code>.</li>
+      <code>send_unfilled_host_recovery()</code>.</li>
   <li><b>Couper un type (test de la porte d'expérience) :</b>
       passer <code>rollout_pct</code> à 0 dans <code>admin_settings</code> pour la clé
       <code>momentum_&lt;type&gt;</code>, relancer le balayage, confirmer qu'aucune ligne
@@ -344,7 +328,7 @@
 </ul>
 
 <div class="foot">
-  Fixtures posées et vérifiées sur staging le 7 août 2026. Les cinq types de notification ont
+  Fixtures posées et vérifiées sur staging le 7 août 2026. Les quatre types de notification ont
   été déclenchés une fois en conditions réelles avant d'être remis à zéro pour ce test.
 </div>
 

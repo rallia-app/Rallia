@@ -3,26 +3,26 @@
 --
 -- Idempotent AND re-armable. Every run wipes the [MOMENTUM] fixtures and
 -- recreates the time-sensitive ones relative to now(). Re-run it whenever the
--- tester needs a fresh window: the last-minute push needs a game starting in
--- 2-6 h, and the unfilled-recovery push needs one that started in the last 6 h.
+-- tester needs a fresh window: the unfilled-recovery push needs a game that
+-- started in the last 6 h.
 --
 -- Run it in the Supabase SQL editor on rallia-staging (ahbaeewecdeguxtxtvhr).
 --
 -- Target: jdl.sonkin@gmail.com = 4ed1fa69-c3c4-4d24-83bf-948fb5a9a537
 --   Cote Saint-Luc (45.4751, -73.6603), tennis NTRP 3.0, 30 km radius, fr-CA.
 --
--- Two facilities are used on purpose:
---   Parc Warren-Allmand (2.8 km) for the last-minute push, because its
---     recipient gate is LEAST(max_travel_distance, 5) km and he sits 5.7 km
---     from Saint-Jean-de-Matha, which put him outside the cap.
---   Parc Saint-Jean-de-Matha (5.7 km) everywhere else, because it is the
---     closest facility whose bookable-slot snapshot runs several days out,
---     which the court-booking nudge needs.
+-- Everything sits at Parc Saint-Jean-de-Matha (5.7 km), the closest facility
+-- whose bookable-slot snapshot runs several days out, which the court-booking
+-- nudge needs.
+--
+-- The last-minute open-spots fixture was removed on 2026-08-07 when that
+-- notification was switched off (see 20260807140000). If it is ever re-enabled,
+-- its fixture has to sit within 5 km of the tester: its recipient gate is
+-- LEAST(max_travel_distance, 5) km, and 5.7 km put him outside the cap.
 --
 -- session_replication_role = replica is deliberate: it suppresses
 -- match_create_host_participant (we insert hosts ourselves) and
--- match_notify_nearby_players_on_create, whose pushes would otherwise burn the
--- 3-per-7-days discovery budget that the last-minute push shares.
+-- match_notify_nearby_players_on_create, whose pushes are noise for this test.
 --
 -- Cleanup: every match created here has notes LIKE '[MOMENTUM]%' and the
 -- tournament is named '[MOMENTUM]%'.
@@ -142,27 +142,7 @@ SELECT m.id, 'a1000000-0000-0000-0000-000000000033', 'joined', true,
 FROM match m WHERE m.notes = '[MOMENTUM] activite recente Wei'
 ON CONFLICT (match_id, player_id) DO NOTHING;
 
--- ------------------------------------- 2. match_last_minute_spots (T+3h) --
--- Parc Warren-Allmand: 2.8 km, inside the LEAST(max_travel, 5) km cap.
-INSERT INTO match (id, created_by, sport_id, match_date, start_time, end_time,
-                   format, visibility, location_type, facility_id, timezone,
-                   join_mode, is_auto_generated, min_rating_score_id, notes)
-VALUES ('e1000000-0000-0000-0000-000000000001',
-        'a1000000-0000-0000-0000-000000000008',
-        '36c45c46-1daf-48f2-b13a-cf7b2c961534',
-        ((now() AT TIME ZONE 'America/Toronto') + interval '3 hours')::date,
-        date_trunc('hour', (now() AT TIME ZONE 'America/Toronto') + interval '3 hours')::time,
-        date_trunc('hour', (now() AT TIME ZONE 'America/Toronto') + interval '4 hours 30 minutes')::time,
-        'singles', 'public', 'facility',
-        '0f587dd3-f90d-4c7d-883c-a171f1134f38', 'America/Toronto',
-        'direct', false, '6dc7fa22-7286-4ce3-ba80-b0b56eb446ee',
-        '[MOMENTUM] places de derniere minute');
-
-INSERT INTO match_participant (match_id, player_id, status, is_host, joined_at)
-VALUES ('e1000000-0000-0000-0000-000000000001',
-        'a1000000-0000-0000-0000-000000000008', 'joined', true, now());
-
--- -------------------------------- 3. match_unfilled_recovery (started -2h) --
+-- -------------------------------- 2. match_unfilled_recovery (started -2h) --
 INSERT INTO match (id, created_by, sport_id, match_date, start_time, end_time,
                    format, visibility, location_type, facility_id, timezone,
                    join_mode, is_auto_generated, notes)
@@ -180,7 +160,7 @@ INSERT INTO match_participant (match_id, player_id, status, is_host, joined_at)
 VALUES ('e1000000-0000-0000-0000-000000000002',
         '4ed1fa69-c3c4-4d24-83bf-948fb5a9a537', 'joined', true, now() - interval '3 hours');
 
--- ------------------------------------------------ 4. play_rhythm_nudge --
+-- ------------------------------------------------ 3. play_rhythm_nudge --
 -- One game on each of his declared weekend slots, so the daily 13:00 UTC sweep
 -- finds a target whether "tomorrow" is Saturday or Sunday. min_rating_score_id
 -- must equal his own NTRP 3.0 score id for the compatibility join to hit.
@@ -205,7 +185,7 @@ INSERT INTO match_participant (match_id, player_id, status, is_host, joined_at)
 SELECT m.id, m.created_by, 'joined', true, now()
 FROM match m WHERE m.notes = '[MOMENTUM] partie compatible pour le rythme de jeu';
 
--- ------------------------------------- 5. tournament_registration_open --
+-- ------------------------------------- 4. tournament_registration_open --
 -- Left in draft on purpose. Publishing it is what fires the fan-out, so do
 -- that only once the tester has the app open (see the guide's annex).
 UPDATE player SET is_certified_organizer = true
