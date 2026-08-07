@@ -75,7 +75,7 @@
 
 <p>
   Connecte-toi avec <code>jdl.sonkin@gmail.com</code> pour tous les scénarios ci-dessous.
-  Ce document couvre deux blocs : les <b>notifications de momentum</b> (quatre nouveaux types
+  Ce document couvre deux blocs : les <b>notifications de momentum</b> (trois nouveaux types
   qui poussent une action au bon moment) et la <b>vérification du numéro de téléphone</b>.
   Les fixtures qui te concernent portent toutes la mention <code>[MOMENTUM]</code>.
 </p>
@@ -83,7 +83,7 @@
 <div class="box danger">
   <b>Étape zéro obligatoire : accepte les notifications push.</b> Ton compte n'avait aucun
   jeton push enregistré. Tant que tu n'as pas ouvert l'app et accepté la permission du
-  système, <b>aucune</b> des quatre notifications ne peut t'arriver sur ton écran verrouillé.
+  système, <b>aucune</b> des trois notifications ne peut t'arriver sur ton écran verrouillé.
   Si tu rates la fenêtre de permission, va dans les réglages iOS/Android de l'app et
   active-les à la main, pis rouvre Rallia.
 </div>
@@ -255,27 +255,7 @@
   sens ou dans l'autre est un bogue à signaler.
 </div>
 
-<h2>5. Ton créneau habituel est libre <span class="pill push">push</span></h2>
-<p>
-  Tu as déclaré jouer le samedi. Une partie compatible cherche des joueurs à un de ces
-  créneaux, et tu n'as rien de prévu à cette heure-là.
-</p>
-<div class="quote">
-  <span class="t">Ton créneau du samedi est libre</span><br>
-  Tu joues d'habitude le samedi. Une partie de tennis à Parc Saint-Jean-de-Matha à 16:00
-  cherche encore des joueurs. Touche pour rejoindre.
-</div>
-<div class="expect">
-  <b>Attendu :</b> le jour nommé dans le message correspond vraiment à un de tes créneaux
-  déclarés, et l'heure correspond à la partie proposée. Maximum <b>une fois par semaine</b>.
-</div>
-<div class="box warn">
-  Ce balayage tourne <b>une fois par jour, vers 9 h du matin</b>. Tu ne peux pas le forcer
-  depuis l'app : ou bien tu attends le lendemain matin, ou bien tu demandes à Mathis de le
-  déclencher.
-</div>
-
-<h2>6. Inscriptions de tournoi ouvertes <span class="pill push">push</span> <span class="pill admin">Mathis déclenche</span></h2>
+<h2>5. Inscriptions de tournoi ouvertes <span class="pill push">push</span> <span class="pill admin">Mathis déclenche</span></h2>
 <p>
   Un tournoi de tennis près de chez toi, <code>[MOMENTUM] Tournoi test notification</code>,
   attend en brouillon. Quand Mathis l'ouvre aux inscriptions, la notification part vers les
@@ -292,7 +272,7 @@
   même si Mathis referme et rouvre les inscriptions.
 </div>
 
-<h2>7. Ce qu'il faut noter</h2>
+<h2>6. Ce qu'il faut noter</h2>
 <table>
   <tr><th>À surveiller</th><th>Pourquoi ça compte</th></tr>
   <tr><td>Une notification reçue <b>deux fois</b></td>
@@ -315,11 +295,9 @@
   <li><b>Réarmer les fixtures :</b> réexécuter
       <code>scripts/momentum/seed-staging-jdl.sql</code>. Idempotent, remet les fenêtres
       temporelles à neuf.</li>
-  <li><b>Publier le tournoi (scénario 6) :</b>
+  <li><b>Publier le tournoi (scénario 5) :</b>
       <code>UPDATE tournaments SET status='registration_open' WHERE id='cccc0000-0000-0000-0000-00000000c001';</code>
       Le worker passe à la minute.</li>
-  <li><b>Forcer le nudge de rythme (scénario 5) :</b>
-      <code>SELECT public.send_play_rhythm_nudges();</code></li>
   <li><b>Forcer les autres :</b> <code>send_court_booking_nudges()</code>,
       <code>send_unfilled_host_recovery()</code>.</li>
   <li><b>Couper un type (test de la porte d'expérience) :</b>
@@ -331,7 +309,7 @@
 </ul>
 
 <div class="foot">
-  Fixtures posées et vérifiées sur staging le 7 août 2026. Les quatre types de notification ont
+  Fixtures posées et vérifiées sur staging le 7 août 2026. Les trois types de notification ont
   été déclenchés une fois en conditions réelles avant d'être remis à zéro pour ce test.
 </div>
 

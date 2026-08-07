@@ -160,7 +160,7 @@ INSERT INTO match_participant (match_id, player_id, status, is_host, joined_at)
 VALUES ('e1000000-0000-0000-0000-000000000002',
         '4ed1fa69-c3c4-4d24-83bf-948fb5a9a537', 'joined', true, now() - interval '3 hours');
 
--- ------------------------------------------------ 3. play_rhythm_nudge --
+-- ------------------- 3. compatible open games (feed the recovery count) --
 -- One game on each of his declared weekend slots, so the daily 13:00 UTC sweep
 -- finds a target whether "tomorrow" is Saturday or Sunday. min_rating_score_id
 -- must equal his own NTRP 3.0 score id for the compatibility join to hit.
@@ -171,7 +171,7 @@ SELECT v.id, v.host, '36c45c46-1daf-48f2-b13a-cf7b2c961534', v.d,
        '16:00', '17:30', 'singles', 'public', 'facility',
        '04a0f958-3261-4169-9498-ca76ee6f4ec5', 'America/Toronto',
        'direct', false, '6dc7fa22-7286-4ce3-ba80-b0b56eb446ee',
-       '[MOMENTUM] partie compatible pour le rythme de jeu'
+       '[MOMENTUM] partie compatible ouverte'
 FROM (VALUES
   ('e1000000-0000-0000-0000-000000000003'::uuid,
    'a1000000-0000-0000-0000-000000000083'::uuid,
@@ -183,7 +183,7 @@ FROM (VALUES
 
 INSERT INTO match_participant (match_id, player_id, status, is_host, joined_at)
 SELECT m.id, m.created_by, 'joined', true, now()
-FROM match m WHERE m.notes = '[MOMENTUM] partie compatible pour le rythme de jeu';
+FROM match m WHERE m.notes = '[MOMENTUM] partie compatible ouverte';
 
 -- ------------------------------------- 4. tournament_registration_open --
 -- Left in draft on purpose. Publishing it is what fires the fan-out, so do
