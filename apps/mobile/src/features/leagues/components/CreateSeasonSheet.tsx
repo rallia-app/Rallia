@@ -43,6 +43,33 @@ type SeasonFormat = Enums<'entry_format'>;
 
 const SEASON_FORMATS: SeasonFormat[] = ['singles', 'doubles', 'mixed_doubles'];
 
+/**
+ * The four seasons of the year, as calendar quarters. Tapping one fills the name
+ * and the dates; everything stays editable afterwards, here and through
+ * season_update while the season is still a draft.
+ */
+const CALENDAR_SEASONS = ['winter', 'spring', 'summer', 'fall'] as const;
+type CalendarSeason = (typeof CALENDAR_SEASONS)[number];
+
+const SEASON_MONTHS: Record<CalendarSeason, { startMonth: number; endMonth: number }> = {
+  winter: { startMonth: 0, endMonth: 2 },
+  spring: { startMonth: 3, endMonth: 5 },
+  summer: { startMonth: 6, endMonth: 8 },
+  fall: { startMonth: 9, endMonth: 11 },
+};
+
+/** The next occurrence of that quarter: this year's if it hasn't ended, else next. */
+function presetRange(season: CalendarSeason, today: Date): { start: Date; end: Date } {
+  const { startMonth, endMonth } = SEASON_MONTHS[season];
+  const year = today.getFullYear();
+  const endThisYear = new Date(year, endMonth + 1, 0);
+  const useYear = endThisYear < today ? year + 1 : year;
+  return {
+    start: new Date(useYear, startMonth, 1),
+    end: new Date(useYear, endMonth + 1, 0),
+  };
+}
+
 /** Dollars string → integer cents. Tolerates "", "12", "12.5", "12.50". */
 function dollarsToCents(input: string): number {
   const n = Number.parseFloat(input.replace(',', '.'));
@@ -127,6 +154,20 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     void SheetManager.hide(SHEET_ID);
   }, []);
 
+  const applyPreset = useCallback(
+    (season: CalendarSeason) => {
+      lightHaptic();
+      const { start, end } = presetRange(season, new Date());
+      setName(
+        `${t(`leagueDetail.createSeason.presets.${season}` as TranslationKey)} ${start.getFullYear()}`
+      );
+      setStartDate(start);
+      setEndDate(end);
+      setRefundCutoff(prev => (prev > start ? start : prev));
+    },
+    [t]
+  );
+
   const handleStartChange = useCallback((date: Date) => {
     setStartDate(date);
     setEndDate(prev => (prev < date ? date : prev));
@@ -207,6 +248,25 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
       }
     >
       <View style={styles.body}>
+        <View style={styles.fieldGroup}>
+          <Text size="xs" color={colors.textMuted}>
+            {t('leagueDetail.createSeason.presets.hint')}
+          </Text>
+          <View style={styles.presetRow}>
+            {CALENDAR_SEASONS.map(s => (
+              <TouchableOpacity
+                key={s}
+                onPress={() => applyPreset(s)}
+                testID={`season-preset-${s}`}
+                style={[styles.presetChip, { borderColor: colors.border }]}
+              >
+                <Text size="xs" weight="semibold" color={colors.text}>
+                  {t(`leagueDetail.createSeason.presets.${s}` as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
         <TextInput
           value={name}
           onChangeText={setName}
@@ -530,6 +590,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.lg,
     paddingHorizontal: spacingPixels[4],
+  },
+  presetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  presetChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
   },
   priceInput: {
     flex: 1,

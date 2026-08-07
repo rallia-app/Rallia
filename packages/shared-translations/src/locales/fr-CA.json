@@ -3370,6 +3370,14 @@
     },
     "preview": "J'ai proposé des moments pour jouer"
   },
+  "matchShare": {
+    "card": {
+      "title": "Nouvelle partie",
+      "viewGame": "Voir la partie",
+      "placeTbd": "Endroit à confirmer",
+      "levelPrefix": "Niveau"
+    }
+  },
   "matchDetail": {
     "title": "Détails de la partie",
     "preferences": "Préférences",
@@ -4280,6 +4288,10 @@
     "sectionOpenJoin": "Ouverte",
     "sectionApproval": "Approbation requise",
     "sectionInviteOnly": "Sur invitation",
+    "sections": {
+      "organizing": "Ligues que j'organise",
+      "playing": "Ligues où je joue"
+    },
     "roleOrganizer": "Organisateur",
     "memberCount": "{count} membres",
     "emptyMy": {
@@ -4692,6 +4704,13 @@
     },
     "createSeason": {
       "title": "Créer une saison",
+      "presets": {
+        "hint": "Pars d'une des quatre saisons, pis ajuste ce que tu veux.",
+        "winter": "Hiver",
+        "spring": "Printemps",
+        "summer": "Été",
+        "fall": "Automne"
+      },
       "formatLabel": "Format de jeu",
       "format": {
         "singles": {

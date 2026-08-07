@@ -3370,6 +3370,14 @@
     },
     "preview": "I suggested some times to play"
   },
+  "matchShare": {
+    "card": {
+      "title": "New game",
+      "viewGame": "View game",
+      "placeTbd": "Spot to confirm",
+      "levelPrefix": "Level"
+    }
+  },
   "matchDetail": {
     "title": "Game details",
     "preferences": "Preferences",
@@ -4280,6 +4288,10 @@
     "sectionOpenJoin": "Open to join",
     "sectionApproval": "Approval required",
     "sectionInviteOnly": "Invite only",
+    "sections": {
+      "organizing": "Leagues I organize",
+      "playing": "Leagues I play in"
+    },
     "roleOrganizer": "Organizer",
     "memberCount": "{count} members",
     "emptyMy": {
@@ -4692,6 +4704,13 @@
     },
     "createSeason": {
       "title": "Create a season",
+      "presets": {
+        "hint": "Start from one of the four seasons, then adjust anything.",
+        "winter": "Winter",
+        "spring": "Spring",
+        "summer": "Summer",
+        "fall": "Fall"
+      },
       "formatLabel": "Play format",
       "format": {
         "singles": {

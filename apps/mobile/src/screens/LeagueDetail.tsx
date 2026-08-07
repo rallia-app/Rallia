@@ -1931,10 +1931,25 @@ export const LeagueDetail: React.FC = () => {
     [isPaidSeason, isRemovingSeasonMember, locale, removeSeasonMemberMut, seasonFeeQuote, t]
   );
 
-  // Standings come from the open season, else the most recent closed one.
+  // Every season that ever had standings, newest first: a closed season keeps
+  // its table instead of being buried by the next one.
+  const standingsSeasons = useMemo(
+    () =>
+      seasons
+        .filter(s => s.status === 'open' || s.status === 'closed')
+        .sort((a, b) => b.start_date.localeCompare(a.start_date)),
+    [seasons]
+  );
+  const [pickedStandingsSeasonId, setPickedStandingsSeasonId] = useState<string | null>(null);
+
+  // Default to the open season, else the most recent closed one.
   const rankingSeason = useMemo(
-    () => openSeason ?? seasons.find(s => s.status === 'closed') ?? null,
-    [openSeason, seasons]
+    () =>
+      standingsSeasons.find(s => s.id === pickedStandingsSeasonId) ??
+      openSeason ??
+      standingsSeasons[0] ??
+      null,
+    [standingsSeasons, pickedStandingsSeasonId, openSeason]
   );
   const { data: rankings = [] } = useSeasonRankings(rankingSeason?.id);
 
@@ -3034,6 +3049,45 @@ export const LeagueDetail: React.FC = () => {
                 title={t('leagueDetail.standings.title').replace('{name}', rankingSeason.name)}
                 colors={colors}
               >
+                {/* Past seasons stay reachable once there is more than one. */}
+                {standingsSeasons.length > 1 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.standingsSeasonBar}
+                  >
+                    {standingsSeasons.map(s => {
+                      const selected = s.id === rankingSeason.id;
+                      return (
+                        <TouchableOpacity
+                          key={s.id}
+                          onPress={() => {
+                            lightHaptic();
+                            setPickedStandingsSeasonId(s.id);
+                          }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                          testID={`standings-season-${s.id}`}
+                          style={[
+                            styles.standingsSeasonChip,
+                            {
+                              borderColor: selected ? colors.primary : colors.border,
+                              backgroundColor: selected ? colors.statusActiveBg : 'transparent',
+                            },
+                          ]}
+                        >
+                          <Text
+                            size="xs"
+                            weight="semibold"
+                            color={selected ? colors.primary : colors.textMuted}
+                          >
+                            {s.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
                 <View
                   style={[
                     styles.standingRow,
@@ -4201,6 +4255,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[2],
+  },
+  standingsSeasonBar: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+  },
+  standingsSeasonChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1],
   },
   standingRow: {
     flexDirection: 'row',

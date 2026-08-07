@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SectionList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -49,6 +49,21 @@ export const MyLeagues: React.FC = () => {
       leagues.filter(l => (activeTab === 'closed' ? l.status === 'closed' : l.status !== 'closed')),
     [leagues, activeTab]
   );
+
+  // Organizing a league and playing in one are different jobs, so they get
+  // different sections. Headers only appear when both sides have something,
+  // otherwise a single section reads as a label on nothing.
+  const sections = useMemo<Array<{ title: string | null; data: LeagueListItem[] }>>(() => {
+    const organized = visibleLeagues.filter(l => l.organizer_id === userId);
+    const playing = visibleLeagues.filter(l => l.organizer_id !== userId);
+    if (organized.length === 0 || playing.length === 0) {
+      return visibleLeagues.length > 0 ? [{ title: null, data: visibleLeagues }] : [];
+    }
+    return [
+      { title: t('leagueList.sections.organizing'), data: organized },
+      { title: t('leagueList.sections.playing'), data: playing },
+    ];
+  }, [visibleLeagues, userId, t]);
   const closedCount = useMemo(() => leagues.filter(l => l.status === 'closed').length, [leagues]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   useEffect(() => {
@@ -125,9 +140,22 @@ export const MyLeagues: React.FC = () => {
               {renderTab('closed', 'archive-outline', t('leagueList.tabs.closed'))}
             </View>
           ) : null}
-          <FlatList
-            data={visibleLeagues}
+          <SectionList
+            sections={sections}
             keyExtractor={item => item.id}
+            stickySectionHeadersEnabled={false}
+            renderSectionHeader={({ section }) =>
+              section.title ? (
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  color={colors.textMuted}
+                  style={styles.sectionHeader}
+                >
+                  {section.title.toUpperCase()}
+                </Text>
+              ) : null
+            }
             renderItem={({ item }) => (
               <LeagueCard
                 league={item}
@@ -206,6 +234,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  sectionHeader: {
+    marginHorizontal: 16,
+    marginBottom: spacingPixels[2],
+    letterSpacing: 0.6,
   },
   emptyTitle: { marginTop: spacingPixels[3], textAlign: 'center' },
   emptyDescription: { marginTop: spacingPixels[2], textAlign: 'center' },
