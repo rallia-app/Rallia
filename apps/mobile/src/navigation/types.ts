@@ -17,6 +17,7 @@ import type {
   RatingReferencesScreenParams,
   SportProfileScreenParams,
   FacilityDetailScreenParams,
+  DateRangeFilter,
 } from '@rallia/shared-types';
 
 // =============================================================================
@@ -153,6 +154,16 @@ export type HomeStackParamList = {
           startTime?: string;
           sportName?: string;
           reason?: 'cancelled' | 'unfilled';
+        };
+        /**
+         * Filters the unfilled-recovery push counted its games with. Applying
+         * them on arrival is what makes the number in the message and the list
+         * behind it the same set. Sent verbatim in the notification payload.
+         */
+        initialFilters?: {
+          ratingScoreId?: string;
+          distanceKm?: number;
+          dateRange?: DateRangeFilter;
         };
       }
     | undefined;

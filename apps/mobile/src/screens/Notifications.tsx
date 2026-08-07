@@ -53,6 +53,7 @@ const BASE_WHITE = '#ffffff';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 
 import * as Analytics from '#/services/analytics';
+import { buildRecoveryFilters } from '#/utils/recoveryFilters';
 
 // Helper function to format relative time
 function formatRelativeTime(
@@ -453,6 +454,11 @@ const Notifications: React.FC = () => {
               sportName: payload?.sportName as string | undefined,
               reason: notification.type === 'match_cancelled' ? 'cancelled' : 'unfilled',
             },
+            // Only the recovery push counts a set of games, so only it carries
+            // the filters that reproduce them.
+            ...(notification.type === 'match_unfilled_recovery'
+              ? { initialFilters: buildRecoveryFilters(payload) }
+              : {}),
           });
           return;
         }

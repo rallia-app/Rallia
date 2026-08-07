@@ -28,6 +28,7 @@ import {
   type MatchScoringPreferences,
   type PublicMatch,
 } from '@rallia/shared-hooks';
+import type { DistanceFilter } from '@rallia/shared-types';
 import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
 import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger, supabase } from '@rallia/shared-services';
@@ -541,6 +542,27 @@ export default function PublicMatches() {
     // Consume the param so re-focusing the screen doesn't replay the banner.
     navigation.setParams({ cancelledContext: undefined } as never);
   }, [route.params?.cancelledContext, navigation, setSpecificDate]);
+
+  // The unfilled-recovery push announces a count, so it also sends the filters
+  // it counted with. Applying them here is what makes the list the same set as
+  // the number. Reset first: a filter left over from the previous visit would
+  // narrow the feed below what was promised.
+  useEffect(() => {
+    const incoming = route.params?.initialFilters;
+    if (!incoming) return;
+    resetFilters();
+    if (incoming.ratingScoreId) setRating([incoming.ratingScoreId]);
+    if (incoming.distanceKm) setDistance(incoming.distanceKm as DistanceFilter);
+    if (incoming.dateRange) setDateRange(incoming.dateRange);
+    navigation.setParams({ initialFilters: undefined } as never);
+  }, [
+    route.params?.initialFilters,
+    navigation,
+    resetFilters,
+    setRating,
+    setDistance,
+    setDateRange,
+  ]);
 
   // "Create your own game" CTA — shared by the empty state and the end-of-list footer.
   const handleCreateGamePress = useCallback(
