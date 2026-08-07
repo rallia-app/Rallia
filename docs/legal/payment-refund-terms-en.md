@@ -8,10 +8,11 @@
 
 ## 1. Who you are buying from
 
-Paid events on Rallia (tournaments and league seasons) are organized and sold by independent **organizers** (individuals or clubs). When you register for a paid event:
+Every paid event on Rallia (tournament or league season) has an **organizer**: either an independent organizer (an individual or a club), or Rallia itself for events that Rallia organizes directly. The event page identifies the organizer. When you register for a paid event:
 
-- The **organizer** is the seller of your entry. The entry fee is set by the organizer, is paid to the organizer, and the organizer is responsible for delivering the event and for any taxes that apply to the entry fee. The charge on your statement is processed on the organizer's behalf.
-- **Rallia** provides the platform and registration service. Rallia is not the seller of the event and never holds your entry money: payments are processed by our payment provider, **Stripe**, and your entry settles with the organizer.
+- The **organizer** is the seller of your entry. The entry fee is set by the organizer, is paid to the organizer, and the organizer is responsible for delivering the event and for any taxes that apply to the entry fee.
+- For events run by an independent organizer, **Rallia** provides only the platform and registration service. Rallia is not the seller of those events and does not hold your entry money: payments are processed by our payment provider, **Stripe**, and your entry settles with the organizer. The charge on your statement is processed on the organizer's behalf.
+- For events organized by Rallia, Rallia is the organizer and seller, and everything these terms say about "the organizer" applies to Rallia.
 
 ## 2. What you pay
 
@@ -55,7 +56,7 @@ Approved refunds are issued to your **original payment method** through Stripe. 
 
 If something goes wrong (an event materially differs from its description, a refund you believe you are owed has not arrived), contact us first at **contact@rallia.ca**. Most issues are resolved faster through us than through your bank.
 
-Because the organizer is the seller of the entry, payment disputes about the entry fee are ultimately between you and the organizer; Rallia will assist in good faith. Initiating a chargeback for a charge that complies with these terms and the event's displayed refund policy may result in suspension of your ability to register for paid events.
+Because the organizer is the seller of the entry, payment disputes about the entry fee are ultimately between you and the organizer of the event (Rallia itself, for events Rallia organizes); for events run by independent organizers, Rallia will assist in good faith. Initiating a chargeback for a charge that complies with these terms and the event's displayed refund policy may result in suspension of your ability to register for paid events.
 
 ## 8. Your legal rights
 
