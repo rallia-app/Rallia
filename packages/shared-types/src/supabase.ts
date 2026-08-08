@@ -13695,6 +13695,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      session_swap_player: {
+        Args: {
+          p_session_id: string
+          p_user_in: string
+          p_user_out: string
+          p_version_was: number
+        }
+        Returns: {
+          allow_guests: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          capacity: number | null
+          completed_at: string | null
+          confirm_reminder_sent_at: string | null
+          confirmation_deadline_at: string | null
+          created_at: string
+          duration_minutes: number
+          facility_id: string | null
+          formats_allowed: Database["public"]["Enums"]["entry_format"][]
+          id: string
+          match_format: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
+          published_at: string | null
+          rounds: number
+          scheduled_at: string
+          season_id: string
+          status: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at: string
+          venue_name: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       session_withdraw_member: {
         Args: { p_session_id: string; p_user_id: string; p_version_was: number }
         Returns: {

@@ -4838,6 +4838,23 @@
       "published": "Session published",
       "cancelled": "Session cancelled"
     },
+    "swap": {
+      "action": "Substitute a player",
+      "title": "Replace {name}",
+      "hint": "Pick who takes the slot. A paired player trades places; a player on a bye simply comes in.",
+      "trades": "Currently paired, will trade places",
+      "onBye": "On a bye",
+      "done": "Pairings updated",
+      "empty": "Nobody else has confirmed for this session yet.",
+      "errors": {
+        "alreadyPlayed": "That pairing already has a score, so it can't change.",
+        "alreadyLinked": "That pairing is tied to a game already.",
+        "notConfirmed": "That player hasn't confirmed for this session.",
+        "notOnSheet": "That player isn't on the sheet anymore.",
+        "sameMatch": "Those two already face each other.",
+        "stale": "The sheet changed. Refresh and try again."
+      }
+    },
     "sheet": {
       "title": "Match sheet",
       "empty": "No match sheet generated yet",

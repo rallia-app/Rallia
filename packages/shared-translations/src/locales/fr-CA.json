@@ -4838,6 +4838,23 @@
       "published": "Séance publiée",
       "cancelled": "Séance annulée"
     },
+    "swap": {
+      "action": "Remplacer un joueur",
+      "title": "Remplacer {name}",
+      "hint": "Choisis qui prend la place. Un joueur déjà pairé échange sa place; un joueur en bye entre simplement.",
+      "trades": "Déjà pairé, va échanger sa place",
+      "onBye": "En bye",
+      "done": "Pairages mis à jour",
+      "empty": "Personne d'autre n'a encore confirmé pour cette séance.",
+      "errors": {
+        "alreadyPlayed": "Cette partie a déjà un pointage, elle ne peut plus changer.",
+        "alreadyLinked": "Cette partie est déjà rattachée à une partie jouée.",
+        "notConfirmed": "Ce joueur n'a pas confirmé sa présence.",
+        "notOnSheet": "Ce joueur n'est plus sur la feuille.",
+        "sameMatch": "Ces deux-là s'affrontent déjà.",
+        "stale": "La feuille a changé. Rafraîchis pis réessaie."
+      }
+    },
     "sheet": {
       "title": "Feuille de match",
       "empty": "Aucune feuille de match générée",

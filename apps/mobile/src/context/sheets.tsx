@@ -51,6 +51,7 @@ import {
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
+import { SessionSwapPlayerActionSheet } from '#/features/leagues/components/SessionSwapPlayerSheet';
 import { SessionRecordScoreActionSheet } from '#/features/leagues/components/SessionRecordScoreSheet';
 import type { TournamentEditData } from '#/features/tournaments';
 import type { LeagueEditData } from '#/features/leagues';
@@ -388,6 +389,16 @@ declare module 'react-native-actions-sheet' {
         team2UserIds: string[];
         onSuccess?: () => void;
         onDismiss?: () => void;
+      };
+    }>;
+    'session-swap-player': SheetDefinition<{
+      payload: {
+        sessionId: string;
+        /** The player leaving their pairing. */
+        userOut: string;
+        userOutName: string;
+        /** Guards the swap against a stale copy of the sheet. */
+        sessionVersion: number;
       };
     }>;
     'session-link-match': SheetDefinition<{
@@ -986,6 +997,7 @@ export const Sheets = () => {
         'tournament-record-score': TournamentRecordScoreActionSheet,
         'tournament-link-match': TournamentLinkMatchActionSheet,
         'session-link-match': SessionLinkMatchActionSheet,
+        'session-swap-player': SessionSwapPlayerActionSheet,
         'session-record-score': SessionRecordScoreActionSheet,
         'tournament-partner-picker': TournamentPartnerPickerActionSheet,
         'tournament-edit': TournamentEditActionSheet,

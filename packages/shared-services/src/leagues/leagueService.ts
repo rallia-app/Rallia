@@ -936,6 +936,28 @@ export async function regenerateSessionSheet(
   return data as Session;
 }
 
+/**
+ * Organizer substitution on a published sheet: `userOut` leaves their pairing
+ * and `userIn` takes the slot. If `userIn` was already paired, the two trade;
+ * if they were on a bye, they simply come in. Refused once either pairing
+ * carries a result.
+ */
+export async function swapSessionPlayer(
+  sessionId: string,
+  userOut: string,
+  userIn: string,
+  versionWas: number
+): Promise<Session> {
+  const { data, error } = await supabase.rpc('session_swap_player', {
+    p_session_id: sessionId,
+    p_user_out: userOut,
+    p_user_in: userIn,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Session;
+}
+
 export async function setSessionMatchLock(
   sessionMatchId: string,
   locked: boolean,

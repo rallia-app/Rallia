@@ -462,6 +462,26 @@ export const SessionDetail: React.FC = () => {
     [league, sessionId, seasonId, invalidate]
   );
 
+  // Substitution: the first player of team A is the one offered up, since a
+  // singles row has one player per side and the picker names who leaves.
+  const openSwapPlayer = useCallback(
+    (m: SessionMatch) => {
+      if (!sess) return;
+      const userOut = m.team_a_user_ids[0];
+      if (!userOut) return;
+      lightHaptic();
+      void SheetManager.show('session-swap-player', {
+        payload: {
+          sessionId,
+          userOut,
+          userOutName: nameOf(userOut),
+          sessionVersion: sess.version,
+        },
+      });
+    },
+    [sess, sessionId, nameOf]
+  );
+
   // Open (get-or-create) the per-pairing chat and drop the caller in, so they
   // can agree on a time with their opponent. The game they create there is
   // attached to this pairing before it's played, and that chat becomes the
@@ -911,6 +931,18 @@ export const SessionDetail: React.FC = () => {
                     </View>
                     {canOverride(m) ? (
                       <View style={styles.matchActions}>
+                        {/* Substitute before anyone plays: the late cancellation
+                            the review asked about, without re-pairing the night. */}
+                        {!isScored(m) && !m.match_id ? (
+                          <TouchableOpacity
+                            onPress={() => openSwapPlayer(m)}
+                            style={styles.lockButton}
+                            accessibilityLabel={t('sessionDetail.swap.action')}
+                            testID="cta-swap-player"
+                          >
+                            <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+                          </TouchableOpacity>
+                        ) : null}
                         <TouchableOpacity
                           onPress={() => openScoreEntry(m)}
                           style={styles.lockButton}

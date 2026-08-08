@@ -53,6 +53,7 @@ import {
   recordSessionScore,
   regenerateSessionSheet,
   setSessionMatchLock,
+  swapSessionPlayer,
   updateLeague,
   pauseLeague,
   resumeLeague,
@@ -669,6 +670,26 @@ export function useGenerateSessionSheet(sessionId: string, options: MutationOpti
       regenerate
         ? regenerateSessionSheet(sessionId, versionWas)
         : generateSessionSheet(sessionId, versionWas),
+    onSuccess: result => {
+      invalidate(sessionId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useSwapSessionPlayer(sessionId: string, options: MutationOptions<Session> = {}) {
+  const invalidate = useSheetInvalidator();
+  return useMutation({
+    mutationFn: ({
+      userOut,
+      userIn,
+      versionWas,
+    }: {
+      userOut: string;
+      userIn: string;
+      versionWas: number;
+    }) => swapSessionPlayer(sessionId, userOut, userIn, versionWas),
     onSuccess: result => {
       invalidate(sessionId);
       options.onSuccess?.(result);
