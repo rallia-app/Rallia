@@ -827,6 +827,43 @@ export async function createLeagueSession(input: {
   return data as Session;
 }
 
+/**
+ * Creates a whole run of sessions at once, spaced `repeatEveryDays` apart. The
+ * occurrences are ordinary drafts: each is published, edited or cancelled on
+ * its own afterwards. The server refuses a run that would outlive its season.
+ */
+export async function createLeagueSessionSeries(input: {
+  seasonId: string;
+  name: string;
+  firstAt: string;
+  repeatEveryDays: number;
+  occurrences: number;
+  timezone?: string;
+  durationMinutes?: number;
+  facilityId?: string;
+  venueName?: string;
+  capacity?: number;
+  rounds?: number;
+  pairingMode?: Enums<'pairing_mode'>;
+}): Promise<Session[]> {
+  const { data, error } = await supabase.rpc('session_create_series', {
+    p_season_id: input.seasonId,
+    p_name: input.name,
+    p_first_at: input.firstAt,
+    p_repeat_every_days: input.repeatEveryDays,
+    p_occurrences: input.occurrences,
+    p_timezone: input.timezone ?? null,
+    p_duration_minutes: input.durationMinutes ?? 90,
+    p_facility_id: input.facilityId ?? null,
+    p_venue_name: input.venueName ?? null,
+    p_capacity: input.capacity ?? null,
+    p_rounds: input.rounds ?? 1,
+    p_pairing_mode: input.pairingMode ?? 'by_rank',
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Session[];
+}
+
 export async function publishSession(
   sessionId: string,
   versionWas: number,

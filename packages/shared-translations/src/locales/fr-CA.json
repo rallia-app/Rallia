@@ -4629,6 +4629,19 @@
       "publish": "Publier",
       "created": "Séance créée",
       "published": "Séance publiée",
+      "seriesCreated": "{count} séances créées",
+      "errors": {
+        "seriesTooLong": "Cette série dépasse la fin de la saison. Raccourcis-la ou commence plus tôt."
+      },
+      "repeat": {
+        "label": "Récurrence",
+        "once": "Une fois",
+        "weekly": "Chaque semaine",
+        "biweekly": "Aux 2 semaines",
+        "monthly": "Aux 4 semaines",
+        "countLabel": "Combien de séances",
+        "hint": "Toutes sont créées en brouillon. Tu publies encore chacune toi-même."
+      },
       "rounds": {
         "label": "Parties par joueur",
         "hint": "Combien de parties chaque joueur dispute pendant cette séance."

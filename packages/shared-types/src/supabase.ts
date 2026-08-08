@@ -13504,6 +13504,56 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      session_create_series: {
+        Args: {
+          p_capacity?: number
+          p_duration_minutes?: number
+          p_facility_id?: string
+          p_first_at: string
+          p_name: string
+          p_occurrences: number
+          p_pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          p_repeat_every_days: number
+          p_rounds?: number
+          p_season_id: string
+          p_timezone?: string
+          p_venue_name?: string
+        }
+        Returns: {
+          allow_guests: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          capacity: number | null
+          completed_at: string | null
+          confirm_reminder_sent_at: string | null
+          confirmation_deadline_at: string | null
+          created_at: string
+          duration_minutes: number
+          facility_id: string | null
+          formats_allowed: Database["public"]["Enums"]["entry_format"][]
+          id: string
+          match_format: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
+          published_at: string | null
+          rounds: number
+          scheduled_at: string
+          season_id: string
+          status: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at: string
+          venue_name: string | null
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       session_generate_sheet: {
         Args: { p_session_id: string; p_version_was: number }
         Returns: {

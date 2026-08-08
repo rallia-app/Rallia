@@ -22,6 +22,7 @@ import {
   remindPendingSessionMembers,
   createLeague,
   createLeagueSession,
+  createLeagueSessionSeries,
   createSeason,
   enrollInSeason,
   withdrawFromSeason,
@@ -539,6 +540,27 @@ export function useCreateSession(seasonId: string, options: MutationOptions<Sess
       rounds?: number;
       pairingMode?: Enums<'pairing_mode'>;
     }) => createLeagueSession({ seasonId, ...input }),
+    onSuccess: result => {
+      qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function useCreateSessionSeries(seasonId: string, options: MutationOptions<Session[]> = {}) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      name: string;
+      firstAt: string;
+      repeatEveryDays: number;
+      occurrences: number;
+      timezone?: string;
+      capacity?: number;
+      rounds?: number;
+      pairingMode?: Enums<'pairing_mode'>;
+    }) => createLeagueSessionSeries({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
       options.onSuccess?.(result);

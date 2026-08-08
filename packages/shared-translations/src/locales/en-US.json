@@ -4629,6 +4629,19 @@
       "publish": "Publish",
       "created": "Session created",
       "published": "Session published",
+      "seriesCreated": "{count} sessions created",
+      "errors": {
+        "seriesTooLong": "That run would go past the end of the season. Shorten it or start earlier."
+      },
+      "repeat": {
+        "label": "Repeat",
+        "once": "Once",
+        "weekly": "Weekly",
+        "biweekly": "Every 2 weeks",
+        "monthly": "Every 4 weeks",
+        "countLabel": "How many sessions",
+        "hint": "All of them are created as drafts. You still publish each one yourself."
+      },
       "rounds": {
         "label": "Games per player",
         "hint": "How many games each player plays during this session."
