@@ -18,6 +18,7 @@ export type InvitationType =
   | 'group'
   | 'community'
   | 'tournament'
+  | 'league'
   | 'flyer'
   | 'poster'
   | 'social';
@@ -29,6 +30,8 @@ export interface InvitationLinkParams {
   targetId?: string;
   /** Optional per-recipient match share token for contact-based tracking */
   shareToken?: string;
+  /** League only: a specific session the sharer wants the recipient to land on */
+  sessionId?: string;
   /** Optional UTM params for inbound attribution — built via @rallia/shared-utils buildUtmUrl */
   utm?: UtmParams;
 }
@@ -38,6 +41,7 @@ export interface ParsedInvitationLink {
   type: InvitationType;
   targetId?: string;
   shareToken?: string;
+  sessionId?: string;
 }
 
 // ============================================================================
@@ -72,7 +76,7 @@ const LOCALE_PREFIX = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
  *     → https://rallia.app/invite/ABCD1234?type=match&id=uuid&share=tok
  */
 export function generateInvitationLink(params: InvitationLinkParams): string {
-  const { type, referralCode, targetId, shareToken, utm } = params;
+  const { type, referralCode, targetId, shareToken, sessionId, utm } = params;
   const base = `${BASE_URL}/invite/${encodeURIComponent(referralCode)}`;
 
   const searchParams = new URLSearchParams();
@@ -84,6 +88,9 @@ export function generateInvitationLink(params: InvitationLinkParams): string {
   }
   if (shareToken) {
     searchParams.set('share', shareToken);
+  }
+  if (sessionId) {
+    searchParams.set('session', sessionId);
   }
 
   const qs = searchParams.toString();
@@ -134,6 +141,7 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
       const typeParam = parsed.searchParams.get('type');
       const targetId = parsed.searchParams.get('id') ?? undefined;
       const shareToken = parsed.searchParams.get('share') ?? undefined;
+      const sessionId = parsed.searchParams.get('session') ?? undefined;
 
       const type: InvitationType =
         typeParam &&
@@ -142,6 +150,7 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
           'group',
           'community',
           'tournament',
+          'league',
           'referral',
           'flyer',
           'poster',
@@ -150,7 +159,7 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
           ? (typeParam as InvitationType)
           : 'referral';
 
-      return { referralCode, type, targetId, shareToken };
+      return { referralCode, type, targetId, shareToken, sessionId };
     }
 
     // 2. Match /community/join/{code} (must be checked before /join/ to avoid false match)

@@ -455,6 +455,11 @@ const Home = () => {
               tournamentId: nav.params.tournamentId,
               inviteToken: nav.params.inviteToken,
             });
+          } else if (nav.screen === 'LeagueDetail' && nav.params?.leagueId) {
+            appNavigation.navigate('LeagueDetail', {
+              leagueId: nav.params.leagueId,
+              inviteToken: nav.params.inviteToken,
+            });
           }
         } catch {
           // Ignore parse errors
@@ -547,6 +552,21 @@ const Home = () => {
               tournamentId: pending.targetId,
               inviteToken: pending.shareToken,
             });
+          } else if (pending.type === 'league') {
+            // Session links land on the sheet; SessionDetail bounces to the
+            // league (carrying the token) if RLS hides the session.
+            if (pending.sessionId) {
+              appNavigation.navigate('SessionDetail', {
+                sessionId: pending.sessionId,
+                leagueId: pending.targetId,
+                inviteToken: pending.shareToken,
+              });
+            } else {
+              appNavigation.navigate('LeagueDetail', {
+                leagueId: pending.targetId,
+                inviteToken: pending.shareToken,
+              });
+            }
           }
         } catch {
           // Ignore parse errors
@@ -735,6 +755,22 @@ const Home = () => {
               tournamentId: payload.targetId,
               inviteToken: payload.shareToken,
             });
+          } else if (payload.invitationType === 'league' && payload.targetId) {
+            // Same preview-then-confirm shape as tournaments. A session link
+            // lands on the sheet; SessionDetail bounces to the league
+            // (carrying the token) if RLS hides the session.
+            if (payload.sessionId) {
+              appNavigation.navigate('SessionDetail', {
+                sessionId: payload.sessionId,
+                leagueId: payload.targetId,
+                inviteToken: payload.shareToken,
+              });
+            } else {
+              appNavigation.navigate('LeagueDetail', {
+                leagueId: payload.targetId,
+                inviteToken: payload.shareToken,
+              });
+            }
           }
           // referral-only: nothing to do, already persisted to AsyncStorage by the store
           break;

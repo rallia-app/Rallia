@@ -4392,7 +4392,8 @@
       "leagueNotFound": "This league no longer exists.",
       "leagueFull": "This league is full.",
       "notInvited": "This league is invite-only.",
-      "sportMismatch": "Add this sport to your profile before joining."
+      "sportMismatch": "Add this sport to your profile before joining.",
+      "inviteInvalid": "This invite link is no longer valid."
     },
     "memberErrors": {
       "memberNotFound": "This member is no longer in the league.",
@@ -4796,7 +4797,34 @@
       "close": "Close"
     },
     "seasonEntryFee": "Entry: {amount}",
-    "viewReceipt": "View receipt"
+    "viewReceipt": "View receipt",
+    "invite": {
+      "title": "Share league",
+      "shareCta": "Share this league",
+      "description": "Anyone with this link can join the league right away, even if it is private or normally requires approval.",
+      "descriptionPlayer": "Invite friends to join this league. They join under the same rules as you did.",
+      "generating": "Preparing your invite link...",
+      "scanToJoin": "Scan to join the league",
+      "share": "Share invite link",
+      "shareTitle": "Join {name} on Rallia",
+      "shareMessage": "You're invited to my league {name} on Rallia. Join here: {link}",
+      "shareMessageSession": "Join us for {session} in the league {name} on Rallia: {link}",
+      "resetLink": "Reset link",
+      "resetWarning": "The current link will stop working. Members already in the league keep their spot.",
+      "resetDone": "New invite link ready",
+      "resetFailed": "Couldn't reset the link. Please try again.",
+      "linkInfo": "Anyone who uses this link joins right away, even if the league is private or normally requires approval.",
+      "linkInfoPlayer": "Anyone who joins through your link is credited to you.",
+      "invalidTitle": "This invite link no longer works",
+      "invalidDescription": "It may have been reset by the organizer, or the league is closed. Ask for a fresh link.",
+      "errors": {
+        "title": "Can't show an invite link",
+        "notFound": "This league couldn't be found.",
+        "notActive": "This league is closed, so its invite link is closed too.",
+        "sharingUnavailable": "This league can't be shared by players. Ask the organizer for an invite.",
+        "generic": "Couldn't prepare the invite link. Please try again."
+      }
+    }
   },
   "sessionDetail": {
     "title": "Session",
@@ -4954,7 +4982,8 @@
     "cancelledNotice": {
       "title": "Session cancelled",
       "reason": "Reason: {reason}"
-    }
+    },
+    "shareCta": "Share this session"
   },
   "leagueCreation": {
     "title": "Create a league",
@@ -11812,6 +11841,11 @@
     "tournamentInviteTitleGeneric": "You're invited to {tournament}!",
     "tournamentInviteHeading": "{name} invited you to {tournament}!",
     "tournamentInviteHeadingGeneric": "You're invited to {tournament}!",
+    "leagueInviteTitle": "{name} invited you to the league {league}!",
+    "leagueInviteTitleGeneric": "You're invited to the league {league}!",
+    "leagueInviteHeading": "{name} invited you to the league {league}!",
+    "leagueInviteHeadingGeneric": "You're invited to the league {league}!",
+    "leagueSessionLine": "Session on {date}",
     "at": "at",
     "scanQr": "Scan this QR code with your phone to get started.",
     "appStore": "Download on the App Store",

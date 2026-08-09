@@ -1141,6 +1141,23 @@ export function tournamentInviteRedeemed(props: {
   capture('lt.tournament.invite_redeemed', props);
 }
 
+export function leagueShared(props: {
+  leagueId: string;
+  medium: 'link' | 'native' | 'qr';
+  /** Present when the share was initiated from a session's share action. */
+  sessionId?: string;
+}): void {
+  capture('lt.league.shared', props);
+}
+
+export function leagueInviteRedeemed(props: {
+  leagueId: string;
+  result: 'joined' | 'error';
+  errorCode?: string;
+}): void {
+  capture('lt.league.invite_redeemed', props);
+}
+
 // ---- Chat Match Organizer ----
 // Funnel: opened → card_posted → vote_cast (×N) → match_created. The card lives
 // in small DM/group chats and tournament round chats; opened/card_posted carry

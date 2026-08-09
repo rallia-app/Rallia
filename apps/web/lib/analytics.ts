@@ -86,6 +86,7 @@ export type InvitationLandingType =
   | 'group'
   | 'community'
   | 'tournament'
+  | 'league'
   | 'flyer'
   | 'poster'
   | 'social';

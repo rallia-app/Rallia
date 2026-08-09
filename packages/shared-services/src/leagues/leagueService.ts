@@ -5,6 +5,7 @@
  */
 
 import type { Tables, Enums, Json } from '@rallia/shared-types';
+import type { UtmParams } from '@rallia/shared-utils';
 
 import {
   getProfilesByIds,
@@ -13,6 +14,7 @@ import {
   type LinkableMatch,
   type RegistrationPaymentIntent,
 } from '../tournaments/tournamentService';
+import { generateInvitationLink } from '../invitation/invitationLinkService';
 import { supabase } from '../supabase';
 
 export type League = Tables<'leagues'>;
@@ -993,6 +995,84 @@ export async function swapSessionPlayer(
   });
   if (error) throw new Error(error.message);
   return data as Session;
+}
+
+export type LeagueInviteLink = Tables<'league_invite_links'>;
+
+export interface LeagueInvitePreview {
+  league: League;
+  activeCount: number;
+}
+
+/**
+ * The caller's active invite link, minted on first call. Organizers get the
+ * league's shared organizer link (skeleton key); anyone else gets their own
+ * player link, which only exists on a public, non-invite-only, active league
+ * (SHARING_NOT_AVAILABLE otherwise).
+ */
+export async function getOrCreateLeagueInvite(leagueId: string): Promise<LeagueInviteLink> {
+  const { data, error } = await supabase.rpc('league_invite_get_or_create', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueInviteLink;
+}
+
+/**
+ * Revokes the active organizer link and mints a fresh one. Player links are
+ * deliberately left alone — they redeem through the normal join rules.
+ */
+export async function resetLeagueInvite(leagueId: string): Promise<LeagueInviteLink> {
+  const { data, error } = await supabase.rpc('league_invite_reset', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueInviteLink;
+}
+
+/**
+ * Token preview: resolves a valid invite token to its league — bypassing RLS
+ * so invitees can see private leagues before joining — plus the active member
+ * count. Throws INVITE_INVALID for unknown / revoked / expired tokens.
+ */
+export async function getLeagueByInviteToken(token: string): Promise<LeagueInvitePreview> {
+  const { data, error } = await supabase.rpc('league_get_by_invite_token', { p_token: token });
+  if (error) throw new Error(error.message);
+  const payload = data as unknown as { league: League; active_count: number };
+  return { league: payload.league, activeCount: payload.active_count };
+}
+
+/**
+ * Joins the caller via an invite token. An organizer link bypasses join_mode
+ * and the rating/reputation gates (never capacity); a player link goes through
+ * the normal league_join rules — an approval league lands the caller pending.
+ * Idempotent for already-active members.
+ */
+export async function joinLeagueViaInvite(token: string): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_join_via_invite', { p_token: token });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+/**
+ * Shareable league invite URL on the unified /invite format — the sender's
+ * referral code rides along for signup attribution. `sessionId` points the
+ * recipient at a specific session once they're in.
+ */
+export function getLeagueShareLink(
+  token: string,
+  leagueId: string,
+  referralCode: string,
+  options?: { sessionId?: string; utm?: UtmParams }
+): string {
+  return generateInvitationLink({
+    type: 'league',
+    referralCode,
+    targetId: leagueId,
+    shareToken: token,
+    sessionId: options?.sessionId,
+    utm: options?.utm,
+  });
 }
 
 export async function setSessionMatchLock(

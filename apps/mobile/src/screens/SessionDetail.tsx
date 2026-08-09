@@ -8,7 +8,7 @@
  *       specs/17-leagues-tournaments/leagues.md §Sessions
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -98,7 +98,7 @@ export const SessionDetail: React.FC = () => {
   const userId = authSession?.user?.id;
   const route = useRoute<Route>();
   const navigation = useNavigation<NavigationProp>();
-  const { sessionId, leagueId } = route.params;
+  const { sessionId, leagueId, inviteToken } = route.params;
   const isDark = theme === 'dark';
   const tc = isDark ? darkTheme : lightTheme;
 
@@ -142,6 +142,64 @@ export const SessionDetail: React.FC = () => {
     void refetchMine();
     void refetchMatches();
   }, [refetch, refetchPresence, refetchMine, refetchMatches]);
+
+  // A session share link opened by a non-member of a private league: RLS hides
+  // the session, but the token still gets them somewhere useful — the league
+  // page, where the preview RPC renders and the CTA redeems the token.
+  const fetchSettled = !isLoading && (isError || sess !== undefined);
+  useEffect(() => {
+    if (!inviteToken || !fetchSettled || sess) return;
+    navigation.replace('LeagueDetail', { leagueId, inviteToken });
+  }, [inviteToken, fetchSettled, sess, navigation, leagueId]);
+
+  // Share mirrors the league mint conditions: the organizer always has a link;
+  // anyone else only where a player link exists (public, joinable, active).
+  const canShareSession =
+    !!league &&
+    !!sess &&
+    (isOrganizer ||
+      (league.visibility === 'public' &&
+        league.join_mode !== 'invite_only' &&
+        league.status === 'active'));
+
+  const handleShareSession = useCallback(() => {
+    if (!league || !sess) return;
+    lightHaptic();
+    void SheetManager.show('league-invite', {
+      payload: {
+        leagueId: league.id,
+        leagueName: league.name,
+        sessionId: sess.id,
+        sessionLabel:
+          sess.name ||
+          new Date(sess.scheduled_at).toLocaleString(locale, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+      },
+    });
+  }, [league, sess, locale]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: canShareSession
+        ? () => (
+            <TouchableOpacity
+              onPress={handleShareSession}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('sessionDetail.shareCta')}
+              testID="session-share"
+            >
+              <Ionicons name="share-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, canShareSession, handleShareSession, colors.text, t]);
 
   const nameOf = useCallback(
     (id: string): string => {

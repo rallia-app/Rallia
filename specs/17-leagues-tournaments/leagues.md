@@ -100,6 +100,19 @@ Not yet surfaced: the mobile league screen has no capacity/waitlist editor and r
 
 Gates: optional `min_rating`, `max_rating`, `min_reputation` mirror the tournament fields.
 
+### Shareable invite links (20260809150000)
+
+Mirror of the tournament player/organizer split (`20260729140000`), on the `league_invite_links` table that had sat dormant since the base schema:
+
+| `kind`      | Who mints                                                    | Redeem semantics                                                                                                                                                                                                   |
+| ----------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `organizer` | Organizer/co-organizer/admin; one live link per league       | Skeleton key: lands `active` past `join_mode` and the rating/reputation gates, and admits a pending request on the spot. Capacity is **never** bypassed — full leagues queue (waitlist on) or raise `LEAGUE_FULL`. |
+| `player`    | Anyone, one live link per sharer, only where sharing is safe | **Delegates to `league_join`** — the normal rules (join-mode mapping, gates, capacity, waitlist) apply by construction and can never drift.                                                                        |
+
+Player links exist only on a `public`, non-`invite_only`, `active` league — enforced at mint and re-checked at redeem (`SHARING_NOT_AVAILABLE`). RPCs: `league_invite_get_or_create` (one entry point, the caller's rights pick the kind), `league_invite_reset` (rotates **organizer** links only — player links redeem through the normal rules, so revoking them adds no safety; deliberate deviation from the tournament reset), `league_get_by_invite_token` (RLS-bypassing preview: `{league, active_count}`, opaque `INVITE_INVALID`), `league_join_via_invite`.
+
+Links ride the unified `/invite/{referralCode}?type=league&id={leagueId}&share={token}` format so the sharer's referral code carries signup attribution. A **session share** is the same league link plus `&session={sessionId}`: recipients with access land straight on the session sheet; a non-member of a private league bounces to the league page, where the token renders the preview and the join CTA redeems it. Share affordances: header share icon on `LeagueDetail` and `SessionDetail` (`league-invite` sheet: QR, copy, native share, organizer-only reset). Web `/invite` landing renders league name, optional session date, and location. Test: `supabase/tests/league_share_links_test.sql`.
+
 ### Member statuses
 
 | Status      | Description                       | Can confirm sessions? | Counted in ranking? |

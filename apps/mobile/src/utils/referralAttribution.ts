@@ -165,6 +165,8 @@ function toDeepLinkPayload(referral: PendingReferral): DeepLinkPayload | null {
       referralCode: referral.code,
       invitationType: referral.type,
       targetId: referral.targetId,
+      shareToken: referral.shareToken,
+      sessionId: referral.sessionId,
     };
   return null;
 }

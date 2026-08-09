@@ -2380,6 +2380,7 @@ export type Database = {
           created_by: string
           expires_at: string | null
           id: string
+          kind: string
           label: string | null
           league_id: string
           max_uses: number | null
@@ -2392,6 +2393,7 @@ export type Database = {
           created_by: string
           expires_at?: string | null
           id?: string
+          kind?: string
           label?: string | null
           league_id: string
           max_uses?: number | null
@@ -2404,6 +2406,7 @@ export type Database = {
           created_by?: string
           expires_at?: string | null
           id?: string
+          kind?: string
           label?: string | null
           league_id?: string
           max_uses?: number | null
@@ -10587,7 +10590,12 @@ export type Database = {
         }[]
       }
       get_match_invite_candidates: {
-        Args: { p_limit?: number; p_match_id: string; p_offset?: number }
+        Args: {
+          p_limit?: number
+          p_match_id: string
+          p_offset?: number
+          p_reasons?: string[]
+        }
         Returns: {
           active_recently: boolean
           available_at_slot: boolean
@@ -12024,13 +12032,85 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_get_by_invite_token: { Args: { p_token: string }; Returns: Json }
+      league_invite_get_or_create: {
+        Args: { p_league_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          kind: string
+          label: string | null
+          league_id: string
+          max_uses: number | null
+          revoked_at: string | null
+          token: string
+          uses: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_invite_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_invite_members: {
         Args: { p_league_id: string; p_user_ids: string[] }
         Returns: number
       }
+      league_invite_reset: {
+        Args: { p_league_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          kind: string
+          label: string | null
+          league_id: string
+          max_uses: number | null
+          revoked_at: string | null
+          token: string
+          uses: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_invite_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_is_public: { Args: { p_league_id: string }; Returns: boolean }
       league_join: {
         Args: { p_league_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_join_via_invite: {
+        Args: { p_token: string }
         Returns: {
           approved_at: string | null
           approved_by: string | null

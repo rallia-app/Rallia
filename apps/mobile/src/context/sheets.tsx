@@ -44,6 +44,7 @@ import { TournamentInviteSheet } from '#/features/tournaments/components/Tournam
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
+import { LeagueInviteSheet } from '#/features/leagues/components/LeagueInviteSheet';
 import {
   LeagueEditActionSheet,
   LeagueCreateActionSheet,
@@ -474,6 +475,16 @@ declare module 'react-native-actions-sheet' {
         tournamentId: string;
         sportId: string;
         organizerId: string;
+      };
+    }>;
+    'league-invite': SheetDefinition<{
+      payload: {
+        leagueId: string;
+        leagueName: string;
+        /** Present when sharing a specific session — the link carries it. */
+        sessionId?: string;
+        /** Human-readable session date/name for the share message. */
+        sessionLabel?: string;
       };
     }>;
     'league-invite-players': SheetDefinition<{
@@ -1004,6 +1015,7 @@ export const Sheets = () => {
         'tournament-invite': TournamentInviteSheet,
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
+        'league-invite': LeagueInviteSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,
         'league-create': LeagueCreateActionSheet,

@@ -39,6 +39,12 @@ import {
   type LeagueWaitlistStatus,
   type LeagueWaitlistEntry,
   getMySessionPresence,
+  getOrCreateLeagueInvite,
+  resetLeagueInvite,
+  getLeagueByInviteToken,
+  joinLeagueViaInvite,
+  type LeagueInviteLink,
+  type LeagueInvitePreview,
   joinLeague,
   listLeagueMembers,
   listLeagueSessions,
@@ -118,6 +124,8 @@ export const leagueKeys = {
     [...leagueKeys.all, 'mySeasonMembership', seasonId, userId] as const,
   seasonReceipt: (seasonMemberId: string) =>
     [...leagueKeys.all, 'seasonReceipt', seasonMemberId] as const,
+  inviteLink: (leagueId: string) => [...leagueKeys.all, 'inviteLink', leagueId] as const,
+  invitePreview: (token: string) => [...leagueKeys.all, 'invitePreview', token] as const,
 };
 
 /**
@@ -371,6 +379,80 @@ export function useJoinLeague(leagueId: string, options: MutationOptions<LeagueM
     },
     onError: options.onError,
   });
+}
+
+/**
+ * The caller's active share link for the league (organizer or player kind,
+ * decided server-side). Every failure mode is terminal (LEAGUE_NOT_FOUND,
+ * LEAGUE_NOT_ACTIVE, SHARING_NOT_AVAILABLE) — the share sheet renders the
+ * error state and offers its own retry.
+ */
+export function useLeagueInviteLink(leagueId: string | undefined, enabled = true) {
+  return useQuery<LeagueInviteLink>({
+    queryKey: leagueKeys.inviteLink(leagueId ?? ''),
+    queryFn: () => getOrCreateLeagueInvite(leagueId!),
+    enabled: !!leagueId && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Revoke the active organizer link and mint a fresh one (player links are
+ * untouched — they redeem through the normal rules).
+ */
+export function useResetLeagueInvite(options: MutationOptions<LeagueInviteLink> = {}) {
+  const qc = useQueryClient();
+  const mutation = useMutation<LeagueInviteLink, Error, { leagueId: string }>({
+    mutationFn: ({ leagueId }) => resetLeagueInvite(leagueId),
+    onSuccess: link => {
+      qc.setQueryData(leagueKeys.inviteLink(link.league_id), link);
+      options.onSuccess?.(link);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Invite-token preview: league + active member count for a valid token, even
+ * when the league is private (RLS would hide it pre-join). INVITE_INVALID is
+ * terminal — don't retry.
+ */
+export function useLeagueInvitePreview(token: string | undefined, enabled = true) {
+  return useQuery<LeagueInvitePreview>({
+    queryKey: leagueKeys.invitePreview(token ?? ''),
+    queryFn: () => getLeagueByInviteToken(token!),
+    enabled: !!token && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Join via an invite token (organizer links bypass join_mode and the gates;
+ * player links go through the normal rules; idempotent).
+ */
+export function useJoinLeagueViaInvite(options: MutationOptions<LeagueMember> = {}) {
+  const invalidate = useLeagueDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<LeagueMember, Error, { token: string; leagueId: string }>({
+    mutationFn: ({ token }) => joinLeagueViaInvite(token),
+    onSuccess: (member, vars) => {
+      invalidate(vars.leagueId);
+      qc.invalidateQueries({ queryKey: leagueKeys.lists() });
+      qc.invalidateQueries({ queryKey: leagueKeys.invitePreview(vars.token) });
+      options.onSuccess?.(member);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
 }
 
 export function useApproveLeagueMember(

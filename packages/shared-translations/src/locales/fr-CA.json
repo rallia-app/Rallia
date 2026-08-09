@@ -4392,7 +4392,8 @@
       "leagueNotFound": "Cette ligue n'existe plus.",
       "leagueFull": "Cette ligue est pleine.",
       "notInvited": "Cette ligue est sur invitation seulement.",
-      "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre."
+      "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre.",
+      "inviteInvalid": "Ce lien d'invitation n'est plus valide."
     },
     "memberErrors": {
       "memberNotFound": "Ce membre ne fait plus partie de la ligue.",
@@ -4796,7 +4797,34 @@
       "close": "Fermer"
     },
     "seasonEntryFee": "Inscription : {amount}",
-    "viewReceipt": "Voir le reçu"
+    "viewReceipt": "Voir le reçu",
+    "invite": {
+      "title": "Partager la ligue",
+      "shareCta": "Partager cette ligue",
+      "description": "Toute personne avec ce lien peut rejoindre la ligue immédiatement, même si elle est privée ou demande normalement une approbation.",
+      "descriptionPlayer": "Invite des amis à cette ligue. Ils la rejoignent selon les mêmes règles que toi.",
+      "generating": "Préparation de votre lien d'invitation...",
+      "scanToJoin": "Balayez pour rejoindre la ligue",
+      "share": "Partager le lien d'invitation",
+      "shareTitle": "Rejoignez {name} sur Rallia",
+      "shareMessage": "Vous êtes invité à ma ligue {name} sur Rallia. Rejoignez-nous ici : {link}",
+      "shareMessageSession": "Rejoignez-nous pour la séance {session} de la ligue {name} sur Rallia : {link}",
+      "resetLink": "Réinitialiser le lien",
+      "resetWarning": "Le lien actuel cessera de fonctionner. Les membres déjà dans la ligue gardent leur place.",
+      "resetDone": "Nouveau lien d'invitation prêt",
+      "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
+      "linkInfo": "Toute personne qui utilise ce lien rejoint la ligue immédiatement, même si elle est privée ou demande normalement une approbation.",
+      "linkInfoPlayer": "Toute personne qui rejoint la ligue avec ton lien t'est créditée.",
+      "invalidTitle": "Ce lien d'invitation ne fonctionne plus",
+      "invalidDescription": "Il a peut-être été réinitialisé par l'organisateur, ou la ligue est fermée. Demande un nouveau lien.",
+      "errors": {
+        "title": "Impossible d'afficher un lien d'invitation",
+        "notFound": "Cette ligue est introuvable.",
+        "notActive": "Cette ligue est fermée, donc son lien d'invitation l'est aussi.",
+        "sharingUnavailable": "Cette ligue ne peut pas être partagée par les joueurs. Demande une invitation à l'organisateur.",
+        "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
+      }
+    }
   },
   "sessionDetail": {
     "title": "Séance",
@@ -4954,7 +4982,8 @@
     "cancelledNotice": {
       "title": "Séance annulée",
       "reason": "Motif : {reason}"
-    }
+    },
+    "shareCta": "Partager cette séance"
   },
   "leagueCreation": {
     "title": "Créer une ligue",
@@ -11812,6 +11841,11 @@
     "tournamentInviteTitleGeneric": "Vous êtes invité au tournoi {tournament}!",
     "tournamentInviteHeading": "{name} vous invite au tournoi {tournament}!",
     "tournamentInviteHeadingGeneric": "Vous êtes invité au tournoi {tournament}!",
+    "leagueInviteTitle": "{name} vous invite à la ligue {league}!",
+    "leagueInviteTitleGeneric": "Vous êtes invité à la ligue {league}!",
+    "leagueInviteHeading": "{name} vous invite à la ligue {league}!",
+    "leagueInviteHeadingGeneric": "Vous êtes invité à la ligue {league}!",
+    "leagueSessionLine": "Séance le {date}",
     "at": "à",
     "scanQr": "Scannez ce code QR avec votre téléphone pour commencer.",
     "appStore": "Télécharger sur l'App Store",

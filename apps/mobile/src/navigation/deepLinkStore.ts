@@ -28,8 +28,10 @@ export interface PendingReferral {
   code: string;
   type: InvitationType;
   targetId?: string;
-  /** Tournament invite token — grants preview + registration via the link RPCs. */
+  /** Tournament/league invite token — grants preview + join via the link RPCs. */
   shareToken?: string;
+  /** League invites only: the session the sharer wants the recipient to land on. */
+  sessionId?: string;
   /** True when the user typed the code by hand (DiscoveryStep / PersonalInfoStep). Absent for deep-link / install-referrer / clipboard origins. */
   enteredManually?: boolean;
 }
@@ -58,6 +60,7 @@ export type DeepLinkPayload =
       invitationType?: InvitationType;
       targetId?: string;
       shareToken?: string;
+      sessionId?: string;
     };
 
 // =============================================================================
@@ -127,6 +130,7 @@ function persistToAsyncStorage(payload: DeepLinkPayload): void {
         type: payload.invitationType ?? 'referral',
         targetId: payload.targetId,
         shareToken: payload.shareToken,
+        sessionId: payload.sessionId,
       };
       break;
     case 'publicMatches':

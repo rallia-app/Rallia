@@ -55,6 +55,8 @@ import {
   useLeagueWaitlist,
   useLeagueSeasons,
   useJoinLeague,
+  useJoinLeagueViaInvite,
+  useLeagueInvitePreview,
   useApproveLeagueMember,
   useAcceptLeagueInvite,
   useRevokeLeagueInvite,
@@ -289,6 +291,12 @@ const JOIN_ERROR_KEYS: RpcErrorOverrides = {
   LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
   NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
   SPORT_MISMATCH: 'leagueDetail.joinErrors.sportMismatch',
+};
+
+const JOIN_VIA_INVITE_ERROR_KEYS: RpcErrorOverrides = {
+  ...JOIN_ERROR_KEYS,
+  INVITE_INVALID: 'leagueDetail.joinErrors.inviteInvalid',
+  SHARING_NOT_AVAILABLE: 'leagueDetail.joinErrors.inviteInvalid',
 };
 
 interface ScreenColors {
@@ -1131,7 +1139,7 @@ export const LeagueDetail: React.FC = () => {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const route = useRoute<Route>();
-  const { leagueId } = route.params;
+  const { leagueId, inviteToken: inviteTokenParam } = route.params;
   const isDark = theme === 'dark';
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -1165,7 +1173,20 @@ export const LeagueDetail: React.FC = () => {
     [themeColors, isDark]
   );
 
-  const { data: league, isLoading, isError, refetch: refetchLeague } = useLeague(leagueId);
+  const { data: directLeague, isLoading, isError, refetch: refetchLeague } = useLeague(leagueId);
+
+  // Invite-token fallback: when the direct fetch comes back empty (private
+  // league, caller not yet a member → RLS hides the row), a valid token still
+  // renders the page via the preview RPC. Members/seasons stay empty until the
+  // join lands — the screen degrades to an overview + join CTA.
+  const invitePreviewEnabled = !!inviteTokenParam && !isLoading && !directLeague;
+  const {
+    data: invitePreview,
+    isLoading: invitePreviewLoading,
+    isError: inviteInvalid,
+  } = useLeagueInvitePreview(inviteTokenParam, invitePreviewEnabled);
+  const league = directLeague ?? invitePreview?.league ?? null;
+
   const { data: members = [], refetch: refetchMembers } = useLeagueMembers(leagueId);
   const {
     data: myMembership,
@@ -1229,6 +1250,30 @@ export const LeagueDetail: React.FC = () => {
     onError: e => {
       warningHaptic();
       toast.error(rpcErrorMessage(e, t, 'leagueDetail.errors.generic', JOIN_ERROR_KEYS));
+    },
+  });
+
+  // Arrived via a share link and not yet in: the CTA redeems the token instead
+  // of calling league_join, so an organizer link keeps its skeleton-key power.
+  const inviteToken = !isOrganizer ? inviteTokenParam : undefined;
+  const joinViaInvite = useJoinLeagueViaInvite({
+    onSuccess: m => {
+      successHaptic();
+      toast.success(
+        m.status === 'pending' ? t('leagueDetail.joinPending') : t('leagueDetail.joinSuccess')
+      );
+      Analytics.leagueInviteRedeemed({ leagueId, result: 'joined' });
+      if (m.status === 'pending') {
+        Analytics.leagueMemberPendingAnalytics({ leagueId });
+      } else {
+        Analytics.leagueMemberJoinedAnalytics({ leagueId, viaInvite: true });
+      }
+      invalidateAll();
+    },
+    onError: e => {
+      warningHaptic();
+      Analytics.leagueInviteRedeemed({ leagueId, result: 'error', errorCode: e.message });
+      toast.error(rpcErrorMessage(e, t, 'leagueDetail.errors.generic', JOIN_VIA_INVITE_ERROR_KEYS));
     },
   });
 
@@ -2534,7 +2579,45 @@ export const LeagueDetail: React.FC = () => {
     }
   }, [qc, leagueId, openSeasonId, userId]);
 
-  if (isLoading) {
+  // Share is headerRight for anyone who can actually mint a link: the
+  // organizer always (their skeleton-key link, even on a private league), and
+  // everyone else only where the player-link mint would succeed. Mirrors the
+  // conditions in league_invite_get_or_create.
+  const canShareLeague =
+    !!league &&
+    (isOrganizer
+      ? league.status !== 'closed'
+      : league.visibility === 'public' &&
+        league.join_mode !== 'invite_only' &&
+        league.status === 'active');
+
+  const handleShareLeague = useCallback(() => {
+    if (!league) return;
+    lightHaptic();
+    void SheetManager.show('league-invite', {
+      payload: { leagueId: league.id, leagueName: league.name },
+    });
+  }, [league]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: canShareLeague
+        ? () => (
+            <TouchableOpacity
+              onPress={handleShareLeague}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('leagueDetail.invite.shareCta')}
+              testID="league-share"
+            >
+              <Ionicons name="share-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, canShareLeague, handleShareLeague, colors.text, t]);
+
+  if (isLoading || (invitePreviewEnabled && invitePreviewLoading)) {
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
         <LeagueDetailSkeleton />
@@ -2564,15 +2647,26 @@ export const LeagueDetail: React.FC = () => {
   }
 
   if (!league) {
+    // A dead share link (revoked, expired, or the league closed) gets its own
+    // words — "league not found" would read as a bug to the recipient.
+    const invalidInvite = !!inviteTokenParam && inviteInvalid;
     return (
       <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
         <View style={styles.centered}>
-          <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+          <Ionicons
+            name={invalidInvite ? 'link-outline' : 'people-outline'}
+            size={48}
+            color={colors.textMuted}
+          />
           <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-            {t('leagueDetail.notFound')}
+            {t(invalidInvite ? 'leagueDetail.invite.invalidTitle' : 'leagueDetail.notFound')}
           </Text>
           <Text size="sm" color={colors.textMuted} style={styles.centeredSubtext}>
-            {t('leagueDetail.notFoundDescription')}
+            {t(
+              invalidInvite
+                ? 'leagueDetail.invite.invalidDescription'
+                : 'leagueDetail.notFoundDescription'
+            )}
           </Text>
         </View>
       </SafeAreaView>
@@ -2703,14 +2797,19 @@ export const LeagueDetail: React.FC = () => {
       };
     }
     if (canJoin) {
+      const joinBusy = isJoining || joinViaInvite.isPending;
       return {
-        label: isJoining ? t('leagueDetail.actions.joining') : t('leagueDetail.actions.join'),
+        label: joinBusy ? t('leagueDetail.actions.joining') : t('leagueDetail.actions.join'),
         icon: 'person-add-outline',
         onPress: () => {
           lightHaptic();
-          joinLeague();
+          if (inviteToken) {
+            joinViaInvite.mutate({ token: inviteToken, leagueId });
+          } else {
+            joinLeague();
+          }
         },
-        disabled: isJoining,
+        disabled: joinBusy,
         hint: t('leagueDetail.dashboard.joinCta.description'),
         testID: 'cta-join-league',
       };

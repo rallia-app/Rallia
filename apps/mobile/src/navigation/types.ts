@@ -70,8 +70,13 @@ export type RootStackParamList = {
     openInviteSheet?: boolean;
   }; // Tournament detail view
   TournamentBracketSetup: { tournamentId: string }; // Organizer seeding + bracket preview before publish
-  LeagueDetail: { leagueId: string; leagueName?: string }; // League detail view
-  SessionDetail: { sessionId: string; leagueId: string; sessionName?: string }; // League session detail + confirm CTA
+  LeagueDetail: { leagueId: string; leagueName?: string; inviteToken?: string }; // League detail view (token = arrived via share link)
+  SessionDetail: {
+    sessionId: string;
+    leagueId: string;
+    sessionName?: string;
+    inviteToken?: string;
+  }; // League session detail + confirm CTA (token = arrived via share link)
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
