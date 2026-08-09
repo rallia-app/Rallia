@@ -132,6 +132,40 @@ BEGIN
         IF SQLERRM <> 'NOT_ORGANIZER' THEN RAISE; END IF;
         RAISE NOTICE 'ok 6: only an organizer can schedule a run';
     END;
+
+    -- ------------------------------------------------------------------
+    -- 7. the wall-clock time survives DST
+    -- ------------------------------------------------------------------
+    -- 26 occurrences at 14 days span 350 days, which crosses at least one DST
+    -- transition whenever the test runs (the longest gap between transitions
+    -- is ~238 days). Every occurrence must land at the same local time on the
+    -- same weekday; UTC stepping would drift an hour at each transition.
+    PERFORM pg_temp.as_user(v_org);
+    v_league := public.league_create(
+        p_name => 'Series DST test', p_sport_id => v_sport, p_join_mode => 'open');
+    v_season := public.season_create(
+        v_league.id, 'S', current_date, current_date + 360);
+    v_season := public.season_open(v_season.id, v_season.version);
+
+    v_first := ((current_date + 4)::timestamp + interval '19 hours')
+               AT TIME ZONE 'America/Montreal';
+
+    PERFORM public.session_create_series(
+        p_season_id => v_season.id,
+        p_name => 'Jeudi soir',
+        p_first_at => v_first,
+        p_repeat_every_days => 14,
+        p_occurrences => 26,
+        p_timezone => 'America/Montreal');
+
+    SELECT count(DISTINCT (scheduled_at AT TIME ZONE 'America/Montreal')::time),
+           count(DISTINCT extract(dow FROM scheduled_at AT TIME ZONE 'America/Montreal'))
+      INTO v_count, v_gaps
+      FROM sessions WHERE season_id = v_season.id;
+    IF v_count <> 1 OR v_gaps <> 1 THEN
+        RAISE EXCEPTION 'DST shifted the series: % local times, % weekdays', v_count, v_gaps;
+    END IF;
+    RAISE NOTICE 'ok 7: 26 occurrences keep one local time and one weekday across DST';
 END $$;
 
 ROLLBACK;
