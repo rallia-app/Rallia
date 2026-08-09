@@ -35,8 +35,10 @@ import {
   StyleProp,
   GestureResponderEvent,
 } from 'react-native';
+import { status } from '@rallia/design-system';
+import { useThemeStyles } from '@rallia/shared-hooks';
+
 import { typography, spacing, borderRadius } from '../theme';
-import { primary, neutral, lightTheme, darkTheme, status } from '@rallia/design-system';
 
 export interface ButtonProps {
   /** Button style variant */
@@ -67,7 +69,10 @@ export interface ButtonProps {
   textStyle?: StyleProp<TextStyle>;
   /** Test ID for testing */
   testID?: string;
-  /** Theme colors - if not provided, uses design system defaults */
+  /**
+   * @deprecated Button now reads the theme from ThemeProvider automatically.
+   * Only pass this to override the resolved theme colors (e.g. a custom palette).
+   */
   themeColors?: {
     primary: string;
     primaryForeground: string;
@@ -80,7 +85,9 @@ export interface ButtonProps {
     border: string;
     background: string;
   };
-  /** Whether dark mode is active */
+  /**
+   * @deprecated Dark mode is resolved from ThemeProvider automatically; this prop is ignored.
+   */
   isDark?: boolean;
 }
 
@@ -100,26 +107,22 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   testID,
   themeColors,
-  isDark = false,
 }) => {
   const isDisabled = disabled || loading;
+  const { colors: themeStyleColors } = useThemeStyles();
 
-  // Use theme colors if provided, otherwise use design system defaults
-  // Note: Using string literals for base colors to avoid runtime import issues
-  const basePrimary = destructive ? status.error.DEFAULT : isDark ? primary[500] : primary[600];
-
-  const colors = themeColors || {
-    primary: basePrimary,
-    primaryForeground: '#ffffff', // base.white
-    buttonActive: basePrimary,
-    buttonInactive: isDark ? neutral[700] : neutral[300],
-    buttonTextActive: '#ffffff', // base.white
-    buttonTextInactive: isDark ? neutral[400] : neutral[500],
-    text: isDark ? darkTheme.foreground : lightTheme.foreground,
-    textMuted: isDark ? darkTheme.mutedForeground : lightTheme.mutedForeground,
-    border: destructive ? status.error.DEFAULT : isDark ? darkTheme.border : lightTheme.border,
-    background: isDark ? darkTheme.background : lightTheme.background,
-  };
+  // Explicit themeColors win untouched (legacy call sites build their own palettes,
+  // including destructive ones); otherwise theme context + destructive override.
+  const colors =
+    themeColors ||
+    (destructive
+      ? {
+          ...themeStyleColors,
+          primary: status.error.DEFAULT,
+          buttonActive: status.error.DEFAULT,
+          border: status.error.DEFAULT,
+        }
+      : themeStyleColors);
 
   // Get variant styles
   const variantStyles = getVariantStyles(variant, isDisabled, colors);
