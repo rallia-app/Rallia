@@ -321,6 +321,22 @@ Deno.serve(async req => {
       console.warn('[lt-create-registration-payment] event name lookup failed', e);
     }
 
+    // Stripe PaymentIntent receipts carry no line items, so the price breakdown
+    // rides in the description. Absorb mode names no fee/tax amounts: those are
+    // the organizer's cost, not something the player paid.
+    const money = (cents: number) =>
+      currency === 'cad'
+        ? `${(cents / 100).toFixed(2).replace('.', ',')} $`
+        : `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+    if (reg.fee_payer === 'player_pays' && reg.service_fee_cents > 0) {
+      description += ` · Entrée ${money(reg.entry_cents)} + Frais de service ${money(reg.service_fee_cents)}`;
+      if (reg.fee_tax_cents > 0) description += ` + TPS/TVQ ${money(reg.fee_tax_cents)}`;
+    } else if (reg.fee_payer === 'organizer_absorbs') {
+      description += ` · Entrée ${money(reg.entry_cents)} (frais de service assumés par l'organisateur)`;
+    } else {
+      description += ` · Entrée ${money(reg.entry_cents)}`;
+    }
+
     const params: Stripe.PaymentIntentCreateParams = {
       amount: reg.amount_charged_cents,
       currency,

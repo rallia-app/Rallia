@@ -1740,11 +1740,15 @@ export const TournamentDetail: React.FC = () => {
               .filter(Boolean)
               .join('\n')
           : [
+              t('tournamentDetail.payments.breakdownEntry').replace(
+                '{amount}',
+                money(feeQuote.entryCents)
+              ),
+              t('tournamentDetail.payments.feeCoveredByOrganizer'),
               t('tournamentDetail.payments.breakdownTotal').replace(
                 '{amount}',
                 money(feeQuote.totalCents)
               ),
-              t('tournamentDetail.payments.feeCoveredByOrganizer'),
             ].join('\n');
       const totalLabel = feeQuote ? money(feeQuote.totalCents) : null;
       const message = [

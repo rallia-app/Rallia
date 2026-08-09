@@ -1689,11 +1689,15 @@ export const LeagueDetail: React.FC = () => {
           .filter(Boolean)
           .join('\n') as string)
       : [
+          t('leagueDetail.paid.breakdownEntry').replace(
+            '{amount}',
+            money(seasonFeeQuote.entryCents)
+          ),
+          t('leagueDetail.paid.feeCoveredByOrganizer'),
           t('leagueDetail.paid.breakdownTotal').replace(
             '{amount}',
             money(seasonFeeQuote.totalCents)
           ),
-          t('leagueDetail.paid.feeCoveredByOrganizer'),
         ].join('\n');
     const lines = [
       breakdown,

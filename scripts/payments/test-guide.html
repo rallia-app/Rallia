@@ -456,9 +456,10 @@
         </li>
         <li>
           Sur le reçu, vérifie deux choses : le montant est bien <strong>15,86 $</strong>, et la
-          description nomme l'événement, soit
-          <span class="fixture">Rallia · [PAYUI-JDL] LIVE register + pay</span>. Un reçu qui dirait
-          seulement « Rallia » ou « tournament registration » est un défaut : signale-le.
+          description nomme l'événement avec le détail du prix, soit
+          <span class="fixture">Rallia · [PAYUI-JDL] LIVE register + pay · Entrée 15,00 $ + Frais de
+          service 0,75 $ + TPS/TVQ 0,11 $</span>. Un reçu qui dirait seulement « Rallia » ou
+          « tournament registration » est un défaut : signale-le.
         </li>
       </ol>
       <p class="check">
@@ -482,12 +483,19 @@
       <ol>
         <li>Ouvre l'écran de paiement.</li>
         <li>Compare avec le scénario 4.1 : ici tu dois payer <strong>exactement 40,00 $</strong>, sans frais ajoutés. C'est l'organisateur qui absorbe les 2,00 $ de frais et les 0,30 $ de taxes : il reçoit 37,70 $.</li>
+        <li>
+          Le détail avant paiement doit le dire en trois lignes : « Entrée : 40,00 $ », puis
+          « Frais de service Rallia et taxes : assumés par l'organisateur, rien ne s'ajoute pour
+          toi », puis « Total : 40,00 $ ». Aucun montant de frais ni de taxes n'est affiché : ce
+          n'est pas toi qui les paies.
+        </li>
         <li>Paie avec la carte de test.</li>
         <li>
           <span class="pill new">nouveau</span> Ouvre <strong>Voir le reçu</strong> et compare-le à
-          celui du scénario 4.1. Ici le reçu doit afficher <strong>40,00 $</strong> tout rond, alors
-          que celui de 4.1 affichait 15,86 $. Le reçu montre ce que <em>toi</em> tu as payé : les
-          2,00 $ de frais absorbés par l'organisateur n'ont pas à y paraître.
+          celui du scénario 4.1. Ici le reçu doit afficher <strong>40,00 $</strong> tout rond, avec
+          la mention <span class="fixture">Entrée 40,00 $ (frais de service assumés par
+          l'organisateur)</span> dans la description. Le reçu montre ce que <em>toi</em> tu as payé :
+          aucun montant de frais ni de taxes n'y figure, c'est voulu.
         </li>
       </ol>
       <p class="check"><strong>Attendu :</strong> le total est le prix affiché, ni plus ni moins. C'est la différence visible entre les deux modes de frais, et le reçu doit raconter la même histoire que l'écran de paiement.</p>
@@ -648,8 +656,10 @@
           <span class="pill new">nouveau</span> La pastille <strong>Voir le reçu</strong> doit
           apparaître en haut de l'écran de la ligue, exactement comme sur un tournoi. Ouvre-la : le
           montant est <strong>42,30 $</strong> (40,00 $ d'entrée + 2,00 $ de frais + 0,30 $ de taxes,
-          mode joueur paie) et la description doit nommer la ligue et la saison, soit
-          <span class="fixture">Rallia · [SEED] Paid League — Demo Hosts · Saison payante</span>.
+          mode joueur paie) et la description doit nommer la ligue, la saison et le détail du prix,
+          soit
+          <span class="fixture">Rallia · [SEED] Paid League — Demo Hosts · Saison payante · Entrée
+          40,00 $ + Frais de service 2,00 $ + TPS/TVQ 0,30 $</span>.
         </li>
       </ol>
       <p class="check">
