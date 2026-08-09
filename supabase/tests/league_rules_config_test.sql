@@ -49,10 +49,14 @@ BEGIN
     -- ---------------------------------------------------------------------
     -- 1. create with an override: the named keys win, the rest survive
     -- ---------------------------------------------------------------------
+    -- The wizard cascades the walkover/retirement variants with win/loss;
+    -- direct callers must do the same or be refused (asserted in step 2b).
     v_league := public.league_create(
         p_name           => 'Rules config test',
         p_sport_id       => v_sport,
-        p_rules_override => '{"pointWin": 3, "pointLoss": 0, "pointBye": 2}'::jsonb
+        p_rules_override => '{"pointWin": 3, "pointLoss": 0, "pointBye": 2,
+                              "pointRetirementWinner": 3, "pointWalkoverWinner": 3,
+                              "pointRetirementLoser": 0, "pointWalkoverLoser": 0}'::jsonb
     );
 
     IF (v_league.default_rules ->> 'pointWin')::int <> 3
@@ -78,6 +82,21 @@ BEGIN
     EXCEPTION WHEN SQLSTATE 'P0001' THEN
         IF SQLERRM <> 'INVALID_RULES:pointWin' THEN RAISE; END IF;
         RAISE NOTICE 'ok 2: create rejects a non-numeric point value';
+    END;
+
+    -- ---------------------------------------------------------------------
+    -- 2b. lowering the win without its variants would make a walkover the
+    --     better outcome; the validator refuses the paradox
+    -- ---------------------------------------------------------------------
+    BEGIN
+        PERFORM public.league_create(
+            p_name           => 'Forfeit paradox',
+            p_sport_id       => v_sport,
+            p_rules_override => '{"pointWin": 3}'::jsonb);
+        RAISE EXCEPTION 'a walkover paying more than a win was accepted';
+    EXCEPTION WHEN SQLSTATE 'P0001' THEN
+        IF SQLERRM NOT LIKE 'INVALID_RULES:%' THEN RAISE; END IF;
+        RAISE NOTICE 'ok 2b: a forfeit can never pay more than a played win (%)', SQLERRM;
     END;
 
     -- ---------------------------------------------------------------------

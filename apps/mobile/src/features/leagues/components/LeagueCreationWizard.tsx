@@ -93,6 +93,23 @@ type PointsForm = Record<(typeof POINT_FIELDS)[number], string>;
 /** Mirrors lt_league_default_rules, which seeds these at league_create. */
 const DEFAULT_POINTS: PointsForm = { pointWin: '10', pointLoss: '1', pointBye: '1' };
 
+/**
+ * The walkover/retirement variants the form does NOT show, with their seeded
+ * defaults. They track win/loss: the server refuses any rules where a forfeit
+ * pays more than the played result it shadows, so an edit to win or loss must
+ * carry them along (cascade when they were tracking, clamp when they'd exceed).
+ */
+const VARIANT_SEEDS = {
+  pointRetirementWinner: 10,
+  pointWalkoverWinner: 10,
+  pointRetirementLoser: 1,
+  pointWalkoverLoser: 0,
+} as const;
+type VariantKey = keyof typeof VARIANT_SEEDS;
+
+const WIN_VARIANTS: VariantKey[] = ['pointRetirementWinner', 'pointWalkoverWinner'];
+const LOSS_VARIANTS: VariantKey[] = ['pointRetirementLoser', 'pointWalkoverLoser'];
+
 function pointsFromRules(rules: Record<string, unknown> | null | undefined): PointsForm {
   if (!rules) return { ...DEFAULT_POINTS };
   const read = (k: (typeof POINT_FIELDS)[number]): string =>
@@ -1002,6 +1019,27 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         changedPoints[field] = Number(points[field].trim());
       }
     }
+
+    // Carry the hidden walkover/retirement variants along with win/loss: a
+    // variant that was tracking the old value follows the new one, and one that
+    // would now exceed it is clamped, so a lowered win can never make a forfeit
+    // the better outcome (the server refuses exactly that).
+    const readVariant = (k: VariantKey): number => {
+      const v = editLeague?.defaultRules?.[k];
+      return typeof v === 'number' ? v : VARIANT_SEEDS[k];
+    };
+    const cascadeVariants = (baseKey: 'pointWin' | 'pointLoss', variants: VariantKey[]) => {
+      if (!(baseKey in changedPoints)) return;
+      const oldBase = Number(baseline[baseKey]);
+      const newBase = changedPoints[baseKey];
+      for (const k of variants) {
+        const current = readVariant(k);
+        if (current === oldBase || current > newBase) changedPoints[k] = newBase;
+      }
+    };
+    cascadeVariants('pointWin', WIN_VARIANTS);
+    cascadeVariants('pointLoss', LOSS_VARIANTS);
+
     const hasPointChanges = Object.keys(changedPoints).length > 0;
 
     // ---- Edit mode: diff against the original and PATCH only what changed ----
