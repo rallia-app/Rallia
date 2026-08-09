@@ -71,7 +71,9 @@ const TOKEN_HEXES = [
 ];
 
 // Trailing (?:[0-9a-f]{2})? also catches token + alpha suffix (e.g. '#F59E0B1F').
-const TOKEN_HEX_PATTERN = `^#(?:${TOKEN_HEXES.join('|')})(?:[0-9a-f]{2})?$`;
+// Exported for ui-consistency.mjs, whose broader hex rule skips token-valued
+// hexes so they surface only here (at 'error') instead of double-reporting.
+export const TOKEN_HEX_PATTERN = `^#(?:${TOKEN_HEXES.join('|')})(?:[0-9a-f]{2})?$`;
 
 export const designTokens = {
   rules: {
