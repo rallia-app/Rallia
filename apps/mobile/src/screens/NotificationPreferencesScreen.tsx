@@ -113,6 +113,7 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'league_invitation',
   'league_member_request',
   'league_member_approved',
+  'league_member_rejected',
   'session_published',
   'session_confirm_reminder',
   'session_cancelled',
@@ -186,6 +187,7 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   league_invitation: primary[500],
   league_member_request: primary[500],
   league_member_approved: status.success.light,
+  league_member_rejected: status.error.light,
   session_published: status.info.DEFAULT,
   session_confirm_reminder: accent[600],
   // Cancellations share the tournament_cancelled colour: same kind of bad news.

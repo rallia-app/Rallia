@@ -362,6 +362,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   league_invitation: 'mail-outline',
   league_member_request: 'person-add-outline',
   league_member_approved: 'checkmark-circle-outline',
+  league_member_rejected: 'close-circle-outline',
 };
 
 /**
@@ -474,6 +475,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   league_invitation: '#4DB8A8', // Teal — info
   league_member_request: '#FF9800', // Amber — action needed
   league_member_approved: '#4CAF50', // Green — accepted
+  league_member_rejected: '#9E9E9E', // Grey — closed without joining
 };
 
 /**
@@ -582,6 +584,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   league_invitation: 'League Invitation',
   league_member_request: 'New Join Request',
   league_member_approved: 'Membership Approved',
+  league_member_rejected: 'Request Declined',
 };
 
 /**
@@ -700,6 +703,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   league_invitation: 'leagues',
   league_member_request: 'leagues',
   league_member_approved: 'leagues',
+  league_member_rejected: 'leagues',
 };
 
 /**
@@ -860,6 +864,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   league_invitation: { email: true, push: true, sms: false },
   league_member_request: { email: false, push: true, sms: false },
   league_member_approved: { email: true, push: true, sms: false },
+  league_member_rejected: { email: false, push: true, sms: false },
 };
 
 // ============================================
@@ -941,6 +946,7 @@ export const LEAGUE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] 
   'league_invitation',
   'league_member_request',
   'league_member_approved',
+  'league_member_rejected',
   'season_closed',
   'season_cancelled',
 ];

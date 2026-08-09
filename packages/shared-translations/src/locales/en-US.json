@@ -297,6 +297,7 @@
       "league_invitation": "League invitation",
       "league_member_request": "League join request",
       "league_member_approved": "League join approved",
+      "league_member_rejected": "League request declined",
       "session_published": "Schedule published",
       "session_confirm_reminder": "Confirm your spot",
       "season_closed": "Season closed",

@@ -15322,6 +15322,7 @@ export type Database = {
         | "match_unfilled_recovery"
         | "play_rhythm_nudge"
         | "tournament_registration_open"
+        | "league_member_rejected"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -16004,6 +16005,7 @@ export const Constants = {
         "match_unfilled_recovery",
         "play_rhythm_nudge",
         "tournament_registration_open",
+        "league_member_rejected",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

@@ -465,6 +465,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   league_invitation: 'high',
   league_member_request: 'normal',
   league_member_approved: 'high',
+  league_member_rejected: 'normal',
 };
 
 /**
@@ -578,6 +579,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   league_invitation: 'League invitation',
   league_member_request: 'New join request',
   league_member_approved: "You're in",
+  league_member_rejected: 'Request declined',
 };
 
 /**
@@ -720,6 +722,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   league_invitation: 'You have a new league invitation.',
   league_member_request: 'A player wants to join your league.',
   league_member_approved: 'Your league membership was approved.',
+  league_member_rejected: "Your request to join the league wasn't accepted.",
 };
 
 /**
