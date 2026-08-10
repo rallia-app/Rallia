@@ -69,6 +69,7 @@ import {
   spacingPixels,
   radiusPixels,
   accent,
+  base,
   neutral,
   primary,
   secondary,
@@ -410,13 +411,12 @@ const Home = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // Card-skeleton palette — mirrors PlayerCardSkeleton / FacilityCardSkeleton
-  // so My Matches & Just-for-you skeletons sit on the same tinted surface
-  // as the real MatchCard / MyMatchCard (primary[50/950]).
-  const skeletonCardBg = isDark ? primary[950] : primary[50];
+  // Card-skeleton palette — mirrors the v2 MatchCard / MyMatchCard surfaces
+  // (plain white / dark card with a neutral shimmer).
+  const skeletonCardBg = isDark ? neutral[900] : base.white;
   const skeletonCardBorder = isDark ? `${primary[400]}40` : `${primary[500]}20`;
-  const skeletonShimmerBg = isDark ? primary[900] : primary[100];
-  const skeletonShimmerHighlight = isDark ? primary[800] : primary[50];
+  const skeletonShimmerBg = isDark ? neutral[800] : neutral[100];
+  const skeletonShimmerHighlight = isDark ? neutral[700] : neutral[50];
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
   const toast = useToast();
@@ -1375,7 +1375,7 @@ const Home = () => {
             taller LocationSelector pill grows the row. The subtitle sits below. */}
         <View style={styles.sectionHeaderTopRow}>
           <View style={styles.sectionTitleRow}>
-            <Text size="xl" weight="bold" color={colors.text}>
+            <Text variant="display" size="xl" weight="bold" color={colors.text}>
               {t(titleKey)}
             </Text>
             {/* Only show LocationSelector when both GPS and home location are available */}
@@ -1440,7 +1440,7 @@ const Home = () => {
           {/* Header with title and "See All" button */}
           <View style={[styles.sectionHeader]}>
             <View style={styles.sectionHeaderText}>
-              <Text size="xl" weight="bold" color={colors.text}>
+              <Text variant="display" size="xl" weight="bold" color={colors.text}>
                 {t('home.myMatches')}
               </Text>
               <Text size="sm" color={colors.textMuted}>
@@ -1615,7 +1615,7 @@ const Home = () => {
       <View>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderText}>
-            <Text size="xl" weight="bold" color={colors.text}>
+            <Text variant="display" size="xl" weight="bold" color={colors.text}>
               {sectionTitle}
             </Text>
             <Text size="sm" color={colors.textMuted}>
@@ -1963,7 +1963,7 @@ const Home = () => {
         <View key="sign-in">
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderText}>
-              <Text size="xl" weight="bold" color={colors.text}>
+              <Text variant="display" size="xl" weight="bold" color={colors.text}>
                 {t('home.yourMatches')}
               </Text>
             </View>
@@ -1995,7 +1995,7 @@ const Home = () => {
         <View key="complete-profile">
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderText}>
-              <Text size="xl" weight="bold" color={colors.text}>
+              <Text variant="display" size="xl" weight="bold" color={colors.text}>
                 {t('home.yourMatches')}
               </Text>
             </View>
@@ -2088,7 +2088,7 @@ const Home = () => {
     headerComponents.push(
       <View key="play-grid">
         <View style={quickNavStyles.sectionHeader}>
-          <Text size="xl" weight="bold" color={colors.text}>
+          <Text variant="display" size="xl" weight="bold" color={colors.text}>
             {t('home.playGrid.title')}
           </Text>
         </View>

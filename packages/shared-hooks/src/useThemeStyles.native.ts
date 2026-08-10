@@ -148,11 +148,12 @@ export function useThemeStyles() {
 
       // Skeleton shimmer palette. Neutral pair matches the Skeleton
       // primitive's historical defaults (kept verbatim so existing screens
-      // don't shift); tinted pair matches the primary-tinted card surfaces.
+      // don't shift); tinted pair matches the v2 card surfaces (white/dark
+      // card with a neutral shimmer).
       skeletonBackground: isDark ? '#2C2C2E' : '#E1E9EE',
       skeletonHighlight: isDark ? '#3C3C3E' : '#F2F8FC',
-      skeletonTintedBackground: isDark ? primary[900] : primary[100],
-      skeletonTintedHighlight: isDark ? primary[800] : primary[50],
+      skeletonTintedBackground: isDark ? neutral[800] : neutral[100],
+      skeletonTintedHighlight: isDark ? neutral[700] : neutral[50],
     };
   }, [isDark]);
 

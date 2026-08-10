@@ -54,21 +54,22 @@ import { TranslationKey } from '@rallia/shared-translations';
  * - regular: primary (teal) - standard matches
  */
 const TIER_PALETTES = {
+  // Theme v2: plain card surfaces — the tint lives on the page ground.
   mostWanted: {
-    light: { background: primary[50] },
-    dark: { background: primary[950] },
+    light: { background: base.white },
+    dark: { background: neutral[900] },
   },
   readyToPlay: {
-    light: { background: primary[50] },
-    dark: { background: primary[950] },
+    light: { background: base.white },
+    dark: { background: neutral[900] },
   },
   topPlayer: {
-    light: { background: primary[50] },
-    dark: { background: primary[950] },
+    light: { background: base.white },
+    dark: { background: neutral[900] },
   },
   regular: {
-    light: { background: primary[50] },
-    dark: { background: primary[950] },
+    light: { background: base.white },
+    dark: { background: neutral[900] },
   },
   expired: {
     light: { background: neutral[100] },
