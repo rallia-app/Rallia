@@ -6,6 +6,10 @@
  * CTA(s). Replaces hand-rolled per-screen empty states so typography, badge
  * treatment, and CTA styling stay consistent.
  *
+ * The `sheet` variant is a compact version (72px badge, base title, sm
+ * description, md CTA) for empty states inside action sheets, modals, and
+ * wizard steps; pass its icon at 36px.
+ *
  * For inline section empty states (a card inside a scrolling hub page), use
  * the section card pattern instead (see Home's myMatchesEmpty styles).
  *
@@ -26,6 +30,14 @@
  *   ctaLabel={t('matches.createMatch')}
  *   onCtaPress={onCreatePress}
  * />
+ *
+ * // Compact, inside a sheet or wizard step
+ * <EmptyState
+ *   variant="sheet"
+ *   icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+ *   title={t('inviteToMatch.noMatches')}
+ *   description={t('inviteToMatch.noMatchesDescription')}
+ * />
  * ```
  */
 
@@ -38,7 +50,9 @@ import { Text } from '../foundation/Text';
 import { Button } from '../foundation/Button';
 
 export interface EmptyStateProps {
-  /** Large icon inside the tinted badge (recommended: 64px, colors.primary) */
+  /** Layout scale: full `screen` (default) or compact `sheet` for sheets/modals/wizard steps */
+  variant?: 'screen' | 'sheet';
+  /** Large icon inside the tinted badge (recommended: 64px for screen, 36px for sheet; colors.primary) */
   icon: React.ReactNode;
   /** Small icon for the corner mark disc (recommended: 14px, COLORS.white); no mark when omitted */
   markIcon?: React.ReactNode;
@@ -65,6 +79,7 @@ export interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
+  variant = 'screen',
   icon,
   markIcon,
   title,
@@ -79,21 +94,45 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   testID,
 }) => {
   const { colors } = useThemeStyles();
+  const isSheet = variant === 'sheet';
 
   return (
-    <View style={[styles.container, style]} testID={testID}>
-      <View style={[styles.badge, { backgroundColor: `${colors.primary}14` }]}>
+    <View style={[styles.container, isSheet && styles.containerSheet, style]} testID={testID}>
+      <View
+        style={[
+          styles.badge,
+          isSheet && styles.badgeSheet,
+          { backgroundColor: `${colors.primary}14` },
+        ]}
+      >
         {icon}
         {markIcon ? (
-          <View style={[styles.badgeMark, { backgroundColor: colors.primary }]}>{markIcon}</View>
+          <View
+            style={[
+              styles.badgeMark,
+              isSheet && styles.badgeMarkSheet,
+              { backgroundColor: colors.primary },
+            ]}
+          >
+            {markIcon}
+          </View>
         ) : null}
       </View>
 
-      <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
+      <Text
+        size={isSheet ? 'base' : 'xl'}
+        weight={isSheet ? 'semibold' : 'bold'}
+        color={colors.text}
+        style={styles.title}
+      >
         {title}
       </Text>
       {description ? (
-        <Text size="base" color={colors.textMuted} style={styles.description}>
+        <Text
+          size={isSheet ? 'sm' : 'base'}
+          color={colors.textMuted}
+          style={isSheet ? styles.descriptionSheet : styles.description}
+        >
           {description}
         </Text>
       ) : null}
@@ -101,12 +140,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {ctaLabel && onCtaPress ? (
         <Button
           variant="primary"
-          size="lg"
-          fullWidth
+          size={isSheet ? 'md' : 'lg'}
+          fullWidth={!isSheet}
           rounded
           onPress={onCtaPress}
           leftIcon={ctaLeftIcon}
-          style={styles.cta}
+          style={isSheet ? styles.ctaSheet : styles.cta}
         >
           {ctaLabel}
         </Button>
@@ -114,8 +153,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {secondaryCtaLabel && onSecondaryCtaPress ? (
         <Button
           variant="outline"
-          size="lg"
-          fullWidth
+          size={isSheet ? 'md' : 'lg'}
+          fullWidth={!isSheet}
           rounded
           onPress={onSecondaryCtaPress}
           style={styles.secondaryCta}
@@ -139,6 +178,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[6],
     gap: spacingPixels[2],
   },
+  containerSheet: {
+    paddingVertical: spacingPixels[6],
+  },
   badge: {
     width: 120,
     height: 120,
@@ -146,6 +188,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacingPixels[4],
+  },
+  badgeSheet: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    marginBottom: spacingPixels[3],
   },
   badgeMark: {
     position: 'absolute',
@@ -159,6 +207,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.white,
   },
+  badgeMarkSheet: {
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
   title: {
     textAlign: 'center',
   },
@@ -167,8 +222,16 @@ const styles = StyleSheet.create({
     lineHeight: Math.round(fontSizePixels.base * 1.4),
     maxWidth: 300,
   },
+  descriptionSheet: {
+    textAlign: 'center',
+    lineHeight: Math.round(fontSizePixels.sm * 1.4),
+    maxWidth: 280,
+  },
   cta: {
     marginTop: spacingPixels[6],
+  },
+  ctaSheet: {
+    marginTop: spacingPixels[4],
   },
   secondaryCta: {
     marginTop: 0,
