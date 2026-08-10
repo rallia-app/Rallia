@@ -131,6 +131,27 @@ BEGIN
         PERFORM pg_temp.as_user(v_jdl);
         PERFORM public.league_invite_get_or_create(v_league.id);
     END IF;
+
+    -- =====================================================================
+    -- D. Où je joue gets a published session, so Jean can also share a
+    --    session from a league he does NOT organize (player-kind link).
+    -- =====================================================================
+    SELECT * INTO v_league FROM leagues WHERE name = '[JDL v2] Où je joue';
+    IF v_league.id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM sessions s JOIN seasons se ON se.id = s.season_id
+         WHERE se.league_id = v_league.id
+    ) THEN
+        SELECT * INTO v_season FROM seasons
+         WHERE league_id = v_league.id AND status = 'open' LIMIT 1;
+        IF v_season.id IS NOT NULL THEN
+            PERFORM pg_temp.as_user(v_league.organizer_id);
+            v_sess := public.session_create(
+                p_season_id    => v_season.id,
+                p_name         => 'Jeudi soir',
+                p_scheduled_at => now() + interval '5 days');
+            v_sess := public.session_publish(v_sess.id, NULL, v_sess.version);
+        END IF;
+    END IF;
 END $$;
 
 -- ---------------------------------------------------------------------------
