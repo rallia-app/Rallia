@@ -582,8 +582,8 @@
     "incomingTitle": "Reference Requests",
     "pendingRequests": "Verify player ratings",
     "helpCertifyRatings": "Help certify other players' ratings",
-    "noRequests": "No Pending Requests",
-    "noRequestsDescription": "When other players ask you to verify their rating, their requests will appear here.",
+    "noRequests": "No pending requests",
+    "noRequestsDescription": "When other players ask you to verify their rating, their requests will appear here",
     "headerInfo": "Other players have asked you to verify their rating level. Tap on a request to review and respond.",
     "claimedRating": "Claimed Rating",
     "expiresVerySoon": "Expires today",
@@ -1152,19 +1152,19 @@
       },
       "empty": {
         "title": "No references yet",
-        "description": "Send requests to players at your level or higher to validate your rating."
+        "description": "Send requests to players at your level or higher to validate your rating"
       },
       "emptyApproved": {
         "title": "No approved references",
-        "description": "Players haven't approved any references yet."
+        "description": "Players haven't approved any references yet"
       },
       "emptyContested": {
         "title": "No contested references",
-        "description": "No referee has disputed your rating."
+        "description": "No referee has disputed your rating"
       },
       "emptyPending": {
         "title": "No pending requests",
-        "description": "Send a new request from the + button above."
+        "description": "Send a new request from the + button above"
       }
     },
     "ratingProofs": {
@@ -1172,11 +1172,11 @@
       "myProofs": "My Rating Proofs",
       "infoMessage": "Please provide fair and convincing proof. Any false evidence may be reported by other users and lead to a decrease in your reputation.",
       "addProof": "Add Rating Proof",
-      "addFirstProof": "Add Your First Proof",
+      "addFirstProof": "Add your first proof",
       "chooseProofType": "Choose how you want to verify your rating",
-      "noProofsYet": "No Proofs Yet",
+      "noProofsYet": "No proofs yet",
       "noProofsDescription": "Add proof of your rating to help others verify your skill level",
-      "noProofsOtherUser": "This user has not added any rating proofs yet",
+      "noProofsOtherUser": "This player hasn't added any rating proofs yet",
       "descriptionLabel": "Description",
       "reactions": {
         "like": "Like",
@@ -2360,7 +2360,7 @@
     "findPartner": "Find a Partner",
     "players": "Players",
     "myCommunities": "My Communities",
-    "createCommunity": "Create Community",
+    "createCommunity": "Create a community",
     "editCommunity": "Edit Community",
     "deleteCommunity": "Delete Community",
     "leaveCommunity": "Leave Community",
@@ -2444,14 +2444,14 @@
       "members": "Members",
       "about": "About"
     },
-    "discoverCommunities": "Discover Communities",
+    "discoverCommunities": "Discover communities",
     "empty": {
       "discover": {
-        "title": "No Communities Found",
+        "title": "No communities found",
         "subtitle": "Be the first to create a community!"
       },
       "myCommunities": {
-        "title": "No Communities Yet",
+        "title": "No communities yet",
         "subtitle": "Join or create a community to connect with players"
       }
     },
@@ -2474,8 +2474,8 @@
     "matches": {
       "title": "Member Matches",
       "empty": {
-        "title": "No Upcoming Matches",
-        "description": "Members haven't shared any public matches yet"
+        "title": "No upcoming games",
+        "description": "Members haven't shared any public games yet"
       }
     },
     "detail": {
@@ -2638,9 +2638,9 @@
     },
     "chatWithMembers": "Chat with members",
     "empty": {
-      "title": "No Groups Yet",
+      "title": "No groups yet",
       "subtitle": "Create a group or scan a QR code to join one",
-      "createButton": "Create Group",
+      "createButton": "Create a group",
       "scanButton": "Scan QR Code"
     },
     "listInfoMessage": "Groups are private communities limited to a maximum of {maxMembers} players.",
@@ -2887,8 +2887,8 @@
     "matches": {
       "title": "Member Matches",
       "empty": {
-        "title": "No Upcoming Matches",
-        "description": "Members haven't shared any public matches yet"
+        "title": "No upcoming games",
+        "description": "Members haven't shared any public games yet"
       }
     },
     "home": {
@@ -3105,9 +3105,9 @@
   },
   "sharedLists": {
     "title": "Shared Lists",
-    "noLists": "No Shared Lists Yet",
-    "noListsDescription": "Create a list to easily invite friends and contacts to your matches",
-    "createFirstList": "Create Your First List",
+    "noLists": "No shared lists yet",
+    "noListsDescription": "Create a list to easily invite friends and contacts to your games",
+    "createFirstList": "Create your first list",
     "createList": "Create List",
     "newList": "New List",
     "editList": "Edit List",
@@ -3122,11 +3122,11 @@
     "deleteContact": "Delete Contact",
     "deleteContactConfirm": "Are you sure you want to remove \"{name}\" from this list?",
     "failedToDeleteContact": "Failed to delete the contact. Please try again.",
-    "importFromPhone": "Import from Phone",
-    "addManually": "Add Manually",
+    "importFromPhone": "Import from phone",
+    "addManually": "Add manually",
     "emptyState": {
-      "noContacts": "No Contacts Yet",
-      "addContacts": "Add contacts to this list to easily invite them to your matches"
+      "noContacts": "No contacts yet",
+      "addContacts": "Add contacts to this list to easily invite them to your games"
     },
     "shareMatch": {
       "title": "Share a Match",
@@ -3833,7 +3833,7 @@
     "completeProfile": "Complete Your Profile",
     "completeProfileSubtitle": "Finish setting up to start playing with others",
     "continueSetup": "Continue Setup",
-    "createMatch": "Create Game",
+    "createMatch": "Create a game",
     "createMatchDescription": "Create a game and share it with players and contacts",
     "invitePlayers": "Invite a Friend to Rallia",
     "invitePlayersDescription": "Share your code or QR so friends can join you on Rallia",
@@ -4184,6 +4184,8 @@
       "noPlayersFound": "No players found",
       "noPlayersAvailable": "No players available",
       "noPlayersAvailableDescription": "You can resend invitations to already invited players from the game details",
+      "noFilterResults": "No players match these filters",
+      "noFilterResultsDescription": "Remove a filter to see more players",
       "selectPlayers": "Select players to invite",
       "sendInvitations": "Send Invitations ({count})",
       "skip": "Skip",
@@ -4274,7 +4276,7 @@
     "loadError": "Couldn't load leagues",
     "retry": "Try again",
     "empty": "No public leagues right now",
-    "emptyDescription": "Check back soon, or create your own from the action menu.",
+    "emptyDescription": "Check back soon, or create your own from the action menu",
     "searchPlaceholder": "Search leagues...",
     "discoverFilters": {
       "joinMode": "Join mode",
@@ -4284,7 +4286,7 @@
     },
     "emptySearch": {
       "title": "No leagues found",
-      "description": "Try adjusting your search or filters."
+      "description": "Try adjusting your search or filters"
     },
     "sectionOpenJoin": "Open to join",
     "sectionApproval": "Approval required",
@@ -4297,7 +4299,7 @@
     "memberCount": "{count} members",
     "emptyMy": {
       "title": "No leagues yet",
-      "description": "Leagues you join or organize will show up here. Create one from the action menu."
+      "description": "Leagues you join or organize will appear here. Create one from the action menu."
     },
     "tabs": {
       "active": "Active",
@@ -5066,7 +5068,7 @@
     "loadError": "Couldn't load tournaments",
     "retry": "Try again",
     "empty": "No public tournaments right now",
-    "emptyDescription": "Check back soon, or create your own from the action menu.",
+    "emptyDescription": "Check back soon, or create your own from the action menu",
     "myTournaments": "My tournaments",
     "create": "Create a tournament",
     "createSubtitle": "Set up a bracket and invite players",
@@ -5084,7 +5086,7 @@
     },
     "emptySearch": {
       "title": "No tournaments found",
-      "description": "Try adjusting your search or filters."
+      "description": "Try adjusting your search or filters"
     },
     "sectionOpen": "Open for registration",
     "sectionInProgress": "In progress",
@@ -5100,11 +5102,11 @@
     },
     "emptyUpcoming": {
       "title": "No upcoming tournaments",
-      "description": "Tournaments you join or organize will show up here."
+      "description": "Tournaments you join or organize will appear here"
     },
     "emptyPast": {
       "title": "No past tournaments",
-      "description": "Your completed and cancelled tournaments will show up here."
+      "description": "Your completed and cancelled tournaments will appear here"
     },
     "emptyFiltered": {
       "title": "No tournaments found",
@@ -5781,9 +5783,15 @@
   "home": {
     "welcomeBack": "Welcome back! 👋",
     "yourMatches": "Your Games",
-    "signInPrompt": "Sign in to create and manage your games",
-    "onboardingPrompt": "Complete your profile to create and access your games",
-    "completeProfile": "Complete Profile",
+    "signInEmpty": {
+      "title": "No games to show yet",
+      "description": "Sign in to create and manage your games"
+    },
+    "onboardingEmpty": {
+      "title": "One step to go",
+      "description": "Complete your profile to create and access your games"
+    },
+    "completeProfile": "Complete profile",
     "user": "User",
     "subtitle": "The best way to find your next tennis or pickleball partner",
     "soonAndNearby": "Nearby",
@@ -5856,7 +5864,7 @@
     },
     "nearbyEmpty": {
       "title": "No nearby games found",
-      "description": "There are no upcoming games within your {distance} km travel distance.",
+      "description": "There are no upcoming games within your {distance} km travel distance",
       "suggestion": "Try increasing your maximum travel distance in your profile to see more games.",
       "updateSettings": "Update Settings",
       "guestDescription": "Sign in to see games near your location."
@@ -10853,7 +10861,7 @@
       }
     },
     "empty": {
-      "title": "No Facilities Found",
+      "title": "No facilities found",
       "description": "No facilities match your search. Try adjusting your filters.",
       "noLocation": "Enable location to find facilities nearby"
     },

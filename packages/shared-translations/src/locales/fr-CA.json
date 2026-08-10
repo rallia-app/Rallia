@@ -25,7 +25,7 @@
     },
     "retry": "Réessayer",
     "tryAgain": "Réessayer",
-    "tryDifferentSearch": "Essayez un autre terme de recherche",
+    "tryDifferentSearch": "Essaie un autre terme de recherche",
     "noResultsFound": "Aucun résultat trouvé",
     "processing": "Traitement...",
     "openSettings": "Ouvrir les paramètres",
@@ -197,8 +197,8 @@
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "Aucune notification",
-    "emptyDescription": "Vous verrez ici les invitations aux parties, les rappels et les mises à jour",
+    "empty": "Aucune notification pour le moment",
+    "emptyDescription": "Tu verras ici les invitations aux parties, les rappels et les mises à jour",
     "unread": "non lu(s)",
     "markAllRead": "Tout marquer comme lu",
     "markAsRead": "Marquer comme lu",
@@ -583,7 +583,7 @@
     "pendingRequests": "Vérifier des niveaux",
     "helpCertifyRatings": "Aidez à certifier les niveaux d'autres joueurs",
     "noRequests": "Aucune demande en attente",
-    "noRequestsDescription": "Lorsque d'autres joueurs vous demandent de valider leur niveau, leurs demandes apparaîtront ici.",
+    "noRequestsDescription": "Quand d'autres joueurs te demandent de valider leur niveau, leurs demandes apparaîtront ici",
     "headerInfo": "D'autres joueurs vous ont demandé de vérifier leur niveau. Appuyez sur une demande pour l'examiner et y répondre.",
     "claimedRating": "Niveau déclaré",
     "expiresVerySoon": "Expire aujourd'hui",
@@ -1151,20 +1151,20 @@
         "pending": "En attente"
       },
       "empty": {
-        "title": "Aucune référence",
-        "description": "Envoyez des demandes à des joueurs de votre niveau ou supérieur pour valider votre classement."
+        "title": "Aucune référence pour le moment",
+        "description": "Envoie des demandes à des joueurs de ton calibre ou plus pour valider ton niveau"
       },
       "emptyApproved": {
         "title": "Aucune référence approuvée",
-        "description": "Aucun joueur n'a encore approuvé vos demandes de référence."
+        "description": "Aucun joueur n'a encore approuvé tes demandes de référence"
       },
       "emptyContested": {
         "title": "Aucune référence contestée",
-        "description": "Aucun référent n'a contesté votre classement."
+        "description": "Aucun référent n'a contesté ton niveau"
       },
       "emptyPending": {
         "title": "Aucune demande en attente",
-        "description": "Envoyez une nouvelle demande avec le bouton + ci-dessus."
+        "description": "Envoie une nouvelle demande avec le bouton + ci-dessus"
       }
     },
     "ratingProofs": {
@@ -1172,11 +1172,11 @@
       "myProofs": "Mes preuves de classement",
       "infoMessage": "Veuillez fournir des preuves justes et convaincantes. Toute fausse preuve pourra être signalée par d'autres utilisateurs et entraîner une diminution de votre réputation.",
       "addProof": "Ajouter une preuve",
-      "addFirstProof": "Ajouter votre première preuve",
+      "addFirstProof": "Ajouter ta première preuve",
       "chooseProofType": "Choisissez comment vérifier votre classement",
-      "noProofsYet": "Aucune preuve",
-      "noProofsDescription": "Ajoutez une preuve de votre classement pour aider les autres joueurs à vérifier votre niveau",
-      "noProofsOtherUser": "Cet utilisateur n'a pas encore ajouté de preuve de niveau",
+      "noProofsYet": "Aucune preuve pour le moment",
+      "noProofsDescription": "Ajoute une preuve de ton niveau pour aider les autres joueurs à le vérifier",
+      "noProofsOtherUser": "Ce joueur n'a pas encore ajouté de preuve de niveau",
       "descriptionLabel": "Description",
       "reactions": {
         "like": "J'aime",
@@ -2132,10 +2132,10 @@
     "archivedChats": {
       "title": "Archivées",
       "noArchivedChats": "Aucune conversation archivée",
-      "chatsAppearHere": "Les conversations que vous archivez apparaîtront ici"
+      "chatsAppearHere": "Les conversations que tu archives apparaîtront ici"
     },
     "noConversations": "Aucune conversation pour le moment",
-    "noConversationsSubtitle": "Rejoignez un groupe ou démarrez une conversation avec un autre joueur",
+    "noConversationsSubtitle": "Rejoins un groupe ou démarre une conversation avec un autre joueur",
     "filters": {
       "all": "Tout",
       "unread": "Non lus",
@@ -2448,11 +2448,11 @@
     "empty": {
       "discover": {
         "title": "Aucune communauté trouvée",
-        "subtitle": "Soyez le premier à créer une communauté!"
+        "subtitle": "Sois la première personne à créer une communauté!"
       },
       "myCommunities": {
         "title": "Aucune communauté pour le moment",
-        "subtitle": "Rejoignez ou créez une communauté pour vous connecter avec des joueurs"
+        "subtitle": "Rejoins ou crée une communauté pour te connecter avec des joueurs"
       }
     },
     "leaderboard": {
@@ -2474,8 +2474,8 @@
     "matches": {
       "title": "Matchs des membres",
       "empty": {
-        "title": "Aucun match à venir",
-        "description": "Les membres n'ont pas encore partagé de matchs publics"
+        "title": "Aucune partie à venir",
+        "description": "Les membres n'ont pas encore partagé de parties publiques"
       }
     },
     "detail": {
@@ -2639,7 +2639,7 @@
     "chatWithMembers": "Discuter avec les membres",
     "empty": {
       "title": "Aucun groupe pour le moment",
-      "subtitle": "Créez un groupe ou scannez un code QR pour en rejoindre un",
+      "subtitle": "Crée un groupe ou scanne un code QR pour en rejoindre un",
       "createButton": "Créer un groupe",
       "scanButton": "Scanner le code QR"
     },
@@ -2887,8 +2887,8 @@
     "matches": {
       "title": "Matchs des membres",
       "empty": {
-        "title": "Aucun match à venir",
-        "description": "Les membres n'ont pas encore partagé de matchs publics"
+        "title": "Aucune partie à venir",
+        "description": "Les membres n'ont pas encore partagé de parties publiques"
       }
     },
     "home": {
@@ -2929,7 +2929,7 @@
       "last7DaysActivities": "Activités des 7 derniers jours",
       "viewActivity": "Voir l'activité",
       "noGamesPlayedYet": "Aucune partie jouée pour le moment",
-      "playGamesToAppear": "Jouez des parties avec les membres du groupe pour apparaître au classement",
+      "playGamesToAppear": "Joue des parties avec les membres du groupe pour apparaître au classement",
       "noRecentActivity": "Aucune activité récente",
       "addPlayer": "Ajouter un joueur",
       "shareInviteLink": "Partager le lien d'invitation",
@@ -3003,11 +3003,11 @@
     "noPlayersFound": "Aucun joueur trouvé",
     "noPlayersFoundDescription": "Essayez d'ajuster votre recherche ou vos filtres",
     "noPlayersYet": "Aucun joueur pour le moment",
-    "adjustSearch": "Essayez d'ajuster votre recherche ou vos filtres",
-    "beFirstToInvite": "Soyez le premier à inviter des joueurs à votre sport",
-    "selectSport": "Sélectionnez un sport",
+    "adjustSearch": "Essaie d'ajuster ta recherche ou tes filtres",
+    "beFirstToInvite": "Sois la première personne à inviter des joueurs dans ton sport",
+    "selectSport": "Sélectionne un sport",
     "selectSportDescription": "Choisissez un sport dans l'en-tête pour voir les joueurs",
-    "chooseSport": "Choisissez un sport dans l'en-tête pour voir les joueurs",
+    "chooseSport": "Choisis un sport dans l'en-tête pour voir les joueurs",
     "nearby": "À proximité",
     "online": "En ligne",
     "lastSeenToday": "Aujourd'hui",
@@ -3105,9 +3105,9 @@
   },
   "sharedLists": {
     "title": "Listes partagées",
-    "noLists": "Aucune liste partagée",
-    "noListsDescription": "Créez une liste pour inviter facilement vos amis et contacts à vos parties",
-    "createFirstList": "Créer votre première liste",
+    "noLists": "Aucune liste partagée pour le moment",
+    "noListsDescription": "Crée une liste pour inviter facilement tes amis et contacts à tes parties",
+    "createFirstList": "Créer ta première liste",
     "createList": "Créer une liste",
     "newList": "Nouvelle liste",
     "editList": "Modifier la liste",
@@ -3125,8 +3125,8 @@
     "importFromPhone": "Importer du téléphone",
     "addManually": "Ajouter manuellement",
     "emptyState": {
-      "noContacts": "Aucun contact",
-      "addContacts": "Ajoutez des contacts à cette liste pour les inviter facilement à vos parties"
+      "noContacts": "Aucun contact pour le moment",
+      "addContacts": "Ajoute des contacts à cette liste pour les inviter facilement à tes parties"
     },
     "shareMatch": {
       "title": "Partager un match",
@@ -4184,6 +4184,8 @@
       "noPlayersFound": "Aucun joueur trouvé",
       "noPlayersAvailable": "Aucun joueur disponible",
       "noPlayersAvailableDescription": "Vous pouvez renvoyer des invitations aux joueurs déjà invités depuis les détails de la partie",
+      "noFilterResults": "Aucun joueur ne correspond à ces filtres",
+      "noFilterResultsDescription": "Retirez un filtre pour voir plus de joueurs",
       "selectPlayers": "Sélectionner des joueurs",
       "sendInvitations": "Envoyer les invitations ({count})",
       "skip": "Passer",
@@ -4273,8 +4275,8 @@
     "createSubtitle": "Pars ta saison pis invite des joueurs",
     "loadError": "Impossible de charger les ligues",
     "retry": "Réessayer",
-    "empty": "Aucune ligue publique pour l'instant",
-    "emptyDescription": "Revenez bientôt, ou créez la vôtre depuis le menu d'actions.",
+    "empty": "Aucune ligue publique pour le moment",
+    "emptyDescription": "Reviens bientôt, ou crée la tienne depuis le menu d'actions",
     "searchPlaceholder": "Rechercher des ligues...",
     "discoverFilters": {
       "joinMode": "Mode d'adhésion",
@@ -4284,7 +4286,7 @@
     },
     "emptySearch": {
       "title": "Aucune ligue trouvée",
-      "description": "Essayez d'ajuster votre recherche ou vos filtres."
+      "description": "Essaie d'ajuster ta recherche ou tes filtres"
     },
     "sectionOpenJoin": "Ouverte",
     "sectionApproval": "Approbation requise",
@@ -4296,8 +4298,8 @@
     "roleOrganizer": "Organisateur",
     "memberCount": "{count} membres",
     "emptyMy": {
-      "title": "Aucune ligue pour l'instant",
-      "description": "Les ligues que vous rejoignez ou organisez apparaîtront ici. Créez-en une depuis le menu d'actions."
+      "title": "Aucune ligue pour le moment",
+      "description": "Les ligues que tu rejoins ou organises apparaîtront ici. Crées-en une depuis le menu d'actions."
     },
     "tabs": {
       "active": "Actives",
@@ -5066,7 +5068,7 @@
     "loadError": "Impossible de charger les tournois",
     "retry": "Réessayer",
     "empty": "Aucun tournoi public pour le moment",
-    "emptyDescription": "Revenez bientôt, ou créez le vôtre depuis le menu d'actions.",
+    "emptyDescription": "Reviens bientôt, ou crée le tien depuis le menu d'actions",
     "myTournaments": "Mes tournois",
     "create": "Créer un tournoi",
     "createSubtitle": "Crée ton tableau et invite des joueurs",
@@ -5084,7 +5086,7 @@
     },
     "emptySearch": {
       "title": "Aucun tournoi trouvé",
-      "description": "Essayez d'ajuster votre recherche ou vos filtres."
+      "description": "Essaie d'ajuster ta recherche ou tes filtres"
     },
     "sectionOpen": "Inscriptions ouvertes",
     "sectionInProgress": "En cours",
@@ -5100,11 +5102,11 @@
     },
     "emptyUpcoming": {
       "title": "Aucun tournoi à venir",
-      "description": "Les tournois que vous rejoignez ou organisez apparaîtront ici."
+      "description": "Les tournois que tu rejoins ou organises apparaîtront ici"
     },
     "emptyPast": {
       "title": "Aucun tournoi passé",
-      "description": "Vos tournois terminés et annulés apparaîtront ici."
+      "description": "Tes tournois terminés et annulés apparaîtront ici"
     },
     "emptyFiltered": {
       "title": "Aucun tournoi trouvé",
@@ -5781,8 +5783,14 @@
   "home": {
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "Vos parties",
-    "signInPrompt": "Veuillez vous connecter pour créer et gérer à vos parties",
-    "onboardingPrompt": "Complétez votre profil pour créer et accéder à vos parties",
+    "signInEmpty": {
+      "title": "Aucune partie à afficher",
+      "description": "Connecte-toi pour créer et gérer tes parties"
+    },
+    "onboardingEmpty": {
+      "title": "Encore une étape",
+      "description": "Complète ton profil pour créer et accéder à tes parties"
+    },
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
@@ -5806,7 +5814,7 @@
       "nearbyTitle": "Des terrains près de toi",
       "subtitle": "Des disponibilités en temps réel",
       "empty": {
-        "title": "Aucune disponibilité pour l'instant",
+        "title": "Aucune disponibilité pour le moment",
         "description": "Explore les terrains pour des disponibilités en ville",
         "cta": "Voir les terrains"
       }
@@ -5852,11 +5860,11 @@
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
-      "description": "Créez une partie ou rejoignez-en une pour la voir ici"
+      "description": "Crée une partie ou rejoins-en une pour la voir ici"
     },
     "nearbyEmpty": {
       "title": "Aucune partie à proximité",
-      "description": "Il n'y a pas de parties à venir dans votre rayon de {distance} km.",
+      "description": "Il n'y a pas de parties à venir dans ton rayon de {distance} km",
       "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans votre profil pour voir plus de parties.",
       "updateSettings": "Modifier les paramètres",
       "guestDescription": "Connectez-vous pour voir les parties près de chez vous."
@@ -6218,11 +6226,11 @@
     },
     "emptyUpcoming": {
       "title": "Aucune partie à venir",
-      "description": "Créez une nouvelle partie ou parcourez les parties publiques pour commencer"
+      "description": "Crée une nouvelle partie ou parcours les parties publiques pour commencer"
     },
     "emptyPast": {
       "title": "Aucune partie passée",
-      "description": "Vos parties terminées apparaîtront ici"
+      "description": "Tes parties terminées apparaîtront ici"
     },
     "emptyFiltered": {
       "title": "Aucune partie trouvée",
@@ -6355,11 +6363,11 @@
     },
     "empty": {
       "title": "Aucune partie trouvée",
-      "description": "Essayez d'ajuster vos filtres ou revenez plus tard",
-      "helper": "Créez la vôtre et on vous aidera à la remplir 💪",
+      "description": "Essaie d'ajuster tes filtres ou reviens plus tard",
+      "helper": "Crée la tienne et on t'aidera à la remplir 💪",
       "noFilters": {
         "title": "Aucune partie publique à proximité",
-        "description": "Soyez le premier à créer une partie dans votre région!"
+        "description": "Sois la première personne à créer une partie dans ta région!"
       }
     },
     "endOfList": {
@@ -10854,8 +10862,8 @@
     },
     "empty": {
       "title": "Aucun site de jeu trouvé",
-      "description": "Aucun site de jeu ne correspond à votre recherche. Essayez d'ajuster vos filtres.",
-      "noLocation": "Activez la localisation pour trouver des sites de jeu à proximité"
+      "description": "Aucun site de jeu ne correspond à ta recherche. Essaie d'ajuster tes filtres.",
+      "noLocation": "Active la localisation pour trouver des sites de jeu à proximité"
     },
     "results": {
       "count": "{count} sites de jeu",
@@ -11281,11 +11289,11 @@
     },
     "emptyUpcoming": {
       "title": "Aucune réservation à venir",
-      "description": "Réservez un terrain pour commencer"
+      "description": "Réserve un terrain pour commencer"
     },
     "emptyPast": {
       "title": "Aucune réservation passée",
-      "description": "Vos réservations terminées apparaîtront ici"
+      "description": "Tes réservations terminées apparaîtront ici"
     },
     "emptyFiltered": {
       "title": "Aucune réservation trouvée",
