@@ -1,34 +1,39 @@
 /**
- * Typography Tokens - Energy & Trust Theme
+ * Typography Tokens - Theme v2
  *
  * Font families, sizes, weights, line heights, and letter spacing
  * for consistent typography across web and mobile.
  */
 
 /**
- * Font families
- * - Heading: Poppins (Energy & Trust theme)
+ * Font families (theme v2)
+ * - Display: Bricolage Grotesque (headings)
+ * - Stat: Barlow Semi Condensed (scores, ratings, ranks, countdowns)
  * - Body: Inter
  */
 export const fontFamily = {
-  heading: ['Poppins', 'sans-serif'],
+  heading: ['Bricolage Grotesque', 'sans-serif'],
+  stat: ['Barlow Semi Condensed', 'sans-serif'],
   body: ['Inter', 'sans-serif'],
   mono: ['Fira Code', 'Consolas', 'monospace'],
 } as const;
 
 /**
- * Font family strings for React Native (single font name)
+ * Font family strings for React Native. These are the @expo-google-fonts
+ * export names; the mobile app loads them at boot (App.tsx SplashGate).
  */
 export const fontFamilyNative = {
-  heading: 'Poppins',
-  headingMedium: 'Poppins-Medium',
-  headingSemiBold: 'Poppins-SemiBold',
-  headingBold: 'Poppins-Bold',
-  headingExtraBold: 'Poppins-ExtraBold',
-  body: 'Inter',
-  bodyMedium: 'Inter-Medium',
-  bodySemiBold: 'Inter-SemiBold',
-  bodyBold: 'Inter-Bold',
+  heading: 'BricolageGrotesque_400Regular',
+  headingMedium: 'BricolageGrotesque_500Medium',
+  headingSemiBold: 'BricolageGrotesque_600SemiBold',
+  headingBold: 'BricolageGrotesque_700Bold',
+  headingExtraBold: 'BricolageGrotesque_800ExtraBold',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemiBold: 'Inter_600SemiBold',
+  bodyBold: 'Inter_700Bold',
+  stat: 'BarlowSemiCondensed_700Bold',
+  statSemiBold: 'BarlowSemiCondensed_600SemiBold',
   mono: 'FiraCode',
 } as const;
 
@@ -244,6 +249,22 @@ export const textStyles = {
     letterSpacing: letterSpacing.wide,
   },
 
+  // Stat numerals (scores, ratings, ranks, countdowns) - tabular figures
+  stat: {
+    fontFamily: fontFamily.stat,
+    fontSize: fontSize['2xl'],
+    fontWeight: fontWeight.bold,
+    lineHeight: lineHeight.none,
+    letterSpacing: letterSpacing.normal,
+  },
+  statLarge: {
+    fontFamily: fontFamily.stat,
+    fontSize: fontSize['4xl'],
+    fontWeight: fontWeight.bold,
+    lineHeight: lineHeight.none,
+    letterSpacing: letterSpacing.normal,
+  },
+
   // Code
   code: {
     fontFamily: fontFamily.mono,
@@ -335,6 +356,20 @@ export const textStylesNative = {
     fontSize: fontSizePixels.sm,
     lineHeight: fontSizePixels.sm,
     letterSpacing: letterSpacingPixels.wide,
+  },
+  stat: {
+    fontFamily: fontFamilyNative.stat,
+    fontSize: fontSizePixels['2xl'],
+    lineHeight: fontSizePixels['2xl'] * lineHeightMultiplier.tight,
+    letterSpacing: letterSpacingPixels.normal,
+    fontVariant: ['tabular-nums'] as const,
+  },
+  statLarge: {
+    fontFamily: fontFamilyNative.stat,
+    fontSize: fontSizePixels['4xl'],
+    lineHeight: fontSizePixels['4xl'] * lineHeightMultiplier.tight,
+    letterSpacing: letterSpacingPixels.normal,
+    fontVariant: ['tabular-nums'] as const,
   },
   code: {
     fontFamily: fontFamilyNative.mono,

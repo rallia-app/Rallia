@@ -19,9 +19,11 @@ import { typography } from '../theme';
 
 export interface TextProps extends Omit<RNTextProps, 'style'> {
   /**
-   * Predefined text variants for common use cases
+   * Predefined text variants for common use cases.
+   * `display` renders in the heading face (Bricolage Grotesque);
+   * `stat` renders numerals in Barlow Semi Condensed with tabular figures.
    */
-  variant?: 'body' | 'caption' | 'label';
+  variant?: 'body' | 'caption' | 'label' | 'display' | 'stat';
 
   /**
    * Text color - defaults to theme text color
@@ -82,6 +84,41 @@ const VARIANT_LINE_HEIGHT: Record<string, NonNullable<TextProps['lineHeight']>> 
   body: 'normal',
   caption: 'normal',
   label: 'tight',
+  display: 'tight',
+  stat: 'tight',
+};
+
+/**
+ * Weight-to-family maps. The v2 faces ship as static files, so the weight
+ * must be encoded in the family name; numeric fontWeight on a static file
+ * gets synthesized (or ignored) per platform. Loaded at boot in App.tsx.
+ */
+const BODY_FONTS: Record<NonNullable<TextProps['weight']>, string> = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+};
+const DISPLAY_FONTS: Record<NonNullable<TextProps['weight']>, string> = {
+  regular: 'BricolageGrotesque_400Regular',
+  medium: 'BricolageGrotesque_500Medium',
+  semibold: 'BricolageGrotesque_600SemiBold',
+  bold: 'BricolageGrotesque_700Bold',
+};
+const STAT_FONTS: Record<NonNullable<TextProps['weight']>, string> = {
+  regular: 'BarlowSemiCondensed_600SemiBold',
+  medium: 'BarlowSemiCondensed_600SemiBold',
+  semibold: 'BarlowSemiCondensed_600SemiBold',
+  bold: 'BarlowSemiCondensed_700Bold',
+};
+
+const resolveFontFamily = (
+  variant: TextProps['variant'],
+  weight: NonNullable<TextProps['weight']>
+): string => {
+  if (variant === 'stat') return STAT_FONTS[weight];
+  if (variant === 'display') return DISPLAY_FONTS[weight];
+  return BODY_FONTS[weight];
 };
 
 /**
@@ -100,18 +137,23 @@ const getVariantStyles = (variant: TextProps['variant']): TextStyle => {
   const variants: Record<string, TextStyle> = {
     body: {
       fontSize: baseSize,
-      fontWeight: typography?.fontWeight?.regular ?? '400',
     },
     caption: {
       fontSize: smSize,
-      fontWeight: typography?.fontWeight?.regular ?? '400',
       color: colors.gray,
     },
     label: {
       fontSize: smSize,
-      fontWeight: typography?.fontWeight?.medium ?? '500',
       letterSpacing: typography?.letterSpacing?.wide ?? 0.5,
       textTransform: 'uppercase',
+    },
+    display: {
+      fontSize: baseSize,
+      letterSpacing: -0.4,
+    },
+    stat: {
+      fontSize: baseSize,
+      fontVariant: ['tabular-nums'],
     },
   };
 
@@ -119,11 +161,12 @@ const getVariantStyles = (variant: TextProps['variant']): TextStyle => {
 };
 
 /**
- * Get font weight value
+ * Default weight per variant (label reads medium, display/stat read bold).
  */
-const getFontWeight = (weight: TextProps['weight']): TextStyle['fontWeight'] => {
-  if (!weight) return typography?.fontWeight?.regular ?? '400';
-  return typography?.fontWeight?.[weight] ?? '400';
+const getDefaultWeight = (variant: TextProps['variant']): NonNullable<TextProps['weight']> => {
+  if (variant === 'label') return 'medium';
+  if (variant === 'display' || variant === 'stat') return 'bold';
+  return 'regular';
 };
 
 /**
@@ -183,8 +226,8 @@ export const Text: React.FC<TextProps> = ({
     ...variantStyles,
     fontSize,
     lineHeight: calculatedLineHeight,
+    fontFamily: resolveFontFamily(variant, weight ?? getDefaultWeight(variant)),
     ...(color && { color }),
-    ...(weight && { fontWeight: getFontWeight(weight) }),
     ...(align && { textAlign: align }),
     ...(italic && { fontStyle: 'italic' }),
     ...(underline && { textDecorationLine: 'underline' }),

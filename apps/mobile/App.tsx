@@ -97,6 +97,40 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { neutral } from '@rallia/design-system';
+import { useFonts } from 'expo-font';
+import {
+  BricolageGrotesque_400Regular,
+  BricolageGrotesque_500Medium,
+  BricolageGrotesque_600SemiBold,
+  BricolageGrotesque_700Bold,
+  BricolageGrotesque_800ExtraBold,
+} from '@expo-google-fonts/bricolage-grotesque';
+import {
+  BarlowSemiCondensed_600SemiBold,
+  BarlowSemiCondensed_700Bold,
+} from '@expo-google-fonts/barlow-semi-condensed';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+
+// Theme v2 faces — the names here are what shared-components' Text resolves
+// (Bricolage = display, Barlow Semi Condensed = stat numerals, Inter = body).
+const APP_FONTS = {
+  BricolageGrotesque_400Regular,
+  BricolageGrotesque_500Medium,
+  BricolageGrotesque_600SemiBold,
+  BricolageGrotesque_700Bold,
+  BricolageGrotesque_800ExtraBold,
+  BarlowSemiCondensed_600SemiBold,
+  BarlowSemiCondensed_700Bold,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+};
 
 // Keep the native splash visible until the app is ready, then cross-fade it out.
 SplashScreen.preventAutoHideAsync();
@@ -287,6 +321,9 @@ function SplashGate({ children }: PropsWithChildren) {
   const isCheckingUpdate = useOTAUpdate();
   const hasHiddenSplashRef = useRef(false);
   const [timedOut, setTimedOut] = useState(false);
+  // Bundled with the app, so this resolves in one frame; the 5s safety
+  // timeout below still applies if loading ever fails.
+  const [fontsLoaded] = useFonts(APP_FONTS);
 
   // Safety net — if any provider hangs, hide splash after 5s anyway.
   useEffect(() => {
@@ -295,6 +332,7 @@ function SplashGate({ children }: PropsWithChildren) {
   }, []);
 
   const isAppReady = useMemo(() => {
+    if (!fontsLoaded) return false;
     if (isCheckingUpdate) return false;
     if (!isLocaleReady) return false;
     if (authLoading) return false;
@@ -306,6 +344,7 @@ function SplashGate({ children }: PropsWithChildren) {
     if (sportLoading) return false;
     return true;
   }, [
+    fontsLoaded,
     isCheckingUpdate,
     isLocaleReady,
     authLoading,

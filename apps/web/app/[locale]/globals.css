@@ -7,7 +7,7 @@
 :root {
   /* Theme System - Default to Energy & Trust */
   --theme-name: "energy-trust";
-  --font-heading: var(--font-poppins);
+  --font-heading: var(--font-bricolage);
 
   /* Theme colors (Energy & Trust theme) */
 
@@ -278,7 +278,7 @@
   h4,
   h5,
   h6 {
-    font-family: var(--font-heading, var(--font-poppins)), sans-serif;
+    font-family: var(--font-heading, var(--font-bricolage)), sans-serif;
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.025em;
@@ -297,6 +297,13 @@
 
   p {
     line-height: 1.6;
+  }
+
+  /* Stat numerals (scores, ratings, ranks, countdowns) — theme v2 */
+  .font-stat {
+    font-family: var(--font-stat), sans-serif;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Improved card spacing */
