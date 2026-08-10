@@ -54,9 +54,9 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // Reputation tier → gauge color (gold uses the design-system accent token)
 const TIER_COLORS: Record<string, string> = {
-  platinum: '#e2e8f0',
+  platinum: '#dce8e5',
   gold: dsAccent[400],
-  silver: '#cbd5e1',
+  silver: '#c4d4d0',
   bronze: '#d9913e',
 };
 
@@ -111,10 +111,10 @@ export default async function PlayerPage({ params }: Props) {
         <div className="relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-lg">
           {/* Banner + overlapping avatar, echoing the OG card */}
           <div className="h-24 w-full bg-gradient-to-br from-teal-900 via-teal-700 to-teal-500 relative">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-300 via-amber-400 to-[#ed6a6d]" />
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-300 via-amber-400 to-[#f2554b]" />
           </div>
           <div className="px-6 -mt-12 flex items-end justify-between relative z-10">
-            <div className="rounded-full p-[3px] bg-gradient-to-br from-teal-300 via-amber-400 to-[#ed6a6d] shadow-md">
+            <div className="rounded-full p-[3px] bg-gradient-to-br from-teal-300 via-amber-400 to-[#f2554b] shadow-md">
               <div className="size-24 rounded-full flex items-center justify-center overflow-hidden bg-card border-4 border-card">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element

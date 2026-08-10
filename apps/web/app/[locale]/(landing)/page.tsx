@@ -139,7 +139,7 @@ export default async function Home({ params }: { params: Promise<{ locale: Local
                 <Card className="bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1">
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-[#ed6a6d]/20">
+                      <div className="p-2 rounded-lg bg-[#f2554b]/20">
                         <Icon className="size-6 text-[#f1888a]" />
                       </div>
                       <CardTitle className="text-xl text-white">

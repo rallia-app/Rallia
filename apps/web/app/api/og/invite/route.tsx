@@ -334,7 +334,7 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
         right: 0,
         height: 5,
         display: 'flex',
-        background: 'linear-gradient(90deg, #5eead4, #fbbf24, #ed6a6d)',
+        background: 'linear-gradient(90deg, #6bdcc9, #f5b535, #f2554b)',
       }}
     />
   );
@@ -504,7 +504,7 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
         flexDirection: 'column',
         position: 'relative',
         fontFamily: 'Inter',
-        background: `linear-gradient(140deg, ${primary[950]} 0%, #0a4340 55%, ${primary[800]} 100%)`,
+        background: `linear-gradient(140deg, ${primary[950]} 0%, #0a4e48 55%, ${primary[800]} 100%)`,
       }}
     >
       {/* Faint concentric arcs, bottom-left */}
@@ -758,7 +758,7 @@ async function inviteImage(code: string, locale: string, fonts: Fonts) {
           right: 0,
           height: 5,
           display: 'flex',
-          background: 'linear-gradient(90deg, #5eead4, #fbbf24, #ed6a6d)',
+          background: 'linear-gradient(90deg, #6bdcc9, #f5b535, #f2554b)',
         }}
       />
 

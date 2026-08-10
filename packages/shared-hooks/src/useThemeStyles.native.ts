@@ -106,25 +106,25 @@ export function useThemeStyles() {
       cardBackground: themeColors.card,
       cardForeground: themeColors.cardForeground,
 
-      // Text hierarchy
+      // Text hierarchy (neutral in both modes; accent text is opt-in, not the default)
       text: themeColors.foreground,
-      textSecondary: isDark ? primary[300] : neutral[600],
+      textSecondary: isDark ? neutral[300] : neutral[600],
       textMuted: themeColors.mutedForeground,
 
-      // Interactive
-      primary: isDark ? primary[500] : primary[600],
-      primaryForeground: BASE_WHITE,
-      buttonActive: isDark ? primary[500] : primary[600],
+      // Interactive (dark mode: bright Court Teal with dark ink on top)
+      primary: isDark ? primary[400] : primary[600],
+      primaryForeground: isDark ? primary[950] : BASE_WHITE,
+      buttonActive: isDark ? primary[400] : primary[600],
       buttonInactive: themeColors.muted,
-      buttonTextActive: BASE_WHITE,
+      buttonTextActive: isDark ? primary[950] : BASE_WHITE,
       buttonTextInactive: themeColors.mutedForeground,
 
       // Borders
       border: themeColors.border,
-      borderFocus: isDark ? primary[500] : primary[600],
+      borderFocus: isDark ? primary[400] : primary[600],
       input: themeColors.input,
       inputBorder: isDark ? neutral[700] : neutral[200],
-      inputBorderFocused: isDark ? primary[500] : primary[600],
+      inputBorderFocused: isDark ? primary[400] : primary[600],
 
       // Status
       error: status.error.DEFAULT,
@@ -132,8 +132,8 @@ export function useThemeStyles() {
       warning: status.warning.DEFAULT,
       info: status.info.DEFAULT,
 
-      // Header (app-specific)
-      headerBackground: isDark ? neutral[900] : primary[100],
+      // Header (app-specific) — sits on the tinted neutral ground, no teal wash
+      headerBackground: isDark ? neutral[900] : neutral[100],
       headerForeground: isDark ? neutral[50] : neutral[900],
 
       // Icon colors
@@ -141,7 +141,7 @@ export function useThemeStyles() {
       iconMuted: themeColors.mutedForeground,
 
       // Extended colors for overlays/wizards
-      progressActive: isDark ? primary[500] : primary[600],
+      progressActive: isDark ? primary[400] : primary[600],
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       divider: isDark ? neutral[700] : neutral[200],

@@ -69,6 +69,14 @@ export const lightTheme = {
   // Background variations
   backgroundSecondary: primary[50],
   foregroundSecondary: primary[700],
+
+  // Accent jobs (theme v2): coral = people/social moments, gold = earned.
+  social: secondary[500],
+  socialSubtle: secondary[50],
+  socialForeground: secondary[700],
+  achievement: accent[500],
+  achievementSubtle: accent[50],
+  achievementForeground: accent[700],
 } as const;
 
 /**
@@ -76,34 +84,34 @@ export const lightTheme = {
  * Uses oklch color space where appropriate
  */
 export const lightThemeCSSValues = {
-  '--background': 'oklch(0.985 0 0)', // neutral[50] - slightly off-white
-  '--foreground': 'oklch(0.145 0 0)',
-  '--card': 'oklch(1 0 0)',
-  '--card-foreground': 'oklch(0.145 0 0)',
-  '--popover': 'oklch(1 0 0)',
-  '--popover-foreground': 'oklch(0.145 0 0)',
-  '--primary': 'oklch(0.600 0.104 184.704)', // teal-600
-  '--primary-foreground': 'oklch(1 0 0)',
-  '--secondary': 'oklch(0.97 0 0)',
-  '--secondary-foreground': 'oklch(0.205 0 0)',
-  '--muted': 'oklch(0.97 0 0)',
-  '--muted-foreground': 'oklch(0.556 0 0)',
-  '--accent': 'oklch(0.97 0 0)',
-  '--accent-foreground': 'oklch(0.205 0 0)',
-  '--destructive': 'oklch(0.577 0.245 27.325)',
-  '--border': 'oklch(0.922 0 0)',
-  '--input': 'oklch(0.922 0 0)',
-  '--ring': 'oklch(0.600 0.104 184.704)', // teal-600
+  '--background': neutral[50],
+  '--foreground': neutral[950],
+  '--card': base.white,
+  '--card-foreground': neutral[950],
+  '--popover': base.white,
+  '--popover-foreground': neutral[950],
+  '--primary': primary[600], // Court Teal
+  '--primary-foreground': base.white,
+  '--secondary': neutral[100],
+  '--secondary-foreground': neutral[900],
+  '--muted': neutral[100],
+  '--muted-foreground': neutral[500],
+  '--accent': neutral[100],
+  '--accent-foreground': neutral[900],
+  '--destructive': status.error.DEFAULT,
+  '--border': neutral[200],
+  '--input': neutral[200],
+  '--ring': primary[600],
 
   // Sidebar
-  '--sidebar': 'oklch(0.985 0 0)',
-  '--sidebar-foreground': 'oklch(0.145 0 0)',
-  '--sidebar-primary': 'oklch(0.600 0.104 184.704)', // teal-600
-  '--sidebar-primary-foreground': 'oklch(1 0 0)',
-  '--sidebar-accent': 'oklch(0.97 0 0)',
-  '--sidebar-accent-foreground': 'oklch(0.205 0 0)',
-  '--sidebar-border': 'oklch(0.922 0 0)',
-  '--sidebar-ring': 'oklch(0.600 0.104 184.704)', // teal-600
+  '--sidebar': neutral[50],
+  '--sidebar-foreground': neutral[950],
+  '--sidebar-primary': primary[600],
+  '--sidebar-primary-foreground': base.white,
+  '--sidebar-accent': neutral[100],
+  '--sidebar-accent-foreground': neutral[900],
+  '--sidebar-border': neutral[200],
+  '--sidebar-ring': primary[600],
 
   // Theme-specific background
   '--background-secondary': primary[50],
