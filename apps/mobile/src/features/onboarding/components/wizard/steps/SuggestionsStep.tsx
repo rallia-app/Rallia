@@ -22,7 +22,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { MatchCard, Text, EmptyState } from '@rallia/shared-components';
 import { useAuth } from '@rallia/shared-hooks';
 import { base, primary, spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
@@ -193,27 +193,14 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
             </Text>
           </View>
         ) : previewOpportunities.length === 0 ? (
-          <View style={styles.centeredState}>
-            <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-            <Text size="base" weight="semibold" color={colors.text} style={styles.stateText}>
-              {t('onboarding.suggestions.emptyTitle')}
-            </Text>
-            <Text size="sm" color={colors.textMuted}>
-              {t('onboarding.suggestions.emptySubtitle')}
-            </Text>
-            {onRefresh && (
-              <TouchableOpacity
-                style={[styles.refreshButton, { borderColor: colors.buttonActive }]}
-                onPress={onRefresh}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="refresh-outline" size={18} color={colors.buttonActive} />
-                <Text size="sm" weight="semibold" color={colors.buttonActive}>
-                  {t('common.refresh')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="search-outline" size={36} color={colors.buttonActive} />}
+            title={t('onboarding.suggestions.emptyTitle')}
+            description={t('onboarding.suggestions.emptySubtitle')}
+            ctaLabel={onRefresh ? t('common.refresh') : undefined}
+            onCtaPress={onRefresh}
+          />
         ) : (
           <View style={styles.cardsContainer}>
             {previewOpportunities.map(match => (
@@ -378,18 +365,6 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[3],
     textAlign: 'center',
   },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[5],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-
   // Join CTA
   cardFooter: {
     flexDirection: 'row',

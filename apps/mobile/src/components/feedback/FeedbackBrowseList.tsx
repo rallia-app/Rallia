@@ -18,7 +18,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import {
   base,
   darkTheme,
@@ -151,22 +151,23 @@ export const FeedbackBrowseList: React.FC<FeedbackBrowseListProps> = ({
 
   const renderEmpty = useCallback(
     () => (
-      <View style={styles.centered}>
-        <Ionicons
-          name={category === 'bug' ? 'bug-outline' : 'bulb-outline'}
-          size={42}
-          color={colors.muted}
-        />
-        <Text size="sm" color={colors.muted} style={styles.emptyText}>
-          {t(
-            (category === 'bug'
-              ? 'feedback.browse.empty.bug'
-              : 'feedback.browse.empty.feature') as TranslationKey
-          )}
-        </Text>
-      </View>
+      <EmptyState
+        variant="sheet"
+        icon={
+          <Ionicons
+            name={category === 'bug' ? 'bug-outline' : 'bulb-outline'}
+            size={36}
+            color={themeColors.primary}
+          />
+        }
+        title={t(
+          (category === 'bug'
+            ? 'feedback.browse.empty.bug'
+            : 'feedback.browse.empty.feature') as TranslationKey
+        )}
+      />
     ),
-    [category, colors.muted, t]
+    [category, themeColors.primary, t]
   );
 
   const renderFooter = useCallback(() => {
@@ -333,15 +334,6 @@ const styles = StyleSheet.create({
   skeletonList: {
     flex: 1,
     padding: spacingPixels[4],
-  },
-  centered: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[10],
-    gap: spacingPixels[3],
-  },
-  emptyText: {
-    textAlign: 'center',
   },
   footer: {
     borderTopWidth: 1,

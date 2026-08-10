@@ -11,7 +11,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Switch } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, EmptyState, useToast } from '@rallia/shared-components';
 import { lightHaptic, successHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   usePlayerSearch,
@@ -303,12 +303,11 @@ export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-commu
         {isLoading ? (
           renderPlayerSkeleton()
         ) : visiblePlayers.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-            <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-              {searchQuery ? t('community.noPlayersFound') : t('community.noPlayersAvailable')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+            title={searchQuery ? t('community.noPlayersFound') : t('community.noPlayersAvailable')}
+          />
         ) : (
           <FlatList
             data={visiblePlayers}
@@ -388,12 +387,6 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: spacingPixels[4],
     alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
   },
   listContent: {
     paddingHorizontal: 16,

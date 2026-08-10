@@ -28,7 +28,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, EmptyState, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { useReferral, useAuth } from '@rallia/shared-hooks';
 import { getReferralLink } from '@rallia/shared-services';
@@ -438,12 +438,13 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                   showsVerticalScrollIndicator={false}
                 >
                   {filteredContacts.length === 0 ? (
-                    <View style={styles.emptySearchState}>
-                      <Ionicons name="search-outline" size={28} color={colors.textMuted} />
-                      <Text size="sm" color={colors.textMuted} style={styles.noContacts}>
-                        {t('onboarding.success.noContacts')}
-                      </Text>
-                    </View>
+                    <EmptyState
+                      variant="sheet"
+                      icon={
+                        <Ionicons name="search-outline" size={36} color={colors.buttonActive} />
+                      }
+                      title={t('onboarding.success.noContacts')}
+                    />
                   ) : (
                     visibleContacts.map((item, index) => {
                       const subtitle = formatContactSubtitle(item.phone, item.email);
@@ -720,21 +721,12 @@ const styles = StyleSheet.create({
     maxHeight: CONTACT_LIST_MAX_HEIGHT,
     marginBottom: spacingPixels[2],
   },
-  emptySearchState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[8],
-    gap: spacingPixels[2],
-  },
   showMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[3],
     gap: spacingPixels[1],
-  },
-  noContacts: {
-    textAlign: 'center',
   },
   deniedArea: {
     width: '100%',

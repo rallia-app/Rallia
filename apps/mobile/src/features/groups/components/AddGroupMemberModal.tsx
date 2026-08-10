@@ -7,7 +7,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, Skeleton, EmptyState, useToast } from '@rallia/shared-components';
 import { lightHaptic, successHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import { useAddGroupMember, usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
@@ -225,12 +225,11 @@ export function AddGroupMemberActionSheet({ payload }: SheetProps<'add-group-mem
         {isLoading ? (
           renderPlayerSkeleton()
         ) : visiblePlayers.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="person-outline" size={48} color={colors.textMuted} />
-            <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-              {searchQuery ? t('groups.noPlayersFound') : t('groups.noPlayersAvailable')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="person-outline" size={36} color={colors.primary} />}
+            title={searchQuery ? t('groups.noPlayersFound') : t('groups.noPlayersAvailable')}
+          />
         ) : (
           <FlatList
             data={visiblePlayers}
@@ -292,12 +291,6 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: spacingPixels[4],
     alignItems: 'center',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
   },
   playerItem: {
     flexDirection: 'row',

@@ -10,7 +10,7 @@ import React, { useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useRatingScoreReferees, type RatingScoreReferee } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
@@ -116,12 +116,11 @@ export function ReferencesListActionSheet({ payload }: SheetProps<'references-li
           </Text>
         </View>
       ) : referees.length === 0 ? (
-        <View style={styles.stateContainer}>
-          <Ionicons name="people-outline" size={40} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {t('profile.rating.referencesList.empty')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+          title={t('profile.rating.referencesList.empty')}
+        />
       ) : (
         <FlatList
           data={referees}
@@ -172,9 +171,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacingPixels[8],
     gap: spacingPixels[3],
-  },
-  emptyText: {
-    fontSize: fontSizePixels.sm,
   },
 });
 

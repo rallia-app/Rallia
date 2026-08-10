@@ -25,15 +25,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-  primary,
-  neutral,
-  base,
-} from '@rallia/design-system';
+import { Text, useToast, EmptyState } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/design-system';
 import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
   getSharedContactLists,
@@ -801,15 +794,13 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
               {isLoadingMatches ? (
                 <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
               ) : !upcomingMatches || upcomingMatches.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                    {t('sharedLists.share.noUpcomingMatches')}
-                  </Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                    {t('sharedLists.share.createMatchFirst')}
-                  </Text>
-                </View>
+                <EmptyState
+                  variant="sheet"
+                  icon={<Ionicons name="calendar-outline" size={36} color={colors.primary} />}
+                  title={t('sharedLists.share.noUpcomingMatches')}
+                  description={t('sharedLists.share.createMatchFirst')}
+                  style={styles.emptyState}
+                />
               ) : (
                 <FlatList
                   data={upcomingMatches as MatchItem[] | undefined}
@@ -850,15 +841,13 @@ export function ShareMatchActionSheet({ payload }: SheetProps<'share-match'>) {
                 {isLoadingLists ? (
                   <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
                 ) : lists.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-                    <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                      {t('sharedLists.share.noSharedLists')}
-                    </Text>
-                    <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                      {t('sharedLists.share.createListFirst')}
-                    </Text>
-                  </View>
+                  <EmptyState
+                    variant="sheet"
+                    icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+                    title={t('sharedLists.share.noSharedLists')}
+                    description={t('sharedLists.share.createListFirst')}
+                    style={styles.emptyState}
+                  />
                 ) : (
                   <FlatList
                     data={lists}
@@ -1362,20 +1351,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[8],
-  },
-  emptyTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: '600',
-    marginTop: spacingPixels[3],
-  },
-  emptySubtitle: {
-    fontSize: fontSizePixels.sm,
-    textAlign: 'center',
-    marginTop: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
   },
   emptyText: {
     textAlign: 'center',

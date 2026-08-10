@@ -13,7 +13,7 @@ import { View, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput } from
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
 import { isRealSportId, fallbackSportSlug } from '@rallia/shared-services';
@@ -521,47 +521,45 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
 
     if (!effectiveSportIds?.length) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noSportSelected')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="alert-circle-outline" size={36} color={colors.buttonActive} />}
+          title={t('onboarding.favoriteSitesStep.noSportSelected')}
+        />
       );
     }
 
     if (latitude === null || longitude === null) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="location-outline" size={48} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noLocation')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="location-outline" size={36} color={colors.buttonActive} />}
+          title={t('onboarding.favoriteSitesStep.noLocation')}
+        />
       );
     }
 
     if (searchQuery && filteredSearchResults.length === 0) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noResults')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="search-outline" size={36} color={colors.buttonActive} />}
+          title={t('onboarding.favoriteSitesStep.noResults')}
+        />
       );
     }
 
     if (filteredSearchResults.length === 0) {
       return (
-        <View style={styles.emptyState}>
-          <View style={{ transform: [{ rotate: '90deg' }] }}>
-            <TennisCourtIcon width={48} height={48} stroke={colors.textMuted} />
-          </View>
-          <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('onboarding.favoriteSitesStep.noFacilitiesNearby')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={
+            <View style={{ transform: [{ rotate: '90deg' }] }}>
+              <TennisCourtIcon width={40} height={40} stroke={colors.buttonActive} />
+            </View>
+          }
+          title={t('onboarding.favoriteSitesStep.noFacilitiesNearby')}
+        />
       );
     }
 

@@ -10,7 +10,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button, useToast } from '@rallia/shared-components';
+import { Text, Button, EmptyState, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -156,23 +156,21 @@ export function LeagueInvitePlayersActionSheet({ payload }: SheetProps<'league-i
         />
 
         {!showingSearch ? (
-          <View style={styles.stateContainer}>
-            <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-              {t('leagueDetail.invitePlayers.searchHint')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+            title={t('leagueDetail.invitePlayers.searchHint')}
+          />
         ) : isSearching ? (
           <View style={styles.stateContainer}>
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : players.length === 0 ? (
-          <View style={styles.stateContainer}>
-            <Ionicons name="people-outline" size={36} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-              {t('leagueDetail.invitePlayers.noResults')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+            title={t('leagueDetail.invitePlayers.noResults')}
+          />
         ) : (
           <FlatList
             data={players as PickerRow[]}
@@ -236,7 +234,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[8],
     gap: spacingPixels[2],
   },
-  emptyText: { textAlign: 'center', paddingHorizontal: spacingPixels[6] },
 });
 
 export default LeagueInvitePlayersActionSheet;

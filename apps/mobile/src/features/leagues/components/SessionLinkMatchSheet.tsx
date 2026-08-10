@@ -12,7 +12,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, EmptyState, useToast } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
@@ -144,19 +144,16 @@ export function SessionLinkMatchActionSheet({ payload }: SheetProps<'session-lin
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : matches.length === 0 ? (
-        <View style={styles.stateContainer}>
-          <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-          <Text size="base" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-            {t('sessionDetail.linkPicker.empty')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.emptyHint}>
-            {t(
-              entryFormat === 'singles'
-                ? 'sessionDetail.linkPicker.emptyHint'
-                : 'sessionDetail.linkPicker.emptyHintDoubles'
-            )}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+          title={t('sessionDetail.linkPicker.empty')}
+          description={t(
+            entryFormat === 'singles'
+              ? 'sessionDetail.linkPicker.emptyHint'
+              : 'sessionDetail.linkPicker.emptyHintDoubles'
+          )}
+        />
       ) : (
         <FlatList
           data={matches}
@@ -576,13 +573,6 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[3],
-    textAlign: 'center',
-  },
-  emptyHint: {
-    textAlign: 'center',
   },
 });
 

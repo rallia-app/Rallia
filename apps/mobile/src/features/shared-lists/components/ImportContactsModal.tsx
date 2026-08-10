@@ -16,7 +16,7 @@ import {
 import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, useToast, EmptyState } from '@rallia/shared-components';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import { bulkCreateSharedContacts, type SharedContact } from '@rallia/shared-services';
@@ -260,19 +260,21 @@ export function ImportContactsActionSheet({ payload }: SheetProps<'import-contac
     if (isLoading) return null;
 
     return (
-      <View style={styles.centerContainer}>
-        <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" style={[styles.centerTitle, { color: colors.text }]}>
-          {searchQuery
+      <EmptyState
+        variant="sheet"
+        icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+        title={
+          searchQuery
             ? t('sharedLists.import.noResults')
-            : t('sharedLists.import.noContactsAvailable')}
-        </Text>
-        <Text size="sm" style={[styles.centerDescription, { color: colors.textSecondary }]}>
-          {searchQuery
+            : t('sharedLists.import.noContactsAvailable')
+        }
+        description={
+          searchQuery
             ? t('sharedLists.import.tryDifferentSearch')
-            : t('sharedLists.import.allContactsInList')}
-        </Text>
-      </View>
+            : t('sharedLists.import.allContactsInList')
+        }
+        style={styles.emptyState}
+      />
     );
   };
 
@@ -443,6 +445,10 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     paddingBottom: 0,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
   },
   centerContainer: {
     flex: 1,

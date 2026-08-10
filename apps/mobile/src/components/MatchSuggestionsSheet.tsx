@@ -20,7 +20,7 @@ import Animated, {
   makeMutable,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -241,17 +241,13 @@ export function MatchSuggestionsActionSheet(_props: SheetProps<'match-suggestion
             </Text>
           </View>
         ) : totalCards === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={[styles.emptyIconContainer, { backgroundColor: colors.textMuted + '15' }]}>
-              <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-            </View>
-            <Text size="base" weight="semibold" color={colors.foreground} style={styles.emptyTitle}>
-              {t('onboarding.suggestions.emptyTitle')}
-            </Text>
-            <Text size="sm" color={colors.textMuted} style={styles.emptySubtitle}>
-              {t('onboarding.suggestions.emptySubtitle')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+            title={t('onboarding.suggestions.emptyTitle')}
+            description={t('onboarding.suggestions.emptySubtitle')}
+            style={styles.emptyState}
+          />
         ) : (
           <View style={styles.cardsContainer}>
             <View
@@ -413,24 +409,6 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[10],
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptySubtitle: {
-    textAlign: 'center',
-    paddingHorizontal: spacingPixels[6],
   },
 });

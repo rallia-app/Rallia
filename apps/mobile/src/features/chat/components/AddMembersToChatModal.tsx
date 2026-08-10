@@ -7,7 +7,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button, Skeleton } from '@rallia/shared-components';
+import { Text, Button, Skeleton, EmptyState } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
@@ -247,12 +247,11 @@ export function AddMembersToChatActionSheet({ payload }: SheetProps<'add-members
           {isLoading ? (
             renderPlayerSkeleton()
           ) : players.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                {searchQuery ? t('chat.noPlayersFound') : t('chat.noMorePlayersToAdd')}
-              </Text>
-            </View>
+            <EmptyState
+              variant="sheet"
+              icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+              title={searchQuery ? t('chat.noPlayersFound') : t('chat.noMorePlayersToAdd')}
+            />
           ) : (
             <FlatList
               data={players}
@@ -380,15 +379,6 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: spacingPixels[4],
     alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-  },
-  emptyText: {
-    fontSize: fontSizePixels.base,
   },
   listContent: {
     paddingVertical: spacingPixels[2],

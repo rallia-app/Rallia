@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
@@ -414,17 +414,16 @@ export function ReferenceRequestActionSheet({ payload }: SheetProps<'reference-r
               </Text>
             </View>
           ) : filteredPlayers.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                {t('profile.certification.referenceRequest.noPlayersFound')}
-              </Text>
-              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                {players.length === 0
+            <EmptyState
+              variant="sheet"
+              icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+              title={t('profile.certification.referenceRequest.noPlayersFound')}
+              description={
+                players.length === 0
                   ? t('profile.certification.referenceRequest.noEligiblePlayers')
-                  : t('common.tryDifferentSearch')}
-              </Text>
-            </View>
+                  : t('common.tryDifferentSearch')
+              }
+            />
           ) : (
             <View style={styles.playersGrid}>
               {filteredPlayers.map(player => renderPlayerCard(player))}
@@ -624,22 +623,5 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 40,
   },
 });

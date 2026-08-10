@@ -11,7 +11,7 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, MatchCard, useToast } from '@rallia/shared-components';
+import { EmptyState, Text, MatchCard, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -255,20 +255,12 @@ export function InviteToMatchActionSheet({ payload }: SheetProps<'invite-to-matc
 
   // Render empty state
   const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons
-        name="calendar-outline"
-        size={48}
-        color={colors.textMuted}
-        style={styles.emptyIcon}
-      />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {t('inviteToMatch.noMatches')}
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-        {t('inviteToMatch.noMatchesDescription')}
-      </Text>
-    </View>
+    <EmptyState
+      variant="sheet"
+      icon={<Ionicons name="calendar-outline" size={36} color={colors.buttonActive} />}
+      title={t('inviteToMatch.noMatches')}
+      description={t('inviteToMatch.noMatchesDescription')}
+    />
   );
 
   // Render loading state
