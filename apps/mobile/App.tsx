@@ -893,7 +893,13 @@ function ThemedRoot({ children }: PropsWithChildren) {
  */
 function ConsentGate({ children }: PropsWithChildren) {
   const { user } = useAuth();
-  const gate = usePolicyConsentGate(user?.id);
+  const { profile } = useProfile();
+  // Brand-new accounts consent inside the onboarding wizard's consent step —
+  // gating them here double-prompts and ejects the wizard sheet mid-signup.
+  // The blocking gate only covers policy bumps for already-onboarded users
+  // (passing null short-circuits the hook to 'ok', same as guests).
+  const isOnboarded = !!profile?.onboarding_completed;
+  const gate = usePolicyConsentGate(isOnboarded ? user?.id : null);
 
   useEffect(() => {
     if (gate.status === 'required') {
