@@ -1960,68 +1960,60 @@ const Home = () => {
     if (!session) {
       // Not signed in: show sign-in prompt
       headerComponents.push(
-        <View
-          key="sign-in"
-          style={[
-            styles.matchesSection,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              paddingHorizontal: spacingPixels[10],
-            },
-          ]}
-        >
-          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
-            {t('home.yourMatches')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
-            {t('home.signInPrompt')}
-          </Text>
-          <Button
-            variant="primary"
-            rounded
-            onPress={openSheet}
-            style={styles.signInButton}
-            leftIcon={<Ionicons name="log-in-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-            testID="home-signin"
-          >
-            {t('auth.signIn')}
-          </Button>
+        <View key="sign-in">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderText}>
+              <Text size="xl" weight="bold" color={colors.text}>
+                {t('home.yourMatches')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.myMatchesEmptyWrap}>
+            <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+              <Ionicons name="log-in-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.signInEmpty.title')}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.signInEmpty.description')}
+              </Text>
+              <Button
+                variant="primary"
+                onPress={openSheet}
+                style={styles.myMatchesEmptyCta}
+                testID="home-signin"
+              >
+                {t('auth.signIn')}
+              </Button>
+            </View>
+          </View>
         </View>
       );
     } else if (!isOnboarded) {
       // Signed in but not onboarded: show complete profile prompt
       headerComponents.push(
-        <View
-          key="complete-profile"
-          style={[
-            styles.matchesSection,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <View style={[styles.matchesSectionIconWrap, { backgroundColor: `${primary[500]}20` }]}>
-            <Ionicons name="person-add-outline" size={40} color={primary[500]} />
+        <View key="complete-profile">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderText}>
+              <Text size="xl" weight="bold" color={colors.text}>
+                {t('home.yourMatches')}
+              </Text>
+            </View>
           </View>
-          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
-            {t('home.yourMatches')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
-            {t('home.onboardingPrompt')}
-          </Text>
-          <Button
-            variant="primary"
-            rounded
-            onPress={openSheet}
-            style={styles.signInButton}
-            leftIcon={<Ionicons name="person-add-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-          >
-            {t('home.completeProfile')}
-          </Button>
+          <View style={styles.myMatchesEmptyWrap}>
+            <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+              <Ionicons name="person-add-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.onboardingEmpty.title')}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.onboardingEmpty.description')}
+              </Text>
+              <Button variant="primary" onPress={openSheet} style={styles.myMatchesEmptyCta}>
+                {t('home.completeProfile')}
+              </Button>
+            </View>
+          </View>
         </View>
       );
     } else {
@@ -2260,29 +2252,30 @@ const Home = () => {
             }}
           >
             {showJfyEmpty ? (
-              <View
-                style={[
-                  styles.matchesSection,
-                  { backgroundColor: colors.card, borderColor: colors.border, marginTop: 0 },
-                ]}
-              >
-                <Ionicons name="location-outline" size={32} color={colors.textMuted} />
-                <Text size="sm" color={colors.textMuted} style={styles.jfyEmptyText}>
-                  {t('home.nearbyEmpty.title')}
-                </Text>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onPress={() => {
-                    Analytics.createGameCtaPressed({
-                      placement: 'home_nearby_empty',
-                      has_active_filters: false,
-                    });
-                    openSheetForMatchCreation('home_nearby_empty');
-                  }}
-                >
-                  {t('matches.createMatch')}
-                </Button>
+              /* Same empty-state shell as My Matches / Favorite Availability. */
+              <View style={styles.myMatchesEmptyWrap}>
+                <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+                  <Ionicons name="location-outline" size={32} color={colors.textMuted} />
+                  <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                    {t('home.nearbyEmpty.title')}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                    {t('home.nearbyEmpty.description', { distance: searchRadiusKm })}
+                  </Text>
+                  <Button
+                    variant="primary"
+                    onPress={() => {
+                      Analytics.createGameCtaPressed({
+                        placement: 'home_nearby_empty',
+                        has_active_filters: false,
+                      });
+                      openSheetForMatchCreation('home_nearby_empty');
+                    }}
+                    style={styles.myMatchesEmptyCta}
+                  >
+                    {t('matches.createMatch')}
+                  </Button>
+                </View>
               </View>
             ) : showJfyLoading ? (
               <ScrollView
@@ -2453,37 +2446,6 @@ const styles = StyleSheet.create({
   // it so the card fills the 340px slot exactly.
   jfyMatchInner: {
     marginHorizontal: -spacingPixels[4],
-  },
-  jfyEmptyText: {
-    textAlign: 'center',
-  },
-  matchesSection: {
-    padding: spacingPixels[6],
-    margin: spacingPixels[4],
-    marginTop: spacingPixels[5],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: spacingPixels[3],
-  },
-  matchesSectionIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  matchesSectionTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  sectionSubtitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  signInButton: {
-    marginTop: spacingPixels[2],
   },
   sectionHeader: {
     flexDirection: 'row',
