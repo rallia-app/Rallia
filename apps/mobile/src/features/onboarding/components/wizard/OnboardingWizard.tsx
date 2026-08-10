@@ -1296,6 +1296,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <SuggestionsStep
             opportunities={matchOpportunities}
             isLoading={opportunitiesLoading}
+            isActive={currentStepId === 'suggestions'}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
             colors={colors}
@@ -1346,6 +1347,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <SuggestionsStep
             opportunities={matchOpportunities}
             isLoading={opportunitiesLoading}
+            isActive
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
             colors={colors}

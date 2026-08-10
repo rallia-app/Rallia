@@ -52,6 +52,13 @@ interface SuggestionsStepProps {
   /** Real public matches with open spots that fit the player's setup. */
   opportunities: MatchWithDetails[];
   isLoading: boolean;
+  /**
+   * Whether this step is the wizard's CURRENT step. The wizard mounts every
+   * step at once (horizontal slider), so mount alone must never trigger
+   * behavior — the auto-skip below fired on wizard open and closed the whole
+   * sheet before this guard existed.
+   */
+  isActive: boolean;
   onComplete: () => void;
   onRefresh?: () => void;
   colors: ThemeColors;
@@ -69,6 +76,7 @@ interface SuggestionsStepProps {
 export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   opportunities,
   isLoading,
+  isActive,
   onComplete,
   onRefresh,
   colors,
@@ -102,11 +110,11 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   // race where the player advanced while the query was still in flight.
   const autoSkippedRef = useRef(false);
   useEffect(() => {
-    if (isLoading || opportunities.length > 0 || autoSkippedRef.current) return;
+    if (!isActive || isLoading || opportunities.length > 0 || autoSkippedRef.current) return;
     autoSkippedRef.current = true;
     Analytics.onboardingStepCompleted({ step_name: 'suggestions_skipped_empty', step_index: -1 });
     onComplete();
-  }, [isLoading, opportunities.length, onComplete]);
+  }, [isActive, isLoading, opportunities.length, onComplete]);
 
   // Cap the preview at MAX_CARDS — the caller already fetches up to 20, but the
   // post-onboarding moment only needs a short, joinable shortlist.
