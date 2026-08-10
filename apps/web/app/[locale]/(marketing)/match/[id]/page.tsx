@@ -11,10 +11,10 @@ import { getMatch } from './_lib/get-match';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
-// Invite links get hammered by link-preview bots; a short ISR window serves
-// them from the cache instead of a function invocation. Kept short because
-// the card shows live participant slots.
-export const revalidate = 60;
+// Invite links get hammered by link-preview bots; the ISR window serves them
+// from the cache instead of a function invocation. 10 min keeps participant
+// slots reasonably fresh while capping billed ISR writes.
+export const revalidate = 600;
 
 // No ids at build time — each match page is generated on first request and
 // then served from the ISR cache (this is what opts the route into caching).

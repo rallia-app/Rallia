@@ -18,10 +18,10 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ISR: ~700 facility pages enter the sitemap; the crawler wave must hit the
-// cache, not a function invocation per page. Availability snapshots refresh
-// on this cadence too.
-export const revalidate = 300;
+// ISR: ~2000 facility pages enter the sitemap; each revalidation is a billed
+// ISR write, so the window is 1h. Availability slots are day-scoped, which
+// keeps hourly staleness acceptable.
+export const revalidate = 3600;
 
 // No slugs at build time — each facility page is generated on first request
 // and then served from the ISR cache (this is what opts the route into caching).
