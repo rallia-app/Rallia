@@ -9,6 +9,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   searchFacilitiesNearby,
   supabase,
+  isRealSportId,
   type FacilityTypeFilter,
   type SurfaceTypeFilter,
   type CourtTypeFilter,
@@ -212,7 +213,7 @@ interface UseFacilitySearchReturn {
  */
 export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilitySearchReturn {
   const {
-    sportIds,
+    sportIds: rawSportIds,
     latitude,
     longitude,
     searchQuery,
@@ -223,6 +224,14 @@ export function useFacilitySearch(options: UseFacilitySearchOptions): UseFacilit
     pageSize,
     enabled = true,
   } = options;
+
+  // Drop synthetic `*-fallback` onboarding placeholder ids — the RPC's uuid[]
+  // param rejects the whole statement (22P02) if even one reaches it.
+  const sportIds = useMemo(() => {
+    if (!rawSportIds) return rawSportIds;
+    const real = rawSportIds.filter(isRealSportId);
+    return real.length === rawSportIds.length ? rawSportIds : real;
+  }, [rawSportIds]);
 
   // Normalize whitespace before debouncing for consistent cache keys and cleaner queries
   const normalizedQuery = (searchQuery ?? '').trim().replace(/\s+/g, ' ');

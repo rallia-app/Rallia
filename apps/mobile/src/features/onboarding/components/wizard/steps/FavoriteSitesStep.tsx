@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
+import { isRealSportId, fallbackSportSlug } from '@rallia/shared-services';
 import { useFacilitySearch, useSports } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
@@ -323,13 +324,16 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     effectiveLocation?.longitude ??
     (locationLoading ? null : JEANNE_MANCE_PARK_FALLBACK.longitude);
 
-  // Sport fallback. When no sport reached the step via formData, recover the
-  // user's real pre-onboarding selection from AsyncStorage (the same key the
-  // wizard seeds from) and resolve it to live catalog UUIDs. Resolving by sport
-  // *name* also repairs placeholder `*-fallback` IDs persisted when the
-  // pre-onboarding catalog fetch failed. Only when nothing can be recovered do
-  // we default to tennis + pickleball so facilities still display.
-  const needsSportFallback = !sportIds?.length;
+  // Sport fallback. Two broken shapes can reach this step via formData: no
+  // sport ids at all, or placeholder `*-fallback` ids persisted when the
+  // pre-onboarding catalog fetch failed. The placeholders are not uuids — the
+  // facility search RPC rejects them wholesale (22P02) and the step strands on
+  // "no facilities nearby". Recover the real selection from the placeholder
+  // slugs themselves, else from AsyncStorage (the same key the wizard seeds
+  // from), resolved to live catalog UUIDs. Only when nothing can be recovered
+  // do we default to tennis + pickleball so facilities still display.
+  const realSportIds = useMemo(() => (sportIds ?? []).filter(isRealSportId), [sportIds]);
+  const needsSportFallback = realSportIds.length === 0;
 
   const [guestSports, setGuestSports] = useState<{ loaded: boolean; names: string[] }>({
     loaded: false,
@@ -369,34 +373,38 @@ export const FavoriteSitesStep: React.FC<FavoriteSitesStepProps> = ({
     [allSports]
   );
 
-  // The user's real selection, recovered from storage and mapped to live UUIDs.
+  // The user's real selection, mapped to live UUIDs. Placeholder ids carry
+  // their sport slug, so they are the most direct record of what the user
+  // picked; storage names are the fallback for the ids-missing case.
   const recoveredSportIds = useMemo(() => {
     if (!needsSportFallback || sportIdBySlug.size === 0) return [];
-    return guestSports.names
-      .map(name => sportIdBySlug.get(name))
-      .filter((id): id is string => !!id);
-  }, [needsSportFallback, sportIdBySlug, guestSports.names]);
+    const slugsFromPlaceholders = (sportIds ?? [])
+      .map(fallbackSportSlug)
+      .filter((slug): slug is string => !!slug);
+    const names = slugsFromPlaceholders.length ? slugsFromPlaceholders : guestSports.names;
+    return names.map(name => sportIdBySlug.get(name)).filter((id): id is string => !!id);
+  }, [needsSportFallback, sportIdBySlug, sportIds, guestSports.names]);
 
   // Effective IDs driving the search: real selection → recovered selection →
   // tennis + pickleball safety net. `undefined` while sources are still loading.
   const effectiveSportIds = useMemo(() => {
-    if (sportIds?.length) return sportIds;
+    if (realSportIds.length) return realSportIds;
     if (recoveredSportIds.length) return recoveredSportIds;
     if (!guestSports.loaded || sportIdBySlug.size === 0) return undefined;
     const fallbackIds = FALLBACK_SPORT_SLUGS.map(slug => sportIdBySlug.get(slug)).filter(
       (id): id is string => !!id
     );
     return fallbackIds.length ? fallbackIds : undefined;
-  }, [sportIds, recoveredSportIds, guestSports.loaded, sportIdBySlug]);
+  }, [realSportIds, recoveredSportIds, guestSports.loaded, sportIdBySlug]);
 
   // Repair formData with the recovered *real* selection so the favorites save
   // (which keys off selectedSportIds) persists rows. IDs only — selectedSportNames
   // is left untouched so the wizard's computed step list can't shift mid-flow.
   // The hardcoded tennis + pickleball default is never written back.
   useEffect(() => {
-    if (sportIds?.length || recoveredSportIds.length === 0) return;
+    if (realSportIds.length || recoveredSportIds.length === 0) return;
     onUpdateFormData({ selectedSportIds: recoveredSportIds });
-  }, [sportIds, recoveredSportIds, onUpdateFormData]);
+  }, [realSportIds, recoveredSportIds, onUpdateFormData]);
 
   // Use facility search hook
   const {
