@@ -19,6 +19,7 @@ import {
   accent,
   secondary,
   status,
+  neutral,
 } from '@rallia/design-system';
 
 export type ReasonKey =
@@ -58,16 +59,38 @@ interface ReasonBadgeProps {
   label: string;
   isDark: boolean;
   size?: 'sm' | 'md';
+  /** Neutral "off" treatment — for toggleable filter chips in their unselected state. */
+  muted?: boolean;
 }
 
-const ReasonBadge: React.FC<ReasonBadgeProps> = ({ reason, label, isDark, size = 'sm' }) => {
+const ReasonBadge: React.FC<ReasonBadgeProps> = ({
+  reason,
+  label,
+  isDark,
+  size = 'sm',
+  muted = false,
+}) => {
   const { color, icon } = REASON_BADGE_CONFIG[reason];
 
-  const gradientColors: [string, string] = isDark
-    ? [withAlpha(color, 0.32), withAlpha(color, 0.5)]
-    : [withAlpha(color, 0.08), withAlpha(color, 0.22)];
-  const borderColor = isDark ? withAlpha(color, 0.55) : withAlpha(color, 0.3);
-  const contentColor = isDark ? withAlpha(color, 0.99) : color;
+  const gradientColors: [string, string] = muted
+    ? ['transparent', 'transparent']
+    : isDark
+      ? [withAlpha(color, 0.32), withAlpha(color, 0.5)]
+      : [withAlpha(color, 0.08), withAlpha(color, 0.22)];
+  const borderColor = muted
+    ? isDark
+      ? neutral[600]
+      : neutral[300]
+    : isDark
+      ? withAlpha(color, 0.55)
+      : withAlpha(color, 0.3);
+  const contentColor = muted
+    ? isDark
+      ? neutral[400]
+      : neutral[500]
+    : isDark
+      ? withAlpha(color, 0.99)
+      : color;
   const iconSize = size === 'sm' ? 10 : 12;
 
   return (
@@ -75,7 +98,10 @@ const ReasonBadge: React.FC<ReasonBadgeProps> = ({ reason, label, isDark, size =
       colors={gradientColors}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
-      style={[styles.badge, { borderColor, shadowColor: color, shadowOpacity: isDark ? 0 : 0.22 }]}
+      style={[
+        styles.badge,
+        { borderColor, shadowColor: color, shadowOpacity: isDark || muted ? 0 : 0.22 },
+      ]}
     >
       <Ionicons name={icon} size={iconSize} color={contentColor} />
       <Text size="xs" weight="semibold" color={contentColor} style={styles.label}>

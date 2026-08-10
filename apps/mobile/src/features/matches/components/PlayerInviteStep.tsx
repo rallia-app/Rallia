@@ -44,6 +44,37 @@ import ReasonBadge, { type ReasonKey } from '#/components/ReasonBadge';
 import * as Analytics from '#/services/analytics';
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/** Filterable reasons in display order, with their RPC keys (p_reasons). */
+const REASON_FILTER_OPTIONS: { key: ReasonKey; rpcKey: string; labelKey: TranslationKey }[] = [
+  {
+    key: 'playedTogether',
+    rpcKey: 'played_together',
+    labelKey: 'matchCreation.invite.chips.playedTogether',
+  },
+  {
+    key: 'availableAtSlot',
+    rpcKey: 'available_at_slot',
+    labelKey: 'matchCreation.invite.freeAtGameTime',
+  },
+  { key: 'responsive', rpcKey: 'responds_fast', labelKey: 'matchCreation.invite.chips.responsive' },
+  { key: 'sameRating', rpcKey: 'same_rating', labelKey: 'matchCreation.invite.chips.sameRating' },
+  {
+    key: 'activeRecently',
+    rpcKey: 'active_recently',
+    labelKey: 'matchCreation.invite.chips.activeRecently',
+  },
+  {
+    key: 'favoriteFacility',
+    rpcKey: 'favorite_facility',
+    labelKey: 'matchCreation.invite.chips.playsHere',
+  },
+  { key: 'nearby', rpcKey: 'nearby', labelKey: 'matchCreation.invite.chips.nearby' },
+];
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -254,6 +285,8 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   // State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState<PlayerSearchResult[]>([]);
+  /** Reason chips the host toggled on — narrows the ranked list (AND) server-side */
+  const [reasonFilters, setReasonFilters] = useState<ReasonKey[]>([]);
   /** Player IDs we invited this session — exclude them from search so they don't show again */
   const [invitedPlayerIds, setInvitedPlayerIds] = useState<string[]>([]);
 
@@ -337,6 +370,14 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   // Typing a search switches to the plain name search below.
   const usingRankedList = searchQuery.length === 0;
 
+  const reasonRpcKeys = useMemo(
+    () =>
+      REASON_FILTER_OPTIONS.filter(option => reasonFilters.includes(option.key)).map(
+        option => option.rpcKey
+      ),
+    [reasonFilters]
+  );
+
   const {
     candidates: rankedCandidates,
     isLoading: isLoadingRanked,
@@ -348,6 +389,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   } = useMatchInviteCandidates({
     matchId,
     excludePlayerIds: effectiveExcludePlayerIds,
+    reasons: reasonRpcKeys,
     enabled: usingRankedList,
   });
 
@@ -418,6 +460,12 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       toast.error(t('common.tryAgain'));
     },
   });
+
+  // Toggle a reason filter chip (multi-select, AND semantics server-side)
+  const handleToggleReasonFilter = useCallback((key: ReasonKey) => {
+    selectionHaptic();
+    setReasonFilters(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
+  }, []);
 
   // Handle player selection toggle
   const handleTogglePlayer = useCallback((player: PlayerSearchResult) => {
@@ -574,6 +622,20 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
       );
     }
 
+    if (!searchQuery && reasonFilters.length > 0 && players.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="funnel-outline" size={48} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('matchCreation.invite.noFilterResults')}
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            {t('matchCreation.invite.noFilterResultsDescription')}
+          </Text>
+        </View>
+      );
+    }
+
     if (!searchQuery && players.length === 0) {
       return (
         <View style={styles.emptyState}>
@@ -589,7 +651,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     }
 
     return null;
-  }, [isLoading, listError, searchQuery, players.length, colors, t]);
+  }, [isLoading, listError, searchQuery, reasonFilters.length, players.length, colors, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -683,6 +745,40 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         colors={colors}
         style={styles.searchBarWrapper}
       />
+
+      {/* Reason filter chips — the same badges the rows show, tappable to
+          narrow the ranked list. Hidden during name search (unsupported there). */}
+      {usingRankedList && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.reasonFiltersScroll}
+          contentContainerStyle={styles.reasonFiltersRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          {REASON_FILTER_OPTIONS.map(option => {
+            const selected = reasonFilters.includes(option.key);
+            return (
+              <TouchableOpacity
+                key={option.key}
+                onPress={() => handleToggleReasonFilter(option.key)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                hitSlop={{ top: 6, bottom: 6, left: 0, right: 0 }}
+              >
+                <ReasonBadge
+                  reason={option.key}
+                  label={t(option.labelKey)}
+                  isDark={isDark}
+                  size="md"
+                  muted={!selected}
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {/* Player list */}
       <FlatList
@@ -798,6 +894,18 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.full,
     borderWidth: 1,
     minHeight: 36,
+  },
+  // ---- Reason filter chips (mirrors secondaryActions sizing behavior) ----
+  reasonFiltersScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  reasonFiltersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1.5],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   successNote: {
     flexDirection: 'row',

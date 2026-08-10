@@ -13,8 +13,8 @@ const DEFAULT_PAGE_SIZE = 20;
 
 export const inviteCandidateKeys = {
   all: ['inviteCandidates'] as const,
-  forMatch: (matchId: string, excludeIds: string[]) =>
-    [...inviteCandidateKeys.all, matchId, JSON.stringify(excludeIds)] as const,
+  forMatch: (matchId: string, excludeIds: string[], reasons: string[]) =>
+    [...inviteCandidateKeys.all, matchId, JSON.stringify(excludeIds), reasons.join(',')] as const,
 };
 
 interface UseMatchInviteCandidatesOptions {
@@ -22,6 +22,8 @@ interface UseMatchInviteCandidatesOptions {
   matchId: string | undefined;
   /** Player IDs to hide client-side (e.g. invited during this session) */
   excludePlayerIds?: string[];
+  /** RPC reason keys; candidates must carry ALL of them (AND semantics) */
+  reasons?: string[];
   pageSize?: number;
   enabled?: boolean;
 }
@@ -40,10 +42,16 @@ interface UseMatchInviteCandidatesReturn {
 export function useMatchInviteCandidates(
   options: UseMatchInviteCandidatesOptions
 ): UseMatchInviteCandidatesReturn {
-  const { matchId, excludePlayerIds = [], pageSize = DEFAULT_PAGE_SIZE, enabled = true } = options;
+  const {
+    matchId,
+    excludePlayerIds = [],
+    reasons = [],
+    pageSize = DEFAULT_PAGE_SIZE,
+    enabled = true,
+  } = options;
 
   const query = useInfiniteQuery<InviteCandidatesPage, Error>({
-    queryKey: inviteCandidateKeys.forMatch(matchId ?? '', excludePlayerIds),
+    queryKey: inviteCandidateKeys.forMatch(matchId ?? '', excludePlayerIds, reasons),
     queryFn: async ({ pageParam }) => {
       if (!matchId) {
         return { players: [], hasMore: false, nextOffset: null, totalCount: 0 };
@@ -52,6 +60,7 @@ export function useMatchInviteCandidates(
         matchId,
         limit: pageSize,
         offset: (pageParam as number) ?? 0,
+        reasons,
       });
     },
     getNextPageParam: lastPage => lastPage.nextOffset,

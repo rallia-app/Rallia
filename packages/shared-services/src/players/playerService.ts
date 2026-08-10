@@ -550,6 +550,8 @@ export async function getMatchInviteCandidates(params: {
   matchId: string;
   limit?: number;
   offset?: number;
+  /** RPC reason keys; candidates must carry ALL of them (AND semantics) */
+  reasons?: string[];
 }): Promise<InviteCandidatesPage> {
   const limit = params.limit ?? 20;
   const offset = params.offset ?? 0;
@@ -558,6 +560,7 @@ export async function getMatchInviteCandidates(params: {
     p_match_id: params.matchId,
     p_limit: limit,
     p_offset: offset,
+    p_reasons: params.reasons && params.reasons.length > 0 ? params.reasons : undefined,
   });
 
   if (error) {
