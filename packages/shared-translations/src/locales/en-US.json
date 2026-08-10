@@ -1119,6 +1119,10 @@
         "playerLevel": "Level {level}",
         "certifiedPlayer": "Certified Player"
       },
+      "peerRating": {
+        "noPlayersFound": "No players found",
+        "noEligiblePlayers": "Complete games with other players to request peer ratings"
+      },
       "levelChange": {
         "increased": "Level increased - certification reset",
         "decreased": "Level decreased - certification maintained",

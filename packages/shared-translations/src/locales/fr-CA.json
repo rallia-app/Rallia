@@ -1119,6 +1119,10 @@
         "playerLevel": "Niveau {level}",
         "certifiedPlayer": "Joueur certifié"
       },
+      "peerRating": {
+        "noPlayersFound": "Aucun joueur trouvé",
+        "noEligiblePlayers": "Complète des parties avec d'autres joueurs pour demander des évaluations à tes pairs"
+      },
       "levelChange": {
         "increased": "Niveau augmenté - certification réinitialisée",
         "decreased": "Niveau diminué - certification maintenue",
