@@ -40,7 +40,8 @@ import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation'
 import { SearchBar } from '#/components/SearchBar';
 import RatingBadge from '#/components/RatingBadge';
 import ReputationBadge from '#/components/ReputationBadge';
-import ReasonBadge, { type ReasonKey } from '#/components/ReasonBadge';
+import ReasonBadge, { REASON_BADGE_CONFIG, type ReasonKey } from '#/components/ReasonBadge';
+import { FilterChip, FilterResetChip } from './MatchFiltersBar';
 import * as Analytics from '#/services/analytics';
 
 // =============================================================================
@@ -461,9 +462,9 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     },
   });
 
-  // Toggle a reason filter chip (multi-select, AND semantics server-side)
+  // Toggle a reason filter chip (multi-select, AND semantics server-side).
+  // FilterChip provides its own haptic + press animation.
   const handleToggleReasonFilter = useCallback((key: ReasonKey) => {
-    selectionHaptic();
     setReasonFilters(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
   }, []);
 
@@ -746,8 +747,9 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         style={styles.searchBarWrapper}
       />
 
-      {/* Reason filter chips — the same badges the rows show, tappable to
-          narrow the ranked list. Hidden during name search (unsupported there). */}
+      {/* Reason filter chips — same chip family as MatchFiltersBar, filtering
+          on the reasons the row badges show. Hidden during name search
+          (unsupported there). */}
       {usingRankedList && (
         <ScrollView
           horizontal
@@ -756,27 +758,27 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
           contentContainerStyle={styles.reasonFiltersRow}
           keyboardShouldPersistTaps="handled"
         >
-          {REASON_FILTER_OPTIONS.map(option => {
-            const selected = reasonFilters.includes(option.key);
-            return (
-              <TouchableOpacity
-                key={option.key}
-                onPress={() => handleToggleReasonFilter(option.key)}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                hitSlop={{ top: 6, bottom: 6, left: 0, right: 0 }}
-              >
-                <ReasonBadge
-                  reason={option.key}
-                  label={t(option.labelKey)}
-                  isDark={isDark}
-                  size="md"
-                  muted={!selected}
-                />
-              </TouchableOpacity>
-            );
-          })}
+          {reasonFilters.length > 0 && (
+            <FilterResetChip
+              label={t('publicMatches.filters.reset')}
+              onPress={() => {
+                lightHaptic();
+                setReasonFilters([]);
+              }}
+              isDark={isDark}
+            />
+          )}
+          {REASON_FILTER_OPTIONS.map(option => (
+            <FilterChip
+              key={option.key}
+              value={t(option.labelKey)}
+              isActive={reasonFilters.includes(option.key)}
+              onPress={() => handleToggleReasonFilter(option.key)}
+              isDark={isDark}
+              icon={REASON_BADGE_CONFIG[option.key].icon}
+              hasDropdown={false}
+            />
+          ))}
         </ScrollView>
       )}
 
@@ -895,7 +897,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 36,
   },
-  // ---- Reason filter chips (mirrors secondaryActions sizing behavior) ----
+  // ---- Reason filter chips (same row metrics as MatchFiltersBar) ----
   reasonFiltersScroll: {
     flexGrow: 0,
     flexShrink: 0,
@@ -903,9 +905,9 @@ const styles = StyleSheet.create({
   reasonFiltersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1.5],
+    gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[2],
+    paddingVertical: spacingPixels[2],
   },
   successNote: {
     flexDirection: 'row',
