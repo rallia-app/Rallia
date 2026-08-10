@@ -25,66 +25,36 @@ export type Spacing = keyof typeof spacing;
 
 /**
  * Border Radius System
+ *
+ * Derived from @rallia/design-system (theme v2 shape language) so there is
+ * a single source of truth: 6 tags, 12 inputs, 16 cards, 24 sheets.
  */
+import { radiusPixels, shadowsNative } from '@rallia/design-system';
+
 export const borderRadius = {
-  none: 0,
-  sm: 4,
-  base: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  none: radiusPixels.none,
+  sm: radiusPixels.md, // 6 — tags/chips
+  base: radiusPixels.xl, // 12 — inputs, small surfaces
+  md: radiusPixels['2xl'], // 16 — cards
+  lg: radiusPixels['2xl'], // 16 — cards (legacy alias)
+  xl: radiusPixels['3xl'], // 24 — sheets/modals
   '2xl': 32,
-  full: 9999,
+  full: radiusPixels.full,
 } as const;
 
 export type BorderRadius = keyof typeof borderRadius;
 
 /**
  * Shadow System (for elevated components)
+ * Re-exported from the design system's native shadow tokens.
  */
 export const shadows = {
-  none: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  base: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  xl: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 12,
-  },
+  none: shadowsNative.none,
+  sm: shadowsNative.sm,
+  base: shadowsNative.DEFAULT,
+  md: shadowsNative.md,
+  lg: shadowsNative.lg,
+  xl: shadowsNative.xl,
 } as const;
 
 export type Shadow = keyof typeof shadows;

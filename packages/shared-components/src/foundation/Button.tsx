@@ -342,7 +342,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.base,
+    // Theme v2: buttons are pill-shaped by default
+    borderRadius: borderRadius.full,
   },
   fullWidth: {
     width: '100%',

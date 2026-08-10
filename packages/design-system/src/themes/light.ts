@@ -157,7 +157,7 @@ export const lightThemeCSSValues = {
   '--accent-950': accent[950],
 
   // Radius
-  '--radius': '0.625rem',
+  '--radius': '1rem',
 } as const;
 
 export type LightTheme = typeof lightTheme;
