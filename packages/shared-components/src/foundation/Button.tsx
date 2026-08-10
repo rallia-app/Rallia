@@ -21,6 +21,12 @@
  *   Submitting...
  * </Button>
  * ```
+ *
+ * Role conventions (keep these consistent across screens):
+ * - Full-width primary CTA: `size="lg" fullWidth`
+ * - Retry / empty-state action: `variant="primary" size="sm"` (or `md` when it is the only action)
+ * - Cancel/confirm pair: `variant="outline"` + `variant="primary"` (or `destructive`)
+ * - Icon-only actions (close/back/header/FAB): use `IconButton` instead
  */
 
 import React from 'react';
@@ -34,6 +40,7 @@ import {
   TextStyle,
   StyleProp,
   GestureResponderEvent,
+  Insets,
 } from 'react-native';
 import { status } from '@rallia/design-system';
 import { useThemeStyles } from '@rallia/shared-hooks';
@@ -57,6 +64,12 @@ export interface ButtonProps {
   destructive?: boolean;
   /** Press handler */
   onPress?: (event?: GestureResponderEvent) => void;
+  /** Long-press handler */
+  onLongPress?: (event?: GestureResponderEvent) => void;
+  /** Screen-reader label (defaults to the visible text) */
+  accessibilityLabel?: string;
+  /** Extra touch area for small buttons */
+  hitSlop?: Insets;
   /** Icon to show on left side */
   leftIcon?: React.ReactNode;
   /** Icon to show on right side */
@@ -100,6 +113,9 @@ export const Button: React.FC<ButtonProps> = ({
   rounded = false,
   destructive = false,
   onPress,
+  onLongPress,
+  accessibilityLabel,
+  hitSlop,
   leftIcon,
   rightIcon,
   children,
@@ -133,8 +149,13 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={isDisabled}
       activeOpacity={0.7}
+      hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       testID={testID}
       style={[
         styles.container,
