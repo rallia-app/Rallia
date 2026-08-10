@@ -435,10 +435,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     fetchSelectedSports();
   }, [currentStepId, formData.selectedSportIds]);
 
-  // Advance from success step to suggestions step
+  // Advance from success step to suggestions step. When there is nothing
+  // joinable to show (no declared availability, or the prefetch settled
+  // empty), finish onboarding directly instead of landing on an empty step.
   const handleAdvanceToSuggestions = useCallback(() => {
+    if (
+      opportunitySlots.length === 0 ||
+      (!opportunitiesLoading && matchOpportunities.length === 0)
+    ) {
+      Analytics.onboardingStepCompleted({ step_name: 'suggestions_skipped_empty', step_index: -1 });
+      onComplete();
+      return;
+    }
     goToNextStep();
-  }, [goToNextStep]);
+  }, [
+    opportunitySlots.length,
+    opportunitiesLoading,
+    matchOpportunities.length,
+    onComplete,
+    goToNextStep,
+  ]);
 
   // Refresh the "Games for you" list — delegates to the query's refetch
   const handleRefreshSuggestions = useCallback(async () => {

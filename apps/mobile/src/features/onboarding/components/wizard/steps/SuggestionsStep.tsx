@@ -12,7 +12,7 @@
  * screen.
  */
 
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { Alert, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import Animated, {
@@ -95,6 +95,18 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     source: 'onboarding',
     notifyError: handleJoinError,
   });
+
+  // When the fetch settles with nothing joinable, complete onboarding instead
+  // of stranding the player on an empty step. The wizard already skips this
+  // step when the prefetch settled empty before advancing; this covers the
+  // race where the player advanced while the query was still in flight.
+  const autoSkippedRef = useRef(false);
+  useEffect(() => {
+    if (isLoading || opportunities.length > 0 || autoSkippedRef.current) return;
+    autoSkippedRef.current = true;
+    Analytics.onboardingStepCompleted({ step_name: 'suggestions_skipped_empty', step_index: -1 });
+    onComplete();
+  }, [isLoading, opportunities.length, onComplete]);
 
   // Cap the preview at MAX_CARDS — the caller already fetches up to 20, but the
   // post-onboarding moment only needs a short, joinable shortlist.
