@@ -37,6 +37,7 @@ export type { SpacerProps } from './layout/Spacer';
 export { Spinner } from './feedback/Spinner';
 export { ErrorMessage } from './feedback/ErrorMessage';
 export { Badge } from './feedback/Badge';
+export { EmptyState } from './feedback/EmptyState';
 export { ErrorBoundary } from './ErrorBoundary';
 export type { ErrorBoundaryTranslations } from './ErrorBoundary';
 export {
@@ -62,6 +63,7 @@ export {
 export type { SpinnerProps } from './feedback/Spinner';
 export type { ErrorMessageProps } from './feedback/ErrorMessage';
 export type { BadgeProps } from './feedback/Badge';
+export type { EmptyStateProps } from './feedback/EmptyState';
 export type {
   SkeletonProps,
   SkeletonTextProps,
