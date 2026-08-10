@@ -7,9 +7,9 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, SkeletonConversation } from '@rallia/shared-components';
+import { EmptyState, SkeletonConversation } from '@rallia/shared-components';
 import { getConversationDisplayName } from '@rallia/shared-services';
-import { spacingPixels, fontSizePixels, primary } from '@rallia/design-system';
+import { spacingPixels, primary } from '@rallia/design-system';
 import {
   usePlayerConversations,
   useTogglePinConversation,
@@ -131,15 +131,11 @@ const ArchivedChats = () => {
     if (isLoading) return null;
 
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {t('chat.archivedChats.noArchivedChats')}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          {t('chat.archivedChats.chatsAppearHere')}
-        </Text>
-      </View>
+      <EmptyState
+        icon={<Ionicons name="archive-outline" size={64} color={colors.primary} />}
+        title={t('chat.archivedChats.noArchivedChats')}
+        description={t('chat.archivedChats.chatsAppearHere')}
+      />
     );
   }, [isLoading, colors, t]);
 
@@ -203,25 +199,9 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 66 + spacingPixels[4],
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacingPixels[8],
-  },
   emptyListContent: {
     flexGrow: 1,
-  },
-  emptyTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: '600',
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: fontSizePixels.base,
-    marginTop: spacingPixels[2],
-    textAlign: 'center',
+    justifyContent: 'center',
   },
 });
 

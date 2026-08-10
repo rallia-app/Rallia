@@ -13,13 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
+import { Text, Button, EmptyState, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { useProfileCompleteness } from '@rallia/shared-hooks';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
 import { SheetManager } from 'react-native-actions-sheet';
-import { spacingPixels, radiusPixels, fontSizePixels, status } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, status } from '@rallia/design-system';
 
 import { useVideoThumbnail } from '#/hooks/useVideoThumbnail';
 import { withTimeout, getNetworkErrorMessage } from '#/utils/networkTimeout';
@@ -502,20 +502,17 @@ const RatingProofs: React.FC = () => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="folder-open-outline" size={64} color={colors.textMuted} />
-      <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-        {t('profile.ratingProofs.noProofsYet')}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-        {isOwnProfile
-          ? t('profile.ratingProofs.noProofsDescription')
-          : t('profile.ratingProofs.noProofsOtherUser')}
-      </Text>
-      {isOwnProfile && (
-        <Button variant="primary" onPress={handleAddProof} style={styles.emptyButton}>
-          {t('profile.ratingProofs.addFirstProof')}
-        </Button>
-      )}
+      <EmptyState
+        icon={<Ionicons name="folder-open-outline" size={64} color={colors.primary} />}
+        title={t('profile.ratingProofs.noProofsYet')}
+        description={
+          isOwnProfile
+            ? t('profile.ratingProofs.noProofsDescription')
+            : t('profile.ratingProofs.noProofsOtherUser')
+        }
+        ctaLabel={isOwnProfile ? t('profile.ratingProofs.addFirstProof') : undefined}
+        onCtaPress={isOwnProfile ? handleAddProof : undefined}
+      />
     </View>
   );
 
@@ -816,21 +813,6 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingVertical: 60, // 15 * 4px base unit
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  emptyText: {
-    textAlign: 'center',
-    lineHeight: fontSizePixels.sm * 1.43,
-    marginBottom: spacingPixels[6],
-  },
-  emptyButton: {
-    minWidth: 200, // 50 * 4px base unit
   },
 });
 

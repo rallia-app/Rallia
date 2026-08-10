@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { EmptyState, Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
@@ -332,17 +332,11 @@ const IncomingReferenceRequests: React.FC = () => {
   };
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <View style={[styles.emptyIcon, { backgroundColor: colors.inputBackground }]}>
-        <Ionicons name="document-text-outline" size={48} color={colors.textMuted} />
-      </View>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {t('referenceRequest.noRequests')}
-      </Text>
-      <Text style={[styles.emptyDescription, { color: colors.textMuted }]}>
-        {t('referenceRequest.noRequestsDescription')}
-      </Text>
-    </View>
+    <EmptyState
+      icon={<Ionicons name="document-text-outline" size={64} color={colors.primary} />}
+      title={t('referenceRequest.noRequests')}
+      description={t('referenceRequest.noRequestsDescription')}
+    />
   );
 
   if (loading) {
@@ -508,29 +502,6 @@ const styles = StyleSheet.create({
   respondButtonText: {
     fontSize: fontSizePixels.base,
     fontWeight: fontWeightNumeric.semibold,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-  },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: fontWeightNumeric.semibold,
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    fontSize: fontSizePixels.sm,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });
 

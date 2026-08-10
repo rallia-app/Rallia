@@ -46,6 +46,8 @@ import type { TranslationKey } from '@rallia/shared-translations';
 
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useScrollBottomInset } from '#/hooks';
+import { useActionsSheet } from '#/context';
+import SignInPrompt from '#/components/SignInPrompt';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -467,6 +469,7 @@ function useColors() {
 
 const NotificationPreferencesScreen: React.FC = () => {
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
+  const { openSheet } = useActionsSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
@@ -553,17 +556,14 @@ const NotificationPreferencesScreen: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
-        <View style={styles.emptyContainer}>
-          <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
-          <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-            {t('notifications.signInRequired')}
-          </Text>
-        </View>
-      </SafeAreaView>
+      <SignInPrompt
+        variant="notifications"
+        icon="lock-closed"
+        title={t('notifications.signInRequired')}
+        description={t('notifications.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+      />
     );
   }
 
@@ -638,16 +638,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

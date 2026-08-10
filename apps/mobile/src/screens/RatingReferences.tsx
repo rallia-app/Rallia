@@ -22,7 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Skeleton, useToast } from '@rallia/shared-components';
+import { EmptyState, Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
   supabase,
   Logger,
@@ -693,13 +693,11 @@ const RatingReferences: React.FC = () => {
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset }]}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-              <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-                {t(`profile.referencesManage.${emptyKey}.title`)}
-              </Text>
-              <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-                {t(`profile.referencesManage.${emptyKey}.description`)}
-              </Text>
+              <EmptyState
+                icon={<Ionicons name="people-outline" size={64} color={colors.primary} />}
+                title={t(`profile.referencesManage.${emptyKey}.title`)}
+                description={t(`profile.referencesManage.${emptyKey}.description`)}
+              />
             </View>
           }
           showsVerticalScrollIndicator={false}
@@ -817,17 +815,6 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  emptyText: {
-    textAlign: 'center',
-    lineHeight: fontSizePixels.sm * 1.43,
   },
 });
 

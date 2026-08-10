@@ -22,8 +22,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Skeleton, Button, useToast } from '@rallia/shared-components';
+import { EmptyState, Text, Skeleton, Button, useToast } from '@rallia/shared-components';
 import { getCoverImageUrl, lightHaptic } from '@rallia/shared-utils';
+import { COLORS } from '@rallia/design-system';
 import {
   usePublicCommunities,
   usePlayerCommunities,
@@ -419,47 +420,42 @@ export default function CommunitiesScreen() {
 
   const renderEmptyState = useMemo(
     () => (
-      <View style={styles.emptyState}>
-        <Ionicons
-          name={activeTab === 'discover' ? 'globe-outline' : 'people-outline'}
-          size={64}
-          color={colors.textMuted}
-        />
-        <Text weight="semibold" size="lg" style={[styles.emptyTitle, { color: colors.text }]}>
-          {activeTab === 'discover'
+      <EmptyState
+        icon={
+          <Ionicons
+            name={activeTab === 'discover' ? 'globe-outline' : 'people-outline'}
+            size={64}
+            color={colors.primary}
+          />
+        }
+        title={
+          activeTab === 'discover'
             ? t('community.empty.discover.title')
-            : t('community.empty.myCommunities.title')}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {activeTab === 'discover'
+            : t('community.empty.myCommunities.title')
+        }
+        description={
+          activeTab === 'discover'
             ? t('community.empty.discover.subtitle')
-            : t('community.empty.myCommunities.subtitle')}
-        </Text>
-        {activeTab === 'discover' && (
-          <Button
-            variant="primary"
-            size="md"
-            rounded
-            onPress={handleOpenCreateCommunityActionSheet}
-            leftIcon={<Ionicons name="add-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-          >
-            {t('community.createCommunity')}
-          </Button>
-        )}
-        {activeTab === 'my-communities' && (
-          <Button
-            variant="primary"
-            size="md"
-            rounded
-            onPress={() => handleTabChange('discover')}
-            leftIcon={<Ionicons name="compass-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-          >
-            {t('community.discoverCommunities')}
-          </Button>
-        )}
-      </View>
+            : t('community.empty.myCommunities.subtitle')
+        }
+        ctaLabel={
+          activeTab === 'discover'
+            ? t('community.createCommunity')
+            : t('community.discoverCommunities')
+        }
+        onCtaPress={
+          activeTab === 'discover'
+            ? handleOpenCreateCommunityActionSheet
+            : () => handleTabChange('discover')
+        }
+        ctaLeftIcon={
+          <Ionicons
+            name={activeTab === 'discover' ? 'add-outline' : 'compass-outline'}
+            size={20}
+            color={COLORS.white}
+          />
+        }
+      />
     ),
     [colors, activeTab, handleTabChange, t, handleOpenCreateCommunityActionSheet]
   );
@@ -785,20 +781,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 12,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
   },
   fabContainer: {
     position: 'absolute',

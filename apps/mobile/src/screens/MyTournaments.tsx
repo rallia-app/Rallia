@@ -21,7 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text } from '@rallia/shared-components';
+import { EmptyState, Text } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -326,15 +326,11 @@ export const MyTournaments: React.FC = () => {
         : t('tournamentList.emptyPast.description');
 
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name={icon} size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {title}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {description}
-        </Text>
-      </View>
+      <EmptyState
+        icon={<Ionicons name={icon} size={64} color={colors.primary} />}
+        title={title}
+        description={description}
+      />
     );
   };
 
@@ -470,21 +466,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     minHeight: '100%',
-  },
-  emptyContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingVertical: spacingPixels[8],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
 

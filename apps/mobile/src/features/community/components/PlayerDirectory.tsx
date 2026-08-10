@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { EmptyState, Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { usePlayerSearch, usePlayer, useRatingScoresForSport } from '@rallia/shared-hooks';
 import type { PlayerSearchResult, ReputationTier } from '@rallia/shared-services';
@@ -438,18 +438,20 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     const hasSearchOrFilters = searchQuery || hasActiveFilters;
 
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {hasSearchOrFilters
-            ? t('playerDirectory.noPlayersFound')
-            : t('playerDirectory.noPlayersYet')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {hasSearchOrFilters
-            ? t('playerDirectory.adjustSearch')
-            : t('playerDirectory.beFirstToInvite')}
-        </Text>
+      <View style={styles.emptyStateWrapper}>
+        <EmptyState
+          icon={<Ionicons name="people-outline" size={64} color={colors.primary} />}
+          title={
+            hasSearchOrFilters
+              ? t('playerDirectory.noPlayersFound')
+              : t('playerDirectory.noPlayersYet')
+          }
+          description={
+            hasSearchOrFilters
+              ? t('playerDirectory.adjustSearch')
+              : t('playerDirectory.beFirstToInvite')
+          }
+        />
       </View>
     );
   };
@@ -465,14 +467,12 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
 
   if (!sportId) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {t('playerDirectory.selectSport')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('playerDirectory.chooseSport')}
-        </Text>
+      <View style={styles.emptyStateWrapper}>
+        <EmptyState
+          icon={<Ionicons name="alert-circle-outline" size={64} color={colors.primary} />}
+          title={t('playerDirectory.selectSport')}
+          description={t('playerDirectory.chooseSport')}
+        />
       </View>
     );
   }
@@ -614,6 +614,10 @@ const styles = StyleSheet.create({
   },
   emptyListContent: {
     flexGrow: 1,
+  },
+  emptyStateWrapper: {
+    flex: 1,
+    justifyContent: 'center',
   },
   emptyContainer: {
     flex: 1,

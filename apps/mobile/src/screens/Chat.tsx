@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, SkeletonConversation } from '@rallia/shared-components';
+import { EmptyState, Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { getConversationDisplayName } from '@rallia/shared-services';
 import { spacingPixels, fontSizePixels, primary, secondary } from '@rallia/design-system';
@@ -317,93 +317,56 @@ const Chat = () => {
   const renderEmpty = useCallback(() => {
     if (isLoading) return null;
 
+    let icon: React.ComponentProps<typeof Ionicons>['name'] = 'chatbubbles-outline';
+    let title: string;
+    let description: string | undefined;
+
     if (searchQuery.trim()) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            {t('common.noResultsFound')}
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-            {t('common.tryDifferentSearch')}
-          </Text>
-        </View>
-      );
+      icon = 'search-outline';
+      title = t('common.noResultsFound');
+      description = t('common.tryDifferentSearch');
+    } else {
+      switch (inboxFilter) {
+        case 'blocked':
+          icon = 'ban-outline';
+          title = t('chat.filters.emptyBlocked');
+          break;
+        case 'favorites':
+          icon = 'heart-outline';
+          title = t('chat.filters.emptyFavorites');
+          break;
+        case 'muted':
+          icon = 'volume-mute-outline';
+          title = t('chat.filters.emptyMuted');
+          break;
+        case 'pinned':
+          icon = 'pin-outline';
+          title = t('chat.filters.emptyPinned');
+          break;
+        case 'unread':
+          icon = 'mail-open-outline';
+          title = t('chat.filters.emptyUnread');
+          break;
+        case 'all':
+          title = t('chat.noConversations');
+          description = t('chat.noConversationsSubtitle');
+          break;
+        default:
+          // Type filter (direct / match / group_chat / player_group / community)
+          title = t('chat.emptyFiltered.title');
+          description = t('chat.emptyFiltered.description');
+      }
     }
 
-    // Status-filter-specific empty states
-    switch (inboxFilter) {
-      case 'blocked':
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="ban-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.filters.emptyBlocked')}
-            </Text>
-          </View>
-        );
-      case 'favorites':
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.filters.emptyFavorites')}
-            </Text>
-          </View>
-        );
-      case 'muted':
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="volume-mute-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.filters.emptyMuted')}
-            </Text>
-          </View>
-        );
-      case 'pinned':
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="pin-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.filters.emptyPinned')}
-            </Text>
-          </View>
-        );
-      case 'unread':
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="mail-open-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.filters.emptyUnread')}
-            </Text>
-          </View>
-        );
-      case 'all':
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.noConversations')}
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              {t('chat.noConversationsSubtitle')}
-            </Text>
-          </View>
-        );
-      default:
-        // Type filter (direct / match / group_chat / player_group / community)
-        return (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {t('chat.emptyFiltered.title')}
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              {t('chat.emptyFiltered.description')}
-            </Text>
-          </View>
-        );
-    }
+    return (
+      <View style={styles.emptyContainer}>
+        <EmptyState
+          icon={<Ionicons name={icon} size={64} color={colors.primary} />}
+          title={title}
+          description={description}
+        />
+      </View>
+    );
   }, [isLoading, colors, searchQuery, inboxFilter, t]);
 
   const renderSeparator = useCallback(
@@ -638,23 +601,10 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[8],
   },
   emptyListContent: {
     flexGrow: 1,
-  },
-  emptyTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: '600',
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: fontSizePixels.base,
-    marginTop: spacingPixels[2],
-    textAlign: 'center',
   },
 });
 

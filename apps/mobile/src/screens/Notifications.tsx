@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { EmptyState, Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, useMatch, useNotificationsWithActions } from '@rallia/shared-hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import {
@@ -30,7 +30,6 @@ import {
   lightTheme,
   darkTheme,
   spacingPixels,
-  fontSizePixels,
   radiusPixels,
   primary,
   neutral,
@@ -371,6 +370,7 @@ const Notifications: React.FC = () => {
       textMuted: themeColors.mutedForeground,
       icon: themeColors.foreground,
       iconMuted: themeColors.mutedForeground,
+      primary: isDark ? primary[500] : primary[600],
       buttonActive: isDark ? primary[500] : primary[600],
       buttonTextActive: BASE_WHITE,
       border: themeColors.border,
@@ -624,15 +624,11 @@ const Notifications: React.FC = () => {
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="notifications-off-outline" size={64} color={colors.iconMuted} />
-      <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-        {t('notifications.empty')}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {t('notifications.emptyDescription')}
-      </Text>
-    </View>
+    <EmptyState
+      icon={<Ionicons name="notifications-off-outline" size={64} color={colors.primary} />}
+      title={t('notifications.empty')}
+      description={t('notifications.emptyDescription')}
+    />
   );
 
   const renderFooter = () => {
@@ -946,21 +942,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: spacingPixels[2],
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingVertical: spacingPixels[14],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    lineHeight: fontSizePixels.sm * 1.5,
   },
   footerLoader: {
     alignItems: 'center',

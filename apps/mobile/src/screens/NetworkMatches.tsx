@@ -17,8 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MatchCard, Text, Skeleton } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, neutral, primary } from '@rallia/design-system';
+import { EmptyState, MatchCard, Text, Skeleton } from '@rallia/shared-components';
+import { COLORS, spacingPixels, radiusPixels, neutral, primary } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useNetworkMemberUpcomingMatches,
@@ -27,7 +27,6 @@ import {
   type NetworkMemberMatch,
   type NetworkMatchFilters,
 } from '@rallia/shared-hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation, useAuth, useScrollBottomInset } from '#/hooks';
@@ -42,54 +41,6 @@ import { SearchBar, MatchFiltersBar } from '#/features/matches/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type NetworkMatchesRouteProp = RouteProp<RootStackParamList, 'NetworkMatches'>;
-
-// =============================================================================
-// HELPER COMPONENTS
-// =============================================================================
-
-interface EmptyStateProps {
-  hasActiveFilters: boolean;
-  colors: ReturnType<typeof useThemeStyles>['colors'];
-  t: (key: TranslationKey) => string;
-  networkType: 'community' | 'group';
-}
-
-function EmptyState({ hasActiveFilters, colors, t, networkType }: EmptyStateProps) {
-  const { selectedSport } = useSport();
-  return (
-    <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-        {hasActiveFilters ? (
-          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-        ) : (
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={48}
-            color={colors.textMuted}
-          />
-        )}
-      </View>
-      <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {hasActiveFilters
-          ? t('publicMatches.empty.title')
-          : t(
-              networkType === 'community'
-                ? 'community.matches.empty.title'
-                : 'groups.matches.empty.title'
-            )}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {hasActiveFilters
-          ? t('publicMatches.empty.description')
-          : t(
-              networkType === 'community'
-                ? 'community.matches.empty.description'
-                : 'groups.matches.empty.description'
-            )}
-      </Text>
-    </View>
-  );
-}
 
 // =============================================================================
 // MAIN COMPONENT
@@ -231,13 +182,33 @@ export default function NetworkMatchesScreen() {
     if (isLoading) return null;
     return (
       <EmptyState
-        hasActiveFilters={hasActiveFilters}
-        colors={colors}
-        t={t}
-        networkType={networkType}
+        icon={
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={64} color={colors.primary} />
+        }
+        markIcon={
+          <Ionicons name={hasActiveFilters ? 'filter' : 'search'} size={14} color={COLORS.white} />
+        }
+        title={
+          hasActiveFilters
+            ? t('publicMatches.empty.title')
+            : t(
+                networkType === 'community'
+                  ? 'community.matches.empty.title'
+                  : 'groups.matches.empty.title'
+              )
+        }
+        description={
+          hasActiveFilters
+            ? t('publicMatches.empty.description')
+            : t(
+                networkType === 'community'
+                  ? 'community.matches.empty.description'
+                  : 'groups.matches.empty.description'
+              )
+        }
       />
     );
-  }, [isLoading, hasActiveFilters, colors, t, networkType]);
+  }, [isLoading, hasActiveFilters, colors.primary, selectedSport?.name, t, networkType]);
 
   // Headerless screen, so the top inset stays on the wrapper. The bottom one
   // goes in the list's contentContainerStyle so it scrolls to the screen edge.
@@ -527,26 +498,5 @@ const styles = StyleSheet.create({
   emptyListContent: {
     justifyContent: 'center',
     minHeight: '100%',
-  },
-  emptyContainer: {
-    padding: spacingPixels[8],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    paddingHorizontal: spacingPixels[4],
   },
 });

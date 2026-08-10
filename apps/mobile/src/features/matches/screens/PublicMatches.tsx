@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
-import { Button, MatchCard, Text } from '@rallia/shared-components';
+import { Button, EmptyState, MatchCard, Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -30,9 +30,8 @@ import {
 } from '@rallia/shared-hooks';
 import type { DistanceFilter } from '@rallia/shared-types';
 import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger, supabase } from '@rallia/shared-services';
-import { neutral, spacingPixels } from '@rallia/design-system';
+import { COLORS, neutral, spacingPixels } from '@rallia/design-system';
 
 import {
   useAuth,
@@ -50,60 +49,6 @@ import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matche
 // A card counts as shown once it's ≥50% visible for 500ms. Module constant so
 // the FlatList viewability config never changes identity (a runtime crash).
 const FEED_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTime: 500 };
-
-// =============================================================================
-// HELPER COMPONENTS
-// =============================================================================
-
-interface EmptyStateProps {
-  hasFilters: boolean;
-  colors: {
-    primary: string;
-    text: string;
-    textMuted: string;
-  };
-  sportName: string;
-  t: (key: TranslationKey) => string;
-  onCreatePress: () => void;
-}
-
-function EmptyState({ hasFilters, colors, sportName, t, onCreatePress }: EmptyStateProps) {
-  return (
-    <View style={styles.emptyHero}>
-      {/* Big tinted sport badge with a small status mark */}
-      <View style={[styles.emptyHeroBadge, { backgroundColor: `${colors.primary}14` }]}>
-        <SportIcon sportName={sportName} size={64} color={colors.primary} />
-        <View style={[styles.emptyHeroBadgeMark, { backgroundColor: colors.primary }]}>
-          <Ionicons name={hasFilters ? 'filter' : 'search'} size={14} color="#FFFFFF" />
-        </View>
-      </View>
-
-      <Text size="xl" weight="bold" color={colors.text} style={styles.emptyHeroTitle}>
-        {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
-      </Text>
-      <Text size="base" color={colors.textMuted} style={styles.emptyHeroDescription}>
-        {hasFilters
-          ? t('publicMatches.empty.description')
-          : t('publicMatches.empty.noFilters.description')}
-      </Text>
-
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        rounded
-        onPress={onCreatePress}
-        leftIcon={<Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />}
-        style={styles.emptyHeroButton}
-      >
-        {t('matches.createMatch')}
-      </Button>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyHeroHelper}>
-        {t('publicMatches.empty.helper')}
-      </Text>
-    </View>
-  );
-}
 
 // =============================================================================
 // MAIN COMPONENT
@@ -581,13 +526,27 @@ export default function PublicMatches() {
   // Render empty state — shows once matches have settled and there are none.
   const renderEmptyComponent = useCallback(() => {
     if (isLoading || isSearching) return null;
+    const hasFilters = hasActiveFilters || debouncedSearchQuery.length > 0;
     return (
       <EmptyState
-        hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
-        colors={{ primary: colors.primary, text: colors.text, textMuted: colors.textMuted }}
-        sportName={selectedSport?.name ?? 'tennis'}
-        t={t}
-        onCreatePress={() => handleCreateGamePress('empty_state')}
+        icon={
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={64} color={colors.primary} />
+        }
+        markIcon={
+          <Ionicons name={hasFilters ? 'filter' : 'search'} size={14} color={COLORS.white} />
+        }
+        title={
+          hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')
+        }
+        description={
+          hasFilters
+            ? t('publicMatches.empty.description')
+            : t('publicMatches.empty.noFilters.description')
+        }
+        ctaLabel={t('matches.createMatch')}
+        onCtaPress={() => handleCreateGamePress('empty_state')}
+        ctaLeftIcon={<Ionicons name="add-circle-outline" size={20} color={COLORS.white} />}
+        helperText={t('publicMatches.empty.helper')}
       />
     );
   }, [
@@ -596,8 +555,6 @@ export default function PublicMatches() {
     hasActiveFilters,
     debouncedSearchQuery,
     colors.primary,
-    colors.text,
-    colors.textMuted,
     selectedSport?.name,
     t,
     handleCreateGamePress,
@@ -864,61 +821,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
-  emptyWrapper: {
-    paddingTop: spacingPixels[2],
-  },
-  inlineEmpty: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
   inlineEmptyText: {
     flexShrink: 1,
     textAlign: 'center',
-  },
-  emptyHero: {
-    alignItems: 'center',
-    paddingVertical: spacingPixels[8],
-    paddingHorizontal: spacingPixels[6],
-    gap: spacingPixels[2],
-  },
-  emptyHeroBadge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyHeroBadgeMark: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  emptyHeroTitle: {
-    textAlign: 'center',
-  },
-  emptyHeroDescription: {
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 300,
-  },
-  emptyHeroButton: {
-    marginTop: spacingPixels[6],
-  },
-  emptyHeroHelper: {
-    textAlign: 'center',
-    marginTop: spacingPixels[1],
   },
   endOfListCta: {
     alignItems: 'center',
@@ -939,27 +844,6 @@ const styles = StyleSheet.create({
   cancelledBannerTextWrap: {
     flex: 1,
     gap: 2,
-  },
-  emptyContainer: {
-    padding: spacingPixels[8],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    paddingHorizontal: spacingPixels[4],
   },
   footerLoader: {
     padding: spacingPixels[4],

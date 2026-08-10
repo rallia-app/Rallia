@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { EmptyState, Text, Skeleton } from '@rallia/shared-components';
 import { getProfilePictureUrl, formatPrice, tournamentRankingHeadline } from '@rallia/shared-utils';
 import {
   lightTheme,
@@ -571,15 +571,11 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
     );
   } else {
     emptyComponent = (
-      <View style={styles.centered}>
-        <Ionicons name={emptyIcon} size={48} color={colors.textMuted} />
-        <Text size="base" weight="semibold" color={colors.text} style={styles.centeredText}>
-          {t(emptyTitleKey)}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.centeredSubtext}>
-          {t(emptyDescriptionKey)}
-        </Text>
-      </View>
+      <EmptyState
+        icon={<Ionicons name={emptyIcon} size={64} color={colors.primary} />}
+        title={t(emptyTitleKey)}
+        description={t(emptyDescriptionKey)}
+      />
     );
   }
 
@@ -640,7 +636,6 @@ const styles = StyleSheet.create({
     padding: spacingPixels[6],
   },
   centeredText: { marginTop: spacingPixels[3], textAlign: 'center' },
-  centeredSubtext: { marginTop: spacingPixels[2], textAlign: 'center' },
   retryButton: {
     marginTop: spacingPixels[4],
     paddingHorizontal: spacingPixels[5],

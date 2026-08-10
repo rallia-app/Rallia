@@ -16,9 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Skeleton, Button } from '@rallia/shared-components';
+import { EmptyState, Skeleton } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { COLORS, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   useSharedLists,
   useDeleteSharedList,
@@ -144,24 +144,14 @@ const SharedLists: React.FC = () => {
 
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="list-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {t('sharedLists.noLists')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('sharedLists.noListsDescription')}
-        </Text>
-        <Button
-          variant="primary"
-          size="md"
-          rounded
-          onPress={handleCreateList}
-          leftIcon={<Ionicons name="add-outline" size={20} color="#fff" />}
-          isDark={isDark}
-          style={styles.emptyButton}
-        >
-          {t('sharedLists.createFirstList')}
-        </Button>
+        <EmptyState
+          icon={<Ionicons name="list-outline" size={64} color={colors.primary} />}
+          title={t('sharedLists.noLists')}
+          description={t('sharedLists.noListsDescription')}
+          ctaLabel={t('sharedLists.createFirstList')}
+          onCtaPress={handleCreateList}
+          ctaLeftIcon={<Ionicons name="add-outline" size={20} color={COLORS.white} />}
+        />
       </View>
     );
   };
@@ -378,21 +368,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[8],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    marginTop: spacingPixels[2],
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyButton: {
-    marginTop: spacingPixels[6],
   },
   fabContainer: {
     position: 'absolute',

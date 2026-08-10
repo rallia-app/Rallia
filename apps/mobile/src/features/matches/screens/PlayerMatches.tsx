@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { EmptyState, MatchCard, Text } from '@rallia/shared-components';
 import { useTheme, usePlayerMatches, usePlayerMatchFilters } from '@rallia/shared-hooks';
 import {
   getUpcomingDateSection,
@@ -260,15 +260,11 @@ export default function PlayerMatches() {
     const { title, description } = getEmptyContent();
 
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name={getIcon()} size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {title}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {description}
-        </Text>
-      </View>
+      <EmptyState
+        icon={<Ionicons name={getIcon()} size={64} color={colors.primary} />}
+        title={title}
+        description={description}
+      />
     );
   };
 
@@ -451,22 +447,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[2],
     marginBottom: spacingPixels[1],
-  },
-  emptyContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingTop: spacingPixels[8],
-    paddingBottom: spacingPixels[8],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    lineHeight: 20,
   },
   footerLoader: {
     alignItems: 'center',

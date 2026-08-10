@@ -22,8 +22,9 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Skeleton, Button } from '@rallia/shared-components';
+import { EmptyState, Text, Skeleton } from '@rallia/shared-components';
 import { getCoverImageUrl, lightHaptic } from '@rallia/shared-utils';
+import { COLORS } from '@rallia/design-system';
 import {
   usePlayerGroups,
   usePlayerGroupsRealtime,
@@ -275,30 +276,17 @@ export default function GroupsScreen() {
 
   const renderEmptyState = useMemo(
     () => (
-      <View style={styles.emptyState}>
-        <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-        <Text weight="semibold" size="lg" style={[styles.emptyTitle, { color: colors.text }]}>
-          {t('groups.empty.title')}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {t('groups.empty.subtitle')}
-        </Text>
-        <View style={styles.emptyButtons}>
-          <Button
-            variant="primary"
-            size="md"
-            rounded
-            onPress={() => {
-              if (!guardAction() || !playerId) return;
-              SheetManager.show('create-group', { payload: { playerId } });
-            }}
-            leftIcon={<Ionicons name="add-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-          >
-            {t('groups.empty.createButton')}
-          </Button>
-        </View>
-      </View>
+      <EmptyState
+        icon={<Ionicons name="people-outline" size={64} color={colors.primary} />}
+        title={t('groups.empty.title')}
+        description={t('groups.empty.subtitle')}
+        ctaLabel={t('groups.empty.createButton')}
+        onCtaPress={() => {
+          if (!guardAction() || !playerId) return;
+          SheetManager.show('create-group', { payload: { playerId } });
+        }}
+        ctaLeftIcon={<Ionicons name="add-outline" size={20} color={COLORS.white} />}
+      />
     ),
     [colors, t, guardAction, playerId]
   );
@@ -554,20 +542,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
   fabContainer: {
     position: 'absolute',
     bottom: 24,
@@ -599,11 +573,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 4,
-  },
-  emptyButtons: {
-    flexDirection: 'column',
-    gap: 12,
-    marginTop: 8,
   },
   headerButton: {
     width: 40,

@@ -7,7 +7,7 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { EmptyState, MatchCard, Text } from '@rallia/shared-components';
 import {
   useNetworkMemberUpcomingMatches,
   usePublicMatchFilters,
@@ -15,9 +15,8 @@ import {
   type NetworkMemberMatch,
   type NetworkMatchFilters,
 } from '@rallia/shared-hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger } from '@rallia/shared-services';
-import { spacingPixels, neutral } from '@rallia/design-system';
+import { COLORS, spacingPixels, neutral } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
 import { useMatchDetailSheet, useSport } from '#/context';
@@ -39,54 +38,6 @@ interface NetworkMatchesTabProps {
   sportId?: string | null;
   /** When true, renders matches inline (no FlatList) for embedding in a parent ScrollView */
   inline?: boolean;
-}
-
-// =============================================================================
-// HELPER COMPONENTS
-// =============================================================================
-
-interface EmptyStateProps {
-  hasActiveFilters: boolean;
-  colors: ReturnType<typeof useThemeStyles>['colors'];
-  t: (key: TranslationKey) => string;
-  networkType: 'group' | 'community';
-}
-
-function EmptyState({ hasActiveFilters, colors, t, networkType }: EmptyStateProps) {
-  const { selectedSport } = useSport();
-  return (
-    <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-        {hasActiveFilters ? (
-          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-        ) : (
-          <SportIcon
-            sportName={selectedSport?.name ?? 'tennis'}
-            size={48}
-            color={colors.textMuted}
-          />
-        )}
-      </View>
-      <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {hasActiveFilters
-          ? t('publicMatches.empty.title')
-          : t(
-              networkType === 'community'
-                ? 'community.matches.empty.title'
-                : 'groups.matches.empty.title'
-            )}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {hasActiveFilters
-          ? t('publicMatches.empty.description')
-          : t(
-              networkType === 'community'
-                ? 'community.matches.empty.description'
-                : 'groups.matches.empty.description'
-            )}
-      </Text>
-    </View>
-  );
 }
 
 // =============================================================================
@@ -227,13 +178,33 @@ export default function NetworkMatchesTab({
     if (isLoading) return null;
     return (
       <EmptyState
-        hasActiveFilters={hasActiveFilters}
-        colors={colors}
-        t={t}
-        networkType={networkType}
+        icon={
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={64} color={colors.primary} />
+        }
+        markIcon={
+          <Ionicons name={hasActiveFilters ? 'filter' : 'search'} size={14} color={COLORS.white} />
+        }
+        title={
+          hasActiveFilters
+            ? t('publicMatches.empty.title')
+            : t(
+                networkType === 'community'
+                  ? 'community.matches.empty.title'
+                  : 'groups.matches.empty.title'
+              )
+        }
+        description={
+          hasActiveFilters
+            ? t('publicMatches.empty.description')
+            : t(
+                networkType === 'community'
+                  ? 'community.matches.empty.description'
+                  : 'groups.matches.empty.description'
+              )
+        }
       />
     );
-  }, [isLoading, hasActiveFilters, colors, t, networkType]);
+  }, [isLoading, hasActiveFilters, colors.primary, selectedSport?.name, t, networkType]);
 
   const filtersBar = (
     <View style={styles.headerContainer}>
@@ -394,26 +365,5 @@ const styles = StyleSheet.create({
   emptyListContent: {
     justifyContent: 'center',
     minHeight: '100%',
-  },
-  emptyContainer: {
-    padding: spacingPixels[8],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    paddingHorizontal: spacingPixels[4],
   },
 });

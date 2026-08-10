@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text } from '@rallia/shared-components';
+import { EmptyState, Text } from '@rallia/shared-components';
 import { spacingPixels, lightTheme, darkTheme } from '@rallia/design-system';
 import { useAuth, useMyLeagues } from '@rallia/shared-hooks';
 import type { LeagueListItem } from '@rallia/shared-services';
@@ -111,15 +111,11 @@ export const MyLeagues: React.FC = () => {
   };
 
   const empty = (
-    <View style={styles.empty}>
-      <Ionicons name="ribbon-outline" size={48} color={colors.textMuted} />
-      <Text size="base" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {t('leagueList.emptyMy.title')}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {t('leagueList.emptyMy.description')}
-      </Text>
-    </View>
+    <EmptyState
+      icon={<Ionicons name="ribbon-outline" size={64} color={colors.primary} />}
+      title={t('leagueList.emptyMy.title')}
+      description={t('leagueList.emptyMy.description')}
+    />
   );
 
   // Bottom inset goes in the list's contentContainerStyle, not on the wrapper,
@@ -207,11 +203,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: '100%',
   },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacingPixels[8],
-  },
   tabBar: {
     flexDirection: 'row',
     marginHorizontal: 16,
@@ -240,8 +231,6 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
     letterSpacing: 0.6,
   },
-  emptyTitle: { marginTop: spacingPixels[3], textAlign: 'center' },
-  emptyDescription: { marginTop: spacingPixels[2], textAlign: 'center' },
 });
 
 export default MyLeagues;
