@@ -5651,7 +5651,8 @@
       "walkover": "W/O",
       "toPlay": "To play",
       "launchKnockout": "Launch the knockout stage",
-      "launchKnockoutWaiting": "Knockout opens when every pool game is settled"
+      "launchKnockoutWaiting": "Knockout opens when every pool game is settled",
+      "poolGame": "Pool game"
     }
   },
   "tournamentCreation": {

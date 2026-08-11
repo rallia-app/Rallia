@@ -2492,20 +2492,24 @@ export const TournamentDetail: React.FC = () => {
 
   const myRegId = myActiveRegistration?.id ?? null;
 
+  // Round math is knockout-only: pool rounds carry their own numbering and
+  // must never shift the Final/Semifinal labels or the champion lookup.
   const totalRounds = useMemo(
-    () => matches.reduce((max, m) => Math.max(max, m.round_number), 0),
-    [matches]
+    () => knockoutMatches.reduce((max, m) => Math.max(max, m.round_number), 0),
+    [knockoutMatches]
   );
 
   const championName = useMemo(() => {
     if (!totalRounds) return null;
-    const final = matches.find(m => m.round_number === totalRounds && m.winner_registration_id);
+    const final = knockoutMatches.find(
+      m => m.round_number === totalRounds && m.winner_registration_id
+    );
     if (!final?.winner_registration_id) return null;
     return (
       nameByRegId.get(final.winner_registration_id) ??
       seedFallbackLabel(seedByRegId.get(final.winner_registration_id), t)
     );
-  }, [matches, totalRounds, nameByRegId, seedByRegId, t]);
+  }, [knockoutMatches, totalRounds, nameByRegId, seedByRegId, t]);
 
   // Playable games only — bye/phantom slots auto-advance and are never played.
   const matchProgress = useMemo(() => {
@@ -2535,15 +2539,16 @@ export const TournamentDetail: React.FC = () => {
         ? 'next'
         : 'waiting';
     }
-    const mine = matches.filter(
+    // Losing a pool game is not elimination; only knockout losses are.
+    const mine = knockoutMatches.filter(
       m => m.player1_registration_id === myRegId || m.player2_registration_id === myRegId
     );
     if (mine.some(m => m.winner_registration_id && m.winner_registration_id !== myRegId)) {
       return 'eliminated';
     }
-    const final = matches.find(m => m.round_number === totalRounds);
+    const final = knockoutMatches.find(m => m.round_number === totalRounds);
     return final?.winner_registration_id === myRegId ? 'champion' : 'waiting';
-  }, [myRegId, tournament?.status, myNextMatch, matches, totalRounds]);
+  }, [myRegId, tournament?.status, myNextMatch, knockoutMatches, totalRounds]);
 
   const myOpponentLabel = useMemo(() => {
     if (!myNextMatch || !myRegId) return null;
@@ -3693,8 +3698,10 @@ export const TournamentDetail: React.FC = () => {
                           )}
                         </Text>
                         <Text size="xs" color={colors.textMuted}>
-                          {roundLabel(myNextMatch.round_number, totalRounds, t)} ·{' '}
-                          {t('tournamentDetail.dashboard.myMatch.hint')}
+                          {myNextMatch.bracket_side === 'pool'
+                            ? t('tournamentDetail.pools.poolGame' as TranslationKey)
+                            : roundLabel(myNextMatch.round_number, totalRounds, t)}{' '}
+                          · {t('tournamentDetail.dashboard.myMatch.hint')}
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={20} color={colors.primary} />

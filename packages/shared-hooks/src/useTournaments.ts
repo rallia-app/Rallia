@@ -300,6 +300,8 @@ function useTournamentDetailInvalidator() {
     qc.invalidateQueries({ queryKey: tournamentKeys.registrations(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.participants(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.matches(tournamentId) });
+    qc.invalidateQueries({ queryKey: tournamentKeys.poolStandings(tournamentId) });
+    qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(tournamentId) });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myRegistration', tournamentId] });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myActiveRegistrations'] });
     // The card's "5/16" chip comes from registration_count, which the list query
