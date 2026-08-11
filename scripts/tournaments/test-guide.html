@@ -381,7 +381,7 @@
         <strong>Lier une partie jouée</strong>.
       </p>
       <p class="check">
-        <strong>Attendu :</strong> trois cartes, dans cet ordre.
+        <strong>Attendu :</strong> les trois parties qu'on t'a préparées, dans cet ordre.
       </p>
       <ul>
         <li>
@@ -710,7 +710,28 @@
     </div>
 
     <div class="block">
-      <h3>12.2 Les têtes de série</h3>
+      <h3>12.2 Retirer un joueur, avant le tirage</h3>
+      <p>Retire un des huit inscrits depuis la liste des participants.</p>
+      <p class="check">
+        <strong>Attendu :</strong> il disparaît de la liste et ne sera pas placé dans une poule. Tu
+        passes donc à 7 inscrits, ce qui donnera au tirage une poule de 4 et une poule de 3. Si tu
+        préfères garder tes 8, saute cette étape : le reste de la section marche pareil.
+      </p>
+      <p class="check">
+        C'est <strong>maintenant ou jamais</strong> : le retrait ne fonctionne qu'avant le tirage.
+        Vérifie-le si tu veux, en réessayant après l'étape 12.4.
+      </p>
+      <p class="warn">
+        <strong>Retirer quelqu'un en cours de poules, ça ne se fait pas encore.</strong> Quand un
+        joueur disparaît après le tirage, ses parties restantes devraient devenir des victoires par
+        forfait pour ses adversaires. Le serveur sait le faire, c'est même ce qui a produit le
+        forfait que tu as vu au tournoi no 8, mais aucun bouton ne le déclenche pour l'instant.
+        D'ici là, écris-nous et on le fait à la main.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>12.3 Les têtes de série</h3>
       <p>Ouvre la gestion du tournoi et cherche l'étape des têtes de série.</p>
       <p class="check">
         <strong>Attendu :</strong> tu peux ordonner les inscrits <strong>avant</strong> de créer les
@@ -721,32 +742,23 @@
     </div>
 
     <div class="block">
-      <h3>12.3 Créer les poules</h3>
+      <h3>12.4 Créer les poules</h3>
       <p class="check">
         <strong>Attendu :</strong> un aperçu de la composition avant de publier, puis les poules
         apparaissent et le tournoi passe en cours. Une fois publiées elles sont
-        <strong>figées</strong> : on ne peut plus déplacer un joueur d'une poule à l'autre. Les huit
-        inscrits reçoivent au même moment une notification qui nomme leur poule et leurs adversaires.
+        <strong>figées</strong> : on ne peut plus déplacer un joueur d'une poule à l'autre. Les
+        inscrits restants reçoivent au même moment une notification qui nomme leur poule et leurs
+        adversaires.
       </p>
     </div>
 
     <div class="block">
-      <h3>12.4 Entrer un pointage à leur place</h3>
+      <h3>12.5 Entrer un pointage à leur place</h3>
       <p>Touche une partie de poule. Tu n'y joues pas, donc tu la vois en organisateur.</p>
       <p class="check">
         <strong>Attendu :</strong> tu peux entrer le pointage à la place des joueurs, et le classement
         de la poule suit tout de suite. C'est le mode « sur place », quand l'organisateur mène la
         ronde lui-même au lieu d'attendre que chacun lie sa partie.
-      </p>
-    </div>
-
-    <div class="block">
-      <h3>12.5 Retirer un joueur</h3>
-      <p>Retire un des inscrits qui a encore des parties à jouer.</p>
-      <p class="check">
-        <strong>Attendu :</strong> ses parties restantes deviennent des victoires par forfait pour
-        ses adversaires, et il tombe dernier de sa poule, inadmissible. C'est exactement ce que tu as
-        vu du côté joueur en section 9, mais cette fois c'est toi qui le déclenches.
       </p>
     </div>
 
@@ -793,6 +805,11 @@
         6 inscrits, on peut rouvrir les inscriptions ou repousser les dates, et on te prévient
         maintenant que le champ est trop court. Ce qu'on ne peut pas encore faire, c'est le convertir
         en élimination simple pour le jouer quand même à 5.
+      </li>
+      <li>
+        <strong>Retirer un joueur en cours de poules.</strong> Le retrait ne marche qu'avant le
+        tirage (section 12.2). Après, le serveur sait transformer les parties restantes en forfaits,
+        mais aucun écran ne le déclenche encore. C'est la prochaine chose à brancher.
       </li>
       <li>
         <strong>La clôture automatique.</strong> Si un organisateur ne lance jamais les éliminatoires,
