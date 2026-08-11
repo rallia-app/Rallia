@@ -105,6 +105,8 @@
     "// check-deps": "Check for dependency conflicts across workspaces",
     "docs:payments-test-guide": "node scripts/payments/generate-test-guide-pdf.mjs",
     "// docs:payments-test-guide": "Regenerate docs/Guide_de_test_des_paiements.pdf from scripts/payments/test-guide.html (paid tournaments + leagues, demo@rallia.ca and jdl.sonkin+10@gmail.com)",
+    "docs:pool-knockout-test-guide": "node scripts/tournaments/generate-test-guide-pdf.mjs",
+    "// docs:pool-knockout-test-guide": "Regenerate docs/Guide_de_test_poules_eliminatoires.pdf from scripts/tournaments/test-guide.html (pool_knockout format, jdl.sonkin@gmail.com)",
     "check-env": "node scripts/dev/check-env.js",
     "// check-env": "Validate environment variables are set",
     "doctor": "node scripts/dev/doctor.js",

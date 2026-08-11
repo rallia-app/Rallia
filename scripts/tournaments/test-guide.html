@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Protocole de test : poules + éliminatoires</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 16mm 20mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.45;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 20pt;
+        margin: 0 0 6px;
+        letter-spacing: -0.02em;
+      }
+
+      .meta {
+        color: #4b5563;
+        font-size: 9.5pt;
+        margin-bottom: 14px;
+      }
+
+      h2 {
+        font-size: 12.5pt;
+        margin: 18px 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 2px solid #0d9488;
+        color: #0f766e;
+        page-break-after: avoid;
+      }
+
+      h3 {
+        font-size: 10.8pt;
+        margin: 14px 0 6px;
+        color: #134e4a;
+        page-break-after: avoid;
+      }
+
+      p {
+        margin: 0 0 8px;
+      }
+
+      ul,
+      ol {
+        margin: 0 0 10px 18px;
+        padding: 0;
+      }
+
+      li {
+        margin-bottom: 4px;
+        page-break-inside: avoid;
+      }
+
+      .fixture {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 9.5pt;
+        background: #f3f4f6;
+        padding: 1px 5px;
+        border-radius: 4px;
+        white-space: nowrap;
+        page-break-inside: avoid;
+      }
+
+      .pill {
+        font-size: 8.5pt;
+        font-weight: 600;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #0f766e;
+        white-space: nowrap;
+      }
+
+      .pill.new {
+        background: #eef2ff;
+        color: #4338ca;
+      }
+
+      .pill.orga {
+        background: #fef3c7;
+        color: #b45309;
+      }
+
+      .pill.lecture {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+
+      .fixtures-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5pt;
+        margin: 8px 0 12px;
+      }
+
+      .fixtures-table th,
+      .fixtures-table td {
+        border: 1px solid #d1d5db;
+        padding: 6px 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+
+      .fixtures-table th {
+        background: #ecfdf5;
+      }
+
+      .section-intro {
+        color: #374151;
+        margin-bottom: 10px;
+      }
+
+      .lifecycle {
+        font-size: 9.7pt;
+        color: #0f766e;
+        background: #f0fdfa;
+        border: 1px solid #99f6e4;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin: 4px 0 14px;
+      }
+
+      .warn {
+        font-size: 9.7pt;
+        color: #92400e;
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin: 4px 0 14px;
+      }
+
+      .stop {
+        font-size: 9.7pt;
+        color: #991b1b;
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin: 4px 0 14px;
+      }
+
+      .block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .check {
+        color: #374151;
+        font-size: 9.7pt;
+        border-left: 3px solid #0d9488;
+        padding-left: 9px;
+        margin: 6px 0 10px;
+      }
+
+      /* On-screen preview: browsers ignore @page margins, so frame the doc. */
+      @media screen {
+        body {
+          max-width: 820px;
+          margin: 24px auto;
+          padding: 32px 40px;
+          background: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Protocole de test : poules + éliminatoires</h1>
+    <p class="meta">
+      Compte de test : <strong>jdl.sonkin@gmail.com</strong> · Environnement :
+      <strong>staging</strong> · Application <strong>mobile</strong> seulement · 11 août 2026
+    </p>
+
+    <p class="lifecycle">
+      <strong>Ce qu'on te demande de valider.</strong> Un nouveau format de tournoi :
+      <strong>poules + éliminatoires</strong>. Tout le monde joue d'abord dans une petite poule, les
+      meilleurs passent dans un tableau à élimination. C'est le format prévu pour la Série 2. Six
+      tournois <span class="fixture">[JDL-PK]</span> t'attendent déjà, chacun te place à une étape
+      différente, donc tu n'as rien à monter toi-même. Compte environ 30 à 40 minutes.
+    </p>
+
+    <p class="section-intro">
+      Trois choses sont neuves et méritent ton attention en priorité : le
+      <strong>sélecteur de partie à lier</strong> (section 3), les
+      <strong>dates limites</strong> avec leur compte à rebours (section 4), et le
+      <strong>passage des poules aux éliminatoires</strong> (section 5). Elles portent la pastille
+      <span class="pill new">nouveau</span>.
+    </p>
+
+    <h2>0. Avant de commencer</h2>
+
+    <p>
+      Connecte-toi avec <span class="fixture">jdl.sonkin@gmail.com</span> sur staging. Tes six
+      tournois commencent tous par <span class="fixture">[JDL-PK]</span> et sont numérotés dans
+      l'ordre où on te suggère de les faire.
+    </p>
+
+    <ul>
+      <li>
+        Le no 1 se trouve dans <strong>Parties &gt; Rejoindre un tournoi</strong> (tu n'y es pas
+        encore inscrit).
+      </li>
+      <li>
+        Les cinq autres sont dans <strong>Mes tournois</strong>, puisque tu y joues déjà ou que tu
+        les organises.
+      </li>
+    </ul>
+
+    <table class="fixtures-table">
+      <thead>
+        <tr>
+          <th style="width: 38%">Tournoi</th>
+          <th style="width: 20%">Ton rôle</th>
+          <th>Ce que ça sert à tester</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="fixture">[JDL-PK] 1 · Inscriptions ouvertes</span></td>
+          <td>tu t'inscris</td>
+          <td>Voir le format avant de s'engager, puis s'inscrire</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL-PK] 2 · Poules en cours</span></td>
+          <td>joueur</td>
+          <td>Classement de poule, et lier une partie jouée</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL-PK] 3 · Échéance dans 20 h</span></td>
+          <td>joueur</td>
+          <td>Compte à rebours et rappels</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL-PK] 4 · Poules finies, à toi de lancer</span></td>
+          <td><span class="pill orga">tu organises</span></td>
+          <td>Lancer la phase éliminatoire</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL-PK] 5 · Éliminatoires (16 joueurs)</span></td>
+          <td>joueur</td>
+          <td>Le tableau au complet, quart à finale</td>
+        </tr>
+        <tr>
+          <td><span class="fixture">[JDL-PK] 6 · Terminé (tu gagnes)</span></td>
+          <td>joueur</td>
+          <td>Champion, fin de tournoi, points au classement</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="warn">
+      <strong>Tes adversaires ne répondront jamais.</strong> Ce sont des comptes bidons
+      (<span class="fixture">@fake-rallia.com</span>). Tout ce qui aurait demandé un geste de leur
+      part est déjà préparé pour toi. Donc si tu écris dans un clavardage de tournoi, personne ne va
+      répondre, et c'est normal.
+    </p>
+
+    <h2>1. Découvrir le format et s'inscrire</h2>
+    <p class="section-intro">
+      Tournoi : <span class="fixture">[JDL-PK] 1 · Inscriptions ouvertes</span>. Il reste 3 places
+      sur 8.
+    </p>
+
+    <div class="block">
+      <h3>1.1 Comprendre le format avant de s'inscrire</h3>
+      <p>Ouvre le tournoi et va dans l'onglet <strong>Détails</strong>.</p>
+      <p class="check">
+        <strong>Attendu :</strong> le format annoncé est
+        <strong>Poules + éliminatoires</strong>, avec des poules de <strong>4</strong> et
+        <strong>2</strong> qualifiés par poule. La question qu'on se pose : est-ce qu'un joueur qui
+        ne connaît pas le format comprend, juste avec cet écran, combien de parties il va jouer et
+        comment il se qualifie ? Si ce n'est pas clair, c'est exactement ce qu'on veut savoir.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>1.2 S'inscrire</h3>
+      <p>Inscris-toi avec le bouton en bas de l'écran.</p>
+      <p class="check">
+        <strong>Attendu :</strong> tu passes à 6 inscrits sur 8, et l'écran te confirme que tu es
+        inscrit. Aucun paiement n'est demandé, ce tournoi est gratuit.
+      </p>
+    </div>
+
+    <h2>2. La phase de poules</h2>
+    <p class="section-intro">
+      Tournoi : <span class="fixture">[JDL-PK] 2 · Poules en cours</span>. Deux poules de 4. Une de
+      tes trois parties est déjà jouée (tu l'as perdue), il t'en reste deux.
+    </p>
+
+    <div class="block">
+      <h3>2.1 Lire le classement</h3>
+      <p>Ouvre l'onglet <strong>Tableau</strong>.</p>
+      <p class="check">
+        <strong>Attendu :</strong> une carte par poule, avec un classement en haut et les parties en
+        dessous. Les colonnes sont identifiées <strong>V-D</strong> (victoires et défaites) et
+        <strong>Sets</strong>. Les deux premiers de chaque poule sont surlignés en vert : ce sont les
+        qualifiés. Ton nom est en gras. Dis-nous si le classement se lit du premier coup d'oeil.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>2.2 Tes parties et celles des autres</h3>
+      <p>
+        Dans la liste des parties sous le classement, essaie de toucher une partie
+        <strong>où tu ne joues pas</strong>, puis une <strong>des tiennes</strong> qui est encore
+        <strong>À jouer</strong>.
+      </p>
+      <p class="check">
+        <strong>Attendu :</strong> les parties des autres sont grises et ne réagissent pas du tout.
+        Seules les tiennes sont en couleur, avec un chevron à droite, et ouvrent quelque chose. Si tu
+        arrives à ouvrir la partie de quelqu'un d'autre, c'est un bogue et on veut le savoir.
+      </p>
+    </div>
+
+    <h2>3. Lier une partie déjà jouée <span class="pill new">nouveau</span></h2>
+    <p class="section-intro">
+      Toujours dans <span class="fixture">[JDL-PK] 2</span>. Le principe du format : tu joues ta
+      partie quand ça t'adonne, avec le pointage normal de Rallia, puis tu la
+      <strong>rattaches</strong> à ta case du tournoi. On t'a préparé trois parties contre
+      <strong>sophie_lavoie</strong>, ton adversaire de poule, exprès dans trois états différents.
+    </p>
+
+    <div class="block">
+      <h3>3.1 Les trois états</h3>
+      <p>
+        Ouvre ta prochaine partie (depuis la carte <strong>Votre prochaine partie</strong> dans
+        l'Aperçu, ou depuis la liste de ta poule) pour arriver au sélecteur
+        <strong>Lier une partie jouée</strong>.
+      </p>
+      <p class="check">
+        <strong>Attendu :</strong> trois cartes, dans cet ordre.
+      </p>
+      <ul>
+        <li>
+          <strong>Vérifié</strong> : en couleur, avec le pointage et le bouton
+          <strong>Lier cette partie</strong>. C'est la seule qu'on peut choisir.
+        </li>
+        <li>
+          <strong>À confirmer</strong> : grise. Elle explique que ton adversaire doit confirmer le
+          pointage avant que tu puisses la lier.
+        </li>
+        <li>
+          <strong>Sans score</strong> : grise aussi, avec des tirets à la place du pointage. Elle te
+          dit d'entrer le pointage d'abord.
+        </li>
+      </ul>
+      <p>Essaie de toucher les deux cartes grises.</p>
+      <p class="check">
+        <strong>Attendu :</strong> il ne se passe rien, elles ne sont pas cliquables. C'est voulu :
+        avant, ces parties-là étaient simplement <em>cachées</em>, et on se retrouvait devant un
+        écran vide sans comprendre pourquoi. La question pour toi : est-ce que la phrase explique
+        assez clairement quoi faire pour débloquer la partie ?
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>3.2 Lier la bonne</h3>
+      <p>Touche <strong>Lier cette partie</strong> sur la carte vérifiée.</p>
+      <p class="check">
+        <strong>Attendu :</strong> le sélecteur se ferme, ta partie de poule affiche maintenant le
+        pointage, et le classement de ta poule se met à jour tout de suite (une victoire de plus pour
+        toi). Vérifie que le pointage affiché dans la poule est bien celui de la partie que tu viens
+        de lier.
+      </p>
+    </div>
+
+    <h2>4. La date limite <span class="pill new">nouveau</span></h2>
+    <p class="section-intro">
+      Tournoi : <span class="fixture">[JDL-PK] 3 · Échéance dans 20 h</span>. Dans ce format,
+      personne ne joue à heure fixe, donc chaque phase a une date limite pour éviter que le tournoi
+      s'étire.
+    </p>
+
+    <div class="block">
+      <h3>4.1 Le compte à rebours</h3>
+      <p>Ouvre le tournoi, regarde l'<strong>Aperçu</strong> puis l'onglet <strong>Tableau</strong>.</p>
+      <p class="check">
+        <strong>Attendu :</strong> sur ta prochaine partie, une ligne avec une horloge et
+        <strong>« 20 h pour jouer »</strong>, en rouge. En haut de l'onglet Tableau, une pastille
+        <strong>« Phase en cours »</strong> avec la même échéance. Sous 48 h le rouge s'allume, au
+        dessus c'est écrit plutôt « à jouer avant le … » en gris. Compare avec le tournoi
+        <span class="fixture">[JDL-PK] 2</span>, dont l'échéance est dans 6 jours : la même ligne
+        doit y être discrète.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>4.2 Les rappels</h3>
+      <p>
+        Regarde tes notifications dans l'application (la cloche). Un rappel part automatiquement à
+        48 h de l'échéance, puis à 12 h.
+      </p>
+      <p class="check">
+        <strong>Attendu :</strong> tu as un rappel qui te dit que la partie est à jouer avant
+        l'échéance. Il n'y a pas de notification poussée sur ton téléphone pour ce compte, c'est
+        normal : tout se passe dans la liste des notifications.
+      </p>
+      <p class="warn">
+        <strong>Ce tournoi se règle tout seul après 20 h.</strong> Une fois l'échéance passée, le
+        système tranche les parties non jouées par forfait, pour que le tournoi avance sans que
+        l'organisateur ait à courir après le monde. C'est le comportement voulu, pas un bogue. Si tu
+        veux tester plus longtemps, écris-nous et on repousse la date.
+      </p>
+    </div>
+
+    <h2>5. Lancer les éliminatoires <span class="pill orga">tu organises</span> <span class="pill new">nouveau</span></h2>
+    <p class="section-intro">
+      Tournoi : <span class="fixture">[JDL-PK] 4 · Poules finies, à toi de lancer</span>. Douze
+      joueurs, trois poules de 4, toutes les parties de poules sont réglées. C'est le moment charnière
+      du format : passer des poules au tableau.
+    </p>
+
+    <div class="block">
+      <h3>5.1 Le bouton</h3>
+      <p>Ouvre l'onglet <strong>Tableau</strong>.</p>
+      <p class="check">
+        <strong>Attendu :</strong> un bouton <strong>Lancer la phase éliminatoire</strong>, actif.
+        Tant qu'il reste une partie de poule à régler, ce bouton n'apparaît pas et les joueurs voient
+        à la place une note qui dit que les éliminatoires ouvriront quand tout sera réglé. Tu peux le
+        vérifier en comparant avec <span class="fixture">[JDL-PK] 2</span>, où il reste des parties.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>5.2 Le tirage</h3>
+      <p>Touche le bouton.</p>
+      <p class="check">
+        <strong>Attendu :</strong> le tableau apparaît sous les poules, avec un en-tête
+        <strong>ÉLIMINATOIRES</strong>. Trois poules donnent 6 qualifiés pour 8 places, donc
+        <strong>2 joueurs passent directement au tour suivant</strong> (marqués
+        <strong>EXEMPT</strong>). Deux règles à vérifier, ce sont les plus importantes de tout le
+        protocole :
+      </p>
+      <ul>
+        <li>
+          les deux exemptions vont aux <strong>mieux classés</strong> : les premiers de poule
+          d'abord, puis le meilleur deuxième ;
+        </li>
+        <li>
+          deux joueurs sortis de <strong>la même poule</strong> sont placés dans des moitiés
+          opposées du tableau, donc ils ne peuvent se recroiser
+          <strong>qu'en finale</strong>. Vérifie-le pour chacune des trois poules : c'est ce qui
+          évite de rejouer en quart la partie qu'on vient de jouer en poule.
+        </li>
+      </ul>
+      <p class="check">
+        Le classement entre les premiers de poule se fait au ratio de victoires, puis aux sets, puis
+        aux jeux. Le tirage des deuxièmes est aléatoire à l'intérieur de cette contrainte : deux
+        lancements du même tournoi ne donneront pas forcément le même tableau, et c'est voulu.
+      </p>
+    </div>
+
+    <h2>6. Le tableau éliminatoire</h2>
+    <p class="section-intro">
+      Tournoi : <span class="fixture">[JDL-PK] 5 · Éliminatoires (16 joueurs)</span>. Quatre poules
+      de 4, tu as gagné la tienne, et tu es en quart de finale contre
+      <strong>mei_wang</strong>.
+    </p>
+
+    <div class="block">
+      <h3>6.1 Lire le tableau</h3>
+      <p>Onglet <strong>Tableau</strong>.</p>
+      <p class="check">
+        <strong>Attendu :</strong> les poules restent consultables en haut, puis l'en-tête
+        <strong>ÉLIMINATOIRES</strong> et le tableau avec ses onglets
+        <strong>Quart de finale</strong>, <strong>Demi-finale</strong>, <strong>Finale</strong>.
+        Vérifie que perdre ou gagner en poule n'a pas d'effet bizarre : tu es toujours en vie, et
+        l'écran ne doit jamais te dire que tu es éliminé alors que tu es en quart.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>6.2 Lier ta partie de quart</h3>
+      <p>
+        Comme en poule, on t'a préparé une partie vérifiée contre mei_wang. Touche ton quart de finale
+        et lie-la.
+      </p>
+      <p class="check">
+        <strong>Attendu :</strong> le même sélecteur qu'en section 3, ta victoire est enregistrée, et
+        tu apparais automatiquement en demi-finale.
+      </p>
+    </div>
+
+    <h2>7. Tournoi terminé</h2>
+    <p class="section-intro">
+      Tournoi : <span class="fixture">[JDL-PK] 6 · Terminé (tu gagnes)</span>.
+    </p>
+
+    <div class="block">
+      <h3>7.1 La fin de parcours</h3>
+      <p>Ouvre l'<strong>Aperçu</strong>.</p>
+      <p class="check">
+        <strong>Attendu :</strong> la bannière de champion à ton nom. Dans la bande de statistiques,
+        la troisième tuile affiche maintenant la date de <strong>Fin</strong> du tournoi, et non plus
+        « Début ». Le tableau garde la trace du parcours complet, poules incluses.
+      </p>
+    </div>
+
+    <div class="block">
+      <h3>7.2 Les points au classement</h3>
+      <p>Va voir ton classement Circuit Rallia depuis ton profil.</p>
+      <p class="check">
+        <strong>Attendu :</strong> 500 points pour la victoire. Ce qui nous intéresse surtout : les
+        joueurs sortis dès les poules doivent quand même avoir leurs points de participation. Dans ce
+        format, sortir en poule reste une vraie participation, et on veut être certains que personne
+        ne repart les mains vides.
+      </p>
+    </div>
+
+    <h2>8. Ce qu'on ne teste pas cette fois</h2>
+    <ul>
+      <li>
+        <strong>Les paiements.</strong> Les six tournois sont gratuits. Le format payant est déjà
+        couvert par le protocole des paiements, et la Série 2 les combinera plus tard.
+      </li>
+      <li><strong>Le double.</strong> Tout est en simple ici.</li>
+      <li>
+        <strong>Le web.</strong> Les tournois vivent seulement dans l'application mobile pour
+        l'instant.
+      </li>
+    </ul>
+
+    <h2>9. Ce qu'on veut savoir</h2>
+    <p>
+      Au delà des bogues, trois questions de fond, et tes réponses valent plus que la liste des
+      étapes :
+    </p>
+    <ol>
+      <li>
+        Est-ce qu'un joueur comprend, <strong>sans qu'on lui explique</strong>, combien de parties il
+        va jouer et comment il se qualifie ?
+      </li>
+      <li>
+        Est-ce que le fait de devoir <strong>lier une partie</strong> après l'avoir jouée est
+        naturel, ou est-ce que ça ressemble à une étape administrative de trop ?
+      </li>
+      <li>
+        Est-ce que les <strong>dates limites</strong> donnent envie de bouger, ou est-ce qu'elles
+        stressent pour rien ?
+      </li>
+    </ol>
+    <p>
+      Pour chaque bogue : le nom du tournoi, la section du protocole, ce que tu attendais, ce qui est
+      arrivé. Une capture d'écran vaut mille mots.
+    </p>
+  </body>
+</html>
