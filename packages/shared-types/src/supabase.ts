@@ -9340,6 +9340,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -9360,6 +9361,7 @@ export type Database = {
           approved_by?: string | null
           bracket_position?: number | null
           created_at?: string
+          forfeited_at?: string | null
           id?: string
           invited_by?: string | null
           notes?: string | null
@@ -9380,6 +9382,7 @@ export type Database = {
           approved_by?: string | null
           bracket_position?: number | null
           created_at?: string
+          forfeited_at?: string | null
           id?: string
           invited_by?: string | null
           notes?: string | null
@@ -12618,6 +12621,10 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: undefined
       }
+      lt_notify_pool_forfeit: {
+        Args: { p_match_ids: string[]; p_registration_id: string }
+        Returns: undefined
+      }
       lt_notify_pools_published: {
         Args: { p_tournament_id: string }
         Returns: undefined
@@ -14099,6 +14106,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14143,6 +14151,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14619,6 +14628,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14815,6 +14825,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -15017,6 +15028,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -15061,6 +15073,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -15177,6 +15190,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -15227,6 +15241,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -15404,6 +15419,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null

@@ -251,6 +251,50 @@ BEGIN
         RAISE EXCEPTION 'walkover win miscounted for third member';
     END IF;
 
+    -- forfeited_at marks this exit apart from a pre-draw removal; the refund
+    -- legs key on it, so a forfeit that only wrote 'disqualified' would silently
+    -- start refunding entries again.
+    IF NOT EXISTS (
+        SELECT 1 FROM tournament_registrations
+         WHERE id = v_reg.id AND status = 'disqualified' AND forfeited_at IS NOT NULL
+    ) THEN
+        RAISE EXCEPTION 'forfeit did not stamp forfeited_at';
+    END IF;
+
+    -- The opponent who inherits a walkover is told. p1[3] had not played the
+    -- leaver, so their game was converted and they get the notice.
+    IF NOT EXISTS (
+        SELECT 1 FROM notification
+         WHERE type = 'tournament_match_walkover'
+           AND target_id = v_t.id AND user_id = p1[3]
+    ) THEN
+        RAISE EXCEPTION 'walkover opponent was not notified';
+    END IF;
+    -- p1[2] already beat them for real, so nothing changed for that game and
+    -- there is nothing to announce.
+    IF EXISTS (
+        SELECT 1 FROM notification
+         WHERE type = 'tournament_match_walkover'
+           AND target_id = v_t.id AND user_id = p1[2]
+    ) THEN
+        RAISE EXCEPTION 'settled opponent was notified of a walkover';
+    END IF;
+    -- The leaver hears it from the registration status trigger, not from us.
+    IF NOT EXISTS (
+        SELECT 1 FROM notification
+         WHERE type = 'tournament_registration_removed'
+           AND target_id = v_t.id AND user_id = p1[1]
+    ) THEN
+        RAISE EXCEPTION 'forfeited player was not notified';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM notification
+         WHERE type = 'tournament_match_walkover'
+           AND target_id = v_t.id AND user_id = p1[1]
+    ) THEN
+        RAISE EXCEPTION 'forfeited player got a walkover notice';
+    END IF;
+
     -- Guard: standings on a single-elim tournament.
     BEGIN
         PERFORM public.tournament_pool_standings(

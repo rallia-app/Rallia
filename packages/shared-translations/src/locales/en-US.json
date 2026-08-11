@@ -5525,10 +5525,10 @@
     "forfeitModal": {
       "title": "Remove this player from the pools?",
       "message": "{name} is out of the tournament. Every pool game they haven't played becomes a walkover win for their opponent, the standings update right away, and they can no longer qualify. This can't be undone.",
-      "messagePaid": "{name} is out of the tournament. Every pool game they haven't played becomes a walkover win for their opponent, the standings update right away, and they can no longer qualify. Their entry fee goes back to them. This can't be undone.",
+      "messagePaid": "{name} is out of the tournament. Every pool game they haven't played becomes a walkover win for their opponent, the standings update right away, and they can no longer qualify. Their entry fee is not refunded: they had their window. This can't be undone.",
       "confirm": "Remove",
       "keepIt": "Cancel",
-      "success": "Player removed. Their opponents got the walkovers."
+      "success": "Player removed. Opponents notified of their walkovers."
     },
     "cancelledNotice": {
       "title": "Tournament cancelled",

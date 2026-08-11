@@ -5525,10 +5525,10 @@
     "forfeitModal": {
       "title": "Retirer ce joueur des poules ?",
       "message": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. C'est irréversible.",
-      "messagePaid": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. Ses frais d'inscription lui sont remis. C'est irréversible.",
+      "messagePaid": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. Ses frais d'inscription ne sont pas remboursés : elle a eu sa chance de jouer. C'est irréversible.",
       "confirm": "Retirer",
       "keepIt": "Annuler",
-      "success": "Joueur retiré. Ses adversaires ont les forfaits."
+      "success": "Joueur retiré. Ses adversaires ont été avisés de leur forfait."
     },
     "cancelledNotice": {
       "title": "Tournoi annulé",
