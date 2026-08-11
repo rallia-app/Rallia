@@ -571,11 +571,13 @@ export const TournamentListScaffold: React.FC<TournamentListScaffoldProps> = ({
     );
   } else {
     emptyComponent = (
-      <EmptyState
-        icon={<Ionicons name={emptyIcon} size={64} color={colors.primary} />}
-        title={t(emptyTitleKey)}
-        description={t(emptyDescriptionKey)}
-      />
+      <View style={styles.emptyWrap}>
+        <EmptyState
+          icon={<Ionicons name={emptyIcon} size={64} color={colors.primary} />}
+          title={t(emptyTitleKey)}
+          description={t(emptyDescriptionKey)}
+        />
+      </View>
     );
   }
 
@@ -647,8 +649,13 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   emptyListContent: {
-    justifyContent: 'center',
+    // Centring lives on the empty component, not here, so the list header stays
+    // anchored to the top instead of floating down with the empty state.
     minHeight: '100%',
+  },
+  emptyWrap: {
+    flex: 1,
+    justifyContent: 'center',
   },
   sectionHeader: {
     paddingHorizontal: spacingPixels[4],
