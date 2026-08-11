@@ -121,6 +121,7 @@ export {
 
 export {
   getMatchOrganizerOptions,
+  regenerateRoundChatSuggestions,
   getSharedSports,
   postMatchOrganizerCard,
   getMatchTimeVotes,

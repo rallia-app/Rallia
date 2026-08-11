@@ -44,6 +44,8 @@ interface ConversationRPCRow {
   last_message_content: string | null;
   last_message_at: string | null;
   last_message_sender_first_name: string | null;
+  last_message_type: string | null;
+  last_message_meta: ConversationPreview['last_message_meta'];
   is_pinned: boolean;
   is_muted: boolean;
   is_archived: boolean;
@@ -144,6 +146,8 @@ export async function getPlayerConversations(
         last_message_content: row.last_message_content,
         last_message_at: row.last_message_at,
         last_message_sender_name: row.last_message_sender_first_name,
+        last_message_type: row.last_message_type,
+        last_message_meta: row.last_message_meta,
         unread_count: Number(row.unread_count) || 0,
         participant_count: Number(row.participant_count) || 0,
         other_participant: otherParticipant,
@@ -634,6 +638,8 @@ interface FilteredConversationRPCRow {
   last_message_at: string | null;
   last_message_sender_id: string | null;
   last_message_sender_first_name: string | null;
+  last_message_type: string | null;
+  last_message_meta: ConversationPreview['last_message_meta'];
   is_pinned: boolean;
   is_muted: boolean;
   is_archived: boolean;
@@ -763,6 +769,8 @@ export async function getPlayerConversationsFiltered(
           last_message_content: row.last_message_content,
           last_message_at: row.last_message_at,
           last_message_sender_name: row.last_message_sender_first_name,
+          last_message_type: row.last_message_type,
+          last_message_meta: row.last_message_meta,
           unread_count: row.unread_count || 0,
           participant_count: row.participant_count || 0,
           other_participant: otherParticipant,

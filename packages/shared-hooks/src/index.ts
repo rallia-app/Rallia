@@ -43,6 +43,7 @@ export * from './useRatingScoresForSport';
 export * from './useRatingScoreReferees';
 export * from './useFacilitySearch';
 export * from './useFavoriteFacilityAvailability';
+export * from './useSharedAvailability';
 export * from './useFacilityDetail';
 export * from './usePreferredFacility';
 export * from './useFacilityReservationContact';

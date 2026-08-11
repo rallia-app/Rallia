@@ -93,6 +93,10 @@ export interface MatchOrganizerOption {
   /** 'bookable' = a court is open now; 'usually_free' = recurring availability. */
   tier: 'bookable' | 'usually_free';
   distance_km: number | null;
+  /** How many of the card's participants are recurring-free at this slot. */
+  free_count?: number;
+  /** Stable (slot, facility) identity — future vote re-anchoring on regenerate. */
+  option_key?: string;
 }
 
 /** metadata for a 'match_organizer' card (chat Match Organizer). */
@@ -103,7 +107,18 @@ export interface MatchOrganizerMetadata {
   format: 'singles' | 'doubles';
   /** Players who must each thumbs-up an option for it to become mutual. */
   participant_ids: string[];
-  organizer_id: string;
+  /** Null on system-posted cards (posted_by='system'). */
+  organizer_id: string | null;
+  /** 'system' = auto-posted (round chats); absent/'player' = posted via the sheet. */
+  posted_by?: 'system' | 'player';
+  /** Bracket pairing behind an auto-posted card. Drives card regeneration. */
+  tournament_match_id?: string | null;
+  /** When the options snapshot was last generated (regeneration staleness). */
+  options_generated_at?: string | null;
+  /** Suppresses the new_message notification fan-out (system cards). */
+  silent?: boolean;
+  /** True when no option was free for every participant — options is empty. */
+  no_overlap?: boolean;
   options: MatchOrganizerOption[];
   /** Set once a game is created from this card (flips the card to a final state). */
   created_match_id?: string | null;
@@ -335,6 +350,19 @@ export interface ConversationPreview {
   last_message_content: string | null;
   last_message_at: string | null;
   last_message_sender_name: string | null;
+  /**
+   * Message type of the preview line ('user', 'match_organizer', ...). Lets the
+   * conversation list localize structured-card previews per viewer instead of
+   * echoing `content`, which a server-posted card can only write in one locale.
+   */
+  last_message_type?: string | null;
+  /** Trimmed metadata for preview localization (never the full options array). */
+  last_message_meta?: {
+    kind?: string;
+    no_overlap?: boolean;
+    system_note?: string;
+    actor_name?: string;
+  } | null;
   unread_count: number;
   participant_count: number;
   // For direct messages, show the other participant

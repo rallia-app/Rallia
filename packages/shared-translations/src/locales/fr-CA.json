@@ -3349,7 +3349,8 @@
       "createGame": "Créer la partie",
       "noOverlapTitle": "Pas encore de plage commune",
       "noOverlapBody": "Vos disponibilités ne concordent pas pour l'instant. Mets à jour tes heures dans ton profil et de nouvelles suggestions vont apparaître ici.",
-      "noOverlapCta": "Mettre à jour mes dispos"
+      "noOverlapCta": "Mettre à jour mes dispos",
+      "previewSuggestions": "Suggestions d'heures pour jouer"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -12523,6 +12524,16 @@
       "rateLimited": "Trop d'essais. Attends quelques minutes.",
       "sessionExpired": "Ta session est expirée. Reconnecte-toi pour vérifier ton numéro.",
       "generic": "Une erreur est survenue. Réessaie."
+    }
+  },
+  "availabilityOverlay": {
+    "legend": {
+      "theirs": "{name} est dispo",
+      "theirsGeneric": "Ton adversaire est dispo",
+      "both": "Vous êtes tous les deux dispo"
+    },
+    "systemNote": {
+      "updated": "{name} a mis à jour ses dispos"
     }
   }
 }

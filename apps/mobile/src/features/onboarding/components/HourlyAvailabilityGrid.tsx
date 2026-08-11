@@ -120,6 +120,22 @@ interface HourlyAvailabilityGridProps {
    * window to show concrete dates while keeping day-of-week semantics.
    */
   columnLabels?: Partial<Record<DayEnum, string>>;
+  /**
+   * Hours somebody else is free for, drawn underneath the player's own
+   * selection. Turns the picker into a coordination surface: opened from a
+   * pairing context (tournament round chat, league pairing) the player paints
+   * their week while watching mutual hours light up.
+   *
+   * Renders a three-step intensity ramp on one hue so "we're both free" is
+   * unambiguously the strongest state:
+   *   theirs only → outline    mine only → half fill    both → full fill
+   *
+   * Omitted by every non-pairing caller (onboarding, weekly check-in, profile
+   * edit), which keeps today's plain two-state rendering.
+   */
+  overlay?: HourGrid;
+  /** Hue for overlay/mutual cells. Defaults to `colors.cellActive`. */
+  overlayColor?: string;
 }
 
 // =============================================================================
@@ -132,6 +148,22 @@ interface HourlyAvailabilityGridProps {
 const TIME_COL_WIDTH = 40;
 const CELL_HEIGHT = 28;
 
+// Intensity ramp for pairing mode. One hue, three steps, so the mutual cell is
+// the loudest thing on the grid. Alpha suffixes match the `color + '1A'` idiom
+// used across the app's cards (design tokens are 6-digit hex).
+function overlayCellStyle(
+  filled: boolean,
+  theirs: boolean,
+  colors: HourlyAvailabilityGridColors,
+  overlayColor?: string
+): { backgroundColor: string; borderColor: string } {
+  const hue = overlayColor ?? colors.cellActive;
+  if (filled && theirs) return { backgroundColor: hue, borderColor: hue };
+  if (filled) return { backgroundColor: `${hue}8C`, borderColor: `${hue}8C` };
+  if (theirs) return { backgroundColor: `${hue}1A`, borderColor: hue };
+  return { backgroundColor: colors.cellInactive, borderColor: colors.border };
+}
+
 export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   value,
   onChange,
@@ -140,6 +172,8 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   locale,
   days: daysProp,
   columnLabels,
+  overlay,
+  overlayColor,
 }) => {
   // Effective day columns. Defaults to the full week. Pinned via a ref so the
   // gesture callbacks (memoized) always read the current set without forcing a
@@ -416,16 +450,20 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
             {SUPPORTED_HOURS.map(hour => (
               <View key={`row-${hour}`} style={[styles.row, { height: CELL_HEIGHT }]}>
                 {days.map(day => {
-                  const filled = value.has(cellKey(day, hour));
+                  const key = cellKey(day, hour);
+                  const filled = value.has(key);
+                  const theirs = overlay?.has(key) ?? false;
                   return (
                     <View
                       key={`cell-${day}-${hour}`}
                       style={[
                         styles.cell,
-                        {
-                          backgroundColor: filled ? colors.cellActive : colors.cellInactive,
-                          borderColor: filled ? colors.cellActive : colors.border,
-                        },
+                        overlay
+                          ? overlayCellStyle(filled, theirs, colors, overlayColor)
+                          : {
+                              backgroundColor: filled ? colors.cellActive : colors.cellInactive,
+                              borderColor: filled ? colors.cellActive : colors.border,
+                            },
                       ]}
                       // pointerEvents="none" so touches always reach the
                       // GestureDetector — never get absorbed by a cell view.

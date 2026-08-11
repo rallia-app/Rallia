@@ -90,6 +90,7 @@ export {
 
   // Match Organizer Operations
   getMatchOrganizerOptions,
+  regenerateRoundChatSuggestions,
   getSharedSports,
   postMatchOrganizerCard,
   getMatchTimeVotes,

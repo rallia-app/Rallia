@@ -11174,8 +11174,10 @@ export type Database = {
           last_message_at: string
           last_message_content: string
           last_message_id: string
+          last_message_meta: Json
           last_message_sender_first_name: string
           last_message_sender_id: string
+          last_message_type: string
           last_read_at: string
           match_date: string
           match_format: string
@@ -11213,8 +11215,10 @@ export type Database = {
           last_message_at: string
           last_message_content: string
           last_message_id: string
+          last_message_meta: Json
           last_message_sender_first_name: string
           last_message_sender_id: string
+          last_message_type: string
           last_read_at: string
           match_date: string
           match_format: string
@@ -12643,6 +12647,10 @@ export type Database = {
       lt_ranking_window: { Args: never; Returns: string }
       lt_rating_skill_bucket: {
         Args: { p_skill_level: Database["public"]["Enums"]["skill_level"] }
+        Returns: string
+      }
+      lt_regenerate_system_organizer_card: {
+        Args: { p_actor_id?: string; p_tournament_match_id: string }
         Returns: string
       }
       lt_registration_display_name: {

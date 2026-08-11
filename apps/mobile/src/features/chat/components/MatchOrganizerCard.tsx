@@ -15,7 +15,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { SheetManager } from 'react-native-actions-sheet';
+import { Button, Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import {
@@ -33,6 +34,8 @@ import {
   useMatchTimeVotes,
   useToggleMatchTimeVote,
   useCreateCasualMatch,
+  useProfilesByIds,
+  useSharedAvailability,
 } from '@rallia/shared-hooks';
 
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
@@ -77,6 +80,33 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   }, [votes]);
 
   const createdMatchId = metadata?.created_match_id ?? null;
+
+  // Availability editor, opened with pairing context so the grid draws the
+  // opponent's free hours underneath the player's own. Saving regenerates this
+  // card, so a widened week turns "no shared times" into real options in place.
+  const opponentIds = useMemo(
+    () => participants.filter(id => id !== currentUserId),
+    [participants, currentUserId]
+  );
+  const { data: opponentProfiles = {} } = useProfilesByIds(opponentIds);
+  const { data: myGrid } = useSharedAvailability(currentUserId ? [currentUserId] : undefined);
+
+  const openAvailabilityEditor = useCallback(() => {
+    void lightHaptic();
+    void SheetManager.show('player-availabilities', {
+      payload: {
+        mode: 'edit',
+        initialData: myGrid ? new Set(myGrid) : undefined,
+        opponentIds,
+        opponentName:
+          Object.values(opponentProfiles)
+            .map(p => p.first_name)
+            .filter(Boolean)
+            .join(', ') || null,
+        tournamentMatchId: metadata?.tournament_match_id ?? null,
+      },
+    });
+  }, [myGrid, opponentIds, opponentProfiles, metadata?.tournament_match_id]);
 
   const handleToggle = useCallback(
     (optionIndex: number) => {
@@ -167,6 +197,45 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     },
     [locale, t]
   );
+
+  // Zero-overlap card: the engine found no slot free for every participant.
+  // Deliberately not a plain-text fallback — it explains and points at the fix.
+  if (metadata?.no_overlap && (metadata.options?.length ?? 0) === 0) {
+    return (
+      <View style={styles.wrapper}>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '1A' }]}>
+              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.headerText}>
+              <Text size="sm" weight="semibold" color={colors.text} lineHeight="tight">
+                {t('matchOrganizer.card.noOverlapTitle')}
+              </Text>
+              <Text
+                size="xs"
+                color={colors.textMuted}
+                lineHeight="tight"
+                style={styles.headerSubtitle}
+              >
+                {t('matchOrganizer.card.noOverlapBody')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.noOverlapCta}>
+            <Button variant="primary" size="sm" onPress={openAvailabilityEditor}>
+              {t('matchOrganizer.card.noOverlapCta')}
+            </Button>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   // Defensive: no structured payload -> plain text (shouldn't happen).
   if (!metadata || !Array.isArray(metadata.options) || metadata.options.length === 0) {
@@ -291,6 +360,19 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                   ? t('matchOrganizer.tier.courtsOne')
                   : t('matchOrganizer.tier.courtAvailable');
             const isCreatingThis = creatingIndex === index;
+            // Availability label (system-posted cards carry free_count per slot).
+            const allFree =
+              option.free_count != null &&
+              participants.length > 0 &&
+              option.free_count >= participants.length;
+            const availabilityLabel =
+              option.free_count == null
+                ? null
+                : allFree
+                  ? participants.length === 2
+                    ? t('matchOrganizer.availability.both')
+                    : t('matchOrganizer.availability.all')
+                  : t('matchOrganizer.availability.partial');
 
             return (
               <View
@@ -343,6 +425,23 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       {option.court_confirmed && priceLabel ? ` · ${priceLabel}` : ''}
                     </Text>
                   </View>
+                  {availabilityLabel ? (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        { backgroundColor: allFree ? accent + '1A' : colors.border + '66' },
+                      ]}
+                    >
+                      <Ionicons
+                        name={allFree ? 'people' : 'people-outline'}
+                        size={12}
+                        color={allFree ? accent : colors.textMuted}
+                      />
+                      <Text size="xs" weight="semibold" color={allFree ? accent : colors.textMuted}>
+                        {availabilityLabel}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 {isMutual ? (
@@ -434,6 +533,10 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     marginTop: spacingPixels[1],
+  },
+  noOverlapCta: {
+    marginTop: spacingPixels[3],
+    alignSelf: 'flex-start',
   },
   options: {
     marginTop: spacingPixels[4],

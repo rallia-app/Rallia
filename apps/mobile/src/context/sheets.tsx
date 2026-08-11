@@ -697,6 +697,18 @@ declare module 'react-native-actions-sheet' {
         currentStep?: number;
         totalSteps?: number;
         selectedSportIds?: string[];
+        /**
+         * Pairing context. When present the grid renders these players' shared
+         * free hours underneath the player's own selection, so mutual slots are
+         * visible while painting, and the sheet persists the save itself (no
+         * `onSave` needed) then regenerates the round chat's suggestion card.
+         * Opened from a tournament round chat / league pairing.
+         */
+        opponentIds?: string[];
+        /** First name(s) for the overlay legend, e.g. "Marc". */
+        opponentName?: string | null;
+        /** Bracket pairing whose organizer card should regenerate after save. */
+        tournamentMatchId?: string | null;
       };
     }>;
     'tennis-rating': SheetDefinition<{

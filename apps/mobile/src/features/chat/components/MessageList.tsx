@@ -275,6 +275,23 @@ function MessageListComponent(
           return <MatchOrganizerCard message={item.message} />;
         }
 
+        // System notes (e.g. "Alex updated their availability") render as a
+        // centered muted line, localized here from metadata rather than from the
+        // stored content — one message row is shared by readers whose locales
+        // may differ.
+        const systemNote = (item.message.metadata as { system_note?: string } | null)?.system_note;
+        if (systemNote === 'availability_updated') {
+          const actorName =
+            (item.message.metadata as { actor_name?: string } | null)?.actor_name ?? '';
+          return (
+            <View style={styles.systemNote}>
+              <Text size="xs" color={colors.textMuted} style={styles.systemNoteText}>
+                {t('availabilityOverlay.systemNote.updated').replace('{name}', actorName)}
+              </Text>
+            </View>
+          );
+        }
+
         const messageReactions = reactions.get(item.message.id) || [];
         const isHighlighted = highlightedSet.has(item.message.id);
         const isCurrentHighlight = item.message.id === currentHighlightedId;
@@ -423,6 +440,13 @@ const styles = StyleSheet.create({
   dateSeparatorLine: {
     flex: 1,
     height: 1,
+  },
+  systemNote: {
+    paddingHorizontal: spacingPixels[6],
+    paddingVertical: spacingPixels[2],
+  },
+  systemNoteText: {
+    textAlign: 'center',
   },
   dateSeparatorText: {
     fontSize: fontSizePixels.xs,

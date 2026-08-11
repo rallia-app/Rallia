@@ -34,6 +34,8 @@ function toOption(row: {
   court_confirmed: boolean;
   tier: string;
   distance_km: number | null;
+  free_count?: number | null;
+  option_key?: string | null;
 }): MatchOrganizerOption {
   return {
     slot_start: row.slot_start,
@@ -47,6 +49,8 @@ function toOption(row: {
     court_confirmed: row.court_confirmed,
     tier: row.tier === 'bookable' ? 'bookable' : 'usually_free',
     distance_km: row.distance_km,
+    ...(row.free_count != null ? { free_count: row.free_count } : {}),
+    ...(row.option_key ? { option_key: row.option_key } : {}),
   };
 }
 
@@ -196,6 +200,33 @@ export async function getSessionMatchSportId(sessionMatchId: string): Promise<st
   return row?.sessions?.seasons?.leagues?.sport_id ?? null;
 }
 
+/**
+ * Re-run the suggestion engine for a pairing's auto-posted card and rewrite it
+ * in place. Called after a player edits their availability from the round chat,
+ * so widening your hours immediately turns "no shared times" into real options.
+ *
+ * Votes follow their time slot (re-anchored on option_key); a voted option the
+ * engine no longer returns is kept and flagged stale rather than dropped. Cards
+ * that already produced a game are left alone. Returns the card's message id, or
+ * null when the pairing has no system card.
+ */
+export async function regenerateRoundChatSuggestions(
+  tournamentMatchId: string,
+  actorId: string
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('lt_regenerate_system_organizer_card', {
+    p_tournament_match_id: tournamentMatchId,
+    p_actor_id: actorId,
+  });
+
+  if (error) {
+    console.error('Error regenerating organizer card:', error);
+    throw error;
+  }
+
+  return (data as string | null) ?? null;
+}
+
 // ============================================================================
 // CARD POSTING
 // ============================================================================
@@ -222,6 +253,7 @@ export async function postMatchOrganizerCard(params: {
     format: params.format,
     participant_ids: Array.from(new Set(params.participantIds)),
     organizer_id: params.organizerId,
+    posted_by: 'player',
     options: params.options,
     created_match_id: null,
     confirmed_option_index: null,
