@@ -65,6 +65,7 @@ DECLARE
     v_champ_reg uuid;
     v_reg       uuid;
     v_same_semi integer;
+    v_semi_losers uuid[] := '{}';
 BEGIN
     v_players   := pg_temp.tennis_players(9);
     v_organizer := v_players[9];
@@ -171,6 +172,7 @@ BEGIN
     LOOP
         PERFORM public.tournament_override_score(
             v_semi.id, v_semi.player1_registration_id, '6-4 6-4');
+        v_semi_losers := v_semi_losers || v_semi.player2_registration_id;
     END LOOP;
 
     SELECT * INTO v_final FROM tournament_matches
@@ -206,6 +208,24 @@ BEGIN
          WHERE trp.tournament_id = v_t.id AND trp.placement = 'champion'
     ) THEN
         RAISE EXCEPTION 'no champion row awarded';
+    END IF;
+
+    -- Knockout entrants keep their bracket placement even with zero knockout
+    -- wins: they earned the draw slot in the pool phase. The zero-wins
+    -- shortcut to 'participated' is single-elimination only.
+    SELECT count(*) INTO v_cnt FROM tournament_ranking_points trp
+     WHERE trp.tournament_id = v_t.id
+       AND trp.registration_id = ANY (v_semi_losers)
+       AND trp.placement = 'semifinal';
+    IF v_cnt <> 2 THEN
+        RAISE EXCEPTION 'semifinal losers misplaced: % of 2 got semifinal', v_cnt;
+    END IF;
+
+    -- Whole distribution: 1 champion, 1 finalist, 2 semifinalists, 4 pool exits.
+    SELECT count(*) INTO v_cnt FROM tournament_ranking_points trp
+     WHERE trp.tournament_id = v_t.id AND trp.placement = 'participated';
+    IF v_cnt <> 4 THEN
+        RAISE EXCEPTION 'expected exactly 4 participated rows, got %', v_cnt;
     END IF;
 
     RAISE NOTICE 'tournament_pool_knockout_cutover_test: ALL PASS';
