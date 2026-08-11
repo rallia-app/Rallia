@@ -1447,20 +1447,22 @@ const MatchCard: React.FC<MatchCardProps> = ({
             </ScrollView>
           )}
 
-          {/* Footer with CTA */}
-          {renderCta ? (
-            renderCta(match)
-          ) : (
-            <CardFooter
-              match={match}
-              participantInfo={participantInfo}
-              colors={colors}
-              isDark={isDark}
-              t={t}
-              onPress={onPress}
-              currentPlayerId={currentPlayerId}
-            />
-          )}
+          {/* Footer with CTA — pinned to the bottom so minHeight slack never lands under it */}
+          <View style={styles.footerSlot}>
+            {renderCta ? (
+              renderCta(match)
+            ) : (
+              <CardFooter
+                match={match}
+                participantInfo={participantInfo}
+                colors={colors}
+                isDark={isDark}
+                t={t}
+                onPress={onPress}
+                currentPlayerId={currentPlayerId}
+              />
+            )}
+          </View>
         </View>
 
         {/* Scrim + banner AFTER content so they render on top in the paint order */}
@@ -1593,6 +1595,7 @@ const styles = StyleSheet.create({
   content: {
     padding: CARD_PADDING,
     zIndex: 1,
+    flexGrow: 1,
   },
 
   // Top row (time + status)
@@ -1740,6 +1743,9 @@ const styles = StyleSheet.create({
   },
 
   // Footer
+  footerSlot: {
+    marginTop: 'auto',
+  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
