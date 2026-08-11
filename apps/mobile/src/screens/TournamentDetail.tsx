@@ -87,6 +87,7 @@ import {
   useTournamentMatches,
   useTournamentPoolStandings,
   useGenerateTournamentKnockout,
+  useTournamentRoundDeadlines,
   useOpenTournamentRoundChat,
   useIsTournamentOrganizer,
   useIsCertifiedOrganizer,
@@ -2186,6 +2187,46 @@ export const TournamentDetail: React.FC = () => {
     generateKnockout.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
   }, [tournament, generateKnockout]);
 
+  const { data: roundDeadlines = [] } = useTournamentRoundDeadlines(
+    shouldFetchBracket && tournament?.status === 'in_progress' ? tournament?.id : undefined
+  );
+
+  // The phase the players are racing right now: the pool deadline while the
+  // pool stage is live, else the earliest knockout round still unresolved.
+  const currentPhaseDeadline = useMemo(() => {
+    if (roundDeadlines.length === 0) return null;
+    if (isPoolTournament && knockoutMatches.length === 0) {
+      return roundDeadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null;
+    }
+    const unresolvedRounds = new Set(
+      knockoutMatches
+        .filter(m => ['pending', 'in_progress', 'disputed'].includes(m.status))
+        .map(m => m.round_number)
+    );
+    const next = roundDeadlines
+      .filter(d => d.bracket_side === 'main' && unresolvedRounds.has(d.round_number))
+      .sort((a, b) => a.deadline_at.localeCompare(b.deadline_at))[0];
+    return next?.deadline_at ?? null;
+  }, [roundDeadlines, isPoolTournament, knockoutMatches]);
+
+  const formatDeadline = useCallback(
+    (iso: string) => {
+      const target = new Date(iso).getTime();
+      const hoursLeft = Math.max(0, Math.round((target - Date.now()) / 3600000));
+      if (hoursLeft <= 48) {
+        return t('tournamentDetail.deadlines.hoursLeft' as TranslationKey).replace(
+          '{hours}',
+          String(hoursLeft)
+        );
+      }
+      return t('tournamentDetail.deadlines.playBy' as TranslationKey).replace(
+        '{date}',
+        new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+      );
+    },
+    [t, locale]
+  );
+
   // Map registration_id → seed number (1-indexed). The order matches the
   // RPC's seeding criteria so the labels here line up with the bracket.
   const seedByRegId = useMemo(() => {
@@ -2531,6 +2572,18 @@ export const TournamentDetail: React.FC = () => {
         .sort((a, b) => a.round_number - b.round_number)[0] ?? null
     );
   }, [matches, myRegId]);
+
+  // My game's effective deadline: per-match extension wins over the phase row.
+  const myNextMatchDeadline = useMemo(() => {
+    if (!myNextMatch) return null;
+    if (myNextMatch.deadline_override_at) return myNextMatch.deadline_override_at;
+    const row = roundDeadlines.find(d =>
+      myNextMatch.bracket_side === 'pool'
+        ? d.bracket_side === 'pool'
+        : d.bracket_side === 'main' && d.round_number === myNextMatch.round_number
+    );
+    return row?.deadline_at ?? null;
+  }, [myNextMatch, roundDeadlines]);
 
   const myBracketState = useMemo<'next' | 'waiting' | 'eliminated' | 'champion' | null>(() => {
     if (!myRegId || tournament?.status !== 'in_progress') return null;
@@ -3702,6 +3755,7 @@ export const TournamentDetail: React.FC = () => {
                             ? t('tournamentDetail.pools.poolGame' as TranslationKey)
                             : roundLabel(myNextMatch.round_number, totalRounds, t)}{' '}
                           · {t('tournamentDetail.dashboard.myMatch.hint')}
+                          {myNextMatchDeadline ? ` · ${formatDeadline(myNextMatchDeadline)}` : ''}
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={20} color={colors.primary} />
@@ -3936,6 +3990,14 @@ export const TournamentDetail: React.FC = () => {
         {/* ============================ BRACKET ============================= */}
         {currentTabKey === 'bracket' && showBracketTab && (
           <View style={styles.tabContent}>
+            {currentPhaseDeadline && (
+              <Text size="xs" color={colors.textMuted} style={styles.phaseDeadlineLine}>
+                {t('tournamentDetail.deadlines.phaseDeadline' as TranslationKey).replace(
+                  '{when}',
+                  formatDeadline(currentPhaseDeadline)
+                )}
+              </Text>
+            )}
             {isPoolTournament && (
               <>
                 {isOrganizer && knockoutMatches.length === 0 && (
@@ -5070,6 +5132,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
+  },
+  phaseDeadlineLine: {
+    marginBottom: spacingPixels[2],
+    textAlign: 'center',
   },
   poolLaunchBtn: {
     alignItems: 'center',

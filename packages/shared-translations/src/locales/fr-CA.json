@@ -5653,6 +5653,11 @@
       "launchKnockout": "Lancer la phase éliminatoire",
       "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",
       "poolGame": "Partie de poule"
+    },
+    "deadlines": {
+      "playBy": "à jouer avant le {date}",
+      "hoursLeft": "{hours} h pour jouer",
+      "phaseDeadline": "Phase en cours : {when}"
     }
   },
   "tournamentCreation": {
@@ -5788,7 +5793,9 @@
       "structure": "Structure",
       "structureSingle": "Élimination simple",
       "structurePool": "Poules + éliminatoires",
-      "structurePoolHint": "Poules de 4, les 2 premiers passent aux éliminatoires. Tout le monde joue au moins 3 parties garanties."
+      "structurePoolHint": "Poules de 4, les 2 premiers passent aux éliminatoires. Tout le monde joue au moins 3 parties garanties.",
+      "poolSize": "Taille des poules",
+      "qualifiersPerPool": "Qualifiés par poule"
     },
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",

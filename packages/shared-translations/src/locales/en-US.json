@@ -5653,6 +5653,11 @@
       "launchKnockout": "Launch the knockout stage",
       "launchKnockoutWaiting": "Knockout opens when every pool game is settled",
       "poolGame": "Pool game"
+    },
+    "deadlines": {
+      "playBy": "play by {date}",
+      "hoursLeft": "{hours}h left to play",
+      "phaseDeadline": "Current phase: {when}"
     }
   },
   "tournamentCreation": {
@@ -5788,7 +5793,9 @@
       "structure": "Structure",
       "structureSingle": "Single elimination",
       "structurePool": "Pools + knockout",
-      "structurePoolHint": "Pools of 4, best 2 qualify for the knockout. Everyone is guaranteed at least 3 games."
+      "structurePoolHint": "Pools of 4, best 2 qualify for the knockout. Everyone is guaranteed at least 3 games.",
+      "poolSize": "Pool size",
+      "qualifiersPerPool": "Qualifiers per pool"
     },
     "validation": {
       "nameRequired": "Tournament name is required",

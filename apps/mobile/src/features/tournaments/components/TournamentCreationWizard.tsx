@@ -973,6 +973,10 @@ const DetailsStep: React.FC<{
   setBracketSize: (v: BracketSize) => void;
   structure: Structure;
   setStructure: (v: Structure) => void;
+  poolSize: number;
+  setPoolSize: (v: number) => void;
+  qualifiersPerPool: number;
+  setQualifiersPerPool: (v: number) => void;
   matchFormat: MatchFormat;
   setMatchFormat: (v: MatchFormat) => void;
   formatOptions: readonly MatchFormat[];
@@ -1017,6 +1021,10 @@ const DetailsStep: React.FC<{
   setBracketSize,
   structure,
   setStructure,
+  poolSize,
+  setPoolSize,
+  qualifiersPerPool,
+  setQualifiersPerPool,
   matchFormat,
   setMatchFormat,
   formatOptions,
@@ -1369,6 +1377,89 @@ const DetailsStep: React.FC<{
                   </Text>
                 )}
               </View>
+
+              {structure === 'pool_knockout' && (
+                <View style={styles.fieldGroup}>
+                  <FieldLabel colors={colors}>
+                    {t('tournamentCreation.fields.poolSize' as TranslationKey)}
+                  </FieldLabel>
+                  <View style={styles.optionsRow}>
+                    {[3, 4, 5].map(n => {
+                      const selected = n === poolSize;
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          disabled={isEditMode}
+                          onPress={() => {
+                            lightHaptic();
+                            setPoolSize(n);
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.bracketChip,
+                            {
+                              backgroundColor: selected
+                                ? `${colors.buttonActive}15`
+                                : colors.buttonInactive,
+                              borderColor: selected ? colors.buttonActive : colors.border,
+                              opacity: isEditMode ? 0.5 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text
+                            size="base"
+                            weight={selected ? 'semibold' : 'regular'}
+                            color={selected ? colors.buttonActive : colors.text}
+                          >
+                            {n}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <FieldLabel colors={colors}>
+                    {t('tournamentCreation.fields.qualifiersPerPool' as TranslationKey)}
+                  </FieldLabel>
+                  <View style={styles.optionsRow}>
+                    {[1, 2].map(n => {
+                      const selected = n === qualifiersPerPool;
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          disabled={isEditMode}
+                          onPress={() => {
+                            lightHaptic();
+                            setQualifiersPerPool(n);
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.bracketChip,
+                            {
+                              backgroundColor: selected
+                                ? `${colors.buttonActive}15`
+                                : colors.buttonInactive,
+                              borderColor: selected ? colors.buttonActive : colors.border,
+                              opacity: isEditMode ? 0.5 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text
+                            size="base"
+                            weight={selected ? 'semibold' : 'regular'}
+                            color={selected ? colors.buttonActive : colors.text}
+                          >
+                            {n}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
 
               <View style={styles.fieldGroup}>
                 <FieldLabel colors={colors}>
@@ -2207,6 +2298,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       return (s === 'pool_knockout' ? 16 : 8) as BracketSize;
     });
   }, []);
+  const [poolSize, setPoolSize] = useState<number>(4);
+  const [qualifiersPerPool, setQualifiersPerPool] = useState<number>(2);
   const [matchFormat, setMatchFormat] = useState<MatchFormat>(() => {
     const stored = editTournament?.matchFormat;
     if (!stored) return DEFAULT_MATCH_FORMAT;
@@ -2658,6 +2751,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
         bracketType: structure,
+        poolSize: structure === 'pool_knockout' ? poolSize : undefined,
+        qualifiersPerPool: structure === 'pool_knockout' ? qualifiersPerPool : undefined,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         visibility: visibility as Visibility,
@@ -2702,6 +2797,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     maxRating,
     bracketSize,
     structure,
+    poolSize,
+    qualifiersPerPool,
     matchFormat,
     startDate,
     endDate,
@@ -2792,6 +2889,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       setBracketSize,
       structure,
       setStructure,
+      poolSize,
+      setPoolSize,
+      qualifiersPerPool,
+      setQualifiersPerPool,
       matchFormat,
       setMatchFormat,
       formatOptions,
@@ -2837,6 +2938,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       bracketSize,
       structure,
       setStructure,
+      poolSize,
+      qualifiersPerPool,
       matchFormat,
       formatOptions,
       pointsPerGame,
