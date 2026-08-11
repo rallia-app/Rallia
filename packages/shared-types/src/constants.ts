@@ -359,6 +359,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_updated: 'create-outline',
   tournament_cancelled: 'close-circle-outline',
   tournament_completed: 'trophy-outline',
+  tournament_pool_eliminated: 'podium-outline',
   session_published: 'calendar-outline',
   session_confirm_reminder: 'alarm-outline',
   season_closed: 'flag-outline',
@@ -477,6 +478,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_updated: '#FF9800', // Orange — details changed
   tournament_cancelled: '#F44336', // Red
   tournament_completed: '#4CAF50', // Green — celebration
+  tournament_pool_eliminated: '#4DB8A8', // Teal
   session_published: '#4DB8A8', // Teal — info
   session_confirm_reminder: '#FF9800', // Amber — action needed
   season_closed: '#4CAF50', // Green — completion
@@ -591,6 +593,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_updated: 'Tournament Updated',
   tournament_cancelled: 'Tournament Cancelled',
   tournament_completed: 'Tournament Complete',
+  tournament_pool_eliminated: 'Pool Stage Result',
   session_published: 'Session Schedule Published',
   session_confirm_reminder: 'Confirm Your Spot',
   season_closed: 'Season Closed',
@@ -715,6 +718,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_updated: 'leagues',
   tournament_cancelled: 'leagues',
   tournament_completed: 'leagues',
+  tournament_pool_eliminated: 'leagues',
   session_published: 'leagues',
   session_confirm_reminder: 'leagues',
   season_closed: 'leagues',
@@ -881,6 +885,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_updated: { email: false, push: true, sms: false },
   tournament_cancelled: { email: true, push: true, sms: false },
   tournament_completed: { email: false, push: true, sms: false },
+  tournament_pool_eliminated: { email: false, push: true, sms: false },
   session_published: { email: true, push: true, sms: false },
   session_confirm_reminder: { email: false, push: true, sms: false },
   season_closed: { email: true, push: true, sms: false },

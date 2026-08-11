@@ -294,6 +294,7 @@
       "tournament_updated": "Tournoi mis à jour",
       "tournament_cancelled": "Tournoi annulé",
       "tournament_completed": "Tournoi terminé",
+      "tournament_pool_eliminated": "Résultat de poule",
       "league_invitation": "Invitation à la ligue",
       "league_member_request": "Demande pour la ligue",
       "league_member_approved": "Inscription à la ligue acceptée",

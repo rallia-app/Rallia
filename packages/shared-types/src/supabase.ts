@@ -12608,6 +12608,14 @@ export type Database = {
         Args: { p_min_rating: number; p_sport_id: string }
         Returns: number
       }
+      lt_notify_knockout_published: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
+      lt_notify_pools_published: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
       lt_notify_tournament_deadline_changed: {
         Args: {
           p_bracket_side: string
@@ -15756,6 +15764,7 @@ export type Database = {
         | "tournament_deadline_extended"
         | "tournament_match_walkover"
         | "tournament_dispute_escalated"
+        | "tournament_pool_eliminated"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -16449,6 +16458,7 @@ export const Constants = {
         "tournament_deadline_extended",
         "tournament_match_walkover",
         "tournament_dispute_escalated",
+        "tournament_pool_eliminated",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
