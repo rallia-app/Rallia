@@ -5267,6 +5267,7 @@
         "registered": "Registered",
         "games": "Games",
         "start": "Start",
+        "end": "End",
         "startsToday": "Today",
         "live": "Live",
         "ended": "Ended",
@@ -5528,6 +5529,7 @@
       "linkMatch": "Link a played match to this slot",
       "overrideMatch": "Record the result as organizer",
       "recordResult": "Record result",
+      "correctResult": "Correct the result",
       "addResult": "Add your result",
       "live": "Live",
       "disputed": "Disputed",
@@ -5654,7 +5656,12 @@
       "toPlay": "To play",
       "launchKnockout": "Launch the knockout stage",
       "launchKnockoutWaiting": "Knockout opens when every pool game is settled",
-      "poolGame": "Pool game"
+      "launchKnockoutReady": "Pools are done. The organizer can now launch the knockout.",
+      "poolGame": "Pool game",
+      "knockoutTitle": "Knockout",
+      "headerRecord": "W-L",
+      "headerSets": "Sets",
+      "vs": "vs"
     },
     "deadlines": {
       "playBy": "play by {date}",

@@ -8,6 +8,7 @@
  */
 import { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
@@ -99,6 +100,17 @@ export const PoolsSection: React.FC<{
             </Text>
           </View>
 
+          <View style={styles.standingRow}>
+            <View style={styles.rankCell} />
+            <View style={styles.nameCell} />
+            <Text size="xs" color={colors.textMuted} style={styles.statCell}>
+              {t('tournamentDetail.pools.headerRecord')}
+            </Text>
+            <Text size="xs" color={colors.textMuted} style={styles.statCell}>
+              {t('tournamentDetail.pools.headerSets')}
+            </Text>
+          </View>
+
           {rows.map(row => {
             const isMe =
               !!currentUserId &&
@@ -148,6 +160,7 @@ export const PoolsSection: React.FC<{
                 ? (nameByRegId.get(m.player2_registration_id) ?? '—')
                 : '—';
               const settled = TERMINAL.has(m.status);
+              const tappable = !settled && !!onMatchPress;
               const label = settled
                 ? m.status === 'walkover'
                   ? t('tournamentDetail.pools.walkover')
@@ -156,7 +169,7 @@ export const PoolsSection: React.FC<{
               return (
                 <TouchableOpacity
                   key={m.id}
-                  disabled={settled || !onMatchPress}
+                  disabled={!tappable}
                   onPress={() =>
                     onMatchPress?.(m.id, m.player1_registration_id!, m.player2_registration_id!)
                   }
@@ -166,16 +179,25 @@ export const PoolsSection: React.FC<{
                 >
                   <Text size="xs" color={colors.text} numberOfLines={1} style={styles.matchPlayers}>
                     {p1}
-                    {'  ·  '}
+                    <Text size="xs" color={colors.textMuted}>
+                      {'  '}
+                      {t('tournamentDetail.pools.vs')}
+                      {'  '}
+                    </Text>
                     {p2}
                   </Text>
-                  <Text
-                    size="xs"
-                    weight={settled ? 'semibold' : 'regular'}
-                    color={settled ? colors.text : colors.primary}
-                  >
-                    {label}
-                  </Text>
+                  <View style={styles.matchStatus}>
+                    <Text
+                      size="xs"
+                      weight={settled ? 'semibold' : 'regular'}
+                      color={settled ? colors.text : colors.primary}
+                    >
+                      {label}
+                    </Text>
+                    {tappable && (
+                      <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+                    )}
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -225,4 +247,9 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   matchPlayers: { flexShrink: 1 },
+  matchStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[0.5],
+  },
 });

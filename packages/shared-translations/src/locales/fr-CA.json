@@ -5267,6 +5267,7 @@
         "registered": "Inscrits",
         "games": "Parties",
         "start": "Début",
+        "end": "Fin",
         "startsToday": "Aujourd'hui",
         "live": "En cours",
         "ended": "Terminé",
@@ -5528,6 +5529,7 @@
       "linkMatch": "Lier une partie jouée à ce slot",
       "overrideMatch": "Inscrire le résultat (organisateur)",
       "recordResult": "Inscrire le résultat",
+      "correctResult": "Corriger le résultat",
       "addResult": "Ajouter ton résultat",
       "live": "En direct",
       "disputed": "Contesté",
@@ -5654,7 +5656,12 @@
       "toPlay": "À jouer",
       "launchKnockout": "Lancer la phase éliminatoire",
       "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",
-      "poolGame": "Partie de poule"
+      "launchKnockoutReady": "Poules terminées. L'organisateur peut maintenant lancer les éliminatoires.",
+      "poolGame": "Partie de poule",
+      "knockoutTitle": "Éliminatoires",
+      "headerRecord": "V-D",
+      "headerSets": "Sets",
+      "vs": "vs"
     },
     "deadlines": {
       "playBy": "à jouer avant le {date}",

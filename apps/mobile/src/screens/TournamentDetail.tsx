@@ -2209,6 +2209,11 @@ export const TournamentDetail: React.FC = () => {
     return next?.deadline_at ?? null;
   }, [roundDeadlines, isPoolTournament, knockoutMatches]);
 
+  const deadlineUrgent = useCallback(
+    (iso: string) => new Date(iso).getTime() - Date.now() <= 48 * 3600000,
+    []
+  );
+
   const formatDeadline = useCallback(
     (iso: string) => {
       const target = new Date(iso).getTime();
@@ -3025,18 +3030,21 @@ export const TournamentDetail: React.FC = () => {
         : isLive
           ? 2
           : 3;
-  // Kept short: this sits in a narrow stats segment, so an upcoming start shows
-  // the date ("Jul 26") rather than a countdown phrase that would wrap.
-  const startTileValue = isLive
-    ? t('tournamentDetail.dashboard.stats.live')
-    : isFinished
-      ? t('tournamentDetail.dashboard.stats.ended')
+  // Kept short: this sits in a narrow stats segment, so dates show as "Jul 26"
+  // rather than countdown phrases that would wrap. Status already lives in the
+  // hero badge, so once play starts the tile shows the end date instead.
+  const shortDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  const startTileLabel =
+    isLive || isFinished
+      ? t('tournamentDetail.dashboard.stats.end')
+      : t('tournamentDetail.dashboard.stats.start');
+  const startTileValue =
+    isLive || isFinished
+      ? shortDate(tournament.end_date)
       : daysToStart === 0
         ? t('tournamentDetail.dashboard.stats.startsToday')
-        : new Date(tournament.start_date).toLocaleDateString(locale, {
-            month: 'short',
-            day: 'numeric',
-          });
+        : shortDate(tournament.start_date);
   const myMatchP1 = myNextMatch?.player1_registration_id ?? null;
   const myMatchP2 = myNextMatch?.player2_registration_id ?? null;
   const registerCloseHint = tournament.registration_closes_at
@@ -3620,7 +3628,7 @@ export const TournamentDetail: React.FC = () => {
               ) : null}
               <StatSegment
                 value={startTileValue}
-                label={t('tournamentDetail.dashboard.stats.start')}
+                label={startTileLabel}
                 colors={colors}
                 showDivider
               />
@@ -3755,8 +3763,31 @@ export const TournamentDetail: React.FC = () => {
                             ? t('tournamentDetail.pools.poolGame' as TranslationKey)
                             : roundLabel(myNextMatch.round_number, totalRounds, t)}{' '}
                           · {t('tournamentDetail.dashboard.myMatch.hint')}
-                          {myNextMatchDeadline ? ` · ${formatDeadline(myNextMatchDeadline)}` : ''}
                         </Text>
+                        {myNextMatchDeadline && (
+                          <View style={styles.myMatchDeadlineRow}>
+                            <Ionicons
+                              name="time-outline"
+                              size={13}
+                              color={
+                                deadlineUrgent(myNextMatchDeadline)
+                                  ? colors.danger
+                                  : colors.textMuted
+                              }
+                            />
+                            <Text
+                              size="xs"
+                              weight="semibold"
+                              color={
+                                deadlineUrgent(myNextMatchDeadline)
+                                  ? colors.danger
+                                  : colors.textMuted
+                              }
+                            >
+                              {formatDeadline(myNextMatchDeadline)}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                       <Ionicons name="chevron-forward" size={20} color={colors.primary} />
                     </TouchableOpacity>
@@ -3991,41 +4022,67 @@ export const TournamentDetail: React.FC = () => {
         {currentTabKey === 'bracket' && showBracketTab && (
           <View style={styles.tabContent}>
             {currentPhaseDeadline && (
-              <Text size="xs" color={colors.textMuted} style={styles.phaseDeadlineLine}>
-                {t('tournamentDetail.deadlines.phaseDeadline' as TranslationKey).replace(
-                  '{when}',
-                  formatDeadline(currentPhaseDeadline)
-                )}
-              </Text>
+              <View style={styles.phaseDeadlineRow}>
+                <View
+                  style={[
+                    styles.phaseDeadlinePill,
+                    {
+                      backgroundColor: deadlineUrgent(currentPhaseDeadline)
+                        ? colors.dangerBg
+                        : colors.statusMutedBg,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={13}
+                    color={deadlineUrgent(currentPhaseDeadline) ? colors.danger : colors.textMuted}
+                  />
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    color={deadlineUrgent(currentPhaseDeadline) ? colors.danger : colors.textMuted}
+                  >
+                    {t('tournamentDetail.deadlines.phaseDeadline' as TranslationKey).replace(
+                      '{when}',
+                      formatDeadline(currentPhaseDeadline)
+                    )}
+                  </Text>
+                </View>
+              </View>
             )}
             {isPoolTournament && (
               <>
-                {isOrganizer && knockoutMatches.length === 0 && (
-                  <TouchableOpacity
-                    disabled={!poolPhaseComplete || generateKnockout.isPending}
-                    onPress={handleGenerateKnockout}
-                    activeOpacity={0.8}
-                    style={[
-                      styles.poolLaunchBtn,
-                      {
-                        backgroundColor: poolPhaseComplete ? colors.primary : colors.statusMutedBg,
-                      },
-                    ]}
-                    testID="cta-generate-knockout"
-                  >
-                    <Text
-                      size="sm"
-                      weight="semibold"
-                      color={poolPhaseComplete ? '#ffffff' : colors.textMuted}
+                {knockoutMatches.length === 0 &&
+                  (poolPhaseComplete && isOrganizer ? (
+                    <TouchableOpacity
+                      disabled={generateKnockout.isPending}
+                      onPress={handleGenerateKnockout}
+                      activeOpacity={0.8}
+                      style={[styles.poolLaunchBtn, { backgroundColor: colors.primary }]}
+                      testID="cta-generate-knockout"
                     >
-                      {t(
-                        (poolPhaseComplete
-                          ? 'tournamentDetail.pools.launchKnockout'
-                          : 'tournamentDetail.pools.launchKnockoutWaiting') as TranslationKey
-                      )}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                      <Ionicons name="git-branch-outline" size={16} color="#ffffff" />
+                      <Text size="sm" weight="semibold" color="#ffffff">
+                        {t('tournamentDetail.pools.launchKnockout' as TranslationKey)}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.poolPhaseNote, { backgroundColor: colors.statusMutedBg }]}>
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={16}
+                        color={colors.textMuted}
+                      />
+                      <Text size="xs" color={colors.textMuted} style={styles.poolPhaseNoteText}>
+                        {t(
+                          (poolPhaseComplete
+                            ? 'tournamentDetail.pools.launchKnockoutReady'
+                            : 'tournamentDetail.pools.launchKnockoutWaiting') as TranslationKey
+                        )}
+                      </Text>
+                    </View>
+                  ))}
                 <PoolsSection
                   standings={poolStandings}
                   poolMatches={poolMatches}
@@ -4037,6 +4094,16 @@ export const TournamentDetail: React.FC = () => {
                   t={t as (k: string) => string}
                 />
               </>
+            )}
+            {isPoolTournament && knockoutMatches.length > 0 && (
+              <Text
+                size="xs"
+                weight="semibold"
+                color={colors.textMuted}
+                style={[styles.sectionTitle, styles.knockoutTitle]}
+              >
+                {t('tournamentDetail.pools.knockoutTitle' as TranslationKey).toUpperCase()}
+              </Text>
             )}
             {(!isPoolTournament || knockoutMatches.length > 0) && (
               <BracketSection
@@ -4798,15 +4865,21 @@ const BracketSection: React.FC<{
     if (isTappable && m.player1_registration_id && m.player2_registration_id) {
       const p1RegId = m.player1_registration_id;
       const p2RegId = m.player2_registration_id;
+      // Fixing an already-recorded result is a quiet escape hatch, not the next
+      // action — it drops the playable accent and softens the footer.
+      const isCorrection = useOrganizerOverride && m.status === 'completed';
       const handlePress = useOrganizerOverride
         ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
         : () => onMatchPress(m.id, p1RegId, p2RegId);
       const a11yLabel = useOrganizerOverride
         ? t('tournamentDetail.bracket.overrideMatch')
         : t('tournamentDetail.bracket.linkMatch');
-      const ctaLabel = useOrganizerOverride
-        ? t('tournamentDetail.bracket.recordResult')
-        : t('tournamentDetail.bracket.addResult');
+      const ctaLabel = isCorrection
+        ? t('tournamentDetail.bracket.correctResult' as TranslationKey)
+        : useOrganizerOverride
+          ? t('tournamentDetail.bracket.recordResult')
+          : t('tournamentDetail.bracket.addResult');
+      const accent = isCorrection ? colors.textMuted : colors.primary;
       return (
         <TouchableOpacity
           key={m.id}
@@ -4814,8 +4887,11 @@ const BracketSection: React.FC<{
           activeOpacity={0.7}
           style={[
             styles.bmCard,
-            styles.bmCardPlayable,
-            { backgroundColor: colors.cardBackground, borderColor: colors.primary },
+            !isCorrection && styles.bmCardPlayable,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: isCorrection ? colors.border : colors.primary,
+            },
           ]}
           accessibilityRole="button"
           accessibilityLabel={a11yLabel}
@@ -4825,18 +4901,26 @@ const BracketSection: React.FC<{
           <View
             style={[
               styles.bmFooter,
-              { backgroundColor: colors.highlightBg, borderTopColor: colors.border },
+              {
+                backgroundColor: isCorrection ? 'transparent' : colors.highlightBg,
+                borderTopColor: colors.border,
+              },
             ]}
           >
             <Ionicons
               name={useOrganizerOverride ? 'create-outline' : 'add-circle-outline'}
-              size={16}
-              color={colors.primary}
+              size={isCorrection ? 14 : 16}
+              color={accent}
             />
-            <Text size="sm" weight="semibold" color={colors.primary} style={styles.bmFooterLabel}>
+            <Text
+              size={isCorrection ? 'xs' : 'sm'}
+              weight="semibold"
+              color={accent}
+              style={styles.bmFooterLabel}
+            >
               {ctaLabel}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <Ionicons name="chevron-forward" size={isCorrection ? 14 : 16} color={accent} />
           </View>
         </TouchableOpacity>
       );
@@ -5133,17 +5217,48 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
   },
-  phaseDeadlineLine: {
-    marginBottom: spacingPixels[2],
-    textAlign: 'center',
+  phaseDeadlineRow: {
+    alignItems: 'center',
+    marginBottom: spacingPixels[3],
+  },
+  phaseDeadlinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1.5],
+    borderRadius: radiusPixels.full,
   },
   poolLaunchBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacingPixels[2],
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     marginBottom: spacingPixels[4],
+  },
+  poolPhaseNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[2],
+    paddingVertical: spacingPixels[2.5],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[4],
+  },
+  poolPhaseNoteText: {
+    flex: 1,
+  },
+  knockoutTitle: {
+    marginTop: spacingPixels[2],
+  },
+  myMatchDeadlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[1],
   },
   playersInviteBtn: {
     flexDirection: 'row',
@@ -5632,7 +5747,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roundChatBtn: {
-    marginTop: spacingPixels[2],
+    marginTop: spacingPixels[4],
   },
   primaryButton: {
     flexDirection: 'row',
