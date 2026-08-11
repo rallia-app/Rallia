@@ -5667,6 +5667,7 @@
       "poolTitle": "Pool {letter}",
       "qualifyHint": "Top {count} qualify",
       "walkover": "W/O",
+      "cancelled": "Cancelled",
       "toPlay": "To play",
       "launchKnockout": "Launch the knockout stage",
       "launchKnockoutWaiting": "Knockout opens when every pool game is settled",

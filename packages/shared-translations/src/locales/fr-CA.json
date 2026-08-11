@@ -5667,6 +5667,7 @@
       "poolTitle": "Poule {letter}",
       "qualifyHint": "Les {count} premiers se qualifient",
       "walkover": "Forfait",
+      "cancelled": "Annulée",
       "toPlay": "À jouer",
       "launchKnockout": "Lancer la phase éliminatoire",
       "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",

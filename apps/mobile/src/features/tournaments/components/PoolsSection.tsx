@@ -182,11 +182,16 @@ export const PoolsSection: React.FC<{
                 (m.status === 'pending' || m.status === 'completed') &&
                 !!onOrganizerOverride;
               const tappable = canAttach || canOverride;
-              const label = settled
-                ? m.status === 'walkover'
+              // A cancelled game is settled but carries no score, so it reads as
+              // a status rather than a result.
+              const noResult = m.status === 'cancelled';
+              const label = !settled
+                ? t('tournamentDetail.pools.toPlay')
+                : m.status === 'walkover'
                   ? t('tournamentDetail.pools.walkover')
-                  : (m.score ?? '')
-                : t('tournamentDetail.pools.toPlay');
+                  : noResult
+                    ? t('tournamentDetail.pools.cancelled')
+                    : (m.score ?? '—');
               const pendingAccent = tappable ? colors.primary : colors.textMuted;
               return (
                 <TouchableOpacity
@@ -215,8 +220,8 @@ export const PoolsSection: React.FC<{
                   <View style={styles.matchStatus}>
                     <Text
                       size="xs"
-                      weight={settled ? 'semibold' : 'regular'}
-                      color={settled ? colors.text : pendingAccent}
+                      weight={settled && !noResult ? 'semibold' : 'regular'}
+                      color={noResult ? colors.textMuted : settled ? colors.text : pendingAccent}
                     >
                       {label}
                     </Text>
