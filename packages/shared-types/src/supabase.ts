@@ -9115,6 +9115,7 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -9139,6 +9140,7 @@ export type Database = {
           player1_registration_id?: string | null
           player2_is_bye?: boolean
           player2_registration_id?: string | null
+          pool_number?: number | null
           round_number: number
           scheduled_at?: string | null
           score?: string | null
@@ -9163,6 +9165,7 @@ export type Database = {
           player1_registration_id?: string | null
           player2_is_bye?: boolean
           player2_registration_id?: string | null
+          pool_number?: number | null
           round_number?: number
           scheduled_at?: string | null
           score?: string | null
@@ -9513,7 +9516,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -9574,7 +9579,9 @@ export type Database = {
           organizer_id: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game?: number | null
+          pool_size?: number | null
           prize_money_cents?: number | null
+          qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
           ranking_points_ceiling?: number | null
@@ -9635,7 +9642,9 @@ export type Database = {
           organizer_id?: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game?: number | null
+          pool_size?: number | null
           prize_money_cents?: number | null
+          qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
           ranking_points_ceiling?: number | null
@@ -9862,6 +9871,14 @@ export type Database = {
           round_number: number
           status: Database["public"]["Enums"]["tournament_match_status"]
           winner_registration_id: string
+        }[]
+      }
+      _lt_compute_pool_assignment: {
+        Args: { p_pool_size: number; p_regs: string[] }
+        Returns: {
+          pool_number: number
+          registration_id: string
+          seed_idx: number
         }[]
       }
       accept_match_time_suggestion: {
@@ -12531,6 +12548,10 @@ export type Database = {
         Args: { p_score: string }
         Returns: Record<string, unknown>
       }
+      lt_post_system_match_organizer_card: {
+        Args: { p_tournament_match_id: string }
+        Returns: string
+      }
       lt_propagate_match_result_to_bracket: {
         Args: { p_match_result_id: string }
         Returns: undefined
@@ -12663,7 +12684,9 @@ export type Database = {
           facility_id: string
           facility_name: string
           fav_count: number
+          free_count: number
           hour_of_day: number
+          option_key: string
           price_cents: number
           score: number
           slot_start: string
@@ -14070,7 +14093,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14116,6 +14141,7 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -14199,7 +14225,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14269,7 +14297,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14315,7 +14345,9 @@ export type Database = {
           p_name: string
           p_network_id?: string
           p_points_per_game?: number
+          p_pool_size?: number
           p_prize_money_cents?: number
+          p_qualifiers_per_pool?: number
           p_registration_closes_at?: string
           p_registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
           p_registration_opens_at?: string
@@ -14365,7 +14397,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14426,6 +14460,41 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      tournament_generate_pools: {
+        Args: { p_tournament_id: string; p_version_was: number }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -14568,7 +14637,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14618,6 +14689,7 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -14646,6 +14718,17 @@ export type Database = {
           round_number: number
           status: Database["public"]["Enums"]["tournament_match_status"]
           winner_registration_id: string
+        }[]
+      }
+      tournament_preview_pools: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          partner_user_id: string
+          pool_number: number
+          registration_id: string
+          seed_rank: number
+          slot: number
+          user_id: string
         }[]
       }
       tournament_ranked_board: {
@@ -14777,7 +14860,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14922,7 +15007,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14992,7 +15079,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -15150,7 +15239,10 @@ export type Database = {
         | "no_show"
         | "awaiting_approval"
       booking_type_enum: "player" | "program_session" | "maintenance"
-      bracket_type: "single_elimination" | "double_elimination"
+      bracket_type:
+        | "single_elimination"
+        | "double_elimination"
+        | "pool_knockout"
       cancellation_reason_enum:
         | "weather"
         | "court_unavailable"
@@ -15816,7 +15908,11 @@ export const Constants = {
         "awaiting_approval",
       ],
       booking_type_enum: ["player", "program_session", "maintenance"],
-      bracket_type: ["single_elimination", "double_elimination"],
+      bracket_type: [
+        "single_elimination",
+        "double_elimination",
+        "pool_knockout",
+      ],
       cancellation_reason_enum: [
         "weather",
         "court_unavailable",
