@@ -9104,6 +9104,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -9130,6 +9132,8 @@ export type Database = {
           bracket_side?: string
           court_id?: string | null
           created_at?: string
+          deadline_nudge12_at?: string | null
+          deadline_nudge48_at?: string | null
           deadline_override_at?: string | null
           id?: string
           loser_next_match_id?: string | null
@@ -9156,6 +9160,8 @@ export type Database = {
           bracket_side?: string
           court_id?: string | null
           created_at?: string
+          deadline_nudge12_at?: string | null
+          deadline_nudge48_at?: string | null
           deadline_override_at?: string | null
           id?: string
           loser_next_match_id?: string | null
@@ -12515,6 +12521,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_advance_double_walkover: {
+        Args: { p_tm_id: string }
+        Returns: undefined
+      }
       lt_advance_tournament_winner: {
         Args: {
           p_tournament_match_id: string
@@ -12549,6 +12559,12 @@ export type Database = {
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
       lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
+      lt_effective_match_deadline: {
+        Args: {
+          p_tm: Database["public"]["Tables"]["tournament_matches"]["Row"]
+        }
+        Returns: string
+      }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
         Returns: {
@@ -12600,6 +12616,10 @@ export type Database = {
         Args: { p_tm_id: string }
         Returns: undefined
       }
+      lt_notify_tournament_walkover: {
+        Args: { p_double: boolean; p_tm_id: string; p_winner: string }
+        Returns: undefined
+      }
       lt_order_avoid_repeat: {
         Args: { p_pool: string[]; p_season_id: string }
         Returns: string[]
@@ -12629,6 +12649,7 @@ export type Database = {
         Args: { p_registration_id: string }
         Returns: string
       }
+      lt_registration_users: { Args: { p_reg: string }; Returns: string[] }
       lt_release_candidates: {
         Args: never
         Returns: {
@@ -12640,6 +12661,10 @@ export type Database = {
           payment_id: string
           stripe_charge_id: string
         }[]
+      }
+      lt_resolve_due_tournament_matches: {
+        Args: { p_dry_run?: boolean }
+        Returns: number
       }
       lt_rotate_for_round: {
         Args: { p_ids: string[]; p_round: number }
@@ -12684,6 +12709,11 @@ export type Database = {
       }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       lt_send_session_confirm_reminders: { Args: never; Returns: number }
+      lt_send_tournament_deadline_nudges: { Args: never; Returns: number }
+      lt_side_effort: {
+        Args: { p_tm_id: string; p_users: string[] }
+        Returns: Json
+      }
       lt_snap_ranking_multiplier: { Args: { p_mult: number }; Returns: number }
       lt_sport_rating_system: { Args: { p_sport_id: string }; Returns: string }
       lt_tournament_ranking_multiplier: {
@@ -14190,6 +14220,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -14499,6 +14531,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -14582,6 +14616,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -14617,6 +14653,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -14652,6 +14690,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -14848,6 +14888,8 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
           deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
@@ -15849,6 +15891,7 @@ export type Database = {
         | "first_match_bonus"
         | "feedback_submitted"
         | "match_left_late"
+        | "tournament_unresponsive"
       reputation_tier: "unknown" | "bronze" | "silver" | "gold" | "platinum"
       role_enum: "admin" | "staff" | "player" | "coach" | "owner"
       score_validation_status: "pending_validation" | "validated" | "rejected"
@@ -16559,6 +16602,7 @@ export const Constants = {
         "first_match_bonus",
         "feedback_submitted",
         "match_left_late",
+        "tournament_unresponsive",
       ],
       reputation_tier: ["unknown", "bronze", "silver", "gold", "platinum"],
       role_enum: ["admin", "staff", "player", "coach", "owner"],
