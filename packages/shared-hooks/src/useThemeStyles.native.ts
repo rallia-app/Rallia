@@ -115,12 +115,14 @@ export function useThemeStyles() {
       textSecondary: isDark ? neutral[300] : neutral[600],
       textMuted: themeColors.mutedForeground,
 
-      // Interactive (dark mode: bright Court Teal with dark ink on top)
+      // Interactive. Buttons keep white text in both modes, so dark-mode
+      // fills sit one step deeper (500) than the bright 400 used for
+      // links, rings, and text accents.
       primary: isDark ? primary[400] : primary[600],
-      primaryForeground: isDark ? primary[950] : BASE_WHITE,
-      buttonActive: isDark ? primary[400] : primary[600],
+      primaryForeground: BASE_WHITE,
+      buttonActive: isDark ? primary[500] : primary[600],
       buttonInactive: themeColors.muted,
-      buttonTextActive: isDark ? primary[950] : BASE_WHITE,
+      buttonTextActive: BASE_WHITE,
       buttonTextInactive: themeColors.mutedForeground,
 
       // Borders

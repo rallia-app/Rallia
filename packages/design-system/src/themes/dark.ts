@@ -25,9 +25,9 @@ export const darkTheme = {
   popoverForeground: neutral[50],
 
   // Primary colors (buttons, links, etc.)
-  // Bright Court Teal on dark grounds; CTA text flips to dark ink for contrast.
-  primary: primary[400],
-  primaryForeground: primary[950],
+  // Deep enough for white button text; the brighter 400 step stays on rings.
+  primary: primary[500],
+  primaryForeground: base.white,
 
   // Secondary colors (secondary buttons, less emphasis)
   secondary: neutral[800],
@@ -53,8 +53,8 @@ export const darkTheme = {
   // Sidebar specific
   sidebar: neutral[900],
   sidebarForeground: neutral[50],
-  sidebarPrimary: primary[400],
-  sidebarPrimaryForeground: primary[950],
+  sidebarPrimary: primary[500],
+  sidebarPrimaryForeground: base.white,
   sidebarAccent: neutral[800],
   sidebarAccentForeground: neutral[50],
   sidebarBorder: 'rgba(180, 220, 210, 0.14)',
@@ -91,8 +91,8 @@ export const darkThemeCSSValues = {
   '--card-foreground': neutral[50],
   '--popover': neutral[900],
   '--popover-foreground': neutral[50],
-  '--primary': primary[400], // bright Court Teal
-  '--primary-foreground': primary[950],
+  '--primary': primary[500],
+  '--primary-foreground': base.white,
   '--secondary': neutral[800],
   '--secondary-foreground': neutral[50],
   '--muted': neutral[800],
@@ -107,8 +107,8 @@ export const darkThemeCSSValues = {
   // Sidebar
   '--sidebar': neutral[900],
   '--sidebar-foreground': neutral[50],
-  '--sidebar-primary': primary[400],
-  '--sidebar-primary-foreground': primary[950],
+  '--sidebar-primary': primary[500],
+  '--sidebar-primary-foreground': base.white,
   '--sidebar-accent': neutral[800],
   '--sidebar-accent-foreground': neutral[50],
   '--sidebar-border': 'rgba(180, 220, 210, 0.14)',

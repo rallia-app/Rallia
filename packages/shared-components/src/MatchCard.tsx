@@ -759,8 +759,9 @@ const CardFooter: React.FC<CardFooterProps> = ({
     !playerHasCheckedIn &&
     locationAllowsCheckIn;
 
-  const ctaPositive = isDark ? primary[400] : primary[500];
-  const ctaDestructive = isDark ? secondary[400] : secondary[500];
+  // White CTA text in both modes, so the fills stay at the 500 step.
+  const ctaPositive = primary[500];
+  const ctaDestructive = secondary[500];
   // const ctaAccent = isDark ? accent[400] : accent[500];
   const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
   const ctaNeutralText = colors.text;
