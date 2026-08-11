@@ -93,6 +93,8 @@
     "// db:seed:tournaments:staging": "Seed staging with [SEED-T] tournaments covering every lifecycle state, brackets, doubles, pickleball and the participant flows (requires STAGING_DB_URL)",
     "db:seed:paid-e2e:staging": "psql \"$STAGING_DB_URL\" -v ON_ERROR_STOP=1 -f scripts/tournaments/seed-paid-e2e-staging.sql",
     "// db:seed:paid-e2e:staging": "Seed staging with the [PAYE2E] paid end-to-end set: no fake ledger rows, meant to be charged with a real Stripe test card (requires STAGING_DB_URL)",
+    "db:seed:tournaments:pools": "psql \"$STAGING_DB_URL\" -1 -v ON_ERROR_STOP=1 -f scripts/tournaments/seed-pool-knockout-staging.sql",
+    "// db:seed:tournaments:pools": "Seed staging with [JDL-PK] 7-12: the pool_knockout cases the tester cannot reach from the app (uneven pools, forfeit, cancelled game, doubles, one qualifier per pool, 32-player draw, pickleball) and re-arm the clocks on 1-6 (requires STAGING_DB_URL)",
     "// ----- Edge Functions -----": "",
     "functions:serve": "bash scripts/dev/functions-serve.sh",
     "// functions:serve": "Sync Vault keys with edge runtime and start functions serve",
