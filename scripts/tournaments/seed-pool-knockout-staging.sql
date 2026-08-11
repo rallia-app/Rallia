@@ -1,5 +1,5 @@
 -- ============================================================================
--- Pool + knockout ([JDL-PK]) — fixtures 7 to 12
+-- Pool + knockout ([JDL-PK]) — fixtures 7 to 13
 --
 -- The original 1-6 set covers the happy path Jean can drive himself: register
 -- (1), pools running with his own games to link (2), a deadline countdown (3),
@@ -29,6 +29,13 @@
 --        halves here.
 --   12 · Pickleball                     → the points_per_game scoring path on
 --        a pool draw.
+--   13 · À toi de former les poules      → the only fixture Jean ORGANIZES and
+--        does not play in. Everything before pools exist is organizer-only (the
+--        composition preview, seeding, generating), a pool phase he is not in is
+--        the only place he can override someone else's score or forfeit a player
+--        who still owes games, and it is the only fixture that can trigger the
+--        gate-1 nudge since nothing else sits at registration_closed. Left
+--        unseeded with nothing generated: those are his steps.
 --
 -- Idempotent: the fixtures are dropped by exact name and rebuilt. Safe to
 -- re-run before any protocol pass. It does NOT touch fixtures 1-6, so Jean can
@@ -46,7 +53,7 @@
 --
 -- Run: npm run db:seed:tournaments:pools     (needs STAGING_DB_URL)
 --   or paste into the Supabase SQL editor on rallia-staging.
--- Cleanup: the DO block below, or delete the six names in F_NAMES.
+-- Cleanup: the DO block below, or delete the seven names it lists.
 -- ============================================================================
 
 \set ON_ERROR_STOP on
@@ -124,7 +131,11 @@ CREATE OR REPLACE FUNCTION pg_temp.build(
     p_partners   uuid[]  DEFAULT NULL,
     p_qualifiers smallint DEFAULT 2,
     p_format     text    DEFAULT 'singles',
-    p_mformat    text    DEFAULT NULL
+    p_mformat    text    DEFAULT NULL,
+    -- Stop after closing registration, leaving the seeding and the pool
+    -- generation for a human organizer to do.
+    p_stop_closed boolean DEFAULT false,
+    p_visibility  text    DEFAULT 'public'
 )
 RETURNS uuid LANGUAGE plpgsql AS $$
 DECLARE
@@ -140,7 +151,7 @@ BEGIN
         now() + interval '6 days',
         now() + interval '34 days',
         p_description       => 'Fixture de test — poules puis éliminatoires.',
-        p_visibility        => 'public',
+        p_visibility        => p_visibility::tournament_visibility,
         p_registration_mode => 'open',
         p_bracket_type      => 'pool_knockout',
         p_match_format      => p_mformat::match_format,
@@ -161,6 +172,10 @@ BEGIN
     PERFORM pg_temp.as_user(p_organizer);
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
     PERFORM public.tournament_close_registration(v_t.id, v_ver);
+
+    IF p_stop_closed THEN
+        RETURN v_t.id;
+    END IF;
 
     -- Seed explicitly, in p_players order. Everything here runs inside one
     -- transaction, so now() is frozen and every entry shares the same
@@ -193,7 +208,8 @@ DECLARE
         '[JDL-PK] 9 · Doubles',
         '[JDL-PK] 10 · Un seul qualifié par poule',
         '[JDL-PK] 11 · Grand tableau (32 joueurs)',
-        '[JDL-PK] 12 · Pickleball'
+        '[JDL-PK] 12 · Pickleball',
+        '[JDL-PK] 13 · À toi de former les poules'
     ];
     v_ids uuid[];
 BEGIN
@@ -256,10 +272,10 @@ BEGIN
 
     -- 101 fake tennis players available; take a wide slice and carve rosters
     -- out of it so no two fixtures share an organizer.
-    v_tn := pg_temp.fakes('tennis', 86, 0);
+    v_tn := pg_temp.fakes('tennis', 94, 0);
     v_pk := pg_temp.fakes('pickleball', 24, 0);
-    IF coalesce(array_length(v_tn, 1), 0) < 86 THEN
-        RAISE EXCEPTION 'need 86 fake tennis players, found %',
+    IF coalesce(array_length(v_tn, 1), 0) < 94 THEN
+        RAISE EXCEPTION 'need 94 fake tennis players, found %',
             coalesce(array_length(v_tn, 1), 0);
     END IF;
     IF coalesce(array_length(v_pk, 1), 0) < 12 THEN
@@ -434,6 +450,25 @@ BEGIN
                          2::smallint, 'singles', 'pickleball_to_11');
     PERFORM pg_temp.settle_pools(v_t, v_org, '11-7 11-9', 5);
     RAISE NOTICE '12 · pickleball: %', v_t;
+
+    -- =====================================================================
+    -- 13 · À toi de former les poules. Jean ORGANIZES this one and is NOT an
+    -- entrant, which is the gap the other twelve leave. Everything before pools
+    -- exist is organizer-only (the composition preview, seeding, generating),
+    -- and a pool phase he is not playing in is the only place he can override
+    -- someone else's score or forfeit a player who still owes games. It is also
+    -- the only fixture that can trigger the gate-1 nudge, since nothing else
+    -- sits at registration_closed.
+    --
+    -- Left unseeded with nothing generated, on purpose: those are his steps.
+    -- Private because nothing here needs discovering, and a public tournament
+    -- opening registration enqueues a fanout to real staging players.
+    -- =====================================================================
+    v_roster := v_tn[87:94];
+    v_t := pg_temp.build('[JDL-PK] 13 · À toi de former les poules',
+                         'tennis', 8::smallint, v_jean, v_roster, NULL,
+                         2::smallint, 'singles', NULL, true, 'private');
+    RAISE NOTICE '13 · a toi de former les poules: %', v_t;
 END;
 $$;
 
