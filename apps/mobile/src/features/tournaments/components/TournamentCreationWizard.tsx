@@ -85,7 +85,10 @@ const BASE_WHITE = '#ffffff';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 4;
 const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
-type BracketSize = (typeof BRACKET_SIZES)[number];
+/** pool_knockout admits non-powers of two; pools of 4 by default. */
+const POOL_FIELD_SIZES = [8, 12, 16, 20, 24, 32] as const;
+type BracketSize = (typeof BRACKET_SIZES)[number] | (typeof POOL_FIELD_SIZES)[number];
+type Structure = 'single_elimination' | 'pool_knockout';
 
 function startOfLocalDay(date: Date): Date {
   const d = new Date(date);
@@ -226,6 +229,8 @@ export interface TournamentEditData {
   startDate: string; // ISO
   endDate: string; // ISO
   maxParticipants: number;
+  /** Fixed at creation; shown read-only when editing a pool tournament. */
+  bracketType?: Enums<'bracket_type'>;
   matchFormat: MatchFormat;
   /** Pickleball only; null on tennis and on rows written before the split. */
   pointsPerGame: number | null;
@@ -966,6 +971,8 @@ const DetailsStep: React.FC<{
   onRemovePoster: () => void;
   bracketSize: BracketSize;
   setBracketSize: (v: BracketSize) => void;
+  structure: Structure;
+  setStructure: (v: Structure) => void;
   matchFormat: MatchFormat;
   setMatchFormat: (v: MatchFormat) => void;
   formatOptions: readonly MatchFormat[];
@@ -1008,6 +1015,8 @@ const DetailsStep: React.FC<{
   onRemovePoster,
   bracketSize,
   setBracketSize,
+  structure,
+  setStructure,
   matchFormat,
   setMatchFormat,
   formatOptions,
@@ -1312,6 +1321,57 @@ const DetailsStep: React.FC<{
 
               <View style={styles.fieldGroup}>
                 <FieldLabel colors={colors}>
+                  {t('tournamentCreation.fields.structure' as TranslationKey)}
+                </FieldLabel>
+                <View style={styles.optionsRow}>
+                  {(['single_elimination', 'pool_knockout'] as const).map(s => {
+                    const selected = s === structure;
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        disabled={!canEditStructure || isEditMode}
+                        onPress={() => {
+                          lightHaptic();
+                          setStructure(s);
+                        }}
+                        activeOpacity={0.7}
+                        style={[
+                          styles.bracketChip,
+                          {
+                            backgroundColor: selected
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: selected ? colors.buttonActive : colors.border,
+                            opacity: !canEditStructure || isEditMode ? 0.5 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text
+                          size="base"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.buttonActive : colors.text}
+                        >
+                          {t(
+                            (s === 'single_elimination'
+                              ? 'tournamentCreation.fields.structureSingle'
+                              : 'tournamentCreation.fields.structurePool') as TranslationKey
+                          )}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {structure === 'pool_knockout' && (
+                  <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                    {t('tournamentCreation.fields.structurePoolHint' as TranslationKey)}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <FieldLabel colors={colors}>
                   {t(
                     (entryFormat === 'singles'
                       ? 'tournamentCreation.fields.maxParticipants'
@@ -1319,7 +1379,7 @@ const DetailsStep: React.FC<{
                   )}
                 </FieldLabel>
                 <View style={styles.optionsRow}>
-                  {BRACKET_SIZES.map(n => {
+                  {(structure === 'pool_knockout' ? POOL_FIELD_SIZES : BRACKET_SIZES).map(n => {
                     const selected = n === bracketSize;
                     return (
                       <TouchableOpacity
@@ -2135,6 +2195,18 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   const [bracketSize, setBracketSize] = useState<BracketSize>(
     (editTournament?.maxParticipants as BracketSize) ?? 8
   );
+  const [structure, setStructureState] = useState<Structure>(
+    editTournament?.bracketType === 'pool_knockout' ? 'pool_knockout' : 'single_elimination'
+  );
+  // Switching structure snaps the field size to the nearest valid option.
+  const setStructure = useCallback((s: Structure) => {
+    setStructureState(s);
+    setBracketSize(prev => {
+      const sizes: readonly number[] = s === 'pool_knockout' ? POOL_FIELD_SIZES : BRACKET_SIZES;
+      if (sizes.includes(prev)) return prev;
+      return (s === 'pool_knockout' ? 16 : 8) as BracketSize;
+    });
+  }, []);
   const [matchFormat, setMatchFormat] = useState<MatchFormat>(() => {
     const stored = editTournament?.matchFormat;
     if (!stored) return DEFAULT_MATCH_FORMAT;
@@ -2515,7 +2587,13 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (endDate.toISOString() !== new Date(editTournament.endDate).toISOString())
           patch.endDate = endDate.toISOString();
         if (canEditStructure) {
-          if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
+          // The update RPC's size allowlist is single-elim only; pool field
+          // sizes are fixed at creation for now.
+          if (
+            editTournament.bracketType !== 'pool_knockout' &&
+            bracketSize !== editTournament.maxParticipants
+          )
+            patch.maxParticipants = bracketSize as 4 | 8 | 16 | 32 | 64 | 128;
           if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
           // Only pickleball carries a target, and only when it changed.
           const nextPoints = isPickleball ? pointsPerGame : null;
@@ -2579,6 +2657,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         prizeMoneyCents: prizeMoneyCents ?? undefined,
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
+        bracketType: structure,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         visibility: visibility as Visibility,
@@ -2622,6 +2701,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     minRating,
     maxRating,
     bracketSize,
+    structure,
     matchFormat,
     startDate,
     endDate,
@@ -2710,6 +2790,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       onRemovePoster: handleRemovePoster,
       bracketSize,
       setBracketSize,
+      structure,
+      setStructure,
       matchFormat,
       setMatchFormat,
       formatOptions,
@@ -2753,6 +2835,8 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       handlePickPoster,
       handleRemovePoster,
       bracketSize,
+      structure,
+      setStructure,
       matchFormat,
       formatOptions,
       pointsPerGame,

@@ -3346,7 +3346,10 @@
       "created": "Game created 🙌",
       "createdSubtitle": "See you on the court",
       "viewGame": "View game",
-      "createGame": "Create this game"
+      "createGame": "Create this game",
+      "noOverlapTitle": "No shared times yet",
+      "noOverlapBody": "Your availabilities don't line up right now. Update your hours in your profile and new times will show up here.",
+      "noOverlapCta": "Update my availability"
     },
     "banner": {
       "title": "Organize a game",
@@ -3373,7 +3376,12 @@
       "entryLabel": "Organize a game",
       "error": "Couldn't suggest times. Please try again."
     },
-    "preview": "I suggested some times to play"
+    "preview": "I suggested some times to play",
+    "availability": {
+      "both": "You're both available",
+      "all": "Everyone's available",
+      "partial": "Not everyone's available"
+    }
   },
   "matchShare": {
     "card": {
@@ -5131,7 +5139,8 @@
     "publish": "Publish bracket to players",
     "confirmTitle": "Publish this bracket?",
     "confirmMessage": "Players get notified and the bracket goes live. You can't reorder seeds after this.",
-    "confirmCta": "Publish"
+    "confirmCta": "Publish",
+    "poolTitle": "Pool {letter}"
   },
   "tournamentDetail": {
     "title": "Tournament",
@@ -5366,7 +5375,8 @@
       "community": "Community",
       "open": "Open",
       "approval": "Approval required",
-      "inviteOnly": "Invite only"
+      "inviteOnly": "Invite only",
+      "poolKnockout": "Pools + knockout"
     },
     "actions": {
       "openRegistration": "Open registration",
@@ -5634,6 +5644,14 @@
       "releasedLine": "Already paid out to your Stripe account: {count} payment(s)",
       "none": "No payments received yet.",
       "close": "Close"
+    },
+    "pools": {
+      "poolTitle": "Pool {letter}",
+      "qualifyHint": "Top {count} qualify",
+      "walkover": "W/O",
+      "toPlay": "To play",
+      "launchKnockout": "Launch the knockout stage",
+      "launchKnockoutWaiting": "Knockout opens when every pool game is settled"
     }
   },
   "tournamentCreation": {
@@ -5765,7 +5783,11 @@
       "matchFormatTwoOfThreeGames": "Best of 3",
       "matchFormatThreeOfFiveGames": "Best of 5",
       "pointsPerGame": "Points per game",
-      "pointsPerGameHint": "Points to win a game, win by 2"
+      "pointsPerGameHint": "Points to win a game, win by 2",
+      "structure": "Structure",
+      "structureSingle": "Single elimination",
+      "structurePool": "Pools + knockout",
+      "structurePoolHint": "Pools of 4, best 2 qualify for the knockout. Everyone is guaranteed at least 3 games."
     },
     "validation": {
       "nameRequired": "Tournament name is required",

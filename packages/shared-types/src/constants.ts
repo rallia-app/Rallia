@@ -351,6 +351,11 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_registration_open: 'trophy-outline',
   tournament_match_completed: 'podium-outline',
   tournament_match_ready: 'flash-outline',
+  tournament_deadline_changed: 'time-outline',
+  tournament_round_deadline_soon: 'alarm-outline',
+  tournament_deadline_extended: 'time-outline',
+  tournament_match_walkover: 'flag-outline',
+  tournament_dispute_escalated: 'alert-circle-outline',
   tournament_updated: 'create-outline',
   tournament_cancelled: 'close-circle-outline',
   tournament_completed: 'trophy-outline',
@@ -464,6 +469,11 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_open: '#E57373', // Coral (tournament)
   tournament_match_completed: '#4DB8A8', // Teal
   tournament_match_ready: '#4DB8A8', // Teal
+  tournament_deadline_changed: '#4DB8A8', // Teal
+  tournament_round_deadline_soon: '#E8863A', // Orange
+  tournament_deadline_extended: '#4DB8A8', // Teal
+  tournament_match_walkover: '#E8863A', // Orange
+  tournament_dispute_escalated: '#D9534F', // Red
   tournament_updated: '#FF9800', // Orange — details changed
   tournament_cancelled: '#F44336', // Red
   tournament_completed: '#4CAF50', // Green — celebration
@@ -573,6 +583,11 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_open: 'Registration Open',
   tournament_match_completed: 'Tournament Result',
   tournament_match_ready: 'Next Match',
+  tournament_deadline_changed: 'Deadline Updated',
+  tournament_round_deadline_soon: 'Deadline Soon',
+  tournament_deadline_extended: 'Deadline Extended',
+  tournament_match_walkover: 'Walkover',
+  tournament_dispute_escalated: 'Dispute',
   tournament_updated: 'Tournament Updated',
   tournament_cancelled: 'Tournament Cancelled',
   tournament_completed: 'Tournament Complete',
@@ -692,6 +707,11 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_registration_open: 'leagues',
   tournament_match_completed: 'leagues',
   tournament_match_ready: 'leagues',
+  tournament_deadline_changed: 'leagues',
+  tournament_round_deadline_soon: 'leagues',
+  tournament_deadline_extended: 'leagues',
+  tournament_match_walkover: 'leagues',
+  tournament_dispute_escalated: 'leagues',
   tournament_updated: 'leagues',
   tournament_cancelled: 'leagues',
   tournament_completed: 'leagues',
@@ -853,6 +873,11 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_registration_open: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
+  tournament_deadline_changed: { email: false, push: true, sms: false },
+  tournament_round_deadline_soon: { email: false, push: true, sms: false },
+  tournament_deadline_extended: { email: false, push: true, sms: false },
+  tournament_match_walkover: { email: false, push: true, sms: false },
+  tournament_dispute_escalated: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
   tournament_cancelled: { email: true, push: true, sms: false },
   tournament_completed: { email: false, push: true, sms: false },
@@ -936,6 +961,11 @@ export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnu
   'tournament_bracket_published',
   'tournament_match_completed',
   'tournament_match_ready',
+  'tournament_deadline_changed',
+  'tournament_round_deadline_soon',
+  'tournament_deadline_extended',
+  'tournament_match_walkover',
+  'tournament_dispute_escalated',
   'tournament_updated',
   'tournament_cancelled',
   'tournament_completed',

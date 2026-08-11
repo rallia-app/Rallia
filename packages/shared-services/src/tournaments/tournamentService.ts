@@ -90,7 +90,8 @@ async function toListItems(rows: ListRow[]): Promise<TournamentListItem[]> {
 export interface CreateTournamentInput {
   name: string;
   sportId: string;
-  maxParticipants: 4 | 8 | 16 | 32 | 64 | 128;
+  /** Powers of two for elimination; 8-32 incl. 12/20/24 for pool_knockout. */
+  maxParticipants: 4 | 8 | 12 | 16 | 20 | 24 | 32 | 64 | 128;
   startDate: string; // ISO 8601
   endDate: string; // ISO 8601
   description?: string;
@@ -102,6 +103,10 @@ export interface CreateTournamentInput {
   visibility?: Enums<'tournament_visibility'>;
   registrationMode?: Enums<'tournament_registration_mode'>;
   bracketType?: Enums<'bracket_type'>;
+  /** pool_knockout only: players per pool (3-5, default 4). */
+  poolSize?: number;
+  /** pool_knockout only: qualifiers per pool (1-2, default 2). */
+  qualifiersPerPool?: number;
   matchFormat?: Enums<'match_format'>;
   /** Pickleball only: points that take one game (11/15/21). */
   pointsPerGame?: number;
@@ -283,6 +288,8 @@ export async function createTournament(input: CreateTournamentInput): Promise<To
     p_venue_address: input.venueAddress,
     p_city: input.city,
     p_prize_money_cents: input.prizeMoneyCents,
+    p_pool_size: input.poolSize,
+    p_qualifiers_per_pool: input.qualifiersPerPool,
   });
 
   if (error) {
@@ -1110,6 +1117,145 @@ export async function previewTournamentBracket(
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as PreviewBracketMatch[];
+}
+
+/** A computed pool slot from the read-only pool preview RPC. */
+export type PreviewPoolSlot =
+  Database['public']['Functions']['tournament_preview_pools']['Returns'][number];
+
+/** One row of the derived pool standings. */
+export type PoolStandingRow =
+  Database['public']['Functions']['tournament_pool_standings']['Returns'][number];
+
+export type TournamentRoundDeadline = Tables<'tournament_round_deadlines'>;
+
+/**
+ * Read-only dry run of the serpentine pool composition (pool_knockout,
+ * organizer only). Mirrors previewTournamentBracket for the pool phase.
+ */
+export async function previewTournamentPools(tournamentId: string): Promise<PreviewPoolSlot[]> {
+  const { data, error } = await supabase.rpc('tournament_preview_pools', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PreviewPoolSlot[];
+}
+
+/**
+ * Organizer publishes the pool phase of a pool_knockout tournament: inserts
+ * every round-robin pool match and flips the tournament to in_progress.
+ */
+export async function generateTournamentPools(
+  tournamentId: string,
+  versionWas: number
+): Promise<TournamentMatch[]> {
+  const { data, error } = await supabase.rpc('tournament_generate_pools', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentMatch[];
+}
+
+/**
+ * Derived pool standings (wins, h2h, ratios, seed), one row per registration
+ * with its pool_rank and eligibility. Never stored; safe to poll.
+ */
+export async function getTournamentPoolStandings(tournamentId: string): Promise<PoolStandingRow[]> {
+  const { data, error } = await supabase.rpc('tournament_pool_standings', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PoolStandingRow[];
+}
+
+/**
+ * Organizer launches the knockout once every pool match is settled. Qualifiers
+ * seed the tree; runners-up are drawn into the opposite half from their pool
+ * winner. Returns the main-side rows.
+ */
+export async function generateTournamentKnockout(
+  tournamentId: string,
+  versionWas: number
+): Promise<TournamentMatch[]> {
+  const { data, error } = await supabase.rpc('tournament_generate_knockout', {
+    p_tournament_id: tournamentId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentMatch[];
+}
+
+/**
+ * Organizer removes a player during the pool phase: registration goes
+ * disqualified and their unsettled pool matches become walkovers.
+ */
+export async function forfeitTournamentRegistration(
+  registrationId: string,
+  versionWas: number,
+  reason?: string
+): Promise<TournamentRegistration> {
+  const { data, error } = await supabase.rpc('tournament_forfeit_registration', {
+    p_registration_id: registrationId,
+    p_version_was: versionWas,
+    p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentRegistration;
+}
+
+/** Phase/round deadlines for a tournament (RLS mirrors match visibility). */
+export async function getTournamentRoundDeadlines(
+  tournamentId: string
+): Promise<TournamentRoundDeadline[]> {
+  const { data, error } = await supabase
+    .from('tournament_round_deadlines')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('bracket_side', { ascending: true })
+    .order('round_number', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentRoundDeadline[];
+}
+
+export interface RoundDeadlineInput {
+  /** 'pool' (round 0, the whole phase) or 'main' (per knockout round). */
+  bracketSide: 'pool' | 'main';
+  roundNumber: number;
+  /** ISO timestamp. */
+  deadlineAt: string;
+}
+
+/** Organizer upserts phase/round deadlines. Affected players are notified. */
+export async function setTournamentRoundDeadlines(
+  tournamentId: string,
+  rounds: RoundDeadlineInput[]
+): Promise<TournamentRoundDeadline[]> {
+  const { data, error } = await supabase.rpc('tournament_set_round_deadlines', {
+    p_tournament_id: tournamentId,
+    p_rounds: rounds.map(r => ({
+      bracket_side: r.bracketSide,
+      round_number: r.roundNumber,
+      deadline_at: r.deadlineAt,
+    })),
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentRoundDeadline[];
+}
+
+/** Organizer gives one match its own deadline (extension). */
+export async function extendTournamentMatchDeadline(
+  tournamentMatchId: string,
+  deadlineAt: string,
+  reason?: string
+): Promise<TournamentMatch> {
+  const { data, error } = await supabase.rpc('tournament_extend_match_deadline', {
+    p_tournament_match_id: tournamentMatchId,
+    p_deadline_at: deadlineAt,
+    p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentMatch;
 }
 
 export type TournamentCoOrganizer = Tables<'tournament_co_organizers'>;

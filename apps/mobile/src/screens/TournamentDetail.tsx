@@ -85,6 +85,8 @@ import {
   useTournamentInvitePreview,
   useJoinTournamentViaInvite,
   useTournamentMatches,
+  useTournamentPoolStandings,
+  useGenerateTournamentKnockout,
   useOpenTournamentRoundChat,
   useIsTournamentOrganizer,
   useIsCertifiedOrganizer,
@@ -115,6 +117,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import ParticipantRow from '../components/ParticipantRow';
 import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
+import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import {
   TournamentBanner,
   TOURNAMENT_BANNER_ASPECT,
@@ -148,6 +151,7 @@ const REG_MODE_LABEL_KEY: Record<RegistrationMode, string> = {
 const BRACKET_TYPE_LABEL_KEY: Record<BracketType, string> = {
   single_elimination: 'tournamentDetail.values.singleElimination',
   double_elimination: 'tournamentDetail.values.doubleElimination',
+  pool_knockout: 'tournamentDetail.values.poolKnockout',
 };
 const ENTRY_FORMAT_LABEL_KEY: Record<EntryFormat, string> = {
   singles: 'tournamentDetail.values.singles',
@@ -2167,6 +2171,21 @@ export const TournamentDetail: React.FC = () => {
     shouldFetchBracket ? tournament?.id : undefined
   );
 
+  // Pool phase (pool_knockout only): the bracket tab shows pools first, then
+  // the knockout tree once it exists. Single elim: every row is main-side.
+  const isPoolTournament = tournament?.bracket_type === 'pool_knockout';
+  const poolMatches = useMemo(() => matches.filter(m => m.bracket_side === 'pool'), [matches]);
+  const knockoutMatches = useMemo(() => matches.filter(m => m.bracket_side === 'main'), [matches]);
+  const { data: poolStandings = [] } = useTournamentPoolStandings(
+    isPoolTournament && shouldFetchBracket ? tournament?.id : undefined
+  );
+  const poolPhaseComplete = poolsComplete(poolMatches);
+  const generateKnockout = useGenerateTournamentKnockout();
+  const handleGenerateKnockout = useCallback(() => {
+    if (!tournament) return;
+    generateKnockout.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
+  }, [tournament, generateKnockout]);
+
   // Map registration_id → seed number (1-indexed). The order matches the
   // RPC's seeding criteria so the labels here line up with the bracket.
   const seedByRegId = useMemo(() => {
@@ -2735,6 +2754,7 @@ export const TournamentDetail: React.FC = () => {
       startDate: tournament.start_date,
       endDate: tournament.end_date,
       maxParticipants: tournament.max_participants,
+      bracketType: tournament.bracket_type,
       matchFormat: tournament.match_format,
       pointsPerGame: tournament.points_per_game,
       sport: {
@@ -3909,21 +3929,63 @@ export const TournamentDetail: React.FC = () => {
         {/* ============================ BRACKET ============================= */}
         {currentTabKey === 'bracket' && showBracketTab && (
           <View style={styles.tabContent}>
-            <BracketSection
-              matches={matches}
-              seedByRegId={seedByRegId}
-              nameByRegId={nameByRegId}
-              membersByRegId={membersByRegId}
-              slotPlayersByRegId={slotPlayersByRegId}
-              currentUserId={userId}
-              isOrganizer={isOrganizer}
-              onMatchPress={handleBracketMatchTap}
-              onOrganizerOverride={handleOrganizerOverride}
-              onPlayerPress={handleBracketPlayerPress}
-              colors={colors}
-              t={t}
-              showTitle={false}
-            />
+            {isPoolTournament && (
+              <>
+                {isOrganizer && knockoutMatches.length === 0 && (
+                  <TouchableOpacity
+                    disabled={!poolPhaseComplete || generateKnockout.isPending}
+                    onPress={handleGenerateKnockout}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.poolLaunchBtn,
+                      {
+                        backgroundColor: poolPhaseComplete ? colors.primary : colors.statusMutedBg,
+                      },
+                    ]}
+                    testID="cta-generate-knockout"
+                  >
+                    <Text
+                      size="sm"
+                      weight="semibold"
+                      color={poolPhaseComplete ? '#ffffff' : colors.textMuted}
+                    >
+                      {t(
+                        (poolPhaseComplete
+                          ? 'tournamentDetail.pools.launchKnockout'
+                          : 'tournamentDetail.pools.launchKnockoutWaiting') as TranslationKey
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <PoolsSection
+                  standings={poolStandings}
+                  poolMatches={poolMatches}
+                  nameByRegId={nameByRegId}
+                  qualifiersPerPool={tournament.qualifiers_per_pool ?? 2}
+                  currentUserId={userId}
+                  onMatchPress={handleBracketMatchTap}
+                  colors={colors}
+                  t={t as (k: string) => string}
+                />
+              </>
+            )}
+            {(!isPoolTournament || knockoutMatches.length > 0) && (
+              <BracketSection
+                matches={knockoutMatches}
+                seedByRegId={seedByRegId}
+                nameByRegId={nameByRegId}
+                membersByRegId={membersByRegId}
+                slotPlayersByRegId={slotPlayersByRegId}
+                currentUserId={userId}
+                isOrganizer={isOrganizer}
+                onMatchPress={handleBracketMatchTap}
+                onOrganizerOverride={handleOrganizerOverride}
+                onPlayerPress={handleBracketPlayerPress}
+                colors={colors}
+                t={t}
+                showTitle={false}
+              />
+            )}
           </View>
         )}
 
@@ -5001,6 +5063,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[5],
     paddingVertical: spacingPixels[3],
     borderRadius: radiusPixels.lg,
+  },
+  poolLaunchBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    marginBottom: spacingPixels[4],
   },
   playersInviteBtn: {
     flexDirection: 'row',

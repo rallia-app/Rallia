@@ -3346,7 +3346,10 @@
       "created": "Partie créée 🙌",
       "createdSubtitle": "Rendez-vous sur le terrain",
       "viewGame": "Voir la partie",
-      "createGame": "Créer la partie"
+      "createGame": "Créer la partie",
+      "noOverlapTitle": "Pas encore de plage commune",
+      "noOverlapBody": "Vos disponibilités ne concordent pas pour l'instant. Mets à jour tes heures dans ton profil et de nouvelles suggestions vont apparaître ici.",
+      "noOverlapCta": "Mettre à jour mes dispos"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -3373,7 +3376,12 @@
       "entryLabel": "Organiser une partie",
       "error": "Impossible de proposer des moments. Réessaie."
     },
-    "preview": "J'ai proposé des moments pour jouer"
+    "preview": "J'ai proposé des moments pour jouer",
+    "availability": {
+      "both": "Vous êtes tous les deux dispo",
+      "all": "Tout le monde est dispo",
+      "partial": "Pas dispo pour tout le monde"
+    }
   },
   "matchShare": {
     "card": {
@@ -5131,7 +5139,8 @@
     "publish": "Publier le tableau aux joueurs",
     "confirmTitle": "Publier ce tableau ?",
     "confirmMessage": "Les joueurs sont avisés et le tableau devient officiel. Tu ne pourras plus réorganiser les têtes de série après.",
-    "confirmCta": "Publier"
+    "confirmCta": "Publier",
+    "poolTitle": "Poule {letter}"
   },
   "tournamentDetail": {
     "title": "Tournoi",
@@ -5366,7 +5375,8 @@
       "community": "Communauté",
       "open": "Ouvert",
       "approval": "Approbation requise",
-      "inviteOnly": "Sur invitation"
+      "inviteOnly": "Sur invitation",
+      "poolKnockout": "Poules + éliminatoires"
     },
     "actions": {
       "openRegistration": "Ouvrir les inscriptions",
@@ -5634,6 +5644,14 @@
       "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
       "none": "Aucun paiement reçu pour le moment.",
       "close": "Fermer"
+    },
+    "pools": {
+      "poolTitle": "Poule {letter}",
+      "qualifyHint": "Les {count} premiers se qualifient",
+      "walkover": "Forfait",
+      "toPlay": "À jouer",
+      "launchKnockout": "Lancer la phase éliminatoire",
+      "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées"
     }
   },
   "tournamentCreation": {
@@ -5765,7 +5783,11 @@
       "matchFormatTwoOfThreeGames": "2 de 3",
       "matchFormatThreeOfFiveGames": "3 de 5",
       "pointsPerGame": "Points par partie",
-      "pointsPerGameHint": "Points pour gagner une partie, 2 points d'écart"
+      "pointsPerGameHint": "Points pour gagner une partie, 2 points d'écart",
+      "structure": "Structure",
+      "structureSingle": "Élimination simple",
+      "structurePool": "Poules + éliminatoires",
+      "structurePoolHint": "Poules de 4, les 2 premiers passent aux éliminatoires. Tout le monde joue au moins 3 parties garanties."
     },
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",
