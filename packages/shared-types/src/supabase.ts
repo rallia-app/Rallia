@@ -9881,6 +9881,10 @@ export type Database = {
           seed_idx: number
         }[]
       }
+      _lt_rank_pool_group: {
+        Args: { p_level: number; p_regs: string[]; p_tournament_id: string }
+        Returns: string[]
+      }
       accept_match_time_suggestion: {
         Args: { p_suggestion_id: string }
         Returns: Json
@@ -14443,6 +14447,39 @@ export type Database = {
           total_cents: number
         }[]
       }
+      tournament_forfeit_registration: {
+        Args: {
+          p_reason?: string
+          p_registration_id: string
+          p_version_was: number
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          bracket_position: number | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          notes: string | null
+          partner_user_id: string | null
+          partnership_id: string | null
+          registered_at: string
+          seed_rank: number | null
+          self_declared_rank: number | null
+          status: Database["public"]["Enums"]["registration_status"]
+          tournament_id: string
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_registrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_generate_bracket: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -14705,6 +14742,24 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      tournament_pool_standings: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          eligible: boolean
+          games_lost: number
+          games_won: number
+          partner_user_id: string
+          pool_number: number
+          pool_rank: number
+          registration_id: string
+          sets_lost: number
+          sets_won: number
+          settled: number
+          user_id: string
+          wins: number
+          withdrawn: boolean
+        }[]
       }
       tournament_preview_bracket: {
         Args: { p_tournament_id: string }
