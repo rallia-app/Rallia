@@ -7,12 +7,12 @@
 
 /**
  * Font families (theme v2)
- * - Display: Bricolage Grotesque (headings)
+ * - Display: Poppins (headings)
  * - Stat: Barlow Semi Condensed (scores, ratings, ranks, countdowns)
  * - Body: Inter
  */
 export const fontFamily = {
-  heading: ['Bricolage Grotesque', 'sans-serif'],
+  heading: ['Poppins', 'sans-serif'],
   stat: ['Barlow Semi Condensed', 'sans-serif'],
   body: ['Inter', 'sans-serif'],
   mono: ['Fira Code', 'Consolas', 'monospace'],
@@ -23,11 +23,11 @@ export const fontFamily = {
  * export names; the mobile app loads them at boot (App.tsx SplashGate).
  */
 export const fontFamilyNative = {
-  heading: 'BricolageGrotesque_400Regular',
-  headingMedium: 'BricolageGrotesque_500Medium',
-  headingSemiBold: 'BricolageGrotesque_600SemiBold',
-  headingBold: 'BricolageGrotesque_700Bold',
-  headingExtraBold: 'BricolageGrotesque_800ExtraBold',
+  heading: 'Poppins_400Regular',
+  headingMedium: 'Poppins_500Medium',
+  headingSemiBold: 'Poppins_600SemiBold',
+  headingBold: 'Poppins_700Bold',
+  headingExtraBold: 'Poppins_800ExtraBold',
   body: 'Inter_400Regular',
   bodyMedium: 'Inter_500Medium',
   bodySemiBold: 'Inter_600SemiBold',

@@ -20,7 +20,7 @@ import { typography } from '../theme';
 export interface TextProps extends Omit<RNTextProps, 'style'> {
   /**
    * Predefined text variants for common use cases.
-   * `display` renders in the heading face (Bricolage Grotesque);
+   * `display` renders in the heading face (Poppins);
    * `stat` renders numerals in Barlow Semi Condensed with tabular figures.
    */
   variant?: 'body' | 'caption' | 'label' | 'display' | 'stat';
@@ -100,10 +100,10 @@ const BODY_FONTS: Record<NonNullable<TextProps['weight']>, string> = {
   bold: 'Inter_700Bold',
 };
 const DISPLAY_FONTS: Record<NonNullable<TextProps['weight']>, string> = {
-  regular: 'BricolageGrotesque_400Regular',
-  medium: 'BricolageGrotesque_500Medium',
-  semibold: 'BricolageGrotesque_600SemiBold',
-  bold: 'BricolageGrotesque_700Bold',
+  regular: 'Poppins_400Regular',
+  medium: 'Poppins_500Medium',
+  semibold: 'Poppins_600SemiBold',
+  bold: 'Poppins_700Bold',
 };
 const STAT_FONTS: Record<NonNullable<TextProps['weight']>, string> = {
   regular: 'BarlowSemiCondensed_600SemiBold',

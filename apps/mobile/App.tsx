@@ -99,12 +99,12 @@ import { StatusBar } from 'expo-status-bar';
 import { neutral } from '@rallia/design-system';
 import { useFonts } from 'expo-font';
 import {
-  BricolageGrotesque_400Regular,
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
 import {
   BarlowSemiCondensed_600SemiBold,
   BarlowSemiCondensed_700Bold,
@@ -117,13 +117,13 @@ import {
 } from '@expo-google-fonts/inter';
 
 // Theme v2 faces — the names here are what shared-components' Text resolves
-// (Bricolage = display, Barlow Semi Condensed = stat numerals, Inter = body).
+// (Poppins = display, Barlow Semi Condensed = stat numerals, Inter = body).
 const APP_FONTS = {
-  BricolageGrotesque_400Regular,
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
   BarlowSemiCondensed_600SemiBold,
   BarlowSemiCondensed_700Bold,
   Inter_400Regular,

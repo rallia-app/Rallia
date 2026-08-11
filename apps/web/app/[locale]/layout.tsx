@@ -5,13 +5,7 @@ import { getTranslations, type Locale as SharedLocale } from '@rallia/shared-tra
 import type { Metadata } from 'next';
 import { getTranslations as getServerTranslations, setRequestLocale } from 'next-intl/server';
 import { Locale, NextIntlClientProvider } from 'next-intl';
-import {
-  Barlow_Semi_Condensed,
-  Bricolage_Grotesque,
-  Inter,
-  Outfit,
-  Space_Grotesk,
-} from 'next/font/google';
+import { Barlow_Semi_Condensed, Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import './globals.css';
 
@@ -44,11 +38,11 @@ const outfit = Outfit({
   variable: '--font-outfit',
 });
 
-// Theme v2 - Bricolage Grotesque for headlines
-const bricolage = Bricolage_Grotesque({
+// Theme B: Energy & Trust - Poppins for headlines
+const poppins = Poppins({
   weight: ['400', '500', '600', '700', '800'],
   subsets: ['latin'],
-  variable: '--font-bricolage',
+  variable: '--font-poppins',
 });
 
 // Theme v2 - Barlow Semi Condensed for stat numerals
@@ -180,7 +174,7 @@ export default async function LocaleLayout({
         <JsonLd data={[organizationJsonLd, websiteJsonLd, ...mobileApplicationJsonLd]} />
       </head>
       <body
-        className={`${outfit.variable} ${bricolage.variable} ${barlow.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased flex min-h-screen flex-col bg-[var(--primary-50)] dark:bg-[var(--primary-900)]`}
+        className={`${outfit.variable} ${poppins.variable} ${barlow.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased flex min-h-screen flex-col bg-[var(--primary-50)] dark:bg-[var(--primary-900)]`}
       >
         <PostHogProvider>
           <ConsentProvider>
