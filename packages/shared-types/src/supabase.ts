@@ -9104,6 +9104,7 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -9129,6 +9130,7 @@ export type Database = {
           bracket_side?: string
           court_id?: string | null
           created_at?: string
+          deadline_override_at?: string | null
           id?: string
           loser_next_match_id?: string | null
           match_id?: string | null
@@ -9154,6 +9156,7 @@ export type Database = {
           bracket_side?: string
           court_id?: string | null
           created_at?: string
+          deadline_override_at?: string | null
           id?: string
           loser_next_match_id?: string | null
           match_id?: string | null
@@ -9420,6 +9423,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_round_deadlines: {
+        Row: {
+          bracket_side: string
+          created_at: string
+          deadline_at: string
+          round_number: number
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          bracket_side?: string
+          created_at?: string
+          deadline_at: string
+          round_number: number
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          bracket_side?: string
+          created_at?: string
+          deadline_at?: string
+          round_number?: number
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_round_deadlines_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -9884,6 +9922,16 @@ export type Database = {
       _lt_rank_pool_group: {
         Args: { p_level: number; p_regs: string[]; p_tournament_id: string }
         Returns: string[]
+      }
+      _lt_seed_default_deadlines: {
+        Args: {
+          p_from: string
+          p_rounds: number
+          p_side: string
+          p_to: string
+          p_tournament_id: string
+        }
+        Returns: undefined
       }
       accept_match_time_suggestion: {
         Args: { p_suggestion_id: string }
@@ -12540,6 +12588,14 @@ export type Database = {
         Args: { p_min_rating: number; p_sport_id: string }
         Returns: number
       }
+      lt_notify_tournament_deadline_changed: {
+        Args: {
+          p_bracket_side: string
+          p_rounds: number[]
+          p_tournament_id: string
+        }
+        Returns: undefined
+      }
       lt_notify_tournament_match_ready: {
         Args: { p_tm_id: string }
         Returns: undefined
@@ -14134,6 +14190,7 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -14432,6 +14489,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_extend_match_deadline: {
+        Args: {
+          p_deadline_at: string
+          p_reason?: string
+          p_tournament_match_id: string
+        }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          deadline_override_at: string | null
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_fee_quote: {
         Args: { p_tournament_id: string }
         Returns: {
@@ -14486,6 +14582,7 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -14520,6 +14617,7 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -14554,6 +14652,7 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -14749,6 +14848,7 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -15020,6 +15120,23 @@ export type Database = {
           to: "tournament_registrations"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      tournament_set_round_deadlines: {
+        Args: { p_rounds: Json; p_tournament_id: string }
+        Returns: {
+          bracket_side: string
+          created_at: string
+          deadline_at: string
+          round_number: number
+          tournament_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_round_deadlines"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       tournament_set_seeds: {
@@ -15584,6 +15701,11 @@ export type Database = {
         | "play_rhythm_nudge"
         | "tournament_registration_open"
         | "league_member_rejected"
+        | "tournament_deadline_changed"
+        | "tournament_round_deadline_soon"
+        | "tournament_deadline_extended"
+        | "tournament_match_walkover"
+        | "tournament_dispute_escalated"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -16271,6 +16393,11 @@ export const Constants = {
         "play_rhythm_nudge",
         "tournament_registration_open",
         "league_member_rejected",
+        "tournament_deadline_changed",
+        "tournament_round_deadline_soon",
+        "tournament_deadline_extended",
+        "tournament_match_walkover",
+        "tournament_dispute_escalated",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
