@@ -126,7 +126,10 @@ by level bucket (beginner / intermediate / advanced) for reading your own tier.
   were byes, walkovers or unplayed matches gets no ledger row at all: no points,
   and the event does not count toward `events_played`.
 - **Byes and walkovers are not wins.** They advance you; they were never played.
-  A retirement is a win for the other player.
+  A retirement is a win for the other player. Pool standings do count a walkover
+  as a win, because the opponent who showed up cannot be punished for a forfeit,
+  so a pool can be qualified out of on forfeits alone. That buys a draw slot, not
+  a placement: the zero-win floor below still reads played wins only.
 - **Zero-win floor.** If you won no real match, you get participation (10) no
   matter how far the draw carried you.
 - **Certified organizers only.** A tournament awards Points Rallia only if its
