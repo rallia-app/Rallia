@@ -81,6 +81,7 @@ import {
   useRevokeTournamentInvite,
   useWithdrawFromTournament,
   useRemoveTournamentRegistration,
+  useForfeitTournamentRegistration,
   useApproveTournamentRegistration,
   useTournamentInvitePreview,
   useJoinTournamentViaInvite,
@@ -1417,25 +1418,27 @@ export const TournamentDetail: React.FC = () => {
                                     ? 'tournamentDetail.errors.approveNotAllowed'
                                     : lower.includes('remove_not_allowed')
                                       ? 'tournamentDetail.errors.removeNotAllowed'
-                                      : lower.includes('registration_not_found')
-                                        ? 'tournamentDetail.errors.lockConflict'
-                                        : lower.includes('tournament_reg_closed') ||
-                                            lower.includes('reg_closed')
-                                          ? 'tournamentDetail.errors.regClosed'
-                                          : // partner_rating_* first: they contain the bare rating_* codes.
-                                            lower.includes('partner_rating_too_low')
-                                            ? 'tournamentDetail.errors.partnerRatingTooLow'
-                                            : lower.includes('partner_rating_too_high')
-                                              ? 'tournamentDetail.errors.partnerRatingTooHigh'
-                                              : lower.includes('partner_rating_required')
-                                                ? 'tournamentDetail.errors.partnerRatingRequired'
-                                                : lower.includes('rating_too_low')
-                                                  ? 'tournamentDetail.errors.ratingTooLow'
-                                                  : lower.includes('rating_too_high')
-                                                    ? 'tournamentDetail.errors.ratingTooHigh'
-                                                    : lower.includes('rating_required')
-                                                      ? 'tournamentDetail.errors.ratingRequired'
-                                                      : fallbackKey;
+                                      : lower.includes('forfeit_not_allowed')
+                                        ? 'tournamentDetail.errors.forfeitNotAllowed'
+                                        : lower.includes('registration_not_found')
+                                          ? 'tournamentDetail.errors.lockConflict'
+                                          : lower.includes('tournament_reg_closed') ||
+                                              lower.includes('reg_closed')
+                                            ? 'tournamentDetail.errors.regClosed'
+                                            : // partner_rating_* first: they contain the bare rating_* codes.
+                                              lower.includes('partner_rating_too_low')
+                                              ? 'tournamentDetail.errors.partnerRatingTooLow'
+                                              : lower.includes('partner_rating_too_high')
+                                                ? 'tournamentDetail.errors.partnerRatingTooHigh'
+                                                : lower.includes('partner_rating_required')
+                                                  ? 'tournamentDetail.errors.partnerRatingRequired'
+                                                  : lower.includes('rating_too_low')
+                                                    ? 'tournamentDetail.errors.ratingTooLow'
+                                                    : lower.includes('rating_too_high')
+                                                      ? 'tournamentDetail.errors.ratingTooHigh'
+                                                      : lower.includes('rating_required')
+                                                        ? 'tournamentDetail.errors.ratingRequired'
+                                                        : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },
@@ -1849,6 +1852,20 @@ export const TournamentDetail: React.FC = () => {
           ? 'tournamentDetail.errors.declineFailed'
           : 'tournamentDetail.errors.removeFailed'
       );
+    },
+  });
+
+  // Same roster affordance once the pools are drawn: the RPC swap turns the
+  // leaver's unplayed pool games into walkovers for their opponents.
+  const forfeitRegistrant = useForfeitTournamentRegistration({
+    onSuccess: () => {
+      successHaptic();
+      setRemoveTarget(null);
+      toast.success(t('tournamentDetail.forfeitModal.success'));
+    },
+    onError: e => {
+      setRemoveTarget(null);
+      showError(e.message, 'tournamentDetail.errors.forfeitFailed');
     },
   });
 
@@ -2322,6 +2339,15 @@ export const TournamentDetail: React.FC = () => {
     isOrganizer &&
     (tournament?.status === 'registration_open' || tournament?.status === 'registration_closed');
 
+  // After the draw the same row action forfeits instead of removing. Mirrors
+  // tournament_forfeit_registration's gate: pools drawn, knockout not yet.
+  const canForfeitRegistrants =
+    isOrganizer &&
+    isPoolTournament &&
+    tournament?.status === 'in_progress' &&
+    poolMatches.length > 0 &&
+    knockoutMatches.length === 0;
+
   const registrationByUserId = useMemo(() => {
     const map = new Map<string, (typeof registrations)[number]>();
     for (const r of registrations) {
@@ -2455,6 +2481,22 @@ export const TournamentDetail: React.FC = () => {
     [removeTarget, registrationByUserId]
   );
 
+  // One roster affordance, three outcomes. Forfeit wins the pick because its
+  // phase gate can't overlap remove's, and mid-pools it does more than shrink
+  // the roster: the leaver's unplayed games become walkovers, so the standings
+  // move for everyone in their pool.
+  const removeModalCopy = canForfeitRegistrants
+    ? 'forfeitModal'
+    : removeTargetIsPending
+      ? 'declineModal'
+      : 'removeModal';
+  // Only the remove/forfeit paths have a paid variant; a pending request never
+  // reached checkout.
+  const removeModalMessageKey: TranslationKey =
+    isPaidTournament && removeModalCopy !== 'declineModal'
+      ? `tournamentDetail.${removeModalCopy}.messagePaid`
+      : `tournamentDetail.${removeModalCopy}.message`;
+
   const confirmRemove = useCallback(() => {
     if (!tournament || !removeTarget) return;
     const reg = registrationByUserId.get(removeTarget.id);
@@ -2464,13 +2506,30 @@ export const TournamentDetail: React.FC = () => {
       toast.error(t('tournamentDetail.errors.lockConflict'));
       return;
     }
+    if (canForfeitRegistrants) {
+      forfeitRegistrant.mutate({
+        registrationId: reg.id,
+        versionWas: reg.version,
+        tournamentId: tournament.id,
+      });
+      return;
+    }
     declineModeRef.current = reg.status === 'pending';
     removeRegistrant.mutate({
       registrationId: reg.id,
       versionWas: reg.version,
       tournamentId: tournament.id,
     });
-  }, [tournament, removeTarget, registrationByUserId, removeRegistrant, toast, t]);
+  }, [
+    tournament,
+    removeTarget,
+    registrationByUserId,
+    canForfeitRegistrants,
+    forfeitRegistrant,
+    removeRegistrant,
+    toast,
+    t,
+  ]);
 
   const handleApprovePress = useCallback(
     (registrationId: string, version: number) => {
@@ -4176,7 +4235,9 @@ export const TournamentDetail: React.FC = () => {
               <ParticipantsSection
                 players={registeredParticipantPlayers}
                 onPlayerPress={handlePlayerPress}
-                onRemovePress={canRemoveRegistrants ? handleRemovePress : undefined}
+                onRemovePress={
+                  canRemoveRegistrants || canForfeitRegistrants ? handleRemovePress : undefined
+                }
                 currentUserId={userId}
                 maxParticipants={tournament.max_participants}
                 deadlineLabel={
@@ -4560,33 +4621,14 @@ export const TournamentDetail: React.FC = () => {
 
       <ConfirmationModal
         visible={!!removeTarget && !!tournament}
-        title={t(
-          removeTargetIsPending
-            ? 'tournamentDetail.declineModal.title'
-            : 'tournamentDetail.removeModal.title'
-        )}
-        message={t(
-          removeTargetIsPending
-            ? 'tournamentDetail.declineModal.message'
-            : isPaidTournament
-              ? // A confirmed registrant on a paid event has paid, and removal
-                // now queues their entry back. Say so before the organizer taps.
-                'tournamentDetail.removeModal.messagePaid'
-              : 'tournamentDetail.removeModal.message',
-          { name: removeTarget ? getHumanName(removeTarget, '') : '' }
-        )}
-        confirmLabel={t(
-          removeTargetIsPending
-            ? 'tournamentDetail.declineModal.confirm'
-            : 'tournamentDetail.removeModal.confirm'
-        )}
-        cancelLabel={t(
-          removeTargetIsPending
-            ? 'tournamentDetail.declineModal.keepIt'
-            : 'tournamentDetail.removeModal.keepIt'
-        )}
+        title={t(`tournamentDetail.${removeModalCopy}.title`)}
+        message={t(removeModalMessageKey, {
+          name: removeTarget ? getHumanName(removeTarget, '') : '',
+        })}
+        confirmLabel={t(`tournamentDetail.${removeModalCopy}.confirm`)}
+        cancelLabel={t(`tournamentDetail.${removeModalCopy}.keepIt`)}
         destructive
-        isLoading={removeRegistrant.isPending}
+        isLoading={removeRegistrant.isPending || forfeitRegistrant.isPending}
         onClose={() => setRemoveTarget(null)}
         onConfirm={confirmRemove}
       />

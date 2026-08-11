@@ -5522,6 +5522,14 @@
       "keepIt": "Cancel",
       "success": "Request declined"
     },
+    "forfeitModal": {
+      "title": "Remove this player from the pools?",
+      "message": "{name} is out of the tournament. Every pool game they haven't played becomes a walkover win for their opponent, the standings update right away, and they can no longer qualify. This can't be undone.",
+      "messagePaid": "{name} is out of the tournament. Every pool game they haven't played becomes a walkover win for their opponent, the standings update right away, and they can no longer qualify. Their entry fee goes back to them. This can't be undone.",
+      "confirm": "Remove",
+      "keepIt": "Cancel",
+      "success": "Player removed. Their opponents got the walkovers."
+    },
     "cancelledNotice": {
       "title": "Tournament cancelled",
       "reason": "Reason: {reason}"
@@ -5632,6 +5640,8 @@
       "lockConflict": "Someone else made changes — please refresh and try again.",
       "removeFailed": "Couldn't remove the player. Please try again.",
       "removeNotAllowed": "Players can't be removed once the bracket exists.",
+      "forfeitFailed": "Couldn't remove the player from the pools. Please try again.",
+      "forfeitNotAllowed": "A player can only be removed while the pools are running, before the knockout starts.",
       "approveFailed": "Couldn't approve the request. Please try again.",
       "approveNotAllowed": "Requests can't be approved once the bracket exists.",
       "declineFailed": "Couldn't decline the request. Please try again.",

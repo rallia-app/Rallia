@@ -5522,6 +5522,14 @@
       "keepIt": "Annuler",
       "success": "Demande refusée"
     },
+    "forfeitModal": {
+      "title": "Retirer ce joueur des poules ?",
+      "message": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. C'est irréversible.",
+      "messagePaid": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. Ses frais d'inscription lui sont remis. C'est irréversible.",
+      "confirm": "Retirer",
+      "keepIt": "Annuler",
+      "success": "Joueur retiré. Ses adversaires ont les forfaits."
+    },
     "cancelledNotice": {
       "title": "Tournoi annulé",
       "reason": "Raison : {reason}"
@@ -5632,6 +5640,8 @@
       "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
       "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
       "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
+      "forfeitFailed": "Impossible de retirer le joueur des poules. Réessaie.",
+      "forfeitNotAllowed": "On peut retirer un joueur pendant les poules seulement, avant le début des éliminatoires.",
       "approveFailed": "Impossible d'accepter la demande. Réessaie.",
       "approveNotAllowed": "On ne peut plus accepter de demandes une fois le tableau créé.",
       "declineFailed": "Impossible de refuser la demande. Réessaie.",
