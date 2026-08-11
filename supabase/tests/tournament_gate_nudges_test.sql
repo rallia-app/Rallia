@@ -112,7 +112,31 @@ BEGIN
 
     PERFORM public.lt_nudge_tournament_gates();
     IF pg_temp.nudges(v_t2, 'pools') <> 0 THEN
-        RAISE EXCEPTION 'nudged a pool draw that cannot be generated (5 entrants)';
+        RAISE EXCEPTION 'told the organizer to start pools that cannot be generated (5 entrants)';
+    END IF;
+    -- ...but it must not stay silent either: that was the one gate stall with
+    -- no notification at all.
+    IF pg_temp.nudges(v_t2, 'short_field') <> 1 THEN
+        RAISE EXCEPTION 'short field went unreported (% short_field notices)',
+            pg_temp.nudges(v_t2, 'short_field');
+    END IF;
+    SELECT count(*) INTO v_n FROM notification n
+     WHERE n.payload->>'tournamentId' = v_t2::text
+       AND n.payload->>'gate' = 'short_field'
+       AND (n.payload->>'entered')::int = 5
+       AND (n.payload->>'needed')::int = 6
+       AND n.body LIKE '%6%';
+    IF v_n <> 1 THEN
+        RAISE EXCEPTION 'short-field notice did not carry the real numbers';
+    END IF;
+
+    -- Reopening starts a fresh cycle, so the stamp must clear or the next close
+    -- would wait out the leftover 48h before saying anything.
+    PERFORM pg_temp.as_user(v_org2);
+    SELECT version INTO v_ver FROM tournaments WHERE id = v_t2;
+    PERFORM public.tournament_reopen_registration(v_t2, v_ver);
+    IF (SELECT draw_nudged_at FROM tournaments WHERE id = v_t2) IS NOT NULL THEN
+        RAISE EXCEPTION 'reopening left the gate-nudge stamp in place';
     END IF;
 
     -- ---- T3: single elimination stalls at the same gate -------------------
@@ -137,6 +161,25 @@ BEGIN
         RAISE EXCEPTION 'single-elim gate reached % recipients, expected 1',
             pg_temp.nudges(v_t3, 'bracket');
     END IF;
+
+    -- ---- The short-field floor differs by structure -----------------------
+    -- Straight on the rows: tournament_withdraw is registration_open only, and
+    -- the point here is the floor, not the withdrawal path.
+    UPDATE tournament_registrations SET status = 'withdrawn'
+     WHERE tournament_id = v_t3
+       AND user_id IN (v_p[2], v_p[3], v_p[4]);
+    UPDATE tournaments SET draw_nudged_at = NULL WHERE id = v_t3;
+    PERFORM public.lt_nudge_tournament_gates();
+    SELECT count(*) INTO v_n FROM notification n
+     WHERE n.payload->>'tournamentId' = v_t3::text
+       AND n.payload->>'gate' = 'short_field'
+       AND (n.payload->>'needed')::int = 2;
+    IF v_n <> 1 THEN
+        RAISE EXCEPTION 'a bracket short of entrants should need 2, got % notices', v_n;
+    END IF;
+    -- Put it back for the abandoned-event check below.
+    UPDATE tournament_registrations SET status = 'registered'
+     WHERE tournament_id = v_t3 AND status = 'withdrawn';
 
     -- ---- Gate 1 closes once the draw exists ------------------------------
     PERFORM pg_temp.as_user(v_org1);
