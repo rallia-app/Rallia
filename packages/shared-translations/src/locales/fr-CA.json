@@ -5668,6 +5668,7 @@
     "pools": {
       "poolTitle": "Poule {letter}",
       "qualifyHint": "Les {count} premiers se qualifient",
+      "qualifyHintOne": "Le premier se qualifie",
       "walkover": "Forfait",
       "cancelled": "Annulée",
       "toPlay": "À jouer",

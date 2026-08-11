@@ -100,10 +100,13 @@ export const PoolsSection: React.FC<{
               )}
             </Text>
             <Text size="xs" color={colors.textMuted}>
-              {t('tournamentDetail.pools.qualifyHint').replace(
-                '{count}',
-                String(qualifiersPerPool)
-              )}
+              {/* One qualifier needs its own phrasing: "Les 1 premiers" is not French. */}
+              {qualifiersPerPool === 1
+                ? t('tournamentDetail.pools.qualifyHintOne')
+                : t('tournamentDetail.pools.qualifyHint').replace(
+                    '{count}',
+                    String(qualifiersPerPool)
+                  )}
             </Text>
           </View>
 
