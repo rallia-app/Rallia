@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 /**
- * Emits a Google-Docs-friendly HTML rendering of the payments test protocol,
- * from the same source as the PDFs (scripts/payments/test-guide.html).
+ * Emits a Google-Docs-friendly HTML rendering of a test protocol, from the same
+ * source the PDF is built from.
  *
- * Drive converts uploaded text/html into a Doc, but its importer ignores
- * <style> blocks and drops borders on block elements. So the two things that
- * carry meaning in this document have to be re-expressed inline:
+ * Drive converts uploaded text/html into a Doc, but its importer ignores <style>
+ * blocks and drops borders on block elements. So the two things that carry
+ * meaning in these documents have to be re-expressed inline:
  *
  *   - the coloured callouts (expected result vs warning vs stop) become
  *     single-cell tables, the one construct whose background colour Docs keeps
  *   - the pills and fixture names become styled inline spans
  *
- * Usage: node scripts/payments/build-test-guide-gdoc.mjs > out.html
+ * Handles any guide written against the shared protocol template: the payments
+ * one (scripts/payments/test-guide.html) and the pool + knockout one
+ * (scripts/tournaments/test-guide.html). The momentum guide uses a different
+ * vocabulary (box / expect / quote) and is not covered.
+ *
+ * Usage: node scripts/dev/build-test-guide-gdoc.mjs <source.html> > out.html
  */
-import { fileURLToPath } from 'url';
-import path from 'path';
 import fs from 'fs';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HTML_PATH = path.join(__dirname, 'test-guide.html');
+import path from 'path';
 
 /** Callout paragraph classes -> the colours they carry in the PDF. */
 const CALLOUTS = {
@@ -28,15 +29,19 @@ const CALLOUTS = {
   check: { bg: '#f8fafc', border: '#cbd5e1', color: '#334155' },
 };
 
-/** Pill variants. Longest class string first so 'pill live' wins over 'pill'. */
+/** Pill variants across both guides. Longest class string first so 'pill live'
+ *  wins over 'pill'. */
 const PILLS = {
   'pill live': { bg: '#dcfce7', color: '#15803d' },
   'pill sim': { bg: '#f3f4f6', color: '#4b5563' },
   'pill new': { bg: '#eef2ff', color: '#4338ca' },
+  'pill orga': { bg: '#fef3c7', color: '#b45309' },
+  'pill lecture': { bg: '#f3f4f6', color: '#4b5563' },
   pill: { bg: '#ecfdf5', color: '#0f766e' },
 };
 
 function build(source) {
+  const title = (source.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? 'Protocole de test').trim();
   let html = source.match(/<body>([\s\S]*)<\/body>/)[1];
 
   // Inline spans first: the callout wrapper below copies its inner HTML
@@ -61,13 +66,15 @@ function build(source) {
     /<table class="fixtures-table">/g,
     '<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;">'
   );
-  html = html.replace(/<th>/g, '<th style="border:1px solid #d1d5db;background-color:#ecfdf5;">');
+  // Must not swallow <thead>: require '>' or whitespace right after "th". The
+  // pool guide sets column widths, so bare <th> alone is not enough either.
+  html = html.replace(
+    /<th(?:\s[^>]*)?>/g,
+    '<th style="border:1px solid #d1d5db;background-color:#ecfdf5;">'
+  );
   html = html.replace(/<td>/g, '<td style="border:1px solid #d1d5db;">');
 
-  html = html.replace(
-    /<h1>([\s\S]*?)<\/h1>/g,
-    (_, i) => `<h1 style="color:#111827;">${i}</h1>`
-  );
+  html = html.replace(/<h1>([\s\S]*?)<\/h1>/g, (_, i) => `<h1 style="color:#111827;">${i}</h1>`);
   html = html.replace(/<h2>([\s\S]*?)<\/h2>/g, (_, i) => `<h2 style="color:#0f766e;">${i}</h2>`);
   html = html.replace(/<h3>([\s\S]*?)<\/h3>/g, (_, i) => `<h3 style="color:#134e4a;">${i}</h3>`);
   html = html.replace(
@@ -89,8 +96,10 @@ function build(source) {
     );
   }
 
-  // Structural wrappers Docs has no use for.
+  // Structural wrappers Docs has no use for. The two guides differ here: the
+  // payments one groups with <section class="block">, the pool one with a div.
   html = html.replace(/<\/?section[^>]*>/g, '');
+  html = html.replace(/<div class="block">/g, '').replace(/<\/div>/g, '');
 
   // The source is pretty-printed: every paragraph is hard-wrapped and indented.
   // A browser collapses that to one space, but the Docs importer is not a
@@ -103,7 +112,12 @@ function build(source) {
   html = html.replace(new RegExp(`(<(?:${BLOCK})\\b[^>]*>) `, 'g'), '$1');
   html = html.replace(new RegExp(` (</(?:${BLOCK})>)`, 'g'), '$1');
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Protocole de test des paiements</title></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${html}</body></html>`;
 }
 
-process.stdout.write(build(fs.readFileSync(HTML_PATH, 'utf8')));
+const src = process.argv[2];
+if (!src) {
+  console.error('Usage: node scripts/dev/build-test-guide-gdoc.mjs <source.html> > out.html');
+  process.exit(1);
+}
+process.stdout.write(build(fs.readFileSync(path.resolve(src), 'utf8')));
