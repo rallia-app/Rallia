@@ -295,6 +295,7 @@
       "tournament_cancelled": "Tournament cancelled",
       "tournament_completed": "Tournament finished",
       "tournament_pool_eliminated": "Pool stage result",
+      "tournament_action_required": "Action needed",
       "league_invitation": "League invitation",
       "league_member_request": "League join request",
       "league_member_approved": "League join approved",

@@ -463,6 +463,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   tournament_cancelled: 'urgent',
   tournament_completed: 'normal',
   tournament_pool_eliminated: 'normal',
+  tournament_action_required: 'high',
   session_published: 'normal',
   session_confirm_reminder: 'normal',
   season_closed: 'normal',
@@ -583,6 +584,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_cancelled: 'Tournament cancelled',
   tournament_completed: 'Tournament complete',
   tournament_pool_eliminated: 'Run complete',
+  tournament_action_required: 'Action needed',
   session_published: 'Session schedule published',
   session_confirm_reminder: 'Confirm your spot',
   season_closed: 'Season closed',
@@ -733,6 +735,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_completed: '{tournamentName} has wrapped up. Champion: {championName}.',
   tournament_pool_eliminated:
     '{tournamentName}: your run ends in the pool stage. You finished #{poolRank} in your pool.',
+  tournament_action_required: '{tournamentName} is waiting on you.',
   session_published: 'The schedule for {sessionName} is now available.',
   session_confirm_reminder: 'Respond for {sessionName} before your spot is released.',
   season_closed: '{seasonName} has ended. Final standings are in.',

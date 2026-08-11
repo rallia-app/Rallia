@@ -79,6 +79,7 @@ export type NotificationType =
   | 'tournament_cancelled'
   | 'tournament_completed'
   | 'tournament_pool_eliminated'
+  | 'tournament_action_required'
   | 'session_published'
   | 'session_confirm_reminder'
   | 'season_closed'
@@ -277,6 +278,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   tournament_cancelled: { email: true, push: true, sms: false },
   tournament_completed: { email: false, push: true, sms: false },
   tournament_pool_eliminated: { email: false, push: true, sms: false },
+  tournament_action_required: { email: true, push: true, sms: false },
   session_published: { email: true, push: true, sms: false },
   session_confirm_reminder: { email: false, push: true, sms: false },
   season_closed: { email: true, push: true, sms: false },

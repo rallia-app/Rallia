@@ -9533,6 +9533,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -9544,6 +9545,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -9596,6 +9598,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          draw_nudged_at?: string | null
           end_date: string
           entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
@@ -9607,6 +9610,7 @@ export type Database = {
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
+          knockout_nudged_at?: string | null
           latitude?: number | null
           level?: string | null
           logo_url?: string | null
@@ -9659,6 +9663,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          draw_nudged_at?: string | null
           end_date?: string
           entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
@@ -9670,6 +9675,7 @@ export type Database = {
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
+          knockout_nudged_at?: string | null
           latitude?: number | null
           level?: string | null
           logo_url?: string | null
@@ -12632,6 +12638,7 @@ export type Database = {
         Args: { p_double: boolean; p_tm_id: string; p_winner: string }
         Returns: undefined
       }
+      lt_nudge_tournament_gates: { Args: never; Returns: number }
       lt_order_avoid_repeat: {
         Args: { p_pool: string[]; p_season_id: string }
         Returns: string[]
@@ -14172,6 +14179,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14183,6 +14191,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -14307,6 +14316,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14318,6 +14328,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -14379,6 +14390,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14390,6 +14402,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -14479,6 +14492,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14490,6 +14504,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -14836,6 +14851,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14847,6 +14863,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -15080,6 +15097,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -15091,6 +15109,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -15244,6 +15263,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -15255,6 +15275,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -15316,6 +15337,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -15327,6 +15349,7 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
           latitude: number | null
           level: string | null
           logo_url: string | null
@@ -15765,6 +15788,7 @@ export type Database = {
         | "tournament_match_walkover"
         | "tournament_dispute_escalated"
         | "tournament_pool_eliminated"
+        | "tournament_action_required"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -16459,6 +16483,7 @@ export const Constants = {
         "tournament_match_walkover",
         "tournament_dispute_escalated",
         "tournament_pool_eliminated",
+        "tournament_action_required",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
