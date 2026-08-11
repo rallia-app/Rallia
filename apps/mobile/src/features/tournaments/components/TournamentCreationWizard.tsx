@@ -72,6 +72,7 @@ import {
 } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
+import { computePoolLayout } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
@@ -89,6 +90,57 @@ const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
 const POOL_FIELD_SIZES = [8, 12, 16, 20, 24, 32] as const;
 type BracketSize = (typeof BRACKET_SIZES)[number] | (typeof POOL_FIELD_SIZES)[number];
 type Structure = 'single_elimination' | 'pool_knockout';
+
+const POOL_ROUND_KEYS: Record<number, string> = {
+  2: 'poolRoundFinal',
+  4: 'poolRoundSemis',
+  8: 'poolRoundQuarters',
+  16: 'poolRoundOf16',
+  32: 'poolRoundOf32',
+};
+
+/**
+ * The spec's configuration preview: how many pools of what size, who advances
+ * and to which round, and the games everyone is guaranteed. Computed rather
+ * than written down, because the requested pool size is only a target and the
+ * distribution can hand back something else (20 at pools of 5 really is pools
+ * of 5, so 4 games each, while 16 at pools of 3 splits [4,3,3,3,3] and the
+ * floor is 2).
+ */
+function poolPreviewText(
+  fieldSize: number,
+  poolSize: number,
+  qualifiersPerPool: number,
+  isDoubles: boolean,
+  t: (k: TranslationKey) => string
+): string | null {
+  const layout = computePoolLayout(fieldSize, poolSize, qualifiersPerPool);
+  if (!layout) return null;
+
+  const key = (k: string) => `tournamentCreation.fields.${k}` as TranslationKey;
+
+  const groups = layout.groups.map(g =>
+    (g.count === 1
+      ? t(key('poolPreviewGroupOne'))
+      : t(key('poolPreviewGroupMany')).replace('{count}', String(g.count))
+    ).replace('{size}', String(g.size))
+  );
+
+  const one = qualifiersPerPool === 1;
+  const template = isDoubles
+    ? one
+      ? 'poolPreviewTeamsOne'
+      : 'poolPreviewTeamsTwo'
+    : one
+      ? 'poolPreviewOne'
+      : 'poolPreviewTwo';
+
+  return t(key(template))
+    .replace('{field}', String(fieldSize))
+    .replace('{layout}', groups.join(t(key('poolPreviewJoin'))))
+    .replace('{round}', t(key(POOL_ROUND_KEYS[layout.drawSize] ?? 'poolRoundOf32')))
+    .replace('{games}', String(layout.guaranteedGames));
+}
 
 function startOfLocalDay(date: Date): Date {
   const d = new Date(date);
@@ -1051,6 +1103,14 @@ const DetailsStep: React.FC<{
   // when the user never scrolls (iOS onChange only fires on an actual change).
   const [pickerValue, setPickerValue] = useState<Date>(() => todayAtLocalMidnight());
 
+  const poolPreview = useMemo(
+    () =>
+      structure === 'pool_knockout'
+        ? poolPreviewText(bracketSize, poolSize, qualifiersPerPool, entryFormat === 'doubles', t)
+        : null,
+    [structure, bracketSize, poolSize, qualifiersPerPool, entryFormat, t]
+  );
+
   const openPicker = useCallback(
     (which: 'start' | 'end') => {
       const today = todayAtLocalMidnight();
@@ -1510,6 +1570,16 @@ const DetailsStep: React.FC<{
                       : 'tournamentCreation.fields.maxTeamsHint') as TranslationKey
                   )}
                 </Text>
+                {poolPreview && (
+                  <Text
+                    size="xs"
+                    color={colors.textMuted}
+                    style={styles.fieldHint}
+                    testID="pool-config-preview"
+                  >
+                    {poolPreview}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.fieldGroup}>

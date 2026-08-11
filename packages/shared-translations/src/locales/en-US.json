@@ -5818,9 +5818,21 @@
       "structure": "Structure",
       "structureSingle": "Single elimination",
       "structurePool": "Pools + knockout",
-      "structurePoolHint": "Pools of 4, best 2 qualify for the knockout. Everyone is guaranteed at least 3 games.",
+      "structurePoolHint": "Two phases: pools where everyone plays several games, then a knockout bracket for the best.",
       "poolSize": "Pool size",
-      "qualifiersPerPool": "Qualifiers per pool"
+      "qualifiersPerPool": "Qualifiers per pool",
+      "poolPreviewGroupOne": "1 pool of {size}",
+      "poolPreviewGroupMany": "{count} pools of {size}",
+      "poolPreviewJoin": " and ",
+      "poolPreviewOne": "{field} players: {layout}. The winner of each pool goes through to the {round}. Everyone plays at least {games} games.",
+      "poolPreviewTwo": "{field} players: {layout}. The top 2 of each pool go through to the {round}. Everyone plays at least {games} games.",
+      "poolPreviewTeamsOne": "{field} teams: {layout}. The winner of each pool goes through to the {round}. Every team plays at least {games} games.",
+      "poolPreviewTeamsTwo": "{field} teams: {layout}. The top 2 of each pool go through to the {round}. Every team plays at least {games} games.",
+      "poolRoundFinal": "final",
+      "poolRoundSemis": "semifinals",
+      "poolRoundQuarters": "quarterfinals",
+      "poolRoundOf16": "round of 16",
+      "poolRoundOf32": "round of 32"
     },
     "validation": {
       "nameRequired": "Tournament name is required",

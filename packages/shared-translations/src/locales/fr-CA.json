@@ -5818,9 +5818,21 @@
       "structure": "Structure",
       "structureSingle": "Élimination simple",
       "structurePool": "Poules + éliminatoires",
-      "structurePoolHint": "Poules de 4, les 2 premiers passent aux éliminatoires. Tout le monde joue au moins 3 parties garanties.",
+      "structurePoolHint": "Deux phases : des poules où tout le monde joue plusieurs parties, puis un tableau éliminatoire pour les meilleurs.",
       "poolSize": "Taille des poules",
-      "qualifiersPerPool": "Qualifiés par poule"
+      "qualifiersPerPool": "Qualifiés par poule",
+      "poolPreviewGroupOne": "1 poule de {size}",
+      "poolPreviewGroupMany": "{count} poules de {size}",
+      "poolPreviewJoin": " et ",
+      "poolPreviewOne": "{field} joueurs : {layout}. Le premier de chaque poule passe {round}. Chaque joueur joue au moins {games} parties.",
+      "poolPreviewTwo": "{field} joueurs : {layout}. Les 2 premiers de chaque poule passent {round}. Chaque joueur joue au moins {games} parties.",
+      "poolPreviewTeamsOne": "{field} équipes : {layout}. La première de chaque poule passe {round}. Chaque équipe joue au moins {games} parties.",
+      "poolPreviewTeamsTwo": "{field} équipes : {layout}. Les 2 premières de chaque poule passent {round}. Chaque équipe joue au moins {games} parties.",
+      "poolRoundFinal": "en finale",
+      "poolRoundSemis": "en demi-finales",
+      "poolRoundQuarters": "en quarts de finale",
+      "poolRoundOf16": "au tableau de 16",
+      "poolRoundOf32": "au tableau de 32"
     },
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",
