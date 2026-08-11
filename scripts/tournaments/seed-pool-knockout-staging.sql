@@ -1,5 +1,5 @@
 -- ============================================================================
--- Pool + knockout ([JDL-PK]) — fixtures 7 to 13
+-- Pool + knockout ([JDL-PK]) — fixtures 7 to 14
 --
 -- The original 1-6 set covers the happy path Jean can drive himself: register
 -- (1), pools running with his own games to link (2), a deadline countdown (3),
@@ -36,6 +36,13 @@
 --        who still owes games, and it is the only fixture that can trigger the
 --        gate-1 nudge since nothing else sits at registration_closed. Left
 --        unseeded with nothing generated: those are his steps.
+--   14 · Retirer en cours de poules     → the same organizer seat as 13, but
+--        parked one step later: pools drawn, round 1 settled, everything else
+--        still to play. That is the only window where
+--        tournament_forfeit_registration is legal, and 13 only reaches it
+--        after Jean has done the seeding and the draw himself. Whoever he
+--        removes keeps their played result and hands the rest away as
+--        walkovers, which is what the confirmation now promises.
 --
 -- Idempotent: the fixtures are dropped by exact name and rebuilt. Safe to
 -- re-run before any protocol pass. It does NOT touch fixtures 1-6, so Jean can
@@ -209,7 +216,8 @@ DECLARE
         '[JDL-PK] 10 · Un seul qualifié par poule',
         '[JDL-PK] 11 · Grand tableau (32 joueurs)',
         '[JDL-PK] 12 · Pickleball',
-        '[JDL-PK] 13 · À toi de former les poules'
+        '[JDL-PK] 13 · À toi de former les poules',
+        '[JDL-PK] 14 · Retirer en cours de poules'
     ];
     v_ids uuid[];
 BEGIN
@@ -226,7 +234,7 @@ BEGIN
           JOIN tournament_registrations r ON r.id = p.tournament_registration_id
          WHERE r.tournament_id = ANY (v_ids)
     ) THEN
-        RAISE EXCEPTION 'a [JDL-PK] 7-12 fixture carries a payment row; aborting';
+        RAISE EXCEPTION 'a [JDL-PK] 7-14 fixture carries a payment row; aborting';
     END IF;
 
     DELETE FROM notification n
@@ -272,7 +280,7 @@ BEGIN
 
     -- 101 fake tennis players available; take a wide slice and carve rosters
     -- out of it so no two fixtures share an organizer.
-    v_tn := pg_temp.fakes('tennis', 94, 0);
+    v_tn := pg_temp.fakes('tennis', 101, 0);
     v_pk := pg_temp.fakes('pickleball', 24, 0);
     IF coalesce(array_length(v_tn, 1), 0) < 94 THEN
         RAISE EXCEPTION 'need 94 fake tennis players, found %',
@@ -469,6 +477,29 @@ BEGIN
                          'tennis', 8::smallint, v_jean, v_roster, NULL,
                          2::smallint, 'singles', NULL, true, 'private');
     RAISE NOTICE '13 · a toi de former les poules: %', v_t;
+
+    -- =====================================================================
+    -- 14 · Retirer en cours de poules. Jean organizes and does not play, like
+    -- 13, but this one is already drawn: the forfeit RPC is legal only while
+    -- pools exist and the knockout does not, and 13 does not enter that window
+    -- until he has seeded and generated the pools himself. Parking a second
+    -- fixture inside it means the removal can be tested on its own.
+    --
+    -- Only round 1 is settled, so every entrant has both a played result and
+    -- games still owed. Whoever he removes therefore demonstrates both halves
+    -- of the promise: the played game keeps its score, the rest become
+    -- walkovers for the opponents.
+    --
+    -- Seven entrants because the fake tennis roster ends at 101 and 13 takes
+    -- through 94. That gives pools of [4,3], which is fine here: the pool of 4
+    -- is where the removal has the most to show.
+    -- =====================================================================
+    v_roster := v_tn[95:101];
+    v_t := pg_temp.build('[JDL-PK] 14 · Retirer en cours de poules',
+                         'tennis', 8::smallint, v_jean, v_roster, NULL,
+                         2::smallint, 'singles', NULL, false, 'private');
+    PERFORM pg_temp.settle_pools(v_t, v_jean, '6-4 6-2', 3);
+    RAISE NOTICE '14 · retirer en cours de poules: %', v_t;
 END;
 $$;
 
