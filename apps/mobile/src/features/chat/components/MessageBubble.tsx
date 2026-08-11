@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
-  Linking,
   Animated,
   PanResponder,
 } from 'react-native';
@@ -23,6 +22,8 @@ import type { MessageWithSender, ReactionSummary } from '@rallia/shared-services
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+
+import { useChatLinkPress } from '../hooks/useChatLinkPress';
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -40,6 +41,8 @@ interface MessageBubbleProps {
 
 // Regex to detect URLs in text
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+// Anchored, non-global: .test() on a /g regex is lastIndex-dependent.
+const URL_TEST_REGEX = /^https?:\/\/[^\s]+$/;
 
 // Swipe threshold to trigger reply
 const SWIPE_THRESHOLD = 60;
@@ -111,6 +114,7 @@ function MessageBubbleComponent({
 }: MessageBubbleProps) {
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const handleLinkPress = useChatLinkPress();
 
   // Animation values for swipe-to-reply - using useMemo for stable instances
   const translateX = useMemo(() => new Animated.Value(0), []);
@@ -207,7 +211,7 @@ function MessageBubbleComponent({
   // Helper to render text with search highlighting
   const renderTextWithHighlight = useCallback(
     (text: string, baseStyle: object, key?: string | number, isLink?: boolean) => {
-      const handlePress = isLink ? () => Linking.openURL(text) : undefined;
+      const handlePress = isLink ? () => handleLinkPress(text) : undefined;
 
       if (!searchQuery || searchQuery.length < 2) {
         return (
@@ -243,7 +247,7 @@ function MessageBubbleComponent({
         </Text>
       );
     },
-    [searchQuery]
+    [searchQuery, handleLinkPress]
   );
 
   // Parse content for URLs with optional search highlighting
@@ -268,7 +272,7 @@ function MessageBubbleComponent({
     return parts.map((part, index) => {
       const baseStyle = [styles.messageText, { color: isOwnMessage ? '#FFFFFF' : colors.text }];
 
-      if (URL_REGEX.test(part)) {
+      if (URL_TEST_REGEX.test(part)) {
         // URL part - still apply highlighting if needed, and make clickable
         return renderTextWithHighlight(
           part,

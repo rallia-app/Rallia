@@ -2320,7 +2320,8 @@
     },
     "message": {
       "deleted": "This message was deleted",
-      "edited": "edited"
+      "edited": "edited",
+      "matchUnavailable": "This game is no longer available"
     },
     "input": {
       "replyingTo": "Replying to {name}"

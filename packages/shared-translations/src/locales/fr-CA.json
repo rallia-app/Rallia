@@ -2320,7 +2320,8 @@
     },
     "message": {
       "deleted": "Ce message a été supprimé",
-      "edited": "modifié"
+      "edited": "modifié",
+      "matchUnavailable": "Cette partie n'est plus disponible"
     },
     "input": {
       "replyingTo": "Répondre à {name}"
