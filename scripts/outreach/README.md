@@ -81,7 +81,36 @@ What to verify after step 3:
 The conversation title defaults to `"<recipient first name>, Jean & Mathis"` (e.g. `"Ana, Jean & Mathis"`).
 Pass `--title "..."` to force a single static title for every thread instead.
 
-Useful flags: `--csv <path>`, `--limit N`, `--title "..."`, `--sender <email>`, `--allow-missing-name`.
+Useful flags: `--csv <path>`, `--limit N`, `--title "..."`, `--sender <email>`, `--allow-missing-name`,
+`--direct`, `--campaign <tag>`.
+
+## 1-on-1 threads (`--direct`)
+
+`--direct` posts into a two-person `direct` conversation between the recipient and the sender
+instead of the founders group. Direct threads carry no title (the client names them from the
+other participant). Jean is not added, and his account no longer needs to exist on the project.
+
+Pair it with `--campaign <tag>`: idempotency is keyed on `message.metadata.campaign`, so without
+a fresh tag every recipient who ever received `user_interview_outreach` is skipped as
+"already sent". A new tag also keeps `reply-rates.sql` from mixing two campaigns in one group.
+
+## Notification-mute research wave
+
+Asks the players who muted their notifications why they did it. Deliberately makes no ask to
+re-enable anything. Two segments, matched to how broadly each person muted:
+
+- `nearby_muted` — muted a handful of types including nearby games. Asks about nearby games.
+- `all_muted` — swept most types off. Asks about notification volume overall.
+
+```
+node scripts/outreach/send-interview-outreach.mjs \
+  --csv scripts/outreach/waves/notif-mute-wave1-nearby.csv \
+  --direct --campaign notif_mute_research --allow-prod
+```
+
+Drop `--allow-prod` off a staging run, and add `--execute` only once the dry run reads right.
+Note that 44 of the 49 already have a founders group thread from `user_interview_outreach`;
+`--direct` deliberately opens a separate 1-on-1 rather than reusing it.
 
 ## Side effects
 
