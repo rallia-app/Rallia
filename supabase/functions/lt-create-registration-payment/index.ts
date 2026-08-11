@@ -323,7 +323,8 @@ Deno.serve(async req => {
 
     // Stripe PaymentIntent receipts carry no line items, so the price breakdown
     // rides in the description. Absorb mode names no fee/tax amounts: those are
-    // the organizer's cost, not something the player paid.
+    // the organizer's cost, not something the player paid — but the price must
+    // still be flagged tax-inclusive when no breakdown is shown.
     const money = (cents: number) =>
       currency === 'cad'
         ? `${(cents / 100).toFixed(2).replace('.', ',')} $`
@@ -332,9 +333,9 @@ Deno.serve(async req => {
       description += ` · Entrée ${money(reg.entry_cents)} + Frais de service ${money(reg.service_fee_cents)}`;
       if (reg.fee_tax_cents > 0) description += ` + TPS/TVQ ${money(reg.fee_tax_cents)}`;
     } else if (reg.fee_payer === 'organizer_absorbs') {
-      description += ` · Entrée ${money(reg.entry_cents)} (frais de service assumés par l'organisateur)`;
+      description += ` · Entrée ${money(reg.entry_cents)} (taxes incluses, frais de service assumés par l'organisateur)`;
     } else {
-      description += ` · Entrée ${money(reg.entry_cents)}`;
+      description += ` · Entrée ${money(reg.entry_cents)} (taxes incluses)`;
     }
 
     const params: Stripe.PaymentIntentCreateParams = {

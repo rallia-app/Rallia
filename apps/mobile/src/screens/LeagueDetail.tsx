@@ -1739,7 +1739,7 @@ export const LeagueDetail: React.FC = () => {
             money(seasonFeeQuote.entryCents)
           ),
           t('leagueDetail.paid.feeCoveredByOrganizer'),
-          t('leagueDetail.paid.breakdownTotal').replace(
+          t('leagueDetail.paid.breakdownTotalTaxesIncluded').replace(
             '{amount}',
             money(seasonFeeQuote.totalCents)
           ),

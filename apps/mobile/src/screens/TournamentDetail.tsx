@@ -1750,7 +1750,7 @@ export const TournamentDetail: React.FC = () => {
                 money(feeQuote.entryCents)
               ),
               t('tournamentDetail.payments.feeCoveredByOrganizer'),
-              t('tournamentDetail.payments.breakdownTotal').replace(
+              t('tournamentDetail.payments.breakdownTotalTaxesIncluded').replace(
                 '{amount}',
                 money(feeQuote.totalCents)
               ),
