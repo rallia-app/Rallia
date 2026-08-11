@@ -28,14 +28,14 @@ export const primary = {
 
 /**
  * Secondary colors - Rally Coral
- * Anchors: 500 #f2554b (light), 400 #ff7a6e (dark-mode step, kept vivid)
+ * Anchors: 500 #f2554b (light), 400 #ff8b76 (dark-mode step, warm coral not red)
  */
 export const secondary = {
   50: '#fef1ef',
   100: '#fde2df',
   200: '#fbc5bf',
-  300: '#f9a199',
-  400: '#ff7a6e',
+  300: '#f9a390',
+  400: '#ff8b76',
   500: '#f2554b',
   600: '#d0433a',
   700: '#a93129',
@@ -141,10 +141,10 @@ export const darkMode = {
     200: '#3b201c',
     300: '#4b2a24',
     400: '#5c342d',
-    500: '#ff7a6e',
-    600: '#ff8a80',
-    700: '#ff9c92',
-    800: '#ffafa6',
+    500: '#ff8b76',
+    600: '#ff9a85',
+    700: '#ffaa95',
+    800: '#ffbaa6',
     900: '#2b1714',
   },
   accent: {
