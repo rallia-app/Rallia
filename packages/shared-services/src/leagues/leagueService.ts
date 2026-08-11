@@ -12,6 +12,7 @@ import {
   TournamentPaymentError,
   type PlayerProfile,
   type LinkableMatch,
+  type LinkableMatchState,
   type RegistrationPaymentIntent,
 } from '../tournaments/tournamentService';
 import { generateInvitationLink } from '../invitation/invitationLinkService';
@@ -1223,10 +1224,14 @@ export async function reinstateLeagueMember(
 // ---------------------------------------------------------------------------
 
 /**
- * List the caller's verified matches that could be linked to a session pairing:
- * every member of the pairing is a joined participant (2 for singles, 4 for
- * doubles), same sport + format, has a verified result, and isn't already linked
- * to another session pairing or a tournament bracket slot.
+ * List the caller's games that could be linked to a session pairing: every
+ * member of the pairing is a joined participant (2 for singles, 4 for doubles),
+ * same sport + format, and not already linked to another session pairing or a
+ * tournament bracket slot.
+ *
+ * Games still missing a score, or with a score the opponent has not confirmed,
+ * are returned too (see `state`) so the picker can show them as not-yet-linkable
+ * with the step that unblocks them. Only 'ready' rows may be attached.
  */
 export async function listLinkableMatchesForSessionSlot(params: {
   sessionMatchId: string;
@@ -1235,15 +1240,24 @@ export async function listLinkableMatchesForSessionSlot(params: {
   sportId: string;
   entryFormat: Enums<'entry_format'>;
 }): Promise<LinkableMatch[]> {
+  // Scoreless games are candidates too, so the result join can't be inner —
+  // which means upcoming games would otherwise crowd out played ones. Only
+  // games whose date has passed can have been played.
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+    today.getDate()
+  ).padStart(2, '0')}`;
+
   const { data, error } = await supabase
     .from('match')
     .select(
       `id, match_date, start_time, end_time, format,
-       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
+       match_result ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
          match_set ( set_number, team1_score, team2_score ) ),
        match_participant!inner ( player_id, status, team_number )`
     )
     .eq('sport_id', params.sportId)
+    .lte('match_date', todayIso)
     .order('match_date', { ascending: false })
     .limit(50);
   if (error) throw new Error(error.message);
@@ -1276,8 +1290,12 @@ export async function listLinkableMatchesForSessionSlot(params: {
 
   for (const row of rows) {
     const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
-    if (!mr || !mr.is_verified) continue;
     if ((row.format ?? 'singles') !== (isDoubles ? 'doubles' : 'singles')) continue;
+    const state: LinkableMatchState = !mr
+      ? 'awaiting_score'
+      : mr.is_verified
+        ? 'ready'
+        : 'awaiting_confirmation';
 
     const joined = row.match_participant.filter(p => p.status === 'joined');
     const joinedUsers = joined.map(p => p.player_id);
@@ -1294,24 +1312,22 @@ export async function listLinkableMatchesForSessionSlot(params: {
       team2_user_ids = t2 ? [t2] : [];
     }
 
-    const sets = (mr.match_set ?? [])
+    const sets = (mr?.match_set ?? [])
       .slice()
       .sort((a, b) => a.set_number - b.set_number)
       .map(s => ({ team1: s.team1_score, team2: s.team2_score }));
 
     eligible.push({
-      // Leagues only surface verified games; the not-yet-linkable states are
-      // a tournament-picker affordance for now.
-      state: 'ready',
+      state,
       id: row.id,
       match_date: row.match_date,
       start_time: row.start_time,
       end_time: row.end_time,
-      match_result_id: mr.id,
-      winning_team: (mr.winning_team as 1 | 2 | null) ?? null,
-      team1_score: mr.team1_score,
-      team2_score: mr.team2_score,
-      verified_at: mr.verified_at,
+      match_result_id: mr?.id ?? null,
+      winning_team: (mr?.winning_team as 1 | 2 | null) ?? null,
+      team1_score: mr?.team1_score ?? null,
+      team2_score: mr?.team2_score ?? null,
+      verified_at: mr?.verified_at ?? null,
       team1_user_ids,
       team2_user_ids,
       sets,
@@ -1334,7 +1350,10 @@ export async function listLinkableMatchesForSessionSlot(params: {
   for (const r of sLinked.data ?? []) if (r.match_id) taken.add(r.match_id);
   for (const r of tLinked.data ?? []) if (r.match_id) taken.add(r.match_id);
 
-  return eligible.filter(m => !taken.has(m.id));
+  // Linkable games first; the rest keep the date ordering from the query.
+  return eligible
+    .filter(m => !taken.has(m.id))
+    .sort((a, b) => Number(b.state === 'ready') - Number(a.state === 'ready'));
 }
 
 /**

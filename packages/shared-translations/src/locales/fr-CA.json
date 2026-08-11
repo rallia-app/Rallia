@@ -4959,11 +4959,17 @@
     "linkPicker": {
       "title": "Lier une partie jouée",
       "empty": "Aucune partie trouvée",
-      "emptyHint": "Joue ta partie avec ton adversaire de la session pis entre un pointage confirmé, ensuite reviens la lier ici.",
+      "emptyHint": "Joue ta partie avec ton adversaire de la session pis entre le score, ensuite reviens la lier ici.",
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, entre un pointage confirmé, ensuite reviens la lier ici.",
       "attachFailed": "Impossible de lier la partie",
       "linkCta": "Lier cette partie",
       "addResult": "Ajouter le résultat",
+      "blocked": {
+        "noScoreChip": "Sans score",
+        "unconfirmedChip": "À confirmer",
+        "awaitingScore": "Entre le score de cette partie pour pouvoir la lier.",
+        "awaitingConfirmation": "Ton adversaire doit confirmer le score avant que tu puisses lier cette partie."
+      },
       "errors": {
         "alreadyLinked": "Une partie est déjà liée à ce duel.",
         "notPending": "Ce duel est déjà réglé.",

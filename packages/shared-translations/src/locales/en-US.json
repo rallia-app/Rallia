@@ -4959,11 +4959,17 @@
     "linkPicker": {
       "title": "Link a played match",
       "empty": "No matches found",
-      "emptyHint": "Play a game with your session opponent and submit a confirmed score, then come back to link it here.",
+      "emptyHint": "Play a game with your session opponent and enter the score, then come back to link it here.",
       "emptyHintDoubles": "Play a doubles game with all four players and submit a confirmed score, then come back to link it here.",
       "attachFailed": "Couldn't link the match",
       "linkCta": "Link this game",
       "addResult": "Add result",
+      "blocked": {
+        "noScoreChip": "No score",
+        "unconfirmedChip": "Unconfirmed",
+        "awaitingScore": "Enter this game's score to make it linkable.",
+        "awaitingConfirmation": "Your opponent needs to confirm the score before you can link this game."
+      },
       "errors": {
         "alreadyLinked": "A game is already linked to this matchup.",
         "notPending": "This matchup is already settled.",
