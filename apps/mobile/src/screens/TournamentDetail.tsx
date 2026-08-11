@@ -2689,7 +2689,8 @@ export const TournamentDetail: React.FC = () => {
           isPickleball: sportName === 'pickleball',
           matchFormat: tournament.match_format,
           pointsPerGame: tournament.points_per_game,
-          isFinal: !!totalRounds && match?.round_number === totalRounds,
+          isFinal:
+            !!totalRounds && match?.bracket_side === 'main' && match?.round_number === totalRounds,
           onSuccess: () => {
             successHaptic();
           },
@@ -4087,9 +4088,12 @@ export const TournamentDetail: React.FC = () => {
                   standings={poolStandings}
                   poolMatches={poolMatches}
                   nameByRegId={nameByRegId}
+                  membersByRegId={membersByRegId}
                   qualifiersPerPool={tournament.qualifiers_per_pool ?? 2}
                   currentUserId={userId}
+                  isOrganizer={isOrganizer}
                   onMatchPress={handleBracketMatchTap}
+                  onOrganizerOverride={handleOrganizerOverride}
                   colors={colors}
                   t={t as (k: string) => string}
                 />

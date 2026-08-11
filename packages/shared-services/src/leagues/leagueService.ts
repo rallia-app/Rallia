@@ -1300,6 +1300,9 @@ export async function listLinkableMatchesForSessionSlot(params: {
       .map(s => ({ team1: s.team1_score, team2: s.team2_score }));
 
     eligible.push({
+      // Leagues only surface verified games; the not-yet-linkable states are
+      // a tournament-picker affordance for now.
+      state: 'ready',
       id: row.id,
       match_date: row.match_date,
       start_time: row.start_time,

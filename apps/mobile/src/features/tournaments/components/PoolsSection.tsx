@@ -35,19 +35,26 @@ export const PoolsSection: React.FC<{
   standings: PoolStandingRow[];
   poolMatches: TournamentMatch[];
   nameByRegId: Map<string, string>;
+  membersByRegId: Map<string, string[]>;
   qualifiersPerPool: number;
   currentUserId: string | undefined;
-  /** Tap a playable pool game (both mine and others'; parent gates actions). */
+  isOrganizer: boolean;
+  /** Participant taps their own pending game → link a played match. */
   onMatchPress?: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
+  /** Organizer taps a game they are not playing in → record/correct the result. */
+  onOrganizerOverride?: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   colors: Colors;
   t: (k: string) => string;
 }> = ({
   standings,
   poolMatches,
   nameByRegId,
+  membersByRegId,
   qualifiersPerPool,
   currentUserId,
+  isOrganizer,
   onMatchPress,
+  onOrganizerOverride,
   colors,
   t,
 }) => {
@@ -160,18 +167,37 @@ export const PoolsSection: React.FC<{
                 ? (nameByRegId.get(m.player2_registration_id) ?? '—')
                 : '—';
               const settled = TERMINAL.has(m.status);
-              const tappable = !settled && !!onMatchPress;
+              // Same gating as the knockout renderer: participants act on their
+              // own pending game, the organizer records others' games and may
+              // quietly correct a completed one; everyone else just reads.
+              const callerInMatch =
+                !!currentUserId &&
+                [m.player1_registration_id, m.player2_registration_id].some(
+                  regId => !!regId && (membersByRegId.get(regId) ?? []).includes(currentUserId)
+                );
+              const canAttach = m.status === 'pending' && callerInMatch && !!onMatchPress;
+              const canOverride =
+                isOrganizer &&
+                !canAttach &&
+                (m.status === 'pending' || m.status === 'completed') &&
+                !!onOrganizerOverride;
+              const tappable = canAttach || canOverride;
               const label = settled
                 ? m.status === 'walkover'
                   ? t('tournamentDetail.pools.walkover')
                   : (m.score ?? '')
                 : t('tournamentDetail.pools.toPlay');
+              const pendingAccent = tappable ? colors.primary : colors.textMuted;
               return (
                 <TouchableOpacity
                   key={m.id}
                   disabled={!tappable}
                   onPress={() =>
-                    onMatchPress?.(m.id, m.player1_registration_id!, m.player2_registration_id!)
+                    (canAttach ? onMatchPress : onOrganizerOverride)?.(
+                      m.id,
+                      m.player1_registration_id!,
+                      m.player2_registration_id!
+                    )
                   }
                   activeOpacity={0.7}
                   style={styles.matchRow}
@@ -190,12 +216,16 @@ export const PoolsSection: React.FC<{
                     <Text
                       size="xs"
                       weight={settled ? 'semibold' : 'regular'}
-                      color={settled ? colors.text : colors.primary}
+                      color={settled ? colors.text : pendingAccent}
                     >
                       {label}
                     </Text>
                     {tappable && (
-                      <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+                      <Ionicons
+                        name={settled ? 'create-outline' : 'chevron-forward'}
+                        size={13}
+                        color={settled ? colors.textMuted : colors.primary}
+                      />
                     )}
                   </View>
                 </TouchableOpacity>

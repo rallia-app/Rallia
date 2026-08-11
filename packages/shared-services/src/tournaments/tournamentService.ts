@@ -1329,16 +1329,24 @@ export async function isCertifiedOrganizer(playerId: string): Promise<boolean> {
   return data?.is_certified_organizer === true;
 }
 
+/**
+ * Why a candidate game cannot be linked yet. 'ready' is the only linkable
+ * state; the others are surfaced so the player sees the game they played and
+ * what is still missing, instead of an empty picker.
+ */
+export type LinkableMatchState = 'ready' | 'awaiting_score' | 'awaiting_confirmation';
+
 export interface LinkableMatch {
   id: string;
   match_date: string;
   start_time: string;
   end_time: string;
-  match_result_id: string;
+  match_result_id: string | null;
   winning_team: 1 | 2 | null;
   team1_score: number | null;
   team2_score: number | null;
   verified_at: string | null;
+  state: LinkableMatchState;
   /** User ids on each score side (1 for singles, 2 for doubles). */
   team1_user_ids: string[];
   team2_user_ids: string[];
@@ -1347,11 +1355,14 @@ export interface LinkableMatch {
 }
 
 /**
- * List the caller's verified matches that could be linked to the given
- * tournament_match slot — every member of both bracket entries is a joined
- * participant (2 players for singles, 4 for doubles), the game is in the
- * tournament's sport with the matching format, has a verified result, and
- * is not already linked to another tournament_match.
+ * List the caller's games that match the given tournament_match slot — every
+ * member of both bracket entries is a joined participant (2 players for
+ * singles, 4 for doubles), the game is in the tournament's sport with the
+ * matching format, and it is not already linked to another tournament_match.
+ *
+ * Games still missing a score, or with a score the opponent has not confirmed,
+ * are returned too (see `state`) so the picker can show them as not-yet-linkable
+ * with the step that unblocks them. Only 'ready' rows may be attached.
  *
  * Filters happen client-side via the server-fetched two-sided join; the
  * eligible set is small (caller's recent matches).
@@ -1366,15 +1377,24 @@ export async function listLinkableMatchesForSlot(params: {
   // Fetch the caller's matches with verified results in this sport, then
   // filter to those whose joined participants are exactly the bracket
   // entries' members (no third party).
+  // Scoreless games are candidates too, so the result join can't be inner —
+  // which means upcoming games would otherwise crowd out played ones. Only
+  // games whose date has passed can have been played.
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+    today.getDate()
+  ).padStart(2, '0')}`;
+
   const { data, error } = await supabase
     .from('match')
     .select(
       `id, match_date, start_time, end_time, format,
-       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
+       match_result ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
          match_set ( set_number, team1_score, team2_score ) ),
        match_participant!inner ( player_id, status, team_number )`
     )
     .eq('sport_id', params.sportId)
+    .lte('match_date', todayIso)
     .order('match_date', { ascending: false })
     .limit(50);
 
@@ -1410,8 +1430,12 @@ export async function listLinkableMatchesForSlot(params: {
 
   for (const row of rows) {
     const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
-    if (!mr || !mr.is_verified) continue;
     if ((row.format ?? 'singles') !== (isDoubles ? 'doubles' : 'singles')) continue;
+    const state: LinkableMatchState = !mr
+      ? 'awaiting_score'
+      : mr.is_verified
+        ? 'ready'
+        : 'awaiting_confirmation';
 
     const joined = row.match_participant.filter(p => p.status === 'joined');
     const joinedUsers = joined.map(p => p.player_id);
@@ -1431,21 +1455,22 @@ export async function listLinkableMatchesForSlot(params: {
       team2_user_ids = t2 ? [t2] : [];
     }
 
-    const sets = (mr.match_set ?? [])
+    const sets = (mr?.match_set ?? [])
       .slice()
       .sort((a, b) => a.set_number - b.set_number)
       .map(s => ({ team1: s.team1_score, team2: s.team2_score }));
 
     eligible.push({
+      state,
       id: row.id,
       match_date: row.match_date,
       start_time: row.start_time,
       end_time: row.end_time,
-      match_result_id: mr.id,
-      winning_team: (mr.winning_team as 1 | 2 | null) ?? null,
-      team1_score: mr.team1_score,
-      team2_score: mr.team2_score,
-      verified_at: mr.verified_at,
+      match_result_id: mr?.id ?? null,
+      winning_team: (mr?.winning_team as 1 | 2 | null) ?? null,
+      team1_score: mr?.team1_score ?? null,
+      team2_score: mr?.team2_score ?? null,
+      verified_at: mr?.verified_at ?? null,
       team1_user_ids,
       team2_user_ids,
       sets,
@@ -1465,7 +1490,10 @@ export async function listLinkableMatchesForSlot(params: {
   if (linkedErr) throw new Error(linkedErr.message);
   const taken = new Set((linked ?? []).map(r => r.match_id).filter((x): x is string => !!x));
 
-  return eligible.filter(m => !taken.has(m.id));
+  // Linkable games first; the rest keep the date ordering from the query.
+  return eligible
+    .filter(m => !taken.has(m.id))
+    .sort((a, b) => Number(b.state === 'ready') - Number(a.state === 'ready'));
 }
 
 /**
