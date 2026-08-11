@@ -17,6 +17,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  base,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useTheme } from '@rallia/shared-hooks';
@@ -196,8 +197,8 @@ export const CreateNetworkWizard: React.FC<CreateNetworkWizardProps> = ({
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       buttonActive: isDark ? primary[500] : primary[600],
-      segmentBackground: isDark ? '#1C1C1E' : '#F2F2F7',
-      segmentActiveBackground: themeColors.card,
+      segmentBackground: isDark ? neutral[800] : neutral[100],
+      segmentActiveBackground: isDark ? neutral[700] : base.white,
     }),
     [themeColors, isDark]
   );

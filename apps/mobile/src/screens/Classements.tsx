@@ -38,7 +38,10 @@ export const Classements: React.FC = () => {
     const isActive = activeTab === tab;
     return (
       <TouchableOpacity
-        style={[styles.tab, isActive && [styles.activeTab, { backgroundColor: colors.card }]]}
+        style={[
+          styles.tab,
+          isActive && [styles.activeTab, { backgroundColor: colors.segmentActive }],
+        ]}
         onPress={() => {
           if (tab !== activeTab) {
             void lightHaptic();
@@ -62,7 +65,7 @@ export const Classements: React.FC = () => {
   // Each tab's list carries its own bottom inset, so the wrapper takes none.
   return (
     <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View style={[styles.tabBar, { backgroundColor: colors.segmentTrack }]}>
         {renderTab('challenge', 'calendar-outline', t('classements.tabs.challenge'))}
         {renderTab('ranking', 'trophy-outline', t('classements.tabs.ranking'))}
       </View>

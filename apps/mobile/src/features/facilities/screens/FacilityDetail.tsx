@@ -514,7 +514,7 @@ export default function FacilityDetail() {
       edges={safeAreaEdges}
     >
       {/* Tab Bar at top */}
-      <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View style={[styles.tabBar, { backgroundColor: colors.segmentTrack }]}>
         {visibleTabs.map(tab => {
           const isActive = activeTab === tab;
           const tabLabel = t(`facilityDetail.tabs.${tab}`);
@@ -528,7 +528,7 @@ export default function FacilityDetail() {
               }}
               style={[
                 styles.tab,
-                isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+                isActive && [styles.activeTab, { backgroundColor: colors.segmentActive }],
               ]}
               activeOpacity={0.7}
             >

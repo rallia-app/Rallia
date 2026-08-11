@@ -47,6 +47,7 @@ import {
   fontWeightNumeric,
   primary,
   neutral,
+  base,
   status,
 } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -102,13 +103,7 @@ const TabButton: React.FC<TabButtonProps> = ({
   isDark,
 }) => (
   <TouchableOpacity
-    style={[
-      styles.tab,
-      active && [
-        styles.activeTab,
-        { backgroundColor: isDark ? colors.cardBackground : BASE_WHITE },
-      ],
-    ]}
+    style={[styles.tab, active && [styles.activeTab, { backgroundColor: colors.segmentActive }]]}
     onPress={onPress}
     activeOpacity={0.7}
   >
@@ -388,9 +383,11 @@ function useColors() {
       background: themeColors.background,
       cardBackground: themeColors.card,
       text: themeColors.foreground,
-      textSecondary: isDark ? primary[300] : neutral[600],
+      textSecondary: isDark ? neutral[300] : neutral[600],
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
+      segmentTrack: isDark ? neutral[800] : neutral[100],
+      segmentActive: isDark ? neutral[700] : base.white,
       icon: themeColors.foreground,
       iconMuted: themeColors.mutedForeground,
       accent: isDark ? primary[500] : primary[600],
@@ -717,7 +714,7 @@ const AdminModerationScreen: React.FC = () => {
       </View>
 
       {/* Tabs */}
-      <View style={[styles.tabsContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View style={[styles.tabsContainer, { backgroundColor: colors.segmentTrack }]}>
         <TabButton
           label={t('admin.moderation.reports')}
           active={activeTab === 'reports'}

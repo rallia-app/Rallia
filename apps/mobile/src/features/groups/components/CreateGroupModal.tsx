@@ -557,7 +557,7 @@ export const CreateGroupForm: React.FC<CreateGroupFormProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+        <View style={[styles.infoBox, { backgroundColor: colors.inputBackground }]}>
           <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
           <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
             {t('groups.createGroupHint', { maxMembers: limits?.max_group_members ?? 20 })}

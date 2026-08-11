@@ -372,7 +372,7 @@ export default function GroupsScreen() {
         ListEmptyComponent={renderEmptyState}
         ListHeaderComponent={
           groups && groups.length > 0 ? (
-            <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+            <View style={[styles.infoBox, { backgroundColor: colors.inputBackground }]}>
               <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
               <Text size="sm" style={[styles.infoBoxText, { color: colors.textSecondary }]}>
                 {t('groups.listInfoMessage', { maxMembers: limits?.max_group_members ?? 20 })}

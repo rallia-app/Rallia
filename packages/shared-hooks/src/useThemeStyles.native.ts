@@ -67,6 +67,10 @@ export interface ThemeColors {
   inputBackground: string;
   divider: string;
 
+  // Segmented controls (pill tab bars): recessed track + elevated active pill
+  segmentTrack: string;
+  segmentActive: string;
+
   // Skeleton shimmer palette — `skeleton*` for neutral surfaces (colors.card),
   // `skeletonTinted*` for primary-tinted card surfaces (MatchCard-style).
   skeletonBackground: string;
@@ -145,6 +149,12 @@ export function useThemeStyles() {
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       divider: isDark ? neutral[700] : neutral[200],
+
+      // Segmented controls: the active pill must sit ABOVE the track in
+      // luminance (dark cards are darker than the track, so cardBackground
+      // makes the active segment vanish in dark mode).
+      segmentTrack: isDark ? neutral[800] : neutral[100],
+      segmentActive: isDark ? neutral[700] : BASE_WHITE,
 
       // Skeleton shimmer palette. Neutral pair matches the Skeleton
       // primitive's historical defaults (kept verbatim so existing screens

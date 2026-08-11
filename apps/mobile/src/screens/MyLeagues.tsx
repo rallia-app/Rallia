@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { EmptyState, Text } from '@rallia/shared-components';
-import { spacingPixels, lightTheme, darkTheme } from '@rallia/design-system';
+import { spacingPixels, lightTheme, darkTheme, neutral, base } from '@rallia/design-system';
 import { useAuth, useMyLeagues } from '@rallia/shared-hooks';
 import type { LeagueListItem } from '@rallia/shared-services';
 
@@ -84,10 +84,7 @@ export const MyLeagues: React.FC = () => {
       <TouchableOpacity
         style={[
           styles.tab,
-          isActive && [
-            styles.activeTab,
-            { backgroundColor: isDark ? darkTheme.card : lightTheme.card },
-          ],
+          isActive && [styles.activeTab, { backgroundColor: isDark ? neutral[700] : base.white }],
         ]}
         onPress={() => {
           if (tab !== activeTab) {
@@ -131,7 +128,9 @@ export const MyLeagues: React.FC = () => {
       ) : (
         <>
           {closedCount > 0 ? (
-            <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+            <View
+              style={[styles.tabBar, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}
+            >
               {renderTab('active', 'ribbon-outline', t('leagueList.tabs.active'))}
               {renderTab('closed', 'archive-outline', t('leagueList.tabs.closed'))}
             </View>

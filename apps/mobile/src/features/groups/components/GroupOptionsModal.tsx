@@ -111,7 +111,7 @@ export function GroupOptionsActionSheet({ payload }: SheetProps<'group-options'>
 
         {/* Cancel Button */}
         <TouchableOpacity
-          style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+          style={[styles.cancelButton, { backgroundColor: colors.inputBackground }]}
           onPress={handleClose}
           activeOpacity={0.7}
         >

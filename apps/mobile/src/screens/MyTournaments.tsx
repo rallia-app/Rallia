@@ -29,6 +29,7 @@ import {
   radiusPixels,
   primary,
   neutral,
+  base,
 } from '@rallia/design-system';
 import {
   useTheme,
@@ -280,10 +281,7 @@ export const MyTournaments: React.FC = () => {
       <TouchableOpacity
         style={[
           styles.tab,
-          isActive && [
-            styles.activeTab,
-            { backgroundColor: isDark ? darkTheme.card : lightTheme.card },
-          ],
+          isActive && [styles.activeTab, { backgroundColor: isDark ? neutral[700] : base.white }],
         ]}
         onPress={() => {
           if (tab !== activeTab) {
@@ -340,7 +338,7 @@ export const MyTournaments: React.FC = () => {
   // so the list scrolls under the home indicator instead of stopping above it.
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View style={[styles.tabBar, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
         {renderTab('upcoming', 'calendar-outline', t('playerMatches.tabs.upcoming'))}
         {renderTab('past', 'time-outline', t('playerMatches.tabs.past'))}
       </View>

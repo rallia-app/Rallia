@@ -312,7 +312,10 @@ export default function NetworkMatchesScreen() {
                 key={i}
                 style={[
                   styles.skeletonMatchCard,
-                  { backgroundColor: isDark ? '#1C1C1E' : neutral[50], borderColor: colors.border },
+                  {
+                    backgroundColor: isDark ? neutral[900] : neutral[50],
+                    borderColor: colors.border,
+                  },
                 ]}
               >
                 {/* Time row */}

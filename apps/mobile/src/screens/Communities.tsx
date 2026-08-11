@@ -462,7 +462,7 @@ export default function CommunitiesScreen() {
 
   const renderTabs = useMemo(
     () => (
-      <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+      <View style={[styles.tabContainer, { backgroundColor: colors.segmentTrack }]}>
         {/* Only show "My Communities" tab for authenticated users */}
         {playerId && (
           <TouchableOpacity
@@ -470,7 +470,7 @@ export default function CommunitiesScreen() {
               styles.tab,
               activeTab === 'my-communities' && [
                 styles.activeTab,
-                { backgroundColor: colors.cardBackground },
+                { backgroundColor: colors.segmentActive },
               ],
             ]}
             onPress={() => handleTabChange('my-communities')}
@@ -497,7 +497,7 @@ export default function CommunitiesScreen() {
             styles.tab,
             activeTab === 'discover' && [
               styles.activeTab,
-              { backgroundColor: colors.cardBackground },
+              { backgroundColor: colors.segmentActive },
             ],
           ]}
           onPress={() => handleTabChange('discover')}

@@ -354,7 +354,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
           <View
             style={[
               styles.visibilityToggle,
-              { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+              { backgroundColor: colors.segmentTrack, borderColor: colors.border },
             ]}
           >
             <View style={styles.visibilityInfo}>
@@ -396,7 +396,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
               <View
                 style={[
                   styles.visibilityToggle,
-                  { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', borderColor: colors.border },
+                  { backgroundColor: colors.segmentTrack, borderColor: colors.border },
                 ]}
               >
                 <View style={styles.visibilityInfo}>
@@ -493,7 +493,7 @@ export function EditCommunityActionSheet({ payload }: SheetProps<'edit-community
                     style={[
                       styles.visibilityToggle,
                       {
-                        backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+                        backgroundColor: colors.segmentTrack,
                         borderColor: colors.border,
                         marginTop: 12,
                       },

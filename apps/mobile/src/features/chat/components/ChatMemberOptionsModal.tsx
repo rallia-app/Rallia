@@ -67,7 +67,7 @@ export function ChatMemberOptionsModal({
               {/* Member Header */}
               <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity
-                  style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                  style={[styles.avatar, { backgroundColor: colors.inputBackground }]}
                   onPress={() => {
                     if (member.playerId && onAvatarPress) {
                       onClose();
@@ -181,7 +181,7 @@ export function ChatMemberOptionsModal({
 
               {/* Cancel Button */}
               <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+                style={[styles.cancelButton, { backgroundColor: colors.inputBackground }]}
                 onPress={onClose}
                 activeOpacity={0.7}
                 disabled={isLoading}

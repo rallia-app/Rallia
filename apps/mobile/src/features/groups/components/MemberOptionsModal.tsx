@@ -53,7 +53,7 @@ export function MemberOptionsActionSheet({ payload }: SheetProps<'member-options
         {/* Member Header */}
         <View style={[styles.memberHeader, { borderBottomColor: colors.border }]}>
           <TouchableOpacity
-            style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}
+            style={[styles.avatar, { backgroundColor: colors.inputBackground }]}
             onPress={() => {
               if (member.playerId && onAvatarPress) {
                 handleClose();
@@ -163,7 +163,7 @@ export function MemberOptionsActionSheet({ payload }: SheetProps<'member-options
 
         {/* Cancel Button */}
         <TouchableOpacity
-          style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+          style={[styles.cancelButton, { backgroundColor: colors.inputBackground }]}
           onPress={handleClose}
           activeOpacity={0.7}
         >
