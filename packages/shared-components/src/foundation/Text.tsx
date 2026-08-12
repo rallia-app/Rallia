@@ -245,6 +245,11 @@ export const Text: React.FC<TextProps> = ({
 const styles = StyleSheet.create({
   base: {
     color: colors.dark,
+    // Custom font files (Inter/Poppins/Barlow) carry tall ascent/descent
+    // metrics; without this, Android pads every text box vertically and
+    // tight elements like chips grow. Restores system-font-era compactness.
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
 
