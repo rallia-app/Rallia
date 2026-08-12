@@ -2057,33 +2057,21 @@ const Home = () => {
       />,
     ];
     if (session) {
+      // Tournaments and leagues share one destination now, so they share one
+      // tile. It keeps the tournament identity (trophy, coral) the Compete
+      // hub's own Events segment uses.
       playTiles.push(
         <GradientNavTile
-          key="tournaments"
+          key="compete"
           style={quickNavStyles.item}
           icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
           watermark={<Ionicons name="trophy" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
           gradient={[secondary[400], secondary[600]]}
           borderColor={secondary[500]}
-          label={t('home.playGrid.tournaments')}
+          label={t('home.playGrid.compete')}
           onPress={() => appNavigation.navigate('Compete')}
         />
       );
-      // Leagues are re-admin-gated during rollout.
-      if (isAdmin) {
-        playTiles.push(
-          <GradientNavTile
-            key="leagues"
-            style={quickNavStyles.item}
-            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-            watermark={<Ionicons name="ribbon" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
-            gradient={[primary[700], primary[900]]}
-            borderColor={primary[800]}
-            label={t('home.playGrid.leagues')}
-            onPress={() => appNavigation.navigate('Compete')}
-          />
-        );
-      }
     }
     headerComponents.push(
       <View key="play-grid">

@@ -2360,9 +2360,7 @@
     "communities": "Communities",
     "groups": "Groups",
     "shareLists": "Share Lists",
-    "tournaments": "Tournaments",
     "tournamentsComingSoon": "This feature is coming soon!",
-    "leagues": "Leagues",
     "leaguesComingSoon": "This feature is coming soon!",
     "findPartner": "Find a Partner",
     "players": "Players",
@@ -2626,7 +2624,8 @@
     "addAnotherFacility": "Add another facility",
     "noFacilitiesFound": "No facilities found",
     "typeToSearchFacility": "Type to search for facilities",
-    "locationRequiredForFacilities": "Location required to search facilities"
+    "locationRequiredForFacilities": "Location required to search facilities",
+    "compete": "Events"
   },
   "groups": {
     "title": "Groups",
@@ -6001,8 +6000,7 @@
       "title": "Play",
       "findGame": "Find a game",
       "bookCourt": "Book a court",
-      "tournaments": "Join a tournament",
-      "leagues": "Join a league"
+      "compete": "Join an event"
     },
     "classementsCard": {
       "challengeNudge": "One game this month and you're in",

@@ -2360,9 +2360,7 @@
     "communities": "Communautés",
     "groups": "Groupes",
     "shareLists": "Listes Partage",
-    "tournaments": "Tournois",
     "tournamentsComingSoon": "Cette fonctionnalité arrive bientôt!",
-    "leagues": "Ligues",
     "leaguesComingSoon": "Cette fonctionnalité arrive bientôt!",
     "findPartner": "Trouver un partenaire",
     "players": "Joueurs",
@@ -2626,7 +2624,8 @@
     "addAnotherFacility": "Ajouter un autre site de jeu",
     "noFacilitiesFound": "Aucun site de jeu trouvé",
     "typeToSearchFacility": "Tapez pour rechercher des sites de jeu",
-    "locationRequiredForFacilities": "Emplacement requis pour rechercher des sites de jeu"
+    "locationRequiredForFacilities": "Emplacement requis pour rechercher des sites de jeu",
+    "compete": "Événements"
   },
   "groups": {
     "title": "Groupes",
@@ -6001,8 +6000,7 @@
       "title": "Jouer",
       "findGame": "Trouver une partie",
       "bookCourt": "Réserver un terrain",
-      "tournaments": "Rejoindre un tournoi",
-      "leagues": "Rejoindre une ligue"
+      "compete": "Rejoindre un événement"
     },
     "classementsCard": {
       "challengeNudge": "Une partie ce mois-ci et t'es dans le coup",
