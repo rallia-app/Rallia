@@ -12739,6 +12739,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      lt_score_for_side: {
+        Args: { p_is_player1: boolean; p_score: string }
+        Returns: string
+      }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       lt_send_session_confirm_reminders: { Args: never; Returns: number }
       lt_send_tournament_deadline_nudges: { Args: never; Returns: number }
