@@ -221,6 +221,16 @@ export const PoolsSection: React.FC<{
                     {p2}
                   </Text>
                   <View style={styles.matchStatus}>
+                    {/* Attached to a real Rallia game: its score comes from that
+                        game rather than from the organizer, and nothing said so. */}
+                    {!!m.match_id && (
+                      <Ionicons
+                        name="link"
+                        size={12}
+                        color={colors.textMuted}
+                        accessibilityLabel={t('tournamentDetail.pools.linkedGame')}
+                      />
+                    )}
                     <Text
                       size="xs"
                       weight={settled && !noResult ? 'semibold' : 'regular'}

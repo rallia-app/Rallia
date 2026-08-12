@@ -5737,7 +5737,8 @@
     "pools": {
       "poolTitle": "Pool {letter}",
       "qualifyHint": "Top {count} qualify",
-      "qualifyHintOne": "Winner qualifies",
+      "qualifyHintOne": "Only the winner qualifies",
+      "linkedGame": "Linked to a Rallia game",
       "walkover": "W/O",
       "cancelled": "Cancelled",
       "toPlay": "To play",

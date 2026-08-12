@@ -5737,7 +5737,8 @@
     "pools": {
       "poolTitle": "Poule {letter}",
       "qualifyHint": "Les {count} premiers se qualifient",
-      "qualifyHintOne": "Le premier se qualifie",
+      "qualifyHintOne": "Seul le premier se qualifie",
+      "linkedGame": "Rattachée à une partie Rallia",
       "walkover": "Forfait",
       "cancelled": "Annulée",
       "toPlay": "À jouer",
