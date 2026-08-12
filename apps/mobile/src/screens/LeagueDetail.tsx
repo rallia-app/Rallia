@@ -104,6 +104,11 @@ import ParticipantRow from '../components/ParticipantRow';
 import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
 import { EventDetailTabBar } from '../features/events/components/EventDetailChrome';
 import { styles } from '../features/leagues/detail/detailStyles';
+import { DetailsTab } from '../features/leagues/detail/DetailsTab';
+import { MembersTab } from '../features/leagues/detail/MembersTab';
+import { OverviewTab } from '../features/leagues/detail/OverviewTab';
+import { SeasonsTab } from '../features/leagues/detail/SeasonsTab';
+import { SessionsTab } from '../features/leagues/detail/SessionsTab';
 import {
   DashboardCtaCard,
   HeroChip,
@@ -2061,815 +2066,116 @@ export const LeagueDetail: React.FC = () => {
 
         {/* Overview */}
         {currentTabKey === 'overview' && (
-          <View style={styles.tabContent}>
-            {/* Paused/closed are otherwise invisible to members — the controls
-                that change are all organizer-only. */}
-            {league.status !== 'active' && (
-              <View
-                style={[
-                  styles.section,
-                  styles.lifecycleBanner,
-                  { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
-                ]}
-                testID="league-lifecycle-banner"
-              >
-                <Ionicons
-                  name={league.status === 'paused' ? 'pause-circle-outline' : 'lock-closed-outline'}
-                  size={18}
-                  color={colors.statusMutedText}
-                />
-                <Text
-                  size="sm"
-                  weight="semibold"
-                  color={colors.statusMutedText}
-                  style={styles.flex1}
-                >
-                  {league.status === 'paused'
-                    ? t('leagueDetail.lifecycle.pausedBanner')
-                    : t('leagueDetail.lifecycle.closedBanner')}
-                </Text>
-              </View>
-            )}
-            {/* Stats first: the numbers worth a glance, one segmented card */}
-            <View
-              style={[
-                styles.section,
-                styles.statsCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <StatSegment
-                value={String(activeMembers.length)}
-                label={t('leagueDetail.dashboard.stats.members')}
-                colors={colors}
-              />
-              <StatSegment
-                value={String(seasons.length)}
-                label={t('leagueDetail.dashboard.stats.seasons')}
-                colors={colors}
-                showDivider
-              />
-              <StatSegment
-                value={currentSeasonLabel}
-                label={t('leagueDetail.dashboard.stats.currentSeason')}
-                colors={colors}
-                showDivider
-              />
-            </View>
-
-            {/* Lifecycle pipeline */}
-            <View
-              style={[
-                styles.section,
-                styles.stepperCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <LifecycleStepper stepIndex={stepIndex} colors={colors} t={t} />
-            </View>
-
-            {/* At most one accent card: approvals waiting. Everything
-                state-advancing lives in the docked bar instead. */}
-            {isOrganizer && pendingMemberRows.length > 0 && (
-              <DashboardCtaCard
-                icon="hourglass-outline"
-                title={t('leagueDetail.dashboard.pendingRequestsCta.title')}
-                description={t('leagueDetail.dashboard.pendingRequestsCta.description').replace(
-                  '{count}',
-                  String(pendingMemberRows.length)
-                )}
-                buttonLabel={t('leagueDetail.dashboard.pendingRequestsCta.review')}
-                buttonIcon="people-outline"
-                onPress={() => {
-                  if (membersTabIdx < 0) return;
-                  setMembersSegment('requests');
-                  goToTab(membersTabIdx);
-                }}
-                accent="secondary"
-                colors={colors}
-                testID="cta-pending-members"
-              />
-            )}
-
-            {rankingSeason && rankings.length > 0 && (
-              <Section
-                title={t('leagueDetail.standings.title').replace('{name}', rankingSeason.name)}
-                colors={colors}
-              >
-                {/* Past seasons stay reachable once there is more than one. */}
-                {standingsSeasons.length > 1 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.standingsSeasonBar}
-                  >
-                    {standingsSeasons.map(s => {
-                      const selected = s.id === rankingSeason.id;
-                      return (
-                        <TouchableOpacity
-                          key={s.id}
-                          onPress={() => {
-                            lightHaptic();
-                            setPickedStandingsSeasonId(s.id);
-                          }}
-                          accessibilityRole="radio"
-                          accessibilityState={{ selected }}
-                          testID={`standings-season-${s.id}`}
-                          style={[
-                            styles.standingsSeasonChip,
-                            {
-                              borderColor: selected ? colors.primary : colors.border,
-                              backgroundColor: selected ? colors.statusActiveBg : 'transparent',
-                            },
-                          ]}
-                        >
-                          <Text
-                            size="xs"
-                            weight="semibold"
-                            color={selected ? colors.primary : colors.textMuted}
-                          >
-                            {s.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                )}
-                <View
-                  style={[
-                    styles.standingRow,
-                    styles.standingHeader,
-                    { borderBottomColor: colors.border },
-                  ]}
-                >
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={colors.textMuted}
-                    style={styles.standingRank}
-                  >
-                    #
-                  </Text>
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={colors.textMuted}
-                    style={styles.standingName}
-                  >
-                    {t('leagueDetail.standings.player')}
-                  </Text>
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={colors.textMuted}
-                    style={styles.standingWl}
-                  >
-                    {t('leagueDetail.standings.wl')}
-                  </Text>
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={colors.textMuted}
-                    style={styles.standingPts}
-                  >
-                    {t('leagueDetail.standings.pts')}
-                  </Text>
-                </View>
-                {rankings.slice(0, 12).map((r, i) => (
-                  <View
-                    key={r.id}
-                    style={[
-                      styles.standingRow,
-                      i < Math.min(rankings.length, 12) - 1 && {
-                        borderBottomColor: colors.border,
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                      },
-                    ]}
-                  >
-                    <Text
-                      size="sm"
-                      weight="semibold"
-                      color={colors.text}
-                      style={styles.standingRank}
-                    >
-                      {r.rank ?? i + 1}
-                    </Text>
-                    <Text
-                      size="sm"
-                      color={colors.text}
-                      numberOfLines={1}
-                      style={styles.standingName}
-                    >
-                      {r.profile
-                        ? getHumanName(r.profile, t('leagueDetail.unknownMember'))
-                        : t('leagueDetail.unknownMember')}
-                    </Text>
-                    <Text size="sm" color={colors.textMuted} style={styles.standingWl}>
-                      {r.wins}-{r.losses}
-                    </Text>
-                    <Text size="sm" weight="bold" color={colors.text} style={styles.standingPts}>
-                      {r.points}
-                    </Text>
-                  </View>
-                ))}
-              </Section>
-            )}
-
-            {/* League info: the friendly at-a-glance card (Details keeps the
-                full spec sheet). Rows only render when they have something. */}
-            <Section title={t('leagueDetail.overview.infoTitle')} colors={colors}>
-              <OverviewInfoRow
-                icon="eye-outline"
-                text={`${t(VISIBILITY_KEY[league.visibility] as TranslationKey)} · ${t(JOIN_MODE_KEY[league.join_mode] as TranslationKey)}`}
-                colors={colors}
-              />
-              {league.venue_name ? (
-                <OverviewInfoRow
-                  icon="location-outline"
-                  text={league.venue_name}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-              {ratingRangeLabel ? (
-                <OverviewInfoRow
-                  icon="analytics-outline"
-                  text={`${t('leagueDetail.labels.ratingRange')} · ${ratingRangeLabel}`}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-              {organizerName ? (
-                <OverviewInfoRow
-                  icon="person-outline"
-                  text={t('leagueDetail.dashboard.organizedBy').replace('{name}', organizerName)}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-            </Section>
-
-            {/* How it works: the blurb plus the rules the standings run on, so a
-                player does not have to ask the organizer how points are counted. */}
-            {league.description?.trim() || scoringLabel || pointsLabel ? (
-              <Section title={t('leagueDetail.overview.rulesTitle')} colors={colors}>
-                {league.description?.trim() ? (
-                  <View style={styles.overviewDescription}>
-                    <Text size="sm" color={colors.textMuted}>
-                      {league.description}
-                    </Text>
-                  </View>
-                ) : null}
-                {scoringLabel ? (
-                  <OverviewInfoRow
-                    icon="options-outline"
-                    text={t(scoringLabel as TranslationKey)}
-                    subText={t('leagueDetail.overview.rulesScoring')}
-                    colors={colors}
-                    showDivider={!!league.description?.trim()}
-                  />
-                ) : null}
-                {pointsLabel ? (
-                  <OverviewInfoRow
-                    icon="trophy-outline"
-                    text={pointsLabel}
-                    subText={t('leagueDetail.overview.rulesPointsHint')}
-                    colors={colors}
-                    showDivider={!!league.description?.trim() || !!scoringLabel}
-                  />
-                ) : null}
-              </Section>
-            ) : null}
-
-            {/* Who's in: social proof, tappable through to the Members tab */}
-            {activeMembers.length > 0 && (
-              <Section title={t('leagueDetail.tabs.members')} colors={colors}>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (membersTabIdx < 0) return;
-                    setMembersSegment('confirmed');
-                    goToTab(membersTabIdx);
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('leagueDetail.tabs.members')}
-                  style={styles.membersPreviewRow}
-                  testID="overview-members-preview"
-                >
-                  <View style={styles.membersPreviewAvatars}>
-                    {activeMembers.slice(0, 6).map((m, i) => {
-                      const uri = getProfilePictureUrl(m.profile?.profile_picture_url ?? null);
-                      return (
-                        <View
-                          key={m.id}
-                          style={[
-                            styles.membersPreviewAvatar,
-                            i > 0 && styles.membersPreviewAvatarOverlap,
-                            {
-                              backgroundColor: colors.statusMutedBg,
-                              borderColor: colors.cardBackground,
-                            },
-                          ]}
-                        >
-                          {uri ? (
-                            <Image source={{ uri }} style={styles.membersPreviewAvatarImg} />
-                          ) : (
-                            <Ionicons name="person" size={14} color={colors.textMuted} />
-                          )}
-                        </View>
-                      );
-                    })}
-                    {activeMembers.length > 6 && (
-                      <View
-                        style={[
-                          styles.membersPreviewAvatar,
-                          styles.membersPreviewAvatarOverlap,
-                          {
-                            backgroundColor: colors.statusActiveBg,
-                            borderColor: colors.cardBackground,
-                          },
-                        ]}
-                      >
-                        <Text size="xs" weight="semibold" color={colors.primary}>
-                          +{activeMembers.length - 6}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text size="sm" weight="semibold" color={colors.textMuted}>
-                    {activeMembers.length}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
-              </Section>
-            )}
-
-            {/* Organizer utilities: quiet grouped rows, not competing cards. */}
-            {isOrganizer && organizerRows.length > 0 && (
-              <View style={styles.section}>
-                <Text
-                  size="xs"
-                  weight="semibold"
-                  color={colors.textMuted}
-                  style={styles.sectionTitle}
-                >
-                  {t('leagueDetail.dashboard.manageTitle').toUpperCase()}
-                </Text>
-                <View
-                  style={[
-                    styles.card,
-                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                  ]}
-                >
-                  {organizerRows.map((row, i) => (
-                    <OverviewActionRow
-                      key={row.testID}
-                      icon={row.icon}
-                      label={row.label}
-                      onPress={row.onPress}
-                      destructive={row.destructive}
-                      disabled={row.disabled}
-                      badge={row.badge}
-                      showDivider={i > 0}
-                      colors={colors}
-                      testID={row.testID}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
+          <OverviewTab
+            league={league}
+            colors={colors}
+            t={t}
+            isOrganizer={isOrganizer}
+            stepIndex={stepIndex}
+            activeMembers={activeMembers}
+            seasons={seasons}
+            currentSeasonLabel={currentSeasonLabel}
+            ratingRangeLabel={ratingRangeLabel}
+            scoringLabel={scoringLabel}
+            pointsLabel={pointsLabel}
+            organizerName={organizerName}
+            organizerRows={organizerRows}
+            pendingMemberRows={pendingMemberRows}
+            rankingSeason={rankingSeason}
+            rankings={rankings}
+            standingsSeasons={standingsSeasons}
+            setPickedStandingsSeasonId={setPickedStandingsSeasonId}
+            goToTab={goToTab}
+            membersTabIdx={membersTabIdx}
+            setMembersSegment={setMembersSegment}
+          />
         )}
 
         {/* Members */}
         {currentTabKey === 'members' && (
-          <View style={styles.playersTabContent}>
-            {isOrganizer && (
-              <TouchableOpacity
-                onPress={handleInvitePress}
-                style={[
-                  styles.primaryButton,
-                  styles.inviteButton,
-                  { backgroundColor: colors.primary },
-                ]}
-                testID="cta-invite-players"
-              >
-                <Ionicons name="person-add-outline" size={20} color="#ffffff" />
-                <Text size="base" weight="semibold" color="#ffffff">
-                  {t('leagueDetail.invitePlayers.button')}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {/* Edit and lifecycle controls live in the Overview's Manage list. */}
-            {membersSegmentTabs.length > 1 && (
-              <UnderlineTabBar
-                tabs={membersSegmentTabs}
-                activeKey={activeMembersSegment}
-                onChange={setMembersSegment}
-                style={styles.segmentBar}
-              />
-            )}
-            {activeMembersSegment === 'requests' ? (
-              <PendingMembersSection
-                rows={pendingMemberRows}
-                onPlayerPress={handlePlayerPress}
-                onApprove={handleApprovePress}
-                onReject={handleRejectPress}
-                colors={colors}
-                t={t}
-              />
-            ) : activeMembersSegment === 'invited' ? (
-              <InvitedMembersSection
-                rows={invitedMemberRows}
-                onPlayerPress={handlePlayerPress}
-                onRevoke={handleRevokePress}
-                colors={colors}
-                t={t}
-              />
-            ) : activeMembersSegment === 'suspended' && isOrganizer ? (
-              <SuspendedMembersSection
-                rows={suspendedMemberRows}
-                onPlayerPress={handlePlayerPress}
-                onReinstate={handleReinstateMemberPress}
-                onRemove={handleRemoveMemberPress}
-                colors={colors}
-                t={t}
-              />
-            ) : (
-              <MembersSection
-                rows={activeMemberRows}
-                ownerId={league.organizer_id}
-                onPlayerPress={handlePlayerPress}
-                organizerActions={
-                  isOrganizer
-                    ? { onSuspend: handleSuspendMemberPress, onRemove: handleRemoveMemberPress }
-                    : undefined
-                }
-                colors={colors}
-                t={t}
-              />
-            )}
-          </View>
+          <MembersTab
+            league={league}
+            colors={colors}
+            t={t}
+            isOrganizer={isOrganizer}
+            membersSegmentTabs={membersSegmentTabs}
+            activeMembersSegment={activeMembersSegment}
+            setMembersSegment={setMembersSegment}
+            activeMemberRows={activeMemberRows}
+            pendingMemberRows={pendingMemberRows}
+            invitedMemberRows={invitedMemberRows}
+            suspendedMemberRows={suspendedMemberRows}
+            handlePlayerPress={handlePlayerPress}
+            handleInvitePress={handleInvitePress}
+            handleApprovePress={handleApprovePress}
+            handleRejectPress={handleRejectPress}
+            handleRevokePress={handleRevokePress}
+            handleSuspendMemberPress={handleSuspendMemberPress}
+            handleRemoveMemberPress={handleRemoveMemberPress}
+            handleReinstateMemberPress={handleReinstateMemberPress}
+          />
         )}
 
         {/* Seasons */}
         {currentTabKey === 'seasons' && (
-          <View style={styles.tabContent}>
-            <Section title={t('leagueDetail.sections.seasons')} colors={colors}>
-              {seasons.length === 0 ? (
-                <View style={styles.participantEmpty}>
-                  <Text size="sm" color={colors.textMuted}>
-                    {t('leagueDetail.noSeasons')}
-                  </Text>
-                </View>
-              ) : (
-                seasons.map(s => {
-                  const statusBg =
-                    s.status === 'open'
-                      ? colors.statusPositiveBg
-                      : s.status === 'draft'
-                        ? colors.statusNeutralBg
-                        : colors.statusMutedBg;
-                  const statusFg =
-                    s.status === 'open'
-                      ? colors.statusPositiveText
-                      : s.status === 'draft'
-                        ? colors.statusNeutralText
-                        : colors.statusMutedText;
-                  return (
-                    <View
-                      key={s.id}
-                      style={[styles.seasonCard, { borderBottomColor: colors.border }]}
-                    >
-                      <View style={styles.seasonCardHeader}>
-                        <View style={styles.seasonCardInfo}>
-                          <Text size="base" weight="semibold" color={colors.text} numberOfLines={1}>
-                            {s.name}
-                          </Text>
-                          <Text size="xs" color={colors.textMuted}>
-                            {formatDate(s.start_date)} – {formatDate(s.end_date)}
-                          </Text>
-                          {(s.entry_fee_cents ?? 0) > 0 && (
-                            // The price was invisible outside the enroll CTA (open
-                            // seasons only) — a draft's fee showed nowhere, so an
-                            // organizer opened a paid season blind to its price.
-                            <Text size="xs" weight="semibold" color={colors.text}>
-                              {t('leagueDetail.seasonEntryFee').replace(
-                                '{amount}',
-                                formatPrice(s.entry_fee_cents ?? 0, s.currency ?? 'CAD', { locale })
-                              )}
-                            </Text>
-                          )}
-                        </View>
-                        <View style={[styles.seasonStatusPill, { backgroundColor: statusBg }]}>
-                          <Text size="xs" weight="semibold" color={statusFg}>
-                            {t(SEASON_STATUS_KEY[s.status] as TranslationKey)}
-                          </Text>
-                        </View>
-                      </View>
-                      {isOrganizer && s.status === 'draft' && (
-                        <TouchableOpacity
-                          onPress={() => {
-                            lightHaptic();
-                            openSeasonMut({ seasonId: s.id, versionWas: s.version });
-                          }}
-                          disabled={isOpeningSeason}
-                          testID="cta-open-season"
-                          style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
-                        >
-                          <Text size="sm" weight="semibold" color={colors.primary}>
-                            {t('leagueDetail.actions.openSeason')}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                      {isOrganizer &&
-                        s.status === 'open' &&
-                        s.id === openSeasonId &&
-                        isPaidSeason && (
-                          <TouchableOpacity
-                            onPress={showSeasonEarnings}
-                            testID="cta-season-earnings"
-                            style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
-                          >
-                            <Text size="sm" weight="semibold" color={colors.primary}>
-                              {t('leagueDetail.earnings.row')}
-                              {seasonEarnings
-                                ? ' · ' +
-                                  formatPrice(
-                                    seasonEarnings.netToOrganizerCents,
-                                    seasonEarnings.currency ?? 'CAD',
-                                    { locale }
-                                  )
-                                : ''}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      {isOrganizer && s.status === 'open' && (
-                        <TouchableOpacity
-                          onPress={() => handleCloseSeasonPress(s.id, s.version, s.name)}
-                          disabled={isClosingSeason}
-                          testID="cta-close-season"
-                          style={[styles.seasonCtaButton, { borderColor: colors.danger }]}
-                        >
-                          <Text size="sm" weight="semibold" color={colors.danger}>
-                            {isClosingSeason
-                              ? t('leagueDetail.actions.closingSeason')
-                              : t('leagueDetail.actions.closeSeason')}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                      {/* Cancel (abort + refund) is offered on draft and open
-                          seasons, quieter than close since close is the normal
-                          end and cancel triggers refunds. */}
-                      {isOrganizer && (s.status === 'draft' || s.status === 'open') && (
-                        <TouchableOpacity
-                          onPress={() => handleCancelSeason(s)}
-                          disabled={isCancellingSeason}
-                          testID="cta-cancel-season"
-                          style={styles.seasonCancelAction}
-                        >
-                          <Text size="sm" weight="semibold" color={colors.danger}>
-                            {isCancellingSeason
-                              ? t('leagueDetail.seasonLifecycle.cancelling')
-                              : t('leagueDetail.seasonLifecycle.cancel')}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  );
-                })
-              )}
-            </Section>
-
-            {openSeason && (
-              <Section title={t('leagueDetail.roster.title')} colors={colors}>
-                {seasonRoster.length === 0 ? (
-                  <View style={styles.participantEmpty}>
-                    <Text size="sm" color={colors.textMuted}>
-                      {t('leagueDetail.roster.empty')}
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    <Text
-                      size="xs"
-                      weight="semibold"
-                      color={colors.textMuted}
-                      style={styles.rosterCountLabel}
-                    >
-                      {t('leagueDetail.roster.count', { count: String(seasonRoster.length) })}
-                    </Text>
-                    {seasonRoster.map(m => (
-                      <ParticipantRow
-                        key={m.id}
-                        player={memberToPlayer(m, memberBadges?.[m.user_id])}
-                        onPress={handlePlayerPress}
-                        colors={colors}
-                        showDivider
-                        trailingActions={
-                          isOrganizer && m.user_id !== userId && m.status === 'enrolled'
-                            ? [
-                                {
-                                  icon: 'person-remove-outline',
-                                  color: colors.danger,
-                                  accessibilityLabel: t('leagueDetail.roster.removeAccessibility', {
-                                    name: getHumanName(m.profile, t('leagueDetail.unknownMember')),
-                                  }),
-                                  onPress: () => handleRemoveSeasonMember(m),
-                                },
-                              ]
-                            : undefined
-                        }
-                      />
-                    ))}
-                  </>
-                )}
-                {canParticipateInSeason &&
-                  (isEnrolledInSeason ? (
-                    <TouchableOpacity
-                      onPress={handleWithdrawSeason}
-                      disabled={isWithdrawingSeason || isRefundingSeason}
-                      testID="cta-leave-season"
-                      style={[styles.seasonCtaButton, { borderColor: colors.danger }]}
-                    >
-                      <Text size="sm" weight="semibold" color={colors.danger}>
-                        {isWithdrawingSeason || isRefundingSeason
-                          ? t('leagueDetail.roster.leaving')
-                          : t('leagueDetail.roster.leave')}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : !isPaidSeason ? (
-                    // Free season: membership is the enrolment. Say so instead of
-                    // offering a step that changes nothing.
-                    <Text size="xs" color={colors.textMuted} testID="season-auto-enrolled-note">
-                      {t('leagueDetail.roster.autoEnrolled')}
-                    </Text>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => {
-                        lightHaptic();
-                        // Paid seasons must go through Stripe: season_enroll is
-                        // blocked by the payment-required trigger.
-                        if (isPaidSeason) void handlePaidEnroll();
-                        else enrollSeasonMut();
-                      }}
-                      disabled={isEnrollingSeason || isPayingSeason}
-                      testID="cta-enroll-season"
-                      style={[styles.seasonCtaButton, { borderColor: colors.primary }]}
-                    >
-                      <Text size="sm" weight="semibold" color={colors.primary}>
-                        {isEnrollingSeason || isPayingSeason
-                          ? t('leagueDetail.roster.enrolling')
-                          : isPaidSeason && seasonFeeQuote
-                            ? t('leagueDetail.paid.enrollFor').replace(
-                                '{amount}',
-                                formatPrice(seasonFeeQuote.totalCents, seasonFeeQuote.currency, {
-                                  locale,
-                                  trimZeroCents: true,
-                                })
-                              )
-                            : t('leagueDetail.roster.enroll')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-              </Section>
-            )}
-
-            {isOrganizer && (
-              <TouchableOpacity
-                onPress={handleOpenCreateSeason}
-                style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-                testID="cta-create-season"
-              >
-                <Ionicons name="add-outline" size={20} color="#ffffff" />
-                <Text size="base" weight="semibold" color="#ffffff">
-                  {t('leagueDetail.createSeason.submit')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <SeasonsTab
+            colors={colors}
+            t={t}
+            locale={locale}
+            userId={userId}
+            isOrganizer={isOrganizer}
+            seasons={seasons}
+            openSeason={openSeason}
+            openSeasonId={openSeasonId}
+            seasonRoster={seasonRoster}
+            memberBadges={memberBadges}
+            formatDate={formatDate}
+            formatPrice={formatPrice}
+            canParticipateInSeason={canParticipateInSeason}
+            isEnrolledInSeason={isEnrolledInSeason}
+            isPaidSeason={isPaidSeason}
+            seasonFeeQuote={seasonFeeQuote}
+            seasonEarnings={seasonEarnings}
+            showSeasonEarnings={showSeasonEarnings}
+            handleOpenCreateSeason={handleOpenCreateSeason}
+            handleCloseSeasonPress={handleCloseSeasonPress}
+            handleCancelSeason={handleCancelSeason}
+            handlePlayerPress={handlePlayerPress}
+            handleRemoveSeasonMember={handleRemoveSeasonMember}
+            handlePaidEnroll={handlePaidEnroll}
+            handleWithdrawSeason={handleWithdrawSeason}
+            enrollSeasonMut={enrollSeasonMut}
+            openSeasonMut={openSeasonMut}
+            isOpeningSeason={isOpeningSeason}
+            isClosingSeason={isClosingSeason}
+            isCancellingSeason={isCancellingSeason}
+            isEnrollingSeason={isEnrollingSeason}
+            isWithdrawingSeason={isWithdrawingSeason}
+            isPayingSeason={isPayingSeason}
+            isRefundingSeason={isRefundingSeason}
+          />
         )}
 
         {/* Sessions */}
         {currentTabKey === 'sessions' && (
-          <View style={styles.tabContent}>
-            {!openSeason ? (
-              <Section title={t('leagueDetail.sessions.title')} colors={colors}>
-                <View style={styles.participantEmpty}>
-                  <Text size="sm" color={colors.textMuted} style={styles.sessionEmptyText}>
-                    {t('leagueDetail.sessions.needOpenSeason')}
-                  </Text>
-                </View>
-              </Section>
-            ) : (
-              <>
-                <Section title={t('leagueDetail.sessions.title')} colors={colors}>
-                  {seasonSessions.length === 0 ? (
-                    <View style={styles.participantEmpty}>
-                      <Text size="sm" color={colors.textMuted}>
-                        {t('leagueDetail.sessions.empty')}
-                      </Text>
-                    </View>
-                  ) : (
-                    seasonSessions.map(s => {
-                      const pill = sessionPill(s.status);
-                      return (
-                        <TouchableOpacity
-                          key={s.id}
-                          onPress={() => handleOpenSession(s.id, s.name)}
-                          activeOpacity={0.7}
-                          style={[styles.seasonRow, { borderBottomColor: colors.border }]}
-                          testID={`session-row-${s.id}`}
-                        >
-                          <View style={styles.seasonRowMain}>
-                            <Text size="base" weight="semibold" color={colors.text}>
-                              {s.name}
-                            </Text>
-                            <Text size="xs" color={colors.textMuted}>
-                              {formatDateTime(s.scheduled_at)}
-                            </Text>
-                          </View>
-                          <View style={styles.seasonRowActions}>
-                            <View style={[styles.seasonStatusPill, { backgroundColor: pill.bg }]}>
-                              <Text size="xs" weight="semibold" color={pill.fg}>
-                                {t(SESSION_STATUS_KEY[s.status] as TranslationKey)}
-                              </Text>
-                            </View>
-                            {isOrganizer && s.status === 'draft' && (
-                              <TouchableOpacity
-                                onPress={() => handlePublishSession(s.id, s.version)}
-                                disabled={isPublishingSession}
-                                testID="cta-publish-session"
-                                style={[styles.seasonActionButton, { borderColor: colors.primary }]}
-                              >
-                                <Text size="sm" weight="semibold" color={colors.primary}>
-                                  {t('leagueDetail.sessions.publish')}
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })
-                  )}
-                </Section>
-
-                {isOrganizer && (
-                  <TouchableOpacity
-                    onPress={handleOpenCreateSession}
-                    style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-                    testID="cta-create-session"
-                  >
-                    <Ionicons name="add-outline" size={20} color="#ffffff" />
-                    <Text size="base" weight="semibold" color="#ffffff">
-                      {t('leagueDetail.sessions.submit')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-          </View>
+          <SessionsTab
+            colors={colors}
+            t={t}
+            isOrganizer={isOrganizer}
+            openSeason={openSeason}
+            seasonSessions={seasonSessions}
+            formatDateTime={formatDateTime}
+            sessionPill={sessionPill}
+            handleOpenSession={handleOpenSession}
+            handleOpenCreateSession={handleOpenCreateSession}
+            handlePublishSession={handlePublishSession}
+            isPublishingSession={isPublishingSession}
+          />
         )}
 
         {/* Details */}
         {currentTabKey === 'details' && (
-          <View style={styles.tabContent}>
-            {league.description?.trim() ? (
-              <LabeledBlock
-                label={t('leagueDetail.labels.description')}
-                value={league.description}
-                colors={colors}
-              />
-            ) : null}
-
-            <Section title={t('leagueDetail.tabs.details')} colors={colors}>
-              <InfoRow
-                label={t('leagueDetail.labels.visibility')}
-                value={t(VISIBILITY_KEY[league.visibility] as TranslationKey)}
-                colors={colors}
-              />
-              <InfoRow
-                label={t('leagueDetail.labels.joinMode')}
-                value={t(JOIN_MODE_KEY[league.join_mode] as TranslationKey)}
-                colors={colors}
-              />
-              {league.venue_name ? (
-                <InfoRow
-                  label={t('leagueDetail.labels.venue')}
-                  value={league.venue_name}
-                  colors={colors}
-                />
-              ) : null}
-              {ratingRangeLabel && (
-                <InfoRow
-                  label={t('leagueDetail.labels.ratingRange')}
-                  value={ratingRangeLabel}
-                  colors={colors}
-                />
-              )}
-            </Section>
-          </View>
+          <DetailsTab league={league} colors={colors} t={t} ratingRangeLabel={ratingRangeLabel} />
         )}
       </ScrollView>
 
