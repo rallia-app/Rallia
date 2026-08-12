@@ -25,10 +25,10 @@ const BASE_WHITE = '#ffffff';
 /** Card art per format: the event banner palette (tournaments teal, leagues
  *  coral) plus gold for the middle format, so the three read as siblings of
  *  the default banners rather than a new visual system. */
-const KIND_ART: Record<EventKind, { gradient: [string, string]; badgeCheck: string }> = {
-  knockout: { gradient: [primary[400], primary[700]], badgeCheck: primary[600] },
-  pools_knockout: { gradient: [accent[400], accent[600]], badgeCheck: accent[600] },
-  session_league: { gradient: [secondary[400], secondary[600]], badgeCheck: secondary[600] },
+const KIND_ART: Record<EventKind, { gradient: [string, string] }> = {
+  knockout: { gradient: [primary[400], primary[700]] },
+  pools_knockout: { gradient: [accent[400], accent[600]] },
+  session_league: { gradient: [secondary[400], secondary[600]] },
 };
 
 interface EventFormatPickerProps {
@@ -90,18 +90,18 @@ export const EventFormatPicker: React.FC<EventFormatPickerProps> = ({
                 entering={FadeInDown.delay(150 + index * 100).springify()}
                 style={styles.option}
               >
-                {/* Selection chrome keys off the theme foreground: white
-                    border and glow on the dark sheet, near-black on the light
-                    one, so the ring never dissolves into the background. */}
+                {/* Selection ring in the app primary, the colour every other
+                    selected control wears, offset from the card by a gap of
+                    sheet background so it reads even on the teal card. The
+                    transparent border is always drawn, so selecting never
+                    resizes the card. */}
                 <TouchableOpacity
                   style={[
-                    styles.card,
-                    isSelected
-                      ? [
-                          styles.cardSelected,
-                          { borderColor: colors.text, shadowColor: colors.text },
-                        ]
-                      : styles.cardUnselected,
+                    styles.ringWrap,
+                    isSelected && {
+                      borderColor: colors.buttonActive,
+                      shadowColor: colors.buttonActive,
+                    },
                   ]}
                   onPress={() => {
                     void selectionHaptic();
@@ -113,59 +113,66 @@ export const EventFormatPicker: React.FC<EventFormatPickerProps> = ({
                   accessibilityLabel={t(descriptor.titleKey)}
                   testID={`event-format-${descriptor.kind}`}
                 >
-                  {/* Banner-language backdrop: brand gradient, soft circles,
+                  <View style={styles.card}>
+                    {/* Banner-language backdrop: brand gradient, soft circles,
                       an oversized translucent glyph off the corner. */}
-                  <LinearGradient
-                    colors={art.gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                  >
-                    <View style={[styles.decorCircle, styles.decorCircleLarge]} />
-                    <View style={[styles.decorCircle, styles.decorCircleSmall]} />
-                    <Ionicons
-                      name={descriptor.icon}
-                      size={104}
-                      color="rgba(255,255,255,0.22)"
-                      style={styles.decorGlyph}
-                    />
-                  </LinearGradient>
-
-                  {/* Scrim so the white text reads over the gradient art. */}
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.55)']}
-                    style={styles.scrim}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                  />
-
-                  <View style={styles.info}>
-                    <View style={styles.titleRow}>
-                      <Text size="xl" weight="bold" color={BASE_WHITE} style={styles.title}>
-                        {t(descriptor.titleKey)}
-                      </Text>
-                      {isSelected ? (
-                        <View style={styles.selectionBadge}>
-                          <Ionicons name="checkmark-outline" size={18} color={art.badgeCheck} />
-                        </View>
-                      ) : (
-                        <View style={styles.selectRing}>
-                          <Ionicons name="add-outline" size={20} color={BASE_WHITE} />
-                        </View>
-                      )}
-                    </View>
-                    <Text size="xs" color="rgba(255,255,255,0.92)" numberOfLines={2}>
-                      {t(descriptor.descriptionKey)}
-                    </Text>
-                    <Text
-                      size="xs"
-                      weight="semibold"
-                      color="rgba(255,255,255,0.78)"
-                      style={styles.facts}
-                      numberOfLines={2}
+                    <LinearGradient
+                      colors={art.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFill}
                     >
-                      {descriptor.factKeys.map(key => t(key)).join(' · ')}
-                    </Text>
+                      <View style={[styles.decorCircle, styles.decorCircleLarge]} />
+                      <View style={[styles.decorCircle, styles.decorCircleSmall]} />
+                      <Ionicons
+                        name={descriptor.icon}
+                        size={104}
+                        color="rgba(255,255,255,0.22)"
+                        style={styles.decorGlyph}
+                      />
+                    </LinearGradient>
+
+                    {/* Scrim so the white text reads over the gradient art. */}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.55)']}
+                      style={styles.scrim}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                    />
+
+                    <View style={styles.info}>
+                      <View style={styles.titleRow}>
+                        <Text size="xl" weight="bold" color={BASE_WHITE} style={styles.title}>
+                          {t(descriptor.titleKey)}
+                        </Text>
+                        {isSelected ? (
+                          <View
+                            style={[
+                              styles.selectionBadge,
+                              { backgroundColor: colors.buttonActive },
+                            ]}
+                          >
+                            <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
+                          </View>
+                        ) : (
+                          <View style={styles.selectRing}>
+                            <Ionicons name="add-outline" size={20} color={BASE_WHITE} />
+                          </View>
+                        )}
+                      </View>
+                      <Text size="xs" color="rgba(255,255,255,0.92)" numberOfLines={2}>
+                        {t(descriptor.descriptionKey)}
+                      </Text>
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color="rgba(255,255,255,0.78)"
+                        style={styles.facts}
+                        numberOfLines={2}
+                      >
+                        {descriptor.factKeys.map(key => t(key)).join(' · ')}
+                      </Text>
+                    </View>
                   </View>
                 </TouchableOpacity>
               </Animated.View>
@@ -209,27 +216,22 @@ const styles = StyleSheet.create({
   option: {
     flex: 1,
   },
-  card: {
+  ringWrap: {
     flex: 1,
     minHeight: 132,
+    borderWidth: 2.5,
+    borderColor: 'transparent',
+    borderRadius: radiusPixels.xl + 5,
+    padding: 2.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+  },
+  card: {
+    flex: 1,
     borderRadius: radiusPixels.xl,
     overflow: 'hidden',
     position: 'relative',
-  },
-  cardSelected: {
-    borderWidth: 3,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  cardUnselected: {
-    borderWidth: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
   },
   decorCircle: {
     position: 'absolute',
@@ -287,7 +289,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: BASE_WHITE,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
