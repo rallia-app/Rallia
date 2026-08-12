@@ -5020,7 +5020,7 @@
         "description": "Un tableau classique. Tu gagnes, tu continues.",
         "duration": "Une fin de semaine",
         "guaranteed": "1 partie garantie",
-        "elimination": "Une défaite pis tu sors"
+        "elimination": "Élimination directe"
       },
       "poolsKnockout": {
         "title": "Poules, puis éliminatoires",
