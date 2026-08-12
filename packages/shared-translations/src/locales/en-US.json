@@ -5010,6 +5010,64 @@
     },
     "shareCta": "Share this session"
   },
+  "compete": {
+    "title": "Compete",
+    "tabs": {
+      "events": "Events",
+      "challenge": "Challenge",
+      "ranking": "Ranking"
+    }
+  },
+  "eventList": {
+    "title": "Events",
+    "create": "Create an event",
+    "createSubtitle": "Run a tournament or a league",
+    "myEvents": "My events",
+    "searchPlaceholder": "Search events...",
+    "empty": "No events yet",
+    "emptyDescription": "Nothing open near you right now. Check back soon, or create your own.",
+    "emptySearch": {
+      "title": "No events match",
+      "description": "Try a different search or clear your filters."
+    },
+    "loadError": "Could not load events",
+    "retry": "Retry",
+    "sections": {
+      "joinable": "Open to join",
+      "startingSoon": "Starting soon",
+      "running": "Under way"
+    },
+    "filters": {
+      "format": "Format",
+      "allFormats": "All formats",
+      "engineTournament": "Tournaments",
+      "engineLeague": "Leagues",
+      "phase": "Status",
+      "allPhases": "All statuses",
+      "myRating": "My level",
+      "openSpots": "Open spots"
+    }
+  },
+  "myEvents": {
+    "title": "My events",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "filters": {
+      "all": "All",
+      "playing": "Playing",
+      "organizing": "Organizing",
+      "drafts": "Drafts",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "archived": "Archived"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "description": "Events you organize or join show up here."
+    }
+  },
   "eventCreation": {
     "pickerTitle": "What do you want to organize?",
     "pickerDescription": "Each format runs differently. Pick the one that fits the time you have.",

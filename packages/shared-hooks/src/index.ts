@@ -24,6 +24,7 @@ export * from './useOrgNotifications';
 export * from './useCreateMatch';
 export * from './useTournaments';
 export * from './useLeagues';
+export * from './useEvents';
 export * from './useUpdateMatch';
 export * from './useMatches';
 export * from './useMatchActions';

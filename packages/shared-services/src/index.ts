@@ -25,6 +25,7 @@ export * from './communities';
 export * from './chat';
 export * from './tournaments';
 export * from './leagues';
+export * from './events';
 export * from './leaderboard';
 export * from './policy-consent';
 // Reports - explicit exports to avoid conflicts with admin/moderationService

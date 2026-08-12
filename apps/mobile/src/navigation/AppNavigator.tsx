@@ -89,11 +89,8 @@ import Communities from '#/screens/Communities';
 import CommunityDetail from '#/screens/CommunityDetail';
 import TournamentDetail from '#/screens/TournamentDetail';
 import TournamentBracketSetup from '#/screens/TournamentBracketSetup';
-import Tournaments from '#/screens/Tournaments';
-import MyTournaments from '#/screens/MyTournaments';
-import Leagues from '#/screens/Leagues';
-import MyLeagues from '#/screens/MyLeagues';
-import Classements from '#/screens/Classements';
+import Compete from '#/screens/Compete';
+import MyEvents from '#/screens/MyEvents';
 import MonthlyChallengeBoard from '#/screens/MonthlyChallengeBoard';
 import LeagueDetail from '#/screens/LeagueDetail';
 import SessionDetail from '#/screens/SessionDetail';
@@ -131,7 +128,6 @@ import PublicMatches from '#/features/matches/screens/PublicMatches';
 import PlayerMatches from '#/features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '#/features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '#/features/bookings';
-import { TOURNAMENT_EVENT_KINDS } from '#/features/events';
 import { InviteReferralScreen } from '#/screens/InviteReferralScreen';
 import { WeeklyCheckInScreen } from '#/features/weekly-checkin/WeeklyCheckInScreen';
 
@@ -668,7 +664,7 @@ function CreateListHeaderButton() {
 }
 
 /** Header "+" that opens the tournament creation wizard. Admin-only during rollout. */
-function TournamentCreateHeaderButton() {
+function EventCreateHeaderButton() {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
@@ -682,48 +678,14 @@ function TournamentCreateHeaderButton() {
       onPress={() => {
         if (!guardAction()) return;
         lightHaptic();
-        openSheetForEventCreation(TOURNAMENT_EVENT_KINDS);
+        openSheetForEventCreation();
       }}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       style={{ marginRight: spacingPixels[2] }}
       accessibilityRole="button"
-      accessibilityLabel={t('actions.createTournament')}
+      accessibilityLabel={t('actions.createEvent')}
     >
-      <Ionicons name="add" size={28} color={colors.headerForeground} />
-    </TouchableOpacity>
-  );
-}
-
-/** Header "+" that opens the league creation wizard. Admin-only during rollout. */
-function LeagueCreateHeaderButton({
-  navigation,
-}: {
-  navigation: { navigate: (screen: 'LeagueDetail', params: { leagueId: string }) => void };
-}) {
-  const { colors } = useThemeStyles();
-  const { t } = useTranslation();
-  const { guardAction } = useRequireOnboarding();
-  const { isAdmin } = useAdminStatus();
-
-  if (!isAdmin) return null;
-
-  return (
-    <TouchableOpacity
-      onPress={() => {
-        if (!guardAction()) return;
-        lightHaptic();
-        void SheetManager.show('league-create', {
-          payload: {
-            onCreated: (leagueId: string) => navigation.navigate('LeagueDetail', { leagueId }),
-          },
-        });
-      }}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{ marginRight: spacingPixels[2] }}
-      accessibilityRole="button"
-      accessibilityLabel={t('actions.createLeague')}
-    >
-      <Ionicons name="add" size={28} color={colors.headerForeground} />
+      <Ionicons name="add" size={26} color={colors.foreground} />
     </TouchableOpacity>
   );
 }
@@ -1618,53 +1580,22 @@ export default function AppNavigator() {
       />
 
       <RootStack.Screen
-        name="Tournaments"
-        component={Tournaments}
+        name="Compete"
+        component={Compete}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: t('tournamentList.title'),
+          headerTitle: t('compete.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
-          headerRight: () => <TournamentCreateHeaderButton />,
+          headerRight: () => <EventCreateHeaderButton />,
         })}
       />
 
       <RootStack.Screen
-        name="MyTournaments"
-        component={MyTournaments}
+        name="MyEvents"
+        component={MyEvents}
         options={({ navigation }) => ({
           ...sharedOptions,
-          headerTitle: t('tournamentList.myTournaments'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
-      />
-
-      <RootStack.Screen
-        name="Leagues"
-        component={Leagues}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('leagueList.title'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-          headerRight: () => <LeagueCreateHeaderButton navigation={navigation} />,
-        })}
-      />
-
-      <RootStack.Screen
-        name="MyLeagues"
-        component={MyLeagues}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('leagueList.myLeagues'),
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
-      />
-
-      <RootStack.Screen
-        name="Classements"
-        component={Classements}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('classements.title'),
+          headerTitle: t('myEvents.title'),
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

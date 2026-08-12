@@ -1,5 +1,12 @@
 /**
- * LeagueFiltersBar — filter chips for public league discovery.
+ * EventFiltersBar
+ *
+ * Filter chips for the unified event list. Replaces the tournament and league
+ * bars, which filtered the same things by different names on two screens.
+ *
+ * The format chip is what makes one list work: it narrows to tournaments or
+ * leagues instead of the reader having to pick a screen first. Everything else
+ * is stated in format-neutral terms, so a new format inherits the bar.
  */
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -17,30 +24,48 @@ import {
   darkTheme,
 } from '@rallia/design-system';
 import { useTheme } from '@rallia/shared-hooks';
+import type { EventPhase } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { selectionHaptic, lightHaptic } from '../../../utils/haptics';
 
-export type LeagueJoinModeFilter = 'all' | 'open' | 'approval' | 'invite_only';
+/** Which engine's events to show. Mirrors EventEngine plus an "everything". */
+export type EventEngineFilter = 'all' | 'tournament' | 'league';
+/** Lifecycle cut, in EventPhase terms. `closed` never appears in discovery. */
+export type EventPhaseFilter = 'all' | Extract<EventPhase, 'joinable' | 'startingSoon' | 'running'>;
 
-const JOIN_MODE_OPTIONS: LeagueJoinModeFilter[] = ['all', 'open', 'approval', 'invite_only'];
+const ENGINE_OPTIONS: EventEngineFilter[] = ['all', 'tournament', 'league'];
+const PHASE_OPTIONS: EventPhaseFilter[] = ['all', 'joinable', 'startingSoon', 'running'];
 
-const JOIN_MODE_LABEL_KEYS: Record<LeagueJoinModeFilter, string> = {
-  all: 'leagueList.discoverFilters.allJoinModes',
-  open: 'leagueDetail.values.open',
-  approval: 'leagueDetail.values.approval',
-  invite_only: 'leagueDetail.values.inviteOnly',
+const ENGINE_LABEL_KEYS: Record<Exclude<EventEngineFilter, 'all'>, string> = {
+  tournament: 'eventList.filters.engineTournament',
+  league: 'eventList.filters.engineLeague',
+};
+const PHASE_LABEL_KEYS: Record<Exclude<EventPhaseFilter, 'all'>, string> = {
+  joinable: 'eventList.sections.joinable',
+  startingSoon: 'eventList.sections.startingSoon',
+  running: 'eventList.sections.running',
 };
 
-interface LeagueFiltersBarProps {
-  joinMode: LeagueJoinModeFilter;
+interface EventFiltersBarProps {
+  engine: EventEngineFilter;
+  phase: EventPhaseFilter;
+  /** Toggle: only events whose rating window includes the player's rating. */
   myRatingOnly: boolean;
+  /** Hide the my-rating chip when the player has no rating for the sport. */
   showMyRatingFilter: boolean;
-  onJoinModeChange: (joinMode: LeagueJoinModeFilter) => void;
+  openSpotsOnly: boolean;
+  onEngineChange: (engine: EventEngineFilter) => void;
+  onPhaseChange: (phase: EventPhaseFilter) => void;
   onMyRatingChange: (myRatingOnly: boolean) => void;
+  onOpenSpotsChange: (openSpotsOnly: boolean) => void;
   onReset: () => void;
   hasActiveFilters: boolean;
 }
+
+// =============================================================================
+// FILTER CHIP (mirrors MatchFiltersBar)
+// =============================================================================
 
 const FilterChip: React.FC<{
   value: string;
@@ -51,6 +76,7 @@ const FilterChip: React.FC<{
   icon?: keyof typeof Ionicons.glyphMap;
 }> = ({ value, isActive, onPress, isDark, hasDropdown = true, icon }) => {
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
+
   const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
   const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
   const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
@@ -82,6 +108,10 @@ const FilterChip: React.FC<{
     </Animated.View>
   );
 };
+
+// =============================================================================
+// FILTER DROPDOWN MODAL (mirrors MatchFiltersBar)
+// =============================================================================
 
 function FilterDropdown<T extends string>({
   visible,
@@ -184,7 +214,7 @@ function FilterDropdown<T extends string>({
 
           <ScrollView showsVerticalScrollIndicator={false} bounces={options.length > 6}>
             {options.map((option, index) => {
-              const selected = option === selectedValue;
+              const isSelected = selectedValue === option;
               const isLast = index === options.length - 1;
               return (
                 <TouchableOpacity
@@ -192,7 +222,7 @@ function FilterDropdown<T extends string>({
                   style={[
                     styles.dropdownItem,
                     {
-                      backgroundColor: selected ? colors.itemBgSelected : 'transparent',
+                      backgroundColor: isSelected ? colors.itemBgSelected : 'transparent',
                       borderBottomColor: isLast ? 'transparent' : colors.itemBorder,
                     },
                   ]}
@@ -201,12 +231,12 @@ function FilterDropdown<T extends string>({
                 >
                   <Text
                     size="base"
-                    weight={selected ? 'semibold' : 'regular'}
-                    color={selected ? colors.itemTextSelected : colors.itemText}
+                    weight={isSelected ? 'semibold' : 'regular'}
+                    color={isSelected ? colors.itemTextSelected : colors.itemText}
                   >
                     {getLabel(option)}
                   </Text>
-                  {selected && (
+                  {isSelected && (
                     <Ionicons name="checkmark-circle" size={22} color={colors.checkmark} />
                   )}
                 </TouchableOpacity>
@@ -219,22 +249,39 @@ function FilterDropdown<T extends string>({
   );
 }
 
-export const LeagueFiltersBar: React.FC<LeagueFiltersBarProps> = ({
-  joinMode,
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
+export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
+  engine,
+  phase,
   myRatingOnly,
   showMyRatingFilter,
-  onJoinModeChange,
+  openSpotsOnly,
+  onEngineChange,
+  onPhaseChange,
   onMyRatingChange,
+  onOpenSpotsChange,
   onReset,
   hasActiveFilters,
 }) => {
-  const { t } = useTranslation();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
-  const [joinModeOpen, setJoinModeOpen] = useState(false);
 
-  const getJoinModeLabel = (value: LeagueJoinModeFilter) =>
-    t(JOIN_MODE_LABEL_KEYS[value] as TranslationKey);
+  const [showEngineDropdown, setShowEngineDropdown] = useState(false);
+  const [showPhaseDropdown, setShowPhaseDropdown] = useState(false);
+
+  const getEngineLabel = (value: EventEngineFilter) =>
+    value === 'all'
+      ? t('eventList.filters.allFormats')
+      : t(ENGINE_LABEL_KEYS[value] as TranslationKey);
+
+  const getPhaseLabel = (value: EventPhaseFilter) =>
+    value === 'all'
+      ? t('eventList.filters.allPhases')
+      : t(PHASE_LABEL_KEYS[value] as TranslationKey);
 
   return (
     <View style={styles.container}>
@@ -248,7 +295,7 @@ export const LeagueFiltersBar: React.FC<LeagueFiltersBarProps> = ({
             style={[
               styles.resetChip,
               {
-                backgroundColor: isDark ? `${secondary[900]}40` : secondary[50],
+                backgroundColor: isDark ? secondary[900] + '40' : secondary[50],
                 borderColor: isDark ? secondary[700] : secondary[200],
               },
             ]}
@@ -270,18 +317,20 @@ export const LeagueFiltersBar: React.FC<LeagueFiltersBarProps> = ({
         )}
 
         <FilterChip
-          value={
-            joinMode === 'all'
-              ? t('leagueList.discoverFilters.joinMode')
-              : getJoinModeLabel(joinMode)
-          }
-          isActive={joinMode !== 'all'}
-          onPress={() => setJoinModeOpen(true)}
+          value={engine === 'all' ? t('eventList.filters.format') : getEngineLabel(engine)}
+          isActive={engine !== 'all'}
+          onPress={() => setShowEngineDropdown(true)}
+          isDark={isDark}
+        />
+        <FilterChip
+          value={phase === 'all' ? t('eventList.filters.phase') : getPhaseLabel(phase)}
+          isActive={phase !== 'all'}
+          onPress={() => setShowPhaseDropdown(true)}
           isDark={isDark}
         />
         {showMyRatingFilter && (
           <FilterChip
-            value={t('leagueList.discoverFilters.myRating')}
+            value={t('eventList.filters.myRating')}
             isActive={myRatingOnly}
             onPress={() => onMyRatingChange(!myRatingOnly)}
             isDark={isDark}
@@ -289,17 +338,35 @@ export const LeagueFiltersBar: React.FC<LeagueFiltersBarProps> = ({
             icon="analytics"
           />
         )}
+        <FilterChip
+          value={t('eventList.filters.openSpots')}
+          isActive={openSpotsOnly}
+          onPress={() => onOpenSpotsChange(!openSpotsOnly)}
+          isDark={isDark}
+          hasDropdown={false}
+          icon="people-outline"
+        />
       </ScrollView>
 
       <FilterDropdown
-        visible={joinModeOpen}
-        title={t('leagueList.discoverFilters.joinMode')}
-        options={JOIN_MODE_OPTIONS}
-        selectedValue={joinMode}
-        getLabel={getJoinModeLabel}
-        onSelect={onJoinModeChange}
-        onClose={() => setJoinModeOpen(false)}
+        visible={showEngineDropdown}
+        title={t('eventList.filters.format')}
+        options={ENGINE_OPTIONS}
+        selectedValue={engine}
+        onSelect={onEngineChange}
+        onClose={() => setShowEngineDropdown(false)}
         isDark={isDark}
+        getLabel={getEngineLabel}
+      />
+      <FilterDropdown
+        visible={showPhaseDropdown}
+        title={t('eventList.filters.phase')}
+        options={PHASE_OPTIONS}
+        selectedValue={phase}
+        onSelect={onPhaseChange}
+        onClose={() => setShowPhaseDropdown(false)}
+        isDark={isDark}
+        getLabel={getPhaseLabel}
       />
     </View>
   );
@@ -323,8 +390,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacingPixels[1],
   },
-  chipIcon: { marginRight: 2 },
-  chipChevron: { marginLeft: 2 },
+  chipIcon: {
+    marginRight: 2,
+  },
+  chipChevron: {
+    marginLeft: 2,
+  },
   resetChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -367,3 +438,5 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });
+
+export default EventFiltersBar;

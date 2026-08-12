@@ -89,7 +89,7 @@ export function Serie1AnnouncementActionSheet(_props: SheetProps<'serie1-announc
       if (tennis) await setSelectedSport(tennis);
     }
     if (navigationRef.isReady()) {
-      navigationRef.navigate('Tournaments');
+      navigationRef.navigate('Compete');
     }
   }, [selectedSport?.name, userSports, setSelectedSport]);
 

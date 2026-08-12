@@ -81,12 +81,12 @@ const Community = () => {
 
   const handleTournaments = useCallback(() => {
     if (!guardAction()) return;
-    navigation.navigate('Tournaments');
+    navigation.navigate('Compete');
   }, [navigation, guardAction]);
 
   const handleLeagues = useCallback(() => {
     if (!guardAction()) return;
-    navigation.navigate('Leagues');
+    navigation.navigate('Compete');
   }, [navigation, guardAction]);
 
   // Action buttons configuration — gradients match the Home play grid so each

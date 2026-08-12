@@ -1,20 +1,16 @@
 /**
- * Tournaments List — public discovery
+ * Events — public discovery for every format.
  *
- * Shows upcoming/live public tournaments for the active sport, mirroring
- * the PublicMatches UX: fixed search bar + filter chips (status, entry
- * format, open spots) above a list grouped by actionability — Open for
- * registration (soonest-closing deadline first), In progress, Starting
- * soon. Completed, cancelled, self-organized and already-registered
- * tournaments never surface here (those live in MyTournaments, like
- * PublicMatches hiding own matches). Reached from the Home quick-nav FAB
- * row. Tap a row →
- * TournamentDetail. The top button leads to MyTournaments.
+ * Replaces the separate Tournaments and Leagues directories. A reader looking
+ * for something to enter no longer has to know which of two screens holds it;
+ * the format is a filter chip, and the sections are ordered by how actionable
+ * each event is rather than by which table it came from.
  *
- * Spec: specs/17-leagues-tournaments/rollout.md §V2 (discovery slice)
+ * Spec: specs/navigation-ia/README.md (Compete hub), and
+ * specs/17-leagues-tournaments/rollout.md
  */
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -25,31 +21,34 @@ import {
   useAuth,
   useAdminStatus,
   useDebounce,
-  usePublicTournaments,
+  usePublicEvents,
   useMyActiveRegistrations,
   useRatingScoresForSport,
 } from '@rallia/shared-hooks';
-import type { TournamentListItem } from '@rallia/shared-services';
+import {
+  hasOpenSpots,
+  isDiscoverable,
+  matchesRatingBand,
+  type EventSummary,
+} from '@rallia/shared-services';
 
 import {
-  TournamentListScaffold,
-  type TournamentSection,
-} from '../features/tournaments/components/TournamentListScaffold';
+  EventListScaffold,
+  type EventListSection,
+} from '../features/events/components/EventListScaffold';
 import {
-  TournamentFiltersBar,
-  type TournamentStatusFilter,
-  type TournamentFormatFilter,
-} from '../features/tournaments/components/TournamentFiltersBar';
-import { TOURNAMENT_EVENT_KINDS } from '../features/events';
+  EventFiltersBar,
+  type EventEngineFilter,
+  type EventPhaseFilter,
+} from '../features/events/components/EventFiltersBar';
+import { EventSummaryCard } from '../features/events/components/EventSummaryCard';
 import { SearchBar } from '../features/matches/components';
 import { useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport, useActionsSheet } from '../context';
 import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
 
-type Tournament = TournamentListItem;
-
-export const Tournaments: React.FC = () => {
+export const Events: React.FC = () => {
   const { t } = useTranslation();
   const { selectedSport } = useSport();
   const { session } = useAuth();
@@ -58,30 +57,25 @@ export const Tournaments: React.FC = () => {
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
   const { openSheetForEventCreation } = useActionsSheet();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleCreate = useCallback(() => {
     void lightHaptic();
     if (!guardAction()) return;
-    openSheetForEventCreation(TOURNAMENT_EVENT_KINDS);
+    openSheetForEventCreation();
   }, [guardAction, openSheetForEventCreation]);
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const {
-    data: tournaments = [],
-    isLoading,
-    isError,
-    refetch,
-  } = usePublicTournaments(selectedSport?.id);
+  const { data: events, isLoading, isError, refetch } = usePublicEvents(selectedSport?.id);
   const { data: myRegistrations = [] } = useMyActiveRegistrations(userId);
-  const registeredTournamentIds = useMemo(
+  const registeredIds = useMemo(
     () => new Set(myRegistrations.map(r => r.tournament_id)),
     [myRegistrations]
   );
 
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [statusFilter, setStatusFilter] = useState<TournamentStatusFilter>('all');
-  const [formatFilter, setFormatFilter] = useState<TournamentFormatFilter>('all');
+  const [engineFilter, setEngineFilter] = useState<EventEngineFilter>('all');
+  const [phaseFilter, setPhaseFilter] = useState<EventPhaseFilter>('all');
   const [myRatingOnly, setMyRatingOnly] = useState(false);
   const [openSpotsOnly, setOpenSpotsOnly] = useState(false);
 
@@ -98,102 +92,103 @@ export const Tournaments: React.FC = () => {
   const ratingFilterValue = myRatingOnly ? playerRatingValue : null;
 
   const hasActiveFilters =
-    statusFilter !== 'all' ||
-    formatFilter !== 'all' ||
+    engineFilter !== 'all' ||
+    phaseFilter !== 'all' ||
     (myRatingOnly && playerRatingValue != null) ||
     openSpotsOnly;
   const isFilteredView = hasActiveFilters || debouncedSearchQuery.length > 0;
 
-  const sections = useMemo<TournamentSection[]>(() => {
+  const sections = useMemo<EventListSection<EventSummary>[]>(() => {
     const query = debouncedSearchQuery.trim().toLowerCase();
-    const visible = tournaments.filter(tn => {
-      if (userId && tn.organizer_id === userId) return false;
-      if (registeredTournamentIds.has(tn.id)) return false;
-      if (statusFilter !== 'all' && tn.status !== statusFilter) return false;
-      if (formatFilter !== 'all' && tn.entry_format !== formatFilter) return false;
-      if (
-        ratingFilterValue != null &&
-        ((tn.min_rating != null && ratingFilterValue < Number(tn.min_rating)) ||
-          (tn.max_rating != null && ratingFilterValue > Number(tn.max_rating)))
-      )
-        return false;
-      if (
-        openSpotsOnly &&
-        (tn.status !== 'registration_open' || tn.registration_count >= tn.max_participants)
-      )
-        return false;
+    const visible = events.filter(event => {
+      if (!isDiscoverable(event)) return false;
+      // Already yours: it belongs on My Events, not on discovery.
+      if (userId && event.organizerId === userId) return false;
+      if (event.engine === 'tournament' && registeredIds.has(event.id)) return false;
+      if (engineFilter !== 'all' && event.engine !== engineFilter) return false;
+      if (phaseFilter !== 'all' && event.phase !== phaseFilter) return false;
+      if (!matchesRatingBand(event, ratingFilterValue)) return false;
+      if (openSpotsOnly && !hasOpenSpots(event)) return false;
       if (
         query &&
-        !tn.name.toLowerCase().includes(query) &&
-        !(tn.venue_name ?? '').toLowerCase().includes(query)
+        !event.name.toLowerCase().includes(query) &&
+        !(event.locationLabel ?? '').toLowerCase().includes(query)
       )
         return false;
       return true;
     });
 
-    // Actionability grouping: joinable first, soonest-closing deadline on top.
-    const open: Tournament[] = [];
-    const inProgress: Tournament[] = [];
-    const startingSoon: Tournament[] = [];
-    for (const tn of visible) {
-      if (tn.status === 'registration_open') open.push(tn);
-      else if (tn.status === 'in_progress') inProgress.push(tn);
-      else if (tn.status === 'registration_closed') startingSoon.push(tn);
+    // Actionability order, the tournament screen's grouping generalized:
+    // what you can enter now, then what is about to start, then what is under
+    // way. Inside the joinable bucket, the soonest deadline leads; events with
+    // no deadline (leagues) fall to the end of it.
+    const buckets: Record<'joinable' | 'startingSoon' | 'running', EventSummary[]> = {
+      joinable: [],
+      startingSoon: [],
+      running: [],
+    };
+    for (const event of visible) {
+      if (event.phase !== 'closed') buckets[event.phase].push(event);
     }
-    open.sort(
-      (a, b) =>
-        new Date(a.registration_closes_at ?? a.start_date).getTime() -
-        new Date(b.registration_closes_at ?? b.start_date).getTime()
-    );
+    buckets.joinable.sort((a, b) => {
+      if (a.nextDeadline == null) return b.nextDeadline == null ? 0 : 1;
+      if (b.nextDeadline == null) return -1;
+      return new Date(a.nextDeadline).getTime() - new Date(b.nextDeadline).getTime();
+    });
 
-    const out: TournamentSection[] = [];
-    if (open.length) out.push({ titleKey: 'tournamentList.sectionOpen', items: open });
-    if (inProgress.length)
-      out.push({ titleKey: 'tournamentList.sectionInProgress', items: inProgress });
-    if (startingSoon.length)
-      out.push({ titleKey: 'tournamentList.sectionStartingSoon', items: startingSoon });
+    const out: EventListSection<EventSummary>[] = [];
+    if (buckets.joinable.length)
+      out.push({ titleKey: 'eventList.sections.joinable', items: buckets.joinable });
+    if (buckets.startingSoon.length)
+      out.push({ titleKey: 'eventList.sections.startingSoon', items: buckets.startingSoon });
+    if (buckets.running.length)
+      out.push({ titleKey: 'eventList.sections.running', items: buckets.running });
     return out;
   }, [
-    tournaments,
+    events,
     userId,
-    registeredTournamentIds,
+    registeredIds,
     debouncedSearchQuery,
-    statusFilter,
-    formatFilter,
+    engineFilter,
+    phaseFilter,
     ratingFilterValue,
     openSpotsOnly,
   ]);
 
   const handlePress = useCallback(
-    (tournament: Tournament) => {
-      navigation.navigate('TournamentDetail', {
-        tournamentId: tournament.id,
-        tournamentName: tournament.name,
-      });
+    (event: EventSummary) => {
+      if (event.engine === 'league') {
+        navigation.navigate('LeagueDetail', { leagueId: event.id, leagueName: event.name });
+      } else {
+        navigation.navigate('TournamentDetail', {
+          tournamentId: event.id,
+          tournamentName: event.name,
+        });
+      }
     },
     [navigation]
   );
 
   const header = (
     <View style={styles.headerContainer}>
-      {/* Tournament creation is admin-gated during rollout (mirrors ActionsBottomSheet). */}
       {isAdmin && (
         <TouchableOpacity
           onPress={handleCreate}
           activeOpacity={0.85}
           style={styles.createButton}
           accessibilityRole="button"
-          accessibilityLabel={t('tournamentList.create')}
+          accessibilityLabel={t('eventList.create')}
+          testID="cta-create-event"
         >
           <View style={styles.createIcon}>
             <Ionicons name="add" size={26} color="#ffffff" />
           </View>
           <View style={styles.createTextWrap}>
             <Text size="base" weight="semibold" color="#ffffff">
-              {t('tournamentList.create')}
+              {t('eventList.create')}
             </Text>
             <Text size="xs" color="rgba(255,255,255,0.85)">
-              {t('tournamentList.createSubtitle')}
+              {t('eventList.createSubtitle')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.75)" />
@@ -203,19 +198,20 @@ export const Tournaments: React.FC = () => {
       <TouchableOpacity
         onPress={() => {
           void lightHaptic();
-          navigation.navigate('MyTournaments');
+          navigation.navigate('MyEvents');
         }}
         activeOpacity={0.85}
         style={[
-          styles.myTournamentsButton,
+          styles.myEventsButton,
           { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
         ]}
+        testID="cta-my-events"
       >
-        <View style={[styles.myTournamentsIcon, { backgroundColor: colors.chipPrimaryBg }]}>
-          <Ionicons name="ribbon" size={18} color={colors.primary} />
+        <View style={[styles.myEventsIcon, { backgroundColor: colors.chipPrimaryBg }]}>
+          <Ionicons name="trophy" size={18} color={colors.primary} />
         </View>
-        <Text size="sm" weight="semibold" color={colors.text} style={styles.myTournamentsLabel}>
-          {t('tournamentList.myTournaments')}
+        <Text size="sm" weight="semibold" color={colors.text} style={styles.myEventsLabel}>
+          {t('eventList.myEvents')}
         </Text>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </TouchableOpacity>
@@ -224,24 +220,24 @@ export const Tournaments: React.FC = () => {
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder={t('tournamentList.searchPlaceholder')}
+          placeholder={t('eventList.searchPlaceholder')}
           onClear={() => setSearchQuery('')}
         />
       </View>
 
-      <TournamentFiltersBar
-        status={statusFilter}
-        format={formatFilter}
+      <EventFiltersBar
+        engine={engineFilter}
+        phase={phaseFilter}
         myRatingOnly={myRatingOnly}
         showMyRatingFilter={playerRatingValue != null}
         openSpotsOnly={openSpotsOnly}
-        onStatusChange={setStatusFilter}
-        onFormatChange={setFormatFilter}
+        onEngineChange={setEngineFilter}
+        onPhaseChange={setPhaseFilter}
         onMyRatingChange={setMyRatingOnly}
         onOpenSpotsChange={setOpenSpotsOnly}
         onReset={() => {
-          setStatusFilter('all');
-          setFormatFilter('all');
+          setEngineFilter('all');
+          setPhaseFilter('all');
           setMyRatingOnly(false);
           setOpenSpotsOnly(false);
         }}
@@ -251,28 +247,29 @@ export const Tournaments: React.FC = () => {
   );
 
   return (
-    <TournamentListScaffold
+    <EventListScaffold
       sections={sections}
       isLoading={isLoading}
       isError={isError}
       refetch={refetch}
       emptyIcon={isFilteredView ? 'filter-outline' : 'trophy-outline'}
-      emptyTitleKey={isFilteredView ? 'tournamentList.emptySearch.title' : 'tournamentList.empty'}
+      emptyTitleKey={isFilteredView ? 'eventList.emptySearch.title' : 'eventList.empty'}
       emptyDescriptionKey={
-        isFilteredView
-          ? 'tournamentList.emptySearch.description'
-          : 'tournamentList.emptyDescription'
+        isFilteredView ? 'eventList.emptySearch.description' : 'eventList.emptyDescription'
       }
+      loadErrorKey="eventList.loadError"
+      retryKey="eventList.retry"
       header={header}
-      onPressTournament={handlePress}
+      skeletonBannerAspect={2.4}
+      renderCard={event => (
+        <EventSummaryCard event={event} currentUserId={userId} onPress={() => handlePress(event)} />
+      )}
     />
   );
 };
 
 const styles = StyleSheet.create({
   headerContainer: {
-    // List's own paddingTop (spacingPixels[2]) sits above this header, so keep
-    // this smaller to match the ~20px top spacing on sibling screens.
     paddingTop: spacingPixels[3],
   },
   createButton: {
@@ -307,7 +304,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  myTournamentsButton: {
+  myEventsButton: {
     flexDirection: 'row',
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[4],
@@ -318,14 +315,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2.5],
     paddingHorizontal: spacingPixels[3],
   },
-  myTournamentsIcon: {
+  myEventsIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  myTournamentsLabel: {
+  myEventsLabel: {
     flex: 1,
   },
   searchRow: {
@@ -337,4 +334,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Tournaments;
+export default Events;

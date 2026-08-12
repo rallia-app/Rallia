@@ -5010,6 +5010,64 @@
     },
     "shareCta": "Partager cette séance"
   },
+  "compete": {
+    "title": "Compétition",
+    "tabs": {
+      "events": "Événements",
+      "challenge": "Défi",
+      "ranking": "Classement"
+    }
+  },
+  "eventList": {
+    "title": "Événements",
+    "create": "Créer un événement",
+    "createSubtitle": "Pars un tournoi ou une ligue",
+    "myEvents": "Mes événements",
+    "searchPlaceholder": "Rechercher des événements...",
+    "empty": "Aucun événement pour le moment",
+    "emptyDescription": "Rien d'ouvert près de chez toi en ce moment. Reviens bientôt, ou crée le tien.",
+    "emptySearch": {
+      "title": "Aucun événement ne correspond",
+      "description": "Essaie une autre recherche ou enlève tes filtres."
+    },
+    "loadError": "Impossible de charger les événements",
+    "retry": "Réessayer",
+    "sections": {
+      "joinable": "Ouverts aux inscriptions",
+      "startingSoon": "Commencent bientôt",
+      "running": "En cours"
+    },
+    "filters": {
+      "format": "Format",
+      "allFormats": "Tous les formats",
+      "engineTournament": "Tournois",
+      "engineLeague": "Ligues",
+      "phase": "Statut",
+      "allPhases": "Tous les statuts",
+      "myRating": "Mon calibre",
+      "openSpots": "Places libres"
+    }
+  },
+  "myEvents": {
+    "title": "Mes événements",
+    "tabs": {
+      "upcoming": "À venir",
+      "past": "Passés"
+    },
+    "filters": {
+      "all": "Tous",
+      "playing": "Je joue",
+      "organizing": "J'organise",
+      "drafts": "Brouillons",
+      "completed": "Terminés",
+      "cancelled": "Annulés",
+      "archived": "Archivés"
+    },
+    "empty": {
+      "title": "Rien ici pour le moment",
+      "description": "Les événements que tu organises ou rejoins apparaissent ici."
+    }
+  },
   "eventCreation": {
     "pickerTitle": "Tu organises quoi?",
     "pickerDescription": "Chaque format se joue différemment. Choisis selon le temps que t'as.",

@@ -1951,7 +1951,7 @@ const Home = () => {
               board,
               ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
             });
-            appNavigation.navigate('Classements', { initialTab: board });
+            appNavigation.navigate('Compete', { initialSegment: board });
           }}
         />
       );
@@ -2066,7 +2066,7 @@ const Home = () => {
           gradient={[secondary[400], secondary[600]]}
           borderColor={secondary[500]}
           label={t('home.playGrid.tournaments')}
-          onPress={() => appNavigation.navigate('Tournaments')}
+          onPress={() => appNavigation.navigate('Compete')}
         />
       );
       // Leagues are re-admin-gated during rollout.
@@ -2080,7 +2080,7 @@ const Home = () => {
             gradient={[primary[700], primary[900]]}
             borderColor={primary[800]}
             label={t('home.playGrid.leagues')}
-            onPress={() => appNavigation.navigate('Leagues')}
+            onPress={() => appNavigation.navigate('Compete')}
           />
         );
       }
