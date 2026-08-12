@@ -15,7 +15,6 @@ import { CreateListActionSheet } from '#/features/shared-lists/components/Create
 import { ShareMatchActionSheet } from '#/features/shared-lists/components/ShareMatchModal';
 import { AddContactActionSheet } from '#/features/shared-lists/components/AddContactModal';
 import { ImportContactsActionSheet } from '#/features/shared-lists/components/ImportContactsModal';
-import { CreateGroupActionSheet } from '#/features/groups/components/CreateGroupModal';
 import { GroupOptionsActionSheet } from '#/features/groups/components/GroupOptionsModal';
 import { MemberOptionsActionSheet } from '#/features/groups/components/MemberOptionsModal';
 import { InviteLinkActionSheet } from '#/features/groups/components/InviteLinkModal';
@@ -160,11 +159,6 @@ declare module 'react-native-actions-sheet' {
       payload: {
         listId: string;
         existingContacts: SharedContact[];
-      };
-    }>;
-    'create-group': SheetDefinition<{
-      payload: {
-        playerId: string;
       };
     }>;
     // Chat sheets
@@ -991,7 +985,6 @@ export const Sheets = () => {
         'share-match': ShareMatchActionSheet,
         'add-contact': AddContactActionSheet,
         'import-contacts': ImportContactsActionSheet,
-        'create-group': CreateGroupActionSheet,
         // Chat sheets
         'message-actions': MessageActionsActionSheet,
         'conversation-actions': ConversationActionsActionSheet,

@@ -47,7 +47,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   { value: 'match', labelKey: 'chat.filters.match', useSportIcon: true },
   { value: 'tournament', labelKey: 'chat.filters.tournament', icon: 'podium-outline' },
   { value: 'group_chat', labelKey: 'chat.filters.groupChat', icon: 'people-outline' },
-  { value: 'player_group', labelKey: 'chat.filters.playerGroup', icon: 'people-circle-outline' },
   { value: 'community', labelKey: 'chat.filters.community', icon: 'earth-outline' },
   { value: 'pinned', labelKey: 'chat.filters.pinned', icon: 'pin-outline' },
   { value: 'favorites', labelKey: 'chat.filters.favorites', icon: 'heart-outline' },

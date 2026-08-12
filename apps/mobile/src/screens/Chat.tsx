@@ -59,7 +59,6 @@ const SERVER_FILTERS = new Set<ChatInboxFilter>([
   'unread',
   'direct',
   'group_chat',
-  'player_group',
   'community',
   'match',
   'tournament',
@@ -352,7 +351,7 @@ const Chat = () => {
           description = t('chat.noConversationsSubtitle');
           break;
         default:
-          // Type filter (direct / match / group_chat / player_group / community)
+          // Type filter (direct / match / group_chat / community)
           title = t('chat.emptyFiltered.title');
           description = t('chat.emptyFiltered.description');
       }

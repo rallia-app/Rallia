@@ -2147,7 +2147,6 @@
       "unread": "Non lus",
       "direct": "Direct",
       "groupChat": "Groupes",
-      "playerGroup": "Groupes de joueurs",
       "community": "Communautés",
       "club": "Clubs",
       "match": "Matchs",
@@ -2358,7 +2357,6 @@
     "placeholder": "Connectez-vous avec d'autres joueurs",
     "title": "Communauté",
     "communities": "Communautés",
-    "groups": "Groupes",
     "shareLists": "Listes Partage",
     "tournamentsComingSoon": "Cette fonctionnalité arrive bientôt!",
     "leaguesComingSoon": "Cette fonctionnalité arrive bientôt!",
@@ -2630,8 +2628,6 @@
   "groups": {
     "title": "Groupes",
     "myGroups": "Mes groupes",
-    "createGroup": "Créer un groupe",
-    "createNewGroup": "Créer un nouveau groupe",
     "notFound": "Groupe introuvable",
     "tabs": {
       "home": "Accueil",
@@ -2644,17 +2640,9 @@
     },
     "chatWithMembers": "Discuter avec les membres",
     "empty": {
-      "title": "Aucun groupe pour le moment",
-      "subtitle": "Crée un groupe ou scanne un code QR pour en rejoindre un",
-      "createButton": "Créer un groupe",
       "scanButton": "Scanner le code QR"
     },
-    "listInfoMessage": "Les groupes sont des communautés privées limitées à un maximum de {maxMembers} joueurs.",
-    "welcome": {
-      "title": "Bienvenue!",
-      "joinedMessage": "Vous avez rejoint \"{groupName}\" avec succès"
-    },
-    "viewGroup": "Voir le groupe",
+    "welcome": {},
     "editGroup": "Modifier le groupe",
     "deleteGroup": "Supprimer le groupe",
     "leaveGroup": "Quitter le groupe",
@@ -2668,11 +2656,9 @@
     "descriptionOptional": "Description (optionnel)",
     "descriptionPlaceholder": "De quoi parle ce groupe?",
     "groupImage": "Image du groupe",
-    "groupImageOptional": "Image du groupe (optionnel)",
     "addCoverImage": "Ajouter une image de couverture",
     "changeImage": "Changer",
     "removeImage": "Supprimer",
-    "createGroupHint": "Les groupes peuvent avoir jusqu'à {maxMembers} membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
     "permissionRequired": "Permission requise",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image au groupe.",
     "photoAccessRequiredEdit": "Veuillez autoriser l'accès à vos photos pour changer l'image du groupe.",
@@ -2905,13 +2891,11 @@
       "nameRequired": "Le nom du groupe est requis",
       "nameTooShort": "Le nom du groupe doit contenir au moins 2 caractères",
       "nameTooLong": "Le nom du groupe ne peut pas dépasser 50 caractères",
-      "failedToCreate": "Échec de la création du groupe",
       "failedToUpdate": "Échec de la mise à jour du groupe",
       "failedToDelete": "Échec de la suppression du groupe",
       "failedToLeave": "Échec de la sortie du groupe"
     },
     "success": {
-      "created": "Groupe créé avec succès",
       "updated": "Groupe mis à jour avec succès",
       "deleted": "Groupe supprimé avec succès",
       "left": "Vous avez quitté le groupe"
@@ -2984,16 +2968,10 @@
     "sportPickleball": "Pickleball",
     "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe",
     "favoriteFacilities": "Sites de jeu favoris",
-    "favoriteFacilitiesOptional": "Sites de jeu favoris (Optionnel)",
     "noFavoriteFacilities": "Aucun site de jeu favori",
     "addFavoriteFacilitiesHint": "Ajoutez les sites de jeu où votre groupe joue",
-    "addFavoriteFacility": "Ajouter un site de jeu favori",
-    "addAnotherFacility": "Ajouter un autre site de jeu",
-    "searchFacilityToAdd": "Rechercher un site de jeu à ajouter",
-    "noFacilitiesFound": "Aucun site de jeu trouvé",
     "typeToSearchFacility": "Tapez pour rechercher des sites de jeu",
-    "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu",
-    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les sites de jeu plus tard"
+    "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu"
   },
   "playerAvailability": {
     "staleHint": "Cela fait un moment — confirmez votre disponibilité pour la semaine.",
@@ -3854,19 +3832,15 @@
     "invitePlayersDescription": "Partagez votre code ou votre QR pour que vos amis vous rejoignent sur Rallia",
     "createShareList": "Créer une liste de partage",
     "createShareListDescription": "Créez une liste de personnes hors application à inviter à vos parties",
-    "createNetwork": "Créer un réseau",
-    "createNetworkDescription": "Créez un groupe ou une communauté pour organiser des parties régulières",
     "createTournament": "Créer un tournoi",
     "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
     "createLeague": "Créer une ligue",
     "createLeagueDescription": "Organisez une ligue saisonnière avec des séances et un classement",
     "createEvent": "Créer un événement",
     "createEventDescription": "Gérez un tournoi ou une ligue, des inscriptions au classement",
-    "selectNetworkType": "Créer un réseau",
-    "selectNetworkTypeDescription": "Choisissez le type de réseau que vous souhaitez créer",
-    "group": "Groupe",
     "groupDescription": "Réseau privé entre amis",
-    "community": "Communauté",
+    "createCommunity": "Créer une communauté",
+    "createCommunityDescription": "Créez une communauté pour organiser des parties régulières près de chez vous",
     "communityDescription": "Réseau public pour joueurs"
   },
   "referral": {

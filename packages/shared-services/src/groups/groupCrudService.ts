@@ -4,34 +4,11 @@
  */
 
 import { supabase } from '../supabase';
-import type {
-  Group,
-  GroupWithMembers,
-  GroupMember,
-  CreateGroupInput,
-  UpdateGroupInput,
-} from './groupTypes';
+import type { Group, GroupWithMembers, GroupMember, UpdateGroupInput } from './groupTypes';
 
 // ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
-
-/**
- * Get the player_group network type ID
- */
-export async function getPlayerGroupTypeId(): Promise<string> {
-  const { data, error } = await supabase
-    .from('network_type')
-    .select('id')
-    .eq('name', 'player_group')
-    .single();
-
-  if (error || !data) {
-    throw new Error('Player group type not found');
-  }
-
-  return data.id;
-}
 
 /**
  * Check if a player is a group moderator (internal helper to avoid circular import)
@@ -47,38 +24,6 @@ async function checkIsGroupModerator(groupId: string, playerId: string): Promise
 
   if (error || !data) return false;
   return data.role === 'moderator';
-}
-
-// ============================================================================
-// CREATE OPERATIONS
-// ============================================================================
-
-/**
- * Create a new player group
- */
-export async function createGroup(playerId: string, input: CreateGroupInput): Promise<Group> {
-  const typeId = await getPlayerGroupTypeId();
-
-  const { data, error } = await supabase
-    .from('network')
-    .insert({
-      network_type_id: typeId,
-      name: input.name,
-      description: input.description || null,
-      cover_image_url: input.cover_image_url || null,
-      is_private: true, // Groups are always private
-      created_by: playerId,
-      sport_id: input.sport_id || null, // null means both sports
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating group:', error);
-    throw new Error(error.message);
-  }
-
-  return data as Group;
 }
 
 // ============================================================================
@@ -147,26 +92,6 @@ export async function getGroupWithMembers(groupId: string): Promise<GroupWithMem
     ...(group as Group),
     members: members as GroupMember[],
   };
-}
-
-/**
- * Get all groups for a player (groups they are a member of)
- * Only returns networks with type 'player_group', not communities
- * @param playerId - The player's ID
- * @param sportId - Optional sport ID to filter by (null returns groups for all sports)
- */
-export async function getPlayerGroups(playerId: string, sportId?: string | null): Promise<Group[]> {
-  const { data, error } = await supabase.rpc('get_player_groups', {
-    p_player_id: playerId,
-    p_sport_id: sportId || null,
-  });
-
-  if (error) {
-    console.error('Error fetching player groups:', error);
-    throw new Error(error.message);
-  }
-
-  return (data || []) as Group[];
 }
 
 // ============================================================================

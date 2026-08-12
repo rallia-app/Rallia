@@ -81,7 +81,6 @@ import PermissionsScreen from '#/screens/PermissionsScreen';
 import PlayerProfile from '#/screens/PlayerProfile';
 import SharedLists from '#/screens/SharedLists';
 import SharedListDetail from '#/screens/SharedListDetail';
-import Groups from '#/screens/Groups';
 import GroupDetail from '#/screens/GroupDetail';
 import PreOnboardingScreen from '#/screens/PreOnboarding';
 import GroupChatInfo from '#/screens/GroupChatInfo';
@@ -721,15 +720,6 @@ function CommunityStack() {
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('sharedLists.title') || 'List',
-          headerLeft: () => <ThemedBackButton navigation={navigation} />,
-        })}
-      />
-      <CommunityStackNavigator.Screen
-        name="Groups"
-        getComponent={() => Groups}
-        options={({ navigation }) => ({
-          ...sharedOptions,
-          headerTitle: t('community.groups') || 'Groups',
           headerLeft: () => <ThemedBackButton navigation={navigation} />,
         })}
       />

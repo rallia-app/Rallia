@@ -2147,7 +2147,6 @@
       "unread": "Unread",
       "direct": "Direct",
       "groupChat": "Group Chats",
-      "playerGroup": "Player Groups",
       "community": "Communities",
       "club": "Clubs",
       "match": "Matches",
@@ -2358,7 +2357,6 @@
     "placeholder": "Connect with other players",
     "title": "Community",
     "communities": "Communities",
-    "groups": "Groups",
     "shareLists": "Share Lists",
     "tournamentsComingSoon": "This feature is coming soon!",
     "leaguesComingSoon": "This feature is coming soon!",
@@ -2630,8 +2628,6 @@
   "groups": {
     "title": "Groups",
     "myGroups": "My Groups",
-    "createGroup": "Create Group",
-    "createNewGroup": "Create New Group",
     "notFound": "Group not found",
     "tabs": {
       "home": "Home",
@@ -2644,17 +2640,9 @@
     },
     "chatWithMembers": "Chat with members",
     "empty": {
-      "title": "No groups yet",
-      "subtitle": "Create a group or scan a QR code to join one",
-      "createButton": "Create a group",
       "scanButton": "Scan QR Code"
     },
-    "listInfoMessage": "Groups are private communities limited to a maximum of {maxMembers} players.",
-    "welcome": {
-      "title": "Welcome!",
-      "joinedMessage": "You've successfully joined \"{groupName}\""
-    },
-    "viewGroup": "View Group",
+    "welcome": {},
     "editGroup": "Edit Group",
     "deleteGroup": "Delete Group",
     "leaveGroup": "Leave Group",
@@ -2668,11 +2656,9 @@
     "descriptionOptional": "Description (optional)",
     "descriptionPlaceholder": "What's this group about?",
     "groupImage": "Group Image",
-    "groupImageOptional": "Group Image (optional)",
     "addCoverImage": "Add a cover image",
     "changeImage": "Change",
     "removeImage": "Remove",
-    "createGroupHint": "Groups can have up to {maxMembers} members. As the creator, you'll be a moderator with the ability to add and remove members.",
     "permissionRequired": "Permission Required",
     "photoAccessRequired": "Please allow access to your photos to add a group image.",
     "photoAccessRequiredEdit": "Please allow access to your photos to change the group image.",
@@ -2905,13 +2891,11 @@
       "nameRequired": "Group name is required",
       "nameTooShort": "Group name must be at least 2 characters",
       "nameTooLong": "Group name must be less than 50 characters",
-      "failedToCreate": "Failed to create group",
       "failedToUpdate": "Failed to update group",
       "failedToDelete": "Failed to delete group",
       "failedToLeave": "Failed to leave group"
     },
     "success": {
-      "created": "Group created successfully",
       "updated": "Group updated successfully",
       "deleted": "Group deleted successfully",
       "left": "You have left the group"
@@ -2984,16 +2968,10 @@
     "sportPickleball": "Pickleball",
     "sportSelectionHint": "Choose a sport to filter who sees this group",
     "favoriteFacilities": "Favorite Facilities",
-    "favoriteFacilitiesOptional": "Favorite Facilities (Optional)",
     "noFavoriteFacilities": "No favorite facilities yet",
     "addFavoriteFacilitiesHint": "Add facilities where your group plays",
-    "addFavoriteFacility": "Add a favorite facility",
-    "addAnotherFacility": "Add another facility",
-    "searchFacilityToAdd": "Search for a facility to add",
-    "noFacilitiesFound": "No facilities found",
     "typeToSearchFacility": "Type to search for facilities",
-    "locationRequiredForFacilities": "Location is required to search facilities",
-    "favoriteFacilitiesHint": "You can always add or change facilities later"
+    "locationRequiredForFacilities": "Location is required to search facilities"
   },
   "playerAvailability": {
     "staleHint": "It's been a while — confirm your availability for the week ahead.",
@@ -3854,19 +3832,15 @@
     "invitePlayersDescription": "Share your code or QR so friends can join you on Rallia",
     "createShareList": "Create a share list",
     "createShareListDescription": "Create a list of people outside the app to invite to your games",
-    "createNetwork": "Create a network",
-    "createNetworkDescription": "Start a group or community to organize regular games with others",
     "createTournament": "Create a tournament",
     "createTournamentDescription": "Organize a tournament with a bracket and registrations",
     "createLeague": "Create a league",
     "createLeagueDescription": "Run a seasonal ladder with sessions and rankings",
     "createEvent": "Create an event",
     "createEventDescription": "Run a tournament or a league, from registrations to the standings",
-    "selectNetworkType": "Create a network",
-    "selectNetworkTypeDescription": "Choose the type of network you want to create",
-    "group": "Group",
     "groupDescription": "Private network for friends",
-    "community": "Community",
+    "createCommunity": "Create a community",
+    "createCommunityDescription": "Start a community to organize regular games with players near you",
     "communityDescription": "Public network for players"
   },
   "referral": {

@@ -46,7 +46,7 @@ import { MatchCreationWizard } from '#/features/matches';
 import { EventCreationWizard } from '#/features/events/components/EventCreationWizard';
 import { eventKindDescriptor, type EventKind } from '#/features/events/eventKinds';
 import { InvitePlayersWizard } from '#/features/referral';
-import { CreateNetworkWizard } from '#/features/groups';
+import { CreateCommunityWizard } from '#/features/communities';
 import { AuthWizard } from '#/features/auth';
 import { OnboardingWizard } from '#/features/onboarding/components/wizard';
 import { navigateFromOutside, navigationRef } from '#/navigation';
@@ -192,9 +192,9 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
         )}
 
         <ActionItem
-          icon="people-outline"
-          title={t('actions.createNetwork')}
-          description={t('actions.createNetworkDescription')}
+          icon="globe-outline"
+          title={t('actions.createCommunity')}
+          description={t('actions.createCommunityDescription')}
           onPress={onCreateNetwork}
           colors={colors}
         />
@@ -533,23 +533,17 @@ export const ActionsBottomSheet: React.FC = () => {
     [closeSheet, slideProgress, openMatchDetail, clearEditMatch]
   );
 
-  // Handle network wizard success - navigate to created group or community
+  // Handle community wizard success - navigate to the created community
   const handleNetworkSuccess = useCallback(
-    (type: 'group' | 'community', id: string) => {
+    (id: string) => {
       successHaptic();
       closeSheet();
       setShowNetworkWizard(false);
       // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
       slideProgress.value = 0;
 
-      if (type === 'group') {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('GroupDetail', { groupId: id });
-        }
-      } else {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('CommunityDetail', { communityId: id });
-        }
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('CommunityDetail', { communityId: id });
       }
     },
     [closeSheet, slideProgress]
@@ -729,10 +723,10 @@ export const ActionsBottomSheet: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Network wizard (Group / Community) */}
+        {/* Community wizard */}
         {showNetworkWizard && (
           <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <CreateNetworkWizard
+            <CreateCommunityWizard
               onClose={closeSheet}
               onBackToLanding={handleNetworkWizardClose}
               onSuccess={handleNetworkSuccess}

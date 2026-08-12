@@ -142,39 +142,6 @@ export function subscribeToGroupSettings(
 // PLAYER'S GROUPS LIST SUBSCRIPTION
 // ============================================================================
 
-/**
- * Subscribe to changes in player's group memberships
- * Useful for updating the groups list screen
- */
-export function subscribeToPlayerGroups(
-  playerId: string,
-  onGroupsChange: (payload: { eventType: 'INSERT' | 'DELETE'; membership: unknown }) => void
-): RealtimeChannel {
-  const channel = supabase
-    .channel(`player_groups:${playerId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'network_member',
-        filter: `player_id=eq.${playerId}`,
-      },
-      payload => {
-        // Only care about inserts (joined) and deletes (left)
-        if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
-          onGroupsChange({
-            eventType: payload.eventType,
-            membership: payload.new || payload.old,
-          });
-        }
-      }
-    )
-    .subscribe();
-
-  return channel;
-}
-
 // ============================================================================
 // SCORE CONFIRMATION SUBSCRIPTIONS
 // ============================================================================

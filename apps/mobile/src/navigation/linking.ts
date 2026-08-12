@@ -169,7 +169,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
             path: 'community',
             screens: {
               PlayerDirectory: 'players',
-              Groups: 'groups',
               Communities: 'communities',
             },
           },

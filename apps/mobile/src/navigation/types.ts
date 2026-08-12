@@ -194,7 +194,6 @@ export type CommunityStackParamList = {
   PlayerDirectory: undefined;
   ShareLists: undefined;
   SharedListDetail: { listId: string; listName: string };
-  Groups: undefined;
   Communities: undefined;
   Leagues: undefined;
   CommunityDetail: { communityId: string; fromChat?: boolean };

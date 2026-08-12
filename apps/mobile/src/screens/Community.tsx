@@ -2,7 +2,7 @@
  * Community Screen
  *
  * Main community hub with:
- * - Quick action buttons: Groups, Communities, Tournaments, Leagues (horizontal carousel)
+ * - Quick action buttons: Compete, Communities
  * - Player directory for finding and connecting with players
  */
 
@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, accent, primary, secondary } from '@rallia/design-system';
+import { spacingPixels, accent, secondary } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
@@ -68,11 +68,6 @@ const Community = () => {
   );
 
   // Action button handlers — the tile fires the haptic on press.
-  const handleGroups = useCallback(() => {
-    if (!guardAction()) return;
-    navigation.navigate('Groups');
-  }, [navigation, guardAction]);
-
   const handleCommunities = useCallback(() => {
     navigation.navigate('Communities');
   }, [navigation]);
@@ -99,29 +94,18 @@ const Community = () => {
       onPress: handleCompete,
     });
 
-    buttons.push(
-      {
-        id: 'communities',
-        icon: 'globe-outline',
-        watermark: 'globe',
-        gradient: [accent[400], accent[600]],
-        borderColor: accent[500],
-        label: t('community.communities'),
-        onPress: handleCommunities,
-      },
-      {
-        id: 'groups',
-        icon: 'people-outline',
-        watermark: 'people',
-        gradient: [primary[500], primary[700]],
-        borderColor: primary[600],
-        label: t('community.groups'),
-        onPress: handleGroups,
-      }
-    );
+    buttons.push({
+      id: 'communities',
+      icon: 'globe-outline',
+      watermark: 'globe',
+      gradient: [accent[400], accent[600]],
+      borderColor: accent[500],
+      label: t('community.communities'),
+      onPress: handleCommunities,
+    });
 
     return buttons;
-  }, [handleGroups, handleCommunities, handleCompete, t]);
+  }, [handleCommunities, handleCompete, t]);
 
   // When there are few enough buttons to fit without scrolling, stretch them
   // to fill the width.
