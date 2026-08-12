@@ -57,9 +57,9 @@ export const slotKind = (regId: string | null, isBye: boolean, isPhantom: boolea
   return 'player';
 };
 
-// The bracket score is a free-form string the organizer types ("e.g., 6-4
-// 6-2"). We split it into per-set pairs in written order; the caller orients
-// each set onto the right player's row using the known match winner.
+// The bracket score is per-set games written player1-first ("6-4 6-2" means
+// player1 took both). We split it into pairs in written order, so pair.a is
+// always player1's games and pair.b player2's.
 export const parseScoreSets = (score: string | null): Array<{ a: number; b: number }> => {
   if (!score) return [];
   const sets: Array<{ a: number; b: number }> = [];
@@ -222,20 +222,14 @@ export const BracketSection: React.FC<{
     ) : null;
 
     // Per-player set scores: each set's games sit on that player's own row, the
-    // set-winner's number bolded per column. The raw string has no fixed player
-    // order, so we orient it by the known match winner — whichever side took
-    // more sets is the winner's — then map onto rows. A winner with no parseable
-    // score gets a check instead.
+    // set-winner's number bolded per column. The stored string is player1-first
+    // by convention, so each set maps straight onto the rows. This used to infer
+    // the orientation from whichever side took more sets, which landed the games
+    // on the wrong rows for an even split (a retirement at one set each). A
+    // winner with no parseable score gets a check instead.
     const sets = parseScoreSets(m.score);
-    const aWins = sets.filter(s => s.a > s.b).length;
-    const bWins = sets.filter(s => s.b > s.a).length;
-    const winnerOnSideA = aWins >= bWins;
-    const winnerGames = sets.map(s => (winnerOnSideA ? s.a : s.b));
-    const loserGames = sets.map(s => (winnerOnSideA ? s.b : s.a));
-    const p1Games =
-      winnerSlot === 1 ? winnerGames : winnerSlot === 2 ? loserGames : sets.map(s => s.a);
-    const p2Games =
-      winnerSlot === 2 ? winnerGames : winnerSlot === 1 ? loserGames : sets.map(s => s.b);
+    const p1Games = sets.map(s => s.a);
+    const p2Games = sets.map(s => s.b);
     const cells1 = p1Games.map((v, i) => ({ value: v, won: v > p2Games[i] }));
     const cells2 = p2Games.map((v, i) => ({ value: v, won: v > p1Games[i] }));
 

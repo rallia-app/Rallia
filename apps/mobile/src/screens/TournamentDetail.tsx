@@ -1160,32 +1160,48 @@ export const TournamentDetail: React.FC = () => {
       ...registrations.flatMap(r =>
         r.partner_user_id ? [r.user_id, r.partner_user_id] : [r.user_id]
       ),
+      // A removed entrant leaves the active roster but keeps its pool row, so
+      // its profile still has to be fetched or that row renders nameless.
+      ...poolStandings.flatMap(s =>
+        s.partner_user_id ? [s.user_id, s.partner_user_id] : [s.user_id]
+      ),
       ...(tournament ? [tournament.organizer_id] : []),
     ],
-    [registrations, tournament]
+    [registrations, poolStandings, tournament]
   );
   const { data: profiles } = useProfilesByIds(userIds);
   const nameByRegId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const r of registrations) {
-      const p = profiles?.[r.user_id];
-      // Always use first (+ last). display_name is intentionally ignored
-      // per the app-wide convention in @rallia/shared-utils/getHumanName.
-      // Doubles entries render as a pair label everywhere the registration is
-      // shown: bracket slots, champion, opponent, score sheet. Two full names on
-      // one line overflow essentially always, so pairs shorten to first name +
-      // last initial ("Mathis L. & Jean-Daniel S."). Singles keep the full name,
-      // where there is room for it.
-      const partner = r.partner_user_id ? profiles?.[r.partner_user_id] : undefined;
-      const label = partner
+    // Always use first (+ last). display_name is intentionally ignored
+    // per the app-wide convention in @rallia/shared-utils/getHumanName.
+    // Doubles entries render as a pair label everywhere the registration is
+    // shown: bracket slots, champion, opponent, score sheet. Two full names on
+    // one line overflow essentially always, so pairs shorten to first name +
+    // last initial ("Mathis L. & Jean-Daniel S."). Singles keep the full name,
+    // where there is room for it.
+    const labelFor = (userId: string, partnerUserId: string | null) => {
+      const p = profiles?.[userId];
+      const partner = partnerUserId ? profiles?.[partnerUserId] : undefined;
+      return partner
         ? [getInitialName(p, ''), getInitialName(partner, '')].filter(Boolean).join(' & ')
         : p
           ? getHumanName(p, '')
           : '';
+    };
+    for (const r of registrations) {
+      const label = labelFor(r.user_id, r.partner_user_id);
       if (label) map.set(r.id, label);
     }
+    // Standings still carry withdrawn and disqualified entrants so their pool
+    // row can be struck through, but listActiveRegistrations drops them, and
+    // the row was falling back to a bare dash with nothing left to strike.
+    for (const s of poolStandings) {
+      if (map.has(s.registration_id)) continue;
+      const label = labelFor(s.user_id, s.partner_user_id);
+      if (label) map.set(s.registration_id, label);
+    }
     return map;
-  }, [registrations, profiles]);
+  }, [registrations, poolStandings, profiles]);
 
   // Members of each registration as clickable avatar descriptors (captain first,
   // partner second for doubles), so bracket slots can show avatars that link to
