@@ -90,8 +90,19 @@ export const EventFormatPicker: React.FC<EventFormatPickerProps> = ({
                 entering={FadeInDown.delay(150 + index * 100).springify()}
                 style={styles.option}
               >
+                {/* Selection chrome keys off the theme foreground: white
+                    border and glow on the dark sheet, near-black on the light
+                    one, so the ring never dissolves into the background. */}
                 <TouchableOpacity
-                  style={[styles.card, isSelected ? styles.cardSelected : styles.cardUnselected]}
+                  style={[
+                    styles.card,
+                    isSelected
+                      ? [
+                          styles.cardSelected,
+                          { borderColor: colors.text, shadowColor: colors.text },
+                        ]
+                      : styles.cardUnselected,
+                  ]}
                   onPress={() => {
                     void selectionHaptic();
                     onSelect(descriptor.kind);
@@ -207,8 +218,6 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     borderWidth: 3,
-    borderColor: BASE_WHITE,
-    shadowColor: BASE_WHITE,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
