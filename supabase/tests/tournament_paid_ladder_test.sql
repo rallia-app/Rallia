@@ -55,6 +55,24 @@ BEGIN
 END;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_players uuid[];
@@ -71,9 +89,11 @@ BEGIN
     v_org     := v_players[9];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM public.tournament_create(
         '[TEST-DL] Paid ladder', (SELECT id FROM sport WHERE name = 'tennis'), 4::smallint,
         now() + interval '1 day', now() + interval '20 days');
+    PERFORM pg_temp.staff_off(v_org);
     UPDATE tournaments
        SET entry_fee_cents = 1500, currency = 'CAD', fee_payer = 'player_pays',
            created_at = now() - interval '2 days'

@@ -24,11 +24,15 @@ $$;
 -- staff is granted around the create calls and dropped again before the block
 -- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
 -- a lingering row would shift every fixture picked by a later block.
-CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
   INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
 $$;
 
-CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
   DELETE FROM admin WHERE id = p;
 $$;
 
@@ -54,6 +58,7 @@ BEGIN
         '[TEST-PK] Deadlines', (SELECT id FROM sport WHERE name = 'tennis'), 8::smallint,
         now() + interval '7 days', now() + interval '35 days',
         p_bracket_type => 'pool_knockout');
+    PERFORM pg_temp.staff_off(v_organizer);
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
     PERFORM public.tournament_open_registration(v_t.id, v_ver);
     FOR i IN 1..8 LOOP
@@ -135,9 +140,11 @@ BEGIN
     END;
 
     -- Single-elim publish seeds per-round defaults too (regression scope).
+    PERFORM pg_temp.staff_on(v_organizer);
     SELECT * INTO v_se FROM public.tournament_create(
         '[TEST-PK] SE deadlines', (SELECT id FROM sport WHERE name = 'tennis'), 8::smallint,
         now() + interval '7 days', now() + interval '21 days');
+    PERFORM pg_temp.staff_off(v_organizer);
     SELECT version INTO v_ver FROM tournaments WHERE id = v_se.id;
     PERFORM public.tournament_open_registration(v_se.id, v_ver);
     FOR i IN 1..4 LOOP
@@ -155,7 +162,6 @@ BEGIN
         RAISE EXCEPTION 'single-elim seeded % deadlines, expected 3', v_cnt;
     END IF;
 
-    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'tournament_round_deadlines_test: ALL PASS';
 END;
 $$;

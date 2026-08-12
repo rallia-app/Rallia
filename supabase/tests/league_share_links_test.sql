@@ -27,6 +27,24 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_p        uuid[];
@@ -50,10 +68,12 @@ BEGIN
     v_org := v_p[1];
     PERFORM pg_temp.as_user(v_org);
 
+    PERFORM pg_temp.staff_on(v_org);
     v_pub     := public.league_create('Share pub',  v_sport, p_visibility => 'public',  p_join_mode => 'approval');
     v_priv    := public.league_create('Share priv', v_sport, p_visibility => 'private', p_join_mode => 'open');
     v_invonly := public.league_create('Share invo', v_sport, p_visibility => 'public',  p_join_mode => 'invite_only');
     v_cap     := public.league_create('Share cap',  v_sport, p_visibility => 'public',  p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
     -- Capacity 2: the organizer's own seat (population invariant) plus one.
     SELECT * INTO v_cap FROM league_update(v_cap.id, v_cap.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', false));

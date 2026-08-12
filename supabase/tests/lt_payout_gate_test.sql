@@ -27,6 +27,24 @@ LANGUAGE sql AS $$
     SELECT set_config('request.jwt.claims', json_build_object('sub', p_user::text)::text, true);
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_sport   uuid;
@@ -70,11 +88,13 @@ BEGIN
     -- 2. tournament_open_registration refuses a paid draft
     -- ------------------------------------------------------------------
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'payout gate tournament', p_sport_id => v_sport,
         p_max_participants => 8::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
     UPDATE tournaments SET entry_fee_cents = 5000, currency = 'CAD' WHERE id = v_t.id;
 
     -- charges_enabled is false (step 1 left it there), so this must be refused.
@@ -99,11 +119,13 @@ BEGIN
     -- A FREE draft is never gated.
     UPDATE player_stripe_account SET charges_enabled = false WHERE player_id = v_org;
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'payout gate free tournament', p_sport_id => v_sport,
         p_max_participants => 8::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT version INTO v_v FROM tournaments WHERE id = v_t.id;
     PERFORM tournament_open_registration(v_t.id, v_v);
     ASSERT (SELECT status FROM tournaments WHERE id = v_t.id) = 'registration_open',
@@ -113,9 +135,11 @@ BEGIN
     -- 3. season_open refuses a paid draft season
     -- ------------------------------------------------------------------
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     v_league := league_create(
         p_name => 'payout gate league', p_sport_id => v_sport,
         p_visibility => 'public', p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
     v_season := season_create(
         p_league_id => v_league.id, p_name => 'paid season',
         p_start_date => current_date, p_end_date => current_date + 60,

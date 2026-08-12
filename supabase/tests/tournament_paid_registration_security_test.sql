@@ -49,10 +49,12 @@ BEGIN
     o_org := o_players[1];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', o_org::text)::text, true);
+    PERFORM pg_temp.staff_on(o_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => p_name, p_sport_id => v_sport, p_max_participants => p_max::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => p_mode, p_entry_format => p_format);
+    PERFORM pg_temp.staff_off(o_org);
     o_tid := v_t.id;
 
     UPDATE tournaments
@@ -111,6 +113,24 @@ END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.as_player(p_player uuid) RETURNS void LANGUAGE sql AS $$
     SELECT set_config('request.jwt.claims', json_build_object('sub', p_player::text)::text, true);
+$$;
+
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
 $$;
 
 -- ==========================================================================

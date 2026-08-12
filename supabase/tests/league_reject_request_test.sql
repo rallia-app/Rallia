@@ -26,6 +26,24 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_players uuid[];
@@ -44,8 +62,10 @@ BEGIN
     v_c   := v_players[3];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     v_league := public.league_create(
         p_name => 'Reject test', p_sport_id => v_sport, p_join_mode => 'approval');
+    PERFORM pg_temp.staff_off(v_org);
 
     -- ------------------------------------------------------------------
     -- 1. organizer turns a request down: the requester hears about it

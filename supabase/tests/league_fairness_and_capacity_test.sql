@@ -25,6 +25,24 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- --------------------------------------------------------------------------
 -- 1. Odd roster over multiple rounds must not bench the same player throughout
 -- --------------------------------------------------------------------------
@@ -40,7 +58,9 @@ BEGIN
     v_org := v_p[1];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Bye Rotation', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     FOR v_i IN 2..5 LOOP
         PERFORM pg_temp.as_user(v_p[v_i]);
         PERFORM league_join(v_l.id);
@@ -100,7 +120,9 @@ BEGIN
     v_org := v_p[6];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Bye Credit', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     FOR v_i IN 1..4 LOOP
         PERFORM pg_temp.as_user(v_p[v_i]);
         PERFORM league_join(v_l.id);
@@ -165,7 +187,9 @@ BEGIN
     v_org := v_p[1];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'H2H', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);
 
     PERFORM pg_temp.as_user(v_org);
@@ -242,7 +266,9 @@ BEGIN
     v_org := v_p[1];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Free Exits', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);
     PERFORM pg_temp.as_user(v_p[3]); PERFORM league_join(v_l.id);
 
@@ -289,7 +315,9 @@ BEGIN
     v_org := v_p[1];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Capped', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
 
@@ -345,7 +373,9 @@ BEGIN
     v_org := v_p[2];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Capped Hard', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 1, 'waitlist_enabled', false));
 
@@ -381,7 +411,9 @@ BEGIN
        SET onboarding_completed = true, charges_enabled = true;
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Paid Roster', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);
     PERFORM pg_temp.as_user(v_p[3]); PERFORM league_join(v_l.id);
 
@@ -426,7 +458,9 @@ BEGIN
     v_org := v_p[2];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Free Invite All', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[3]); PERFORM league_join(v_l.id);
     PERFORM pg_temp.as_user(v_p[4]); PERFORM league_join(v_l.id);
 
@@ -463,7 +497,9 @@ BEGIN
        SET onboarding_completed = true, charges_enabled = true;
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Paid Guard', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[1]); PERFORM league_join(v_l.id);
 
     PERFORM pg_temp.as_user(v_org);
@@ -525,7 +561,9 @@ BEGIN
     v_org := v_p[3];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Suspensions', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[1]); PERFORM league_join(v_l.id);
     PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);
 
@@ -572,7 +610,9 @@ BEGIN
     v_org := v_p[5];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Queue Exits', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
 
@@ -620,7 +660,9 @@ BEGIN
     v_org := v_p[3];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Approve Cap', p_sport_id=>v_sport, p_join_mode=>'approval');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
 
@@ -673,7 +715,9 @@ BEGIN
     v_org := v_p[4];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Remove Queued', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
 
@@ -709,7 +753,9 @@ BEGIN
     v_org := v_p[2];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Held Seat', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
     PERFORM pg_temp.as_user(v_p[1]); PERFORM league_join(v_l.id);  -- seat 2/2
@@ -751,7 +797,9 @@ BEGIN
     v_org := v_p[4];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Late Score', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM pg_temp.as_user(v_p[1]); PERFORM league_join(v_l.id);
     PERFORM pg_temp.as_user(v_p[2]); PERFORM league_join(v_l.id);
 
@@ -807,7 +855,9 @@ BEGIN
     v_org := v_p[5];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Drain', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
 
@@ -853,7 +903,9 @@ BEGIN
     v_org := v_p[6];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'One Open', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_sa FROM season_create(v_l.id, 'Now', current_date, current_date+60);
     SELECT * INTO v_sa FROM season_open(v_sa.id, v_sa.version);
 
@@ -894,7 +946,9 @@ BEGIN
     v_org := v_p[3];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Doubles Night', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     FOR v_i IN 1..8 LOOP
         IF v_p[v_i] <> v_org THEN
             PERFORM pg_temp.as_user(v_p[v_i]); PERFORM league_join(v_l.id);
@@ -994,7 +1048,9 @@ BEGIN
     v_org := v_p[5];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Mixed Night', p_sport_id=>v_sport, p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     FOR v_i IN 1..4 LOOP
         PERFORM pg_temp.as_user(v_p[v_i]); PERFORM league_join(v_l.id);
     END LOOP;
@@ -1038,7 +1094,9 @@ BEGIN
     v_org := v_p[6];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(p_name=>'Approval Drain', p_sport_id=>v_sport, p_join_mode=>'approval');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 2, 'waitlist_enabled', true));
 

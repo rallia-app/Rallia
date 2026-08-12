@@ -42,11 +42,15 @@ $$;
 -- staff is granted around the create calls and dropped again before the block
 -- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
 -- a lingering row would shift every fixture picked by a later block.
-CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
   INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
 $$;
 
-CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
   DELETE FROM admin WHERE id = p;
 $$;
 
@@ -110,6 +114,7 @@ BEGIN
         '[TEST-PK] Standings', pg_temp.tennis_sport(), 8::smallint,
         now() + interval '7 days', now() + interval '21 days',
         p_bracket_type => 'pool_knockout');
+    PERFORM pg_temp.staff_off(v_organizer);
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
     PERFORM public.tournament_open_registration(v_t.id, v_ver);
     FOR i IN 1..8 LOOP
@@ -185,7 +190,6 @@ BEGIN
         RAISE EXCEPTION 'pool2: h should be last';
     END IF;
 
-    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'PASS: win ordering, h2h precedence, seed fallback';
 END;
 $$;
@@ -211,6 +215,7 @@ BEGIN
         '[TEST-PK] Forfait', pg_temp.tennis_sport(), 8::smallint,
         now() + interval '7 days', now() + interval '21 days',
         p_bracket_type => 'pool_knockout');
+    PERFORM pg_temp.staff_off(v_organizer);
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
     PERFORM public.tournament_open_registration(v_t.id, v_ver);
     FOR i IN 1..6 LOOP
@@ -333,7 +338,6 @@ BEGIN
         IF SQLERRM <> 'NOT_POOL_TOURNAMENT' THEN RAISE; END IF;
     END;
 
-    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'tournament_pool_standings_test: ALL PASS';
 END;
 $$;

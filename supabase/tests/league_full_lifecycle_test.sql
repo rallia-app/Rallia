@@ -63,6 +63,24 @@ CREATE OR REPLACE FUNCTION pg_temp.derived_byer(p_session uuid) RETURNS uuid LAN
               AND sp.user_id = ANY (sm.team_a_user_ids || sm.team_b_user_ids));
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_sport   uuid;
@@ -94,9 +112,11 @@ BEGIN
     -- ACT 1 — birth: approval league, capacity 6, waitlist; F ends up queued
     -- ======================================================================
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_l FROM league_create(
         p_name => '[LIFE] Full Cycle', p_sport_id => v_sport,
         p_visibility => 'public', p_join_mode => 'approval');
+    PERFORM pg_temp.staff_off(v_org);
     SELECT * INTO v_l FROM league_update(v_l.id, v_l.version,
         jsonb_build_object('member_capacity', 6, 'waitlist_enabled', true));
 

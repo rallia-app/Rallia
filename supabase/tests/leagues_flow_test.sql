@@ -9,6 +9,24 @@
 
 BEGIN;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- --------------------------------------------------------------------------
 -- 1. league_create -> organizer member; approval join -> pending -> approved
 -- --------------------------------------------------------------------------
@@ -29,9 +47,11 @@ BEGIN
     v_org := v_players[1];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(
         p_name => 'Summer Ladder', p_sport_id => v_sport,
         p_visibility => 'public', p_join_mode => 'approval');
+    PERFORM pg_temp.staff_off(v_org);
     ASSERT v_league.organizer_id = v_org, 'organizer_id mismatch';
     ASSERT EXISTS (
         SELECT 1 FROM league_members
@@ -66,9 +86,11 @@ BEGIN
     v_org := v_players[1];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(
         p_name => 'Season Test League', p_sport_id => v_sport,
         p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[2]::text)::text, true);
     PERFORM league_join(v_league.id);
@@ -107,8 +129,10 @@ BEGIN
     v_org := v_players[1]; v_outsider := v_players[4];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(
         p_name => 'Auth League', p_sport_id => v_sport, p_join_mode => 'approval');
+    PERFORM pg_temp.staff_off(v_org);
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[2]::text)::text, true);
     SELECT * INTO v_member FROM league_join(v_league.id);
@@ -141,11 +165,13 @@ BEGIN
     v_org := v_players[1]; v_outsider := v_players[5];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(
         p_name => 'Public Roster League',
         p_sport_id => v_sport,
         p_visibility => 'public',
         p_join_mode => 'approval');
+    PERFORM pg_temp.staff_off(v_org);
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[2]::text)::text, true);
     SELECT * INTO v_active_member FROM league_join(v_league.id);
@@ -201,9 +227,11 @@ BEGIN
 
     -- Open-join league so members land active without approval.
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(
         p_name => 'V7 Session League', p_sport_id => v_sport,
         p_visibility => 'public', p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_m1::text)::text, true);
     PERFORM league_join(v_league.id);
@@ -302,8 +330,10 @@ BEGIN
     v_org := v_players[6];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(p_name=>'V8 Sheet Test', p_sport_id=>v_sport,
         p_visibility=>'public', p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     FOR i IN 1..5 LOOP
         PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[i]::text)::text, true);
         PERFORM league_join(v_league.id);
@@ -402,8 +432,10 @@ BEGIN
     v_org := v_players[5];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(p_name=>'V9 Season Cycle', p_sport_id=>v_sport,
         p_visibility=>'public', p_join_mode=>'open');
+    PERFORM pg_temp.staff_off(v_org);
     FOR i IN 1..3 LOOP
         PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[i]::text)::text, true);
         PERFORM league_join(v_league.id);
@@ -474,8 +506,10 @@ BEGIN
     v_org:=v_players[4]; v_p1:=v_players[1]; v_p2:=v_players[2]; v_p3:=v_players[3];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_league FROM league_create(p_name=>'Invite Cycle', p_sport_id=>v_sport,
         p_visibility=>'private', p_join_mode=>'approval');
+    PERFORM pg_temp.staff_off(v_org);
 
     -- invite p1 + p2 (pending, invited_by set, invitation notif each)
     SELECT league_invite_members(v_league.id, ARRAY[v_p1, v_p2]) INTO v_n;

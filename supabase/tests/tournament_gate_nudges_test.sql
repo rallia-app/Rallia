@@ -37,6 +37,24 @@ LANGUAGE sql AS $$
      AND n.payload->>'gate' = p_gate;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_p       uuid[];
@@ -61,10 +79,12 @@ BEGIN
 
     -- ---- T1: pool tournament, registration closed, nothing drawn ----------
     PERFORM pg_temp.as_user(v_org1);
+    PERFORM pg_temp.staff_on(v_org1);
     SELECT * INTO v_row FROM public.tournament_create(
         '[TEST-GATE] Pools', (SELECT id FROM sport WHERE name = 'tennis'),
         8::smallint, now() + interval '5 days', now() + interval '25 days',
         p_bracket_type => 'pool_knockout');
+    PERFORM pg_temp.staff_off(v_org1);
     v_t1 := v_row.id;
     INSERT INTO tournament_co_organizers (tournament_id, user_id, added_by)
     VALUES (v_t1, v_coorg, v_org1);
@@ -95,10 +115,12 @@ BEGIN
 
     -- ---- T2: too few entrants for pools to be generatable at all ---------
     PERFORM pg_temp.as_user(v_org2);
+    PERFORM pg_temp.staff_on(v_org2);
     SELECT * INTO v_row FROM public.tournament_create(
         '[TEST-GATE] Too small', (SELECT id FROM sport WHERE name = 'tennis'),
         8::smallint, now() + interval '5 days', now() + interval '25 days',
         p_bracket_type => 'pool_knockout');
+    PERFORM pg_temp.staff_off(v_org2);
     v_t2 := v_row.id;
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t2;
     PERFORM public.tournament_open_registration(v_t2, v_ver);
@@ -141,10 +163,12 @@ BEGIN
 
     -- ---- T3: single elimination stalls at the same gate -------------------
     PERFORM pg_temp.as_user(v_org3);
+    PERFORM pg_temp.staff_on(v_org3);
     SELECT * INTO v_row FROM public.tournament_create(
         '[TEST-GATE] Bracket', (SELECT id FROM sport WHERE name = 'tennis'),
         4::smallint, now() + interval '5 days', now() + interval '25 days',
         p_bracket_type => 'single_elimination');
+    PERFORM pg_temp.staff_off(v_org3);
     v_t3 := v_row.id;
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t3;
     PERFORM public.tournament_open_registration(v_t3, v_ver);

@@ -31,6 +31,24 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_players  uuid[];
@@ -50,6 +68,7 @@ BEGIN
     -- 1. create with an override: the named keys win, the rest survive
     -- ---------------------------------------------------------------------
     -- The wizard cascades the walkover/retirement variants with win/loss;
+    PERFORM pg_temp.staff_on(v_org);
     -- direct callers must do the same or be refused (asserted in step 2b).
     v_league := public.league_create(
         p_name           => 'Rules config test',
@@ -58,6 +77,7 @@ BEGIN
                               "pointRetirementWinner": 3, "pointWalkoverWinner": 3,
                               "pointRetirementLoser": 0, "pointWalkoverLoser": 0}'::jsonb
     );
+    PERFORM pg_temp.staff_off(v_org);
 
     IF (v_league.default_rules ->> 'pointWin')::int <> 3
        OR (v_league.default_rules ->> 'pointLoss')::int <> 0
@@ -74,10 +94,12 @@ BEGIN
     -- 2. create refuses rules the recalc could not sum
     -- ---------------------------------------------------------------------
     BEGIN
+        PERFORM pg_temp.staff_on(v_org);
         PERFORM public.league_create(
             p_name           => 'Bad rules',
             p_sport_id       => v_sport,
             p_rules_override => '{"pointWin": "lots"}'::jsonb);
+        PERFORM pg_temp.staff_off(v_org);
         RAISE EXCEPTION 'create accepted a non-numeric point value';
     EXCEPTION WHEN SQLSTATE 'P0001' THEN
         IF SQLERRM <> 'INVALID_RULES:pointWin' THEN RAISE; END IF;
@@ -89,10 +111,12 @@ BEGIN
     --     better outcome; the validator refuses the paradox
     -- ---------------------------------------------------------------------
     BEGIN
+        PERFORM pg_temp.staff_on(v_org);
         PERFORM public.league_create(
             p_name           => 'Forfeit paradox',
             p_sport_id       => v_sport,
             p_rules_override => '{"pointWin": 3}'::jsonb);
+        PERFORM pg_temp.staff_off(v_org);
         RAISE EXCEPTION 'a walkover paying more than a win was accepted';
     EXCEPTION WHEN SQLSTATE 'P0001' THEN
         IF SQLERRM NOT LIKE 'INVALID_RULES:%' THEN RAISE; END IF;

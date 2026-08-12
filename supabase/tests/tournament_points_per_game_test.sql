@@ -24,6 +24,24 @@
 
 BEGIN;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.as_user(p_user uuid) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -49,33 +67,39 @@ BEGIN
 
     PERFORM pg_temp.as_user(v_org);
 
+    PERFORM pg_temp.staff_on(v_org);
     -- ---------------- the format the fused enum could not express ----------
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Points — best of 3 to 11', p_sport_id => v_pickle,
         p_max_participants => 4::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
         p_match_format => 'two_of_three', p_points_per_game => 11::smallint);
+    PERFORM pg_temp.staff_off(v_org);
     ASSERT v_t.match_format = 'two_of_three',
         format('the games axis must survive, got %s', v_t.match_format);
     ASSERT v_t.points_per_game = 11,
         format('the points axis must survive, got %s', v_t.points_per_game);
 
+    PERFORM pg_temp.staff_on(v_org);
     -- ---------------- a legacy fused label is split, never stored ----------
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Points — legacy label', p_sport_id => v_pickle,
         p_max_participants => 4::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
         p_match_format => 'pickleball_to_15');
+    PERFORM pg_temp.staff_off(v_org);
     ASSERT v_t.match_format = 'two_of_three',
         format('a fused label must be split, got %s', v_t.match_format);
     ASSERT v_t.points_per_game = 15,
         format('the fused target must land in its own column, got %s', v_t.points_per_game);
 
+    PERFORM pg_temp.staff_on(v_org);
     -- ---------------- defaults per sport -----------------------------------
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Points — pickleball default', p_sport_id => v_pickle,
         p_max_participants => 4::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days');
+    PERFORM pg_temp.staff_off(v_org);
     ASSERT v_t.points_per_game = 11,
         format('pickleball must default to 11, got %s', v_t.points_per_game);
     ASSERT v_t.match_format = 'two_of_three',
@@ -83,11 +107,13 @@ BEGIN
 
     -- ---------------- an off-list target is refused ------------------------
     BEGIN
+        PERFORM pg_temp.staff_on(v_org);
         PERFORM tournament_create(
             p_name => 'Points — bad target', p_sport_id => v_pickle,
             p_max_participants => 4::smallint,
             p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
             p_points_per_game => 9::smallint);
+        PERFORM pg_temp.staff_off(v_org);
         v_err := 'no error';
     EXCEPTION WHEN OTHERS THEN v_err := SQLERRM;
     END;
@@ -136,10 +162,12 @@ BEGIN
     v_org := v_p[41];
 
     PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Points — tennis', p_sport_id => v_tennis,
         p_max_participants => 4::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days');
+    PERFORM pg_temp.staff_off(v_org);
     ASSERT v_t.points_per_game IS NULL,
         format('tennis must carry no points target, got %s', v_t.points_per_game);
 

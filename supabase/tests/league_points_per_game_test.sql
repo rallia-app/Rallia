@@ -41,9 +41,11 @@ BEGIN
     SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
 
     PERFORM pg_temp.as_user(p_org);
+    PERFORM pg_temp.staff_on(p_org);
     v_league := public.league_create(
         p_name => p_name, p_sport_id => v_sport,
         p_join_mode => 'open', p_rules_override => p_rules);
+    PERFORM pg_temp.staff_off(p_org);
 
     PERFORM pg_temp.as_user(p_opponent);
     PERFORM public.league_join(v_league.id);
@@ -76,6 +78,24 @@ BEGIN
       FROM season_rankings sr
      WHERE sr.season_id = v_season.id;
 END;
+$$;
+
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
 $$;
 
 DO $$
