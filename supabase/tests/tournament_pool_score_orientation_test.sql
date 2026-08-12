@@ -146,25 +146,30 @@ BEGIN
 
     UPDATE tournament_matches SET match_id = v_match WHERE id = v_tm;
 
-    -- Team 1 (bracket player2) wins 6-3 6-4.
+    -- Team 1 (bracket player2) wins 6-3 6-4. Model the real order: the result
+    -- and its sets land unverified, then the opponent confirms, and the
+    -- lt_match_result_propagation trigger does the work. Inserting an already
+    -- verified result first fires the trigger while match_set is still empty,
+    -- which completes the bracket row with a NULL score.
     INSERT INTO match_result (match_id, winning_team, team1_score, team2_score,
-                              submitted_by, is_verified, confirmed_by)
-    VALUES (v_match, 1, 2, 0, v_ps[2], true, v_ps[1])
+                              submitted_by, is_verified)
+    VALUES (v_match, 1, 2, 0, v_ps[2], false)
     RETURNING id INTO v_mr;
     INSERT INTO match_set (match_result_id, set_number, team1_score, team2_score)
     VALUES (v_mr, 1, 6, 3), (v_mr, 2, 6, 4);
 
-    PERFORM public.lt_propagate_match_result_to_bracket(v_mr);
+    UPDATE match_result SET is_verified = true, confirmed_by = v_ps[1], verified_at = now()
+     WHERE id = v_mr;
 
     SELECT score, winner_registration_id INTO v_score, v_win
       FROM tournament_matches WHERE id = v_tm;
 
-    IF v_win <> v_r2 THEN
+    IF v_win IS DISTINCT FROM v_r2 THEN
         RAISE EXCEPTION 'bridge picked the wrong winner';
     END IF;
     -- player1 lost, so player1-first storage must read 3-6 4-6.
-    IF v_score <> '3-6 4-6' THEN
-        RAISE EXCEPTION 'bridge stored "%", expected "3-6 4-6" (player1 first)', v_score;
+    IF v_score IS DISTINCT FROM '3-6 4-6' THEN
+        RAISE EXCEPTION 'bridge stored %, expected "3-6 4-6" (player1 first)', coalesce('"'||v_score||'"','NULL');
     END IF;
 
     RAISE NOTICE 'PASS: the bridge orients a linked score onto the player1 slot';
