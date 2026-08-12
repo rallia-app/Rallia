@@ -10892,6 +10892,7 @@ export type Database = {
       get_my_points_to_defend: {
         Args: { p_within_days?: number }
         Returns: {
+          board: string
           counts_now: boolean
           days_remaining: number
           earned_at: string

@@ -21,6 +21,15 @@
 /** Points a champion earns at multiplier 1.0 — mirrors lt_champion_base(). */
 export const CHAMPION_BASE_POINTS = 500;
 
+/**
+ * Showing up pays this, flat, in every category. The award applies the
+ * multiplier to the win rungs ONLY (`CASE WHEN placement = 'participated'
+ * THEN 10 ELSE round(base × multiplier / 10) × 10`, migration 20260720180000),
+ * because showing up is the same act whatever the field. Scaling it here would
+ * have advertised 200 on an Avancé ×10 event that pays 10.
+ */
+export const PARTICIPATION_POINTS = 10;
+
 export interface TournamentRankingPointsInput {
   /** Stamped at bracket generation; null until then. */
   ranking_multiplier: number | null;
@@ -79,13 +88,15 @@ export const PLACEMENT_BASE_POINTS: Record<TournamentPlacement, number> = {
   round_of_16: 50,
   round_of_32: 30,
   round_of_64: 25,
-  participated: 20,
+  participated: PARTICIPATION_POINTS,
 };
 
 /**
- * `minCapacity` is the smallest bracket the rung exists in. The award reads
- * depth off `final_round`, which is the CAPACITY depth (log2 max_participants),
- * not the number of entrants — so an under-filled 32-cap event still pays R16.
+ * `minCapacity` is the smallest DRAW the rung exists in. The award reads depth
+ * off `final_round`, the generated bracket's own depth. For single elimination
+ * that is the capacity (the bracket is built at `max_participants`, so an
+ * under-filled 32-cap event still pays R16). For pool_knockout the tree is
+ * sized from the qualifier count instead — see `poolKnockoutDrawSize`.
  */
 const LADDER_ORDER: { placement: TournamentPlacement; minCapacity: number }[] = [
   { placement: 'champion', minCapacity: 2 },
@@ -121,10 +132,46 @@ export interface TournamentPointsLadder {
 }
 
 export interface TournamentPointsLadderInput extends TournamentRankingPointsInput {
-  /** Bracket capacity (4…128). Sets how deep the ladder goes. */
+  /** Field capacity. Single elim 4…128; pool_knockout 8/12/16/20/24/32. */
   max_participants: number;
   /** Double elimination collapses the middle placements — see below. */
   bracket_type?: string | null;
+  /** pool_knockout only: entrants per pool (3…5), default 4. */
+  pool_size?: number | null;
+  /** pool_knockout only: how many advance out of each pool (1 or 2), default 2. */
+  qualifiers_per_pool?: number | null;
+}
+
+/**
+ * Deepest knockout tree a pool event can produce, at full capacity.
+ *
+ * A pool tournament's tree is NOT built at `max_participants`: only the
+ * qualifiers reach it, so a 16-player, 4-per-pool, 2-qualify event plays an
+ * 8-team knockout whose first round is the quarterfinal. Advertising a round
+ * of 16 there would promise points no entrant can reach.
+ *
+ * Pool count mirrors `_lt_compute_pool_assignment` (migration 20260810170100):
+ * `ceil(n / pool_size)`, pulled back to `floor(n / 3)` when that would leave
+ * pools of fewer than three. Capacity is an upper bound on turnout, so this is
+ * an upper bound on the tree, which is the same promise `ranking_points_ceiling`
+ * makes: the value at a full field.
+ */
+export function poolKnockoutDrawSize(
+  maxParticipants: number,
+  poolSize: number = 4,
+  qualifiersPerPool: number = 2
+): number {
+  if (maxParticipants < 6 || poolSize < 3) return 2;
+
+  let pools = Math.ceil(maxParticipants / poolSize);
+  if (Math.floor(maxParticipants / pools) < 3) {
+    pools = Math.floor(maxParticipants / 3);
+  }
+
+  const qualifiers = Math.max(2, pools * qualifiersPerPool);
+  let size = 2;
+  while (size < qualifiers) size *= 2;
+  return size;
 }
 
 /**
@@ -135,8 +182,12 @@ export interface TournamentPointsLadderInput extends TournamentRankingPointsInpu
  * recovered from the advertised ceiling — the snap to 0.2 steps makes
  * `ceiling / 500` exact, so this never re-derives pricing rules on the client.
  *
- * Rungs are truncated to the bracket capacity: an 8-draw has no round of 16 to
- * reach, so it must not advertise those points.
+ * Rungs are truncated to the draw the format actually produces: an 8-draw has
+ * no round of 16 to reach, so it must not advertise those points. For
+ * pool_knockout that draw is the qualifiers' tree, not the field.
+ *
+ * Participation is the exception to the multiplier: it is flat, always, so the
+ * screen shows the same 10 the award writes.
  *
  * Double elimination only resolves champion / finalist / participated today, so
  * the middle rungs are omitted rather than promised.
@@ -153,15 +204,25 @@ export function tournamentPointsLadder(
     : (t.ranking_multiplier as number);
 
   const doubleElim = t.bracket_type === 'double_elimination';
+  const drawSize =
+    t.bracket_type === 'pool_knockout'
+      ? poolKnockoutDrawSize(
+          t.max_participants,
+          t.pool_size ?? undefined,
+          t.qualifiers_per_pool ?? undefined
+        )
+      : t.max_participants;
 
   const rows = LADDER_ORDER.filter(
     rung =>
-      t.max_participants >= rung.minCapacity &&
-      !(doubleElim && DEPTH_PLACEMENTS.includes(rung.placement))
+      drawSize >= rung.minCapacity && !(doubleElim && DEPTH_PLACEMENTS.includes(rung.placement))
   )
     .map(({ placement }) => ({
       placement,
-      points: Math.round((PLACEMENT_BASE_POINTS[placement] * multiplier) / 10) * 10,
+      points:
+        placement === 'participated'
+          ? PARTICIPATION_POINTS
+          : Math.round((PLACEMENT_BASE_POINTS[placement] * multiplier) / 10) * 10,
     }))
     .filter(row => row.points > 0);
 

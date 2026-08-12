@@ -3,7 +3,9 @@ import { describe, it, expect } from '@jest/globals';
 import {
   tournamentRankingHeadline,
   tournamentPointsLadder,
+  poolKnockoutDrawSize,
   CHAMPION_BASE_POINTS,
+  PARTICIPATION_POINTS,
 } from './rankingPoints';
 
 describe('tournamentRankingHeadline', () => {
@@ -73,7 +75,7 @@ describe('tournamentPointsLadder', () => {
       { placement: 'semifinal', points: 470 },
       { placement: 'quarterfinal', points: 230 },
       { placement: 'round_of_16', points: 130 },
-      { placement: 'participated', points: 50 },
+      { placement: 'participated', points: 10 },
     ]);
     // Avancé (×3.2) and Débutant (×2.0), same draws on staging.
     expect(
@@ -82,14 +84,14 @@ describe('tournamentPointsLadder', () => {
         ranking_points_ceiling: 1600,
         max_participants: 16,
       })?.rows.map(r => r.points)
-    ).toEqual([1600, 960, 580, 290, 160, 60]);
+    ).toEqual([1600, 960, 580, 290, 160, 10]);
     expect(
       tournamentPointsLadder({
         ranking_multiplier: null,
         ranking_points_ceiling: 1000,
         max_participants: 16,
       })?.rows.map(r => r.points)
-    ).toEqual([1000, 600, 360, 180, 100, 40]);
+    ).toEqual([1000, 600, 360, 180, 100, 10]);
   });
 
   it('is the unscaled base ladder at multiplier 1.0', () => {
@@ -99,7 +101,7 @@ describe('tournamentPointsLadder', () => {
         ranking_points_ceiling: 500,
         max_participants: 8,
       })?.rows.map(r => r.points)
-    ).toEqual([500, 300, 180, 90, 20]);
+    ).toEqual([500, 300, 180, 90, 10]);
   });
 
   it('truncates the ladder to the bracket capacity', () => {
@@ -185,14 +187,79 @@ describe('tournamentPointsLadder', () => {
     ).toBeNull();
   });
 
-  it('drops rungs that round away to zero', () => {
-    // ×0.2 floor: participation (20 × 0.2 = 4) rounds to 0 and is not shown.
-    const rows = tournamentPointsLadder({
-      ranking_multiplier: 0.2,
-      ranking_points_ceiling: null,
-      max_participants: 8,
-    })?.rows;
-    expect(rows?.map(r => r.placement)).not.toContain('participated');
-    expect(rows?.map(r => r.points)).toEqual([100, 60, 40, 20]);
+  it('never scales participation, in either direction', () => {
+    // The award pays a flat 10 for showing up whatever the category, so the
+    // rung must not move with the multiplier. At ×10 the old scaled value
+    // advertised 200 against an award of 10.
+    const participation = (ranking_multiplier: number) =>
+      tournamentPointsLadder({
+        ranking_multiplier,
+        ranking_points_ceiling: null,
+        max_participants: 8,
+      })?.rows.find(r => r.placement === 'participated')?.points;
+
+    expect(participation(0.2)).toBe(PARTICIPATION_POINTS);
+    expect(participation(1.0)).toBe(PARTICIPATION_POINTS);
+    expect(participation(10)).toBe(PARTICIPATION_POINTS);
+    expect(PARTICIPATION_POINTS).toBe(10);
+
+    // The floor case still bottoms out above participation: a quarterfinal at
+    // ×0.2 pays 20, so no win ever pays less than showing up.
+    expect(
+      tournamentPointsLadder({
+        ranking_multiplier: 0.2,
+        ranking_points_ceiling: null,
+        max_participants: 8,
+      })?.rows.map(r => r.points)
+    ).toEqual([100, 60, 40, 20, 10]);
+  });
+
+  it('sizes a pool ladder off the qualifiers, not the field', () => {
+    // 16 players, 4 pools of 4, 2 through: an 8-team tree whose first round is
+    // the quarterfinal. A round of 16 is unreachable and must not be promised.
+    const pool = (max_participants: number, qualifiers_per_pool = 2) =>
+      tournamentPointsLadder({
+        ranking_multiplier: 1.0,
+        ranking_points_ceiling: null,
+        max_participants,
+        bracket_type: 'pool_knockout',
+        pool_size: 4,
+        qualifiers_per_pool,
+      })?.rows.map(r => r.placement);
+
+    expect(pool(16)).toEqual(['champion', 'finalist', 'semifinal', 'quarterfinal', 'participated']);
+    // Same capacity as a single-elim 16-draw, which DOES reach the round of 16.
+    expect(
+      tournamentPointsLadder({
+        ranking_multiplier: 1.0,
+        ranking_points_ceiling: null,
+        max_participants: 16,
+      })?.rows.map(r => r.placement)
+    ).toContain('round_of_16');
+
+    // 24 and 32 both make a 16-team tree; 8 and 12 stop at the quarterfinal.
+    expect(pool(24)).toContain('round_of_16');
+    expect(pool(32)).toContain('round_of_16');
+    expect(pool(32)).not.toContain('round_of_32');
+    expect(pool(12)).not.toContain('round_of_16');
+    expect(pool(8)).toEqual(['champion', 'finalist', 'semifinal', 'participated']);
+
+    // One per pool halves the tree.
+    expect(pool(16, 1)).toEqual(['champion', 'finalist', 'semifinal', 'participated']);
+  });
+
+  it('pins the pool draw sizes against _lt_compute_pool_assignment', () => {
+    // ceil(n / pool_size), pulled back to floor(n / 3) when pools would be
+    // smaller than three. Drift here silently mis-advertises a whole format.
+    expect(poolKnockoutDrawSize(8, 4, 2)).toBe(4);
+    expect(poolKnockoutDrawSize(12, 4, 2)).toBe(8);
+    expect(poolKnockoutDrawSize(16, 4, 2)).toBe(8);
+    expect(poolKnockoutDrawSize(20, 4, 2)).toBe(16);
+    expect(poolKnockoutDrawSize(24, 4, 2)).toBe(16);
+    expect(poolKnockoutDrawSize(32, 4, 2)).toBe(16);
+    // pool_size 3 on an 8 field would give pools of 3/3/2, so it falls back to
+    // two pools of four.
+    expect(poolKnockoutDrawSize(8, 3, 2)).toBe(4);
+    expect(poolKnockoutDrawSize(16, 5, 2)).toBe(8);
   });
 });
