@@ -46,6 +46,8 @@ import {
   WizardFooter,
   WizardOptionCard as OptionCard,
   WizardFieldLabel as FieldLabel,
+  WizardRatingBoundPicker,
+  type WizardRatingOption,
 } from '@rallia/shared-components';
 import {
   lightTheme,
@@ -321,6 +323,12 @@ export interface TournamentCreationWizardProps {
   onShareInvite?: (tournamentId: string) => void;
   /** When present, the wizard runs in edit mode against this tournament. */
   editTournament?: TournamentEditData;
+  /**
+   * Structure chosen upstream by the event format picker. Seeds the field on
+   * step 2 (still editable there) and the default draw size that goes with it.
+   * Ignored in edit mode, where the saved tournament wins.
+   */
+  initialStructure?: Structure;
 }
 
 // =============================================================================
@@ -710,98 +718,6 @@ const LocationSection: React.FC<{
   );
 };
 
-type RatingOption = {
-  value: number;
-  label: string;
-  skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
-  id: string;
-};
-
-/** One bound of the rating band: the sport's tiers plus a "no bound" card. */
-const RatingBoundPicker: React.FC<{
-  label: string;
-  noneLabel: string;
-  hint: string;
-  value: number | null;
-  onChange: (v: number | null) => void;
-  options: RatingOption[];
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({ label, noneLabel, hint, value, onChange, options, colors, t }) => (
-  <View style={styles.fieldGroup}>
-    <FieldLabel colors={colors}>{label}</FieldLabel>
-    <GestureScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.ratingScrollContent}
-      nestedScrollEnabled
-    >
-      <TouchableOpacity
-        onPress={() => {
-          lightHaptic();
-          onChange(null);
-        }}
-        activeOpacity={0.7}
-        style={[
-          styles.ratingCard,
-          {
-            backgroundColor: value === null ? `${colors.buttonActive}15` : colors.buttonInactive,
-            borderColor: value === null ? colors.buttonActive : colors.border,
-          },
-        ]}
-      >
-        <Text
-          size="sm"
-          weight={value === null ? 'bold' : 'regular'}
-          color={value === null ? colors.buttonActive : colors.text}
-        >
-          {noneLabel}
-        </Text>
-      </TouchableOpacity>
-      {options.map(opt => {
-        const selected = value === opt.value;
-        return (
-          <TouchableOpacity
-            key={opt.id}
-            onPress={() => {
-              lightHaptic();
-              onChange(opt.value);
-            }}
-            activeOpacity={0.7}
-            style={[
-              styles.ratingCard,
-              {
-                backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-                borderColor: selected ? colors.buttonActive : colors.border,
-              },
-            ]}
-          >
-            <Text
-              size="base"
-              weight={selected ? 'bold' : 'semibold'}
-              color={selected ? colors.buttonActive : colors.text}
-            >
-              {opt.label}
-            </Text>
-            {opt.skillLevel && (
-              <Text
-                size="xs"
-                color={selected ? colors.buttonActive : colors.textMuted}
-                style={styles.ratingSkillLevel}
-              >
-                {t(`matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey)}
-              </Text>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </GestureScrollView>
-    <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-      {hint}
-    </Text>
-  </View>
-);
-
 const DetailsStep: React.FC<{
   /** Which form step to render: 1 Basics, 2 Format. */
   step: number;
@@ -814,12 +730,7 @@ const DetailsStep: React.FC<{
   setMinRating: (v: number | null) => void;
   maxRating: number | null;
   setMaxRating: (v: number | null) => void;
-  ratingOptions: {
-    value: number;
-    label: string;
-    skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
-    id: string;
-  }[];
+  ratingOptions: WizardRatingOption[];
   /** Location capture, rendered on step 1 only. */
   location: React.ComponentProps<typeof LocationSection>;
   /** Poster/logo is edit-only too (uploaded to the tournament-logos bucket). */
@@ -1495,7 +1406,7 @@ const DetailsStep: React.FC<{
 
           {canEditStructure && ratingOptions.length > 0 && (
             <>
-              <RatingBoundPicker
+              <WizardRatingBoundPicker
                 label={t('tournamentCreation.fields.minLevel' as TranslationKey)}
                 noneLabel={t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
                 hint={t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
@@ -1508,9 +1419,8 @@ const DetailsStep: React.FC<{
                 }}
                 options={ratingOptions}
                 colors={colors}
-                t={t}
               />
-              <RatingBoundPicker
+              <WizardRatingBoundPicker
                 label={t('tournamentCreation.fields.maxLevel' as TranslationKey)}
                 noneLabel={t('tournamentCreation.fields.maxLevelNone' as TranslationKey)}
                 hint={t('tournamentCreation.fields.maxLevelHint' as TranslationKey)}
@@ -1522,7 +1432,6 @@ const DetailsStep: React.FC<{
                     : ratingOptions.filter(o => o.value >= minRating)
                 }
                 colors={colors}
-                t={t}
               />
             </>
           )}
@@ -2095,6 +2004,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   onSuccess,
   onShareInvite,
   editTournament,
+  initialStructure,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -2154,17 +2064,25 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       ratingScores.map(r => ({
         value: r.value,
         label: r.label,
-        skillLevel: r.skillLevel,
+        skillLabel: r.skillLevel
+          ? t(`matchCreation.fields.skillLevelAbbr.${r.skillLevel}` as TranslationKey)
+          : null,
         id: r.id,
       })),
-    [ratingScores]
+    [ratingScores, t]
   );
+  // Creation arrives with the structure already chosen (the format picker is
+  // that choice); edit always reads the saved tournament.
+  const seedStructure: Structure = editTournament
+    ? editTournament.bracketType === 'pool_knockout'
+      ? 'pool_knockout'
+      : 'single_elimination'
+    : (initialStructure ?? 'single_elimination');
   const [bracketSize, setBracketSize] = useState<BracketSize>(
-    (editTournament?.maxParticipants as BracketSize) ?? 8
+    (editTournament?.maxParticipants as BracketSize) ??
+      ((seedStructure === 'pool_knockout' ? 16 : 8) as BracketSize)
   );
-  const [structure, setStructureState] = useState<Structure>(
-    editTournament?.bracketType === 'pool_knockout' ? 'pool_knockout' : 'single_elimination'
-  );
+  const [structure, setStructureState] = useState<Structure>(seedStructure);
   // Switching structure snaps the field size to the nearest valid option.
   const setStructure = useCallback((s: Structure) => {
     setStructureState(s);

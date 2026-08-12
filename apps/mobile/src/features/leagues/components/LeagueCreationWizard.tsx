@@ -37,6 +37,8 @@ import {
   WizardFooter,
   WizardOptionCard as OptionCard,
   WizardFieldLabel as FieldLabel,
+  WizardRatingBoundPicker,
+  type WizardRatingOption,
 } from '@rallia/shared-components';
 import {
   lightTheme,
@@ -396,94 +398,12 @@ const VisibilityStep: React.FC<{
   </SheetScrollView>
 );
 
-const RatingTierRow: React.FC<{
-  label: string;
-  noneLabel: string;
-  value: number | null;
-  setValue: (v: number | null) => void;
-  ratingOptions: { id: string; value: number; label: string; skillLevel: string | null }[];
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-  testID?: string;
-}> = ({ label, noneLabel, value, setValue, ratingOptions, colors, t, testID }) => (
-  <View style={styles.fieldGroup}>
-    <FieldLabel colors={colors}>{label}</FieldLabel>
-    <GestureScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.ratingScrollContent}
-      nestedScrollEnabled
-      testID={testID}
-    >
-      <TouchableOpacity
-        onPress={() => {
-          lightHaptic();
-          setValue(null);
-        }}
-        activeOpacity={0.7}
-        style={[
-          styles.ratingCard,
-          {
-            backgroundColor: value === null ? `${colors.buttonActive}15` : colors.buttonInactive,
-            borderColor: value === null ? colors.buttonActive : colors.border,
-          },
-        ]}
-      >
-        <Text
-          size="sm"
-          weight={value === null ? 'bold' : 'regular'}
-          color={value === null ? colors.buttonActive : colors.text}
-        >
-          {noneLabel}
-        </Text>
-      </TouchableOpacity>
-      {ratingOptions.map(opt => {
-        const selected = value === opt.value;
-        return (
-          <TouchableOpacity
-            key={opt.id}
-            onPress={() => {
-              lightHaptic();
-              setValue(opt.value);
-            }}
-            activeOpacity={0.7}
-            style={[
-              styles.ratingCard,
-              {
-                backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-                borderColor: selected ? colors.buttonActive : colors.border,
-              },
-            ]}
-          >
-            <Text
-              size="base"
-              weight={selected ? 'bold' : 'semibold'}
-              color={selected ? colors.buttonActive : colors.text}
-            >
-              {opt.label}
-            </Text>
-            {opt.skillLevel && (
-              <Text
-                size="xs"
-                color={selected ? colors.buttonActive : colors.textMuted}
-                style={styles.ratingSkillLevel}
-              >
-                {t(`matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey)}
-              </Text>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </GestureScrollView>
-  </View>
-);
-
 const EligibilityStep: React.FC<{
   minRating: number | null;
   setMinRating: (v: number | null) => void;
   maxRating: number | null;
   setMaxRating: (v: number | null) => void;
-  ratingOptions: { id: string; value: number; label: string; skillLevel: string | null }[];
+  ratingOptions: WizardRatingOption[];
   capacityInput: string;
   setCapacityInput: (v: string) => void;
   waitlistEnabled: boolean;
@@ -526,24 +446,22 @@ const EligibilityStep: React.FC<{
 
     {ratingOptions.length > 0 ? (
       <>
-        <RatingTierRow
+        <WizardRatingBoundPicker
           label={t('leagueCreation.fields.minRating' as TranslationKey)}
           noneLabel={t('leagueCreation.fields.minRatingNone' as TranslationKey)}
           value={minRating}
-          setValue={setMinRating}
-          ratingOptions={ratingOptions}
+          onChange={setMinRating}
+          options={ratingOptions}
           colors={colors}
-          t={t}
           testID="league-min-rating"
         />
-        <RatingTierRow
+        <WizardRatingBoundPicker
           label={t('leagueCreation.fields.maxRating' as TranslationKey)}
           noneLabel={t('leagueCreation.fields.maxRatingNone' as TranslationKey)}
           value={maxRating}
-          setValue={setMaxRating}
-          ratingOptions={ratingOptions}
+          onChange={setMaxRating}
+          options={ratingOptions}
           colors={colors}
-          t={t}
           testID="league-max-rating"
         />
         {errors.ratingRange && (
@@ -721,9 +639,11 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         id: r.id,
         value: r.value,
         label: r.label,
-        skillLevel: r.skillLevel,
+        skillLabel: r.skillLevel
+          ? t(`matchCreation.fields.skillLevelAbbr.${r.skillLevel}` as TranslationKey)
+          : null,
       })),
-    [ratingScores]
+    [ratingScores, t]
   );
 
   // Pick + crop only — the upload is deferred to submit (handleSubmit) so an

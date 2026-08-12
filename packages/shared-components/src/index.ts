@@ -115,6 +115,7 @@ export {
   WizardFooter,
   WizardOptionCard,
   WizardFieldLabel,
+  WizardRatingBoundPicker,
 } from './wizard';
 export type {
   WizardColors,
@@ -122,6 +123,8 @@ export type {
   WizardProgressBarProps,
   WizardFooterProps,
   WizardOptionCardProps,
+  WizardRatingBoundPickerProps,
+  WizardRatingOption,
 } from './wizard';
 
 // Event list primitives — format-neutral card chrome for tournaments, leagues

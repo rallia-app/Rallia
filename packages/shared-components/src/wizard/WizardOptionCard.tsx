@@ -21,6 +21,12 @@ export interface WizardOptionCardProps {
   onPress: () => void;
   colors: WizardColors;
   compact?: boolean;
+  /**
+   * Decision facts listed under the description, one per line. For choices
+   * where the trade-off is what the reader is actually comparing (which event
+   * format to run), rather than a one-line enum.
+   */
+  facts?: string[];
   testID?: string;
 }
 
@@ -32,6 +38,7 @@ export const WizardOptionCard: React.FC<WizardOptionCardProps> = ({
   onPress,
   colors,
   compact = false,
+  facts,
   testID,
 }) => (
   <TouchableOpacity
@@ -81,6 +88,22 @@ export const WizardOptionCard: React.FC<WizardOptionCardProps> = ({
               <Text size="xs" color={colors.textMuted}>
                 {description}
               </Text>
+            )}
+            {facts && facts.length > 0 && (
+              <View style={styles.facts}>
+                {facts.map(fact => (
+                  <View key={fact} style={styles.factRow}>
+                    <Ionicons
+                      name="ellipse"
+                      size={4}
+                      color={selected ? colors.buttonActive : colors.textMuted}
+                    />
+                    <Text size="xs" color={colors.textMuted} style={styles.factText}>
+                      {fact}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             )}
           </View>
         </View>
@@ -133,6 +156,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionTextContainer: {
+    flex: 1,
+  },
+  facts: {
+    marginTop: spacingPixels[2],
+    gap: spacingPixels[1],
+  },
+  factRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  factText: {
     flex: 1,
   },
   label: {

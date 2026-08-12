@@ -6,3 +6,16 @@
 
 export { EventListScaffold } from './components/EventListScaffold';
 export type { EventListSection } from './components/EventListScaffold';
+
+export { EventCreationWizard } from './components/EventCreationWizard';
+export type { EventCreationWizardProps } from './components/EventCreationWizard';
+export { EventFormatPicker } from './components/EventFormatPicker';
+
+export {
+  EVENT_KINDS,
+  TOURNAMENT_EVENT_KINDS,
+  eventKindDescriptor,
+  type EventKind,
+  type EventEngine,
+  type EventKindDescriptor,
+} from './eventKinds';

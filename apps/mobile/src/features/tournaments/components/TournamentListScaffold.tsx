@@ -28,7 +28,10 @@ import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import type { TournamentListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import { EventListScaffold, type EventListSection } from '../../events';
+import {
+  EventListScaffold,
+  type EventListSection,
+} from '../../events/components/EventListScaffold';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 
 import { TournamentBanner, TOURNAMENT_BANNER_ASPECT } from './TournamentBanner';

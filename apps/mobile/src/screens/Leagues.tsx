@@ -48,7 +48,7 @@ export const Leagues: React.FC = () => {
   const colors = useEventListColors();
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
-  const { openSheetForLeagueCreation } = useActionsSheet();
+  const { openSheetForEventCreation } = useActionsSheet();
   // Leagues are admin-gated during rollout (ActionsBottomSheet gates the wizard
   // the same way), so only admins see the create button.
   const { isAdmin } = useAdminStatus();
@@ -56,8 +56,8 @@ export const Leagues: React.FC = () => {
   const handleCreate = useCallback(() => {
     void lightHaptic();
     if (!guardAction()) return;
-    openSheetForLeagueCreation();
-  }, [guardAction, openSheetForLeagueCreation]);
+    openSheetForEventCreation(['session_league']);
+  }, [guardAction, openSheetForEventCreation]);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {

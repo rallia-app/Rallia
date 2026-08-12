@@ -131,6 +131,7 @@ import PublicMatches from '#/features/matches/screens/PublicMatches';
 import PlayerMatches from '#/features/matches/screens/PlayerMatches';
 import { FacilitiesDirectory, FacilityDetail } from '#/features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '#/features/bookings';
+import { TOURNAMENT_EVENT_KINDS } from '#/features/events';
 import { InviteReferralScreen } from '#/screens/InviteReferralScreen';
 import { WeeklyCheckInScreen } from '#/features/weekly-checkin/WeeklyCheckInScreen';
 
@@ -671,7 +672,7 @@ function TournamentCreateHeaderButton() {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { guardAction } = useRequireOnboarding();
-  const { openSheetForTournamentCreation } = useActionsSheet();
+  const { openSheetForEventCreation } = useActionsSheet();
   const { isAdmin } = useAdminStatus();
 
   if (!isAdmin) return null;
@@ -681,7 +682,7 @@ function TournamentCreateHeaderButton() {
       onPress={() => {
         if (!guardAction()) return;
         lightHaptic();
-        openSheetForTournamentCreation();
+        openSheetForEventCreation(TOURNAMENT_EVENT_KINDS);
       }}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       style={{ marginRight: spacingPixels[2] }}

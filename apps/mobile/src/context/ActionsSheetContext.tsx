@@ -24,10 +24,12 @@ import React, {
 import { SheetManager } from 'react-native-actions-sheet';
 import { useProfile } from '@rallia/shared-hooks';
 
-import { useAuth } from './AuthContext';
-import type { MatchDetailData } from './MatchDetailSheetContext';
 import type { TournamentEditData } from '../features/tournaments';
+import { EVENT_KINDS, type EventKind } from '../features/events/eventKinds';
 import type { MatchCreationSource } from '../services/analytics';
+
+import type { MatchDetailData } from './MatchDetailSheetContext';
+import { useAuth } from './AuthContext';
 
 // =============================================================================
 // TYPES
@@ -73,11 +75,12 @@ interface ActionsSheetContextType {
   /** Clear the pending pre-fill after the wizard has consumed it */
   clearMatchCreationPrefill: () => void;
 
-  /** Open the Actions bottom sheet directly to tournament creation (skips actions menu) */
-  openSheetForTournamentCreation: () => void;
-
-  /** Open the Actions bottom sheet directly to league creation (skips actions menu) */
-  openSheetForLeagueCreation: () => void;
+  /**
+   * Open the Actions bottom sheet directly to event creation (skips the actions
+   * menu). Pass `kinds` to narrow the formats on offer; a single kind skips the
+   * format picker too and opens that format's wizard.
+   */
+  openSheetForEventCreation: (kinds?: EventKind[]) => void;
 
   /** Open match creation wizard with steps 1–2 pre-filled from a booking (e.g. from facility screen) */
   openSheetForMatchCreationFromBooking: (data: {
@@ -113,17 +116,14 @@ interface ActionsSheetContextType {
   /** Clear the shouldOpenMatchCreation flag after it's been consumed */
   clearMatchCreationFlag: () => void;
 
-  /** Flag to indicate we should open directly to tournament creation wizard */
-  shouldOpenTournamentCreation: boolean;
+  /**
+   * Set when the sheet should open straight into event creation. The array is
+   * the formats on offer; `null` means no request is pending.
+   */
+  pendingEventCreation: EventKind[] | null;
 
-  /** Clear the shouldOpenTournamentCreation flag after it's been consumed */
-  clearTournamentCreationFlag: () => void;
-
-  /** Flag to indicate we should open directly to league creation wizard */
-  shouldOpenLeagueCreation: boolean;
-
-  /** Clear the shouldOpenLeagueCreation flag after it's been consumed */
-  clearLeagueCreationFlag: () => void;
+  /** Clear the pending event-creation request after it's been consumed */
+  clearEventCreationFlag: () => void;
 
   /** Open the Actions bottom sheet directly to invite players wizard (contacts tab) */
   openSheetForInvitePlayers: () => void;
@@ -178,8 +178,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   const [matchCreationPrefill, setMatchCreationPrefill] = useState<MatchCreationPrefill | null>(
     null
   );
-  const [shouldOpenTournamentCreation, setShouldOpenTournamentCreation] = useState(false);
-  const [shouldOpenLeagueCreation, setShouldOpenLeagueCreation] = useState(false);
+  const [pendingEventCreation, setPendingEventCreation] = useState<EventKind[] | null>(null);
 
   // Flag to open directly to invite players wizard (contacts tab)
   const [shouldOpenInvitePlayers, setShouldOpenInvitePlayers] = useState(false);
@@ -310,45 +309,28 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
   }, []);
 
   /**
-   * Open the sheet directly to the tournament creation wizard (skips actions menu)
+   * Open the sheet directly to event creation (skips the actions menu). The
+   * sheet still gates it on admin (events are admin-gated during rollout), so
+   * callers should only surface this to admins.
    */
-  const openSheetForTournamentCreation = useCallback(() => {
-    const mode = computeInitialMode();
-    if (mode !== 'actions') {
-      setContentMode(mode);
-      setShouldOpenTournamentCreation(false);
+  const openSheetForEventCreation = useCallback(
+    (kinds?: EventKind[]) => {
+      const mode = computeInitialMode();
+      if (mode !== 'actions') {
+        setContentMode(mode);
+        setPendingEventCreation(null);
+        SheetManager.show('main-actions');
+        return;
+      }
+      setEditMatchData(null);
+      setInitialBookingForWizard(null);
+      setShouldOpenMatchCreation(false);
+      setPendingEventCreation(kinds ?? EVENT_KINDS.map(d => d.kind));
+      setContentMode('actions');
       SheetManager.show('main-actions');
-      return;
-    }
-    setEditMatchData(null);
-    setInitialBookingForWizard(null);
-    setShouldOpenMatchCreation(false);
-    setShouldOpenTournamentCreation(true);
-    setContentMode('actions');
-    SheetManager.show('main-actions');
-  }, [computeInitialMode]);
-
-  /**
-   * Open the sheet directly to the league creation wizard (skips actions menu).
-   * The sheet still gates the wizard on admin (leagues are admin-gated during
-   * rollout), so callers should only surface this to admins.
-   */
-  const openSheetForLeagueCreation = useCallback(() => {
-    const mode = computeInitialMode();
-    if (mode !== 'actions') {
-      setContentMode(mode);
-      setShouldOpenLeagueCreation(false);
-      SheetManager.show('main-actions');
-      return;
-    }
-    setEditMatchData(null);
-    setInitialBookingForWizard(null);
-    setShouldOpenMatchCreation(false);
-    setShouldOpenTournamentCreation(false);
-    setShouldOpenLeagueCreation(true);
-    setContentMode('actions');
-    SheetManager.show('main-actions');
-  }, [computeInitialMode]);
+    },
+    [computeInitialMode]
+  );
 
   /**
    * Open match creation wizard with steps 1–2 pre-filled from a booking (from facility screen)
@@ -423,12 +405,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     setMatchCreationSource(null);
   }, []);
 
-  const clearTournamentCreationFlag = useCallback(() => {
-    setShouldOpenTournamentCreation(false);
-  }, []);
-
-  const clearLeagueCreationFlag = useCallback(() => {
-    setShouldOpenLeagueCreation(false);
+  const clearEventCreationFlag = useCallback(() => {
+    setPendingEventCreation(null);
   }, []);
 
   /**
@@ -464,8 +442,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       openSheetForEdit,
       openSheetForTournamentEdit,
       openSheetForMatchCreation,
-      openSheetForTournamentCreation,
-      openSheetForLeagueCreation,
+      openSheetForEventCreation,
       openSheetForMatchCreationFromBooking,
       closeSheet,
       contentMode,
@@ -478,10 +455,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       matchCreationPrefill,
       clearMatchCreationPrefill,
       clearMatchCreationFlag,
-      shouldOpenTournamentCreation,
-      clearTournamentCreationFlag,
-      shouldOpenLeagueCreation,
-      clearLeagueCreationFlag,
+      pendingEventCreation,
+      clearEventCreationFlag,
       openSheetForInvitePlayers,
       shouldOpenInvitePlayers,
       clearInvitePlayersFlag,
@@ -493,8 +468,7 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       openSheetForEdit,
       openSheetForTournamentEdit,
       openSheetForMatchCreation,
-      openSheetForTournamentCreation,
-      openSheetForLeagueCreation,
+      openSheetForEventCreation,
       openSheetForMatchCreationFromBooking,
       closeSheet,
       contentMode,
@@ -507,10 +481,8 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
       matchCreationPrefill,
       clearMatchCreationPrefill,
       clearMatchCreationFlag,
-      shouldOpenTournamentCreation,
-      clearTournamentCreationFlag,
-      shouldOpenLeagueCreation,
-      clearLeagueCreationFlag,
+      pendingEventCreation,
+      clearEventCreationFlag,
       openSheetForInvitePlayers,
       shouldOpenInvitePlayers,
       clearInvitePlayersFlag,

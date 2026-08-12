@@ -40,6 +40,7 @@ import {
   type TournamentStatusFilter,
   type TournamentFormatFilter,
 } from '../features/tournaments/components/TournamentFiltersBar';
+import { TOURNAMENT_EVENT_KINDS } from '../features/events';
 import { SearchBar } from '../features/matches/components';
 import { useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport, useActionsSheet } from '../context';
@@ -56,13 +57,13 @@ export const Tournaments: React.FC = () => {
   const colors = useEventListColors();
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
-  const { openSheetForTournamentCreation } = useActionsSheet();
+  const { openSheetForEventCreation } = useActionsSheet();
 
   const handleCreate = useCallback(() => {
     void lightHaptic();
     if (!guardAction()) return;
-    openSheetForTournamentCreation();
-  }, [guardAction, openSheetForTournamentCreation]);
+    openSheetForEventCreation(TOURNAMENT_EVENT_KINDS);
+  }, [guardAction, openSheetForEventCreation]);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {

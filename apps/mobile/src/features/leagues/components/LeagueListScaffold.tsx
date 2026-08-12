@@ -22,7 +22,10 @@ import {
 import type { LeagueListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import { EventListScaffold, type EventListSection } from '../../events';
+import {
+  EventListScaffold,
+  type EventListSection,
+} from '../../events/components/EventListScaffold';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 
 import { LeagueBanner, LEAGUE_BANNER_ASPECT } from './LeagueBanner';
