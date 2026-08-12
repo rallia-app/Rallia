@@ -34,6 +34,20 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"), so the create RPC now refuses a plain player. These
+-- tests still drive everything AFTER creation as an ordinary organizer, so
+-- staff is granted around the create calls and dropped again before the block
+-- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
+-- a lingering row would shift every fixture picked by a later block.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- Settle every pending pool game in seed order: the better-seeded side wins.
 -- Deterministic, so pool ranks are exactly seed order and the qualifiers are
 -- known without naming 48 pairings.
@@ -64,7 +78,11 @@ BEGIN
         ELSE
             v_win := v_tm.player2_registration_id;
         END IF;
-        PERFORM public.tournament_override_score(v_tm.id, v_win, '6-2 6-2');
+        -- Player1-first score text (20260812210000): the winner is whichever
+        -- side is better seeded, so write 6-2 6-2 from player1's point of view.
+        PERFORM public.tournament_override_score(
+            v_tm.id, v_win,
+            CASE WHEN v_win = v_tm.player1_registration_id THEN '6-2 6-2' ELSE '2-6 2-6' END);
     END LOOP;
 END;
 $$;
@@ -87,6 +105,7 @@ BEGIN
     END IF;
     v_organizer := v_players[33];
 
+    PERFORM pg_temp.staff_on(v_organizer);
     PERFORM pg_temp.as_user(v_organizer);
     SELECT * INTO v_t FROM public.tournament_create(
         '[TEST-PK] Draw 32', (SELECT id FROM sport WHERE name = 'tennis'), 32::smallint,
@@ -166,6 +185,7 @@ BEGIN
         RAISE EXCEPTION '% pool(s) had both qualifiers in one half of the draw', v_bad;
     END IF;
 
+    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'tournament_pool_knockout_draw_test: ALL PASS';
 END;
 $$;

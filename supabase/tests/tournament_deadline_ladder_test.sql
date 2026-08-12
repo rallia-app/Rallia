@@ -30,6 +30,20 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"), so the create RPC now refuses a plain player. These
+-- tests still drive everything AFTER creation as an ordinary organizer, so
+-- staff is granted around the create calls and dropped again before the block
+-- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
+-- a lingering row would shift every fixture picked by a later block.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- Build one draw-of-4 free tournament, registration in seed order.
 CREATE OR REPLACE FUNCTION pg_temp.mk_t(p_org uuid, p_players uuid[], p_name text)
 RETURNS uuid LANGUAGE plpgsql AS $$
@@ -37,10 +51,12 @@ DECLARE
     v_t   tournaments;
     v_ver integer;
 BEGIN
+    PERFORM pg_temp.staff_on(p_org);
     PERFORM pg_temp.as_user(p_org);
     SELECT * INTO v_t FROM public.tournament_create(
         p_name, (SELECT id FROM sport WHERE name = 'tennis'), 4::smallint,
         now() + interval '1 day', now() + interval '20 days');
+    PERFORM pg_temp.staff_off(p_org);
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
     PERFORM public.tournament_open_registration(v_t.id, v_ver);
     FOR i IN 1..4 LOOP

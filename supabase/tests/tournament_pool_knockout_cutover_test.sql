@@ -31,6 +31,20 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"), so the create RPC now refuses a plain player. These
+-- tests still drive everything AFTER creation as an ordinary organizer, so
+-- staff is granted around the create calls and dropped again before the block
+-- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
+-- a lingering row would shift every fixture picked by a later block.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.settle_pool(p_t uuid, p_winner uuid, p_loser uuid, p_score text)
 RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
@@ -46,7 +60,14 @@ BEGIN
          OR (r1.user_id, r2.user_id) = (p_loser, p_winner));
     SELECT id INTO v_win FROM tournament_registrations
      WHERE tournament_id = p_t AND user_id = p_winner;
-    PERFORM public.tournament_override_score(v_tm.id, v_win, p_score);
+    -- The score text is player1-first (20260812210000), so a winner-first
+    -- argument is oriented onto the row the way the app's score sheet does.
+    PERFORM public.tournament_override_score(
+        v_tm.id, v_win,
+        CASE WHEN v_win = v_tm.player2_registration_id
+             THEN (SELECT string_agg(split_part(t.s,'-',2)||'-'||split_part(t.s,'-',1), ' ' ORDER BY t.ord)
+                     FROM unnest(string_to_array(p_score,' ')) WITH ORDINALITY AS t(s,ord))
+             ELSE p_score END);
 END;
 $$;
 
@@ -73,6 +94,7 @@ BEGIN
     -- Certified organizer so award runs for real.
     UPDATE player SET is_certified_organizer = true WHERE id = v_organizer;
 
+    PERFORM pg_temp.staff_on(v_organizer);
     PERFORM pg_temp.as_user(v_organizer);
     SELECT * INTO v_t FROM public.tournament_create(
         '[TEST-PK] Cutover', (SELECT id FROM sport WHERE name = 'tennis'), 8::smallint,
@@ -228,6 +250,7 @@ BEGIN
         RAISE EXCEPTION 'expected exactly 4 participated rows, got %', v_cnt;
     END IF;
 
+    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'tournament_pool_knockout_cutover_test: ALL PASS';
 END;
 $$;

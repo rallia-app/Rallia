@@ -29,6 +29,20 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"), so the create RPC now refuses a plain player. These
+-- tests still drive everything AFTER creation as an ordinary organizer, so
+-- staff is granted around the create calls and dropped again before the block
+-- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
+-- a lingering row would shift every fixture picked by a later block.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.tennis_sport() RETURNS uuid LANGUAGE sql AS $$
   SELECT id FROM sport WHERE name = 'tennis';
 $$;
@@ -66,6 +80,11 @@ BEGIN
     END IF;
     v_organizer  := v_players[15];
     v_organizer2 := v_players[16];
+
+    -- Both drive tournament_create below, including the invalid-config cases,
+    -- so both need staff for the duration of this block.
+    PERFORM pg_temp.staff_on(v_organizer);
+    PERFORM pg_temp.staff_on(v_organizer2);
 
     -- ---------------------------------------------------------------- create
     PERFORM pg_temp.as_user(v_organizer);
@@ -278,6 +297,8 @@ BEGIN
         RAISE EXCEPTION 'single-elim rows polluted by pool columns';
     END IF;
 
+    PERFORM pg_temp.staff_off(v_organizer);
+    PERFORM pg_temp.staff_off(v_organizer2);
     RAISE NOTICE 'tournament_pool_generation_test: ALL PASS';
 END;
 $$;

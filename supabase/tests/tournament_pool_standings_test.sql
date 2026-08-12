@@ -2,7 +2,7 @@
 -- Tournaments — pool_knockout F2: standings + settlement
 -- ============================================
 -- One 8-player pool_knockout tournament (2 pools of 4), scores entered via
--- tournament_override_score (winner-first text, the no-linked-match path).
+-- tournament_override_score (score text only, the no-linked-match path).
 -- Asserts:
 --   * pool 1 (clean sweep shape): straight win-count ordering;
 --   * pool 1 h2h: two players tied on wins are ordered by their meeting even
@@ -36,7 +36,30 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_sport() RETURNS uuid LANGUAGE sql AS $
   SELECT id FROM sport WHERE name = 'tennis';
 $$;
 
--- Settle a pool match between two users via organizer override, winner-first.
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"), so the create RPC now refuses a plain player. These
+-- tests still drive everything AFTER creation as an ordinary organizer, so
+-- staff is granted around the create calls and dropped again before the block
+-- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
+-- a lingering row would shift every fixture picked by a later block.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
+-- The score text is player1-first (see 20260812210000), so a helper that is
+-- handed a winner-first score has to orient it onto the row before writing.
+CREATE OR REPLACE FUNCTION pg_temp.flip_score(p_score text) RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT string_agg(split_part(t.s, '-', 2) || '-' || split_part(t.s, '-', 1), ' ' ORDER BY t.ord)
+    FROM unnest(string_to_array(p_score, ' ')) WITH ORDINALITY AS t(s, ord);
+$$;
+
+-- Settle a pool match between two users via organizer override. Callers pass
+-- the score winner-first, the way a result is spoken ("X beat Y 6-3 6-4"), and
+-- this orients it onto the row's player1 like the app's score sheet does.
 CREATE OR REPLACE FUNCTION pg_temp.settle(p_t uuid, p_winner uuid, p_loser uuid, p_score text)
 RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
@@ -55,7 +78,10 @@ BEGIN
     END IF;
     SELECT id INTO v_win FROM tournament_registrations
      WHERE tournament_id = p_t AND user_id = p_winner;
-    PERFORM public.tournament_override_score(v_tm.id, v_win, p_score);
+    PERFORM public.tournament_override_score(
+        v_tm.id, v_win,
+        CASE WHEN v_win = v_tm.player2_registration_id
+             THEN pg_temp.flip_score(p_score) ELSE p_score END);
 END;
 $$;
 
@@ -78,6 +104,7 @@ BEGIN
     v_players   := pg_temp.tennis_players(9);
     v_organizer := v_players[9];
 
+    PERFORM pg_temp.staff_on(v_organizer);
     PERFORM pg_temp.as_user(v_organizer);
     SELECT * INTO v_t FROM public.tournament_create(
         '[TEST-PK] Standings', pg_temp.tennis_sport(), 8::smallint,
@@ -158,6 +185,7 @@ BEGIN
         RAISE EXCEPTION 'pool2: h should be last';
     END IF;
 
+    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'PASS: win ordering, h2h precedence, seed fallback';
 END;
 $$;
@@ -177,6 +205,7 @@ BEGIN
     v_players   := pg_temp.tennis_players(9);
     v_organizer := v_players[8];
 
+    PERFORM pg_temp.staff_on(v_organizer);
     PERFORM pg_temp.as_user(v_organizer);
     SELECT * INTO v_t FROM public.tournament_create(
         '[TEST-PK] Forfait', pg_temp.tennis_sport(), 8::smallint,
@@ -304,6 +333,7 @@ BEGIN
         IF SQLERRM <> 'NOT_POOL_TOURNAMENT' THEN RAISE; END IF;
     END;
 
+    PERFORM pg_temp.staff_off(v_organizer);
     RAISE NOTICE 'tournament_pool_standings_test: ALL PASS';
 END;
 $$;

@@ -32,6 +32,20 @@ CREATE OR REPLACE FUNCTION pg_temp.tennis_players(n integer) RETURNS uuid[] LANG
      ORDER BY ps.player_id LIMIT n) t;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"), so the create RPC now refuses a plain player. These
+-- tests still drive everything AFTER creation as an ordinary organizer, so
+-- staff is granted around the create calls and dropped again before the block
+-- ends. It has to be dropped: pg_temp.tennis_players() filters admins out, so
+-- a lingering row would shift every fixture picked by a later block.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void LANGUAGE sql AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void LANGUAGE sql AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_players uuid[];
@@ -48,6 +62,7 @@ BEGIN
     v_players := pg_temp.tennis_players(15);
     v_org     := v_players[15];
 
+    PERFORM pg_temp.staff_on(v_org);
     PERFORM pg_temp.as_user(v_org);
     SELECT * INTO v_t FROM public.tournament_create(
         '[TEST-PK] Notifications', (SELECT id FROM sport WHERE name = 'tennis'),
@@ -122,7 +137,10 @@ BEGIN
         ELSE
             v_win := v_tm.player2_registration_id;
         END IF;
-        PERFORM public.tournament_override_score(v_tm.id, v_win, '6-2 6-3');
+        -- Player1-first score text (20260812210000).
+        PERFORM public.tournament_override_score(
+            v_tm.id, v_win,
+            CASE WHEN v_win = v_tm.player1_registration_id THEN '6-2 6-3' ELSE '2-6 3-6' END);
     END LOOP;
 
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
@@ -178,6 +196,7 @@ BEGIN
         RAISE EXCEPTION '% elimination notice(s) missing a sane pool rank', v_bad;
     END IF;
 
+    PERFORM pg_temp.staff_off(v_org);
     RAISE NOTICE 'tournament_pool_notifications_test: ALL PASS';
 END;
 $$;
