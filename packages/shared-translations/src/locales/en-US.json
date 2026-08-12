@@ -5012,29 +5012,29 @@
   },
   "eventCreation": {
     "pickerTitle": "What do you want to organize?",
-    "pickerDescription": "Each format runs differently. Pick the one that fits the time you have and how much you want to be on site.",
+    "pickerDescription": "Each format runs differently. Pick the one that fits the time you have.",
     "continue": "Continue",
     "kinds": {
       "knockout": {
         "title": "Knockout tournament",
-        "description": "A classic bracket. Win and move on, lose and you are out.",
-        "duration": "A weekend, or a single day for a small draw",
-        "elimination": "Elimination from the first round",
-        "guaranteed": "One game guaranteed per player"
+        "description": "A classic bracket. Win and move on.",
+        "duration": "A weekend",
+        "guaranteed": "1 game guaranteed",
+        "elimination": "Out on a loss"
       },
       "poolsKnockout": {
         "title": "Pools, then knockout",
-        "description": "Groups first so everyone plays several games, then a bracket for the best of each pool.",
-        "duration": "A weekend to a few weeks",
-        "elimination": "Elimination only in the bracket phase",
-        "guaranteed": "Every pool game guaranteed, three or more per player"
+        "description": "Groups first, then a bracket for the best of each pool.",
+        "duration": "1 to 3 weeks",
+        "guaranteed": "3+ games guaranteed",
+        "elimination": "Out only in phase two"
       },
       "sessionLeague": {
         "title": "Session league",
-        "description": "A season of scheduled sessions with a standings table that builds over time.",
-        "duration": "A full season, week after week",
-        "elimination": "No elimination, everyone plays to the end",
-        "guaranteed": "A game at every session you show up for"
+        "description": "A season of scheduled sessions with a running table.",
+        "duration": "A full season",
+        "guaranteed": "1 game per session",
+        "elimination": "No elimination"
       }
     }
   },

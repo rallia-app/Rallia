@@ -5012,29 +5012,29 @@
   },
   "eventCreation": {
     "pickerTitle": "Tu organises quoi?",
-    "pickerDescription": "Chaque format se joue différemment. Choisis celui qui va avec le temps que t'as et le temps que tu veux passer sur place.",
+    "pickerDescription": "Chaque format se joue différemment. Choisis selon le temps que t'as.",
     "continue": "Continuer",
     "kinds": {
       "knockout": {
         "title": "Tournoi à élimination",
-        "description": "Un tableau classique. Tu gagnes tu continues, tu perds tu sors.",
-        "duration": "Une fin de semaine, ou une journée pour un petit tableau",
-        "elimination": "Élimination dès la première ronde",
-        "guaranteed": "Une partie garantie par joueur"
+        "description": "Un tableau classique. Tu gagnes, tu continues.",
+        "duration": "Une fin de semaine",
+        "guaranteed": "1 partie garantie",
+        "elimination": "Une défaite pis tu sors"
       },
       "poolsKnockout": {
         "title": "Poules, puis éliminatoires",
-        "description": "Des groupes d'abord, pour que tout le monde joue plusieurs parties, puis un tableau pour les meilleurs de chaque poule.",
-        "duration": "D'une fin de semaine à quelques semaines",
-        "elimination": "Élimination seulement en phase éliminatoire",
-        "guaranteed": "Toutes les parties de poule garanties, trois et plus par joueur"
+        "description": "Des groupes d'abord, puis un tableau pour les meilleurs.",
+        "duration": "1 à 3 semaines",
+        "guaranteed": "3+ parties garanties",
+        "elimination": "Élimination en 2e phase"
       },
       "sessionLeague": {
         "title": "Ligue à séances",
-        "description": "Une saison de séances planifiées, avec un classement qui se bâtit au fil des semaines.",
-        "duration": "Une saison complète, semaine après semaine",
-        "elimination": "Aucune élimination, tout le monde joue jusqu'à la fin",
-        "guaranteed": "Une partie à chaque séance où tu te présentes"
+        "description": "Une saison de séances planifiées, avec un classement.",
+        "duration": "Une saison",
+        "guaranteed": "1 partie par séance",
+        "elimination": "Sans élimination"
       }
     }
   },

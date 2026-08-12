@@ -41,8 +41,8 @@ export const EVENT_KINDS: readonly EventKindDescriptor[] = [
     descriptionKey: 'eventCreation.kinds.knockout.description',
     factKeys: [
       'eventCreation.kinds.knockout.duration',
-      'eventCreation.kinds.knockout.elimination',
       'eventCreation.kinds.knockout.guaranteed',
+      'eventCreation.kinds.knockout.elimination',
     ],
   },
   {
@@ -54,8 +54,8 @@ export const EVENT_KINDS: readonly EventKindDescriptor[] = [
     descriptionKey: 'eventCreation.kinds.poolsKnockout.description',
     factKeys: [
       'eventCreation.kinds.poolsKnockout.duration',
-      'eventCreation.kinds.poolsKnockout.elimination',
       'eventCreation.kinds.poolsKnockout.guaranteed',
+      'eventCreation.kinds.poolsKnockout.elimination',
     ],
   },
   {
@@ -66,8 +66,8 @@ export const EVENT_KINDS: readonly EventKindDescriptor[] = [
     descriptionKey: 'eventCreation.kinds.sessionLeague.description',
     factKeys: [
       'eventCreation.kinds.sessionLeague.duration',
-      'eventCreation.kinds.sessionLeague.elimination',
       'eventCreation.kinds.sessionLeague.guaranteed',
+      'eventCreation.kinds.sessionLeague.elimination',
     ],
   },
 ] as const;

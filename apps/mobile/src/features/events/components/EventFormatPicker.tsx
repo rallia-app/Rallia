@@ -88,6 +88,7 @@ export const EventFormatPicker: React.FC<EventFormatPickerProps> = ({
               selected={selected === descriptor.kind}
               onPress={() => onSelect(descriptor.kind)}
               colors={colors}
+              style={styles.option}
               testID={`event-format-${descriptor.kind}`}
             />
           ))}
@@ -116,12 +117,19 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[6],
+    // Lets the cards share whatever height is left below the heading.
+    flexGrow: 1,
   },
   header: {
-    marginBottom: spacingPixels[6],
+    marginBottom: spacingPixels[5],
   },
   options: {
+    flex: 1,
     gap: spacingPixels[3],
+  },
+  /** Equal share of the free space, so the three formats read as peers. */
+  option: {
+    flex: 1,
   },
 });

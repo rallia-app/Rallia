@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -22,11 +22,13 @@ export interface WizardOptionCardProps {
   colors: WizardColors;
   compact?: boolean;
   /**
-   * Decision facts listed under the description, one per line. For choices
-   * where the trade-off is what the reader is actually comparing (which event
-   * format to run), rather than a one-line enum.
+   * Decision facts, joined into one quiet dot-separated line under the
+   * description. For choices where the trade-off is what the reader is
+   * actually comparing (which event format to run), rather than a plain enum.
    */
   facts?: string[];
+  /** Container override, e.g. `flex: 1` to share height with sibling cards. */
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
@@ -39,79 +41,80 @@ export const WizardOptionCard: React.FC<WizardOptionCardProps> = ({
   colors,
   compact = false,
   facts,
+  style,
   testID,
-}) => (
-  <TouchableOpacity
-    testID={testID}
-    style={[
-      compact ? styles.optionCardCompact : styles.optionCard,
-      {
-        backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-        borderColor: selected ? colors.buttonActive : colors.border,
-      },
-    ]}
-    onPress={() => {
-      void lightHaptic();
-      onPress();
-    }}
-    activeOpacity={0.7}
-  >
-    {compact ? (
-      <View style={styles.optionContentCompact}>
-        <Ionicons name={icon} size={24} color={selected ? colors.buttonActive : colors.textMuted} />
-        <Text
-          size="sm"
-          weight={selected ? 'semibold' : 'regular'}
-          color={selected ? colors.buttonActive : colors.text}
-          style={styles.compactTitle}
-        >
-          {title}
-        </Text>
-      </View>
-    ) : (
-      <>
-        <View style={styles.optionContent}>
+}) => {
+  // With facts the text block runs several lines, so the icon has to top-align
+  // or it parks beside the fact line instead of the title.
+  const tall = !!facts && facts.length > 0;
+  return (
+    <TouchableOpacity
+      testID={testID}
+      style={[
+        compact ? styles.optionCardCompact : styles.optionCard,
+        {
+          backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
+          borderColor: selected ? colors.buttonActive : colors.border,
+        },
+        style,
+      ]}
+      onPress={() => {
+        void lightHaptic();
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
+      {compact ? (
+        <View style={styles.optionContentCompact}>
           <Ionicons
             name={icon}
-            size={20}
+            size={24}
             color={selected ? colors.buttonActive : colors.textMuted}
           />
-          <View style={styles.optionTextContainer}>
-            <Text
-              size="base"
-              weight={selected ? 'semibold' : 'regular'}
-              color={selected ? colors.buttonActive : colors.text}
-            >
-              {title}
-            </Text>
-            {description && (
-              <Text size="xs" color={colors.textMuted}>
-                {description}
-              </Text>
-            )}
-            {facts && facts.length > 0 && (
-              <View style={styles.facts}>
-                {facts.map(fact => (
-                  <View key={fact} style={styles.factRow}>
-                    <Ionicons
-                      name="ellipse"
-                      size={4}
-                      color={selected ? colors.buttonActive : colors.textMuted}
-                    />
-                    <Text size="xs" color={colors.textMuted} style={styles.factText}>
-                      {fact}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
+          <Text
+            size="sm"
+            weight={selected ? 'semibold' : 'regular'}
+            color={selected ? colors.buttonActive : colors.text}
+            style={styles.compactTitle}
+          >
+            {title}
+          </Text>
         </View>
-        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
-      </>
-    )}
-  </TouchableOpacity>
-);
+      ) : (
+        <>
+          <View style={[styles.optionContent, tall && styles.optionContentTall]}>
+            <Ionicons
+              name={icon}
+              size={20}
+              color={selected ? colors.buttonActive : colors.textMuted}
+              style={tall ? styles.iconTop : undefined}
+            />
+            <View style={styles.optionTextContainer}>
+              <Text
+                size="base"
+                weight={selected ? 'semibold' : 'regular'}
+                color={selected ? colors.buttonActive : colors.text}
+              >
+                {title}
+              </Text>
+              {description && (
+                <Text size="xs" color={colors.textMuted}>
+                  {description}
+                </Text>
+              )}
+              {facts && facts.length > 0 && (
+                <Text size="xs" color={colors.textMuted} style={styles.facts}>
+                  {facts.join(' · ')}
+                </Text>
+              )}
+            </View>
+          </View>
+          {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
+        </>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 /** Field caption above an input. Shared by every wizard step. */
 export const WizardFieldLabel: React.FC<{ children: string; colors: WizardColors }> = ({
@@ -147,6 +150,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacingPixels[3],
   },
+  optionContentTall: {
+    alignItems: 'flex-start',
+  },
   optionContentCompact: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -158,17 +164,12 @@ const styles = StyleSheet.create({
   optionTextContainer: {
     flex: 1,
   },
+  /** Nudges a 20px glyph onto the title's optical centre. */
+  iconTop: {
+    marginTop: 2,
+  },
   facts: {
-    marginTop: spacingPixels[2],
-    gap: spacingPixels[1],
-  },
-  factRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-  factText: {
-    flex: 1,
+    marginTop: spacingPixels[1.5],
   },
   label: {
     marginBottom: spacingPixels[2],
