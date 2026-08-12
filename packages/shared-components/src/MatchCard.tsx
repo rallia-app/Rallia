@@ -1723,6 +1723,7 @@ const styles = StyleSheet.create({
   },
   badgesContentContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacingPixels[1.5],
   },
   badge: {
