@@ -26,7 +26,6 @@ import {
   Easing,
   Alert,
   RefreshControl,
-  useWindowDimensions,
   Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,7 +35,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Text, Skeleton, SkeletonTextLine, useToast } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -112,12 +111,16 @@ import {
 } from '@rallia/shared-services';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 
-import { useTranslation, useThemeStyles, type TranslationKey } from '../hooks';
+import { useTranslation, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import ParticipantRow from '../components/ParticipantRow';
 import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
+import {
+  EventDetailTabBar,
+  EventDetailSkeleton,
+} from '../features/events/components/EventDetailChrome';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import {
@@ -300,141 +303,9 @@ const LabeledBlock: React.FC<{
 /** Initial-load placeholder mirroring the loaded Overview 1:1 — banner with the
  *  scrim identity lines, sticky-tab geometry, then the stats, stepper and event
  *  info cards — sharing the real StyleSheet so nothing jumps when data lands. */
-const TournamentDetailSkeleton: React.FC = () => {
-  const { width } = useWindowDimensions();
-  const { colors: themed } = useThemeStyles();
-  const shimmer = {
-    backgroundColor: themed.skeletonBackground,
-    highlightColor: themed.skeletonHighlight,
-  };
-  // The scrim lines sit on the banner artwork, so they shimmer in the same
-  // translucent white the real scrim text uses.
-  const onBanner = {
-    backgroundColor: 'rgba(255,255,255,0.40)',
-    highlightColor: 'rgba(255,255,255,0.60)',
-  };
-  return (
-    <View>
-      <View style={styles.heroFixed}>
-        <View style={styles.heroBanner}>
-          <Skeleton
-            {...shimmer}
-            height={Math.round(width / TOURNAMENT_BANNER_ASPECT)}
-            borderRadius={0}
-          />
-          {/* Status pill floats near-white on the image in both themes */}
-          <View style={styles.heroBannerTopRow}>
-            <View style={[styles.statusBadge, { backgroundColor: 'rgba(255,255,255,0.94)' }]}>
-              <SkeletonTextLine
-                size="xs"
-                width={72}
-                backgroundColor="rgba(0,0,0,0.10)"
-                highlightColor="rgba(0,0,0,0.18)"
-              />
-            </View>
-          </View>
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.28)', 'rgba(0,0,0,0.68)']}
-            locations={[0, 0.42, 1]}
-            style={styles.heroScrim}
-          >
-            <SkeletonTextLine {...onBanner} size="2xl" lineHeight="tight" width="62%" />
-            <SkeletonTextLine {...onBanner} size="sm" width="46%" />
-          </LinearGradient>
-        </View>
-      </View>
-
-      <View
-        style={[
-          styles.tabBarSticky,
-          { backgroundColor: themed.background, borderBottomColor: themed.border },
-        ]}
-      >
-        <View style={styles.tabBarContent}>
-          {[64, 52, 58, 46].map((w, i) => (
-            <View key={i} style={styles.tabItem}>
-              <SkeletonTextLine {...shimmer} size="sm" width={w} />
-              <View style={styles.tabUnderline} />
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.tabContent}>
-        {/* Stats: three value/label segments split by hairlines */}
-        <View
-          style={[
-            styles.section,
-            styles.statsCard,
-            { backgroundColor: themed.cardBackground, borderColor: themed.border },
-          ]}
-        >
-          {[0, 1, 2].map(i => (
-            <React.Fragment key={i}>
-              {i > 0 && <View style={[styles.statDivider, { backgroundColor: themed.border }]} />}
-              <View style={styles.statSegment}>
-                <SkeletonTextLine {...shimmer} size="lg" width={44} />
-                <SkeletonTextLine {...shimmer} size="xs" width={56} />
-              </View>
-            </React.Fragment>
-          ))}
-        </View>
-
-        {/* Lifecycle stepper: four dots joined by connectors */}
-        <View
-          style={[
-            styles.section,
-            styles.stepperCard,
-            { backgroundColor: themed.cardBackground, borderColor: themed.border },
-          ]}
-        >
-          <View style={styles.stepperRow}>
-            {[0, 1, 2, 3].map(i => (
-              <React.Fragment key={i}>
-                {i > 0 && (
-                  <View style={[styles.stepperConnector, { backgroundColor: themed.border }]} />
-                )}
-                <View style={styles.stepperStep}>
-                  <Skeleton {...shimmer} width={32} height={32} circle />
-                  <SkeletonTextLine {...shimmer} size="xs" width={44} />
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-
-        {/* Event info: icon-disc rows behind a section title */}
-        <View style={styles.section}>
-          <SkeletonTextLine {...shimmer} size="xs" width={88} style={styles.sectionTitle} />
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: themed.cardBackground, borderColor: themed.border },
-            ]}
-          >
-            {['58%', '72%', '44%', '64%'].map((w, i) => (
-              <View
-                key={w}
-                style={[
-                  styles.overviewInfoRow,
-                  i > 0 && {
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                    borderTopColor: themed.border,
-                  },
-                ]}
-              >
-                <Skeleton {...shimmer} width={30} height={30} circle />
-                <View style={styles.overviewInfoTexts}>
-                  <SkeletonTextLine {...shimmer} size="sm" width={w} />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-};
+const TournamentDetailSkeleton: React.FC = () => (
+  <EventDetailSkeleton bannerAspect={TOURNAMENT_BANNER_ASPECT} />
+);
 
 const PLACEMENT_ICON: Record<TournamentPlacement, keyof typeof Ionicons.glyphMap> = {
   champion: 'trophy',
@@ -3580,48 +3451,13 @@ export const TournamentDetail: React.FC = () => {
 
         {/* Sticky tab bar — scrollable underline tabs: each sized to its label
             and left-aligned, so any number of tabs scrolls cleanly */}
-        <View
-          style={[
-            styles.tabBarSticky,
-            { backgroundColor: colors.background, borderBottomColor: colors.border },
-          ]}
-        >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabBarContent}
-          >
-            {tabs.map(tab => {
-              const selected = tab.key === currentTabKey;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  onPress={() => selectTab(tab.key)}
-                  activeOpacity={0.7}
-                  style={styles.tabItem}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected }}
-                  testID={`tournament-tab-${tab.key}`}
-                >
-                  <Text
-                    size="sm"
-                    weight={selected ? 'semibold' : 'medium'}
-                    color={selected ? colors.primary : colors.textMuted}
-                    numberOfLines={1}
-                  >
-                    {tab.label}
-                  </Text>
-                  <View
-                    style={[
-                      styles.tabUnderline,
-                      { backgroundColor: selected ? colors.primary : 'transparent' },
-                    ]}
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+        <EventDetailTabBar
+          tabs={tabs}
+          currentKey={currentTabKey}
+          onSelect={selectTab}
+          colors={colors}
+          testIDPrefix="tournament"
+        />
 
         {/* ============================ OVERVIEW ============================ */}
         {currentTabKey === 'overview' && (
