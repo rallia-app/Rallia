@@ -3862,7 +3862,7 @@
     "createLeague": "Créer une ligue",
     "createLeagueDescription": "Organisez une ligue saisonnière avec des séances et un classement",
     "createEvent": "Créer un événement",
-    "createEventDescription": "Organisez un tournoi ou une ligue et gérez les tableaux et horaires",
+    "createEventDescription": "Gérez un tournoi ou une ligue, des inscriptions au classement",
     "selectNetworkType": "Créer un réseau",
     "selectNetworkTypeDescription": "Choisissez le type de réseau que vous souhaitez créer",
     "group": "Groupe",
