@@ -81,6 +81,7 @@ import { ChatAgreementActionSheet } from '#/features/chat/components/ChatAgreeme
 import { AddMembersToChatActionSheet } from '#/features/chat/components/AddMembersToChatModal';
 import { CreateGroupChatActionSheet } from '#/features/chat/components/CreateGroupChatModal';
 import { MatchOrganizerSetupActionSheet } from '#/features/chat/components/MatchOrganizerSetupSheet';
+import { MatchOrganizerCustomSlotActionSheet } from '#/features/chat/components/MatchOrganizerCustomSlotSheet';
 // Onboarding/Profile components
 import { PersonalInformationActionSheet } from '#/features/onboarding/components/overlays/PersonalInformationOverlay';
 import { PlayerInformationActionSheet } from '#/features/onboarding/components/overlays/PlayerInformationOverlay';
@@ -213,6 +214,15 @@ declare module 'react-native-actions-sheet' {
     'create-group-chat': SheetDefinition<{
       payload: {
         onSuccess?: (conversationId: string) => void;
+      };
+    }>;
+    /** Propose your own time/place on a card when the engine has nothing to offer. */
+    'match-organizer-custom-slot': SheetDefinition<{
+      payload: {
+        /** The match_organizer card the option is appended to. */
+        messageId: string;
+        /** Invalidated so the card re-renders with the new option. */
+        conversationId: string;
       };
     }>;
     'match-organizer-setup': SheetDefinition<{
@@ -994,6 +1004,7 @@ export const Sheets = () => {
         'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
         'match-organizer-setup': MatchOrganizerSetupActionSheet,
+        'match-organizer-custom-slot': MatchOrganizerCustomSlotActionSheet,
         // Group sheets
         'group-options': GroupOptionsActionSheet,
         'member-options': MemberOptionsActionSheet,

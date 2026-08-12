@@ -23,7 +23,7 @@ import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 import * as Analytics from '#/services/analytics';
 
-import { SheetDateField } from './SheetDateField';
+import { SheetDateField } from '#/components/SheetDateField';
 
 const SHEET_ID = 'create-session';
 

@@ -227,6 +227,39 @@ export async function regenerateRoundChatSuggestions(
   return (data as string | null) ?? null;
 }
 
+/**
+ * Propose your own time (and optionally a place) on a card. This is the
+ * degradation floor: when the engine has nothing to offer because two players
+ * share no free hours, or neither has a facility the app knows, a participant
+ * can still put a slot on the card and the normal vote/create flow takes over.
+ *
+ * Proposing counts as agreeing, so the proposer is voted onto it. Proposing a
+ * slot that already exists on the card just records the vote. Returns the
+ * option's index.
+ */
+export async function addCustomOrganizerOption(params: {
+  messageId: string;
+  /** ISO instant of the proposed start. */
+  slotStart: string;
+  facilityId?: string | null;
+  /** Free-text place, used when no facility is picked. Both may be omitted. */
+  placeName?: string | null;
+}): Promise<number> {
+  const { data, error } = await supabase.rpc('match_organizer_add_custom_option', {
+    p_message_id: params.messageId,
+    p_slot_start: params.slotStart,
+    ...(params.facilityId ? { p_facility_id: params.facilityId } : {}),
+    ...(params.placeName ? { p_place_name: params.placeName } : {}),
+  });
+
+  if (error) {
+    console.error('Error proposing a custom organizer option:', error);
+    throw error;
+  }
+
+  return data as number;
+}
+
 // ============================================================================
 // CARD POSTING
 // ============================================================================
@@ -379,6 +412,8 @@ export async function createCasualMatch(params: {
   durationMinutes?: number;
   sourceMessageId?: string;
   optionIndex?: number;
+  /** Free-text place from a custom option (ignored when a facility is chosen). */
+  locationName?: string | null;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('create_casual_match', {
     p_sport_id: params.sportId,
@@ -389,6 +424,7 @@ export async function createCasualMatch(params: {
     ...(params.facilityId ? { p_facility_id: params.facilityId } : {}),
     ...(params.sourceMessageId ? { p_source_message_id: params.sourceMessageId } : {}),
     ...(params.optionIndex != null ? { p_option_index: params.optionIndex } : {}),
+    ...(params.locationName ? { p_location_name: params.locationName } : {}),
   });
 
   if (error) {

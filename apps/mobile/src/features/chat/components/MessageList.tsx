@@ -280,13 +280,17 @@ function MessageListComponent(
         // stored content — one message row is shared by readers whose locales
         // may differ.
         const systemNote = (item.message.metadata as { system_note?: string } | null)?.system_note;
-        if (systemNote === 'availability_updated') {
+        if (systemNote === 'availability_updated' || systemNote === 'custom_option_added') {
           const actorName =
             (item.message.metadata as { actor_name?: string } | null)?.actor_name ?? '';
           return (
             <View style={styles.systemNote}>
               <Text size="xs" color={colors.textMuted} style={styles.systemNoteText}>
-                {t('availabilityOverlay.systemNote.updated').replace('{name}', actorName)}
+                {t(
+                  systemNote === 'custom_option_added'
+                    ? 'matchOrganizer.custom.systemNote'
+                    : 'availabilityOverlay.systemNote.updated'
+                ).replace('{name}', actorName)}
               </Text>
             </View>
           );

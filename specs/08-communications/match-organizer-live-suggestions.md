@@ -337,6 +337,78 @@ Rule:
 - Never notify on an ambient refresh. Silent in-place update only. Eleven chats
   times two players times every open would otherwise be a notification firehose.
 
+## Graceful degradation floor
+
+Decided 2026-08-12, after Jean's pool_knockout test pass. Two decisions, together:
+
+1. **The card is the only path from a pairing to a created game.** Games are
+   **not** pre-created when a pairing becomes known. A game row appears only once
+   the important facts (when, where) are known, which keeps "a game exists" a
+   meaningful signal, and keeps the card the place where engagement is observable
+   for [deadline arbitration](../17-leagues-tournaments/README.md) (`lt_side_effort`
+   reads votes, cards and messages off the pairing chat).
+2. **Therefore the card must never dead-end.** Forcing every pairing through one
+   funnel is only safe if that funnel always terminates in a game. It did not:
+   the three states below all left players with an availability edit as their
+   only move.
+
+| State                                              | Before                            |
+| -------------------------------------------------- | --------------------------------- |
+| Zero mutual availability overlap                   | `options: []` + "update my hours" |
+| No favourited or in-range facility for the sport   | Empty card, even with overlap     |
+| The pair wants a place the app does not know about | No way to express it              |
+
+### The floor: a participant-proposed option
+
+`match_organizer_add_custom_option(p_message_id, p_slot_start, p_facility_id, p_place_name)`
+appends an option with `tier: 'custom'` to the card. A facility, a free-text
+place, or neither (place genuinely TBD) are all valid. From there nothing is
+special-cased: it is a normal votable option feeding mutual agreement,
+`create_casual_match`, the pre-play bracket link, and effort detection.
+
+Rules that make it safe:
+
+- **Proposing is agreeing.** The proposer is voted onto their own slot, the same
+  rationale as the player-posted card's pre-vote (and unlike a regenerated card,
+  where a blanket pre-vote would be agreement to times nobody saw).
+- **`free_count` stays NULL.** The engine never vetted the slot, so the card must
+  not render "you are both free". The badge is suppressed and replaced by
+  "Suggested by {name}".
+- **Identity is the engine's formula**, `md5(epoch(slot_start) | facility|place)`,
+  so proposing a slot the engine already offered dedupes onto that option and
+  just records the vote instead of listing it twice. The opponent proposing the
+  same slot is therefore itself a path to mutual agreement.
+- **A free-text place reaches the game.** `create_casual_match` gained
+  `p_location_name`; with no facility the game lands `location_type = 'custom'`
+  with the name, rather than a bare `tbd`.
+- **The proposal notifies.** Unlike an ambient refresh, a human proposing a time
+  is exactly when the opponent should hear about it, so the system note is
+  deliberately not silent.
+
+### Regeneration must pin custom options
+
+The engine cannot reproduce a hand-proposed option, so the
+[re-anchoring rule](#re-anchoring-rule-on-regeneration) needed a fourth row:
+**a custom option is always pinned, voted or not, and is never flagged `stale`**
+(`stale` means a real engine option vanished, which is a different thing to tell
+a player). Without this, an ambient staleness refresh silently deletes the one
+option a zero-overlap pair actually agreed on. Regression cover:
+`supabase/tests/match_organizer_custom_option_test.sql`, verified to fail against
+the pre-fix body.
+
+### Still open
+
+- **No facility picker in the sheet yet.** v1 is date, time, and free text; the
+  RPC already takes a `facility_id` for when one is added. A typed place name
+  therefore does not benefit from court/price data or the facility's timezone
+  (the slot resolves against `America/Toronto`).
+- **Mutual agreement is still enforced client-side only.** `create_casual_match`
+  never reads `match_time_vote`, so any conversation participant can call it with
+  any slot. Tolerable while the worst case is an unwanted casual game; worth a
+  server-side check that the caller has a vote on the confirmed option.
+- **Doubles** shows the proposer, not an availability claim, which is correct but
+  means a 4-player entry gets no signal about the other three.
+
 ## Zero-overlap variant
 
 When no option has `free_count = n`:

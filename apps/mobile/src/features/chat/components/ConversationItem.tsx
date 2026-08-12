@@ -176,6 +176,10 @@ function localizedPreview(
     return t('availabilityOverlay.systemNote.updated').replace('{name}', meta.actor_name ?? '');
   }
 
+  if (meta?.system_note === 'custom_option_added') {
+    return t('matchOrganizer.custom.systemNote').replace('{name}', meta.actor_name ?? '');
+  }
+
   if (conversation.last_message_type === 'match_organizer') {
     return meta?.no_overlap
       ? t('matchOrganizer.card.noOverlapTitle')

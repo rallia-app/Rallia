@@ -3330,7 +3330,8 @@
       "noOverlapTitle": "Pas encore de plage commune",
       "noOverlapBody": "Vos disponibilités ne concordent pas pour l'instant. Mets à jour tes heures dans ton profil et de nouvelles suggestions vont apparaître ici.",
       "noOverlapCta": "Mettre à jour mes dispos",
-      "previewSuggestions": "Suggestions d'heures pour jouer"
+      "previewSuggestions": "Suggestions d'heures pour jouer",
+      "staleOption": "Plus disponible"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -3362,6 +3363,25 @@
       "both": "Vous êtes tous les deux dispo",
       "all": "Tout le monde est dispo",
       "partial": "Pas dispo pour tout le monde"
+    },
+    "custom": {
+      "cta": "Proposer un autre moment",
+      "sheetTitle": "Proposer un moment",
+      "sheetSubtitle": "Choisis un moment qui te convient. Ton adversaire va le voir dans le chat et pourra l'accepter.",
+      "dateLabel": "Date",
+      "timeLabel": "Heure",
+      "placeLabel": "Endroit",
+      "placePlaceholder": "Ex. Parc Jarry, terrain 3",
+      "placeHint": "Optionnel. Vous pourrez décider plus tard.",
+      "submit": "Proposer ce moment",
+      "success": "Moment proposé 🙌",
+      "proposedBy": "Proposé par {name}",
+      "proposedByYou": "Proposé par toi",
+      "proposedByFallback": "un joueur",
+      "systemNote": "{name} a proposé un autre moment",
+      "errorPast": "Choisis un moment à venir.",
+      "errorSettled": "La partie est déjà créée pour cette rencontre.",
+      "errorGeneric": "Impossible de proposer ce moment. Réessaie."
     }
   },
   "matchShare": {

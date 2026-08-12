@@ -62,7 +62,7 @@ import type {
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import { SheetDateField } from '#/features/leagues/components/SheetDateField';
+import { SheetDateField } from '#/components/SheetDateField';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';

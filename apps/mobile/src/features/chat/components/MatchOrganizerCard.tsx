@@ -108,6 +108,19 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     });
   }, [myGrid, opponentIds, opponentProfiles, metadata?.tournament_match_id]);
 
+  // The funnel floor: when the engine has nothing to offer (no shared hours, no
+  // facility it knows), a participant names a slot themselves and it becomes a
+  // normal votable option. Without this the card can dead-end.
+  const openCustomSlotSheet = useCallback(() => {
+    void lightHaptic();
+    void SheetManager.show('match-organizer-custom-slot', {
+      payload: {
+        messageId: message.id,
+        conversationId: message.conversation_id,
+      },
+    });
+  }, [message.id, message.conversation_id]);
+
   const handleToggle = useCallback(
     (optionIndex: number) => {
       if (!currentUserId || createdMatchId) return;
@@ -144,6 +157,9 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           playerIds: participants,
           format: metadata!.format,
           facilityId: option.facility_id ?? null,
+          // A hand-proposed place has no facility row, so it rides along as the
+          // game's location name instead of leaving the game location TBD.
+          locationName: option.facility_id ? null : (option.place_name ?? null),
           sourceMessageId: message.id,
           optionIndex,
           conversationId: message.conversation_id,
@@ -227,8 +243,14 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
               </Text>
             </View>
           </View>
+          {/* Proposing a time leads here: the pair may simply have hours they
+              never declared, and asking them to repaint a whole week first is
+              the slower fix. Editing availability stays available underneath. */}
           <View style={styles.noOverlapCta}>
-            <Button variant="primary" size="sm" onPress={openAvailabilityEditor}>
+            <Button variant="primary" size="sm" onPress={openCustomSlotSheet}>
+              {t('matchOrganizer.custom.cta')}
+            </Button>
+            <Button variant="ghost" size="sm" onPress={openAvailabilityEditor}>
               {t('matchOrganizer.card.noOverlapCta')}
             </Button>
           </View>
@@ -359,6 +381,19 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                 : courtCount === 1
                   ? t('matchOrganizer.tier.courtsOne')
                   : t('matchOrganizer.tier.courtAvailable');
+            // A hand-proposed slot carries no court and no availability data, so
+            // it must not borrow the engine's "usually free" reassurance.
+            const isCustom = option.tier === 'custom';
+            const proposerLabel = !isCustom
+              ? null
+              : option.proposed_by && option.proposed_by === currentUserId
+                ? t('matchOrganizer.custom.proposedByYou')
+                : t('matchOrganizer.custom.proposedBy').replace(
+                    '{name}',
+                    (option.proposed_by
+                      ? opponentProfiles[option.proposed_by]?.first_name
+                      : null) ?? t('matchOrganizer.custom.proposedByFallback')
+                  );
             const isCreatingThis = creatingIndex === index;
             // Availability label (system-posted cards carry free_count per slot).
             const allFree =
@@ -394,37 +429,65 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       {option.facility_name}
                     </Text>
                   ) : null}
-                  <View
-                    style={[
-                      styles.courtPill,
-                      {
-                        backgroundColor: option.court_confirmed
-                          ? statusColors.success.DEFAULT + '1A'
-                          : colors.border + '66',
-                      },
-                    ]}
-                  >
-                    {option.court_confirmed ? (
-                      <TennisCourtIcon
-                        width={13}
-                        height={13}
-                        stroke={statusColors.success.DEFAULT}
-                        style={styles.courtIcon}
-                      />
-                    ) : (
-                      <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                    )}
-                    <Text
-                      size="xs"
-                      weight="semibold"
-                      color={
-                        option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
-                      }
+                  {isCustom ? (
+                    <View style={[styles.courtPill, { backgroundColor: accent + '1A' }]}>
+                      <Ionicons name="person-outline" size={12} color={accent} />
+                      <Text size="xs" weight="semibold" color={accent}>
+                        {proposerLabel}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        {
+                          backgroundColor: option.court_confirmed
+                            ? statusColors.success.DEFAULT + '1A'
+                            : colors.border + '66',
+                        },
+                      ]}
                     >
-                      {courtLabel}
-                      {option.court_confirmed && priceLabel ? ` · ${priceLabel}` : ''}
-                    </Text>
-                  </View>
+                      {option.court_confirmed ? (
+                        <TennisCourtIcon
+                          width={13}
+                          height={13}
+                          stroke={statusColors.success.DEFAULT}
+                          style={styles.courtIcon}
+                        />
+                      ) : (
+                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                      )}
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={
+                          option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
+                        }
+                      >
+                        {courtLabel}
+                        {option.court_confirmed && priceLabel ? ` · ${priceLabel}` : ''}
+                      </Text>
+                    </View>
+                  )}
+                  {/* A voted option the engine stopped returning is kept so the
+                      agreement does not vanish, but it is no longer real. */}
+                  {option.stale ? (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        { backgroundColor: statusColors.warning.DEFAULT + '1A' },
+                      ]}
+                    >
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={12}
+                        color={statusColors.warning.DEFAULT}
+                      />
+                      <Text size="xs" weight="semibold" color={statusColors.warning.DEFAULT}>
+                        {t('matchOrganizer.card.staleOption')}
+                      </Text>
+                    </View>
+                  ) : null}
                   {availabilityLabel ? (
                     <View
                       style={[
@@ -492,6 +555,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             );
           })}
         </View>
+
+        {/* None of these work? Name your own slot rather than falling back to
+            free-text chat, which is where pairings stall. */}
+        {isParticipant ? (
+          <View style={styles.footerCta}>
+            <Button variant="ghost" size="sm" onPress={openCustomSlotSheet}>
+              {t('matchOrganizer.custom.cta')}
+            </Button>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -535,6 +608,11 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
   },
   noOverlapCta: {
+    marginTop: spacingPixels[3],
+    alignSelf: 'flex-start',
+    gap: spacingPixels[1],
+  },
+  footerCta: {
     marginTop: spacingPixels[3],
     alignSelf: 'flex-start',
   },

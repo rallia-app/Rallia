@@ -1198,7 +1198,7 @@ export function matchOrganizerVoteCast(props: {
   format: 'singles' | 'doubles';
   participant_count: number;
   option_index: number;
-  option_tier: 'bookable' | 'usually_free';
+  option_tier: 'bookable' | 'usually_free' | 'custom';
   /** True when the tap removed an existing vote rather than adding one. */
   removed: boolean;
 }): void {
@@ -1212,7 +1212,7 @@ export function matchOrganizerMatchCreated(props: {
   format: 'singles' | 'doubles';
   participant_count: number;
   option_index: number;
-  option_tier: 'bookable' | 'usually_free';
+  option_tier: 'bookable' | 'usually_free' | 'custom';
   /** Court price of the agreed slot in cents (null when not court-confirmed). */
   price_cents: number | null;
 }): void {

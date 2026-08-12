@@ -90,13 +90,27 @@ export interface MatchOrganizerOption {
   court_count: number;
   price_cents: number | null;
   court_confirmed: boolean;
-  /** 'bookable' = a court is open now; 'usually_free' = recurring availability. */
-  tier: 'bookable' | 'usually_free';
+  /**
+   * 'bookable' = a court is open now; 'usually_free' = recurring availability;
+   * 'custom' = a participant proposed this slot by hand (the degradation floor,
+   * so a pair with no overlap or no known facility can still reach a game).
+   */
+  tier: 'bookable' | 'usually_free' | 'custom';
   distance_km: number | null;
-  /** How many of the card's participants are recurring-free at this slot. */
-  free_count?: number;
-  /** Stable (slot, facility) identity — future vote re-anchoring on regenerate. */
+  /**
+   * How many of the card's participants are recurring-free at this slot. NULL on
+   * a custom option: the engine never vetted it, so the card must not claim
+   * anyone is free.
+   */
+  free_count?: number | null;
+  /** Stable (slot, place) identity, used to re-anchor votes on regenerate. */
   option_key?: string;
+  /** Free-text place on a custom option with no facility. */
+  place_name?: string | null;
+  /** Who proposed a custom option. */
+  proposed_by?: string | null;
+  /** A voted engine option that vanished on refresh; kept, but no longer real. */
+  stale?: boolean;
 }
 
 /** metadata for a 'match_organizer' card (chat Match Organizer). */

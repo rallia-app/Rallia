@@ -34,7 +34,7 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import * as Analytics from '#/services/analytics';
 
-import { SheetDateField } from './SheetDateField';
+import { SheetDateField } from '#/components/SheetDateField';
 
 const SHEET_ID = 'create-season';
 

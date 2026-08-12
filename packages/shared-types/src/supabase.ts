@@ -10111,6 +10111,7 @@ export type Database = {
           p_duration_minutes?: number
           p_facility_id?: string
           p_format?: Database["public"]["Enums"]["match_format_enum"]
+          p_location_name?: string
           p_option_index?: number
           p_player_ids: string[]
           p_slot_start: string
@@ -12794,6 +12795,15 @@ export type Database = {
         Returns: undefined
       }
       mark_notifications_seen: { Args: never; Returns: undefined }
+      match_organizer_add_custom_option: {
+        Args: {
+          p_facility_id?: string
+          p_message_id: string
+          p_place_name?: string
+          p_slot_start: string
+        }
+        Returns: number
+      }
       match_organizer_options: {
         Args: {
           p_limit?: number

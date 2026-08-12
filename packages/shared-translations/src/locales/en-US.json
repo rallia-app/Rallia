@@ -3330,7 +3330,8 @@
       "noOverlapTitle": "No shared times yet",
       "noOverlapBody": "Your availabilities don't line up right now. Update your hours in your profile and new times will show up here.",
       "noOverlapCta": "Update my availability",
-      "previewSuggestions": "Suggested times to play"
+      "previewSuggestions": "Suggested times to play",
+      "staleOption": "No longer open"
     },
     "banner": {
       "title": "Organize a game",
@@ -3362,6 +3363,25 @@
       "both": "You're both available",
       "all": "Everyone's available",
       "partial": "Not everyone's available"
+    },
+    "custom": {
+      "cta": "Suggest another time",
+      "sheetTitle": "Suggest a time",
+      "sheetSubtitle": "Pick a time that works for you. Your opponent sees it in the chat and can accept it.",
+      "dateLabel": "Date",
+      "timeLabel": "Time",
+      "placeLabel": "Place",
+      "placePlaceholder": "e.g. Jarry Park, court 3",
+      "placeHint": "Optional. You can settle this later.",
+      "submit": "Suggest this time",
+      "success": "Time suggested 🙌",
+      "proposedBy": "Suggested by {name}",
+      "proposedByYou": "Suggested by you",
+      "proposedByFallback": "a player",
+      "systemNote": "{name} suggested another time",
+      "errorPast": "Pick a time in the future.",
+      "errorSettled": "The game for this matchup already exists.",
+      "errorGeneric": "Could not suggest that time. Try again."
     }
   },
   "matchShare": {
