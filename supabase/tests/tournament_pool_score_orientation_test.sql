@@ -176,6 +176,108 @@ BEGIN
 END;
 $$;
 
+-- 3. The result notice states the score from the READER's side. Only the losing
+--    side is told the score, and a loser sitting in the player2 slot used to be
+--    shown the winner's numbers, so their defeat read as a win.
+DO $$
+DECLARE
+    v_admin uuid;
+    v_sport uuid;
+    v_ps    uuid[];
+    v_t     uuid;
+    v_regs  uuid[] := '{}';
+    v_reg   uuid;
+    v_p     uuid;
+    v_tm    tournament_matches;
+BEGIN
+    SELECT id INTO v_admin FROM admin LIMIT 1;
+    SELECT s.id INTO v_sport FROM sport s WHERE s.name = 'tennis';
+    SELECT array_agg(x.player_id) INTO v_ps
+      FROM (SELECT ps.player_id FROM player_sport ps
+             WHERE ps.sport_id = v_sport AND ps.is_active AND ps.player_id <> v_admin
+             LIMIT 4) x;
+
+    INSERT INTO tournaments (name, sport_id, max_participants, bracket_type, pool_size,
+                             qualifiers_per_pool, start_date, end_date, status,
+                             organizer_id, visibility)
+    VALUES ('[TEST-ORIENT] notice', v_sport, 8, 'pool_knockout', 4, 2,
+            now() + interval '2 days', now() + interval '9 days', 'in_progress',
+            v_admin, 'public')
+    RETURNING id INTO v_t;
+
+    FOREACH v_p IN ARRAY v_ps LOOP
+        INSERT INTO tournament_registrations (tournament_id, user_id, status)
+        VALUES (v_t, v_p, 'registered') RETURNING id INTO v_reg;
+        v_regs := v_regs || v_reg;
+    END LOOP;
+
+    -- Game 1: player1 wins, so the loser is the player2 side and the stored
+    -- string reads in the winner's favour. Game 2 is the mirror.
+    INSERT INTO tournament_matches (tournament_id, bracket_side, pool_number, round_number,
+                                    match_position, player1_registration_id,
+                                    player2_registration_id, status)
+    VALUES (v_t, 'pool', 1, 1, 1, v_regs[1], v_regs[2], 'pending'),
+           (v_t, 'pool', 1, 1, 2, v_regs[3], v_regs[4], 'pending');
+
+    PERFORM pg_temp.as_user(v_admin);
+    SELECT * INTO v_tm FROM tournament_matches
+     WHERE tournament_id = v_t AND match_position = 1;
+    PERFORM public.tournament_override_score(v_tm.id, v_regs[1], '6-2 6-2');
+    SELECT * INTO v_tm FROM tournament_matches
+     WHERE tournament_id = v_t AND match_position = 2;
+    PERFORM public.tournament_override_score(v_tm.id, v_regs[4], '2-6 3-6');
+END;
+$$;
+
+-- The notifier is a DEFERRABLE INITIALLY DEFERRED constraint trigger, so it
+-- would otherwise only run at COMMIT, which this test never reaches.
+SET CONSTRAINTS ALL IMMEDIATE;
+
+DO $$
+DECLARE
+    v_t      uuid;
+    v_loser1 uuid;
+    v_loser2 uuid;
+    v_body   text;
+BEGIN
+    SELECT id INTO v_t FROM tournaments WHERE name = '[TEST-ORIENT] notice';
+    -- Read the two losing sides off the games themselves. Every registration in
+    -- this test shares one registered_at (a single transaction freezes now()),
+    -- so any ordering by it falls through to the row uuid and is random.
+    SELECT player2_registration_id INTO v_loser1
+      FROM tournament_matches WHERE tournament_id = v_t AND match_position = 1;
+    SELECT player1_registration_id INTO v_loser2
+      FROM tournament_matches WHERE tournament_id = v_t AND match_position = 2;
+
+    -- Loser of game 1 is the player2 side: they must read 2-6 2-6, not 6-2 6-2.
+    SELECT n.body INTO v_body
+      FROM notification n
+      JOIN tournament_registrations r ON r.id = v_loser1
+     WHERE n.target_id = v_t AND n.user_id = r.user_id
+       AND n.title IN ('Résultat enregistré', 'Result recorded')
+     LIMIT 1;
+    IF v_body IS NULL THEN
+        RAISE EXCEPTION 'the player2-side loser got no result notice at all';
+    END IF;
+    IF v_body NOT LIKE '%(2-6 2-6)%' THEN
+        RAISE EXCEPTION 'player2-side loser was told "%", expected their own 2-6 2-6', v_body;
+    END IF;
+
+    -- Loser of game 2 is the player1 side: the stored string is already theirs.
+    SELECT n.body INTO v_body
+      FROM notification n
+      JOIN tournament_registrations r ON r.id = v_loser2
+     WHERE n.target_id = v_t AND n.user_id = r.user_id
+       AND n.title IN ('Résultat enregistré', 'Result recorded')
+     LIMIT 1;
+    IF v_body NOT LIKE '%(2-6 3-6)%' THEN
+        RAISE EXCEPTION 'player1-side loser was told "%", expected 2-6 3-6 unchanged', v_body;
+    END IF;
+
+    RAISE NOTICE 'PASS: the result notice states the score from the loser''s own side';
+END;
+$$;
+
 DO $$ BEGIN RAISE NOTICE 'tournament_pool_score_orientation_test: ALL PASS'; END; $$;
 
 ROLLBACK;
