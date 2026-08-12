@@ -113,6 +113,12 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import UnderlineTabBar, { type UnderlineTabItem } from '../components/UnderlineTabBar';
 import { EventDetailTabBar } from '../features/events/components/EventDetailChrome';
 import { styles } from '../features/tournaments/detail/detailStyles';
+import { BracketTab } from '../features/tournaments/detail/BracketTab';
+import { OverviewTab } from '../features/tournaments/detail/OverviewTab';
+import { roundLabel } from '../features/tournaments/detail/BracketSection';
+import { DetailsTab } from '../features/tournaments/detail/DetailsTab';
+import { PlayersTab } from '../features/tournaments/detail/PlayersTab';
+import { RulesTab } from '../features/tournaments/detail/RulesTab';
 import {
   BRACKET_TYPE_LABEL_KEY,
   DashboardCtaCard,
@@ -2460,746 +2466,126 @@ export const TournamentDetail: React.FC = () => {
 
         {/* ============================ OVERVIEW ============================ */}
         {currentTabKey === 'overview' && (
-          <View style={styles.tabContent}>
-            {/* Cancelled-state notice (shown immediately under hero) */}
-            {wasCancelled && (
-              <View
-                style={[
-                  styles.section,
-                  styles.cancelledNotice,
-                  { backgroundColor: colors.cancelledBg, borderColor: colors.cancelledBorder },
-                ]}
-              >
-                <Ionicons name="alert-circle-outline" size={20} color={colors.cancelledText} />
-                <View style={{ flex: 1 }}>
-                  <Text size="sm" weight="semibold" color={colors.cancelledText}>
-                    {t('tournamentDetail.cancelledNotice.title')}
-                  </Text>
-                  {tournament.cancelled_reason ? (
-                    <Text size="xs" color={colors.cancelledText}>
-                      {t('tournamentDetail.cancelledNotice.reason').replace(
-                        '{reason}',
-                        tournament.cancelled_reason
-                      )}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            )}
-
-            {/* Champion banner */}
-            {championName && !wasCancelled && <ChampionCard name={championName} colors={colors} />}
-
-            {/* Stats first: the numbers worth a glance, one segmented card */}
-            <View
-              style={[
-                styles.section,
-                styles.statsCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <StatSegment
-                value={`${registeredCount}/${tournament.max_participants}`}
-                label={t('tournamentDetail.dashboard.stats.registered')}
-                colors={colors}
-              />
-              {(isLive || isFinished) && !wasCancelled ? (
-                <StatSegment
-                  value={`${matchProgress.done}/${matchProgress.total}`}
-                  label={t('tournamentDetail.dashboard.stats.games')}
-                  colors={colors}
-                  showDivider
-                />
-              ) : tournament.status === 'registration_open' && tournament.registration_closes_at ? (
-                <StatSegment
-                  value={new Date(tournament.registration_closes_at).toLocaleDateString(locale, {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                  label={t('tournamentDetail.dashboard.stats.deadline')}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-              <StatSegment
-                value={startTileValue}
-                label={startTileLabel}
-                colors={colors}
-                showDivider
-              />
-            </View>
-
-            {/* Lifecycle pipeline — drops away once the event is over */}
-            {!wasCancelled && !isFinished && (
-              <View
-                style={[
-                  styles.section,
-                  styles.stepperCard,
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                ]}
-              >
-                <LifecycleStepper stepIndex={stepIndex} colors={colors} t={t} />
-              </View>
-            )}
-
-            {/* At most one accent card: approvals waiting, or the live summary.
-                Everything state-advancing lives in the docked bar instead. */}
-            {isOrganizer && pendingRequestRows.length > 0 && (
-              <DashboardCtaCard
-                icon="hourglass-outline"
-                title={t('tournamentDetail.dashboard.pendingRequestsCta.title')}
-                description={t('tournamentDetail.dashboard.pendingRequestsCta.description').replace(
-                  '{count}',
-                  String(pendingRequestRows.length)
-                )}
-                buttonLabel={t('tournamentDetail.dashboard.pendingRequestsCta.review')}
-                buttonIcon="people-outline"
-                onPress={() => {
-                  if (!hasPlayersTab) return;
-                  setPlayersSegment('requests');
-                  goToTab('players');
-                }}
-                accent="secondary"
-                colors={colors}
-                testID="cta-pending-requests"
-              />
-            )}
-            {isOrganizer && isLive && (
-              <DashboardCtaCard
-                icon="play-outline"
-                title={t('tournamentDetail.dashboard.nextStep.liveTitle')}
-                description={t('tournamentDetail.dashboard.nextStep.liveDescription')
-                  .replace('{done}', String(matchProgress.done))
-                  .replace('{total}', String(matchProgress.total))}
-                colors={colors}
-              />
-            )}
-
-            {/* Full house: no docked action to show, so say so here instead. */}
-            {!isOrganizer &&
-              tournament.status === 'registration_open' &&
-              !myActiveRegistration &&
-              spotsLeft === 0 && (
-                <DashboardCtaCard
-                  icon="person-add-outline"
-                  title={t('tournamentDetail.dashboard.registerCta.full')}
-                  description={t('tournamentDetail.dashboard.registerCta.fullDescription')}
-                  colors={colors}
-                />
-              )}
-
-            {myActiveRegistration && tournament.status === 'registration_open' && (
-              <DashboardCtaCard
-                icon="checkmark-circle-outline"
-                title={
-                  myActiveRegistration.status === 'pending'
-                    ? isInvitePending || isInvitedPending
-                      ? t('tournamentDetail.dashboard.withdrawCta.titleInvited')
-                      : t('tournamentDetail.dashboard.withdrawCta.titlePending')
-                    : isDoubles
-                      ? t('tournamentDetail.dashboard.withdrawCta.titleTeam')
-                      : t('tournamentDetail.dashboard.withdrawCta.title')
-                }
-                description={
-                  myActiveRegistration.status === 'pending'
-                    ? isInvitePending || isInvitedPending
-                      ? t('tournamentDetail.dashboard.withdrawCta.descriptionInvited')
-                      : t('tournamentDetail.dashboard.withdrawCta.descriptionPending')
-                    : isDoubles
-                      ? t('tournamentDetail.dashboard.withdrawCta.descriptionTeam')
-                      : t('tournamentDetail.dashboard.withdrawCta.description')
-                }
-                buttonLabel={
-                  withdraw.isPending || refundRegistration.isPending
-                    ? t('tournamentDetail.actions.withdrawing')
-                    : t('tournamentDetail.actions.withdraw')
-                }
-                buttonIcon="exit-outline"
-                onPress={onWithdraw}
-                disabled={withdraw.isPending || refundRegistration.isPending}
-                testID="cta-withdraw"
-                destructive
-                colors={colors}
-              />
-            )}
-
-            {/* Participant: my next game (also shown to organizers who play) */}
-            {myBracketState && (
-              <View style={styles.section}>
-                <Text
-                  size="xs"
-                  weight="semibold"
-                  color={colors.textMuted}
-                  style={styles.sectionTitle}
-                >
-                  {t('tournamentDetail.dashboard.myMatch.title').toUpperCase()}
-                </Text>
-                {myBracketState === 'next' && myNextMatch && myMatchP1 && myMatchP2 ? (
-                  <>
-                    <TouchableOpacity
-                      onPress={() => handleBracketMatchTap(myNextMatch.id, myMatchP1, myMatchP2)}
-                      activeOpacity={0.7}
-                      style={[
-                        styles.card,
-                        styles.myMatchCard,
-                        { backgroundColor: colors.highlightBg, borderColor: colors.primary },
-                      ]}
-                      accessibilityRole="button"
-                    >
-                      <View style={styles.myMatchMain}>
-                        <Text size="lg" weight="bold" color={colors.text}>
-                          {t('tournamentDetail.dashboard.myMatch.vs').replace(
-                            '{name}',
-                            myOpponentLabel ?? '?'
-                          )}
-                        </Text>
-                        <Text size="xs" color={colors.textMuted}>
-                          {myNextMatch.bracket_side === 'pool'
-                            ? t('tournamentDetail.pools.poolGame' as TranslationKey)
-                            : roundLabel(myNextMatch.round_number, totalRounds, t)}{' '}
-                          · {t('tournamentDetail.dashboard.myMatch.hint')}
-                        </Text>
-                        {myNextMatchDeadline && (
-                          <View style={styles.myMatchDeadlineRow}>
-                            <Ionicons
-                              name="time-outline"
-                              size={13}
-                              color={
-                                deadlineUrgent(myNextMatchDeadline)
-                                  ? colors.danger
-                                  : colors.textMuted
-                              }
-                            />
-                            <Text
-                              size="xs"
-                              weight="semibold"
-                              color={
-                                deadlineUrgent(myNextMatchDeadline)
-                                  ? colors.danger
-                                  : colors.textMuted
-                              }
-                            >
-                              {formatDeadline(myNextMatchDeadline)}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-                    </TouchableOpacity>
-
-                    {/* Organize the game with your opponent in a shared round chat. */}
-                    <TouchableOpacity
-                      onPress={() => handleOpenRoundChat(myNextMatch.id)}
-                      activeOpacity={0.7}
-                      disabled={openRoundChat.isPending}
-                      style={[
-                        styles.primaryButton,
-                        styles.roundChatBtn,
-                        { backgroundColor: colors.primary },
-                        openRoundChat.isPending && styles.buttonDisabled,
-                      ]}
-                      accessibilityRole="button"
-                    >
-                      {openRoundChat.isPending ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
-                      ) : (
-                        <Ionicons name="chatbubbles-outline" size={20} color="#ffffff" />
-                      )}
-                      <Text size="base" weight="semibold" color="#ffffff">
-                        {t('tournamentDetail.dashboard.myMatch.organize')}
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <View
-                    style={[
-                      styles.card,
-                      styles.myMatchCard,
-                      { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        myBracketState === 'eliminated'
-                          ? 'flag-outline'
-                          : myBracketState === 'champion'
-                            ? 'trophy-outline'
-                            : 'hourglass-outline'
-                      }
-                      size={18}
-                      color={colors.textMuted}
-                    />
-                    <Text size="sm" color={colors.textMuted} style={styles.myMatchStateText}>
-                      {t(
-                        myBracketState === 'eliminated'
-                          ? 'tournamentDetail.dashboard.myMatch.eliminated'
-                          : myBracketState === 'champion'
-                            ? 'tournamentDetail.dashboard.myMatch.champion'
-                            : 'tournamentDetail.dashboard.myMatch.waiting'
-                      )}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* About: the organizer's pitch, clamped; the full text lives in
-                Details. The length check approximates "6 lines would clip". */}
-            {tournament.description?.trim() ? (
-              <Section title={t('tournamentDetail.labels.description')} colors={colors}>
-                <View style={styles.aboutBlock}>
-                  <Text size="sm" color={colors.text} style={styles.aboutText} numberOfLines={6}>
-                    {tournament.description}
-                  </Text>
-                  {tournament.description.length > 280 && (
-                    <TouchableOpacity
-                      onPress={() => goToTab('details')}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      style={styles.aboutMore}
-                    >
-                      <Text size="sm" weight="semibold" color={colors.primary}>
-                        {t('tournamentDetail.overview.readMore')}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </Section>
-            ) : null}
-
-            {/* Event info: the friendly at-a-glance card (Details keeps the
-                full spec sheet). Rows only render when they have something. */}
-            <Section title={t('tournamentDetail.overview.infoTitle')} colors={colors}>
-              <OverviewInfoRow
-                icon="calendar-outline"
-                text={`${formatDate(tournament.start_date)} – ${formatDate(tournament.end_date)}`}
-                colors={colors}
-              />
-              {tournament.venue_name || tournament.city ? (
-                <OverviewInfoRow
-                  icon="location-outline"
-                  text={tournament.venue_name || tournament.city || ''}
-                  subText={venueSecondaryLine || undefined}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-              {ratingRangeLabel ? (
-                <OverviewInfoRow
-                  icon="analytics-outline"
-                  text={`${t('tournamentDetail.labels.ratingRange')} · ${ratingRangeLabel}`}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-              {entryFeeLabel ? (
-                <OverviewInfoRow
-                  icon="card-outline"
-                  text={`${t('tournamentDetail.labels.entryFee')} · ${entryFeeLabel}`}
-                  subText={refundSummary ?? undefined}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-              {organizerName ? (
-                <OverviewInfoRow
-                  icon="person-outline"
-                  text={t('tournamentDetail.dashboard.organizedBy').replace(
-                    '{name}',
-                    organizerName
-                  )}
-                  colors={colors}
-                  showDivider
-                />
-              ) : null}
-            </Section>
-
-            {/* Who's in: social proof, tappable through to the Players tab */}
-            {hasPlayersTab && registeredParticipantPlayers.length > 0 && (
-              <Section title={t('tournamentDetail.dashboard.participants.title')} colors={colors}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPlayersSegment('confirmed');
-                    goToTab('players');
-                  }}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('tournamentDetail.tabs.players')}
-                  style={styles.playersPreviewRow}
-                  testID="overview-players-preview"
-                >
-                  <View style={styles.playersPreviewAvatars}>
-                    {registeredParticipantPlayers.slice(0, 6).map((p, i) => {
-                      const uri = getProfilePictureUrl(p.profile_picture_url);
-                      return (
-                        <View
-                          key={p.id}
-                          style={[
-                            styles.playersPreviewAvatar,
-                            i > 0 && styles.playersPreviewAvatarOverlap,
-                            {
-                              backgroundColor: colors.statusMutedBg,
-                              borderColor: colors.cardBackground,
-                            },
-                          ]}
-                        >
-                          {uri ? (
-                            <Image source={{ uri }} style={styles.playersPreviewAvatarImg} />
-                          ) : (
-                            <Ionicons name="person" size={14} color={colors.textMuted} />
-                          )}
-                        </View>
-                      );
-                    })}
-                    {registeredParticipantPlayers.length > 6 && (
-                      <View
-                        style={[
-                          styles.playersPreviewAvatar,
-                          styles.playersPreviewAvatarOverlap,
-                          {
-                            backgroundColor: colors.statusActiveBg,
-                            borderColor: colors.cardBackground,
-                          },
-                        ]}
-                      >
-                        <Text size="xs" weight="semibold" color={colors.primary}>
-                          +{registeredParticipantPlayers.length - 6}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text size="sm" weight="semibold" color={colors.textMuted}>
-                    {registeredCount}/{tournament.max_participants}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
-              </Section>
-            )}
-
-            {/* Organizer utilities: quiet grouped rows, not competing cards.
-                Edit and Invite also live in the header ⋯ menu. */}
-            {isOrganizer && organizerRows.length > 0 && (
-              <View style={styles.section}>
-                <Text
-                  size="xs"
-                  weight="semibold"
-                  color={colors.textMuted}
-                  style={styles.sectionTitle}
-                >
-                  {t('tournamentDetail.dashboard.manageTitle').toUpperCase()}
-                </Text>
-                <View
-                  style={[
-                    styles.card,
-                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
-                  ]}
-                >
-                  {organizerRows.map((row, i) => (
-                    <OverviewActionRow
-                      key={row.testID}
-                      icon={row.icon}
-                      label={row.label}
-                      badge={row.badge}
-                      onPress={row.onPress}
-                      showDivider={i > 0}
-                      colors={colors}
-                      testID={row.testID}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
+          <OverviewTab
+            tournament={tournament}
+            colors={colors}
+            t={t}
+            locale={locale}
+            formatDate={formatDate}
+            formatDeadline={formatDeadline}
+            deadlineUrgent={deadlineUrgent}
+            goToTab={goToTab}
+            setPlayersSegment={setPlayersSegment}
+            stepIndex={stepIndex}
+            isLive={isLive}
+            isFinished={isFinished}
+            wasCancelled={wasCancelled}
+            startTileLabel={startTileLabel}
+            startTileValue={startTileValue}
+            registeredCount={registeredCount}
+            spotsLeft={spotsLeft}
+            matchProgress={matchProgress}
+            totalRounds={totalRounds}
+            championName={championName}
+            isDoubles={isDoubles}
+            isOrganizer={isOrganizer}
+            isInvitePending={isInvitePending}
+            isInvitedPending={isInvitedPending}
+            myActiveRegistration={myActiveRegistration}
+            myBracketState={myBracketState}
+            myNextMatch={myNextMatch}
+            myNextMatchDeadline={myNextMatchDeadline}
+            myOpponentLabel={myOpponentLabel}
+            myMatchP1={myMatchP1}
+            myMatchP2={myMatchP2}
+            handleBracketMatchTap={handleBracketMatchTap}
+            handleOpenRoundChat={handleOpenRoundChat}
+            openRoundChat={openRoundChat}
+            onWithdraw={onWithdraw}
+            withdraw={withdraw}
+            refundRegistration={refundRegistration}
+            organizerName={organizerName}
+            organizerRows={organizerRows}
+            pendingRequestRows={pendingRequestRows}
+            registeredParticipantPlayers={registeredParticipantPlayers}
+            hasPlayersTab={hasPlayersTab}
+            ratingRangeLabel={ratingRangeLabel}
+            venueSecondaryLine={venueSecondaryLine}
+            entryFeeLabel={entryFeeLabel}
+            refundSummary={refundSummary}
+          />
         )}
 
         {/* ============================ BRACKET ============================= */}
         {currentTabKey === 'bracket' && showBracketTab && (
-          <View style={styles.tabContent}>
-            {currentPhaseDeadline && (
-              <View style={styles.phaseDeadlineRow}>
-                <View
-                  style={[
-                    styles.phaseDeadlinePill,
-                    {
-                      backgroundColor: deadlineUrgent(currentPhaseDeadline)
-                        ? colors.dangerBg
-                        : colors.statusMutedBg,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={13}
-                    color={deadlineUrgent(currentPhaseDeadline) ? colors.danger : colors.textMuted}
-                  />
-                  <Text
-                    size="xs"
-                    weight="semibold"
-                    color={deadlineUrgent(currentPhaseDeadline) ? colors.danger : colors.textMuted}
-                  >
-                    {t('tournamentDetail.deadlines.phaseDeadline' as TranslationKey).replace(
-                      '{when}',
-                      formatDeadline(currentPhaseDeadline)
-                    )}
-                  </Text>
-                </View>
-              </View>
-            )}
-            {isPoolTournament && (
-              <>
-                {knockoutMatches.length === 0 &&
-                  (poolPhaseComplete && isOrganizer ? (
-                    <TouchableOpacity
-                      disabled={generateKnockout.isPending}
-                      onPress={handleGenerateKnockout}
-                      activeOpacity={0.8}
-                      style={[styles.poolLaunchBtn, { backgroundColor: colors.primary }]}
-                      testID="cta-generate-knockout"
-                    >
-                      <Ionicons name="git-branch-outline" size={16} color="#ffffff" />
-                      <Text size="sm" weight="semibold" color="#ffffff">
-                        {t('tournamentDetail.pools.launchKnockout' as TranslationKey)}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={[styles.poolPhaseNote, { backgroundColor: colors.statusMutedBg }]}>
-                      <Ionicons
-                        name="information-circle-outline"
-                        size={16}
-                        color={colors.textMuted}
-                      />
-                      <Text size="xs" color={colors.textMuted} style={styles.poolPhaseNoteText}>
-                        {t(
-                          (poolPhaseComplete
-                            ? 'tournamentDetail.pools.launchKnockoutReady'
-                            : 'tournamentDetail.pools.launchKnockoutWaiting') as TranslationKey
-                        )}
-                      </Text>
-                    </View>
-                  ))}
-                <PoolsSection
-                  standings={poolStandings}
-                  poolMatches={poolMatches}
-                  nameByRegId={nameByRegId}
-                  membersByRegId={membersByRegId}
-                  qualifiersPerPool={tournament.qualifiers_per_pool ?? 2}
-                  currentUserId={userId}
-                  isOrganizer={isOrganizer}
-                  onMatchPress={handleBracketMatchTap}
-                  onOrganizerOverride={handleOrganizerOverride}
-                  colors={colors}
-                  t={t as (k: string) => string}
-                />
-              </>
-            )}
-            {isPoolTournament && knockoutMatches.length > 0 && (
-              <Text
-                size="xs"
-                weight="semibold"
-                color={colors.textMuted}
-                style={[styles.sectionTitle, styles.knockoutTitle]}
-              >
-                {t('tournamentDetail.pools.knockoutTitle' as TranslationKey).toUpperCase()}
-              </Text>
-            )}
-            {(!isPoolTournament || knockoutMatches.length > 0) && (
-              <BracketSection
-                matches={knockoutMatches}
-                seedByRegId={seedByRegId}
-                nameByRegId={nameByRegId}
-                membersByRegId={membersByRegId}
-                slotPlayersByRegId={slotPlayersByRegId}
-                currentUserId={userId}
-                isOrganizer={isOrganizer}
-                onMatchPress={handleBracketMatchTap}
-                onOrganizerOverride={handleOrganizerOverride}
-                onPlayerPress={handleBracketPlayerPress}
-                colors={colors}
-                t={t}
-                showTitle={false}
-              />
-            )}
-          </View>
+          <BracketTab
+            tournament={tournament}
+            colors={colors}
+            t={t}
+            userId={userId}
+            isOrganizer={isOrganizer}
+            isPoolTournament={isPoolTournament}
+            currentPhaseDeadline={currentPhaseDeadline}
+            deadlineUrgent={deadlineUrgent}
+            formatDeadline={formatDeadline}
+            knockoutMatches={knockoutMatches}
+            poolMatches={poolMatches}
+            poolStandings={poolStandings}
+            poolPhaseComplete={poolPhaseComplete}
+            nameByRegId={nameByRegId}
+            membersByRegId={membersByRegId}
+            seedByRegId={seedByRegId}
+            slotPlayersByRegId={slotPlayersByRegId}
+            generateKnockout={generateKnockout}
+            handleGenerateKnockout={handleGenerateKnockout}
+            handleBracketMatchTap={handleBracketMatchTap}
+            handleOrganizerOverride={handleOrganizerOverride}
+            handleBracketPlayerPress={handleBracketPlayerPress}
+          />
         )}
 
         {/* ============================ PLAYERS ============================= */}
         {currentTabKey === 'players' && showPlayersTab && (
-          <View style={styles.playersTabContent}>
-            {adminActions.canInvite && (
-              <Pressable
-                onPress={handleInvitePlayers}
-                style={({ pressed }) => [
-                  styles.playersInviteBtn,
-                  { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
-                ]}
-                testID="players-invite-cta"
-              >
-                <Ionicons name="share-social-outline" size={18} color="#ffffff" />
-                <Text size="sm" weight="semibold" color="#ffffff">
-                  {t('tournamentDetail.actions.invitePlayers')}
-                </Text>
-              </Pressable>
-            )}
-            {playersSegmentTabs.length > 1 && (
-              <UnderlineTabBar
-                tabs={playersSegmentTabs}
-                activeKey={activePlayersSegment}
-                onChange={setPlayersSegment}
-                style={styles.segmentBar}
-              />
-            )}
-            {activePlayersSegment === 'requests' ? (
-              <PendingRequestsSection
-                rows={pendingRequestRows}
-                onPlayerPress={handlePlayerPress}
-                onApprove={handleApprovePress}
-                onDecline={handleRemovePress}
-                colors={colors}
-                t={t}
-              />
-            ) : activePlayersSegment === 'invited' ? (
-              <InvitedSection
-                rows={invitedPendingRows}
-                onPlayerPress={handlePlayerPress}
-                onRevoke={handleRevokeInvite}
-                colors={colors}
-                t={t}
-              />
-            ) : (
-              <ParticipantsSection
-                players={registeredParticipantPlayers}
-                onPlayerPress={handlePlayerPress}
-                onRemovePress={
-                  canRemoveRegistrants || canForfeitRegistrants ? handleRemovePress : undefined
-                }
-                currentUserId={userId}
-                maxParticipants={tournament.max_participants}
-                deadlineLabel={
-                  tournament.registration_closes_at && tournament.status === 'registration_open'
-                    ? formatDate(tournament.registration_closes_at)
-                    : null
-                }
-                colors={colors}
-                t={t}
-              />
-            )}
-          </View>
+          <PlayersTab
+            tournament={tournament}
+            colors={colors}
+            t={t}
+            userId={userId}
+            formatDate={formatDate}
+            playersSegmentTabs={playersSegmentTabs}
+            activePlayersSegment={activePlayersSegment}
+            registeredParticipantPlayers={registeredParticipantPlayers}
+            pendingRequestRows={pendingRequestRows}
+            invitedPendingRows={invitedPendingRows}
+            adminActions={adminActions}
+            canRemoveRegistrants={canRemoveRegistrants}
+            canForfeitRegistrants={canForfeitRegistrants}
+            setPlayersSegment={setPlayersSegment}
+            handlePlayerPress={handlePlayerPress}
+            handleInvitePlayers={handleInvitePlayers}
+            handleApprovePress={handleApprovePress}
+            handleRemovePress={handleRemovePress}
+            handleRevokeInvite={handleRevokeInvite}
+          />
         )}
 
         {/* ============================ DETAILS ============================= */}
         {currentTabKey === 'details' && (
-          <View style={styles.tabContent}>
-            {tournament.description?.trim() ? (
-              <LabeledBlock
-                label={t('tournamentDetail.labels.description')}
-                value={tournament.description}
-                colors={colors}
-              />
-            ) : null}
-
-            <Section title={t('tournamentDetail.dashboard.details')} colors={colors}>
-              <InfoRow
-                label={t('tournamentDetail.labels.startDate')}
-                value={formatDate(tournament.start_date)}
-                colors={colors}
-              />
-              <InfoRow
-                label={t('tournamentDetail.labels.endDate')}
-                value={formatDate(tournament.end_date)}
-                colors={colors}
-              />
-              {tournament.registration_closes_at &&
-                (tournament.status === 'draft' || tournament.status === 'registration_open') && (
-                  <InfoRow
-                    label={t('tournamentDetail.labels.registrationCloses')}
-                    value={formatDate(tournament.registration_closes_at)}
-                    colors={colors}
-                  />
-                )}
-              <InfoRow
-                label={t('tournamentDetail.labels.bracketSize')}
-                value={String(tournament.max_participants)}
-                colors={colors}
-              />
-              <InfoRow
-                label={t('tournamentDetail.labels.bracketType')}
-                value={t(BRACKET_TYPE_LABEL_KEY[tournament.bracket_type] as TranslationKey)}
-                colors={colors}
-              />
-              <InfoRow
-                label={t('tournamentDetail.labels.entryFormat')}
-                value={t(ENTRY_FORMAT_LABEL_KEY[tournament.entry_format] as TranslationKey)}
-                colors={colors}
-              />
-              <InfoRow
-                label={t('tournamentDetail.labels.matchFormat')}
-                value={t(MATCH_FORMAT_LABEL_KEY[tournament.match_format] as TranslationKey)}
-                colors={colors}
-              />
-              {ratingRangeLabel ? (
-                <InfoRow
-                  label={t('tournamentDetail.labels.ratingRange')}
-                  value={ratingRangeLabel}
-                  colors={colors}
-                />
-              ) : null}
-              <InfoRow
-                label={t('tournamentDetail.labels.visibility')}
-                value={t(VISIBILITY_LABEL_KEY[tournament.visibility] as TranslationKey)}
-                colors={colors}
-              />
-              <InfoRow
-                label={t('tournamentDetail.labels.registrationMode')}
-                value={t(REG_MODE_LABEL_KEY[tournament.registration_mode] as TranslationKey)}
-                colors={colors}
-              />
-            </Section>
-
-            {hasVenueDetails ? (
-              <LabeledBlock label={t('tournamentDetail.labels.location')} colors={colors}>
-                <Text size="base" weight="semibold" color={colors.text}>
-                  {tournament.venue_name || tournament.city}
-                </Text>
-                {venueSecondaryLine ? (
-                  <Text size="sm" color={colors.textMuted} style={styles.venueAddress}>
-                    {venueSecondaryLine}
-                  </Text>
-                ) : null}
-              </LabeledBlock>
-            ) : null}
-
-            {showFeesSection ? (
-              <Section title={t('tournamentDetail.dashboard.feesTitle')} colors={colors}>
-                <InfoRow
-                  label={t('tournamentDetail.labels.entryFee')}
-                  value={entryFeeLabel ?? t('tournamentCreation.payments.freeNote')}
-                  colors={colors}
-                />
-                {playerPaysServiceFee && feeTotalLabel ? (
-                  <InfoRow
-                    label={t('tournamentDetail.labels.youPay')}
-                    value={feeTotalLabel}
-                    colors={colors}
-                  />
-                ) : null}
-                {refundSummary ? (
-                  <StackedRow
-                    label={t('tournamentDetail.labels.refundPolicy')}
-                    value={refundSummary}
-                    colors={colors}
-                  />
-                ) : null}
-                {prizePoolLabel ? (
-                  <InfoRow
-                    label={t('tournamentDetail.dashboard.prizePool')}
-                    value={prizePoolLabel}
-                    colors={colors}
-                  />
-                ) : null}
-              </Section>
-            ) : null}
-          </View>
+          <DetailsTab
+            tournament={tournament}
+            colors={colors}
+            t={t}
+            formatDate={formatDate}
+            ratingRangeLabel={ratingRangeLabel}
+            hasVenueDetails={hasVenueDetails}
+            venueSecondaryLine={venueSecondaryLine}
+            showFeesSection={showFeesSection}
+            entryFeeLabel={entryFeeLabel}
+            playerPaysServiceFee={playerPaysServiceFee}
+            feeTotalLabel={feeTotalLabel}
+            refundSummary={refundSummary}
+            prizePoolLabel={prizePoolLabel}
+          />
         )}
 
         {/* ============================= POINTS ============================= */}
@@ -3209,24 +2595,7 @@ export const TournamentDetail: React.FC = () => {
 
         {/* ============================= RULES ============================== */}
         {currentTabKey === 'rules' && showRulesTab && (
-          <View style={styles.tabContent}>
-            <View
-              style={[
-                styles.card,
-                styles.rulesCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              {rulesLines.map((line, i) => (
-                <View key={i} style={styles.ruleRow}>
-                  <View style={[styles.ruleDot, { backgroundColor: colors.primary }]} />
-                  <Text size="sm" color={colors.text} style={styles.ruleText}>
-                    {line}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          <RulesTab rulesLines={rulesLines} colors={colors} />
         )}
       </ScrollView>
 
@@ -3471,588 +2840,6 @@ export const TournamentDetail: React.FC = () => {
   );
 };
 
-type MatchRow = Tables<'tournament_matches'>;
-
-const roundLabel = (
-  round: number,
-  totalRounds: number,
-  t: (k: TranslationKey) => string
-): string => {
-  if (round === totalRounds) return t('tournamentDetail.bracket.final');
-  if (round === totalRounds - 1) return t('tournamentDetail.bracket.semifinal');
-  if (round === totalRounds - 2) return t('tournamentDetail.bracket.quarterfinal');
-  return t('tournamentDetail.bracket.round').replace('{n}', String(round));
-};
-
-const slotLabel = (
-  regId: string | null,
-  isBye: boolean,
-  isPhantom: boolean,
-  seedByRegId: Map<string, number>,
-  nameByRegId: Map<string, string>,
-  t: (k: TranslationKey) => string
-): string => {
-  if (isPhantom) return t('tournamentDetail.bracket.phantom');
-  if (isBye) return t('tournamentDetail.bracket.bye');
-  if (!regId) return t('tournamentDetail.bracket.tbd');
-  const name = nameByRegId.get(regId);
-  if (name) return name;
-  // Fall back to the seed rank for a determined-but-unnamed slot.
-  const seed = seedByRegId.get(regId);
-  return seed !== undefined ? seedFallbackLabel(seed, t) : t('tournamentDetail.bracket.tbd');
-};
-
-type SlotKind = 'player' | 'bye' | 'tbd' | 'phantom';
-
-const slotKind = (regId: string | null, isBye: boolean, isPhantom: boolean): SlotKind => {
-  if (isPhantom) return 'phantom';
-  if (isBye) return 'bye';
-  if (!regId) return 'tbd';
-  return 'player';
-};
-
-// The bracket score is a free-form string the organizer types ("e.g., 6-4
-// 6-2"). We split it into per-set pairs in written order; the caller orients
-// each set onto the right player's row using the known match winner.
-const parseScoreSets = (score: string | null): Array<{ a: number; b: number }> => {
-  if (!score) return [];
-  const sets: Array<{ a: number; b: number }> = [];
-  const re = /(\d{1,2})\s*[-–:]\s*(\d{1,2})/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(score)) !== null) {
-    sets.push({ a: parseInt(m[1], 10), b: parseInt(m[2], 10) });
-  }
-  return sets;
-};
-
-const BracketSection: React.FC<{
-  matches: MatchRow[];
-  seedByRegId: Map<string, number>;
-  nameByRegId: Map<string, string>;
-  membersByRegId: Map<string, string[]>;
-  slotPlayersByRegId: Map<string, Array<{ id: string; avatarUrl: string | null }>>;
-  currentUserId: string | undefined;
-  isOrganizer: boolean;
-  onMatchPress: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
-  onOrganizerOverride: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
-  onPlayerPress: (playerId: string) => void;
-  colors: ScreenColors;
-  t: (k: TranslationKey) => string;
-  showTitle?: boolean;
-}> = ({
-  matches,
-  seedByRegId,
-  nameByRegId,
-  membersByRegId,
-  slotPlayersByRegId,
-  currentUserId,
-  isOrganizer,
-  onMatchPress,
-  onOrganizerOverride,
-  onPlayerPress,
-  colors,
-  t,
-  showTitle = true,
-}) => {
-  const totalRounds = matches.reduce((max, m) => Math.max(max, m.round_number), 0);
-  const byRound = new Map<number, MatchRow[]>();
-  for (const m of matches) {
-    const arr = byRound.get(m.round_number) ?? [];
-    arr.push(m);
-    byRound.set(m.round_number, arr);
-  }
-  const roundNumbers = [...byRound.keys()].sort((a, b) => a - b);
-
-  // Flashscore-style round pager: open on the first round still being played.
-  const [selectedIdx, setSelectedIdx] = useState(() => {
-    const idx = roundNumbers.findIndex(r =>
-      (byRound.get(r) ?? []).some(
-        m => !m.winner_registration_id && !(m.player1_is_bye && m.player2_is_bye)
-      )
-    );
-    return idx === -1 ? Math.max(0, roundNumbers.length - 1) : idx;
-  });
-  const [pageWidth, setPageWidth] = useState(0);
-  const pagerRef = useRef<ScrollView>(null);
-
-  // Snap to the selected page once the pager is measured (no animation).
-  useEffect(() => {
-    if (pageWidth > 0) {
-      pagerRef.current?.scrollTo({ x: selectedIdx * pageWidth, animated: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageWidth]);
-
-  const goToRound = (idx: number) => {
-    void lightHaptic();
-    setSelectedIdx(idx);
-    pagerRef.current?.scrollTo({ x: idx * pageWidth, animated: true });
-  };
-
-  const onPagerSettle = (offsetX: number) => {
-    if (pageWidth <= 0) return;
-    const idx = Math.min(roundNumbers.length - 1, Math.max(0, Math.round(offsetX / pageWidth)));
-    if (idx !== selectedIdx) setSelectedIdx(idx);
-  };
-
-  // Round is "complete" once every real (non-bye) game has a winner — used to
-  // mark the chip with a check and drive the per-round progress pill.
-  const roundProgress = (round: number) => {
-    const real = (byRound.get(round) ?? []).filter(m => !(m.player1_is_bye && m.player2_is_bye));
-    const done = real.filter(m => m.winner_registration_id).length;
-    return { done, total: real.length, complete: real.length > 0 && done === real.length };
-  };
-
-  // Final-round winner → celebratory champion header at the top of the bracket.
-  const finalMatch = matches.find(m => m.round_number === totalRounds && m.winner_registration_id);
-  const championRegId = finalMatch?.winner_registration_id ?? null;
-  const championName = championRegId
-    ? (nameByRegId.get(championRegId) ?? seedFallbackLabel(seedByRegId.get(championRegId), t))
-    : null;
-
-  const renderMatch = (m: MatchRow) => {
-    const isPhantom = m.player1_is_bye && m.player2_is_bye && m.winner_registration_id === null;
-    const winnerSlot = !m.winner_registration_id
-      ? 0
-      : m.winner_registration_id === m.player1_registration_id
-        ? 1
-        : m.winner_registration_id === m.player2_registration_id
-          ? 2
-          : 0;
-    const isFinalRound = m.round_number === totalRounds;
-
-    const p1Members = m.player1_registration_id
-      ? (membersByRegId.get(m.player1_registration_id) ?? [])
-      : [];
-    const p2Members = m.player2_registration_id
-      ? (membersByRegId.get(m.player2_registration_id) ?? [])
-      : [];
-    // Avatars only for real, named slots (never bye/tbd/phantom).
-    const p1SlotPlayers =
-      m.player1_registration_id && !m.player1_is_bye && !isPhantom
-        ? (slotPlayersByRegId.get(m.player1_registration_id) ?? [])
-        : [];
-    const p2SlotPlayers =
-      m.player2_registration_id && !m.player2_is_bye && !isPhantom
-        ? (slotPlayersByRegId.get(m.player2_registration_id) ?? [])
-        : [];
-    const callerIsParticipant =
-      !!currentUserId && (p1Members.includes(currentUserId) || p2Members.includes(currentUserId));
-    const slotsReady =
-      !m.player1_is_bye &&
-      !m.player2_is_bye &&
-      !!m.player1_registration_id &&
-      !!m.player2_registration_id;
-    const isPlayable = m.status === 'pending' && slotsReady;
-    // Organizers record results (override) and may also CORRECT a completed
-    // match; the RPC rejects (NEXT_MATCH_ALREADY_PLAYED) once the downstream
-    // match has its own result. Participants link their own played match.
-    const canOrganizerOverride =
-      isOrganizer && slotsReady && (m.status === 'pending' || m.status === 'completed');
-    const canParticipantAttach = isPlayable && callerIsParticipant;
-    const isTappable = canOrganizerOverride || canParticipantAttach;
-    // An organizer who is playing in this match acts as a participant on it
-    // (link your own played game); the override sheet stays for matches they're
-    // not in and for correcting a completed result they can no longer attach.
-    const useOrganizerOverride = canOrganizerOverride && !canParticipantAttach;
-
-    const isLive = m.status === 'in_progress';
-    const isDisputed = m.status === 'disputed';
-
-    const headerRight = isLive ? (
-      <View style={[styles.bmStatusPill, { backgroundColor: colors.statusActiveBg }]}>
-        <View style={[styles.bmLiveDot, { backgroundColor: colors.primary }]} />
-        <Text size="xs" weight="bold" color={colors.primary}>
-          {t('tournamentDetail.bracket.live')}
-        </Text>
-      </View>
-    ) : isDisputed ? (
-      <View style={[styles.bmStatusPill, { backgroundColor: colors.cancelledBg }]}>
-        <Ionicons name="alert-circle" size={12} color={colors.cancelledText} />
-        <Text size="xs" weight="bold" color={colors.cancelledText}>
-          {t('tournamentDetail.bracket.disputed')}
-        </Text>
-      </View>
-    ) : null;
-
-    // Per-player set scores: each set's games sit on that player's own row, the
-    // set-winner's number bolded per column. The raw string has no fixed player
-    // order, so we orient it by the known match winner — whichever side took
-    // more sets is the winner's — then map onto rows. A winner with no parseable
-    // score gets a check instead.
-    const sets = parseScoreSets(m.score);
-    const aWins = sets.filter(s => s.a > s.b).length;
-    const bWins = sets.filter(s => s.b > s.a).length;
-    const winnerOnSideA = aWins >= bWins;
-    const winnerGames = sets.map(s => (winnerOnSideA ? s.a : s.b));
-    const loserGames = sets.map(s => (winnerOnSideA ? s.b : s.a));
-    const p1Games =
-      winnerSlot === 1 ? winnerGames : winnerSlot === 2 ? loserGames : sets.map(s => s.a);
-    const p2Games =
-      winnerSlot === 2 ? winnerGames : winnerSlot === 1 ? loserGames : sets.map(s => s.b);
-    const cells1 = p1Games.map((v, i) => ({ value: v, won: v > p2Games[i] }));
-    const cells2 = p2Games.map((v, i) => ({ value: v, won: v > p1Games[i] }));
-
-    const statusStrip =
-      isLive || isDisputed ? <View style={styles.bmStatusStrip}>{headerRight}</View> : null;
-
-    const matchInner = (
-      <>
-        {statusStrip}
-        <BracketPlayerRow
-          label={slotLabel(
-            m.player1_registration_id,
-            m.player1_is_bye,
-            isPhantom,
-            seedByRegId,
-            nameByRegId,
-            t
-          )}
-          seed={m.player1_registration_id ? seedByRegId.get(m.player1_registration_id) : undefined}
-          kind={slotKind(m.player1_registration_id, m.player1_is_bye, isPhantom)}
-          isWinner={winnerSlot === 1}
-          isFinalWinner={winnerSlot === 1 && isFinalRound}
-          decided={winnerSlot !== 0}
-          cells={cells1}
-          showCheck={winnerSlot === 1 && sets.length === 0}
-          players={p1SlotPlayers}
-          onPlayerPress={onPlayerPress}
-          colors={colors}
-        />
-        <View style={[styles.bmRowDivider, { backgroundColor: colors.border }]} />
-        <BracketPlayerRow
-          label={slotLabel(
-            m.player2_registration_id,
-            m.player2_is_bye,
-            isPhantom,
-            seedByRegId,
-            nameByRegId,
-            t
-          )}
-          seed={m.player2_registration_id ? seedByRegId.get(m.player2_registration_id) : undefined}
-          kind={slotKind(m.player2_registration_id, m.player2_is_bye, isPhantom)}
-          isWinner={winnerSlot === 2}
-          isFinalWinner={winnerSlot === 2 && isFinalRound}
-          decided={winnerSlot !== 0}
-          cells={cells2}
-          showCheck={winnerSlot === 2 && sets.length === 0}
-          players={p2SlotPlayers}
-          onPlayerPress={onPlayerPress}
-          colors={colors}
-        />
-      </>
-    );
-
-    if (isTappable && m.player1_registration_id && m.player2_registration_id) {
-      const p1RegId = m.player1_registration_id;
-      const p2RegId = m.player2_registration_id;
-      // Fixing an already-recorded result is a quiet escape hatch, not the next
-      // action — it drops the playable accent and softens the footer.
-      const isCorrection = useOrganizerOverride && m.status === 'completed';
-      const handlePress = useOrganizerOverride
-        ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
-        : () => onMatchPress(m.id, p1RegId, p2RegId);
-      const a11yLabel = useOrganizerOverride
-        ? t('tournamentDetail.bracket.overrideMatch')
-        : t('tournamentDetail.bracket.linkMatch');
-      const ctaLabel = isCorrection
-        ? t('tournamentDetail.bracket.correctResult' as TranslationKey)
-        : useOrganizerOverride
-          ? t('tournamentDetail.bracket.recordResult')
-          : t('tournamentDetail.bracket.addResult');
-      const accent = isCorrection ? colors.textMuted : colors.primary;
-      return (
-        <TouchableOpacity
-          key={m.id}
-          onPress={handlePress}
-          activeOpacity={0.7}
-          style={[
-            styles.bmCard,
-            !isCorrection && styles.bmCardPlayable,
-            {
-              backgroundColor: colors.cardBackground,
-              borderColor: isCorrection ? colors.border : colors.primary,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={a11yLabel}
-          testID="bracket-playable-match"
-        >
-          {matchInner}
-          <View
-            style={[
-              styles.bmFooter,
-              {
-                backgroundColor: isCorrection ? 'transparent' : colors.highlightBg,
-                borderTopColor: colors.border,
-              },
-            ]}
-          >
-            <Ionicons
-              name={useOrganizerOverride ? 'create-outline' : 'add-circle-outline'}
-              size={isCorrection ? 14 : 16}
-              color={accent}
-            />
-            <Text
-              size={isCorrection ? 'xs' : 'sm'}
-              weight="semibold"
-              color={accent}
-              style={styles.bmFooterLabel}
-            >
-              {ctaLabel}
-            </Text>
-            <Ionicons name="chevron-forward" size={isCorrection ? 14 : 16} color={accent} />
-          </View>
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <View
-        key={m.id}
-        style={[
-          styles.bmCard,
-          { backgroundColor: colors.cardBackground, borderColor: colors.border },
-        ]}
-      >
-        {matchInner}
-      </View>
-    );
-  };
-
-  // Each pair of sibling matches feeds one match in the next round — group them
-  // with a connector + chevron that advances the pager, mirroring a real tree.
-  const renderRoundPage = (round: number, roundIdx: number) => {
-    const roundMatches = (byRound.get(round) ?? []).sort(
-      (a, b) => a.match_position - b.match_position
-    );
-    const hasNextRound = roundIdx < roundNumbers.length - 1;
-    const pairs: MatchRow[][] = [];
-    for (let i = 0; i < roundMatches.length; i += 2) {
-      pairs.push(roundMatches.slice(i, i + 2));
-    }
-    return (
-      <View key={round} style={[styles.bracketPage, { width: pageWidth }]}>
-        {pairs.map(pair => (
-          <View key={pair[0].id} style={styles.bmPair}>
-            <View style={styles.bmPairCards}>{pair.map(renderMatch)}</View>
-            {hasNextRound && pair.length === 2 && (
-              <View style={styles.bmConnector}>
-                <View style={[styles.bmConnectorSpine, { backgroundColor: colors.border }]} />
-                <View style={[styles.bmConnectorArm, { backgroundColor: colors.border }]} />
-                <TouchableOpacity
-                  onPress={() => goToRound(roundIdx + 1)}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.bmConnectorBtn,
-                    { backgroundColor: colors.statusMutedBg, borderColor: colors.border },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={roundLabel(roundNumbers[roundIdx + 1], totalRounds, t)}
-                >
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
-    );
-  };
-
-  const sel = roundProgress(roundNumbers[selectedIdx] ?? totalRounds);
-
-  return (
-    <View style={styles.section}>
-      {showTitle && (
-        <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-          {t('tournamentDetail.bracket.sectionTitle').toUpperCase()}
-        </Text>
-      )}
-
-      {/* Round selector chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.bracketChipsRow}
-      >
-        {roundNumbers.map((round, idx) => {
-          const selected = idx === selectedIdx;
-          const { complete } = roundProgress(round);
-          return (
-            <TouchableOpacity
-              key={round}
-              onPress={() => goToRound(idx)}
-              activeOpacity={0.85}
-              style={[
-                styles.bracketChip,
-                {
-                  backgroundColor: selected ? colors.primary : colors.cardBackground,
-                  borderColor: selected ? colors.primary : colors.border,
-                },
-              ]}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-            >
-              {complete && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={13}
-                  color={selected ? '#ffffff' : colors.primary}
-                />
-              )}
-              <Text
-                size="xs"
-                weight={selected ? 'semibold' : 'medium'}
-                color={selected ? '#ffffff' : colors.textMuted}
-              >
-                {roundLabel(round, totalRounds, t)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Selected-round header with progress */}
-      <View style={styles.bmRoundHeader}>
-        <Text size="base" weight="bold" color={colors.text}>
-          {roundLabel(roundNumbers[selectedIdx] ?? totalRounds, totalRounds, t)}
-        </Text>
-        {sel.total > 0 && (
-          <View style={[styles.bmProgressPill, { backgroundColor: colors.statusMutedBg }]}>
-            <Ionicons
-              name={sel.complete ? 'checkmark-done' : 'ellipse-outline'}
-              size={12}
-              color={sel.complete ? colors.statusPositiveText : colors.textMuted}
-            />
-            <Text size="xs" weight="semibold" color={colors.textMuted}>
-              {t('tournamentDetail.bracket.gamesProgress')
-                .replace('{done}', String(sel.done))
-                .replace('{total}', String(sel.total))}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Round pager — swipe or tap a chip to slide between rounds */}
-      <View style={styles.bmPager} onLayout={e => setPageWidth(e.nativeEvent.layout.width)}>
-        {pageWidth > 0 && (
-          <ScrollView
-            ref={pagerRef}
-            horizontal
-            pagingEnabled
-            nestedScrollEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={e => onPagerSettle(e.nativeEvent.contentOffset.x)}
-          >
-            {roundNumbers.map((round, roundIdx) => renderRoundPage(round, roundIdx))}
-          </ScrollView>
-        )}
-      </View>
-    </View>
-  );
-};
-
-const BracketPlayerRow: React.FC<{
-  label: string;
-  seed?: number;
-  kind: SlotKind;
-  isWinner: boolean;
-  isFinalWinner: boolean;
-  decided: boolean;
-  cells: Array<{ value: number; won: boolean }>;
-  showCheck: boolean;
-  players: Array<{ id: string; avatarUrl: string | null }>;
-  onPlayerPress: (playerId: string) => void;
-  colors: ScreenColors;
-}> = ({
-  label,
-  seed,
-  kind,
-  isWinner,
-  isFinalWinner,
-  decided,
-  cells,
-  showCheck,
-  players,
-  onPlayerPress,
-  colors,
-}) => {
-  const isPlayer = kind === 'player';
-  const isLoser = decided && isPlayer && !isWinner;
-  const winnerColor = isFinalWinner ? colors.championText : colors.primary;
-  // Winner: bright + bold. Loser: muted. Undecided / non-player: neutral.
-  const nameColor = !isPlayer || isLoser ? colors.textMuted : colors.text;
-  // Within the score column, the set-winner's number is emphasized per column.
-  const wonColor = isFinalWinner ? colors.championText : colors.text;
-
-  return (
-    <View style={styles.bmRow}>
-      {isFinalWinner && (
-        <Ionicons name="trophy" size={14} color={colors.championText} style={styles.bmRowCrown} />
-      )}
-      {isPlayer && players.length > 0 && (
-        <View style={[styles.bmAvatarCluster, isLoser && styles.bmAvatarClusterDim]}>
-          {players.map((p, i) => (
-            <TouchableOpacity
-              key={p.id}
-              onPress={() => onPlayerPress(p.id)}
-              activeOpacity={0.7}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityRole="button"
-              style={[
-                styles.bmAvatar,
-                { backgroundColor: colors.highlightBg },
-                i > 0 && [styles.bmAvatarStacked, { borderColor: colors.cardBackground }],
-              ]}
-            >
-              {p.avatarUrl ? (
-                <Image source={{ uri: p.avatarUrl }} style={styles.bmAvatarImg} />
-              ) : (
-                <Ionicons name="person" size={13} color={colors.textMuted} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      <View style={styles.bmNameWrap}>
-        <Text
-          size="sm"
-          weight={isWinner ? 'bold' : 'medium'}
-          color={nameColor}
-          numberOfLines={1}
-          style={styles.bmNameText}
-        >
-          {label}
-        </Text>
-        {isPlayer && seed !== undefined && (
-          <Text size="xs" weight="medium" color={colors.textMuted}>
-            ({seed})
-          </Text>
-        )}
-      </View>
-      {cells.length > 0 ? (
-        <View style={styles.bmSetRow}>
-          {cells.map((c, i) => (
-            <Text
-              key={i}
-              size="sm"
-              weight={c.won ? 'bold' : 'regular'}
-              color={c.won ? wonColor : colors.textMuted}
-              style={styles.bmSetCell}
-            >
-              {c.value}
-            </Text>
-          ))}
-        </View>
-      ) : showCheck ? (
-        <Ionicons name="checkmark" size={16} color={winnerColor} style={styles.bmScore} />
-      ) : null}
-    </View>
-  );
-};
-
-/** Row inside the header "⋯" overflow menu. */
 const MenuItem: React.FC<{
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
