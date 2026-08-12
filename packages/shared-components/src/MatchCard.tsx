@@ -1520,7 +1520,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
-    minHeight: 244,
+    // Matches the natural height of a populated card, so the footer's
+    // marginTop:'auto' has no slack to absorb and the separator keeps equal
+    // spacing above and below. Was 244, calibrated when chips stretched 14pt.
+    minHeight: 230,
   },
 
   // Tier ribbon badge (top-right corner)
