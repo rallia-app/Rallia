@@ -73,6 +73,20 @@ CREATE OR REPLACE FUNCTION pg_temp.as_user(p uuid) RETURNS void LANGUAGE sql AS 
   SELECT set_config('request.jwt.claims', json_build_object('sub', p::text)::text, true)::void;
 $$;
 
+-- Event creation went staff-only in 20260812150000, and these organizers are
+-- @fake-rallia.com players. Staff is granted for the create call only, then
+-- dropped: pg_temp.fakes() filters admins out, so a lingering row would shift
+-- every roster slice picked after it.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- Deterministic slice of fake players for a sport, so re-runs reuse the same
 -- rosters and the fixtures stay comparable between passes.
 CREATE OR REPLACE FUNCTION pg_temp.fakes(p_sport text, p_n integer, p_offset integer)
@@ -121,7 +135,15 @@ BEGIN
         ELSE
             v_win := v_tm.player2_registration_id;
         END IF;
-        PERFORM public.tournament_override_score(v_tm.id, v_win, p_score);
+        -- p_score is given winner-first ("6-2 6-2"); the column is
+        -- player1-first since 20260812210000, so orient it onto the row or the
+        -- standings credit the sets to the loser.
+        PERFORM public.tournament_override_score(
+            v_tm.id, v_win,
+            CASE WHEN v_win = v_tm.player2_registration_id
+                 THEN (SELECT string_agg(split_part(x.s,'-',2)||'-'||split_part(x.s,'-',1), ' ' ORDER BY x.ord)
+                         FROM unnest(string_to_array(p_score,' ')) WITH ORDINALITY AS x(s,ord))
+                 ELSE p_score END);
         v_done := v_done + 1;
     END LOOP;
     RETURN v_done;
@@ -151,6 +173,7 @@ DECLARE
     v_order uuid[];
 BEGIN
     PERFORM pg_temp.as_user(p_organizer);
+    PERFORM pg_temp.staff_on(p_organizer);
     SELECT * INTO v_t FROM public.tournament_create(
         p_name,
         (SELECT id FROM sport WHERE name = p_sport),
@@ -165,6 +188,7 @@ BEGIN
         p_entry_format      => p_format::entry_format,
         p_city              => 'Grand Montréal',
         p_qualifiers_per_pool => p_qualifiers);
+    PERFORM pg_temp.staff_off(p_organizer);
 
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
     PERFORM public.tournament_open_registration(v_t.id, v_ver);
@@ -500,6 +524,177 @@ BEGIN
                          2::smallint, 'singles', NULL, false, 'private');
     PERFORM pg_temp.settle_pools(v_t, v_jean, '6-4 6-2', 3);
     RAISE NOTICE '14 · retirer en cours de poules: %', v_t;
+END;
+$$;
+
+-- ===========================================================================
+-- 15 and 16 · The notification fixtures.
+--
+-- Section 13 of the protocol lists four notices that are new or corrected, and
+-- Jean could not test any of them: they are addressed to PARTICIPANTS, and the
+-- only two fixtures where an organizer action was still pending (13 and 14) are
+-- ones he organizes. These two put him on the receiving end. The organizer
+-- action is performed here, by this script, so the notices are already in his
+-- bell when he opens the app; reading them is the test.
+--
+--   15 · Notifications : tu passes   → generating the pools sends him "Poules
+--        dévoilées" (his pool and every opponent by name). One of his pool
+--        opponents is then forfeited, which sends him "Partie réglée par
+--        forfait". He wins his pool, so generating the tableau sends him
+--        "Tableau dévoilé" with his first-round matchup folded in.
+--   16 · Notifications : tu sors en poules → the mirror. He finishes last, so
+--        generating the tableau sends him "Parcours terminé" with his placing
+--        instead. One tournament cannot produce both, hence two.
+--
+-- This block is standalone: it re-derives its own rosters and cleans up after
+-- itself, so it can be run WITHOUT the rest of the script. Do that, rather
+-- than re-running the whole file, or 7-14 are rebuilt and their notifications
+-- all fire again.
+--
+-- ROSTER: the fake tennis roster ends at 101 and 7-14 already allocate all of
+-- it, so these two deliberately REUSE v_tn[56:71], which belong to fixture 11.
+-- That fixture is fully settled with its tableau generated, so those accounts
+-- carry no pending games and no deadline reminders will chase them. Nothing new
+-- is added to the roster on purpose: pg_temp.fakes() slices by id order, so one
+-- extra account would silently re-roster 7-14 on the next run.
+-- ===========================================================================
+
+DO $$
+DECLARE
+    v_names text[] := ARRAY[
+        '[JDL-PK] 15 · Notifications : tu passes',
+        '[JDL-PK] 16 · Notifications : tu sors en poules'
+    ];
+    v_ids     uuid[];
+    v_tn      uuid[];
+    v_jean    uuid;
+    v_org     uuid;
+    v_roster  uuid[];
+    v_t       uuid;
+    v_ver     integer;
+    v_jreg    uuid;
+    v_victim  uuid;
+    v_tm      tournament_matches;
+    v_seeds   uuid[];
+    v_win     uuid;
+    v_score   text;
+BEGIN
+    SELECT id INTO v_jean FROM auth.users WHERE email = 'jdl.sonkin@gmail.com';
+    IF v_jean IS NULL THEN
+        RAISE EXCEPTION 'jdl.sonkin@gmail.com not found on this database';
+    END IF;
+
+    -- Self-cleanup, so the block is idempotent on its own.
+    SELECT array_agg(id) INTO v_ids FROM tournaments WHERE name = ANY (v_names);
+    IF v_ids IS NOT NULL THEN
+        DELETE FROM notification n
+         WHERE n.payload->>'tournamentId' IN (SELECT id::text FROM unnest(v_ids) AS id);
+        DELETE FROM tournament_round_deadlines WHERE tournament_id = ANY (v_ids);
+        DELETE FROM tournament_ranking_points  WHERE tournament_id = ANY (v_ids);
+        DELETE FROM tournament_matches         WHERE tournament_id = ANY (v_ids);
+        DELETE FROM tournament_registrations   WHERE tournament_id = ANY (v_ids);
+        DELETE FROM leagues_tournaments_audit
+         WHERE scope = 'tournament' AND entity_id = ANY (v_ids);
+        DELETE FROM tournaments WHERE id = ANY (v_ids);
+        RAISE NOTICE 'cleanup: removed % notification fixture(s)', array_length(v_ids, 1);
+    END IF;
+
+    v_tn := pg_temp.fakes('tennis', 101, 0);
+
+    -- =====================================================================
+    -- 15 · Notifications : tu passes.
+    -- =====================================================================
+    v_org    := v_tn[56];
+    v_roster := v_tn[57:63] || v_jean;          -- 7 fakes + Jean = 8
+    v_t := pg_temp.build('[JDL-PK] 15 · Notifications : tu passes',
+                         'tennis', 8::smallint, v_org, v_roster, NULL,
+                         2::smallint, 'singles', NULL, false, 'private');
+    -- build() ends on generate_pools, which is what sends "Poules dévoilées".
+
+    SELECT id INTO v_jreg FROM tournament_registrations
+     WHERE tournament_id = v_t AND user_id = v_jean;
+
+    -- Forfeit an opponent who shares a pool with him: his unplayed game against
+    -- them becomes a walkover win and he is told so by name.
+    SELECT CASE WHEN m.player1_registration_id = v_jreg
+                THEN m.player2_registration_id ELSE m.player1_registration_id END
+      INTO v_victim
+      FROM tournament_matches m
+     WHERE m.tournament_id = v_t AND m.bracket_side = 'pool'
+       AND v_jreg IN (m.player1_registration_id, m.player2_registration_id)
+     ORDER BY m.round_number LIMIT 1;
+    PERFORM pg_temp.as_user(v_org);
+    PERFORM public.tournament_forfeit_registration(
+        v_victim,
+        (SELECT version FROM tournament_registrations WHERE id = v_victim),
+        'Fixture: forfait pour tester la notification');
+
+    -- Settle what is left with Jean winning, so he qualifies. settle_pools()
+    -- makes the better seed win and he is seeded last, which would eliminate
+    -- him, so his own games are settled here instead.
+    v_seeds := ARRAY(
+        SELECT tr.id FROM tournament_registrations tr
+         WHERE tr.tournament_id = v_t
+         ORDER BY tr.seed_rank ASC NULLS LAST, tr.registered_at ASC, tr.id ASC);
+    PERFORM pg_temp.as_user(v_org);
+    FOR v_tm IN
+        SELECT * FROM tournament_matches
+         WHERE tournament_id = v_t AND bracket_side = 'pool' AND status = 'pending'
+         ORDER BY round_number, match_position
+    LOOP
+        IF v_jreg IN (v_tm.player1_registration_id, v_tm.player2_registration_id) THEN
+            v_win := v_jreg;
+        ELSIF array_position(v_seeds, v_tm.player1_registration_id)
+              <= array_position(v_seeds, v_tm.player2_registration_id) THEN
+            v_win := v_tm.player1_registration_id;
+        ELSE
+            v_win := v_tm.player2_registration_id;
+        END IF;
+        -- player1-first, per 20260812210000.
+        v_score := CASE WHEN v_win = v_tm.player2_registration_id
+                        THEN '4-6 3-6' ELSE '6-4 6-3' END;
+        PERFORM public.tournament_override_score(v_tm.id, v_win, v_score);
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_org);
+    SELECT version INTO v_ver FROM tournaments WHERE id = v_t;
+    PERFORM public.tournament_generate_knockout(v_t, v_ver);
+
+    IF NOT EXISTS (
+        SELECT 1 FROM tournament_matches m
+         WHERE m.tournament_id = v_t AND m.bracket_side = 'main'
+           AND v_jreg IN (m.player1_registration_id, m.player2_registration_id)
+    ) THEN
+        RAISE EXCEPTION '15: Jean did not qualify, so "Tableau dévoilé" was not addressed to him';
+    END IF;
+    RAISE NOTICE '15 · notifications tu passes: %', v_t;
+
+    -- =====================================================================
+    -- 16 · Notifications : tu sors en poules.
+    -- =====================================================================
+    v_org    := v_tn[64];
+    v_roster := v_tn[65:71] || v_jean;          -- 7 fakes + Jean = 8
+    v_t := pg_temp.build('[JDL-PK] 16 · Notifications : tu sors en poules',
+                         'tennis', 8::smallint, v_org, v_roster, NULL,
+                         2::smallint, 'singles', NULL, false, 'private');
+
+    -- Seeded last and the better seed always wins, so he loses every game and
+    -- finishes bottom of his pool.
+    PERFORM pg_temp.settle_pools(v_t, v_org, '6-2 6-2');
+    PERFORM pg_temp.as_user(v_org);
+    SELECT version INTO v_ver FROM tournaments WHERE id = v_t;
+    PERFORM public.tournament_generate_knockout(v_t, v_ver);
+
+    SELECT id INTO v_jreg FROM tournament_registrations
+     WHERE tournament_id = v_t AND user_id = v_jean;
+    IF EXISTS (
+        SELECT 1 FROM tournament_matches m
+         WHERE m.tournament_id = v_t AND m.bracket_side = 'main'
+           AND v_jreg IN (m.player1_registration_id, m.player2_registration_id)
+    ) THEN
+        RAISE EXCEPTION '16: Jean qualified, so he gets the tableau notice instead of "Parcours terminé"';
+    END IF;
+    RAISE NOTICE '16 · notifications tu sors en poules: %', v_t;
 END;
 $$;
 
