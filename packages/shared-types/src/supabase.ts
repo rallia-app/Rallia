@@ -12579,6 +12579,7 @@ export type Database = {
         }
         Returns: string
       }
+      lt_ensure_ranking_season: { Args: { p_at: string }; Returns: string }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
         Returns: {
