@@ -278,6 +278,97 @@ BEGIN
 END;
 $$;
 
+-- 4. The advancement notice is sent once per (player, next game, opponent).
+--    The trigger is deferred and re-reads live state at commit, so two wins for
+--    the same player inside one transaction used to announce the same next game
+--    twice, word for word.
+--
+-- The SET CONSTRAINTS ALL IMMEDIATE above switched this transaction out of
+-- deferred mode for good, and with the trigger firing per statement each win
+-- resolves to a DIFFERENT next game, which is two legitimate notices and not
+-- the bug. Go back to deferred so both events queue and land on the same row.
+SET CONSTRAINTS ALL DEFERRED;
+
+DO $$
+DECLARE
+    v_admin uuid;
+    v_sport uuid;
+    v_ps    uuid[];
+    v_t     uuid;
+    v_regs  uuid[] := '{}';
+    v_reg   uuid;
+    v_p     uuid;
+    v_tm    tournament_matches;
+BEGIN
+    SELECT id INTO v_admin FROM admin LIMIT 1;
+    SELECT s.id INTO v_sport FROM sport s WHERE s.name = 'tennis';
+    SELECT array_agg(x.player_id) INTO v_ps
+      FROM (SELECT ps.player_id FROM player_sport ps
+             WHERE ps.sport_id = v_sport AND ps.is_active AND ps.player_id <> v_admin
+             LIMIT 4) x;
+
+    INSERT INTO tournaments (name, sport_id, max_participants, bracket_type, pool_size,
+                             qualifiers_per_pool, start_date, end_date, status,
+                             organizer_id, visibility)
+    VALUES ('[TEST-ORIENT] dedupe', v_sport, 8, 'pool_knockout', 4, 2,
+            now() + interval '2 days', now() + interval '9 days', 'in_progress',
+            v_admin, 'public')
+    RETURNING id INTO v_t;
+
+    FOREACH v_p IN ARRAY v_ps LOOP
+        INSERT INTO tournament_registrations (tournament_id, user_id, status)
+        VALUES (v_t, v_p, 'registered') RETURNING id INTO v_reg;
+        v_regs := v_regs || v_reg;
+    END LOOP;
+
+    -- regs[1] wins two pool games, and a third game is left pending so the
+    -- deferred re-read has exactly one "next game" to land on for both wins.
+    INSERT INTO tournament_matches (tournament_id, bracket_side, pool_number, round_number,
+                                    match_position, player1_registration_id,
+                                    player2_registration_id, status)
+    VALUES (v_t, 'pool', 1, 1, 1, v_regs[1], v_regs[2], 'pending'),
+           (v_t, 'pool', 1, 2, 1, v_regs[1], v_regs[3], 'pending'),
+           (v_t, 'pool', 1, 3, 1, v_regs[1], v_regs[4], 'pending');
+
+    PERFORM pg_temp.as_user(v_admin);
+    FOR v_tm IN
+        SELECT * FROM tournament_matches
+         WHERE tournament_id = v_t AND round_number IN (1, 2)
+         ORDER BY round_number
+    LOOP
+        PERFORM public.tournament_override_score(v_tm.id, v_regs[1], '6-1 6-1');
+    END LOOP;
+END;
+$$;
+
+SET CONSTRAINTS ALL IMMEDIATE;
+
+DO $$
+DECLARE
+    v_t      uuid;
+    v_winner uuid;
+    v_cnt    integer;
+BEGIN
+    SELECT id INTO v_t FROM tournaments WHERE name = '[TEST-ORIENT] dedupe';
+    -- The winner is whoever took both settled games.
+    SELECT r.user_id INTO v_winner
+      FROM tournament_matches m
+      JOIN tournament_registrations r ON r.id = m.winner_registration_id
+     WHERE m.tournament_id = v_t AND m.status = 'completed'
+     LIMIT 1;
+
+    SELECT count(*) INTO v_cnt
+      FROM notification n
+     WHERE n.target_id = v_t AND n.user_id = v_winner
+       AND n.title IN ('Tu passes au tour suivant', 'You advanced');
+    IF v_cnt <> 1 THEN
+        RAISE EXCEPTION 'advancement notice sent % times for the same next game, expected 1', v_cnt;
+    END IF;
+
+    RAISE NOTICE 'PASS: two wins in one transaction announce the next game once';
+END;
+$$;
+
 DO $$ BEGIN RAISE NOTICE 'tournament_pool_score_orientation_test: ALL PASS'; END; $$;
 
 ROLLBACK;
