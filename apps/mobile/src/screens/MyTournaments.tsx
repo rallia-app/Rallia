@@ -21,7 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { EmptyState, Text } from '@rallia/shared-components';
+import { EmptyState, Text, useEventListColors } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -42,7 +42,6 @@ import type { TournamentListItem } from '@rallia/shared-services';
 import {
   TournamentCard,
   TournamentCardSkeleton,
-  useTournamentListColors,
 } from '../features/tournaments/components/TournamentListScaffold';
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
 import { useSport } from '../context';
@@ -170,7 +169,7 @@ export const MyTournaments: React.FC = () => {
   const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const { session } = useAuth();
-  const colors = useTournamentListColors();
+  const colors = useEventListColors();
   const bottomInset = useScrollBottomInset();
   const isDark = theme === 'dark';
   const userId = session?.user?.id;

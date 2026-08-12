@@ -19,7 +19,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text } from '@rallia/shared-components';
+import { Text, useEventListColors } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import {
   useAuth,
@@ -33,7 +33,6 @@ import type { TournamentListItem } from '@rallia/shared-services';
 
 import {
   TournamentListScaffold,
-  useTournamentListColors,
   type TournamentSection,
 } from '../features/tournaments/components/TournamentListScaffold';
 import {
@@ -54,7 +53,7 @@ export const Tournaments: React.FC = () => {
   const { selectedSport } = useSport();
   const { session } = useAuth();
   const { isAdmin } = useAdminStatus();
-  const colors = useTournamentListColors();
+  const colors = useEventListColors();
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
   const { openSheetForTournamentCreation } = useActionsSheet();

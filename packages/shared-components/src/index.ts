@@ -107,6 +107,48 @@ export type { PermissionType } from './overlays';
 export { PreferencesChips } from './preferences';
 export type { PreferencesChipsProps } from './preferences';
 
+// Wizard chrome — header, progress, footer and option rows shared by every
+// creation wizard (match, league, tournament, and the formats that follow).
+export {
+  WizardHeader,
+  WizardProgressBar,
+  WizardFooter,
+  WizardOptionCard,
+  WizardFieldLabel,
+} from './wizard';
+export type {
+  WizardColors,
+  WizardHeaderProps,
+  WizardProgressBarProps,
+  WizardFooterProps,
+  WizardOptionCardProps,
+} from './wizard';
+
+// Event list primitives — format-neutral card chrome for tournaments, leagues
+// and the formats that follow.
+export {
+  useEventListColors,
+  formatEventRatingRange,
+  EventStatusPill,
+  EventMetaRow,
+  EventMetaChip,
+  EventAvatarStrip,
+  EventCardShell,
+  EventCardSkeleton,
+  EventFooterLink,
+} from './events';
+export type {
+  EventListColors,
+  EventTone,
+  EventStatusPillProps,
+  EventMetaRowProps,
+  EventMetaChipProps,
+  EventAvatarStripProps,
+  EventCardShellProps,
+  EventCardSkeletonProps,
+  EventFooterLinkProps,
+} from './events';
+
 // Charts and analytics layout components are intentionally NOT re-exported
 // here. They pull in `react-native-gifted-charts`, whose top-level module
 // init has crashed on iOS 26 (Sentry REACT-NATIVE-6J). Keeping them on a

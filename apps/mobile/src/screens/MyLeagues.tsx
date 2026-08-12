@@ -8,13 +8,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { EmptyState, Text } from '@rallia/shared-components';
+import { EmptyState, Text, useEventListColors } from '@rallia/shared-components';
 import { spacingPixels, lightTheme, darkTheme, neutral, base } from '@rallia/design-system';
 import { useAuth, useMyLeagues } from '@rallia/shared-hooks';
 import type { LeagueListItem } from '@rallia/shared-services';
 
 import { LeagueCard, LeagueCardSkeleton } from '../features/leagues/components/LeagueListScaffold';
-import { useTournamentListColors } from '../features/tournaments/components/TournamentListScaffold';
 import { useTranslation, useScrollBottomInset, useThemeStyles } from '../hooks';
 import { useSport } from '../context';
 import { lightHaptic } from '../utils/haptics';
@@ -28,7 +27,7 @@ export const MyLeagues: React.FC = () => {
   const { selectedSport } = useSport();
   const { session } = useAuth();
   const userId = session?.user?.id;
-  const colors = useTournamentListColors();
+  const colors = useEventListColors();
   const bottomInset = useScrollBottomInset();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 

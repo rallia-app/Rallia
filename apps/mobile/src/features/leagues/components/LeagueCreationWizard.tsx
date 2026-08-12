@@ -29,7 +29,15 @@ import {
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import {
+  Text,
+  useToast,
+  WizardHeader,
+  WizardProgressBar,
+  WizardFooter,
+  WizardOptionCard as OptionCard,
+  WizardFieldLabel as FieldLabel,
+} from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -58,6 +66,13 @@ import * as Analytics from '../../../services/analytics';
 
 const BASE_WHITE = '#ffffff';
 const TOTAL_STEPS = 3;
+
+/** Progress-bar captions, in step order. */
+const STEP_NAME_KEYS = [
+  'leagueCreation.stepNames.details',
+  'leagueCreation.stepNames.visibility',
+  'leagueCreation.stepNames.eligibility',
+] as TranslationKey[];
 
 type Visibility = Exclude<Enums<'tournament_visibility'>, 'community'>;
 type JoinMode = Enums<'tournament_registration_mode'>;
@@ -142,168 +157,6 @@ interface ThemeColors {
   error: string;
   success: string;
 }
-
-// =============================================================================
-// HEADER & PROGRESS
-// =============================================================================
-
-const WizardHeader: React.FC<{
-  currentStep: number;
-  isEditMode: boolean;
-  onBack: () => void;
-  onBackToLanding: () => void;
-  onClose: () => void;
-  sportName: string;
-  sportKey: string;
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({
-  currentStep,
-  isEditMode,
-  onBack,
-  onBackToLanding,
-  onClose,
-  sportName,
-  sportKey,
-  colors,
-  t,
-}) => (
-  <View style={[styles.header, { borderBottomColor: colors.border }]}>
-    <View style={styles.headerLeft}>
-      {/* Edit opens straight into the form, so step 1 has no landing to go back to. */}
-      {!(isEditMode && currentStep === 1) && (
-        <TouchableOpacity
-          onPress={() => {
-            Keyboard.dismiss();
-            lightHaptic();
-            if (currentStep === 1) onBackToLanding();
-            else onBack();
-          }}
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back' as TranslationKey)}
-        >
-          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-        </TouchableOpacity>
-      )}
-    </View>
-
-    <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
-      <SportIcon sportName={sportKey} size={14} color={BASE_WHITE} />
-      <Text size="sm" weight="semibold" color={BASE_WHITE}>
-        {sportName}
-      </Text>
-    </View>
-
-    <View style={styles.headerRight}>
-      <TouchableOpacity
-        onPress={() => {
-          Keyboard.dismiss();
-          lightHaptic();
-          onClose();
-        }}
-        style={styles.headerButton}
-        accessibilityRole="button"
-        accessibilityLabel={t('common.close' as TranslationKey)}
-      >
-        <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  </View>
-);
-
-const ProgressBar: React.FC<{
-  currentStep: number;
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({ currentStep, colors, t }) => {
-  const pct = (currentStep / TOTAL_STEPS) * 100;
-  const stepNames = [
-    t('leagueCreation.stepNames.details' as TranslationKey),
-    t('leagueCreation.stepNames.visibility' as TranslationKey),
-    t('leagueCreation.stepNames.eligibility' as TranslationKey),
-  ];
-  return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressHeader}>
-        <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('leagueCreation.step' as TranslationKey)
-            .replace('{current}', String(currentStep))
-            .replace('{total}', String(TOTAL_STEPS))}
-        </Text>
-        <Text size="sm" weight="bold" color={colors.progressActive}>
-          {stepNames[currentStep - 1]}
-        </Text>
-      </View>
-      <View style={[styles.progressBarBg, { backgroundColor: colors.progressInactive }]}>
-        <View
-          style={[
-            styles.progressBarFill,
-            { backgroundColor: colors.progressActive, width: `${pct}%` },
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
-
-interface OptionCardProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  description?: string;
-  selected: boolean;
-  onPress: () => void;
-  colors: ThemeColors;
-}
-
-const OptionCard: React.FC<OptionCardProps> = ({
-  icon,
-  title,
-  description,
-  selected,
-  onPress,
-  colors,
-}) => (
-  <TouchableOpacity
-    style={[
-      styles.optionCard,
-      {
-        backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-        borderColor: selected ? colors.buttonActive : colors.border,
-      },
-    ]}
-    onPress={() => {
-      lightHaptic();
-      onPress();
-    }}
-    activeOpacity={0.7}
-  >
-    <View style={styles.optionContent}>
-      <Ionicons name={icon} size={20} color={selected ? colors.buttonActive : colors.textMuted} />
-      <View style={styles.optionTextContainer}>
-        <Text
-          size="base"
-          weight={selected ? 'semibold' : 'regular'}
-          color={selected ? colors.buttonActive : colors.text}
-        >
-          {title}
-        </Text>
-        {description && (
-          <Text size="xs" color={colors.textMuted}>
-            {description}
-          </Text>
-        )}
-      </View>
-    </View>
-    {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
-  </TouchableOpacity>
-);
-
-const FieldLabel: React.FC<{ children: string; colors: ThemeColors }> = ({ children, colors }) => (
-  <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-    {children}
-  </Text>
-);
 
 // =============================================================================
 // STEPS
@@ -1216,18 +1069,26 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+      {/* Edit opens straight into the form, so step 1 has no landing to go back to. */}
       <WizardHeader
-        currentStep={currentStep}
-        isEditMode={isEditMode}
-        onBack={goBack}
-        onBackToLanding={onBackToLanding}
+        showBack={!(isEditMode && currentStep === 1)}
+        onBack={currentStep === 1 ? onBackToLanding : goBack}
         onClose={handleClose}
-        sportName={sportName}
-        sportKey={sportKey}
+        badgeIcon={<SportIcon sportName={sportKey} size={14} color={BASE_WHITE} />}
+        badgeLabel={sportName}
         colors={colors}
-        t={t}
+        backAccessibilityLabel={t('common.back' as TranslationKey)}
+        closeAccessibilityLabel={t('common.close' as TranslationKey)}
       />
-      <ProgressBar currentStep={currentStep} colors={colors} t={t} />
+      <WizardProgressBar
+        currentStep={currentStep}
+        totalSteps={TOTAL_STEPS}
+        counterLabel={t('leagueCreation.step' as TranslationKey)
+          .replace('{current}', String(currentStep))
+          .replace('{total}', String(TOTAL_STEPS))}
+        stepLabel={t(STEP_NAME_KEYS[currentStep - 1])}
+        colors={colors}
+      />
 
       <View style={styles.body}>
         {currentStep === 1 && (
@@ -1275,34 +1136,24 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         )}
       </View>
 
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <TouchableOpacity
-          onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
-          disabled={isSubmitting}
-          style={[
-            styles.nextButton,
-            { backgroundColor: colors.buttonActive },
-            isSubmitting && styles.buttonDisabled,
-          ]}
-          accessibilityRole="button"
-          testID="league-wizard-submit"
-        >
-          <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-            {currentStep === TOTAL_STEPS
-              ? isEditMode
-                ? isUpdating
-                  ? t('leagueDetail.editModal.saving' as TranslationKey)
-                  : t('leagueDetail.editModal.save' as TranslationKey)
-                : isCreating
-                  ? t('leagueCreation.creating' as TranslationKey)
-                  : t('leagueCreation.createLeague' as TranslationKey)
-              : t('leagueCreation.next' as TranslationKey)}
-          </Text>
-          {currentStep !== TOTAL_STEPS && (
-            <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
-          )}
-        </TouchableOpacity>
-      </View>
+      <WizardFooter
+        label={
+          currentStep === TOTAL_STEPS
+            ? isEditMode
+              ? isUpdating
+                ? t('leagueDetail.editModal.saving' as TranslationKey)
+                : t('leagueDetail.editModal.save' as TranslationKey)
+              : isCreating
+                ? t('leagueCreation.creating' as TranslationKey)
+                : t('leagueCreation.createLeague' as TranslationKey)
+            : t('leagueCreation.next' as TranslationKey)
+        }
+        onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
+        disabled={isSubmitting}
+        trailingIcon={currentStep === TOTAL_STEPS ? 'none' : 'arrow'}
+        colors={colors}
+        testID="league-wizard-submit"
+      />
     </View>
   );
 };
@@ -1315,51 +1166,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'column',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    width: 40,
-  },
-  headerRight: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  headerButton: {
-    padding: spacingPixels[1],
-  },
-  sportBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: radiusPixels.full,
-    gap: spacingPixels[1.5],
-  },
-  progressContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: radiusPixels.full,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: radiusPixels.full,
   },
   body: {
     flex: 1,
@@ -1376,9 +1182,6 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     marginBottom: spacingPixels[5],
-  },
-  label: {
-    marginBottom: spacingPixels[2],
   },
   errorText: {
     marginTop: spacingPixels[1],
@@ -1451,38 +1254,6 @@ const styles = StyleSheet.create({
   },
   optionsColumn: {
     gap: spacingPixels[2],
-  },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: spacingPixels[3],
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  footer: {
-    padding: spacingPixels[4],
-    borderTopWidth: 1,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   successContainer: {
     flex: 1,

@@ -13,7 +13,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text } from '@rallia/shared-components';
+import { Text, useEventListColors } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
 import {
   useAuth,
@@ -34,7 +34,6 @@ import {
   type LeagueJoinModeFilter,
 } from '../features/leagues/components/LeagueFiltersBar';
 import { SearchBar } from '../features/matches/components';
-import { useTournamentListColors } from '../features/tournaments/components/TournamentListScaffold';
 import { useTranslation, useRequireOnboarding } from '../hooks';
 import { useSport, useActionsSheet } from '../context';
 import { lightHaptic } from '../utils/haptics';
@@ -46,7 +45,7 @@ export const Leagues: React.FC = () => {
   const { t } = useTranslation();
   const { selectedSport } = useSport();
   const { session } = useAuth();
-  const colors = useTournamentListColors();
+  const colors = useEventListColors();
   const userId = session?.user?.id;
   const { guardAction } = useRequireOnboarding();
   const { openSheetForLeagueCreation } = useActionsSheet();
