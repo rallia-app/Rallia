@@ -1448,8 +1448,9 @@ const MatchCard: React.FC<MatchCardProps> = ({
             </ScrollView>
           )}
 
-          {/* Footer with CTA — pinned to the bottom so minHeight slack never lands under it */}
-          <View style={styles.footerSlot}>
+          {/* Footer with CTA — the slots row's auto margin pushes this to the
+              bottom, so slack never lands under the CTA or beside the separator */}
+          <View>
             {renderCta ? (
               renderCta(match)
             ) : (
@@ -1668,6 +1669,10 @@ const styles = StyleSheet.create({
   slotsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    // Absorbs whatever slack minHeight leaves (cards with no chips have more),
+    // so it never lands next to the footer separator. Everything below this row
+    // keeps fixed spacing: slots -> chips -> separator -> CTA.
+    marginTop: 'auto',
     marginBottom: spacingPixels[3],
   },
   slotsRow: {
@@ -1748,9 +1753,6 @@ const styles = StyleSheet.create({
   },
 
   // Footer
-  footerSlot: {
-    marginTop: 'auto',
-  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
