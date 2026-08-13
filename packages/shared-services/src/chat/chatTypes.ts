@@ -112,6 +112,12 @@ export interface MatchOrganizerOption {
   free_count?: number | null;
   /** Stable (slot, place) identity, used to re-anchor votes on regenerate. */
   option_key?: string;
+  /**
+   * How many of the card's players favourite this facility for the sport. Equal
+   * to the participant count means it is a SHARED favourite, the strongest
+   * signal a slot will actually happen.
+   */
+  fav_count?: number | null;
   /** Free-text place on a custom option with no facility. */
   place_name?: string | null;
   /** Who proposed a custom option. */

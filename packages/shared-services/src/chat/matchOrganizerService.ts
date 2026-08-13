@@ -37,6 +37,7 @@ function toOption(row: {
   free_count?: number | null;
   option_key?: string | null;
   court_state?: string | null;
+  fav_count?: number | null;
 }): MatchOrganizerOption {
   return {
     slot_start: row.slot_start,
@@ -57,6 +58,7 @@ function toOption(row: {
     ...(row.court_state
       ? { court_state: row.court_state as MatchOrganizerOption['court_state'] }
       : {}),
+    ...(row.fav_count != null ? { fav_count: row.fav_count } : {}),
   };
 }
 

@@ -3341,8 +3341,6 @@
       "courtAvailable": "Terrain libre",
       "courtsOne": "1 terrain libre",
       "courtsMany": "{count} terrains libres",
-      "courtNotPublished": "Dispo à venir",
-      "courtBooked": "Complet",
       "courtUnknown": "À confirmer"
     },
     "cost": {
@@ -3364,7 +3362,8 @@
     "availability": {
       "both": "Tous les deux dispo",
       "all": "Tout le monde dispo",
-      "partial": "Pas tous dispo"
+      "partial": "Pas tous dispo",
+      "favoriteShared": "Favori commun"
     },
     "custom": {
       "cta": "Proposer un autre moment",
@@ -6013,7 +6012,9 @@
       "bookCourtStatFavorites": "libres chez tes favoris",
       "bookCourtStatFavorites_one": "libre chez tes favoris",
       "bookCourtStatNearby": "libres près de toi",
-      "bookCourtStatNearby_one": "libre près de toi"
+      "bookCourtStatNearby_one": "libre près de toi",
+      "bookCourtStatCourts": "terrains",
+      "bookCourtStatCourts_one": "terrain"
     },
     "leaderboardCard": {
       "title": "Défi du mois",

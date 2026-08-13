@@ -94,10 +94,17 @@ BEGIN
     SELECT p, v_sport, true FROM unnest(ARRAY[v_rich, v_none, v_chips, v_org, v_fill1, v_fill2]) p
     ON CONFLICT (player_id, sport_id) DO UPDATE SET is_active = true;
 
+    -- Deliberately NOT all three: the opponents share her first two courts and
+    -- skip the third, so the "shared favourite" chip differentiates rows instead
+    -- of appearing on every one of them.
     INSERT INTO player_favorite_facility (player_id, facility_id, sport_id)
     SELECT p, f, v_sport
-      FROM unnest(ARRAY[v_rich, v_none, v_chips]) p, unnest(v_favs) f
+      FROM unnest(ARRAY[v_rich, v_none, v_chips]) p, unnest(v_favs[1:2]) f
     ON CONFLICT DO NOTHING;
+
+    DELETE FROM player_favorite_facility
+     WHERE player_id = ANY(ARRAY[v_rich, v_none, v_chips])
+       AND sport_id = v_sport AND facility_id = v_favs[3];
 
     DELETE FROM player_availability WHERE player_id = ANY(ARRAY[v_rich, v_none, v_chips]);
 

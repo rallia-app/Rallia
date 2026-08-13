@@ -40,25 +40,18 @@ export function courtStateLabel(
         : courtCount === 1
           ? t('matchOrganizer.tier.courtsOne')
           : t('matchOrganizer.tier.courtAvailable');
-    case 'not_published_yet':
-      return t('matchOrganizer.tier.courtNotPublished');
-    case 'booked':
-      return t('matchOrganizer.tier.courtBooked');
     default:
+      // Not published yet, fully booked, and untracked all mean the same thing
+      // to a player: there is no court here they can count on. They differ only
+      // to the ranking, which still penalises a slot we can see is taken.
       return t('matchOrganizer.tier.courtUnknown');
   }
 }
 
-/** Ionicons name for the chip. Only a confirmed court gets the court glyph. */
-export function courtStateIcon(
-  state: CourtState
-): 'time-outline' | 'lock-closed-outline' | 'help-circle-outline' {
-  switch (state) {
-    case 'not_published_yet':
-      return 'time-outline';
-    case 'booked':
-      return 'lock-closed-outline';
-    default:
-      return 'help-circle-outline';
-  }
+/**
+ * Ionicons name for the chip. Only a confirmed court gets the court glyph; every
+ * unconfirmed reason shares one, matching the single grey chip.
+ */
+export function courtStateIcon(_state: CourtState): 'help-circle-outline' {
+  return 'help-circle-outline';
 }

@@ -403,6 +403,12 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       : null) ?? t('matchOrganizer.custom.proposedByFallback')
                   );
             const isCreatingThis = creatingIndex === index;
+            // A court BOTH players already favourite is better evidence the slot
+            // will happen than any court feed, so it gets its own chip.
+            const sharedFavorite =
+              option.fav_count != null &&
+              participants.length > 0 &&
+              option.fav_count >= participants.length;
             // Availability label (system-posted cards carry free_count per slot).
             const allFree =
               option.free_count != null &&
@@ -544,6 +550,26 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       </Text>
                     </View>
                   )}
+
+                  {sharedFavorite ? (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        { backgroundColor: statusColors.success.DEFAULT + '1A' },
+                      ]}
+                    >
+                      <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={statusColors.success.DEFAULT}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
+                        {t('matchOrganizer.availability.favoriteShared')}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {/* A voted option the engine stopped returning is kept so the
                       agreement does not vanish, but it is no longer real. */}
