@@ -3844,25 +3844,25 @@
   },
   "actions": {
     "welcome": "Bienvenue sur Rallia",
-    "welcomeSubtitle": "Connectez-vous pour commencer à jouer",
-    "completeProfile": "Complétez votre profil",
-    "completeProfileSubtitle": "Terminez la configuration pour commencer à jouer avec d'autres",
+    "welcomeSubtitle": "Connecte-toi pour commencer à jouer",
+    "completeProfile": "Complète ton profil",
+    "completeProfileSubtitle": "Termine la configuration pour commencer à jouer avec d'autres",
     "continueSetup": "Continuer la configuration",
     "createMatch": "Créer une partie",
-    "createMatchDescription": "Créez une partie et partagez-la avec des joueurs et contacts",
+    "createMatchDescription": "Crée une partie et partage-la avec des joueurs et contacts",
     "invitePlayers": "Faire découvrir Rallia",
-    "invitePlayersDescription": "Partagez votre code ou votre QR pour que vos amis vous rejoignent sur Rallia",
+    "invitePlayersDescription": "Partage ton code ou ton QR pour que tes amis te rejoignent sur Rallia",
     "createShareList": "Créer une liste de partage",
-    "createShareListDescription": "Créez une liste de personnes hors application à inviter à vos parties",
+    "createShareListDescription": "Crée une liste de personnes hors application à inviter à tes parties",
     "createTournament": "Créer un tournoi",
-    "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
+    "createTournamentDescription": "Organise un tournoi avec un tableau et des inscriptions",
     "createLeague": "Créer une ligue",
-    "createLeagueDescription": "Organisez une ligue saisonnière avec des séances et un classement",
+    "createLeagueDescription": "Organise une ligue saisonnière avec des séances et un classement",
     "createEvent": "Créer un événement",
-    "createEventDescription": "Gérez un tournoi ou une ligue, des inscriptions au classement",
+    "createEventDescription": "Gère un tournoi ou une ligue, des inscriptions au classement",
     "groupDescription": "Réseau privé entre amis",
     "createCommunity": "Créer une communauté",
-    "createCommunityDescription": "Créez une communauté pour organiser des parties régulières près de chez vous",
+    "createCommunityDescription": "Crée une communauté pour organiser des parties régulières près de chez toi",
     "communityDescription": "Réseau public pour joueurs"
   },
   "referral": {
@@ -4322,12 +4322,12 @@
     "loadError": "Impossible de charger la ligue",
     "retry": "Réessayer",
     "notFound": "Ligue introuvable",
-    "notFoundDescription": "Cette ligue a peut-être été supprimée ou vous n'y avez pas accès.",
-    "joinSuccess": "Vous avez rejoint la ligue",
-    "joinPending": "Votre demande attend l'approbation de l'organisateur",
-    "membershipPending": "Votre adhésion est en attente d'approbation",
+    "notFoundDescription": "Cette ligue a peut-être été supprimée ou tu n'y as pas accès.",
+    "joinSuccess": "Tu as rejoint la ligue",
+    "joinPending": "Ta demande attend l'approbation de l'organisateur",
+    "membershipPending": "Ton adhésion est en attente d'approbation",
     "queuedInLine": "{rank}e en file pour une place",
-    "memberActive": "Vous êtes membre actif",
+    "memberActive": "Tu es membre actif",
     "memberApproved": "Membre approuvé",
     "inviteAccepted": "Invitation acceptée — tu embarques!",
     "inviteRevoked": "Invitation retirée",
@@ -4493,7 +4493,7 @@
       },
       "pendingRequestsCta": {
         "title": "Demandes d'adhésion en attente",
-        "description": "{count} joueurs attendent votre approbation",
+        "description": "{count} joueurs attendent ton approbation",
         "review": "Voir les demandes"
       },
       "pendingRequests": {
@@ -4520,7 +4520,7 @@
         "suspended": "Suspendus"
       },
       "joinCta": {
-        "description": "Demandez votre adhésion et participez aux saisons"
+        "description": "Demande ton adhésion et participe aux saisons"
       },
       "createSeasonCta": {
         "description": "Les saisons organisent les périodes de jeu et le classement"
@@ -4536,8 +4536,8 @@
       "saving": "Enregistrement...",
       "saved": "Ligue mise à jour",
       "errors": {
-        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
-        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualise et réessaie.",
+        "generic": "Impossible d'enregistrer les modifications. Réessaie."
       }
     },
     "lifecycle": {
@@ -4796,7 +4796,7 @@
       "endBeforeStart": "La date de fin doit être égale ou postérieure à la date de début"
     },
     "errors": {
-      "generic": "Une erreur s'est produite. Réessayez."
+      "generic": "Une erreur s'est produite. Réessaie."
     },
     "earnings": {
       "row": "Revenus",
@@ -4817,16 +4817,16 @@
       "shareCta": "Partager cette ligue",
       "description": "Toute personne avec ce lien peut rejoindre la ligue immédiatement, même si elle est privée ou demande normalement une approbation.",
       "descriptionPlayer": "Invite des amis à cette ligue. Ils la rejoignent selon les mêmes règles que toi.",
-      "generating": "Préparation de votre lien d'invitation...",
-      "scanToJoin": "Balayez pour rejoindre la ligue",
+      "generating": "Préparation de ton lien d'invitation...",
+      "scanToJoin": "Balaie pour rejoindre la ligue",
       "share": "Partager le lien d'invitation",
-      "shareTitle": "Rejoignez {name} sur Rallia",
-      "shareMessage": "Vous êtes invité à ma ligue {name} sur Rallia. Rejoignez-nous ici : {link}",
-      "shareMessageSession": "Rejoignez-nous pour la séance {session} de la ligue {name} sur Rallia : {link}",
+      "shareTitle": "Rejoins {name} sur Rallia",
+      "shareMessage": "Tu es invité à ma ligue {name} sur Rallia. Rejoins-nous ici : {link}",
+      "shareMessageSession": "Rejoins-nous pour la séance {session} de la ligue {name} sur Rallia : {link}",
       "resetLink": "Réinitialiser le lien",
       "resetWarning": "Le lien actuel cessera de fonctionner. Les membres déjà dans la ligue gardent leur place.",
       "resetDone": "Nouveau lien d'invitation prêt",
-      "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
+      "resetFailed": "Impossible de réinitialiser le lien. Réessaie.",
       "linkInfo": "Toute personne qui utilise ce lien rejoint la ligue immédiatement, même si elle est privée ou demande normalement une approbation.",
       "linkInfoPlayer": "Toute personne qui rejoint la ligue avec ton lien t'est créditée.",
       "invalidTitle": "Ce lien d'invitation ne fonctionne plus",
@@ -4836,7 +4836,7 @@
         "notFound": "Cette ligue est introuvable.",
         "notActive": "Cette ligue est fermée, donc son lien d'invitation l'est aussi.",
         "sharingUnavailable": "Cette ligue ne peut pas être partagée par les joueurs. Demande une invitation à l'organisateur.",
-        "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
+        "generic": "Impossible de préparer le lien d'invitation. Réessaie."
       }
     }
   },
@@ -4932,7 +4932,7 @@
     },
     "score": {
       "title": "Entrer le pointage",
-      "subtitle": "Entrez le score. Le gagnant est déterminé automatiquement.",
+      "subtitle": "Entre le score. Le gagnant est déterminé automatiquement.",
       "enter": "Entrer le pointage",
       "edit": "Modifier le pointage",
       "save": "Enregistrer",
@@ -4982,7 +4982,7 @@
       "error": "Impossible d'ouvrir le chat de la partie. Réessaie."
     },
     "errors": {
-      "generic": "Une erreur s'est produite. Réessayez."
+      "generic": "Une erreur s'est produite. Réessaie."
     },
     "publishModal": {
       "title": "Publier cette séance?",
@@ -5100,16 +5100,16 @@
       "eligibility": "Admissibilité"
     },
     "step1Title": "Détails",
-    "step1Description": "Nommez votre ligue et ajoutez une description (optionnel)",
+    "step1Description": "Nomme ta ligue et ajoute une description (optionnel)",
     "visibilityStepTitle": "Visibilité",
-    "visibilityStepDescription": "Qui peut trouver et rejoindre votre ligue?",
+    "visibilityStepDescription": "Qui peut trouver et rejoindre ta ligue?",
     "eligibilityStepTitle": "Admissibilité",
-    "eligibilityStepDescription": "Restreignez l'accès selon la cote, si vous le souhaitez",
+    "eligibilityStepDescription": "Restreins l'accès selon la cote, si tu veux",
     "next": "Suivant",
     "createLeague": "Créer la ligue",
     "creating": "Création...",
     "success": "Ligue créée!",
-    "successDescription": "Invitez des joueurs et créez votre première saison quand vous serez prêt.",
+    "successDescription": "Invite des joueurs et crée ta première saison quand tu es prêt.",
     "viewLeague": "Voir la ligue",
     "createAnother": "Créer une autre",
     "fields": {
@@ -5120,28 +5120,28 @@
       "name": "Nom",
       "namePlaceholder": "p. ex., Ligue d'été de Montréal",
       "description": "Description",
-      "descriptionPlaceholder": "Décrivez la ligue (optionnel)",
+      "descriptionPlaceholder": "Décris la ligue (optionnel)",
       "visibility": "Visibilité",
       "visibilityPrivate": "Privée",
       "visibilityPrivateDescription": "Seules les personnes invitées peuvent trouver cette ligue",
       "visibilityPublic": "Publique",
-      "visibilityPublicDescription": "Tous les joueurs de votre sport peuvent la trouver et demander à rejoindre",
+      "visibilityPublicDescription": "Tous les joueurs de ton sport peuvent la trouver et demander à rejoindre",
       "joinMode": "Mode d'adhésion",
       "joinModeOpen": "Ouverte",
       "joinModeOpenDescription": "Les joueurs rejoignent immédiatement",
       "joinModeApproval": "Approbation",
-      "joinModeApprovalDescription": "Vous approuvez chaque demande",
+      "joinModeApprovalDescription": "Tu approuves chaque demande",
       "joinModeInviteOnly": "Sur invitation",
       "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre",
       "minRating": "Cote minimale",
       "minRatingNone": "Aucun minimum",
       "maxRating": "Cote maximale",
       "maxRatingNone": "Aucun maximum",
-      "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, vous n'avez rien à approuver.",
+      "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, tu n'as rien à approuver.",
       "ratingGateUnavailable": "L'admissibilité par cote n'est pas encore offerte pour ce sport.",
       "memberCapacity": "Limite de membres",
       "memberCapacityPlaceholder": "Illimité",
-      "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, vous compris. Laissez vide pour aucune limite.",
+      "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, toi compris. Laisse vide pour aucune limite.",
       "pointsTitle": "Système de pointage",
       "points": {
         "pointWin": "Victoire",
@@ -5156,15 +5156,15 @@
       "nameRequired": "Le nom de la ligue est requis",
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
       "ratingRangeInvalid": "La cote maximale doit être égale ou supérieure à la minimale",
-      "capacityInvalid": "Entrez un nombre de 1 ou plus",
+      "capacityInvalid": "Entre un nombre de 1 ou plus",
       "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100"
     },
     "errors": {
-      "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",
-      "rateLimited": "Vous pouvez créer jusqu'à 5 ligues par jour",
-      "generic": "Impossible de créer la ligue. Réessayez.",
+      "sportMismatch": "Active ce sport sur ton profil avant de créer une ligue",
+      "rateLimited": "Tu peux créer jusqu'à 5 ligues par jour",
+      "generic": "Impossible de créer la ligue. Réessaie.",
       "coverUploadFailedTitle": "Échec du téléversement",
-      "coverUploadFailed": "Impossible de téléverser l'image de couverture. Réessayez."
+      "coverUploadFailed": "Impossible de téléverser l'image de couverture. Réessaie."
     }
   },
   "tournamentList": {
@@ -5287,7 +5287,7 @@
     },
     "loading": "Chargement du tournoi...",
     "notFound": "Tournoi introuvable",
-    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
+    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou tu n'as pas la permission de le voir.",
     "loadError": "Impossible de charger le tournoi",
     "retry": "Réessayer",
     "chat": {
@@ -5365,11 +5365,11 @@
         "deadline": "Date limite"
       },
       "nextStep": {
-        "draftDescription": "Ouvrez les inscriptions pour que les joueurs puissent trouver et rejoindre votre tournoi.",
+        "draftDescription": "Ouvre les inscriptions pour que les joueurs puissent trouver et rejoindre ton tournoi.",
         "openDescription": "{count} places sur {max} sont prises.",
-        "closedDescription": "{count} joueurs sont inscrits. Générez le tableau pour commencer.",
+        "closedDescription": "{count} joueurs sont inscrits. Génère le tableau pour commencer.",
         "liveTitle": "Tournoi en cours",
-        "liveDescription": "{done} parties jouées sur {total}. Touchez une partie en attente dans le tableau pour enregistrer son résultat."
+        "liveDescription": "{done} parties jouées sur {total}. Touche une partie en attente dans le tableau pour enregistrer son résultat."
       },
       "registerCta": {
         "full": "Tournoi complet",
@@ -5390,18 +5390,18 @@
       },
       "pendingRequestsCta": {
         "title": "Demandes en attente",
-        "description": "{count} joueur(s) attendent votre approbation.",
+        "description": "{count} joueur(s) attendent ton approbation.",
         "review": "Voir les demandes"
       },
       "myMatch": {
-        "title": "Votre prochaine partie",
+        "title": "Ta prochaine partie",
         "vs": "contre {name}",
-        "hint": "Touchez pour lier votre partie jouée",
+        "hint": "Touche pour lier ta partie jouée",
         "organize": "Organise ta partie",
         "organizeError": "Impossible d'ouvrir le chat de la partie. Réessaie.",
-        "waiting": "En attente de votre prochain adversaire",
-        "eliminated": "Vous avez été éliminé. Belle performance!",
-        "champion": "Vous avez gagné le tournoi!"
+        "waiting": "En attente de ton prochain adversaire",
+        "eliminated": "Tu as été éliminé. Belle performance!",
+        "champion": "Tu as gagné le tournoi!"
       },
       "participants": {
         "title": "Participants",
@@ -5488,7 +5488,7 @@
       "closing": "Fermeture...",
       "registrationPendingLabel": "Inscription en attente d'approbation",
       "invitePendingLabel": "Invitation en attente",
-      "registeredLabel": "Vous êtes inscrit",
+      "registeredLabel": "Tu es inscrit",
       "registeredWithPartnerLabel": "T'es inscrit avec {name}",
       "generateBracket": "Générer le tableau",
       "generating": "Génération du tableau...",
@@ -5521,15 +5521,15 @@
       "shareCta": "Inviter des amis",
       "description": "Toute personne avec ce lien peut s'inscrire au tournoi, même s'il est privé.",
       "descriptionPlayer": "Invite des amis à ce tournoi. Ils s'inscrivent selon les mêmes règles que toi.",
-      "generating": "Préparation de votre lien d'invitation...",
-      "scanToRegister": "Balayez pour vous inscrire au tournoi",
+      "generating": "Préparation de ton lien d'invitation...",
+      "scanToRegister": "Balaie pour t'inscrire au tournoi",
       "share": "Partager le lien d'invitation",
-      "shareTitle": "Rejoignez {name} sur Rallia",
-      "shareMessage": "Vous êtes invité à mon tournoi {name} sur Rallia. Inscrivez-vous ici : {link}",
+      "shareTitle": "Rejoins {name} sur Rallia",
+      "shareMessage": "Tu es invité à mon tournoi {name} sur Rallia. Inscris-toi ici : {link}",
       "resetLink": "Réinitialiser le lien",
       "resetWarning": "Le lien actuel cessera de fonctionner. Les joueurs déjà inscrits gardent leur place.",
       "resetDone": "Nouveau lien d'invitation prêt",
-      "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
+      "resetFailed": "Impossible de réinitialiser le lien. Réessaie.",
       "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation.",
       "linkInfoPlayer": "Toute personne qui s'inscrit avec ton lien t'est créditée.",
       "errors": {
@@ -5538,13 +5538,13 @@
         "terminal": "Ce tournoi est annulé ou archivé, donc son lien d'invitation est fermé.",
         "notFound": "Ce tournoi est introuvable.",
         "sharingUnavailable": "Ce tournoi ne peut pas être partagé par les joueurs. Demande une invitation à l'organisateur.",
-        "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
+        "generic": "Impossible de préparer le lien d'invitation. Réessaie."
       }
     },
     "inviteLanding": {
       "invalidTitle": "Lien d'invitation non valide",
-      "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demandez un nouveau lien à l'organisateur.",
-      "joinedToast": "Vous êtes inscrit! On se voit au tournoi."
+      "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demande un nouveau lien à l'organisateur.",
+      "joinedToast": "Tu es inscrit! On se voit au tournoi."
     },
     "editModal": {
       "title": "Modifier le tournoi",
@@ -5562,8 +5562,8 @@
       "saving": "Enregistrement...",
       "saved": "Tournoi mis à jour",
       "errors": {
-        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
-        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualise et réessaie.",
+        "generic": "Impossible d'enregistrer les modifications. Réessaie."
       }
     },
     "cancelModal": {
@@ -5572,9 +5572,9 @@
       "reasonPlaceholder": "Optionnel : courte raison communiquée aux participants",
       "confirm": "Annuler",
       "keepIt": "Garder",
-      "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
+      "errorGeneric": "Impossible d'annuler le tournoi. Réessaie.",
       "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi. Actualise et réessaie.",
       "paidRefundWarning": "{count} inscription(s) payée(s) seront remboursées, {amount} au total. Les frais de service Rallia ne sont pas remboursés."
     },
     "archiveModal": {
@@ -5582,10 +5582,10 @@
       "description": "Les tournois archivés sont retirés des flux actifs mais restent accessibles par lien direct.",
       "confirm": "Archiver",
       "keepIt": "Annuler",
-      "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
+      "errorGeneric": "Impossible d'archiver le tournoi. Réessaie.",
       "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
       "errorSettlementPending": "Les remboursements ou versements sont encore en traitement. Tu pourras archiver une fois que c'est fait.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi. Actualise et réessaie.",
       "restoredToast": "Tournoi restauré"
     },
     "removeModal": {
@@ -5679,47 +5679,47 @@
     },
     "override": {
       "title": "Inscrire le résultat",
-      "subtitle": "Entrez le score final. Le gagnant est déterminé automatiquement.",
+      "subtitle": "Entre le score final. Le gagnant est déterminé automatiquement.",
       "confirm": "Enregistrer le résultat",
       "confirmFinal": {
         "title": "Confirmer le résultat de la finale",
-        "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Vous pouvez encore corriger pendant 24 heures.",
+        "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Tu peux encore corriger pendant 24 heures.",
         "cta": "Confirmer le champion"
       },
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
-        "nextMatchPlayed": "Vous ne pouvez plus modifier ce score. La prochaine partie a déjà été jouée.",
-        "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
+        "nextMatchPlayed": "Tu ne peux plus modifier ce score. La prochaine partie a déjà été jouée.",
+        "winnerNotInMatch": "Choisis un des deux joueurs de cette partie.",
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
-        "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demandez l'aide d'un admin.",
-        "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
+        "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demande l'aide d'un admin.",
+        "generic": "Impossible d'enregistrer le résultat. Réessaie."
       }
     },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
       "alreadyGenerated": "Le tableau existe déjà.",
-      "wrongStatus": "Fermez les inscriptions avant de générer le tableau.",
-      "generic": "Impossible de générer le tableau. Veuillez réessayer."
+      "wrongStatus": "Ferme les inscriptions avant de générer le tableau.",
+      "generic": "Impossible de générer le tableau. Réessaie."
     },
     "errors": {
-      "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",
-      "closeFailed": "Impossible de fermer les inscriptions. Veuillez réessayer.",
-      "reopenFailed": "Impossible de rouvrir les inscriptions. Veuillez réessayer.",
-      "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
-      "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
-      "acceptInviteFailed": "Impossible d'accepter l'invitation. Veuillez réessayer.",
-      "invitePlayersFailed": "Impossible d'envoyer les invitations. Veuillez réessayer.",
-      "revokeInviteFailed": "Impossible de retirer l'invitation. Veuillez réessayer.",
+      "openFailed": "Impossible d'ouvrir les inscriptions. Réessaie.",
+      "closeFailed": "Impossible de fermer les inscriptions. Réessaie.",
+      "reopenFailed": "Impossible de rouvrir les inscriptions. Réessaie.",
+      "registerFailed": "Impossible de finaliser l'inscription. Réessaie.",
+      "withdrawFailed": "Impossible de se retirer. Réessaie.",
+      "acceptInviteFailed": "Impossible d'accepter l'invitation. Réessaie.",
+      "invitePlayersFailed": "Impossible d'envoyer les invitations. Réessaie.",
+      "revokeInviteFailed": "Impossible de retirer l'invitation. Réessaie.",
       "withdrawClosed": "Les inscriptions sont fermées, tu peux plus te retirer.",
       "tournamentFull": "Ce tournoi est complet.",
-      "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",
-      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil.",
+      "alreadyRegistered": "Tu es déjà inscrit à ce tournoi.",
+      "sportMismatch": "Tu n'as pas ce sport actif sur ton profil.",
       "regClosed": "Les inscriptions ne sont plus ouvertes.",
-      "startPassed": "La date de début est passée. Modifiez les dates avant d'ouvrir les inscriptions.",
-      "notInvited": "Ce tournoi est sur invitation et vous n'avez pas été invité.",
-      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
-      "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
+      "startPassed": "La date de début est passée. Modifie les dates avant d'ouvrir les inscriptions.",
+      "notInvited": "Ce tournoi est sur invitation et tu n'as pas été invité.",
+      "lockConflict": "Quelqu'un a modifié le tournoi. Actualise et réessaie.",
+      "removeFailed": "Impossible de retirer le joueur. Réessaie.",
       "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
       "forfeitFailed": "Impossible de retirer le joueur des poules. Réessaie.",
       "forfeitNotAllowed": "On peut retirer un joueur pendant les poules seulement, avant le début des éliminatoires.",
@@ -5838,7 +5838,7 @@
     "createTournament": "Créer le tournoi",
     "creating": "Création...",
     "success": "Tournoi créé!",
-    "successDescription": "Votre brouillon de tournoi est prêt. Ouvrez les inscriptions quand vous voulez inviter des joueurs.",
+    "successDescription": "Ton brouillon de tournoi est prêt. Ouvre les inscriptions quand tu veux inviter des joueurs.",
     "viewTournament": "Voir le tournoi",
     "shareInvite": "Partager le lien d'invitation",
     "createAnother": "En créer un autre",
@@ -5892,16 +5892,16 @@
       "endDatePlaceholder": "Choisir une date",
       "visibility": "Visibilité",
       "visibilityPrivate": "Privé",
-      "visibilityPrivateDescription": "Seules les personnes que vous invitez le voient",
+      "visibilityPrivateDescription": "Seules les personnes que tu invites le voient",
       "visibilityPublic": "Public",
-      "visibilityPublicDescription": "Toute personne dans votre sport peut le trouver et s'inscrire",
+      "visibilityPublicDescription": "Toute personne dans ton sport peut le trouver et s'inscrire",
       "visibilityCommunity": "Communauté",
-      "visibilityCommunityDescription": "Visible aux membres d'une communauté que vous choisissez",
+      "visibilityCommunityDescription": "Visible aux membres d'une communauté que tu choisis",
       "registrationMode": "Mode d'inscription",
       "registrationModeOpen": "Ouvert",
       "registrationModeOpenDescription": "Toute personne qui voit le tournoi peut s'inscrire",
       "registrationModeApproval": "Approbation",
-      "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
+      "registrationModeApprovalDescription": "Tu approuves chaque inscription",
       "registrationModeInviteOnly": "Sur invitation",
       "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire",
       "matchFormatOneGame": "1 partie",
@@ -5938,11 +5938,11 @@
       "refundPctRange": "Entre un pourcentage de remboursement entre 1 et 100"
     },
     "errors": {
-      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
-      "rateLimited": "Vous avez créé trop de tournois récemment. Réessayez plus tard.",
+      "sportMismatch": "Tu n'as pas ce sport actif sur ton profil",
+      "rateLimited": "Tu as créé trop de tournois récemment. Réessaie plus tard.",
       "posterUploadFailedTitle": "Échec du téléversement",
-      "posterUploadFailed": "Impossible de téléverser l'affiche. Veuillez réessayer.",
-      "generic": "Impossible de créer le tournoi. Veuillez réessayer."
+      "posterUploadFailed": "Impossible de téléverser l'affiche. Réessaie.",
+      "generic": "Impossible de créer le tournoi. Réessaie."
     }
   },
   "home": {
