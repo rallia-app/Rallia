@@ -98,16 +98,6 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     [metadata]
   );
 
-  // The favourite star is the one glyph a row can carry without words, so the
-  // legend explains exactly that, and only when some row actually shows it.
-  // Declared availability is deliberately NOT surfaced as a positive marker:
-  // liking a slot is the real "I can play", and a second green signal for the
-  // recurring grid read as competing with the likes.
-  const showFavoriteLegend = useMemo(() => {
-    const n = participants.length;
-    return n > 0 && (metadata?.options ?? []).some(o => o.fav_count != null && o.fav_count >= n);
-  }, [metadata, participants]);
-
   // Availability editor, opened with pairing context so the grid draws the
   // opponent's free hours underneath the player's own. Saving regenerates this
   // card, so a widened week turns "no shared times" into real options in place.
@@ -391,27 +381,6 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           </View>
         </View>
 
-        {/* A key, not a sentence: the entry shows the REAL badge at its real
-            size, so the mapping to the rows below is literal. */}
-        {showFavoriteLegend ? (
-          <View style={[styles.legend, { borderTopColor: colors.border }]}>
-            <View style={styles.legendItem}>
-              <View
-                style={[
-                  styles.courtPill,
-                  styles.iconPill,
-                  { backgroundColor: statusColors.success.DEFAULT + '1A' },
-                ]}
-              >
-                <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
-              </View>
-              <Text size="xs" color={colors.textMuted} style={styles.legendLabel}>
-                {t('matchOrganizer.availability.favoriteShared')}
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
         <View style={styles.options}>
           {orderedOptions.map(({ option, index }) => {
             const voters = votersByOption.get(index) ?? new Set<string>();
@@ -633,12 +602,19 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                     <View
                       style={[
                         styles.courtPill,
-                        styles.iconPill,
                         { backgroundColor: statusColors.success.DEFAULT + '1A' },
                       ]}
-                      accessibilityLabel={t('matchOrganizer.availability.favoriteShared')}
                     >
                       <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={statusColors.success.DEFAULT}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
+                        {t('matchOrganizer.availability.favoriteShared')}
+                      </Text>
                     </View>
                   ) : null}
 
@@ -837,33 +813,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   pillLabel: {
-    flexShrink: 1,
-  },
-  // A glyph pill is a circle of the same height, and it must NOT be what gives
-  // way when the row is tight: the labelled chip absorbs the squeeze instead.
-  iconPill: {
-    width: CHIP_HEIGHT,
-    paddingHorizontal: 0,
-    flexShrink: 0,
-  },
-  // A hairline sets the key apart from the header without giving it a surface
-  // of its own, which would read as another option row.
-  legend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    columnGap: spacingPixels[4],
-    rowGap: spacingPixels[2],
-    marginTop: spacingPixels[4],
-    paddingTop: spacingPixels[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-  legendLabel: {
     flexShrink: 1,
   },
   courtIcon: {
