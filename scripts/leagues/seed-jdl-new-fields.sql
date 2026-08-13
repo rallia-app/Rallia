@@ -65,6 +65,20 @@ CREATE OR REPLACE FUNCTION pg_temp.fakes(p_offset integer, n integer) RETURNS uu
      ORDER BY u.email OFFSET p_offset LIMIT n) t;
 $$;
 
+
+-- Since 20260812150000, league_create is admin-gated server-side. Fixture
+-- organizers get a temporary staff row around each create; the revoke is
+-- mandatory (same pattern as the SQL test suite).
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_jdl    uuid := pg_temp.jdl();
@@ -291,12 +305,14 @@ BEGIN
     -- =====================================================================
     v_fakes := pg_temp.fakes(20, 4);
     PERFORM pg_temp.as_user(v_fakes[1]);
+    PERFORM pg_temp.staff_on(v_fakes[1]);
     v_league := public.league_create(
         p_name        => '[JDL v2] Où je joue',
         p_sport_id    => (SELECT id FROM sport WHERE name = 'tennis'),
         p_description => 'Tu es joueur ici, pas organisateur. La saison gratuite est ouverte: pas de bouton pour la rejoindre, la note dit que tous les membres actifs y participent.',
         p_visibility  => 'public',
         p_join_mode   => 'open');
+    PERFORM pg_temp.staff_off(v_fakes[1]);
 
     PERFORM pg_temp.as_user(pg_temp.jdl());
     PERFORM public.league_join(v_league.id);

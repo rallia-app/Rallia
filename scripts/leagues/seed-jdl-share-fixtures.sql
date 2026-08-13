@@ -64,6 +64,20 @@ CREATE OR REPLACE FUNCTION pg_temp.fakes(p_offset integer, n integer) RETURNS uu
      ORDER BY u.email OFFSET p_offset LIMIT n) t;
 $$;
 
+
+-- Since 20260812150000, league_create is admin-gated server-side. Fixture
+-- organizers get a temporary staff row around each create; the revoke is
+-- mandatory (same pattern as the SQL test suite).
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 DO $$
 DECLARE
     v_jdl     uuid := pg_temp.jdl();
@@ -91,12 +105,14 @@ BEGIN
     -- A. [JDL v2] Partage secret — private + invite_only, organizer link
     -- =====================================================================
     PERFORM pg_temp.as_user(v_org_a);
+    PERFORM pg_temp.staff_on(v_org_a);
     v_league := public.league_create(
         p_name        => '[JDL v2] Partage secret',
         p_sport_id    => (SELECT id FROM sport WHERE name = 'tennis'),
         p_description => 'Tu vois cette ligue uniquement grâce au lien : elle est privée et sur invitation. Le lien de l''organisateur te fait entrer directement — appuie sur Rejoindre. La variante « séance » du lien devait d''abord rebondir ici puisque la séance t''était cachée.',
         p_visibility  => 'private',
         p_join_mode   => 'invite_only');
+    PERFORM pg_temp.staff_off(v_org_a);
 
     v_season := public.season_create(v_league.id, 'Été 2026', current_date - 7, current_date + 50);
     v_season := public.season_open(v_season.id, v_season.version);
@@ -112,12 +128,14 @@ BEGIN
     -- B. [JDL v2] Partage sur demande — public + approval, player link
     -- =====================================================================
     PERFORM pg_temp.as_user(v_org_b);
+    PERFORM pg_temp.staff_on(v_org_b);
     v_league := public.league_create(
         p_name        => '[JDL v2] Partage sur demande',
         p_sport_id    => (SELECT id FROM sport WHERE name = 'tennis'),
         p_description => 'Lien partagé par un joueur, pas par l''organisateur : les règles normales s''appliquent. Rejoindre envoie une demande d''approbation au lieu de t''inscrire directement.',
         p_visibility  => 'public',
         p_join_mode   => 'approval');
+    PERFORM pg_temp.staff_off(v_org_b);
 
     PERFORM pg_temp.as_user(v_sharer);
     PERFORM public.league_invite_get_or_create(v_league.id);   -- player link
