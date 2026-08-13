@@ -475,13 +475,38 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                     : t('matchOrganizer.availability.all')
                   : t('matchOrganizer.availability.partial');
 
+            // The state that matters most on this card: someone ELSE already
+            // liked this slot and it is waiting on you. A bare count next to the
+            // thumb was invisible, so the row names the liker and takes a firmer
+            // border. On a custom row the proposer's auto-vote is already told
+            // by "Proposé par X", so it is not repeated as a like.
+            const otherVoters = [...voters].filter(id => id !== currentUserId);
+            const awaitingMe =
+              !isMutual &&
+              otherVoters.length > 0 &&
+              !(isCustom && otherVoters.length === 1 && otherVoters[0] === option.proposed_by);
+            const otherVoterNames = otherVoters
+              .map(id => opponentProfiles[id]?.first_name)
+              .filter((n): n is string => !!n);
+            const likedByLabel = !awaitingMe
+              ? null
+              : otherVoters.length === 1
+                ? t('matchOrganizer.card.likedBy').replace(
+                    '{name}',
+                    otherVoterNames[0] ?? t('matchOrganizer.custom.proposedByFallback')
+                  )
+                : t('matchOrganizer.card.likedByCount').replace(
+                    '{count}',
+                    String(otherVoters.length)
+                  );
+
             return (
               <View
                 key={`${option.slot_start}-${option.facility_id}-${index}`}
                 style={[
                   styles.option,
                   {
-                    borderColor: isMutual ? accent : colors.border,
+                    borderColor: isMutual ? accent : awaitingMe ? `${accent}80` : colors.border,
                     backgroundColor: isMutual ? `${accent}15` : colors.buttonInactive,
                   },
                 ]}
@@ -496,6 +521,14 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       <Text size="xs" color={colors.textMuted} style={styles.optionFacility}>
                         {option.facility_name}
                       </Text>
+                    ) : null}
+                    {likedByLabel ? (
+                      <View style={styles.likedByRow}>
+                        <Ionicons name="thumbs-up" size={11} color={accent} />
+                        <Text size="xs" weight="semibold" color={accent} numberOfLines={1}>
+                          {likedByLabel}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
 
@@ -773,6 +806,12 @@ const styles = StyleSheet.create({
   },
   optionFacility: {
     marginTop: 1,
+  },
+  likedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[1],
   },
   courtPill: {
     flexDirection: 'row',

@@ -3331,7 +3331,9 @@
       "noOverlapBody": "Vos disponibilités ne concordent pas pour l'instant. Mets à jour tes heures dans ton profil et de nouvelles suggestions vont apparaître ici.",
       "noOverlapCta": "Mettre à jour mes dispos",
       "previewSuggestions": "Suggestions d'heures pour jouer",
-      "staleOption": "Plus disponible"
+      "staleOption": "Plus disponible",
+      "likedBy": "{name} aime ce moment",
+      "likedByCount": "{count} joueurs aiment ce moment"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -6006,12 +6008,14 @@
       "findGameNudge": "Joue des parties pour te classer ce mois-ci",
       "bookCourtEmpty": "Rien de libre autour de toi en ce moment",
       "bookCourtNudge": "Des disponibilités en temps réel",
-      "findGameStatGames": "{count} parties",
-      "findGameStatGames_one": "{count} partie",
       "bookCourtStatTitle": "En ce moment",
       "bookCourtStatCourts": "terrains libres",
       "bookCourtStatCourts_one": "terrain libre",
-      "bookCourtStatDetail": "à réserver autour de toi"
+      "bookCourtStatDetail": "à réserver autour de toi",
+      "findGameStatDetail": "{count} parties jouées ce mois-ci",
+      "findGameStatDetail_one": "{count} partie jouée ce mois-ci",
+      "competeStatDetail": "{points} pts en {count} événements",
+      "competeStatDetail_one": "{points} pts en {count} événement"
     },
     "leaderboardCard": {
       "title": "Défi du mois",

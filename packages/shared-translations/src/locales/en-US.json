@@ -3331,7 +3331,9 @@
       "noOverlapBody": "Your availabilities don't line up right now. Update your hours in your profile and new times will show up here.",
       "noOverlapCta": "Update my availability",
       "previewSuggestions": "Suggested times to play",
-      "staleOption": "No longer open"
+      "staleOption": "No longer open",
+      "likedBy": "{name} likes this time",
+      "likedByCount": "{count} players like this time"
     },
     "banner": {
       "title": "Organize a game",
@@ -6006,12 +6008,14 @@
       "findGameNudge": "Play games to get ranked this month",
       "bookCourtEmpty": "Nothing available around you right now",
       "bookCourtNudge": "Live openings ready to book",
-      "findGameStatGames": "{count} games",
-      "findGameStatGames_one": "{count} game",
       "bookCourtStatTitle": "Right now",
       "bookCourtStatCourts": "available courts",
       "bookCourtStatCourts_one": "available court",
-      "bookCourtStatDetail": "to book around you"
+      "bookCourtStatDetail": "to book around you",
+      "findGameStatDetail": "{count} games played this month",
+      "findGameStatDetail_one": "{count} game played this month",
+      "competeStatDetail": "{points} pts in {count} events",
+      "competeStatDetail_one": "{points} pts in {count} event"
     },
     "leaderboardCard": {
       "title": "Monthly Challenge",
