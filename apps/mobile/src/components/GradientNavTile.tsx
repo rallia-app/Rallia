@@ -179,7 +179,7 @@ export const GradientStatTile: React.FC<{
       activeOpacity={0.85}
       style={[styles.item, style]}
       accessibilityRole="button"
-      accessibilityLabel={`${label.replace('\n', ' ')}. ${statText}`}
+      accessibilityLabel={`${label.replace(/\n/g, ' ')}. ${statText}`}
     >
       <LinearGradient
         colors={gradient}
