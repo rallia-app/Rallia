@@ -496,7 +496,7 @@ export interface SkeletonMyMatchCardProps {
 }
 
 /**
- * Compact match card skeleton matching the MyMatchCard layout (160px wide):
+ * Compact match card skeleton matching the MyMatchCard layout (240px wide):
  * day label, time, location row, player avatars.
  */
 export function SkeletonMyMatchCard({
@@ -691,7 +691,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   myMatchCard: {
-    width: 200,
+    // Matches MyMatchCard's CARD_WIDTH so the carousel doesn't shift on load.
+    width: 240,
     padding: 16,
     borderRadius: 12,
   },

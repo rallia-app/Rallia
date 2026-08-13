@@ -2443,8 +2443,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
+    // More room above the title than below it, so the header groups with its
+    // own content instead of floating between two sections.
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
   },
   // Variant of sectionHeader used when the title row carries inline controls
   // (the LocationSelector). The title row and "View all" live in a centered top
@@ -2453,8 +2455,8 @@ const styles = StyleSheet.create({
   sectionHeaderStacked: {
     gap: spacingPixels[0.5],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
   },
   sectionHeaderTopRow: {
     flexDirection: 'row',
@@ -2492,7 +2494,6 @@ const styles = StyleSheet.create({
   // single scrollable card.
   myMatchesEmptyWrap: {
     paddingHorizontal: spacingPixels[4],
-    paddingTop: 10,
     paddingBottom: spacingPixels[2],
   },
   myMatchesEmpty: {
@@ -2514,10 +2515,9 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   myMatchesScrollContent: {
-    paddingLeft: spacingPixels[4],
-    paddingRight: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
-    gap: spacingPixels[2],
+    gap: spacingPixels[3],
   },
   favAvailScrollContent: {
     paddingHorizontal: spacingPixels[4],
