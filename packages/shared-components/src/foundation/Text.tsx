@@ -220,13 +220,19 @@ export const Text: React.FC<TextProps> = ({
     : variantStyles.fontSize || (typography?.fontSize?.base ?? 16);
 
   const calculatedLineHeight = getLineHeight(lineHeight, variant, fontSize);
+  const resolvedWeight = weight ?? getDefaultWeight(variant);
 
   // Build style object
   const textStyle: TextStyle = {
     ...variantStyles,
     fontSize,
     lineHeight: calculatedLineHeight,
-    fontFamily: resolveFontFamily(variant, weight ?? getDefaultWeight(variant)),
+    fontFamily: resolveFontFamily(variant, resolvedWeight),
+    // Keep the numeric weight alongside the family. The family name carries the
+    // weight when the custom face is loaded, but if it ever isn't (a build whose
+    // font assets are missing, or before loadAsync resolves) the system fallback
+    // still renders at the right weight instead of silently dropping to regular.
+    fontWeight: typography?.fontWeight?.[resolvedWeight] ?? '400',
     ...(color && { color }),
     ...(align && { textAlign: align }),
     ...(italic && { fontStyle: 'italic' }),

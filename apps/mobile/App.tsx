@@ -323,7 +323,16 @@ function SplashGate({ children }: PropsWithChildren) {
   const [timedOut, setTimedOut] = useState(false);
   // Bundled with the app, so this resolves in one frame; the 5s safety
   // timeout below still applies if loading ever fails.
-  const [fontsLoaded] = useFonts(APP_FONTS);
+  const [fontsLoaded, fontError] = useFonts(APP_FONTS);
+
+  // A failed load is silent otherwise: text falls back to the system face and
+  // headings just look unstyled. Report it so builds missing the font assets
+  // are diagnosable instead of mysterious.
+  useEffect(() => {
+    if (fontError) {
+      Logger.error('Font loading failed — text will fall back to the system face', fontError);
+    }
+  }, [fontError]);
 
   // Safety net — if any provider hangs, hide splash after 5s anyway.
   useEffect(() => {
