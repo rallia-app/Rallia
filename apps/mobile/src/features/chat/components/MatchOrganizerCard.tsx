@@ -680,7 +680,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             free-text chat, which is where pairings stall. */}
         {isParticipant ? (
           <View style={styles.footerCta}>
-            <Button variant="ghost" size="sm" onPress={openCustomSlotSheet}>
+            {/* Deliberately `secondary`, not `primary`: the primary action on
+                this card is agreeing on one of the times above, and a filled
+                button here would outrank the "create" buttons on the rows. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              fullWidth
+              onPress={openCustomSlotSheet}
+              leftIcon={<Ionicons name="add-circle-outline" size={16} color={accent} />}
+            >
               {t('matchOrganizer.custom.cta')}
             </Button>
           </View>
@@ -732,9 +741,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: spacingPixels[1],
   },
+  // Spans the card rather than hugging its label, so it reads as an action
+  // rather than a trailing link.
   footerCta: {
-    marginTop: spacingPixels[3],
-    alignSelf: 'flex-start',
+    marginTop: spacingPixels[4],
   },
   options: {
     marginTop: spacingPixels[4],
