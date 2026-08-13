@@ -306,46 +306,46 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     const start = confirmed ? new Date(confirmed.slot_start) : null;
     const success = statusColors.success.DEFAULT;
 
+    // A compact success band, not a mini screen: solid check on the left, the
+    // what/when/where in the middle, and the open affordance anchored right so
+    // the row has no dead side. The whole band is the tap target.
     return (
       <View style={styles.wrapper}>
         <Pressable
           onPress={() => {
             void handleOpenMatch();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={t('matchOrganizer.card.viewGame')}
           style={[
-            styles.card,
-            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            styles.createdCard,
+            { backgroundColor: success + '14', borderColor: success + '40' },
           ]}
         >
-          <View style={[styles.iconCircle, { backgroundColor: success + '1A' }]}>
-            <Ionicons name="checkmark-circle" size={20} color={success} />
+          <View style={[styles.createdCheck, { backgroundColor: success }]}>
+            <Ionicons name="checkmark" size={18} color={base.white} />
           </View>
-          <View style={styles.body}>
-            <Text size="sm" weight="semibold" color={colors.text}>
+          <View style={styles.createdBody}>
+            <Text size="sm" weight="semibold" color={colors.text} numberOfLines={1}>
               {t('matchOrganizer.card.created')}
             </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.subtitle}>
+            <Text size="xs" color={colors.textMuted} numberOfLines={1}>
               {confirmed && start
-                ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}${
-                    confirmed.facility_name ? ` · ${confirmed.facility_name}` : ''
-                  }`
+                ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}`
                 : t('matchOrganizer.card.createdSubtitle')}
             </Text>
-            <View style={[styles.cta, { backgroundColor: success }]}>
-              <Text
-                size="sm"
-                weight="semibold"
-                color="#fff"
-                style={isOpening ? styles.ctaLabelHidden : undefined}
-              >
-                {t('matchOrganizer.card.viewGame')}
+            {confirmed?.facility_name || confirmed?.place_name ? (
+              <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                {confirmed.facility_name ?? confirmed.place_name}
               </Text>
-              {isOpening ? (
-                <View style={styles.ctaSpinner} pointerEvents="none">
-                  <ActivityIndicator size="small" color="#fff" />
-                </View>
-              ) : null}
-            </View>
+            ) : null}
+          </View>
+          <View style={[styles.createdOpen, { backgroundColor: success + '1A' }]}>
+            {isOpening ? (
+              <ActivityIndicator size="small" color={success} />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color={success} />
+            )}
           </View>
         </Pressable>
       </View>
@@ -674,6 +674,34 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.xl,
     padding: spacingPixels[4],
   },
+  // The created state: one success-tinted band, tap anywhere to open.
+  createdCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    borderWidth: 1,
+    borderRadius: radiusPixels.xl,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+  },
+  createdCheck: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createdBody: {
+    flex: 1,
+    gap: 1,
+  },
+  createdOpen: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -688,13 +716,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  body: {
-    flex: 1,
-    gap: spacingPixels[1],
-  },
-  subtitle: {
-    marginTop: 2,
   },
   headerSubtitle: {
     marginTop: spacingPixels[1],
@@ -810,24 +831,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2],
     minWidth: 72,
     minHeight: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cta: {
-    marginTop: spacingPixels[3],
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
-    borderRadius: 999,
-    minWidth: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaLabelHidden: {
-    opacity: 0,
-  },
-  ctaSpinner: {
-    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
