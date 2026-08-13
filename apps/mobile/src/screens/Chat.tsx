@@ -67,7 +67,7 @@ const SERVER_FILTERS = new Set<ChatInboxFilter>([
 const STATUS_FILTERS = new Set<ChatInboxFilter>(['pinned', 'favorites', 'muted', 'blocked']);
 
 const Chat = () => {
-  const { colors, isDark } = useThemeStyles();
+  const { colors } = useThemeStyles();
 
   const rootNavigation = useAppNavigation();
   const chatNavigation = useChatNavigation();
@@ -467,12 +467,12 @@ const Chat = () => {
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.loadingContainer}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => (
+              {Array.from({ length: 6 }).map((_, i) => (
                 <SkeletonConversation
                   key={i}
-                  backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
-                  highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
-                  style={{ paddingHorizontal: spacingPixels[4] }}
+                  index={i}
+                  backgroundColor={colors.skeletonBackground}
+                  highlightColor={colors.skeletonHighlight}
                 />
               ))}
             </View>

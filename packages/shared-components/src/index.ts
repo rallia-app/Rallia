@@ -51,6 +51,8 @@ export {
   SkeletonMyMatchCard,
   SkeletonPlayerCard,
   SkeletonConversation,
+  SkeletonMessageBubble,
+  SkeletonChatMessages,
 } from './feedback/Skeleton';
 export { Toast, ToastProvider, ToastOverlay, useToast } from './feedback/Toast';
 export {
@@ -74,6 +76,8 @@ export type {
   SkeletonMyMatchCardProps,
   SkeletonPlayerCardProps,
   SkeletonConversationProps,
+  SkeletonMessageBubbleProps,
+  SkeletonChatMessagesProps,
 } from './feedback/Skeleton';
 export type { ToastProps, ToastType, ToastPosition } from './feedback/Toast';
 export type { OfflineIndicatorProps, NetworkStatus } from './feedback/OfflineIndicator';
