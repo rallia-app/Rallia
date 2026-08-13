@@ -504,7 +504,11 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                   styles.option,
                   {
                     borderColor: isMutual ? accent : awaitingMe ? `${accent}80` : colors.border,
-                    backgroundColor: isMutual ? `${accent}15` : colors.buttonInactive,
+                    backgroundColor: isMutual
+                      ? `${accent}15`
+                      : awaitingMe
+                        ? `${accent}0A`
+                        : colors.buttonInactive,
                   },
                 ]}
               >
@@ -535,10 +539,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                             style={[
                               styles.voterAvatar,
                               i > 0 && styles.voterAvatarOverlap,
-                              {
-                                backgroundColor: colors.buttonInactive,
-                                borderColor: colors.cardBackground,
-                              },
+                              { backgroundColor: colors.buttonInactive },
                             ]}
                           >
                             {uri ? (
@@ -833,7 +834,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-end',
-    marginLeft: -spacingPixels[1.5],
+    marginLeft: -spacingPixels[2.5],
     marginBottom: -1,
   },
   courtPill: {
