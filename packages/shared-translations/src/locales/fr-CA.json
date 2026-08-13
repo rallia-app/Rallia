@@ -3362,8 +3362,6 @@
     },
     "preview": "J'ai proposé des moments pour jouer",
     "availability": {
-      "both": "Tous les deux dispo",
-      "all": "Tout le monde dispo",
       "partial": "Pas tous dispo",
       "favoriteShared": "Terrain favori commun"
     },
@@ -6015,7 +6013,8 @@
       "findGameStatDetail": "{count} parties jouées ce mois-ci",
       "findGameStatDetail_one": "{count} partie jouée ce mois-ci",
       "competeStatDetail": "{points} pts en {count} événements",
-      "competeStatDetail_one": "{points} pts en {count} événement"
+      "competeStatDetail_one": "{points} pts en {count} événement",
+      "rankPrefix": "Tu es"
     },
     "leaderboardCard": {
       "title": "Défi du mois",

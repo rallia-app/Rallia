@@ -98,16 +98,14 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     [metadata]
   );
 
-  // The two glyph chips are the only opaque part of a row, since the court chip
-  // spells itself out. The legend explains exactly those, and only the ones this
-  // card actually shows, so it never describes a marker that is not on screen.
-  const glyphLegend = useMemo(() => {
+  // The favourite star is the one glyph a row can carry without words, so the
+  // legend explains exactly that, and only when some row actually shows it.
+  // Declared availability is deliberately NOT surfaced as a positive marker:
+  // liking a slot is the real "I can play", and a second green signal for the
+  // recurring grid read as competing with the likes.
+  const showFavoriteLegend = useMemo(() => {
     const n = participants.length;
-    const options = metadata?.options ?? [];
-    return {
-      allFree: n > 0 && options.some(o => o.free_count != null && o.free_count >= n),
-      sharedFavorite: n > 0 && options.some(o => o.fav_count != null && o.fav_count >= n),
-    };
+    return n > 0 && (metadata?.options ?? []).some(o => o.fav_count != null && o.fav_count >= n);
   }, [metadata, participants]);
 
   // Availability editor, opened with pairing context so the grid draws the
@@ -393,40 +391,24 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           </View>
         </View>
 
-        {/* A key, not a sentence: each entry shows the REAL badge at its real
+        {/* A key, not a sentence: the entry shows the REAL badge at its real
             size, so the mapping to the rows below is literal. */}
-        {glyphLegend.allFree || glyphLegend.sharedFavorite ? (
+        {showFavoriteLegend ? (
           <View style={[styles.legend, { borderTopColor: colors.border }]}>
-            {glyphLegend.allFree ? (
-              <View style={styles.legendItem}>
-                <View
-                  style={[styles.courtPill, styles.iconPill, { backgroundColor: accent + '1A' }]}
-                >
-                  <Ionicons name="people" size={12} color={accent} />
-                </View>
-                <Text size="xs" color={colors.textMuted} style={styles.legendLabel}>
-                  {participants.length === 2
-                    ? t('matchOrganizer.availability.both')
-                    : t('matchOrganizer.availability.all')}
-                </Text>
+            <View style={styles.legendItem}>
+              <View
+                style={[
+                  styles.courtPill,
+                  styles.iconPill,
+                  { backgroundColor: statusColors.success.DEFAULT + '1A' },
+                ]}
+              >
+                <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
               </View>
-            ) : null}
-            {glyphLegend.sharedFavorite ? (
-              <View style={styles.legendItem}>
-                <View
-                  style={[
-                    styles.courtPill,
-                    styles.iconPill,
-                    { backgroundColor: statusColors.success.DEFAULT + '1A' },
-                  ]}
-                >
-                  <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
-                </View>
-                <Text size="xs" color={colors.textMuted} style={styles.legendLabel}>
-                  {t('matchOrganizer.availability.favoriteShared')}
-                </Text>
-              </View>
-            ) : null}
+              <Text size="xs" color={colors.textMuted} style={styles.legendLabel}>
+                {t('matchOrganizer.availability.favoriteShared')}
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -462,19 +444,15 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
               option.fav_count != null &&
               participants.length > 0 &&
               option.fav_count >= participants.length;
-            // Availability label (system-posted cards carry free_count per slot).
-            const allFree =
+            // Declared availability shows only as a WARNING. The engine already
+            // filtered for overlap, so "everyone is free" was true of nearly
+            // every row and, worse, a green people-glyph competed with the
+            // likes, which are the real "I can play". The one thing worth
+            // saying is the exception: this time clashes with someone's grid.
+            const notAllFree =
               option.free_count != null &&
               participants.length > 0 &&
-              option.free_count >= participants.length;
-            const availabilityLabel =
-              option.free_count == null
-                ? null
-                : allFree
-                  ? participants.length === 2
-                    ? t('matchOrganizer.availability.both')
-                    : t('matchOrganizer.availability.all')
-                  : t('matchOrganizer.availability.partial');
+              option.free_count < participants.length;
 
             // The state that matters most on this card: someone ELSE already
             // liked this slot and it is waiting on you. A bare count next to the
@@ -690,21 +668,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                     </View>
                   ) : null}
 
-                  {/* Everyone free is the common case and reads fine as a glyph.
-                      "Not everyone" is the rare exception and a warning, which
-                      an unlabelled icon cannot carry, so it keeps its words. */}
-                  {availabilityLabel && allFree ? (
-                    <View
-                      style={[
-                        styles.courtPill,
-                        styles.iconPill,
-                        { backgroundColor: accent + '1A' },
-                      ]}
-                      accessibilityLabel={availabilityLabel}
-                    >
-                      <Ionicons name="people" size={12} color={accent} />
-                    </View>
-                  ) : availabilityLabel ? (
+                  {notAllFree ? (
                     <View style={[styles.courtPill, { backgroundColor: colors.textMuted + '26' }]}>
                       <Ionicons name="people-outline" size={12} color={colors.textMuted} />
                       <Text
@@ -714,7 +678,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                         numberOfLines={1}
                         style={styles.pillLabel}
                       >
-                        {availabilityLabel}
+                        {t('matchOrganizer.availability.partial')}
                       </Text>
                     </View>
                   ) : null}

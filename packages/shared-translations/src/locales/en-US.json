@@ -3362,8 +3362,6 @@
     },
     "preview": "I suggested some times to play",
     "availability": {
-      "both": "Both free",
-      "all": "Everyone free",
       "partial": "Not everyone free",
       "favoriteShared": "Shared favorite court"
     },
@@ -6015,7 +6013,8 @@
       "findGameStatDetail": "{count} games played this month",
       "findGameStatDetail_one": "{count} game played this month",
       "competeStatDetail": "{points} pts in {count} events",
-      "competeStatDetail_one": "{points} pts in {count} event"
+      "competeStatDetail_one": "{points} pts in {count} event",
+      "rankPrefix": "You're"
     },
     "leaderboardCard": {
       "title": "Monthly Challenge",
