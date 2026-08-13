@@ -12648,6 +12648,7 @@
   },
   "availabilityOverlay": {
     "legend": {
+      "mine": "You're free",
       "theirs": "{name} is free",
       "theirsGeneric": "Your opponent is free",
       "both": "You're both free"

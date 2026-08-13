@@ -126,16 +126,19 @@ interface HourlyAvailabilityGridProps {
    * pairing context (tournament round chat, league pairing) the player paints
    * their week while watching mutual hours light up.
    *
-   * Renders a three-step intensity ramp on one hue so "we're both free" is
-   * unambiguously the strongest state:
-   *   theirs only → outline    mine only → half fill    both → full fill
+   * Three states, three HUES, because one hue at three alphas was too close to
+   * read at this cell size:
+   *   mine only → teal fill    theirs only → coral tint    both → solid gold
    *
    * Omitted by every non-pairing caller (onboarding, weekly check-in, profile
    * edit), which keeps today's plain two-state rendering.
    */
   overlay?: HourGrid;
-  /** Hue for overlay/mutual cells. Defaults to `colors.cellActive`. */
-  overlayColor?: string;
+  /**
+   * Hues for the three pairing states. The caller owns them so it can pick
+   * mode-appropriate anchors and paint matching legend swatches.
+   */
+  overlayColors?: { mine: string; theirs: string; both: string };
 }
 
 // =============================================================================
@@ -148,19 +151,25 @@ interface HourlyAvailabilityGridProps {
 const TIME_COL_WIDTH = 40;
 const CELL_HEIGHT = 28;
 
-// Intensity ramp for pairing mode. One hue, three steps, so the mutual cell is
-// the loudest thing on the grid. Alpha suffixes match the `color + '1A'` idiom
-// used across the app's cards (design tokens are 6-digit hex).
+// Pairing mode paints three DIFFERENT hues, not one hue at three alphas: on a
+// 28pt cell, 100% vs 55% of the same teal was near-indistinguishable. Weight
+// varies too, so the states separate even in greyscale: the mutual cell is the
+// only fully saturated one, and the opponent's own hours stay a light tint
+// because they are context the player reads, not something they own.
 function overlayCellStyle(
   filled: boolean,
   theirs: boolean,
   colors: HourlyAvailabilityGridColors,
-  overlayColor?: string
+  overlayColors?: { mine: string; theirs: string; both: string }
 ): { backgroundColor: string; borderColor: string } {
-  const hue = overlayColor ?? colors.cellActive;
-  if (filled && theirs) return { backgroundColor: hue, borderColor: hue };
-  if (filled) return { backgroundColor: `${hue}8C`, borderColor: `${hue}8C` };
-  if (theirs) return { backgroundColor: `${hue}1A`, borderColor: hue };
+  const hues = overlayColors ?? {
+    mine: colors.cellActive,
+    theirs: colors.cellActive,
+    both: colors.cellActive,
+  };
+  if (filled && theirs) return { backgroundColor: hues.both, borderColor: hues.both };
+  if (filled) return { backgroundColor: `${hues.mine}99`, borderColor: hues.mine };
+  if (theirs) return { backgroundColor: `${hues.theirs}33`, borderColor: hues.theirs };
   return { backgroundColor: colors.cellInactive, borderColor: colors.border };
 }
 
@@ -173,7 +182,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   days: daysProp,
   columnLabels,
   overlay,
-  overlayColor,
+  overlayColors,
 }) => {
   // Effective day columns. Defaults to the full week. Pinned via a ref so the
   // gesture callbacks (memoized) always read the current set without forcing a
@@ -459,7 +468,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
                       style={[
                         styles.cell,
                         overlay
-                          ? overlayCellStyle(filled, theirs, colors, overlayColor)
+                          ? overlayCellStyle(filled, theirs, colors, overlayColors)
                           : {
                               backgroundColor: filled ? colors.cellActive : colors.cellInactive,
                               borderColor: filled ? colors.cellActive : colors.border,

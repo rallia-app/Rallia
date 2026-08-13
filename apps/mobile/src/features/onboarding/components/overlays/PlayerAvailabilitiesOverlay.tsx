@@ -23,10 +23,10 @@ import { OnboardingService, Logger, regenerateRoundChatSuggestions } from '@rall
 import { useSharedAvailability, sharedAvailabilityKeys } from '@rallia/shared-hooks';
 import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { accent, radiusPixels, secondary, spacingPixels } from '@rallia/design-system';
 
 import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
-import { useAuth, useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
 import * as Analytics from '#/services/analytics';
 import {
@@ -53,7 +53,20 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
   const _selectedSportIds = payload?.selectedSportIds;
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
+
+  // Three hues, one per state, so they separate at a 28pt cell: the player's own
+  // teal, the opponent's coral, and gold where they meet. Gold is the design
+  // system's "earned" colour, which is exactly what a mutual hour is. Dark mode
+  // takes each ramp's brighter anchor.
+  const overlayColors = useMemo(
+    () => ({
+      mine: colors.primary,
+      theirs: isDark ? secondary[400] : secondary[500],
+      both: isDark ? accent[300] : accent[500],
+    }),
+    [colors.primary, isDark]
+  );
   const { t } = useTranslation();
   const { locale } = useLocale();
   const toast = useToast();
@@ -254,11 +267,30 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
 
           {isPairing && opponentGrid && opponentGrid.size > 0 && (
             <View style={styles.legend}>
+              {/* Swatches use the SAME formulas as the grid cells, so the key
+                  cannot drift from what it explains. */}
               <View style={styles.legendRow}>
                 <View
                   style={[
                     styles.legendSwatch,
-                    { backgroundColor: `${colors.primary}1A`, borderColor: colors.primary },
+                    {
+                      backgroundColor: `${overlayColors.mine}99`,
+                      borderColor: overlayColors.mine,
+                    },
+                  ]}
+                />
+                <Text size="xs" style={{ color: colors.textMuted }}>
+                  {t('availabilityOverlay.legend.mine')}
+                </Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View
+                  style={[
+                    styles.legendSwatch,
+                    {
+                      backgroundColor: `${overlayColors.theirs}33`,
+                      borderColor: overlayColors.theirs,
+                    },
                   ]}
                 />
                 <Text size="xs" style={{ color: colors.textMuted }}>
@@ -271,10 +303,13 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
                 <View
                   style={[
                     styles.legendSwatch,
-                    { backgroundColor: colors.primary, borderColor: colors.primary },
+                    {
+                      backgroundColor: overlayColors.both,
+                      borderColor: overlayColors.both,
+                    },
                   ]}
                 />
-                <Text size="xs" style={{ color: colors.textMuted }}>
+                <Text size="xs" weight="semibold" style={{ color: colors.text }}>
                   {t('availabilityOverlay.legend.both')}
                 </Text>
               </View>
@@ -289,7 +324,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
               t={t}
               locale={locale}
               overlay={isPairing ? opponentGrid : undefined}
-              overlayColor={colors.primary}
+              overlayColors={overlayColors}
             />
           </View>
         </ScrollView>
