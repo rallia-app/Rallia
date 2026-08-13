@@ -392,12 +392,18 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           </View>
         </View>
 
+        {/* A key, not a sentence: each entry shows the REAL badge at its real
+            size, so the mapping to the rows below is literal. */}
         {glyphLegend.allFree || glyphLegend.sharedFavorite ? (
-          <View style={styles.legend}>
+          <View style={[styles.legend, { borderTopColor: colors.border }]}>
             {glyphLegend.allFree ? (
               <View style={styles.legendItem}>
-                <Ionicons name="people" size={12} color={accent} />
-                <Text size="xs" color={colors.textMuted}>
+                <View
+                  style={[styles.courtPill, styles.iconPill, { backgroundColor: accent + '1A' }]}
+                >
+                  <Ionicons name="people" size={12} color={accent} />
+                </View>
+                <Text size="xs" color={colors.textMuted} style={styles.legendLabel}>
                   {participants.length === 2
                     ? t('matchOrganizer.availability.both')
                     : t('matchOrganizer.availability.all')}
@@ -406,8 +412,16 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             ) : null}
             {glyphLegend.sharedFavorite ? (
               <View style={styles.legendItem}>
-                <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
-                <Text size="xs" color={colors.textMuted}>
+                <View
+                  style={[
+                    styles.courtPill,
+                    styles.iconPill,
+                    { backgroundColor: statusColors.success.DEFAULT + '1A' },
+                  ]}
+                >
+                  <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
+                </View>
+                <Text size="xs" color={colors.textMuted} style={styles.legendLabel}>
                   {t('matchOrganizer.availability.favoriteShared')}
                 </Text>
               </View>
@@ -777,17 +791,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     flexShrink: 0,
   },
+  // A hairline sets the key apart from the header without giving it a surface
+  // of its own, which would read as another option row.
   legend: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: spacingPixels[3],
-    marginTop: spacingPixels[3],
+    columnGap: spacingPixels[4],
+    rowGap: spacingPixels[2],
+    marginTop: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
+    gap: spacingPixels[2],
+  },
+  legendLabel: {
+    flexShrink: 1,
   },
   courtIcon: {
     transform: [{ rotate: '90deg' }],
