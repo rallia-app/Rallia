@@ -366,7 +366,7 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
                         {
                           backgroundColor: option.court_confirmed
                             ? statusColors.success.DEFAULT + '1A'
-                            : colors.border + '66',
+                            : colors.textMuted + '26',
                         },
                       ]}
                     >

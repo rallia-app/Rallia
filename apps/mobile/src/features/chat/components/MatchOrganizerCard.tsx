@@ -50,6 +50,9 @@ interface MatchOrganizerCardProps {
   message: MessageWithSender;
 }
 
+/** Every chip is this tall, glyph or labelled, so the row reads as one band. */
+const CHIP_HEIGHT = 24;
+
 const localDateKey = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -93,6 +96,18 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
         .sort((a, b) => Date.parse(a.option.slot_start) - Date.parse(b.option.slot_start)),
     [metadata]
   );
+
+  // The two glyph chips are the only opaque part of a row, since the court chip
+  // spells itself out. The legend explains exactly those, and only the ones this
+  // card actually shows, so it never describes a marker that is not on screen.
+  const glyphLegend = useMemo(() => {
+    const n = participants.length;
+    const options = metadata?.options ?? [];
+    return {
+      allFree: n > 0 && options.some(o => o.free_count != null && o.free_count >= n),
+      sharedFavorite: n > 0 && options.some(o => o.fav_count != null && o.fav_count >= n),
+    };
+  }, [metadata, participants]);
 
   // Availability editor, opened with pairing context so the grid draws the
   // opponent's free hours underneath the player's own. Saving regenerates this
@@ -377,6 +392,29 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           </View>
         </View>
 
+        {glyphLegend.allFree || glyphLegend.sharedFavorite ? (
+          <View style={styles.legend}>
+            {glyphLegend.allFree ? (
+              <View style={styles.legendItem}>
+                <Ionicons name="people" size={12} color={accent} />
+                <Text size="xs" color={colors.textMuted}>
+                  {participants.length === 2
+                    ? t('matchOrganizer.availability.both')
+                    : t('matchOrganizer.availability.all')}
+                </Text>
+              </View>
+            ) : null}
+            {glyphLegend.sharedFavorite ? (
+              <View style={styles.legendItem}>
+                <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
+                <Text size="xs" color={colors.textMuted}>
+                  {t('matchOrganizer.availability.favoriteShared')}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <View style={styles.options}>
           {orderedOptions.map(({ option, index }) => {
             const voters = votersByOption.get(index) ?? new Set<string>();
@@ -516,7 +554,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                           backgroundColor:
                             courtState === 'confirmed'
                               ? statusColors.success.DEFAULT + '1A'
-                              : colors.border + '66',
+                              : colors.textMuted + '26',
                         },
                       ]}
                     >
@@ -605,7 +643,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       <Ionicons name="people" size={12} color={accent} />
                     </View>
                   ) : availabilityLabel ? (
-                    <View style={[styles.courtPill, { backgroundColor: colors.border + '66' }]}>
+                    <View style={[styles.courtPill, { backgroundColor: colors.textMuted + '26' }]}>
                       <Ionicons name="people-outline" size={12} color={colors.textMuted} />
                       <Text
                         size="xs"
@@ -715,10 +753,14 @@ const styles = StyleSheet.create({
   courtPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacingPixels[1],
     borderRadius: 999,
     paddingHorizontal: spacingPixels[2],
-    paddingVertical: 3,
+    // Every chip is exactly CHIP_HEIGHT tall. Left to their content a labelled
+    // pill measures its 12px line at a 1.5 ratio plus padding while a glyph pill
+    // measures only the 12px icon, so the glyphs came out 6pt shorter.
+    height: CHIP_HEIGHT,
     // The chips stay on ONE line: the pill shrinks and its label ellipsizes
     // rather than wrapping onto a second row. flexShrink defaults to 0 in RN,
     // so both the pill and the label below have to opt in.
@@ -728,11 +770,24 @@ const styles = StyleSheet.create({
   pillLabel: {
     flexShrink: 1,
   },
-  // A glyph-only pill is already minimal, so it must NOT be what gives way when
-  // the row is tight: the labelled chip beside it absorbs the squeeze instead.
+  // A glyph pill is a circle of the same height, and it must NOT be what gives
+  // way when the row is tight: the labelled chip absorbs the squeeze instead.
   iconPill: {
-    paddingHorizontal: spacingPixels[1.5],
+    width: CHIP_HEIGHT,
+    paddingHorizontal: 0,
     flexShrink: 0,
+  },
+  legend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacingPixels[3],
+    marginTop: spacingPixels[3],
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
   },
   courtIcon: {
     transform: [{ rotate: '90deg' }],
