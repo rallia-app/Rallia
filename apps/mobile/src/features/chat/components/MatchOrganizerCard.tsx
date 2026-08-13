@@ -413,16 +413,6 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
               option.fav_count != null &&
               participants.length > 0 &&
               option.fav_count >= participants.length;
-            // Declared availability shows only as a WARNING. The engine already
-            // filtered for overlap, so "everyone is free" was true of nearly
-            // every row and, worse, a green people-glyph competed with the
-            // likes, which are the real "I can play". The one thing worth
-            // saying is the exception: this time clashes with someone's grid.
-            const notAllFree =
-              option.free_count != null &&
-              participants.length > 0 &&
-              option.free_count < participants.length;
-
             // The state that matters most on this card: someone ELSE already
             // liked this slot and it is waiting on you. A bare count next to the
             // thumb was invisible, so their FACES sit beside the thumb, wearing
@@ -640,21 +630,6 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                         style={styles.pillLabel}
                       >
                         {t('matchOrganizer.card.staleOption')}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  {notAllFree ? (
-                    <View style={[styles.courtPill, { backgroundColor: colors.textMuted + '26' }]}>
-                      <Ionicons name="people-outline" size={12} color={colors.textMuted} />
-                      <Text
-                        size="xs"
-                        weight="semibold"
-                        color={colors.textMuted}
-                        numberOfLines={1}
-                        style={styles.pillLabel}
-                      >
-                        {t('matchOrganizer.availability.partial')}
                       </Text>
                     </View>
                   ) : null}
