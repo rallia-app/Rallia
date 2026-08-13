@@ -224,6 +224,10 @@ export function MatchOrganizerCustomSlotActionSheet(
             placeholder={t('matchOrganizer.custom.placePlaceholder')}
             placeholderTextColor={colors.textMuted}
             maxLength={PLACE_MAX}
+            // Place names are proper nouns: autocorrect turns "Parc" into
+            // "Part" on an English keyboard.
+            autoCorrect={false}
+            autoCapitalize="words"
             testID="custom-slot-place"
           />
           <Text size="xs" color={colors.textMuted}>
