@@ -19,6 +19,7 @@ import {
   radiusPixels,
   status as statusColors,
   fontFamilyNative,
+  fontWeight,
   secondary,
 } from '@rallia/design-system';
 import { selectionHaptic, lightHaptic } from '@rallia/shared-utils';
@@ -468,6 +469,9 @@ const styles = StyleSheet.create({
   },
   plusBadgeText: {
     fontFamily: fontFamilyNative.headingExtraBold,
+    // Paired with the family so the system fallback keeps the weight if the
+    // custom face is unavailable (see the shared Text component).
+    fontWeight: fontWeight.extrabold,
     fontSize: 14,
     letterSpacing: 1.2,
   },
