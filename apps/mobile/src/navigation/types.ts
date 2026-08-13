@@ -61,9 +61,9 @@ export type RootStackParamList = {
    * Rallia. Replaces the Tournaments/Leagues/MyTournaments/MyLeagues split and
    * the separate Classements screen.
    */
-  Compete: { initialSegment?: 'events' | 'challenge' | 'ranking' } | undefined;
+  Compete: { initialSegment?: 'events' | 'ranking' } | undefined;
   MyEvents: undefined; // Caller's events across formats (organizing + playing), reached from Compete
-  Leaderboard: undefined; // Monthly GMA challenge board (old card UI) — non-admin Home entry point
+  Leaderboard: undefined; // Monthly GMA challenge board, reached from the public games feed
   TournamentDetail: {
     tournamentId: string;
     tournamentName?: string;

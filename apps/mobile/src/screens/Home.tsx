@@ -103,7 +103,11 @@ import {
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
 import { SportIcon } from '#/components/SportIcon';
-import { GradientStatTile, NAV_TILE_WATERMARK_COLOR } from '#/components/GradientNavTile';
+import {
+  GradientStatTile,
+  NAV_TILE_WATERMARK_COLOR,
+  breakTileLabel,
+} from '#/components/GradientNavTile';
 import { FavoriteAvailabilityCard, FavoriteAvailabilityCardSkeleton } from '#/features/facilities';
 import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
 import { useTabPreload } from '#/navigation/useTabPreload';
@@ -1769,12 +1773,7 @@ const Home = () => {
     // needed, and unloaded stats fall back to a nudge line.
     const SportIconComponent =
       selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
-    // Tile labels break after the first word ("Find / a game"), keeping the
-    // three left columns the same two-line shape in both locales.
-    const breakLabel = (label: string) => {
-      const [first, ...rest] = label.split(' ');
-      return rest.length > 0 ? `${first}\n${rest.join(' ')}` : label;
-    };
+    const breakLabel = breakTileLabel;
     // Find-a-game showcases the monthly-challenge standing (playing games is
     // what moves it), replacing the old standalone Classements card.
     const findGameStat = myLeaderboardRank

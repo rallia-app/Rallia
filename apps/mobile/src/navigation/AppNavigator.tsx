@@ -90,7 +90,7 @@ import TournamentDetail from '#/screens/TournamentDetail';
 import TournamentBracketSetup from '#/screens/TournamentBracketSetup';
 import Compete from '#/screens/Compete';
 import MyEvents from '#/screens/MyEvents';
-import MonthlyChallengeBoard from '#/screens/MonthlyChallengeBoard';
+import Leaderboard from '#/screens/Leaderboard';
 import LeagueDetail from '#/screens/LeagueDetail';
 import SessionDetail from '#/screens/SessionDetail';
 import NetworkMatches from '#/screens/NetworkMatches';
@@ -1590,10 +1590,10 @@ export default function AppNavigator() {
         })}
       />
 
-      {/* Non-admin entry point: monthly challenge only, old card UI. */}
+      {/* Monthly challenge board, reached from the public games feed. */}
       <RootStack.Screen
         name="Leaderboard"
-        component={MonthlyChallengeBoard}
+        component={Leaderboard}
         options={({ navigation }) => ({
           ...sharedOptions,
           headerTitle: t('leaderboard.title'),

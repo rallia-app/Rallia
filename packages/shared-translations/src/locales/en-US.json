@@ -6560,6 +6560,10 @@
     "results": {
       "count": "{count} games",
       "countSingular": "1 game"
+    },
+    "createSubtitle": "Pick a time and let players join",
+    "tabs": {
+      "games": "Games"
     }
   },
   "winter": {

@@ -366,7 +366,10 @@ export const TournamentRanking: React.FC = () => {
 
 const styles = StyleSheet.create({
   listContent: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    // 8 here + the tab bar's 4 = the same 12 below the tabs as the Events tab.
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[4],
     flexGrow: 1,
   },
   header: {
@@ -384,7 +387,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacingPixels[1.5],
     paddingVertical: spacingPixels[2],
     paddingHorizontal: spacingPixels[3],
     borderRadius: radiusPixels.full,

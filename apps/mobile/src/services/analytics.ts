@@ -252,7 +252,7 @@ export function matchCreationStarted(props?: { source?: MatchCreationSource }): 
 
 /** Fired when a "create your own game" CTA is pressed on a browse surface. */
 export function createGameCtaPressed(props: {
-  placement: 'empty_state' | 'feed_footer' | 'home_nearby_empty';
+  placement: 'empty_state' | 'feed_footer' | 'feed_header' | 'home_nearby_empty';
   has_active_filters: boolean;
 }): void {
   capture('create_game_cta_pressed', props);

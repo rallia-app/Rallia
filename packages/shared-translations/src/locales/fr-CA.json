@@ -6560,6 +6560,10 @@
     "results": {
       "count": "{count} parties",
       "countSingular": "1 partie"
+    },
+    "createSubtitle": "Choisis un moment, les joueurs embarquent",
+    "tabs": {
+      "games": "Parties"
     }
   },
   "winter": {

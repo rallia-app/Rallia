@@ -17,6 +17,15 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 export const NAV_TILE_WATERMARK_COLOR = 'rgba(255,255,255,0.12)';
 
 /**
+ * Break a tile label after its first word ("Find / a game"), so a stack of
+ * tiles keeps the same two-line left column in both locales.
+ */
+export const breakTileLabel = (label: string): string => {
+  const [first, ...rest] = label.split(' ');
+  return rest.length > 0 ? `${first}\n${rest.join(' ')}` : label;
+};
+
+/**
  * Gradient dispatch tile shared by the Home play grid and the Community hub —
  * same visual language as the home ClassementsTile (gradient surface, frosted
  * icon chip, low-opacity watermark, chevron).
@@ -290,7 +299,7 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: spacingPixels[2],
+    gap: spacingPixels[1],
   },
   statTitleRow: {
     flexDirection: 'row',
