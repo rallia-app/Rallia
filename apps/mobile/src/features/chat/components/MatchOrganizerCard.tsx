@@ -43,6 +43,7 @@ import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useThemeStyles } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+import { courtStateIcon, courtStateLabel, resolveCourtState } from '../utils/courtState';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
 interface MatchOrganizerCardProps {
@@ -374,13 +375,8 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             const timeLabel = formatTimeOfDay(start, locale);
             const priceLabel = formatPrice(option.price_cents);
             const courtCount = option.court_count ?? 0;
-            const courtLabel = !option.court_confirmed
-              ? t('matchOrganizer.tier.usuallyFree')
-              : courtCount > 1
-                ? t('matchOrganizer.tier.courtsMany').replace('{count}', String(courtCount))
-                : courtCount === 1
-                  ? t('matchOrganizer.tier.courtsOne')
-                  : t('matchOrganizer.tier.courtAvailable');
+            const courtState = resolveCourtState(option);
+            const courtLabel = courtStateLabel(courtState, courtCount, t);
             // A hand-proposed slot carries no court and no availability data, so
             // it must not borrow the engine's "usually free" reassurance.
             const isCustom = option.tier === 'custom';
@@ -441,13 +437,14 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                       style={[
                         styles.courtPill,
                         {
-                          backgroundColor: option.court_confirmed
-                            ? statusColors.success.DEFAULT + '1A'
-                            : colors.border + '66',
+                          backgroundColor:
+                            courtState === 'confirmed'
+                              ? statusColors.success.DEFAULT + '1A'
+                              : colors.border + '66',
                         },
                       ]}
                     >
-                      {option.court_confirmed ? (
+                      {courtState === 'confirmed' ? (
                         <TennisCourtIcon
                           width={13}
                           height={13}
@@ -455,17 +452,23 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                           style={styles.courtIcon}
                         />
                       ) : (
-                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                        <Ionicons
+                          name={courtStateIcon(courtState)}
+                          size={12}
+                          color={colors.textMuted}
+                        />
                       )}
                       <Text
                         size="xs"
                         weight="semibold"
                         color={
-                          option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
+                          courtState === 'confirmed'
+                            ? statusColors.success.DEFAULT
+                            : colors.textMuted
                         }
                       >
                         {courtLabel}
-                        {option.court_confirmed && priceLabel ? ` · ${priceLabel}` : ''}
+                        {courtState === 'confirmed' && priceLabel ? ` · ${priceLabel}` : ''}
                       </Text>
                     </View>
                   )}

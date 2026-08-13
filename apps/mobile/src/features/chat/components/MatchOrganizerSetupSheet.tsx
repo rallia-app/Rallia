@@ -49,6 +49,7 @@ import { SportIcon } from '#/components/SportIcon';
 import * as Analytics from '#/services/analytics';
 import { useThemeStyles, useTranslation } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+import { courtStateLabel, resolveCourtState } from '../utils/courtState';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 
 const SHEET_ID = 'match-organizer-setup';
@@ -330,13 +331,8 @@ export function MatchOrganizerSetupActionSheet({ payload }: SheetProps<'match-or
               const dateLabel = friendlyDate(start);
               const priceLabel = formatPrice(option.price_cents);
               const courtCount = option.court_count ?? 0;
-              const courtLabel = !option.court_confirmed
-                ? t('matchOrganizer.tier.usuallyFree')
-                : courtCount > 1
-                  ? t('matchOrganizer.tier.courtsMany').replace('{count}', String(courtCount))
-                  : courtCount === 1
-                    ? t('matchOrganizer.tier.courtsOne')
-                    : t('matchOrganizer.tier.courtAvailable');
+              const courtState = resolveCourtState(option);
+              const courtLabel = courtStateLabel(courtState, courtCount, t);
 
               return (
                 <Pressable

@@ -12815,6 +12815,7 @@ export type Database = {
           court_confirmed: boolean
           court_count: number
           court_name: string
+          court_state: string
           day_label: string
           distance_km: number
           facility_id: string

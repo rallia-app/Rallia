@@ -3341,7 +3341,9 @@
       "courtAvailable": "Terrain libre",
       "courtsOne": "1 terrain libre",
       "courtsMany": "{count} terrains libres",
-      "usuallyFree": "Souvent libre"
+      "courtNotPublished": "Dispo à venir",
+      "courtBooked": "Terrains réservés",
+      "courtUnknown": "Terrain à confirmer"
     },
     "cost": {
       "free": "Gratuit"
@@ -3360,9 +3362,9 @@
     },
     "preview": "J'ai proposé des moments pour jouer",
     "availability": {
-      "both": "Vous êtes tous les deux dispo",
-      "all": "Tout le monde est dispo",
-      "partial": "Pas dispo pour tout le monde"
+      "both": "Tous les deux dispo",
+      "all": "Tout le monde dispo",
+      "partial": "Pas tous dispo"
     },
     "custom": {
       "cta": "Proposer un autre moment",

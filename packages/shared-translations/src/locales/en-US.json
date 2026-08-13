@@ -3341,7 +3341,9 @@
       "courtAvailable": "Court open",
       "courtsOne": "1 court open",
       "courtsMany": "{count} courts open",
-      "usuallyFree": "Usually open"
+      "courtNotPublished": "Availability not out yet",
+      "courtBooked": "Courts booked",
+      "courtUnknown": "Court to confirm"
     },
     "cost": {
       "free": "Free"
@@ -3360,9 +3362,9 @@
     },
     "preview": "I suggested some times to play",
     "availability": {
-      "both": "You're both available",
-      "all": "Everyone's available",
-      "partial": "Not everyone's available"
+      "both": "Both free",
+      "all": "Everyone free",
+      "partial": "Not everyone free"
     },
     "custom": {
       "cta": "Suggest another time",

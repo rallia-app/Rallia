@@ -98,6 +98,13 @@ export interface MatchOrganizerOption {
   tier: 'bookable' | 'usually_free' | 'custom';
   distance_km: number | null;
   /**
+   * Why there is no confirmed court. 'not_published_yet' = past that facility's
+   * feed horizon, so one may still open; 'booked' = the feed covers this hour and
+   * nothing is free; 'untracked' = facility not covered, or closed that hour.
+   * Absent on cards snapshotted before migration 20260812270000.
+   */
+  court_state?: 'confirmed' | 'not_published_yet' | 'booked' | 'untracked' | null;
+  /**
    * How many of the card's participants are recurring-free at this slot. NULL on
    * a custom option: the engine never vetted it, so the card must not claim
    * anyone is free.
