@@ -544,13 +544,13 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                             {uri ? (
                               <Image source={{ uri }} style={styles.voterAvatarImg} />
                             ) : (
-                              <Ionicons name="person" size={12} color={colors.textMuted} />
+                              <Ionicons name="person" size={15} color={colors.textMuted} />
                             )}
                           </View>
                         );
                       })}
                       <View style={[styles.voterBadge, { backgroundColor: accent }]}>
-                        <Ionicons name="thumbs-up" size={7} color={base.white} />
+                        <Ionicons name="thumbs-up" size={9} color={base.white} />
                       </View>
                     </View>
                   ) : null}
@@ -828,26 +828,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 0,
   },
+  // 32pt matches the thumb button's height, so faces and button sit flush.
   voterAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   voterAvatarOverlap: {
-    marginLeft: -spacingPixels[2],
+    marginLeft: -spacingPixels[2.5],
   },
   voterAvatarImg: {
     width: '100%',
     height: '100%',
   },
   voterBadge: {
-    width: 13,
-    height: 13,
-    borderRadius: 7,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-end',
