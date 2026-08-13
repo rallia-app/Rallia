@@ -44,8 +44,16 @@ import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useThemeStyles } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+
 import { courtStateIcon, courtStateLabel, resolveCourtState } from '../utils/courtState';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
+
+import {
+  ChatCardFallback,
+  ChatCardHeader,
+  ChatConfirmationBand,
+  chatCardShell,
+} from './ChatCardShell';
 
 interface MatchOrganizerCardProps {
   message: MessageWithSender;
@@ -235,36 +243,25 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   // Deliberately not a plain-text fallback — it explains and points at the fix.
   if (metadata?.no_overlap && (metadata.options?.length ?? 0) === 0) {
     return (
-      <View style={styles.wrapper}>
+      <View style={chatCardShell.wrapper}>
         <View
           style={[
-            styles.card,
+            chatCardShell.card,
             { backgroundColor: colors.cardBackground, borderColor: colors.border },
           ]}
         >
-          <View style={styles.headerRow}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + '1A' }]}>
-              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.headerText}>
-              <Text size="sm" weight="semibold" color={colors.text} lineHeight="tight">
-                {t('matchOrganizer.card.noOverlapTitle')}
-              </Text>
-              <Text
-                size="xs"
-                color={colors.textMuted}
-                lineHeight="tight"
-                style={styles.headerSubtitle}
-              >
-                {t('matchOrganizer.card.noOverlapBody')}
-              </Text>
-            </View>
-          </View>
+          <ChatCardHeader
+            icon="calendar-outline"
+            accent={colors.primary}
+            title={t('matchOrganizer.card.noOverlapTitle')}
+            subtitle={t('matchOrganizer.card.noOverlapBody')}
+            colors={colors}
+          />
           {/* Proposing a time leads here: the pair may simply have hours they
               never declared, and asking them to repaint a whole week first is
               the slower fix. Editing availability stays available underneath.
               Both actions span the card so it has no dead side. */}
-          <View style={styles.noOverlapCta}>
+          <View style={chatCardShell.cardCta}>
             <Button
               variant="primary"
               size="sm"
@@ -285,13 +282,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 
   // Defensive: no structured payload -> plain text (shouldn't happen).
   if (!metadata || !Array.isArray(metadata.options) || metadata.options.length === 0) {
-    return (
-      <View style={styles.fallback}>
-        <Text size="sm" color={colors.textMuted} style={styles.center}>
-          {message.content}
-        </Text>
-      </View>
-    );
+    return <ChatCardFallback text={message.content} colors={colors} />;
   }
 
   const isParticipant = currentUserId ? participants.includes(currentUserId) : false;
@@ -313,80 +304,44 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     const start = confirmed ? new Date(confirmed.slot_start) : null;
     const success = statusColors.success.DEFAULT;
 
-    // A compact success band, not a mini screen: solid check on the left, the
-    // what/when/where in the middle, and the open affordance anchored right so
-    // the row has no dead side. The whole band is the tap target.
+    // The same confirmation band the court-booked card uses, so every
+    // "it happened" message in a chat reads identically.
     return (
-      <View style={styles.wrapper}>
-        <Pressable
-          onPress={() => {
-            void handleOpenMatch();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={t('matchOrganizer.card.viewGame')}
-          style={[
-            styles.createdCard,
-            { backgroundColor: success + '14', borderColor: success + '40' },
-          ]}
-        >
-          <View style={[styles.createdCheck, { backgroundColor: success }]}>
-            <Ionicons name="checkmark" size={18} color={base.white} />
-          </View>
-          <View style={styles.createdBody}>
-            <Text size="sm" weight="semibold" color={colors.text} numberOfLines={1}>
-              {t('matchOrganizer.card.created')}
-            </Text>
-            <Text size="xs" color={colors.textMuted} numberOfLines={1}>
-              {confirmed && start
-                ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}`
-                : t('matchOrganizer.card.createdSubtitle')}
-            </Text>
-            {confirmed?.facility_name || confirmed?.place_name ? (
-              <Text size="xs" color={colors.textMuted} numberOfLines={1}>
-                {confirmed.facility_name ?? confirmed.place_name}
-              </Text>
-            ) : null}
-          </View>
-          <View style={[styles.createdOpen, { backgroundColor: success + '1A' }]}>
-            {isOpening ? (
-              <ActivityIndicator size="small" color={success} />
-            ) : (
-              <Ionicons name="chevron-forward" size={16} color={success} />
-            )}
-          </View>
-        </Pressable>
-      </View>
+      <ChatConfirmationBand
+        accent={success}
+        title={t('matchOrganizer.card.created')}
+        lines={[
+          confirmed && start
+            ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}`
+            : t('matchOrganizer.card.createdSubtitle'),
+          confirmed?.facility_name ?? confirmed?.place_name,
+        ]}
+        onPress={() => {
+          void handleOpenMatch();
+        }}
+        isOpening={isOpening}
+        accessibilityLabel={t('matchOrganizer.card.viewGame')}
+        colors={colors}
+      />
     );
   }
 
   // ---- Voting state --------------------------------------------------------
   return (
-    <View style={styles.wrapper}>
+    <View style={chatCardShell.wrapper}>
       <View
         style={[
-          styles.card,
+          chatCardShell.card,
           { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
-        <View style={styles.headerRow}>
-          <View style={[styles.iconCircle, { backgroundColor: accent + '1A' }]}>
-            <Ionicons name="calendar-outline" size={20} color={accent} />
-          </View>
-          <View style={styles.headerText}>
-            <Text size="sm" weight="semibold" color={colors.text} lineHeight="tight">
-              {t('matchOrganizer.card.title')}
-              {metadata.sport_name ? ` · ${metadata.sport_name}` : ''}
-            </Text>
-            <Text
-              size="xs"
-              color={colors.textMuted}
-              lineHeight="tight"
-              style={styles.headerSubtitle}
-            >
-              {t('matchOrganizer.card.subtitlePrompt')}
-            </Text>
-          </View>
-        </View>
+        <ChatCardHeader
+          icon="calendar-outline"
+          accent={accent}
+          title={`${t('matchOrganizer.card.title')}${metadata.sport_name ? ` · ${metadata.sport_name}` : ''}`}
+          subtitle={t('matchOrganizer.card.subtitlePrompt')}
+          colors={colors}
+        />
 
         <View style={styles.options}>
           {orderedOptions.map(({ option, index }) => {
@@ -649,7 +604,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
         {/* None of these work? Name your own slot rather than falling back to
             free-text chat, which is where pairings stall. */}
         {isParticipant ? (
-          <View style={styles.footerCta}>
+          <View style={chatCardShell.cardCta}>
             {/* Deliberately `secondary`, not `primary`: the primary action on
                 this card is agreeing on one of the times above, and a filled
                 button here would outrank the "create" buttons on the rows. */}
@@ -672,70 +627,6 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 export default MatchOrganizerCard;
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[2],
-  },
-  card: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[4],
-  },
-  // The created state: one success-tinted band, tap anywhere to open.
-  createdCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[3],
-    borderWidth: 1,
-    borderRadius: radiusPixels.xl,
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[4],
-  },
-  createdCheck: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createdBody: {
-    flex: 1,
-    gap: 1,
-  },
-  createdOpen: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacingPixels[3],
-  },
-  headerText: {
-    flex: 1,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerSubtitle: {
-    marginTop: spacingPixels[1],
-  },
-  noOverlapCta: {
-    marginTop: spacingPixels[4],
-    gap: spacingPixels[2],
-  },
-  // Spans the card rather than hugging its label, so it reads as an action
-  // rather than a trailing link.
-  footerCta: {
-    marginTop: spacingPixels[4],
-  },
   options: {
     marginTop: spacingPixels[4],
     gap: spacingPixels[1.5],
@@ -839,12 +730,5 @@ const styles = StyleSheet.create({
     minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fallback: {
-    paddingHorizontal: spacingPixels[6],
-    paddingVertical: spacingPixels[2],
-  },
-  center: {
-    textAlign: 'center',
   },
 });
