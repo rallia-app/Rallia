@@ -3363,7 +3363,7 @@
       "both": "Tous les deux dispo",
       "all": "Tout le monde dispo",
       "partial": "Pas tous dispo",
-      "favoriteShared": "Favori commun"
+      "favoriteShared": "Terrain favori commun"
     },
     "custom": {
       "cta": "Proposer un autre moment",
@@ -6002,19 +6002,16 @@
       "findGame": "Trouver une partie",
       "bookCourt": "Réserver un terrain",
       "compete": "Rejoindre un événement",
-      "competeNudge": "Fais un tournoi pour te classer",
-      "findGameNudge": "Une partie ce mois-ci et t'es dans le coup",
-      "bookCourtEmpty": "Aucune disponibilité pour le moment",
+      "competeNudge": "Participe pour gagner des points et te classer",
+      "findGameNudge": "Joue des parties pour te classer ce mois-ci",
+      "bookCourtEmpty": "Rien de libre autour de toi en ce moment",
       "bookCourtNudge": "Des disponibilités en temps réel",
       "findGameStatGames": "{count} parties",
       "findGameStatGames_one": "{count} partie",
       "bookCourtStatTitle": "En ce moment",
-      "bookCourtStatFavorites": "libres chez tes favoris",
-      "bookCourtStatFavorites_one": "libre chez tes favoris",
-      "bookCourtStatNearby": "libres près de toi",
-      "bookCourtStatNearby_one": "libre près de toi",
-      "bookCourtStatCourts": "terrains",
-      "bookCourtStatCourts_one": "terrain"
+      "bookCourtStatCourts": "terrains libres",
+      "bookCourtStatCourts_one": "terrain libre",
+      "bookCourtStatDetail": "à réserver autour de toi"
     },
     "leaderboardCard": {
       "title": "Défi du mois",
