@@ -282,8 +282,12 @@ export const MyEvents: React.FC = () => {
     );
   }
 
+  // Bottom inset goes in the list's contentContainerStyle, not on this wrapper:
+  // claiming the bottom edge here too would pad the same inset twice, and a
+  // padded wrapper crops the scroll viewport so rows stop above the home
+  // indicator instead of scrolling under it.
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={[styles.tabBar, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}>
         {renderTab('upcoming', 'calendar-outline', t('myEvents.tabs.upcoming'))}
         {renderTab('past', 'time-outline', t('myEvents.tabs.past'))}
