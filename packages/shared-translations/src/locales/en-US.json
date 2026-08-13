@@ -3328,7 +3328,7 @@
       "viewGame": "View game",
       "createGame": "Create this game",
       "noOverlapTitle": "No shared times yet",
-      "noOverlapBody": "Your availabilities don't line up right now. Update your hours in your profile and new times will show up here.",
+      "noOverlapBody": "Your schedules don't line up on any time yet.",
       "noOverlapCta": "Update my availability",
       "previewSuggestions": "Suggested times to play",
       "staleOption": "No longer open",

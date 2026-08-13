@@ -3328,7 +3328,7 @@
       "viewGame": "Voir la partie",
       "createGame": "Créer la partie",
       "noOverlapTitle": "Pas encore de plage commune",
-      "noOverlapBody": "Vos disponibilités ne concordent pas pour l'instant. Mets à jour tes heures dans ton profil et de nouvelles suggestions vont apparaître ici.",
+      "noOverlapBody": "Vos horaires ne concordent sur aucune plage pour l'instant.",
       "noOverlapCta": "Mettre à jour mes dispos",
       "previewSuggestions": "Suggestions d'heures pour jouer",
       "staleOption": "Plus disponible",

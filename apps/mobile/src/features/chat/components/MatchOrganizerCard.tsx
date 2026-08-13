@@ -262,12 +262,19 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           </View>
           {/* Proposing a time leads here: the pair may simply have hours they
               never declared, and asking them to repaint a whole week first is
-              the slower fix. Editing availability stays available underneath. */}
+              the slower fix. Editing availability stays available underneath.
+              Both actions span the card so it has no dead side. */}
           <View style={styles.noOverlapCta}>
-            <Button variant="primary" size="sm" onPress={openCustomSlotSheet}>
+            <Button
+              variant="primary"
+              size="sm"
+              fullWidth
+              onPress={openCustomSlotSheet}
+              leftIcon={<Ionicons name="add-circle-outline" size={16} color={base.white} />}
+            >
               {t('matchOrganizer.custom.cta')}
             </Button>
-            <Button variant="ghost" size="sm" onPress={openAvailabilityEditor}>
+            <Button variant="ghost" size="sm" fullWidth onPress={openAvailabilityEditor}>
               {t('matchOrganizer.card.noOverlapCta')}
             </Button>
           </View>
@@ -721,9 +728,8 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
   },
   noOverlapCta: {
-    marginTop: spacingPixels[3],
-    alignSelf: 'flex-start',
-    gap: spacingPixels[1],
+    marginTop: spacingPixels[4],
+    gap: spacingPixels[2],
   },
   // Spans the card rather than hugging its label, so it reads as an action
   // rather than a trailing link.
