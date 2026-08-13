@@ -88,8 +88,8 @@ export function parseScore(score: string | null | undefined): ParsedScore {
 
   // Strip tiebreak detail "(5)", super-tb brackets, "to <target>", and modifiers.
   const cleaned = score
-    .replace(/\([^)]*\)/g, '')
-    .replace(/[[\]]/g, '')
+    .replace(/\([^()]*\)/g, '')
+    .replace(/[[\]()]/g, '')
     .replace(/\bto\s+\d+/gi, '')
     .replace(/\b(RET|W\/O|DEF|INT)\b/gi, '')
     .trim();

@@ -101,6 +101,17 @@ describe('parseScore', () => {
     expect(parseScore('W/O')).toEqual({ aSets: 0, bSets: 0, aGames: 0, bGames: 0 });
     expect(parseScore('garbage')).toEqual({ aSets: 0, bSets: 0, aGames: 0, bGames: 0 });
   });
+
+  it('stays linear on unbalanced parentheses', () => {
+    const started = Date.now();
+    expect(parseScore(`6-4 6-2 ${'('.repeat(50000)}`)).toEqual({
+      aSets: 2,
+      bSets: 0,
+      aGames: 12,
+      bGames: 6,
+    });
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
 });
 
 function row(over: Partial<RankingRow>): RankingRow {
