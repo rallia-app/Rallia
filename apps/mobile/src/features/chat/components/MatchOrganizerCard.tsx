@@ -82,6 +82,18 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 
   const createdMatchId = metadata?.created_match_id ?? null;
 
+  // Players read the list like a calendar, so it is shown chronologically. The
+  // true array index rides along because votes are stored positionally
+  // (match_time_vote.option_index): a proposal appended to the end of the
+  // snapshot has to render in its date position without its votes moving.
+  const orderedOptions = useMemo(
+    () =>
+      (metadata?.options ?? [])
+        .map((option, index) => ({ option, index }))
+        .sort((a, b) => Date.parse(a.option.slot_start) - Date.parse(b.option.slot_start)),
+    [metadata]
+  );
+
   // Availability editor, opened with pairing context so the grid draws the
   // opponent's free hours underneath the player's own. Saving regenerates this
   // card, so a widened week turns "no shared times" into real options in place.
@@ -366,7 +378,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
         </View>
 
         <View style={styles.options}>
-          {metadata.options.map((option, index) => {
+          {orderedOptions.map(({ option, index }) => {
             const voters = votersByOption.get(index) ?? new Set<string>();
             const hasVoted = currentUserId ? voters.has(currentUserId) : false;
             const isMutual = participants.length > 0 && participants.every(p => voters.has(p));
@@ -416,19 +428,77 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                   },
                 ]}
               >
-                <View style={styles.optionInfo}>
-                  <Text size="sm" weight="semibold" color={colors.text}>
-                    {dateLabel} · {timeLabel}
-                  </Text>
-                  {option.facility_name ? (
-                    <Text size="xs" color={colors.textMuted} style={styles.optionFacility}>
-                      {option.facility_name}
+                {/* Row 1: when and where, with the action beside it. */}
+                <View style={styles.optionHeader}>
+                  <View style={styles.optionInfo}>
+                    <Text size="sm" weight="semibold" color={colors.text}>
+                      {dateLabel} · {timeLabel}
                     </Text>
-                  ) : null}
+                    {option.facility_name ? (
+                      <Text size="xs" color={colors.textMuted} style={styles.optionFacility}>
+                        {option.facility_name}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  {isMutual ? (
+                    <Pressable
+                      onPress={() => {
+                        void handleCreate(option, index);
+                      }}
+                      disabled={createMatch.isPending || !isParticipant}
+                      style={[styles.createBtn, { backgroundColor: accent }]}
+                    >
+                      {isCreatingThis ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text size="xs" weight="semibold" color="#fff">
+                          {t('matchOrganizer.card.createGame')}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => handleToggle(index)}
+                      disabled={!isParticipant}
+                      style={[
+                        styles.voteBtn,
+                        {
+                          borderColor: hasVoted ? accent : colors.border,
+                          backgroundColor: hasVoted ? accent : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={hasVoted ? 'thumbs-up' : 'thumbs-up-outline'}
+                        size={16}
+                        color={hasVoted ? '#fff' : colors.textMuted}
+                      />
+                      {voters.size > 0 ? (
+                        <Text
+                          size="xs"
+                          weight="semibold"
+                          color={hasVoted ? '#fff' : colors.textMuted}
+                        >
+                          {voters.size}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Row 2: the chips, across the full width. */}
+                <View style={styles.optionChips}>
                   {isCustom ? (
                     <View style={[styles.courtPill, { backgroundColor: accent + '1A' }]}>
                       <Ionicons name="person-outline" size={12} color={accent} />
-                      <Text size="xs" weight="semibold" color={accent}>
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={accent}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
                         {proposerLabel}
                       </Text>
                     </View>
@@ -466,12 +536,15 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                             ? statusColors.success.DEFAULT
                             : colors.textMuted
                         }
+                        numberOfLines={1}
+                        style={styles.pillLabel}
                       >
                         {courtLabel}
                         {courtState === 'confirmed' && priceLabel ? ` · ${priceLabel}` : ''}
                       </Text>
                     </View>
                   )}
+
                   {/* A voted option the engine stopped returning is kept so the
                       agreement does not vanish, but it is no longer real. */}
                   {option.stale ? (
@@ -486,11 +559,18 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                         size={12}
                         color={statusColors.warning.DEFAULT}
                       />
-                      <Text size="xs" weight="semibold" color={statusColors.warning.DEFAULT}>
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={statusColors.warning.DEFAULT}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
                         {t('matchOrganizer.card.staleOption')}
                       </Text>
                     </View>
                   ) : null}
+
                   {availabilityLabel ? (
                     <View
                       style={[
@@ -503,57 +583,18 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                         size={12}
                         color={allFree ? accent : colors.textMuted}
                       />
-                      <Text size="xs" weight="semibold" color={allFree ? accent : colors.textMuted}>
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={allFree ? accent : colors.textMuted}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
                         {availabilityLabel}
                       </Text>
                     </View>
                   ) : null}
                 </View>
-
-                {isMutual ? (
-                  <Pressable
-                    onPress={() => {
-                      void handleCreate(option, index);
-                    }}
-                    disabled={createMatch.isPending || !isParticipant}
-                    style={[styles.createBtn, { backgroundColor: accent }]}
-                  >
-                    {isCreatingThis ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text size="xs" weight="semibold" color="#fff">
-                        {t('matchOrganizer.card.createGame')}
-                      </Text>
-                    )}
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => handleToggle(index)}
-                    disabled={!isParticipant}
-                    style={[
-                      styles.voteBtn,
-                      {
-                        borderColor: hasVoted ? accent : colors.border,
-                        backgroundColor: hasVoted ? accent : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name={hasVoted ? 'thumbs-up' : 'thumbs-up-outline'}
-                      size={16}
-                      color={hasVoted ? '#fff' : colors.textMuted}
-                    />
-                    {voters.size > 0 ? (
-                      <Text
-                        size="xs"
-                        weight="semibold"
-                        color={hasVoted ? '#fff' : colors.textMuted}
-                      >
-                        {voters.size}
-                      </Text>
-                    ) : null}
-                  </Pressable>
-                )}
               </View>
             );
           })}
@@ -624,13 +665,21 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1.5],
   },
   option: {
+    gap: spacingPixels[2],
+    borderWidth: 1,
+    borderRadius: radiusPixels.xl,
+    padding: spacingPixels[4],
+  },
+  optionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacingPixels[3],
-    borderWidth: 1,
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[4],
+  },
+  optionChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
   },
   optionInfo: {
     flex: 1,
@@ -642,12 +691,18 @@ const styles = StyleSheet.create({
   courtPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: spacingPixels[1],
     borderRadius: 999,
     paddingHorizontal: spacingPixels[2],
     paddingVertical: 3,
-    marginTop: spacingPixels[1],
+    // The chips stay on ONE line: the pill shrinks and its label ellipsizes
+    // rather than wrapping onto a second row. flexShrink defaults to 0 in RN,
+    // so both the pill and the label below have to opt in.
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  pillLabel: {
+    flexShrink: 1,
   },
   courtIcon: {
     transform: [{ rotate: '90deg' }],

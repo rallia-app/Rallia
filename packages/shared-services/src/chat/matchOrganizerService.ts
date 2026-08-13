@@ -36,6 +36,7 @@ function toOption(row: {
   distance_km: number | null;
   free_count?: number | null;
   option_key?: string | null;
+  court_state?: string | null;
 }): MatchOrganizerOption {
   return {
     slot_start: row.slot_start,
@@ -51,6 +52,11 @@ function toOption(row: {
     distance_km: row.distance_km,
     ...(row.free_count != null ? { free_count: row.free_count } : {}),
     ...(row.option_key ? { option_key: row.option_key } : {}),
+    // Carried through so a player-posted card explains a missing court the same
+    // way an auto-posted one does.
+    ...(row.court_state
+      ? { court_state: row.court_state as MatchOrganizerOption['court_state'] }
+      : {}),
   };
 }
 
@@ -75,14 +81,12 @@ export async function getMatchOrganizerOptions(
     throw error;
   }
 
-  // Graceful degradation: keep both tiers. Confirmed-court slots lead (each tier
-  // chronological), with usually-free favorite-facility slots as the fallback so
-  // shared times still get suggested when no court feed reaches that far out.
+  // Graceful degradation: keep both tiers, so shared times are still suggested
+  // when no court feed reaches that far out. Ordered chronologically, matching
+  // the card: a bookable court next week must not jump above a free hour
+  // tomorrow, and its green court chip already marks it out.
   const mapped: MatchOrganizerOption[] = (data ?? []).map(toOption);
-  return mapped.sort((a, b) => {
-    if (a.court_confirmed !== b.court_confirmed) return a.court_confirmed ? -1 : 1;
-    return new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime();
-  });
+  return mapped.sort((a, b) => new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime());
 }
 
 // ============================================================================

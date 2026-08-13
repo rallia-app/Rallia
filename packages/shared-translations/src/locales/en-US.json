@@ -3341,9 +3341,9 @@
       "courtAvailable": "Court open",
       "courtsOne": "1 court open",
       "courtsMany": "{count} courts open",
-      "courtNotPublished": "Availability not out yet",
-      "courtBooked": "Courts booked",
-      "courtUnknown": "Court to confirm"
+      "courtNotPublished": "Not out yet",
+      "courtBooked": "Booked",
+      "courtUnknown": "To confirm"
     },
     "cost": {
       "free": "Free"
@@ -6002,11 +6002,18 @@
       "title": "Play",
       "findGame": "Find a game",
       "bookCourt": "Book a court",
-      "compete": "Join an event"
-    },
-    "classementsCard": {
-      "challengeNudge": "One game this month and you're in",
-      "circuitNudge": "Enter a tournament to get ranked"
+      "compete": "Join an event",
+      "competeNudge": "Enter a tournament to get ranked",
+      "findGameNudge": "One game this month and you're in",
+      "bookCourtEmpty": "No open slots right now",
+      "bookCourtNudge": "Live openings ready to book",
+      "findGameStatGames": "{count} games",
+      "findGameStatGames_one": "{count} game",
+      "bookCourtStatTitle": "Right now",
+      "bookCourtStatFavorites": "open at your favorites",
+      "bookCourtStatFavorites_one": "open at your favorites",
+      "bookCourtStatNearby": "open near you",
+      "bookCourtStatNearby_one": "open near you"
     },
     "leaderboardCard": {
       "title": "Monthly Challenge",
