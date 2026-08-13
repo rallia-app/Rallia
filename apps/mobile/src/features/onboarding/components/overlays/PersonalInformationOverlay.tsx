@@ -24,11 +24,7 @@ import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
 import { uploadImage, replaceImage } from '#/services/imageUpload';
 import { useImagePicker, useThemeStyles, useTranslation } from '#/hooks';
-import { usePhoneVerification } from '#/hooks/usePhoneVerification';
 import { PhoneInput } from '#/components/PhoneInput';
-import { OtpCodeInput } from '#/components/OtpCodeInput';
-
-const E164_REGEX = /^\+[1-9]\d{6,14}$/;
 
 // Calculate minimum date of birth (18 years ago)
 const getMinimumDateOfBirth = (): Date => {
@@ -62,26 +58,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState(initialData?.gender || '');
   const [phoneNumber, setPhoneNumber] = useState(initialData?.phoneNumber || '');
-  const [phoneVerified, setPhoneVerified] = useState(initialData?.phoneVerified || false);
-  const [otpCode, setOtpCode] = useState('');
-
-  const {
-    status: phoneVerifyStatus,
-    errorKey: phoneVerifyErrorKey,
-    resendCooldown,
-    canResend,
-    sendCode,
-    checkCode,
-    reset: resetPhoneVerification,
-  } = usePhoneVerification({
-    source: 'settings',
-    onVerified: verifiedPhone => {
-      setPhoneNumber(verifiedPhone);
-      setPhoneVerified(true);
-      setOtpCode('');
-    },
-  });
-
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
 
@@ -100,11 +76,8 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const handlePhoneNumberChange = useCallback(
     (fullNumber: string, _countryCode: string, _localNumber: string) => {
       setPhoneNumber(fullNumber);
-      setPhoneVerified(false);
-      setOtpCode('');
-      resetPhoneVerification();
     },
-    [resetPhoneVerification]
+    []
   );
 
   const handleDateChange = (_event: unknown, selectedDate?: Date) => {
@@ -639,96 +612,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
                 card: colors.card,
               }}
             />
-
-            {phoneVerified ? (
-              <View style={[styles.verifiedPill, { backgroundColor: colors.success }]}>
-                <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
-                <Text size="sm" weight="semibold" style={{ color: '#FFFFFF' }}>
-                  {t('common.verified')}
-                </Text>
-              </View>
-            ) : E164_REGEX.test(phoneNumber.replace(/[\s\-()]/g, '')) ? (
-              <View style={styles.verifySection}>
-                {phoneVerifyStatus === 'idle' || phoneVerifyStatus === 'sending' ? (
-                  <>
-                    <Text size="xs" color={colors.textMuted} style={styles.consentNotice}>
-                      {t('phoneVerification.consentNotice')}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.verifyButton, { backgroundColor: colors.primary }]}
-                      onPress={() => sendCode(phoneNumber.replace(/[\s\-()]/g, ''))}
-                      disabled={phoneVerifyStatus === 'sending'}
-                      activeOpacity={0.8}
-                    >
-                      {phoneVerifyStatus === 'sending' ? (
-                        <ActivityIndicator size="small" color={colors.primaryForeground} />
-                      ) : (
-                        <Text
-                          size="sm"
-                          weight="semibold"
-                          style={{ color: colors.primaryForeground }}
-                        >
-                          {t('phoneVerification.verify')}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <Text size="sm" color={colors.textSecondary} style={styles.consentNotice}>
-                      {t('phoneVerification.enterCode').replace('{phone}', phoneNumber)}
-                    </Text>
-                    <OtpCodeInput
-                      code={otpCode}
-                      onCodeChange={setOtpCode}
-                      onComplete={checkCode}
-                      colors={{
-                        text: colors.text,
-                        cardBackground: colors.cardBackground,
-                        inputBackground: colors.inputBackground,
-                        inputBorder: colors.inputBorder,
-                        buttonActive: colors.primary,
-                      }}
-                      TextInputComponent={TextInput}
-                    />
-                    {phoneVerifyStatus === 'checking' ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.primary}
-                        style={styles.otpSpinner}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        onPress={() => {
-                          setOtpCode('');
-                          sendCode(phoneNumber.replace(/[\s\-()]/g, ''));
-                        }}
-                        disabled={!canResend}
-                        style={styles.resendLink}
-                      >
-                        <Text
-                          size="sm"
-                          weight="semibold"
-                          color={canResend ? colors.primary : colors.textMuted}
-                        >
-                          {canResend
-                            ? t('phoneVerification.resend')
-                            : t('phoneVerification.resendIn').replace(
-                                '{seconds}',
-                                String(resendCooldown)
-                              )}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-                {phoneVerifyErrorKey ? (
-                  <Text size="xs" color={colors.error} style={styles.verifyError}>
-                    {t(phoneVerifyErrorKey)}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
           </View>
         </ScrollView>
 
@@ -830,39 +713,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: spacingPixels[3],
-  },
-  verifiedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacingPixels[1],
-    borderRadius: radiusPixels.full,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1],
-    marginTop: spacingPixels[2],
-  },
-  verifySection: {
-    marginTop: spacingPixels[2],
-    gap: spacingPixels[2],
-  },
-  consentNotice: {
-    lineHeight: 16,
-  },
-  verifyButton: {
-    borderRadius: radiusPixels.lg,
-    paddingVertical: spacingPixels[2],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resendLink: {
-    alignSelf: 'center',
-    paddingVertical: spacingPixels[1],
-  },
-  otpSpinner: {
-    paddingVertical: spacingPixels[1],
-  },
-  verifyError: {
-    textAlign: 'center',
   },
   inputLabel: {
     marginBottom: spacingPixels[2],
