@@ -13,17 +13,18 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Button, Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
+import { base, spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import {
   lightHaptic,
   successHaptic,
   warningHaptic,
   formatIntuitiveDateInTimezone,
+  getProfilePictureUrl,
 } from '@rallia/shared-utils';
 import type {
   MatchOrganizerMetadata,
@@ -477,28 +478,24 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 
             // The state that matters most on this card: someone ELSE already
             // liked this slot and it is waiting on you. A bare count next to the
-            // thumb was invisible, so the row names the liker and takes a firmer
-            // border. On a custom row the proposer's auto-vote is already told
-            // by "Proposé par X", so it is not repeated as a like.
+            // thumb was invisible, so their FACES sit beside the thumb, wearing
+            // one small thumbs-up badge, and the row takes a firmer border.
             const otherVoters = [...voters].filter(id => id !== currentUserId);
-            const awaitingMe =
-              !isMutual &&
-              otherVoters.length > 0 &&
-              !(isCustom && otherVoters.length === 1 && otherVoters[0] === option.proposed_by);
-            const otherVoterNames = otherVoters
-              .map(id => opponentProfiles[id]?.first_name)
-              .filter((n): n is string => !!n);
-            const likedByLabel = !awaitingMe
-              ? null
-              : otherVoters.length === 1
-                ? t('matchOrganizer.card.likedBy').replace(
-                    '{name}',
-                    otherVoterNames[0] ?? t('matchOrganizer.custom.proposedByFallback')
-                  )
-                : t('matchOrganizer.card.likedByCount').replace(
-                    '{count}',
-                    String(otherVoters.length)
-                  );
+            const awaitingMe = !isMutual && otherVoters.length > 0;
+            // Screen readers hear what sighted users infer from the faces.
+            const votersA11y =
+              otherVoters.length === 0
+                ? undefined
+                : otherVoters.length === 1
+                  ? t('matchOrganizer.card.likedBy').replace(
+                      '{name}',
+                      opponentProfiles[otherVoters[0]]?.first_name ??
+                        t('matchOrganizer.custom.proposedByFallback')
+                    )
+                  : t('matchOrganizer.card.likedByCount').replace(
+                      '{count}',
+                      String(otherVoters.length)
+                    );
 
             return (
               <View
@@ -522,15 +519,41 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                         {option.facility_name}
                       </Text>
                     ) : null}
-                    {likedByLabel ? (
-                      <View style={styles.likedByRow}>
-                        <Ionicons name="thumbs-up" size={11} color={accent} />
-                        <Text size="xs" weight="semibold" color={accent} numberOfLines={1}>
-                          {likedByLabel}
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
+
+                  {/* Who already liked this slot, as faces: one badge on the
+                      stack says these are likes, not just members. */}
+                  {otherVoters.length > 0 ? (
+                    <View style={styles.voterCluster} accessibilityLabel={votersA11y}>
+                      {otherVoters.slice(0, 3).map((id, i) => {
+                        const uri = getProfilePictureUrl(
+                          opponentProfiles[id]?.profile_picture_url ?? null
+                        );
+                        return (
+                          <View
+                            key={id}
+                            style={[
+                              styles.voterAvatar,
+                              i > 0 && styles.voterAvatarOverlap,
+                              {
+                                backgroundColor: colors.buttonInactive,
+                                borderColor: colors.cardBackground,
+                              },
+                            ]}
+                          >
+                            {uri ? (
+                              <Image source={{ uri }} style={styles.voterAvatarImg} />
+                            ) : (
+                              <Ionicons name="person" size={12} color={colors.textMuted} />
+                            )}
+                          </View>
+                        );
+                      })}
+                      <View style={[styles.voterBadge, { backgroundColor: accent }]}>
+                        <Ionicons name="thumbs-up" size={7} color={base.white} />
+                      </View>
+                    </View>
+                  ) : null}
 
                   {isMutual ? (
                     <Pressable
@@ -565,15 +588,6 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                         size={16}
                         color={hasVoted ? '#fff' : colors.textMuted}
                       />
-                      {voters.size > 0 ? (
-                        <Text
-                          size="xs"
-                          weight="semibold"
-                          color={hasVoted ? '#fff' : colors.textMuted}
-                        >
-                          {voters.size}
-                        </Text>
-                      ) : null}
                     </Pressable>
                   )}
                 </View>
@@ -807,11 +821,38 @@ const styles = StyleSheet.create({
   optionFacility: {
     marginTop: 1,
   },
-  likedByRow: {
+  // The facepile: overlapping voter avatars sharing ONE thumbs-up badge, so a
+  // face on a row can only mean "this person liked this time".
+  voterCluster: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacingPixels[1],
-    marginTop: spacingPixels[1],
+    flexShrink: 0,
+  },
+  voterAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  voterAvatarOverlap: {
+    marginLeft: -spacingPixels[2],
+  },
+  voterAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  voterBadge: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-end',
+    marginLeft: -spacingPixels[1.5],
+    marginBottom: -1,
   },
   courtPill: {
     flexDirection: 'row',
