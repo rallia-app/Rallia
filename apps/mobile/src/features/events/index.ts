@@ -14,6 +14,7 @@ export { EventFormatPicker } from './components/EventFormatPicker';
 export {
   EVENT_KINDS,
   TOURNAMENT_EVENT_KINDS,
+  EVENT_FORMAT_LABEL_KEY,
   eventKindDescriptor,
   type EventKind,
   type EventEngine,

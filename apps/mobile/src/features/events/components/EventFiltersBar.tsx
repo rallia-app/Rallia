@@ -4,9 +4,12 @@
  * Filter chips for the unified event list. Replaces the tournament and league
  * bars, which filtered the same things by different names on two screens.
  *
- * The format chip is what makes one list work: it narrows to tournaments or
- * leagues instead of the reader having to pick a screen first. Everything else
- * is stated in format-neutral terms, so a new format inherits the bar.
+ * The format chip is what makes one list work: it narrows to the format the
+ * reader wants instead of them having to pick a screen first. It cuts by the
+ * three formats Rallia runs, not by which engine happens to run them, so a
+ * knockout draw and a pools-then-knockout draw stop sharing one chip.
+ * Everything else is stated in format-neutral terms, so a new format inherits
+ * the bar by adding a row to EVENT_KINDS.
  */
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -24,23 +27,21 @@ import {
   darkTheme,
 } from '@rallia/design-system';
 import { useTheme } from '@rallia/shared-hooks';
-import type { EventPhase } from '@rallia/shared-services';
+import type { EventFormat, EventPhase } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { selectionHaptic, lightHaptic } from '../../../utils/haptics';
+import { EVENT_KINDS, EVENT_FORMAT_LABEL_KEY } from '../eventKinds';
 
-/** Which engine's events to show. Mirrors EventEngine plus an "everything". */
-export type EventEngineFilter = 'all' | 'tournament' | 'league';
+/** Which format's events to show. Mirrors EventFormat plus an "everything". */
+export type EventFormatFilter = 'all' | EventFormat;
 /** Lifecycle cut, in EventPhase terms. `closed` never appears in discovery. */
 export type EventPhaseFilter = 'all' | Extract<EventPhase, 'joinable' | 'startingSoon' | 'running'>;
 
-const ENGINE_OPTIONS: EventEngineFilter[] = ['all', 'tournament', 'league'];
+// Picker order is decision order (shortest commitment first); the filter keeps it.
+const FORMAT_OPTIONS: EventFormatFilter[] = ['all', ...EVENT_KINDS.map(d => d.kind)];
 const PHASE_OPTIONS: EventPhaseFilter[] = ['all', 'joinable', 'startingSoon', 'running'];
 
-const ENGINE_LABEL_KEYS: Record<Exclude<EventEngineFilter, 'all'>, string> = {
-  tournament: 'eventList.filters.engineTournament',
-  league: 'eventList.filters.engineLeague',
-};
 const PHASE_LABEL_KEYS: Record<Exclude<EventPhaseFilter, 'all'>, string> = {
   joinable: 'eventList.sections.joinable',
   startingSoon: 'eventList.sections.startingSoon',
@@ -48,14 +49,14 @@ const PHASE_LABEL_KEYS: Record<Exclude<EventPhaseFilter, 'all'>, string> = {
 };
 
 interface EventFiltersBarProps {
-  engine: EventEngineFilter;
+  format: EventFormatFilter;
   phase: EventPhaseFilter;
   /** Toggle: only events whose rating window includes the player's rating. */
   myRatingOnly: boolean;
   /** Hide the my-rating chip when the player has no rating for the sport. */
   showMyRatingFilter: boolean;
   openSpotsOnly: boolean;
-  onEngineChange: (engine: EventEngineFilter) => void;
+  onFormatChange: (format: EventFormatFilter) => void;
   onPhaseChange: (phase: EventPhaseFilter) => void;
   onMyRatingChange: (myRatingOnly: boolean) => void;
   onOpenSpotsChange: (openSpotsOnly: boolean) => void;
@@ -254,12 +255,12 @@ function FilterDropdown<T extends string>({
 // =============================================================================
 
 export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
-  engine,
+  format,
   phase,
   myRatingOnly,
   showMyRatingFilter,
   openSpotsOnly,
-  onEngineChange,
+  onFormatChange,
   onPhaseChange,
   onMyRatingChange,
   onOpenSpotsChange,
@@ -270,13 +271,11 @@ export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  const [showEngineDropdown, setShowEngineDropdown] = useState(false);
+  const [showFormatDropdown, setShowFormatDropdown] = useState(false);
   const [showPhaseDropdown, setShowPhaseDropdown] = useState(false);
 
-  const getEngineLabel = (value: EventEngineFilter) =>
-    value === 'all'
-      ? t('eventList.filters.allFormats')
-      : t(ENGINE_LABEL_KEYS[value] as TranslationKey);
+  const getFormatLabel = (value: EventFormatFilter) =>
+    value === 'all' ? t('eventList.filters.allFormats') : t(EVENT_FORMAT_LABEL_KEY[value]);
 
   const getPhaseLabel = (value: EventPhaseFilter) =>
     value === 'all'
@@ -317,9 +316,9 @@ export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
         )}
 
         <FilterChip
-          value={engine === 'all' ? t('eventList.filters.format') : getEngineLabel(engine)}
-          isActive={engine !== 'all'}
-          onPress={() => setShowEngineDropdown(true)}
+          value={format === 'all' ? t('eventList.filters.format') : getFormatLabel(format)}
+          isActive={format !== 'all'}
+          onPress={() => setShowFormatDropdown(true)}
           isDark={isDark}
         />
         <FilterChip
@@ -349,14 +348,14 @@ export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
       </ScrollView>
 
       <FilterDropdown
-        visible={showEngineDropdown}
+        visible={showFormatDropdown}
         title={t('eventList.filters.format')}
-        options={ENGINE_OPTIONS}
-        selectedValue={engine}
-        onSelect={onEngineChange}
-        onClose={() => setShowEngineDropdown(false)}
+        options={FORMAT_OPTIONS}
+        selectedValue={format}
+        onSelect={onFormatChange}
+        onClose={() => setShowFormatDropdown(false)}
         isDark={isDark}
-        getLabel={getEngineLabel}
+        getLabel={getFormatLabel}
       />
       <FilterDropdown
         visible={showPhaseDropdown}

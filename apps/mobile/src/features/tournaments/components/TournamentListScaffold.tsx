@@ -25,13 +25,14 @@ import {
 } from '@rallia/shared-components';
 import { formatPrice, tournamentRankingHeadline } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
-import type { TournamentListItem } from '@rallia/shared-services';
+import { bracketTypeToEventFormat, type TournamentListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import {
   EventListScaffold,
   type EventListSection,
 } from '../../events/components/EventListScaffold';
+import { EVENT_FORMAT_LABEL_KEY } from '../../events/eventKinds';
 import { useTranslation, type TranslationKey } from '../../../hooks';
 
 import { TournamentBanner, TOURNAMENT_BANNER_ASPECT } from './TournamentBanner';
@@ -121,8 +122,11 @@ export const TournamentCard: React.FC<{
 
   // Quiet decision facts, dot-separated; special facts (points, role) keep a chip.
   // `level` is deliberately left out: the rating range already says who can enter.
+  // The draw structure leads the formats, in the same words as the format filter,
+  // so a filtered list can be read back against the chip that produced it.
   const metaFacts = [
     ratingRange,
+    t(EVENT_FORMAT_LABEL_KEY[bracketTypeToEventFormat(tournament.bracket_type)]),
     t(ENTRY_FORMAT_KEYS[tournament.entry_format] as TranslationKey),
     t(MATCH_FORMAT_KEYS[tournament.match_format] as TranslationKey),
   ].filter((f): f is string => !!f);

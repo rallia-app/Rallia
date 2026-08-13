@@ -5035,8 +5035,6 @@
     "filters": {
       "format": "Format",
       "allFormats": "All formats",
-      "engineTournament": "Tournaments",
-      "engineLeague": "Leagues",
       "phase": "Status",
       "allPhases": "All statuses",
       "myRating": "My level",
@@ -5064,6 +5062,11 @@
     },
     "signInRequired": "Sign in to see your events",
     "signInPrompt": "Browsing is open to everyone. Sign in and the events you organize or join land here."
+  },
+  "eventFormats": {
+    "knockout": "Knockout",
+    "poolsKnockout": "Pools + knockout",
+    "sessionLeague": "League"
   },
   "eventCreation": {
     "pickerTitle": "What do you want to organize?",

@@ -5035,8 +5035,6 @@
     "filters": {
       "format": "Format",
       "allFormats": "Tous les formats",
-      "engineTournament": "Tournois",
-      "engineLeague": "Ligues",
       "phase": "Statut",
       "allPhases": "Tous les statuts",
       "myRating": "Mon calibre",
@@ -5064,6 +5062,11 @@
     },
     "signInRequired": "Connecte-toi pour voir tes événements",
     "signInPrompt": "Tout le monde peut regarder. Connecte-toi et les événements que tu organises ou rejoins vont atterrir ici."
+  },
+  "eventFormats": {
+    "knockout": "Élimination directe",
+    "poolsKnockout": "Poules + éliminatoires",
+    "sessionLeague": "Ligue"
   },
   "eventCreation": {
     "pickerTitle": "Tu organises quoi?",

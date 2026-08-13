@@ -10,11 +10,22 @@
  */
 
 import type { Ionicons } from '@expo/vector-icons';
+import type { EventFormat } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
 import type { TranslationKey } from '../../hooks';
 
-export type EventKind = 'knockout' | 'pools_knockout' | 'session_league';
+/** Same three formats discovery filters on: what you can create is what you
+ *  can browse for. */
+export type EventKind = EventFormat;
+
+/** Short label for a format, for filter chips and card facts. The picker's
+ *  `kinds.*.title` stays long-form; these have to fit in a chip. */
+export const EVENT_FORMAT_LABEL_KEY: Record<EventFormat, TranslationKey> = {
+  knockout: 'eventFormats.knockout',
+  pools_knockout: 'eventFormats.poolsKnockout',
+  session_league: 'eventFormats.sessionLeague',
+};
 
 /** Which creation flow and data model runs the format. */
 export type EventEngine = 'tournament' | 'league';

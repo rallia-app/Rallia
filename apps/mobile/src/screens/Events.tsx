@@ -3,8 +3,9 @@
  *
  * Replaces the separate Tournaments and Leagues directories. A reader looking
  * for something to enter no longer has to know which of two screens holds it;
- * the format is a filter chip, and the sections are ordered by how actionable
- * each event is rather than by which table it came from.
+ * the format is a filter chip cutting by the three formats Rallia runs, and the
+ * sections are ordered by how actionable each event is rather than by which
+ * table it came from.
  *
  * Spec: specs/navigation-ia/README.md (Compete hub), and
  * specs/17-leagues-tournaments/rollout.md
@@ -38,7 +39,7 @@ import {
 } from '../features/events/components/EventListScaffold';
 import {
   EventFiltersBar,
-  type EventEngineFilter,
+  type EventFormatFilter,
   type EventPhaseFilter,
 } from '../features/events/components/EventFiltersBar';
 import { EventSummaryCard } from '../features/events/components/EventSummaryCard';
@@ -74,7 +75,7 @@ export const Events: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [engineFilter, setEngineFilter] = useState<EventEngineFilter>('all');
+  const [formatFilter, setFormatFilter] = useState<EventFormatFilter>('all');
   const [phaseFilter, setPhaseFilter] = useState<EventPhaseFilter>('all');
   const [myRatingOnly, setMyRatingOnly] = useState(false);
   const [openSpotsOnly, setOpenSpotsOnly] = useState(false);
@@ -92,7 +93,7 @@ export const Events: React.FC = () => {
   const ratingFilterValue = myRatingOnly ? playerRatingValue : null;
 
   const hasActiveFilters =
-    engineFilter !== 'all' ||
+    formatFilter !== 'all' ||
     phaseFilter !== 'all' ||
     (myRatingOnly && playerRatingValue != null) ||
     openSpotsOnly;
@@ -105,7 +106,7 @@ export const Events: React.FC = () => {
       // Already yours: it belongs on My Events, not on discovery.
       if (userId && event.organizerId === userId) return false;
       if (event.engine === 'tournament' && registeredIds.has(event.id)) return false;
-      if (engineFilter !== 'all' && event.engine !== engineFilter) return false;
+      if (formatFilter !== 'all' && event.format !== formatFilter) return false;
       if (phaseFilter !== 'all' && event.phase !== phaseFilter) return false;
       if (!matchesRatingBand(event, ratingFilterValue)) return false;
       if (openSpotsOnly && !hasOpenSpots(event)) return false;
@@ -149,7 +150,7 @@ export const Events: React.FC = () => {
     userId,
     registeredIds,
     debouncedSearchQuery,
-    engineFilter,
+    formatFilter,
     phaseFilter,
     ratingFilterValue,
     openSpotsOnly,
@@ -226,17 +227,17 @@ export const Events: React.FC = () => {
       </View>
 
       <EventFiltersBar
-        engine={engineFilter}
+        format={formatFilter}
         phase={phaseFilter}
         myRatingOnly={myRatingOnly}
         showMyRatingFilter={playerRatingValue != null}
         openSpotsOnly={openSpotsOnly}
-        onEngineChange={setEngineFilter}
+        onFormatChange={setFormatFilter}
         onPhaseChange={setPhaseFilter}
         onMyRatingChange={setMyRatingOnly}
         onOpenSpotsChange={setOpenSpotsOnly}
         onReset={() => {
-          setEngineFilter('all');
+          setFormatFilter('all');
           setPhaseFilter('all');
           setMyRatingOnly(false);
           setOpenSpotsOnly(false);

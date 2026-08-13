@@ -10,11 +10,27 @@
  * Spec: specs/17-leagues-tournaments/formats/README.md
  */
 
+import type { Enums } from '@rallia/shared-types';
+
 import type { LeagueListItem } from '../leagues/leagueService';
 import type { TournamentListItem } from '../tournaments/tournamentService';
 
 /** Which creation flow and data model runs the format. */
 export type EventEngine = 'tournament' | 'league';
+
+/**
+ * The format a player actually chooses between. Two of the three run on the
+ * tournament engine, so the engine is the wrong axis for discovery: someone
+ * looking for a weekend bracket and someone looking for three guaranteed pool
+ * games both filtered to "Tournaments" and got each other's events.
+ */
+export type EventFormat = 'knockout' | 'pools_knockout' | 'session_league';
+
+/** Double elimination is still a bracket you leave by losing, so it reads as
+ *  knockout until it earns its own picker card. */
+export function bracketTypeToEventFormat(bracketType: Enums<'bracket_type'>): EventFormat {
+  return bracketType === 'pool_knockout' ? 'pools_knockout' : 'knockout';
+}
 
 /**
  * Lifecycle bucket shared by every format, ordered by how actionable it is.
@@ -28,6 +44,8 @@ interface EventCommon {
   name: string;
   sportId: string;
   organizerId: string;
+  /** What the event actually is, and what discovery filters on. */
+  format: EventFormat;
   phase: EventPhase;
   /** Members or registrants currently counted in. */
   participantCount: number;
@@ -77,6 +95,7 @@ export function tournamentToEventSummary(tournament: TournamentListItem): EventS
     name: tournament.name,
     sportId: tournament.sport_id,
     organizerId: tournament.organizer_id,
+    format: bracketTypeToEventFormat(tournament.bracket_type),
     phase: tournamentPhase(tournament.status),
     participantCount: tournament.registration_count,
     participantCap: tournament.max_participants,
@@ -95,6 +114,7 @@ export function leagueToEventSummary(league: LeagueListItem): EventSummary {
     name: league.name,
     sportId: league.sport_id,
     organizerId: league.organizer_id,
+    format: 'session_league',
     phase: leaguePhase(league.status),
     participantCount: league.member_count,
     participantCap: league.member_capacity,
