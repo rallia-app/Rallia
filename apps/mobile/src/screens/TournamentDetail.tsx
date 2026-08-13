@@ -106,7 +106,7 @@ import {
 } from '@rallia/shared-services';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, useRequireOnboarding, type TranslationKey } from '../hooks';
 import * as Analytics from '../services/analytics';
 import { useActionsSheet } from '../context';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -170,6 +170,9 @@ export const TournamentDetail: React.FC = () => {
   const toast = useToast();
   const isDark = theme === 'dark';
   const userId = session?.user?.id;
+  // The page reads for everyone, signed out included; the actions that change
+  // state route through here first and open auth/onboarding when needed.
+  const { guardAction } = useRequireOnboarding();
 
   const {
     data: directTournament,
@@ -853,6 +856,9 @@ export const TournamentDetail: React.FC = () => {
   const onRegister = useCallback(() => {
     if (!tournament) return;
     lightHaptic();
+    // Registration is the conversion moment for a signed-out reader: the RPC
+    // would answer NOT_AUTHENTICATED, so ask for the account instead.
+    if (!guardAction()) return;
     // Accepting an existing pending invite flips it via tournament_register
     // (join-via-invite is idempotent on a pending row and wouldn't confirm it);
     // a fresh invitee with only a share link redeems the token. Organizers and
@@ -917,6 +923,7 @@ export const TournamentDetail: React.FC = () => {
     isOrganizer,
     isPaidTournament,
     handlePaidRegister,
+    guardAction,
   ]);
 
   const onWithdraw = useCallback(() => {
@@ -1436,16 +1443,19 @@ export const TournamentDetail: React.FC = () => {
     [tournament, approveRegistrant]
   );
 
+  // Opening a player profile stays behind the guard the player directory uses,
+  // so a roster is not a way around it.
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
       if (!tournament) return;
       lightHaptic();
+      if (!guardAction()) return;
       navigation.navigate('PlayerProfile', {
         playerId: player.id,
         sportId: tournament.sport_id,
       });
     },
-    [navigation, tournament]
+    [navigation, tournament, guardAction]
   );
 
   // Tapping a bracket-slot avatar opens that player's profile (by user id).
@@ -1453,12 +1463,13 @@ export const TournamentDetail: React.FC = () => {
     (playerId: string) => {
       if (!tournament) return;
       lightHaptic();
+      if (!guardAction()) return;
       navigation.navigate('PlayerProfile', {
         playerId,
         sportId: tournament.sport_id,
       });
     },
-    [navigation, tournament]
+    [navigation, tournament, guardAction]
   );
 
   // ---------------------------------------------------------------------------

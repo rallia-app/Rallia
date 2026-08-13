@@ -72,10 +72,11 @@ const Community = () => {
     navigation.navigate('Communities');
   }, [navigation]);
 
+  // Public destination: the Compete hub reads for signed-out visitors too and
+  // guards its own actions (register, join, enroll).
   const handleCompete = useCallback(() => {
-    if (!guardAction()) return;
     navigation.navigate('Compete');
-  }, [navigation, guardAction]);
+  }, [navigation]);
 
   // Action buttons configuration — gradients match the Home play grid so each
   // destination keeps one color identity across the app (tournaments coral,

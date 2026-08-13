@@ -1934,28 +1934,29 @@ const Home = () => {
       );
     }
 
-    // Standings card sits right under the action banners: the player's live
-    // rank is the first thing an onboarded player sees — the dual Classements
-    // card (challenge + Circuit Rallia).
-    if (session && isOnboarded) {
-      headerComponents.push(
-        <ClassementsCard
-          key="classements-card"
-          challengeRank={myLeaderboardRank}
-          challengeLoading={myLeaderboardRankLoading}
-          circuitRank={myCircuitRank}
-          circuitLoading={myCircuitRankLoading}
-          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          onPressBoard={board => {
-            Logger.logUserAction('home_leaderboard_card_pressed', {
-              board,
-              ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
-            });
-            appNavigation.navigate('Compete', { initialSegment: board });
-          }}
-        />
-      );
-    }
+    // Standings card sits right under the action banners, above My games: the
+    // player's live rank is the first thing an onboarded player sees — the dual
+    // Classements card (challenge + Circuit Rallia). Both boards read for
+    // everyone, so a signed-out visitor gets the same slot; the rank hooks are
+    // signed-in only, and no rank already falls back to the nudge state.
+    headerComponents.push(
+      <ClassementsCard
+        key="classements-card"
+        challengeRank={myLeaderboardRank}
+        challengeLoading={myLeaderboardRankLoading}
+        circuitRank={myCircuitRank}
+        circuitLoading={myCircuitRankLoading}
+        t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
+        onPressBoard={board => {
+          Logger.logUserAction('home_leaderboard_card_pressed', {
+            board,
+            ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
+            signedIn: !!session,
+          });
+          appNavigation.navigate('Compete', { initialSegment: board });
+        }}
+      />
+    );
 
     if (!session) {
       // Not signed in: show sign-in prompt
@@ -2056,23 +2057,22 @@ const Home = () => {
         }}
       />,
     ];
-    if (session) {
-      // Tournaments and leagues share one destination now, so they share one
-      // tile. It keeps the tournament identity (trophy, coral) the Compete
-      // hub's own Events segment uses.
-      playTiles.push(
-        <GradientNavTile
-          key="compete"
-          style={quickNavStyles.item}
-          icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-          watermark={<Ionicons name="trophy" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
-          gradient={[secondary[400], secondary[600]]}
-          borderColor={secondary[500]}
-          label={t('home.playGrid.compete')}
-          onPress={() => appNavigation.navigate('Compete')}
-        />
-      );
-    }
+    // Tournaments and leagues share one destination now, so they share one
+    // tile. It keeps the tournament identity (trophy, coral) the Compete
+    // hub's own Events segment uses. Public like the other two tiles: the hub
+    // reads for everyone and gates its own actions.
+    playTiles.push(
+      <GradientNavTile
+        key="compete"
+        style={quickNavStyles.item}
+        icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+        watermark={<Ionicons name="trophy" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
+        gradient={[secondary[400], secondary[600]]}
+        borderColor={secondary[500]}
+        label={t('home.playGrid.compete')}
+        onPress={() => appNavigation.navigate('Compete')}
+      />
+    );
     headerComponents.push(
       <View key="play-grid">
         <View style={quickNavStyles.sectionHeader}>

@@ -5061,7 +5061,9 @@
     "empty": {
       "title": "Rien ici pour le moment",
       "description": "Les événements que tu organises ou rejoins apparaissent ici."
-    }
+    },
+    "signInRequired": "Connecte-toi pour voir tes événements",
+    "signInPrompt": "Tout le monde peut regarder. Connecte-toi et les événements que tu organises ou rejoins vont atterrir ici."
   },
   "eventCreation": {
     "pickerTitle": "Tu organises quoi?",

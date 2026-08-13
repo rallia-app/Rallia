@@ -5061,7 +5061,9 @@
     "empty": {
       "title": "Nothing here yet",
       "description": "Events you organize or join show up here."
-    }
+    },
+    "signInRequired": "Sign in to see your events",
+    "signInPrompt": "Browsing is open to everyone. Sign in and the events you organize or join land here."
   },
   "eventCreation": {
     "pickerTitle": "What do you want to organize?",

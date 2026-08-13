@@ -36,8 +36,9 @@ import {
 import { tournamentToEventSummary, type EventSummary } from '@rallia/shared-services';
 
 import { EventSummaryCard } from '../features/events/components/EventSummaryCard';
+import SignInPrompt from '../components/SignInPrompt';
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
-import { useSport } from '../context';
+import { useSport, useActionsSheet } from '../context';
 import { lightHaptic } from '../utils/haptics';
 import type { RootStackParamList } from '../navigation';
 
@@ -116,6 +117,7 @@ export const MyEvents: React.FC = () => {
   const { t } = useTranslation();
   const { selectedSport } = useSport();
   const { session } = useAuth();
+  const { openSheet } = useActionsSheet();
   const colors = useEventListColors();
   const bottomInset = useScrollBottomInset();
   const isDark = theme === 'dark';
@@ -264,6 +266,21 @@ export const MyEvents: React.FC = () => {
   };
 
   const chips = activeTab === 'upcoming' ? UPCOMING_FILTERS : PAST_FILTERS;
+
+  // Discovery is public, but this is the caller's own library: every query
+  // behind it is keyed on a user id, so a visitor gets the prompt, not an
+  // empty list that reads like "you have nothing".
+  if (!userId) {
+    return (
+      <SignInPrompt
+        title={t('myEvents.signInRequired')}
+        description={t('myEvents.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+        icon="trophy"
+      />
+    );
+  }
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.root, { backgroundColor: colors.background }]}>

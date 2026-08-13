@@ -20,7 +20,12 @@ import {
   type SportLeaderboardEntry,
 } from '@rallia/shared-hooks';
 
-import { useTranslation, useThemeStyles, useScrollBottomInset } from '../hooks';
+import {
+  useTranslation,
+  useThemeStyles,
+  useScrollBottomInset,
+  useRequireOnboarding,
+} from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
 import {
@@ -41,6 +46,7 @@ export const Leaderboard: React.FC = () => {
   const userId = session?.user?.id;
   const sportId = selectedSport?.id;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { guardAction } = useRequireOnboarding();
 
   const { items, isLoading, isError, isRefetching, isFetchingNextPage, fetchNextPage, refetch } =
     useSportLeaderboard(sportId);
@@ -79,9 +85,14 @@ export const Leaderboard: React.FC = () => {
     [userId, t]
   );
 
+  // The board reads for everyone; opening a player stays behind the guard the
+  // player directory uses.
   const openProfile = useCallback(
-    (entry: BoardEntry) => navigation.navigate('PlayerProfile', { playerId: entry.id }),
-    [navigation]
+    (entry: BoardEntry) => {
+      if (!guardAction()) return;
+      navigation.navigate('PlayerProfile', { playerId: entry.id });
+    },
+    [navigation, guardAction]
   );
 
   const header = (

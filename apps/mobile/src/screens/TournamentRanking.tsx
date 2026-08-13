@@ -36,7 +36,12 @@ import {
 
 import { lightHaptic } from '#/utils/haptics';
 
-import { useTranslation, useThemeStyles, useScrollBottomInset } from '../hooks';
+import {
+  useTranslation,
+  useThemeStyles,
+  useScrollBottomInset,
+  useRequireOnboarding,
+} from '../hooks';
 import { useSport } from '../context';
 import type { RootStackParamList } from '../navigation';
 import {
@@ -115,6 +120,7 @@ export const TournamentRanking: React.FC = () => {
   const userId = session?.user?.id;
   const sportId = selectedSport?.id;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { guardAction } = useRequireOnboarding();
 
   // Doubles ranks on its own board, so the two never mix in one list.
   const [board, setBoard] = useState<RankingBoard>('singles');
@@ -185,9 +191,14 @@ export const TournamentRanking: React.FC = () => {
     [userId, t]
   );
 
+  // The board reads for everyone; opening a player stays behind the guard the
+  // player directory uses.
   const openProfile = useCallback(
-    (entry: BoardEntry) => navigation.navigate('PlayerProfile', { playerId: entry.id }),
-    [navigation]
+    (entry: BoardEntry) => {
+      if (!guardAction()) return;
+      navigation.navigate('PlayerProfile', { playerId: entry.id });
+    },
+    [navigation, guardAction]
   );
 
   const header = (

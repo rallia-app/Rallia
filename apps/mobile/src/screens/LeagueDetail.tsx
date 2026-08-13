@@ -149,7 +149,7 @@ import type {
 } from '../features/leagues/detail/components';
 import type { LeagueEditData } from '../features/leagues';
 import { LeagueBanner } from '../features/leagues/components/LeagueBanner';
-import { useTranslation, type TranslationKey } from '../hooks';
+import { useTranslation, useRequireOnboarding, type TranslationKey } from '../hooks';
 import { rpcErrorMessage } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -166,6 +166,9 @@ export const LeagueDetail: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { session } = useAuth();
   const userId = session?.user?.id;
+  // The page reads for everyone, signed out included; the actions that change
+  // state route through here first and open auth/onboarding when needed.
+  const { guardAction } = useRequireOnboarding();
   const route = useRoute<Route>();
   const { leagueId, inviteToken: inviteTokenParam } = route.params;
   const isDark = theme === 'dark';
@@ -246,8 +249,10 @@ export const LeagueDetail: React.FC = () => {
     Analytics.leagueViewed({ leagueId: league.id, userRole });
   }, [league, membershipFetched, isOrganizer, myMembership?.status, leagueId]);
 
+  // Deliberately not gated on userId: a signed-out visitor sees the Join CTA
+  // like anyone else, and the guard on press turns it into the sign-in prompt.
+  // Hiding it instead left the page with no action at all.
   const canJoin =
-    !!userId &&
     !!league &&
     league.status === 'active' &&
     !isOrganizer &&
@@ -1252,16 +1257,19 @@ export const LeagueDetail: React.FC = () => {
     [tabs, goToTab]
   );
 
+  // Opening a player profile stays behind the guard the player directory uses,
+  // so a roster is not a way around it.
   const handlePlayerPress = useCallback(
     (player: PlayerSearchResult) => {
       if (!league) return;
       lightHaptic();
+      if (!guardAction()) return;
       navigation.navigate('PlayerProfile', {
         playerId: player.id,
         sportId: league.sport_id,
       });
     },
-    [navigation, league]
+    [navigation, league, guardAction]
   );
 
   const handleApprovePress = useCallback(
@@ -1840,6 +1848,9 @@ export const LeagueDetail: React.FC = () => {
         icon: 'person-add-outline',
         onPress: () => {
           lightHaptic();
+          // league_join answers NOT_AUTHENTICATED for a visitor: ask for the
+          // account instead of surfacing an RPC error.
+          if (!guardAction()) return;
           if (inviteToken) {
             joinViaInvite.mutate({ token: inviteToken, leagueId });
           } else {
@@ -1878,6 +1889,7 @@ export const LeagueDetail: React.FC = () => {
         icon: 'person-add-outline',
         onPress: () => {
           lightHaptic();
+          if (!guardAction()) return;
           if (isPaidSeason) void handlePaidEnroll();
           else enrollSeasonMut();
         },
