@@ -555,19 +555,12 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                     <View
                       style={[
                         styles.courtPill,
+                        styles.iconPill,
                         { backgroundColor: statusColors.success.DEFAULT + '1A' },
                       ]}
+                      accessibilityLabel={t('matchOrganizer.availability.favoriteShared')}
                     >
                       <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
-                      <Text
-                        size="xs"
-                        weight="semibold"
-                        color={statusColors.success.DEFAULT}
-                        numberOfLines={1}
-                        style={styles.pillLabel}
-                      >
-                        {t('matchOrganizer.availability.favoriteShared')}
-                      </Text>
                     </View>
                   ) : null}
 
@@ -597,22 +590,27 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                     </View>
                   ) : null}
 
-                  {availabilityLabel ? (
+                  {/* Everyone free is the common case and reads fine as a glyph.
+                      "Not everyone" is the rare exception and a warning, which
+                      an unlabelled icon cannot carry, so it keeps its words. */}
+                  {availabilityLabel && allFree ? (
                     <View
                       style={[
                         styles.courtPill,
-                        { backgroundColor: allFree ? accent + '1A' : colors.border + '66' },
+                        styles.iconPill,
+                        { backgroundColor: accent + '1A' },
                       ]}
+                      accessibilityLabel={availabilityLabel}
                     >
-                      <Ionicons
-                        name={allFree ? 'people' : 'people-outline'}
-                        size={12}
-                        color={allFree ? accent : colors.textMuted}
-                      />
+                      <Ionicons name="people" size={12} color={accent} />
+                    </View>
+                  ) : availabilityLabel ? (
+                    <View style={[styles.courtPill, { backgroundColor: colors.border + '66' }]}>
+                      <Ionicons name="people-outline" size={12} color={colors.textMuted} />
                       <Text
                         size="xs"
                         weight="semibold"
-                        color={allFree ? accent : colors.textMuted}
+                        color={colors.textMuted}
                         numberOfLines={1}
                         style={styles.pillLabel}
                       >
@@ -729,6 +727,12 @@ const styles = StyleSheet.create({
   },
   pillLabel: {
     flexShrink: 1,
+  },
+  // A glyph-only pill is already minimal, so it must NOT be what gives way when
+  // the row is tight: the labelled chip beside it absorbs the squeeze instead.
+  iconPill: {
+    paddingHorizontal: spacingPixels[1.5],
+    flexShrink: 0,
   },
   courtIcon: {
     transform: [{ rotate: '90deg' }],
