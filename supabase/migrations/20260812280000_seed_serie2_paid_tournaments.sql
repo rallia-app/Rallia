@@ -7,6 +7,12 @@
 -- directe des 8es à la finale. Tableau de 32, entrée 15 $, bourse 250 $.
 --
 -- Le doc prévoit aussi le pickleball; décision du 2026-08-12: tennis d'abord.
+-- En l'ajoutant, NE PAS RECOPIER LE PLANCHER DU DÉBUTANT TENNIS: les deux
+-- sports n'ont pas la même échelle. Le tennis est en NTRP (1.5 -> 6.0), le
+-- pickleball en DUPR (1.0 -> 6.0). Le Débutant pickleball part donc bien de
+-- 1.0 comme l'écrit le doc; c'est le tennis qui ne peut pas descendre sous
+-- 1.5. Voir le commentaire sur les bandes plus bas: un plancher hors échelle
+-- ne lève pas d'erreur, il fausse silencieusement les points Rallia.
 --
 -- Comme le seed Série 1 (20260717120000), cette migration tourne sur TOUS les
 -- environnements et résout ses références par clés STABLES, jamais par UUID:
@@ -145,9 +151,19 @@ BEGIN
     END LOOP;
 
     -- ------------------------------------------------------------------
-    -- Bandes de niveau du doc : Débutant 1.0 a 2.5, Intermédiaire 3.0 a 3.5,
-    -- Avancé 4.0 et plus (pas de plafond). Le Débutant de la Série 1 partait
-    -- de 1.5; c'est le doc Série 2 qui descend le plancher a 1.0.
+    -- Bandes de niveau : Débutant 1.5 a 2.5, Intermédiaire 3.0 a 3.5,
+    -- Avancé 4.0 et plus (pas de plafond).
+    --
+    -- LE DOC DIT 1.0 POUR LE DÉBUTANT. ON NE PEUT PAS: l'échelle tennis
+    -- commence a 1.5 (rating_score, rangs 1.5 -> 6.0), 1.0 n'existe pas.
+    -- Et un plancher SOUS l'échelle n'est pas inoffensif:
+    -- lt_min_rating_level_multiplier compte les échelons <= au plancher,
+    -- tombe a 0 échelon, prend sa sortie anticipée `v_rank < 1` et renvoie le
+    -- neutre 1.0 -- exactement le multiplicateur de 3.0. Le Débutant et
+    -- l'Intermédiaire annonçaient donc le même plafond de 1000 points Rallia.
+    -- Avec 1.5 l'échelle redevient monotone: 0.2 (200 pts), 1.0 (1000),
+    -- 5.0 (5000). 1.0 n'exclut personne au passage, aucun joueur de tennis ne
+    -- peut être coté sous 1.5.
     --
     -- ATTENTION: depuis 20260725120000 la bande est un gate DUR sur les 4
     -- chemins d'inscription, et un joueur NON COTÉ est refusé dès qu'une borne
@@ -168,12 +184,12 @@ BEGIN
     VALUES
     (
         'Série 2 Montréal · Tennis · Débutant',
-        'Round Robin payant sur l''île de Montréal. 8 poules de 4, puis élimination directe à partir des 8es de finale. Catégorie Débutant (niveau 1.0 à 2.5). Entrée 15 $, bourse de 250 $.',
+        'Round Robin payant sur l''île de Montréal. 8 poules de 4, puis élimination directe à partir des 8es de finale. Catégorie Débutant (niveau 1.5 à 2.5). Entrée 15 $, bourse de 250 $.',
         v_rules,
         c_storage_base || v_org || '/serie2-montreal-tennis-debutant-v1.webp',
         v_tennis, v_org,
         'public', 'open', 'draft',
-        'Débutant', ARRAY['Débutant'], 1.0, 2.5,
+        'Débutant', ARRAY['Débutant'], 1.5, 2.5,
         c_city, c_lat, c_lon,
         32, 'pool_knockout', 4, 2,
         'one_set', 8, 'super_tb_10pt',
