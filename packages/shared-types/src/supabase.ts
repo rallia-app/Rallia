@@ -10087,6 +10087,15 @@ export type Database = {
         }
         Returns: number
       }
+      count_available_courts_nearby: {
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_max_distance_km?: number
+          p_sport_ids: string[]
+        }
+        Returns: number
+      }
       count_checkin_window_committed_matches: {
         Args: { p_player_id: string; p_sport_id?: string; p_today: string }
         Returns: number
@@ -12830,6 +12839,7 @@ export type Database = {
           tier: string
         }[]
       }
+      mo_opponent_agrees: { Args: { p_message_id: string }; Returns: number }
       momentum_bucket: {
         Args: { p_key: string; p_user: string }
         Returns: number
