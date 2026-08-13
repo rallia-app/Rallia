@@ -1,5 +1,5 @@
 -- Reset the demo tester's paid-payments fixtures (staging) back to the start
--- state described in docs/Guide_de_test_des_paiements_demo.pdf.
+-- state described in the demo payments test guide (Google Drive).
 --
 -- Twin of reset-jdl-test-fixtures.sql. Tester: demo@rallia.ca (Alex Monza,
 -- 5e0c481b-5360-490e-8576-d1bab41bcbeb). The events he pays into are organized

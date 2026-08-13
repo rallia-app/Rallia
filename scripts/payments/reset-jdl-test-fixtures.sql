@@ -1,5 +1,5 @@
 -- Reset Jean's paid-payments test fixtures (staging) back to the start state
--- described in docs/Guide_de_test_des_paiements.pdf.
+-- described in the paid-payments test guide (Google Drive).
 --
 -- Rerun this before each pass of the protocol: the scenarios are one-shot
 -- (publishing, cancelling, paying, enrolling all consume their fixture) and the
