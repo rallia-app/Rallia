@@ -6,7 +6,12 @@ import { useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { Text, Skeleton, useToast, Button } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { usePlayPreferences, useFavoriteFacilities, usePlayer } from '@rallia/shared-hooks';
+import {
+  usePlayPreferences,
+  useFavoriteFacilities,
+  usePlayer,
+  useRatingScoresForSport,
+} from '@rallia/shared-hooks';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import {
   spacingPixels,
@@ -129,6 +134,9 @@ const SportProfile = () => {
   } = usePlayer();
   const userId = player?.id || '';
   const { userSports } = useSport();
+  // Shares the sheet's cached query; used only to resolve the chosen score to a
+  // value so a downward change can be confirmed before it is written.
+  const { ratingScores } = useRatingScoresForSport(sportName, sportId, userId);
 
   // Theme-aware skeleton colors (aligned with UserProfile for consistency)
   const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
@@ -458,10 +466,36 @@ const SportProfile = () => {
     }
   };
 
+  // Dropping a level is silent everywhere else, but prize draws hold the player
+  // to their 180-day ceiling (lt_enforce_prize_rating_ceiling), so they'd only
+  // discover it at a registration screen months later. Ask up front instead.
+  const confirmRatingDrop = (from: number, to: number) =>
+    new Promise<boolean>(resolve => {
+      Alert.alert(
+        t('profile.ratingDrop.title'),
+        t('profile.ratingDrop.message', {
+          from: Number(from).toFixed(1),
+          to: Number(to).toFixed(1),
+        }),
+        [
+          { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('profile.ratingDrop.confirm'), onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      );
+    });
+
   const handleSaveRating = async (ratingScoreId: string) => {
     if (!userId) {
       Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
       return;
+    }
+
+    const nextValue = ratingScores.find(s => s.id === ratingScoreId)?.value;
+    const currentValue = ratingInfo?.scoreValue;
+    if (nextValue != null && currentValue != null && nextValue < currentValue) {
+      const confirmed = await confirmRatingDrop(currentValue, nextValue);
+      if (!confirmed) return;
     }
 
     try {
