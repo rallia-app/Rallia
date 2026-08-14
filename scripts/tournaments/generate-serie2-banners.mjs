@@ -44,7 +44,8 @@ const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif"
 // Same category accents the v2 generator used and the v3 artwork kept: teal
 // for Débutant, coral for Intermédiaire, gold for Avancé.
 const CATEGORIES = [
-  { key: 'debutant', label: 'DÉBUTANT', band: '1.0 à 2.5', tint: primary[300] },
+  // 1.5, not the doc's 1.0: NTRP starts at 1.5 (see the seed migration header).
+  { key: 'debutant', label: 'DÉBUTANT', band: '1.5 à 2.5', tint: primary[300] },
   { key: 'intermediaire', label: 'INTERMÉDIAIRE', band: '3.0 à 3.5', tint: secondary[500] },
   { key: 'avance', label: 'AVANCÉ', band: '4.0 et +', tint: accent[400] },
 ]
