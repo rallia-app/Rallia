@@ -12573,6 +12573,18 @@
       "ogTitle": "Conditions d'utilisation de Rallia",
       "ogDescription": "Les conditions régissant votre utilisation de Rallia."
     },
+    "participationTerms": {
+      "title": "Conditions de participation",
+      "description": "Les conditions encadrant la participation aux tournois et ligues Rallia.",
+      "ogTitle": "Conditions de participation Rallia",
+      "ogDescription": "Les conditions encadrant les tournois et ligues Rallia."
+    },
+    "liabilityWaiver": {
+      "title": "Décharge de responsabilité",
+      "description": "Décharge de responsabilité et acceptation des risques pour les activités Rallia.",
+      "ogTitle": "Décharge de responsabilité Rallia",
+      "ogDescription": "Décharge de responsabilité et acceptation des risques."
+    },
     "eula": {
       "title": "Contrat de licence utilisateur final",
       "description": "Contrat de licence utilisateur final de Rallia pour l'application mobile.",

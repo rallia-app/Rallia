@@ -12573,6 +12573,18 @@
       "ogTitle": "Rallia Terms of Service",
       "ogDescription": "The terms governing your use of Rallia."
     },
+    "participationTerms": {
+      "title": "Participation Terms",
+      "description": "The terms governing participation in Rallia tournaments and leagues.",
+      "ogTitle": "Rallia Participation Terms",
+      "ogDescription": "The terms governing Rallia tournaments and leagues."
+    },
+    "liabilityWaiver": {
+      "title": "Liability Waiver",
+      "description": "Waiver of liability and acceptance of risks for Rallia activities.",
+      "ogTitle": "Rallia Liability Waiver",
+      "ogDescription": "Waiver of liability and acceptance of risks."
+    },
     "eula": {
       "title": "End User License Agreement",
       "description": "Rallia's End User License Agreement for the mobile application.",
