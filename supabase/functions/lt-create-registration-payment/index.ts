@@ -61,9 +61,11 @@ type ErrorCode =
   | 'partner_invalid'
   | 'partner_sport_mismatch'
   | 'partner_already_registered'
+  | 'rating_recently_higher'
   | 'partner_rating_required'
   | 'partner_rating_too_low'
   | 'partner_rating_too_high'
+  | 'partner_rating_recently_higher'
   | 'season_not_found'
   | 'season_not_open'
   | 'season_not_paid'
@@ -111,6 +113,10 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'rating_too_low';
     case 'RATING_TOO_HIGH':
       return 'rating_too_high';
+    // Raised by the prize-draw ceiling trigger, not by lt_assert_rating_band.
+    // Distinct from RATING_TOO_HIGH: this player's current rating IS in band.
+    case 'RATING_RECENTLY_HIGHER':
+      return 'rating_recently_higher';
     case 'PARTNER_REQUIRED':
       return 'partner_required';
     case 'PARTNER_NOT_ALLOWED':
@@ -127,6 +133,8 @@ function mapRpcError(message: string | undefined): ErrorCode {
       return 'partner_rating_too_low';
     case 'PARTNER_RATING_TOO_HIGH':
       return 'partner_rating_too_high';
+    case 'PARTNER_RATING_RECENTLY_HIGHER':
+      return 'partner_rating_recently_higher';
     case 'SEASON_NOT_FOUND':
       return 'season_not_found';
     case 'SEASON_NOT_OPEN':

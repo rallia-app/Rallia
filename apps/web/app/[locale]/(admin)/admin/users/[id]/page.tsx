@@ -1,6 +1,7 @@
 import { AdminUserActions } from '@/components/admin-user-actions';
 import { AdminUserFeedbackSection } from '@/components/admin-user-feedback-section';
 import { AdminUserProfileHeader } from '@/components/admin-user-profile-header';
+import { AdminRatingCeiling, type RatingCeilingEntry } from '@/components/admin-rating-ceiling';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -63,6 +64,9 @@ export default async function UserDetailPage({
   const canManageUsers = currentAdminRole
     ? canPerformAction(currentAdminRole, 'players:suspend')
     : false;
+  const canClearRatingCeiling = currentAdminRole
+    ? canPerformAction(currentAdminRole, 'ratings:clear-ceiling')
+    : false;
 
   // Fetch profile (use service role to bypass RLS for admin view)
   const { data: profile, error: profileError } = await adminDb
@@ -107,6 +111,7 @@ export default async function UserDetailPage({
   // Fetch player-specific related data
   let playerSports: Array<{
     id: string;
+    sport_id: string;
     is_primary: boolean | null;
     is_active: boolean | null;
     active_rating_score_id: string | null;
@@ -118,6 +123,9 @@ export default async function UserDetailPage({
     sport: { name: string; display_name: string; slug: string } | null;
     preferred_facility: { name: string } | null;
   }> = [];
+  // Sports where the 180-day prize-draw ceiling sits ABOVE the current rating,
+  // i.e. the player is actually being held back and there is something to clear.
+  let ratingCeilings: RatingCeilingEntry[] = [];
   type PlayerRatingData = {
     id: string;
     badge_status: string;
@@ -236,12 +244,14 @@ export default async function UserDetailPage({
       reportsAboutRes,
       matchFeedbackRes,
       matchStatsRes,
+      ratingHistoryRes,
+      ceilingDaysRes,
     ] = await Promise.all([
       adminDb
         .from('player_sport')
         .select(
           `
-          id, is_primary, is_active,
+          id, sport_id, is_primary, is_active,
           active_rating_score_id,
           preferred_match_type, preferred_match_duration,
           preferred_play_style, preferred_play_attributes,
@@ -299,6 +309,15 @@ export default async function UserDetailPage({
         .from('match_participant')
         .select('id, status, match_outcome, showed_up, was_late, star_rating, feedback_completed')
         .eq('player_id', id),
+      // Prize-draw ceiling inputs. Unfiltered by date on purpose: the window is
+      // owned by lt_prize_rating_ceiling_days() and applied below, so the number
+      // is never duplicated here.
+      adminDb
+        .from('player_rating_history')
+        .select('sport_id, rating_value, recorded_at')
+        .eq('player_id', id)
+        .is('admin_cleared_at', null),
+      adminDb.rpc('lt_prize_rating_ceiling_days'),
     ]);
 
     playerSports = (sportsRes.data ?? []) as typeof playerSports;
@@ -315,6 +334,32 @@ export default async function UserDetailPage({
     if (ratingRaw) {
       playerRatingData = ratingRaw;
     }
+
+    // Ceiling per sport = highest non-cleared rating represented inside the
+    // window, compared against the rating the player shows today.
+    const ceilingDays = (ceilingDaysRes.data as number | null) ?? 180;
+    const windowStart = Date.now() - ceilingDays * 24 * 60 * 60 * 1000;
+    const ceilingBySport = new Map<string, number>();
+    for (const row of ratingHistoryRes.data ?? []) {
+      const value = row.rating_value;
+      if (value == null || new Date(row.recorded_at).getTime() < windowStart) continue;
+      const seen = ceilingBySport.get(row.sport_id);
+      if (seen === undefined || value > seen) ceilingBySport.set(row.sport_id, value);
+    }
+    ratingCeilings = playerSports.flatMap(ps => {
+      const current = allRatings.find(r => r.id === ps.active_rating_score_id)?.rating_score?.value;
+      const ceiling = ceilingBySport.get(ps.sport_id);
+      if (current == null || ceiling == null || ceiling <= current) return [];
+      return [
+        {
+          sportId: ps.sport_id,
+          sportName: ps.sport?.display_name ?? ps.sport?.name ?? '',
+          currentValue: current,
+          ceilingValue: ceiling,
+        },
+      ];
+    });
+
     bans = (bansRes.data ?? []) as typeof bans;
     feedback = (feedbackRes.data ?? []) as typeof feedback;
     reportsAbout = (reportsAboutRes.data ?? []) as unknown as typeof reportsAbout;
@@ -853,6 +898,21 @@ export default async function UserDetailPage({
                 <p className="font-medium m-0">{formatDate(playerRatingData.assigned_at)}</p>
               </div>
             </div>
+
+            {/* Prize-draw rating ceiling */}
+            {ratingCeilings.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-semibold m-0 mb-3">{t('ratingCeiling.title')}</p>
+                  <AdminRatingCeiling
+                    playerId={id}
+                    entries={ratingCeilings}
+                    canClear={canClearRatingCeiling}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Admin notes */}
             {playerRatingData.notes && (

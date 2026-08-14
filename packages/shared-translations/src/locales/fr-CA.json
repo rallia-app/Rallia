@@ -981,6 +981,11 @@
     "matches": "Parties",
     "reviews": "Avis",
     "notSet": "Non défini",
+    "ratingDrop": {
+      "title": "Baisser ta cote?",
+      "message": "Tu passes de {{from}} à {{to}}. Les tournois avec bourse vont continuer d'utiliser {{from}} pour les 180 prochains jours, ça t'ouvrira donc pas une catégorie plus basse. Le reste se met à jour tout de suite.",
+      "confirm": "Baisser ma cote"
+    },
     "sections": {
       "personalInformation": "MES INFORMATIONS PERSONNELLES",
       "playerInformation": "MES INFORMATIONS DE JOUEUR",
@@ -5756,6 +5761,8 @@
       "partnerRatingTooLow": "La cote de ton partenaire est sous la cote minimale de ce tournoi.",
       "partnerRatingTooHigh": "La cote de ton partenaire est au-dessus de la cote maximale de ce tournoi.",
       "partnerRatingRequired": "Ton partenaire a besoin d'une cote dans ce sport pour être inscrit.",
+      "ratingRecentlyHigher": "Ta cote a dépassé la cote maximale de ce tournoi dans les 180 derniers jours, et les tournois avec bourse se basent sur ta cote la plus haute récente. Si ton niveau a vraiment baissé, écris à contact@rallia.ca et on va regarder ça.",
+      "partnerRatingRecentlyHigher": "La cote de ton partenaire a dépassé la cote maximale de ce tournoi dans les 180 derniers jours, et les tournois avec bourse se basent sur la cote la plus haute récente. Si son niveau a vraiment baissé, il peut écrire à contact@rallia.ca.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide.",
       "paidUseRefund": "Cette inscription a été payée. Passe par l'option de remboursement pour te retirer."
@@ -8939,6 +8946,23 @@
           },
           "supported": "Supporté",
           "notSupported": "Non supporté"
+        },
+        "ratingCeiling": {
+          "title": "Plafond de cote pour les tournois avec bourse",
+          "explainer": "Les tournois avec bourse retiennent la cote la plus haute qu'un joueur a représentée récemment, pour qu'une baisse de niveau ouvre pas une catégorie plus basse. Enlève le plafond seulement si la baisse est réelle.",
+          "heldTo": "Affiche {current} aujourd'hui, retenu à {ceiling} pour les tournois avec bourse",
+          "clear": "Accepter la baisse",
+          "confirmTitle": "Accepter cette baisse de niveau?",
+          "confirmDescription": "{sport} : le joueur sera plus retenu à {ceiling} et sera traité comme {current} pour les tournois avec bourse, tout de suite. L'historique reste au dossier.",
+          "reasonLabel": "Raison",
+          "reasonPlaceholder": "Blessure à l'épaule, cote revue avec le joueur",
+          "reasonHint": "Enregistré sur les entrées visées, avec ton compte admin.",
+          "cancel": "Annuler",
+          "confirm": "Accepter la baisse",
+          "errors": {
+            "failed": "Impossible d'enlever le plafond. Réessaie.",
+            "noActiveRating": "Ce joueur n'a pas de cote active pour ce sport."
+          }
         },
         "actions": {
           "suspend": "Suspendre",

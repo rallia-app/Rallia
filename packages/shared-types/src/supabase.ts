@@ -5679,6 +5679,71 @@ export type Database = {
           },
         ]
       }
+      player_rating_history: {
+        Row: {
+          admin_clear_reason: string | null
+          admin_cleared_at: string | null
+          admin_cleared_by: string | null
+          id: number
+          player_id: string
+          rating_score_id: string | null
+          rating_value: number | null
+          recorded_at: string
+          sport_id: string
+        }
+        Insert: {
+          admin_clear_reason?: string | null
+          admin_cleared_at?: string | null
+          admin_cleared_by?: string | null
+          id?: never
+          player_id: string
+          rating_score_id?: string | null
+          rating_value?: number | null
+          recorded_at?: string
+          sport_id: string
+        }
+        Update: {
+          admin_clear_reason?: string | null
+          admin_cleared_at?: string | null
+          admin_cleared_by?: string | null
+          id?: never
+          player_id?: string
+          rating_score_id?: string | null
+          rating_value?: number | null
+          recorded_at?: string
+          sport_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_rating_history_admin_cleared_by_fkey"
+            columns: ["admin_cleared_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_rating_history_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_rating_history_rating_score_id_fkey"
+            columns: ["rating_score_id"]
+            isOneToOne: false
+            referencedRelation: "rating_score"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_rating_history_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sport"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_rating_score: {
         Row: {
           approved_proofs_count: number
@@ -10025,6 +10090,10 @@ export type Database = {
         Args: { p_is_certified: boolean; p_notes?: string; p_player_id: string }
         Returns: Json
       }
+      admin_clear_rating_ceiling: {
+        Args: { p_player_id: string; p_reason: string; p_sport_id: string }
+        Returns: number
+      }
       admin_delete_network: {
         Args: { p_network_id: string; p_reason?: string }
         Returns: Json
@@ -12544,6 +12613,10 @@ export type Database = {
           slug: string
         }[]
       }
+      log_active_rating_change: {
+        Args: { p_player_id: string; p_sport_id: string }
+        Returns: undefined
+      }
       log_admin_action:
         | {
             Args: {
@@ -12600,6 +12673,15 @@ export type Database = {
         Args: {
           p_max: number
           p_min: number
+          p_partner?: boolean
+          p_sport_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      lt_assert_rating_ceiling: {
+        Args: {
+          p_max: number
           p_partner?: boolean
           p_sport_id: string
           p_user_id: string
@@ -12709,6 +12791,7 @@ export type Database = {
         Args: { p_tournament_match_id: string }
         Returns: string
       }
+      lt_prize_rating_ceiling_days: { Args: never; Returns: number }
       lt_propagate_match_result_to_bracket: {
         Args: { p_match_result_id: string }
         Returns: undefined
@@ -12923,6 +13006,10 @@ export type Database = {
       }
       player_history_score: {
         Args: { p_caller_id: string; p_opponent_id: string }
+        Returns: number
+      }
+      player_rating_ceiling: {
+        Args: { p_days: number; p_player_id: string; p_sport_id: string }
         Returns: number
       }
       player_responsiveness_score: {
