@@ -8947,6 +8947,23 @@
           "supported": "Supported",
           "notSupported": "Not Supported"
         },
+        "ratingCeiling": {
+          "title": "Prize-draw rating ceiling",
+          "explainer": "Tournaments with a prize hold a player to the highest level they have represented recently, so a level drop cannot unlock a lower category. Clear it only when the drop is genuine.",
+          "heldTo": "Shows {current} today, held to {ceiling} for tournaments with a prize",
+          "clear": "Accept the drop",
+          "confirmTitle": "Accept this level drop?",
+          "confirmDescription": "{sport}: the player will stop being held to {ceiling} and will be treated as {current} for tournaments with a prize, effective immediately. The history stays on file.",
+          "reasonLabel": "Reason",
+          "reasonPlaceholder": "Shoulder injury, rating reviewed with the player",
+          "reasonHint": "Recorded against the entries this clears, alongside your admin account.",
+          "cancel": "Cancel",
+          "confirm": "Accept the drop",
+          "errors": {
+            "failed": "Could not clear the ceiling. Try again.",
+            "noActiveRating": "This player has no active rating for that sport."
+          }
+        },
         "actions": {
           "suspend": "Suspend",
           "reactivate": "Reactivate",

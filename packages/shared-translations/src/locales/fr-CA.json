@@ -8947,6 +8947,23 @@
           "supported": "Supporté",
           "notSupported": "Non supporté"
         },
+        "ratingCeiling": {
+          "title": "Plafond de cote pour les tournois avec bourse",
+          "explainer": "Les tournois avec bourse retiennent la cote la plus haute qu'un joueur a représentée récemment, pour qu'une baisse de niveau ouvre pas une catégorie plus basse. Enlève le plafond seulement si la baisse est réelle.",
+          "heldTo": "Affiche {current} aujourd'hui, retenu à {ceiling} pour les tournois avec bourse",
+          "clear": "Accepter la baisse",
+          "confirmTitle": "Accepter cette baisse de niveau?",
+          "confirmDescription": "{sport} : le joueur sera plus retenu à {ceiling} et sera traité comme {current} pour les tournois avec bourse, tout de suite. L'historique reste au dossier.",
+          "reasonLabel": "Raison",
+          "reasonPlaceholder": "Blessure à l'épaule, cote revue avec le joueur",
+          "reasonHint": "Enregistré sur les entrées visées, avec ton compte admin.",
+          "cancel": "Annuler",
+          "confirm": "Accepter la baisse",
+          "errors": {
+            "failed": "Impossible d'enlever le plafond. Réessaie.",
+            "noActiveRating": "Ce joueur n'a pas de cote active pour ce sport."
+          }
+        },
         "actions": {
           "suspend": "Suspendre",
           "reactivate": "Réactiver",

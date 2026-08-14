@@ -46,6 +46,8 @@ const ROLE_WRITE_PERMISSIONS: Record<string, AdminRole[]> = {
   'organizations:edit': ['super_admin'],
   'organizations:delete': ['super_admin'],
   'players:suspend': ['super_admin', 'moderator'],
+  // Mirrors the API route's role check on /api/admin/rating-ceiling.
+  'ratings:clear-ceiling': ['super_admin', 'moderator'],
   'players:delete': ['super_admin', 'moderator'],
   'players:ban': ['super_admin', 'moderator'],
   'invitations:create': ['super_admin'],
