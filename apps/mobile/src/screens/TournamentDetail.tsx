@@ -155,6 +155,7 @@ import type {
   TabKey,
 } from '../features/tournaments/detail/components';
 import { poolPreviewText } from '../features/tournaments/poolPreview';
+import { prizeAmountLabel } from '../features/tournaments/prizeLabel';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import { TournamentBanner } from '../features/tournaments/components/TournamentBanner';
@@ -2267,13 +2268,9 @@ export const TournamentDetail: React.FC = () => {
   const entryFeeLabel = isPaidTournament
     ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
     : null;
-  const prizePoolLabel =
-    tournament.prize_money_cents && tournament.prize_money_cents > 0
-      ? formatPrice(tournament.prize_money_cents, tournament.currency, {
-          locale,
-          trimZeroCents: true,
-        })
-      : null;
+  // "jusqu'à 250 $" when the pool scales with the field — see prizeLabel.ts.
+  // Same string feeds the hero pill below, so the two can never disagree.
+  const prizePoolLabel = prizeAmountLabel(tournament, locale, t);
   const hasVenueDetails = !!(tournament.venue_name || tournament.venue_address || tournament.city);
   // Address line under the venue name; when only a city is known it's the primary
   // line instead, so it isn't repeated here.
@@ -2410,14 +2407,11 @@ export const TournamentDetail: React.FC = () => {
               {/* What the event is worth, both currencies together: cash in the
                   solid gold pill, Circuit Rallia points in the lighter one. */}
               <View style={styles.heroBannerBadges}>
-                {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
+                {prizePoolLabel ? (
                   <View style={styles.heroPrizeBadge}>
                     <Ionicons name="trophy" size={13} color={accent[900]} />
                     <Text size="xs" weight="semibold" color={accent[900]} numberOfLines={1}>
-                      {formatPrice(tournament.prize_money_cents, tournament.currency, {
-                        locale,
-                        trimZeroCents: true,
-                      })}
+                      {prizePoolLabel}
                     </Text>
                   </View>
                 ) : null}

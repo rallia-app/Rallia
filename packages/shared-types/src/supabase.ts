@@ -9599,6 +9599,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -9664,6 +9665,7 @@ export type Database = {
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game?: number | null
           pool_size?: number | null
+          prize_is_prorated?: boolean
           prize_money_cents?: number | null
           qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
@@ -9729,6 +9731,7 @@ export type Database = {
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game?: number | null
           pool_size?: number | null
+          prize_is_prorated?: boolean
           prize_money_cents?: number | null
           qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
@@ -14288,6 +14291,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -14429,6 +14433,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -14503,6 +14508,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -14605,6 +14611,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -14970,6 +14977,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -15222,6 +15230,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -15394,6 +15403,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
@@ -15468,6 +15478,7 @@ export type Database = {
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
           pool_size: number | null
+          prize_is_prorated: boolean
           prize_money_cents: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
