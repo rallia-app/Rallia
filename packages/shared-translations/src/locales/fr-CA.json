@@ -4128,6 +4128,8 @@
       "facilityRequired": "Veuillez sélectionner un site de jeu",
       "locationNameRequired": "Veuillez entrer un nom de lieu",
       "sportRequired": "Veuillez sélectionner un sport",
+      "estimatedCostRequired": "Veuillez entrer le coût estimé du terrain",
+      "reviewDetails": "Veuillez vérifier les détails de la partie et réessayer",
       "updateBlocked": "Modification non autorisée",
       "cannotUpdate": "Cette modification n'est pas permise avec les participants actuels.",
       "genderMismatchTitle": "Conflit de préférence de genre",

@@ -236,8 +236,8 @@ export const matchFormSchema = z
       });
     }
 
-    // Cost validation
-    if (!data.isCourtFree && data.estimatedCost === undefined) {
+    // Cost validation (the cost section is hidden for TBD locations)
+    if (data.locationType !== 'tbd' && !data.isCourtFree && data.estimatedCost === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Please enter an estimated cost',

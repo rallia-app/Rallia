@@ -21,7 +21,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import { useRatingScoresForSport, useFacilityReservationContact } from '@rallia/shared-hooks';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
@@ -253,7 +253,11 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   sportId,
   userId,
 }) => {
-  const { watch, setValue } = form;
+  const {
+    watch,
+    setValue,
+    formState: { errors },
+  } = form;
 
   const format = watch('format');
   const playerExpectation = watch('playerExpectation');
@@ -538,7 +542,10 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             <View
               style={[
                 styles.costInputContainer,
-                { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                {
+                  borderColor: errors.estimatedCost ? status.error.DEFAULT : colors.border,
+                  backgroundColor: colors.cardBackground,
+                },
               ]}
             >
               <Text size="base" weight="medium" color={colors.textMuted}>
@@ -559,6 +566,11 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                 keyboardType="decimal-pad"
               />
             </View>
+            {errors.estimatedCost && (
+              <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
+                {errors.estimatedCost.message}
+              </Text>
+            )}
             {costSplitType === 'equal' && typeof estimatedCost === 'number' && (
               <Text size="xs" color={colors.textMuted} style={styles.costHelperText}>
                 {(() => {
@@ -1053,6 +1065,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   costHelperText: {
+    marginTop: spacingPixels[1],
+  },
+  errorText: {
     marginTop: spacingPixels[1],
   },
   notesInput: {
