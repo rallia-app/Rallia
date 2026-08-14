@@ -4128,6 +4128,8 @@
       "facilityRequired": "Please select a facility",
       "locationNameRequired": "Please enter a location name",
       "sportRequired": "Please select a sport",
+      "estimatedCostRequired": "Please enter the estimated court cost",
+      "reviewDetails": "Please review the game details and try again",
       "updateBlocked": "Update Not Allowed",
       "cannotUpdate": "This change is not allowed with current participants.",
       "genderMismatchTitle": "Gender Preference Conflict",

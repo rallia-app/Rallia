@@ -622,7 +622,15 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     }
   }, [values.locationType, values.facilityId, form, formatDateLocal, timezone]);
 
-  // Animate step changes
+  // The cost section is hidden for TBD locations; drop stale cost answers so
+  // the match isn't saved as "not free" with no visible way to review it
+  useEffect(() => {
+    if (!isEditMode && values.locationType === 'tbd' && values.isCourtFree === false) {
+      form.setValue('isCourtFree', true, { shouldDirty: true });
+      form.setValue('estimatedCost', undefined, { shouldDirty: true });
+    }
+  }, [values.locationType, values.isCourtFree, form, isEditMode]);
+
   // Animate step changes
   useEffect(() => {
     translateX.value = withSpring(-((currentStep - 1) * SCREEN_WIDTH), {
@@ -811,10 +819,23 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   // Handle form submission
   const handleSubmit = useCallback(async () => {
     Keyboard.dismiss();
+
+    // PreferencesStep has no blocking inputs besides the cost, so name it in the toast
+    if (
+      values.locationType !== 'tbd' &&
+      !values.isCourtFree &&
+      values.estimatedCost === undefined
+    ) {
+      warningHaptic();
+      toast.warning(t('matchCreation.validation.estimatedCostRequired'));
+      return;
+    }
+
     const isValid = await validateStep(3);
 
     if (!isValid) {
       warningHaptic();
+      toast.warning(t('matchCreation.validation.reviewDetails'));
       return;
     }
 
