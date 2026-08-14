@@ -312,15 +312,19 @@ export const TournamentDetail: React.FC = () => {
                                               ? 'tournamentDetail.errors.partnerRatingTooLow'
                                               : lower.includes('partner_rating_too_high')
                                                 ? 'tournamentDetail.errors.partnerRatingTooHigh'
-                                                : lower.includes('partner_rating_required')
-                                                  ? 'tournamentDetail.errors.partnerRatingRequired'
-                                                  : lower.includes('rating_too_low')
-                                                    ? 'tournamentDetail.errors.ratingTooLow'
-                                                    : lower.includes('rating_too_high')
-                                                      ? 'tournamentDetail.errors.ratingTooHigh'
-                                                      : lower.includes('rating_required')
-                                                        ? 'tournamentDetail.errors.ratingRequired'
-                                                        : fallbackKey;
+                                                : lower.includes('partner_rating_recently_higher')
+                                                  ? 'tournamentDetail.errors.partnerRatingRecentlyHigher'
+                                                  : lower.includes('partner_rating_required')
+                                                    ? 'tournamentDetail.errors.partnerRatingRequired'
+                                                    : lower.includes('rating_too_low')
+                                                      ? 'tournamentDetail.errors.ratingTooLow'
+                                                      : lower.includes('rating_too_high')
+                                                        ? 'tournamentDetail.errors.ratingTooHigh'
+                                                        : lower.includes('rating_recently_higher')
+                                                          ? 'tournamentDetail.errors.ratingRecentlyHigher'
+                                                          : lower.includes('rating_required')
+                                                            ? 'tournamentDetail.errors.ratingRequired'
+                                                            : fallbackKey;
       warningHaptic();
       toast.error(t(key));
     },

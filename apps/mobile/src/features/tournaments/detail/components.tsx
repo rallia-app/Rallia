@@ -108,6 +108,10 @@ export const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
   partner_rating_required: 'tournamentDetail.errors.partnerRatingRequired',
   partner_rating_too_low: 'tournamentDetail.errors.partnerRatingTooLow',
   partner_rating_too_high: 'tournamentDetail.errors.partnerRatingTooHigh',
+  // Prize-draw ceiling. The 180 days in the copy mirrors
+  // lt_prize_rating_ceiling_days(); move both together.
+  rating_recently_higher: 'tournamentDetail.errors.ratingRecentlyHigher',
+  partner_rating_recently_higher: 'tournamentDetail.errors.partnerRatingRecentlyHigher',
   // Belt-and-braces: the sheet disables paying until the tick, so this only
   // surfaces if the published version moved between fetch and pay.
   terms_acceptance_required: 'tournamentDetail.payments.errors.termsAcceptanceRequired',

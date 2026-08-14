@@ -5756,6 +5756,8 @@
       "partnerRatingTooLow": "Your partner's rating is below this tournament's minimum level.",
       "partnerRatingTooHigh": "Your partner's rating is above this tournament's maximum level.",
       "partnerRatingRequired": "Your partner needs a rating in this sport to be entered.",
+      "ratingRecentlyHigher": "Your rating was above this tournament's maximum at some point in the last 180 days. Tournaments with a prize use your highest recent rating.",
+      "partnerRatingRecentlyHigher": "Your partner's rating was above this tournament's maximum at some point in the last 180 days. Tournaments with a prize use the highest recent rating.",
       "partnerInvalid": "That partner can't be registered. Pick someone else.",
       "inviteInvalid": "This invite link is no longer valid.",
       "paidUseRefund": "This entry was paid. Withdraw through the refund option instead."

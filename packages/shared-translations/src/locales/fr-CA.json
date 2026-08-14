@@ -5756,6 +5756,8 @@
       "partnerRatingTooLow": "La cote de ton partenaire est sous la cote minimale de ce tournoi.",
       "partnerRatingTooHigh": "La cote de ton partenaire est au-dessus de la cote maximale de ce tournoi.",
       "partnerRatingRequired": "Ton partenaire a besoin d'une cote dans ce sport pour être inscrit.",
+      "ratingRecentlyHigher": "Ta cote a dépassé la cote maximale de ce tournoi dans les 180 derniers jours. Les tournois avec bourse se basent sur ta cote la plus haute récente.",
+      "partnerRatingRecentlyHigher": "La cote de ton partenaire a dépassé la cote maximale de ce tournoi dans les 180 derniers jours. Les tournois avec bourse se basent sur la cote la plus haute récente.",
       "partnerInvalid": "Ce partenaire peut pas être inscrit. Choisis quelqu'un d'autre.",
       "inviteInvalid": "Ce lien d'invitation n'est plus valide.",
       "paidUseRefund": "Cette inscription a été payée. Passe par l'option de remboursement pour te retirer."
