@@ -9601,6 +9601,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -9667,6 +9668,7 @@ export type Database = {
           pool_size?: number | null
           prize_is_prorated?: boolean
           prize_money_cents?: number | null
+          prize_top_share_bps?: number | null
           qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
@@ -9733,6 +9735,7 @@ export type Database = {
           pool_size?: number | null
           prize_is_prorated?: boolean
           prize_money_cents?: number | null
+          prize_top_share_bps?: number | null
           qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
@@ -14293,6 +14296,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14435,6 +14439,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14510,6 +14515,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14613,6 +14619,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -14979,6 +14986,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -15232,6 +15240,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -15405,6 +15414,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
@@ -15480,6 +15490,7 @@ export type Database = {
           pool_size: number | null
           prize_is_prorated: boolean
           prize_money_cents: number | null
+          prize_top_share_bps: number | null
           qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null

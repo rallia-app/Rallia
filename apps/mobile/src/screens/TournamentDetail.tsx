@@ -2268,9 +2268,11 @@ export const TournamentDetail: React.FC = () => {
   const entryFeeLabel = isPaidTournament
     ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
     : null;
-  // "jusqu'à 250 $" when the pool scales with the field — see prizeLabel.ts.
-  // Same string feeds the hero pill below, so the two can never disagree.
-  const prizePoolLabel = prizeAmountLabel(tournament, locale, t);
+  // Two different numbers, deliberately — see prizeLabel.ts. The spec sheet's
+  // row is labelled "Bourse", so it carries the whole pool; the unlabelled
+  // trophy pill answers "what could I win", so it carries the champion's cut.
+  const prizePoolLabel = prizeAmountLabel(tournament, locale, t, 'pool');
+  const prizeTopLabel = prizeAmountLabel(tournament, locale, t, 'top');
   const hasVenueDetails = !!(tournament.venue_name || tournament.venue_address || tournament.city);
   // Address line under the venue name; when only a city is known it's the primary
   // line instead, so it isn't repeated here.
@@ -2407,11 +2409,11 @@ export const TournamentDetail: React.FC = () => {
               {/* What the event is worth, both currencies together: cash in the
                   solid gold pill, Circuit Rallia points in the lighter one. */}
               <View style={styles.heroBannerBadges}>
-                {prizePoolLabel ? (
+                {prizeTopLabel ? (
                   <View style={styles.heroPrizeBadge}>
                     <Ionicons name="trophy" size={13} color={accent[900]} />
                     <Text size="xs" weight="semibold" color={accent[900]} numberOfLines={1}>
-                      {prizePoolLabel}
+                      {prizeTopLabel}
                     </Text>
                   </View>
                 ) : null}
