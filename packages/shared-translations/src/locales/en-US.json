@@ -5277,7 +5277,8 @@
         "alreadyRegistered": "You're already registered.",
         "organizerNotReady": "The organizer hasn't finished payout setup yet.",
         "closed": "Registration is closed.",
-        "generic": "Couldn't start your registration. Please try again."
+        "generic": "Couldn't start your registration. Please try again.",
+        "termsAcceptanceRequired": "You must accept the terms and the waiver to register."
       },
       "payoutRow": {
         "label": "Payouts",
@@ -5285,7 +5286,12 @@
         "actionNeeded": "Action needed",
         "opening": "Opening...",
         "ready": "Ready"
-      }
+      },
+      "consentPrefix": "I have read and accept the ",
+      "consentTermsLink": "participation terms",
+      "consentMiddle": " and the ",
+      "consentWaiverLink": "liability waiver",
+      "consentSuffix": "."
     },
     "loading": "Loading tournament...",
     "notFound": "Tournament not found",

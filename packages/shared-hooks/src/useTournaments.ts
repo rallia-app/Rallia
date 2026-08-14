@@ -25,6 +25,7 @@ import {
   revokeTournamentInvite,
   registerForTournament,
   getTournamentFeeQuote,
+  getParticipationTerms,
   getEventEarnings,
   getMyPayoutAccount,
   getServiceFeeParams,
@@ -86,6 +87,7 @@ import {
   type PlayerRatingReputation,
   type PlayerSearchResult,
   type TournamentFeeQuote,
+  type ParticipationTerms,
   type EventEarnings,
   type PayoutAccountStatus,
   type RegistrationPaymentIntent,
@@ -129,6 +131,7 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'inviteLink', tournamentId] as const,
   invitePreview: (token: string) => [...tournamentKeys.all, 'invitePreview', token] as const,
   feeQuote: (tournamentId: string) => [...tournamentKeys.all, 'feeQuote', tournamentId] as const,
+  participationTerms: () => [...tournamentKeys.all, 'participationTerms'] as const,
   earnings: (eventId: string) => [...tournamentKeys.all, 'earnings', eventId] as const,
   myPayoutAccount: (userId: string) => [...tournamentKeys.all, 'myPayoutAccount', userId] as const,
   myServiceFeeParams: (userId: string) =>
@@ -857,6 +860,21 @@ export function useTournamentFeeQuote(tournamentId: string | undefined, enabled 
 }
 
 /**
+ * Current participation terms + waiver version and its two localized URLs.
+ * Only needed on paid entry: the version travels with the payment call as the
+ * player's recorded consent. Rarely changes, so it is cached aggressively —
+ * a stale version is refused server-side rather than silently accepted.
+ */
+export function useParticipationTerms(enabled = true) {
+  return useQuery<ParticipationTerms | null>({
+    queryKey: tournamentKeys.participationTerms(),
+    queryFn: () => getParticipationTerms(),
+    enabled,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/**
  * Organizer-only money summary for one paid event. Pass exactly one id; gate
  * `enabled` on being the organizer of a paid event — the RPC raises
  * NOT_ORGANIZER for anyone else.
@@ -917,10 +935,10 @@ export function useCreateRegistrationPayment(
   const mutation = useMutation<
     RegistrationPaymentIntent,
     Error,
-    { tournamentId: string; partnerId?: string }
+    { tournamentId: string; partnerId?: string; termsVersion?: number }
   >({
-    mutationFn: ({ tournamentId, partnerId }) =>
-      createTournamentRegistrationPayment(tournamentId, partnerId),
+    mutationFn: ({ tournamentId, partnerId, termsVersion }) =>
+      createTournamentRegistrationPayment(tournamentId, partnerId, termsVersion),
     onSuccess: r => options.onSuccess?.(r),
     onError: e => options.onError?.(e),
   });

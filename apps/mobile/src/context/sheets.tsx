@@ -78,6 +78,7 @@ import { ConversationActionsActionSheet } from '#/features/chat/components/Conve
 import { EditMessageActionSheet } from '#/features/chat/components/EditMessageModal';
 import { ReportUserActionSheet } from '#/features/chat/components/ReportUserModal';
 import { ChatAgreementActionSheet } from '#/features/chat/components/ChatAgreementModal';
+import { PaidEntryConfirmSheet } from '#/features/tournaments/components/PaidEntryConfirmSheet';
 import { AddMembersToChatActionSheet } from '#/features/chat/components/AddMembersToChatModal';
 import { CreateGroupChatActionSheet } from '#/features/chat/components/CreateGroupChatModal';
 import { MatchOrganizerSetupActionSheet } from '#/features/chat/components/MatchOrganizerSetupSheet';
@@ -202,6 +203,17 @@ declare module 'react-native-actions-sheet' {
       payload: {
         onAgree?: () => void;
         onDecline?: () => void;
+      };
+    }>;
+    'paid-entry-confirm': SheetDefinition<{
+      payload: {
+        /** Price breakdown, refund policy, liability notice — one per line. */
+        disclosureLines: string[];
+        totalLabel?: string | null;
+        /** Absent = no published terms; the sheet then skips the consent tick. */
+        terms?: { version: number; urlFr: string; urlEn: string } | null;
+        /** Receives the accepted version, or undefined when none was shown. */
+        onConfirm?: (termsVersion?: number) => void;
       };
     }>;
     'add-members-to-chat': SheetDefinition<{
@@ -1001,6 +1013,7 @@ export const Sheets = () => {
         'edit-message': EditMessageActionSheet,
         'report-user': ReportUserActionSheet,
         'chat-agreement': ChatAgreementActionSheet,
+        'paid-entry-confirm': PaidEntryConfirmSheet,
         'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
         'match-organizer-setup': MatchOrganizerSetupActionSheet,

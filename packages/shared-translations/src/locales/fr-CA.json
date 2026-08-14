@@ -5277,7 +5277,8 @@
         "alreadyRegistered": "Tu es déjà inscrit.",
         "organizerNotReady": "L'organisateur n'a pas terminé sa configuration de paiement.",
         "closed": "Les inscriptions sont fermées.",
-        "generic": "Impossible de démarrer ton inscription. Réessaie."
+        "generic": "Impossible de démarrer ton inscription. Réessaie.",
+        "termsAcceptanceRequired": "Vous devez accepter les conditions et la décharge pour vous inscrire."
       },
       "payoutRow": {
         "label": "Versements",
@@ -5285,7 +5286,12 @@
         "actionNeeded": "Action requise",
         "opening": "Ouverture...",
         "ready": "Prêt"
-      }
+      },
+      "consentPrefix": "J'ai lu et j'accepte les ",
+      "consentTermsLink": "conditions générales de participation",
+      "consentMiddle": " et la ",
+      "consentWaiverLink": "décharge de responsabilité",
+      "consentSuffix": "."
     },
     "loading": "Chargement du tournoi...",
     "notFound": "Tournoi introuvable",

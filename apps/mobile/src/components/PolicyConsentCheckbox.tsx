@@ -55,6 +55,15 @@ interface PolicyConsentCheckboxProps {
   url: string;
   colors: PolicyConsentColors;
   checkedTint: string;
+  /**
+   * Optional SECOND link, for one tick covering two documents (paid event
+   * entry: conditions générales + décharge). Reads
+   * `prefix [linkLabel] middle [secondLinkLabel] suffix`. Omit all three and
+   * the card renders exactly as the single-link form it has always been.
+   */
+  middle?: string;
+  secondLinkLabel?: string;
+  secondUrl?: string;
 }
 
 export const PolicyConsentCheckbox: React.FC<PolicyConsentCheckboxProps> = ({
@@ -66,6 +75,9 @@ export const PolicyConsentCheckbox: React.FC<PolicyConsentCheckboxProps> = ({
   url,
   colors,
   checkedTint,
+  middle,
+  secondLinkLabel,
+  secondUrl,
 }) => (
   <TouchableOpacity
     style={[
@@ -79,7 +91,7 @@ export const PolicyConsentCheckbox: React.FC<PolicyConsentCheckboxProps> = ({
     activeOpacity={0.7}
     accessibilityRole="checkbox"
     accessibilityState={{ checked }}
-    accessibilityLabel={`${prefix}${linkLabel}${suffix}`}
+    accessibilityLabel={`${prefix}${linkLabel}${middle ?? ''}${secondLinkLabel ?? ''}${suffix}`}
   >
     <Ionicons
       name={checked ? 'checkbox' : 'square-outline'}
@@ -94,10 +106,24 @@ export const PolicyConsentCheckbox: React.FC<PolicyConsentCheckboxProps> = ({
         weight="semibold"
         color={primary[500]}
         style={styles.termsLink}
-        onPress={() => Linking.openURL(url)}
+        onPress={() => void Linking.openURL(url)}
       >
         {linkLabel}
       </Text>
+      {secondLinkLabel && secondUrl ? (
+        <>
+          {middle}
+          <Text
+            size="sm"
+            weight="semibold"
+            color={primary[500]}
+            style={styles.termsLink}
+            onPress={() => void Linking.openURL(secondUrl)}
+          >
+            {secondLinkLabel}
+          </Text>
+        </>
+      ) : null}
       {suffix}
     </Text>
   </TouchableOpacity>

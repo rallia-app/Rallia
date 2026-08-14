@@ -108,6 +108,9 @@ export const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
   partner_rating_required: 'tournamentDetail.errors.partnerRatingRequired',
   partner_rating_too_low: 'tournamentDetail.errors.partnerRatingTooLow',
   partner_rating_too_high: 'tournamentDetail.errors.partnerRatingTooHigh',
+  // Belt-and-braces: the sheet disables paying until the tick, so this only
+  // surfaces if the published version moved between fetch and pay.
+  terms_acceptance_required: 'tournamentDetail.payments.errors.termsAcceptanceRequired',
 };
 
 export interface ScreenColors {
