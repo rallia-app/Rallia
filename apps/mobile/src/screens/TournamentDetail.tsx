@@ -399,6 +399,31 @@ export const TournamentDetail: React.FC = () => {
     );
   }, [t, handleStripeOnboard]);
 
+  // The moment a player gets in is the moment to bring friends: when their
+  // share link is mintable (same conditions as canPlayerShare below), success
+  // toasts carry an invite action that opens the share sheet.
+  const inviteNudgeAction = useCallback(() => {
+    if (
+      !tournament ||
+      isOrganizer ||
+      tournament.visibility !== 'public' ||
+      tournament.status !== 'registration_open' ||
+      tournament.registration_mode === 'invite_only'
+    ) {
+      return {};
+    }
+    const { id: tournamentId, name: tournamentName } = tournament;
+    return {
+      actionText: t('tournamentDetail.invite.shareCta'),
+      duration: 6000,
+      onAction: () => {
+        void SheetManager.show('tournament-invite', {
+          payload: { tournamentId, tournamentName },
+        });
+      },
+    };
+  }, [tournament, isOrganizer, t]);
+
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
     onError: e => {
@@ -428,13 +453,23 @@ export const TournamentDetail: React.FC = () => {
     onError: e => showError(e.message, 'tournamentDetail.errors.reopenFailed'),
   });
   const register = useRegisterForTournament({
-    onSuccess: () => successHaptic(),
+    onSuccess: r => {
+      successHaptic();
+      toast.success(
+        t(
+          r.status === 'pending'
+            ? 'tournamentDetail.registerToast.pending'
+            : 'tournamentDetail.registerToast.registered'
+        ),
+        inviteNudgeAction()
+      );
+    },
     onError: e => showError(e.message, 'tournamentDetail.errors.registerFailed'),
   });
   const joinViaInvite = useJoinTournamentViaInvite({
     onSuccess: () => {
       successHaptic();
-      toast.success(t('tournamentDetail.inviteLanding.joinedToast'));
+      toast.success(t('tournamentDetail.inviteLanding.joinedToast'), inviteNudgeAction());
       Analytics.tournamentInviteRedeemed({
         tournamentId: params.tournamentId,
         result: 'registered',
@@ -583,7 +618,7 @@ export const TournamentDetail: React.FC = () => {
             throw new Error(paymentError.message);
           }
           successHaptic();
-          toast.success(t('tournamentDetail.payments.successToast'));
+          toast.success(t('tournamentDetail.payments.successToast'), inviteNudgeAction());
           // The webhook flips payment_pending → registered; refetch now and again
           // shortly after to catch the async finalize.
           const invalidate = () => {
@@ -702,6 +737,7 @@ export const TournamentDetail: React.FC = () => {
       locale,
       feeQuote,
       participationTerms,
+      inviteNudgeAction,
     ]
   );
 
@@ -724,7 +760,10 @@ export const TournamentDetail: React.FC = () => {
     onError: e => showError(e.message, 'tournamentDetail.errors.withdrawFailed'),
   });
   const acceptInvite = useAcceptTournamentInvite({
-    onSuccess: () => successHaptic(),
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('tournamentDetail.registerToast.registered'), inviteNudgeAction());
+    },
     onError: e => showError(e.message, 'tournamentDetail.errors.acceptInviteFailed'),
   });
   const revokeInvite = useRevokeTournamentInvite({
@@ -2584,6 +2623,8 @@ export const TournamentDetail: React.FC = () => {
             onWithdraw={onWithdraw}
             withdraw={withdraw}
             refundRegistration={refundRegistration}
+            canPlayerShare={canPlayerShare}
+            onInviteFriends={handleShareInviteLink}
             organizerName={organizerName}
             organizerRows={organizerRows}
             pendingRequestRows={pendingRequestRows}
