@@ -2716,6 +2716,27 @@ export type Database = {
           },
         ]
       }
+      lt_participation_terms: {
+        Row: {
+          published_at: string
+          url_en: string
+          url_fr: string
+          version: number
+        }
+        Insert: {
+          published_at?: string
+          url_en: string
+          url_fr: string
+          version: number
+        }
+        Update: {
+          published_at?: string
+          url_en?: string
+          url_fr?: string
+          version?: number
+        }
+        Relationships: []
+      }
       lt_registration_payment: {
         Row: {
           amount_charged_cents: number
@@ -8066,6 +8087,8 @@ export type Database = {
           invited_by: string | null
           season_id: string
           status: Database["public"]["Enums"]["season_member_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           updated_at: string
           user_id: string
           version: number
@@ -8080,6 +8103,8 @@ export type Database = {
           invited_by?: string | null
           season_id: string
           status?: Database["public"]["Enums"]["season_member_status"]
+          terms_accepted_at?: string | null
+          terms_version?: number | null
           updated_at?: string
           user_id: string
           version?: number
@@ -8094,6 +8119,8 @@ export type Database = {
           invited_by?: string | null
           season_id?: string
           status?: Database["public"]["Enums"]["season_member_status"]
+          terms_accepted_at?: string | null
+          terms_version?: number | null
           updated_at?: string
           user_id?: string
           version?: number
@@ -9350,6 +9377,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -9371,6 +9400,8 @@ export type Database = {
           seed_rank?: number | null
           self_declared_rank?: number | null
           status?: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at?: string | null
+          terms_version?: number | null
           tournament_id: string
           updated_at?: string
           user_id: string
@@ -9392,6 +9423,8 @@ export type Database = {
           seed_rank?: number | null
           self_declared_rank?: number | null
           status?: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at?: string | null
+          terms_version?: number | null
           tournament_id?: string
           updated_at?: string
           user_id?: string
@@ -13267,7 +13300,7 @@ export type Database = {
         Returns: number
       }
       season_begin_paid_enrollment: {
-        Args: { p_season_id: string }
+        Args: { p_season_id: string; p_terms_version?: number }
         Returns: {
           amount_charged_cents: number
           currency: string
@@ -13415,6 +13448,8 @@ export type Database = {
           invited_by: string | null
           season_id: string
           status: Database["public"]["Enums"]["season_member_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           updated_at: string
           user_id: string
           version: number
@@ -13501,6 +13536,8 @@ export type Database = {
           invited_by: string | null
           season_id: string
           status: Database["public"]["Enums"]["season_member_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           updated_at: string
           user_id: string
           version: number
@@ -13573,6 +13610,8 @@ export type Database = {
           invited_by: string | null
           season_id: string
           status: Database["public"]["Enums"]["season_member_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           updated_at: string
           user_id: string
           version: number
@@ -14143,6 +14182,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -14188,6 +14229,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -14317,7 +14360,11 @@ export type Database = {
         Returns: undefined
       }
       tournament_begin_paid_registration: {
-        Args: { p_partner_user_id?: string; p_tournament_id: string }
+        Args: {
+          p_partner_user_id?: string
+          p_terms_version?: number
+          p_tournament_id: string
+        }
         Returns: {
           amount_charged_cents: number
           currency: string
@@ -14665,6 +14712,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -14862,6 +14911,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -15065,6 +15116,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -15110,6 +15163,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -15227,6 +15282,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -15278,6 +15335,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string
@@ -15456,6 +15515,8 @@ export type Database = {
           seed_rank: number | null
           self_declared_rank: number | null
           status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted_at: string | null
+          terms_version: number | null
           tournament_id: string
           updated_at: string
           user_id: string

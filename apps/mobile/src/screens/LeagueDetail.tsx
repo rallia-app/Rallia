@@ -743,16 +743,21 @@ export const LeagueDetail: React.FC = () => {
     const cur = seasonFeeQuote.currency;
     const money = (cents: number) => formatPrice(cents, cur, { locale });
     const playerPaysFee = seasonFeeQuote.feePayer === 'player_pays';
+    // A fee-waived season (0% override) still bills player_pays, so the fee
+    // lines have to key off the amount, not the mode.
+    const chargesServiceFee = playerPaysFee && seasonFeeQuote.serviceFeeCents > 0;
     const breakdown = playerPaysFee
       ? ([
           t('leagueDetail.paid.breakdownEntry').replace(
             '{amount}',
             money(seasonFeeQuote.entryCents)
           ),
-          t('leagueDetail.paid.breakdownServiceFee').replace(
-            '{amount}',
-            money(seasonFeeQuote.serviceFeeCents)
-          ),
+          chargesServiceFee
+            ? t('leagueDetail.paid.breakdownServiceFee').replace(
+                '{amount}',
+                money(seasonFeeQuote.serviceFeeCents)
+              )
+            : null,
           seasonFeeQuote.feeTaxCents > 0
             ? t('leagueDetail.paid.breakdownFeeTax').replace(
                 '{amount}',
@@ -780,7 +785,7 @@ export const LeagueDetail: React.FC = () => {
     const lines = [
       breakdown,
       seasonRefundPolicyLine(seasonFeeQuote, t, locale),
-      playerPaysFee ? t('leagueDetail.paid.confirmFeeNonRefundable') : null,
+      chargesServiceFee ? t('leagueDetail.paid.confirmFeeNonRefundable') : null,
       t('leagueDetail.paid.liabilityNotice'),
     ].filter(Boolean) as string[];
 

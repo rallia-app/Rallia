@@ -5250,6 +5250,8 @@
       "payoutsSetupCta": "Configurer les paiements",
       "onboardTypeIndividual": "Je suis un particulier",
       "onboardTypeBusiness": "Je suis une entreprise ou un club",
+      "onboardTypeIndividual": "Je suis un particulier",
+      "onboardTypeBusiness": "Je suis une entreprise ou un club",
       "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
       "manageError": "Impossible d'ouvrir ton compte de versement. Réessaie.",
       "payoutsConnectedToast": "Compte de versement connecté !",
@@ -5277,7 +5279,8 @@
         "alreadyRegistered": "Tu es déjà inscrit.",
         "organizerNotReady": "L'organisateur n'a pas terminé sa configuration de paiement.",
         "closed": "Les inscriptions sont fermées.",
-        "generic": "Impossible de démarrer ton inscription. Réessaie."
+        "generic": "Impossible de démarrer ton inscription. Réessaie.",
+        "termsAcceptanceRequired": "Vous devez accepter les conditions et la décharge pour vous inscrire."
       },
       "payoutRow": {
         "label": "Versements",
@@ -5285,7 +5288,12 @@
         "actionNeeded": "Action requise",
         "opening": "Ouverture...",
         "ready": "Prêt"
-      }
+      },
+      "consentPrefix": "J'ai lu et j'accepte les ",
+      "consentTermsLink": "conditions générales de participation",
+      "consentMiddle": " et la ",
+      "consentWaiverLink": "décharge de responsabilité",
+      "consentSuffix": "."
     },
     "loading": "Chargement du tournoi...",
     "notFound": "Tournoi introuvable",
@@ -5440,6 +5448,7 @@
     "labels": {
       "bracketSize": "Taille du tableau",
       "bracketType": "Type de tableau",
+      "poolFormat": "Format des poules",
       "matchFormat": "Format des parties",
       "entryFormat": "Type d'inscription",
       "startDate": "Date de début",
@@ -5779,6 +5788,12 @@
       "playBy": "à jouer avant le {date}",
       "hoursLeft": "{hours} h pour jouer",
       "phaseDeadline": "Phase en cours : {when}"
+    },
+    "goodToKnow": {
+      "title": "Bon à savoir",
+      "courts": "Le temps de terrain n'est pas inclus. Tu réserves ton terrain et tu partages le coût avec ton adversaire.",
+      "scheduling": "Une fois le tableau sorti, ton adversaire et toi vous entendez sur quand et où jouer, avant la date limite de la ronde.",
+      "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement."
     }
   },
   "tournamentCreation": {
@@ -12572,6 +12587,18 @@
       "description": "Les conditions régissant votre utilisation de la plateforme de matchmaking Rallia.",
       "ogTitle": "Conditions d'utilisation de Rallia",
       "ogDescription": "Les conditions régissant votre utilisation de Rallia."
+    },
+    "participationTerms": {
+      "title": "Conditions de participation",
+      "description": "Les conditions encadrant la participation aux tournois et ligues Rallia.",
+      "ogTitle": "Conditions de participation Rallia",
+      "ogDescription": "Les conditions encadrant les tournois et ligues Rallia."
+    },
+    "liabilityWaiver": {
+      "title": "Décharge de responsabilité",
+      "description": "Décharge de responsabilité et acceptation des risques pour les activités Rallia.",
+      "ogTitle": "Décharge de responsabilité Rallia",
+      "ogDescription": "Décharge de responsabilité et acceptation des risques."
     },
     "eula": {
       "title": "Contrat de licence utilisateur final",

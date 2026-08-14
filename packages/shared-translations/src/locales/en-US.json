@@ -5250,6 +5250,8 @@
       "payoutsSetupCta": "Set up payouts",
       "onboardTypeIndividual": "I'm an individual",
       "onboardTypeBusiness": "I'm a business or club",
+      "onboardTypeIndividual": "I'm an individual",
+      "onboardTypeBusiness": "I'm a business or club",
       "onboardingError": "Couldn't start payout setup. Please try again.",
       "manageError": "Couldn't open your payout account. Please try again.",
       "payoutsConnectedToast": "Payout account connected!",
@@ -5277,7 +5279,8 @@
         "alreadyRegistered": "You're already registered.",
         "organizerNotReady": "The organizer hasn't finished payout setup yet.",
         "closed": "Registration is closed.",
-        "generic": "Couldn't start your registration. Please try again."
+        "generic": "Couldn't start your registration. Please try again.",
+        "termsAcceptanceRequired": "You must accept the terms and the waiver to register."
       },
       "payoutRow": {
         "label": "Payouts",
@@ -5285,7 +5288,12 @@
         "actionNeeded": "Action needed",
         "opening": "Opening...",
         "ready": "Ready"
-      }
+      },
+      "consentPrefix": "I have read and accept the ",
+      "consentTermsLink": "participation terms",
+      "consentMiddle": " and the ",
+      "consentWaiverLink": "liability waiver",
+      "consentSuffix": "."
     },
     "loading": "Loading tournament...",
     "notFound": "Tournament not found",
@@ -5440,6 +5448,7 @@
     "labels": {
       "bracketSize": "Bracket size",
       "bracketType": "Bracket type",
+      "poolFormat": "Pool format",
       "matchFormat": "Scoring format",
       "entryFormat": "Entry format",
       "startDate": "Start date",
@@ -5779,6 +5788,12 @@
       "playBy": "play by {date}",
       "hoursLeft": "{hours}h left to play",
       "phaseDeadline": "Current phase: {when}"
+    },
+    "goodToKnow": {
+      "title": "Good to know",
+      "courts": "Court time isn't included. You book your court and split the cost with your opponent.",
+      "scheduling": "Once the draw is out, you and your opponent agree on when and where to play, before the round deadline.",
+      "cancelRefund": "If the organizer cancels the tournament, your entry fee is refunded automatically."
     }
   },
   "tournamentCreation": {
@@ -12572,6 +12587,18 @@
       "description": "The terms governing your use of Rallia's tennis and pickleball matchmaking platform.",
       "ogTitle": "Rallia Terms of Service",
       "ogDescription": "The terms governing your use of Rallia."
+    },
+    "participationTerms": {
+      "title": "Participation Terms",
+      "description": "The terms governing participation in Rallia tournaments and leagues.",
+      "ogTitle": "Rallia Participation Terms",
+      "ogDescription": "The terms governing Rallia tournaments and leagues."
+    },
+    "liabilityWaiver": {
+      "title": "Liability Waiver",
+      "description": "Waiver of liability and acceptance of risks for Rallia activities.",
+      "ogTitle": "Rallia Liability Waiver",
+      "ogDescription": "Waiver of liability and acceptance of risks."
     },
     "eula": {
       "title": "End User License Agreement",

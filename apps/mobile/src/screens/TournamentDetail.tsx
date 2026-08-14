@@ -63,6 +63,7 @@ import {
   useMyTournamentRegistration,
   useRegistrationReceiptUrl,
   useTournamentFeeQuote,
+  useParticipationTerms,
   useMyPayoutAccount,
   useEventEarnings,
   useCreateRegistrationPayment,
@@ -153,6 +154,7 @@ import type {
   ScreenColors,
   TabKey,
 } from '../features/tournaments/detail/components';
+import { poolPreviewText } from '../features/tournaments/poolPreview';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import { TournamentBanner } from '../features/tournaments/components/TournamentBanner';
@@ -376,9 +378,8 @@ export const TournamentDetail: React.FC = () => {
     [toast, t, userId, queryClient]
   );
 
-  // Confirm, then kick off Stripe onboarding. Everyone onboards as an individual
-  // for now — the club/business path is hidden here but still supported
-  // server-side. Shared by the registration-guard error path and the payout card.
+  // Ask individual vs company, then kick off onboarding. Shared by the
+  // registration-guard error path and the payout card.
   const promptOnboardPayouts = useCallback(() => {
     Alert.alert(
       t('tournamentDetail.payments.payoutsSetupTitle'),
@@ -386,8 +387,12 @@ export const TournamentDetail: React.FC = () => {
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('common.continue'),
+          text: t('tournamentDetail.payments.onboardTypeIndividual'),
           onPress: () => void handleStripeOnboard('individual'),
+        },
+        {
+          text: t('tournamentDetail.payments.onboardTypeBusiness'),
+          onPress: () => void handleStripeOnboard('company'),
         },
       ]
     );
@@ -443,6 +448,8 @@ export const TournamentDetail: React.FC = () => {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const isPaidTournament = (tournament?.entry_fee_cents ?? 0) > 0;
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
+  // Only paid entry needs the consent tick, so only fetch the terms there.
+  const { data: participationTerms } = useParticipationTerms(isPaidTournament);
   // Organizer payout status drives the manage/onboard card on paid events.
   const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
   // What this event has collected — the organizer's only in-app money view
@@ -540,12 +547,15 @@ export const TournamentDetail: React.FC = () => {
     async (partnerId?: string) => {
       if (!tournament) return;
 
-      // The actual charge — only runs after the player accepts the disclosure.
-      const runPayment = async () => {
+      // The actual charge — only runs after the player accepts the disclosure
+      // and, on a paid entry, ticks the participation-terms consent. The
+      // accepted version rides along so the server stamps it on the row.
+      const runPayment = async (termsVersion?: number) => {
         try {
           const intent = await createRegistrationPayment.mutateAsync({
             tournamentId: tournament.id,
             partnerId,
+            termsVersion,
           });
           const { error: initError } = await initPaymentSheet({
             paymentIntentClientSecret: intent.clientSecret,
@@ -601,6 +611,9 @@ export const TournamentDetail: React.FC = () => {
       const money = (cents: number) =>
         feeQuote ? formatPrice(cents, feeQuote.currency, { locale }) : '';
       const playerPaysFee = !!feeQuote && feeQuote.feePayer === 'player_pays';
+      // A fee-waived event (0% override) still bills player_pays, so the fee
+      // lines have to key off the amount, not the mode.
+      const chargesServiceFee = !!feeQuote && playerPaysFee && feeQuote.serviceFeeCents > 0;
       const breakdown = !feeQuote
         ? null
         : playerPaysFee
@@ -609,10 +622,12 @@ export const TournamentDetail: React.FC = () => {
                 '{amount}',
                 money(feeQuote.entryCents)
               ),
-              t('tournamentDetail.payments.breakdownServiceFee').replace(
-                '{amount}',
-                money(feeQuote.serviceFeeCents)
-              ),
+              chargesServiceFee
+                ? t('tournamentDetail.payments.breakdownServiceFee').replace(
+                    '{amount}',
+                    money(feeQuote.serviceFeeCents)
+                  )
+                : null,
               feeQuote.feeTaxCents > 0
                 ? t('tournamentDetail.payments.breakdownFeeTax').replace(
                     '{amount}',
@@ -638,26 +653,29 @@ export const TournamentDetail: React.FC = () => {
               ),
             ].join('\n');
       const totalLabel = feeQuote ? money(feeQuote.totalCents) : null;
-      const message = [
+      const disclosureLines = [
         breakdown,
         refundPolicyLine(feeQuote, t, locale),
-        playerPaysFee ? t('tournamentDetail.payments.confirmFeeNonRefundable') : null,
+        chargesServiceFee ? t('tournamentDetail.payments.confirmFeeNonRefundable') : null,
         t('tournamentDetail.payments.liabilityNotice'),
-      ]
-        .filter(Boolean)
-        .join('\n\n');
+        // What the entry does NOT buy. Court time is the one cost players
+        // reliably assume is included, and the venue row on the detail screen
+        // reinforces that assumption, so it is spelled out at the till.
+        t('tournamentDetail.goodToKnow.courts'),
+      ].filter((l): l is string => !!l);
 
-      Alert.alert(t('tournamentDetail.payments.confirmTitle'), message, [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: totalLabel
-            ? `${t('tournamentDetail.payments.confirmPay')} · ${totalLabel}`
-            : t('tournamentDetail.payments.confirmPay'),
-          onPress: () => {
-            void runPayment();
+      // A sheet, not an Alert: the participation-terms tick needs a checkbox
+      // and two tappable document links, neither of which an Alert can host.
+      void SheetManager.show('paid-entry-confirm', {
+        payload: {
+          disclosureLines,
+          totalLabel,
+          terms: participationTerms ?? null,
+          onConfirm: termsVersion => {
+            void runPayment(termsVersion);
           },
         },
-      ]);
+      });
     },
     [
       tournament,
@@ -670,6 +688,7 @@ export const TournamentDetail: React.FC = () => {
       t,
       locale,
       feeQuote,
+      participationTerms,
     ]
   );
 
@@ -2269,6 +2288,30 @@ export const TournamentDetail: React.FC = () => {
   // (player-absorbs mode); organizer-absorbs makes the two amounts equal.
   const playerPaysServiceFee = !!feeQuote && feeQuote.totalCents > feeQuote.entryCents;
 
+  // The draw shape a pool entrant is actually buying: how many pools, who
+  // advances, and the games everyone is guaranteed. Computed off the full
+  // bracket size, which is what the copy claims ("{field} players: ...") — the
+  // real field is only known once registration closes.
+  const poolFormatLabel =
+    tournament.bracket_type === 'pool_knockout'
+      ? poolPreviewText(
+          tournament.max_participants,
+          tournament.pool_size ?? 4,
+          tournament.qualifiers_per_pool ?? 2,
+          isDoubles,
+          t
+        )
+      : null;
+
+  // Expectations the spec sheet leaves implicit and a registrant pays to find
+  // out otherwise: courts aren't included, games are self-scheduled, and a
+  // cancelled event refunds every paid entry (lt-settle-event-payments).
+  const goodToKnowLines = [
+    t('tournamentDetail.goodToKnow.courts'),
+    t('tournamentDetail.goodToKnow.scheduling'),
+    isPaidTournament ? t('tournamentDetail.goodToKnow.cancelRefund') : null,
+  ].filter((l): l is string => !!l);
+
   // Circuit Rallia eligibility. The ranking ceiling is stamped on EVERY
   // tournament, certified organizer or not, so the ceiling alone would promise
   // points the award will never pay — the certification is the real gate.
@@ -2606,6 +2649,8 @@ export const TournamentDetail: React.FC = () => {
             ratingRangeLabel={ratingRangeLabel}
             hasVenueDetails={hasVenueDetails}
             venueSecondaryLine={venueSecondaryLine}
+            poolFormatLabel={poolFormatLabel}
+            goodToKnowLines={goodToKnowLines}
             showFeesSection={showFeesSection}
             entryFeeLabel={entryFeeLabel}
             playerPaysServiceFee={playerPaysServiceFee}

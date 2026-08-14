@@ -1,19 +1,11 @@
 import { ImageResponse } from 'next/og';
 import { primary } from '@rallia/design-system';
 
+import { loadOgFonts } from './og-fonts';
+
 /** Standard OG image dimensions — 1200×630 (1.91:1) for Twitter / Facebook / LinkedIn. */
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 export const OG_CONTENT_TYPE = 'image/png';
-
-const poppinsBoldPromise = fetch(
-  new URL('https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLCz7V1s.ttf')
-).then(res => res.arrayBuffer());
-
-const interMediumPromise = fetch(
-  new URL(
-    'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf'
-  )
-).then(res => res.arrayBuffer());
 
 export interface OgTemplateOptions {
   /** Small label across the top (e.g. "GUIDE", "GAMES", "ABOUT"). Uppercase recommended. */
@@ -32,7 +24,7 @@ export interface OgTemplateOptions {
  * visually consistent across the marketing surface.
  */
 export async function renderOgImage(opts: OgTemplateOptions): Promise<Response> {
-  const [poppinsBold, interMedium] = await Promise.all([poppinsBoldPromise, interMediumPromise]);
+  const { poppinsBold, interMedium } = await loadOgFonts();
 
   return new ImageResponse(
     <div

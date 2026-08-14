@@ -919,10 +919,18 @@ export interface RegistrationPaymentIntent {
  */
 export async function createTournamentRegistrationPayment(
   tournamentId: string,
-  partnerId?: string
+  partnerId?: string,
+  termsVersion?: number
 ): Promise<RegistrationPaymentIntent> {
   const { data, error } = await supabase.functions.invoke('lt-create-registration-payment', {
-    body: { tournamentId, ...(partnerId ? { partnerId } : {}) },
+    body: {
+      tournamentId,
+      ...(partnerId ? { partnerId } : {}),
+      // The participation-terms version the player accepted. Omitted only by
+      // builds predating the consent sheet; the server still admits those
+      // until the gate flips (participation-consent.md).
+      ...(termsVersion !== undefined ? { termsVersion } : {}),
+    },
   });
 
   // Guard failures come back as { error: code }. supabase-js surfaces non-2xx
@@ -1712,4 +1720,27 @@ export function getTournamentInviteLink(
     shareToken: token,
     utm,
   });
+}
+
+export interface ParticipationTerms {
+  version: number;
+  urlFr: string;
+  urlEn: string;
+}
+
+/**
+ * Current published participation terms + liability waiver pair. The version
+ * is what the paid-entry RPCs record as the player's consent; the URLs are the
+ * two web pages the acceptance sentence links to. Highest version wins.
+ */
+export async function getParticipationTerms(): Promise<ParticipationTerms | null> {
+  const { data, error } = await supabase
+    .from('lt_participation_terms')
+    .select('version, url_fr, url_en')
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return { version: data.version, urlFr: data.url_fr, urlEn: data.url_en };
 }
