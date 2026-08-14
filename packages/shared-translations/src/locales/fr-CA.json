@@ -5396,6 +5396,10 @@
         "descriptionPending": "L'organisateur doit encore approuver ta place. Tu peux te retirer tant que les inscriptions sont ouvertes.",
         "descriptionInvited": "Accepte l'invitation pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
       },
+      "inviteFriendsCta": {
+        "title": "Amène tes amis",
+        "description": "Un tournoi, c'est meilleur avec du monde que tu connais. Partage ton lien et embarque-les dans le tableau."
+      },
       "pendingRequestsCta": {
         "title": "Demandes en attente",
         "description": "{count} joueur(s) attendent ton approbation.",
@@ -5555,6 +5559,10 @@
       "invalidTitle": "Lien d'invitation non valide",
       "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demande un nouveau lien à l'organisateur.",
       "joinedToast": "Tu es inscrit! On se voit au tournoi."
+    },
+    "registerToast": {
+      "registered": "Tu es inscrit! On se voit au tournoi.",
+      "pending": "Demande envoyée. L'organisateur doit approuver ta place."
     },
     "editModal": {
       "title": "Modifier le tournoi",

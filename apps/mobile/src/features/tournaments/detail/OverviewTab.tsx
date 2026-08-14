@@ -76,6 +76,8 @@ interface OverviewTabProps {
   onWithdraw: () => void;
   withdraw: PendingOnly;
   refundRegistration: PendingOnly;
+  canPlayerShare: boolean;
+  onInviteFriends: () => void;
 
   // Organizer dashboard
   organizerName: string | null;
@@ -135,6 +137,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onWithdraw,
   withdraw,
   refundRegistration,
+  canPlayerShare,
+  onInviteFriends,
   organizerName,
   organizerRows,
   pendingRequestRows,
@@ -300,6 +304,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         testID="cta-withdraw"
         destructive
         colors={colors}
+      />
+    )}
+
+    {/* Registered players can pull friends in: their link redeems through the
+            normal rules, so it only shows where sharing is mintable. */}
+    {canPlayerShare && myActiveRegistration && (
+      <DashboardCtaCard
+        icon="share-social-outline"
+        title={t('tournamentDetail.dashboard.inviteFriendsCta.title')}
+        description={t('tournamentDetail.dashboard.inviteFriendsCta.description')}
+        buttonLabel={t('tournamentDetail.invite.shareCta')}
+        buttonIcon="share-outline"
+        onPress={onInviteFriends}
+        colors={colors}
+        testID="cta-invite-friends"
       />
     )}
 

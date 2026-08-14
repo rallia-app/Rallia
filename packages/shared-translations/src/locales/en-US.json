@@ -5396,6 +5396,10 @@
         "descriptionPending": "The organizer still needs to approve your spot. You can withdraw while registration is open.",
         "descriptionInvited": "Accept the invitation to confirm your spot. You can also withdraw if you can't play."
       },
+      "inviteFriendsCta": {
+        "title": "Bring your friends",
+        "description": "Tournaments are better with people you know. Share your link and get them in the draw."
+      },
       "pendingRequestsCta": {
         "title": "Pending requests",
         "description": "{count} players waiting for your approval.",
@@ -5555,6 +5559,10 @@
       "invalidTitle": "Invite link not valid",
       "invalidDescription": "This link was reset or has expired. Ask the organizer for a new one.",
       "joinedToast": "You're in! See you at the tournament."
+    },
+    "registerToast": {
+      "registered": "You're in! See you at the tournament.",
+      "pending": "Request sent. The organizer needs to approve your spot."
     },
     "editModal": {
       "title": "Edit tournament",
