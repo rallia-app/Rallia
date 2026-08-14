@@ -348,7 +348,9 @@
       "url": "https://u.expo.dev/1baeff78-5ea2-4fa5-ab5a-b5f1386575b3",
       "assetPatternsToBeBundled": [
         "assets/images/**/*.{png,jpg,jpeg,webp}",
-        "assets/animations/**/*.json"
+        "assets/animations/**/*.json",
+        "../../node_modules/@expo-google-fonts/**/*.ttf",
+        "node_modules/@expo-google-fonts/**/*.ttf"
       ]
     },
     "experiments": {

@@ -24,6 +24,8 @@ import {
   type EventTone,
 } from '@rallia/shared-components';
 import { formatPrice, tournamentRankingHeadline } from '@rallia/shared-utils';
+
+import { prizeAmountLabel } from '../prizeLabel';
 import { spacingPixels, radiusPixels, accent } from '@rallia/design-system';
 import { bracketTypeToEventFormat, type TournamentListItem } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
@@ -111,13 +113,8 @@ export const TournamentCard: React.FC<{
   const rankingLabel = rankingHeadline
     ? t('tournamentList.rankingPoints').replace('{points}', String(rankingHeadline.points))
     : null;
-  const prizeLabel =
-    tournament.prize_money_cents && tournament.prize_money_cents > 0
-      ? formatPrice(tournament.prize_money_cents, tournament.currency, {
-          locale,
-          trimZeroCents: true,
-        })
-      : null;
+  // "jusqu'à 250 $" when the pool scales with the field — see prizeLabel.ts.
+  const prizeLabel = prizeAmountLabel(tournament, locale, t);
   // Cost, not payout. Only paid events carry it, so a card without the chip
   // reads as free — and the prize badge stops being the only money on the card.
   const entryFeeLabel =

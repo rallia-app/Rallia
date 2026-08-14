@@ -155,6 +155,7 @@ import type {
   TabKey,
 } from '../features/tournaments/detail/components';
 import { poolPreviewText } from '../features/tournaments/poolPreview';
+import { prizeAmountLabel } from '../features/tournaments/prizeLabel';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import { TournamentBanner } from '../features/tournaments/components/TournamentBanner';
@@ -401,11 +402,18 @@ export const TournamentDetail: React.FC = () => {
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
     onError: e => {
-      // Paid event without completed payout setup: prompt the organizer to
-      // finish Stripe onboarding instead of a generic error.
+      // Paid event without completed payout setup. The gate checks the primary
+      // organizer's account, so only they get sent to onboarding.
       if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
         warningHaptic();
-        promptOnboardPayouts();
+        if (isPrimaryOrganizer) {
+          promptOnboardPayouts();
+        } else {
+          Alert.alert(
+            t('tournamentDetail.payments.payoutsSetupTitle'),
+            t('tournamentDetail.payments.errors.organizerNotReady')
+          );
+        }
         return;
       }
       showError(e.message, 'tournamentDetail.errors.openFailed');
@@ -450,13 +458,18 @@ export const TournamentDetail: React.FC = () => {
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
   // Only paid entry needs the consent tick, so only fetch the terms there.
   const { data: participationTerms } = useParticipationTerms(isPaidTournament);
-  // Organizer payout status drives the manage/onboard card on paid events.
-  const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
+  // Payout status drives the manage/onboard card. Primary only: the entry
+  // settles into their connected account, never a co-organizer's.
+  const { data: payoutAccount } = useMyPayoutAccount(
+    userId,
+    isPrimaryOrganizer && isPaidTournament
+  );
   // What this event has collected — the organizer's only in-app money view
   // (the Stripe dashboard is account-wide and can't be tied back to one event).
+  // lt_event_earnings refuses co-organizers, so gate on the primary.
   const { data: earnings } = useEventEarnings(
     { tournamentId: params.tournamentId },
-    isOrganizer && isPaidTournament
+    isPrimaryOrganizer && isPaidTournament
   );
   // Stripe-hosted receipt for the payer's own paid registration. Not gated on
   // status: after a withdrawal that same receipt is where the refund shows up.
@@ -2208,8 +2221,10 @@ export const TournamentDetail: React.FC = () => {
         testID: 'cta-add-myself',
       });
     }
+    // Primary check repeated: the account cache is keyed per player, so a
+    // co-organizer running their own paid event would see a stale hit here.
     // undefined = still loading; the row appears once the status is known.
-    if (isPaidTournament && payoutAccount !== undefined) {
+    if (isPrimaryOrganizer && isPaidTournament && payoutAccount !== undefined) {
       organizerRows.push({
         icon: 'wallet-outline',
         label: t('tournamentDetail.payments.payoutRow.label'),
@@ -2226,7 +2241,7 @@ export const TournamentDetail: React.FC = () => {
     }
     // Per-event money summary. Only in-app place an organizer can see what
     // this event collected; the Stripe dashboard is account-wide.
-    if (isPaidTournament && earnings !== undefined) {
+    if (isPrimaryOrganizer && isPaidTournament && earnings !== undefined) {
       organizerRows.push({
         icon: 'cash-outline',
         label: t('tournamentDetail.earnings.row'),
@@ -2267,13 +2282,11 @@ export const TournamentDetail: React.FC = () => {
   const entryFeeLabel = isPaidTournament
     ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
     : null;
-  const prizePoolLabel =
-    tournament.prize_money_cents && tournament.prize_money_cents > 0
-      ? formatPrice(tournament.prize_money_cents, tournament.currency, {
-          locale,
-          trimZeroCents: true,
-        })
-      : null;
+  // Two different numbers, deliberately — see prizeLabel.ts. The spec sheet's
+  // row is labelled "Bourse", so it carries the whole pool; the unlabelled
+  // trophy pill answers "what could I win", so it carries the champion's cut.
+  const prizePoolLabel = prizeAmountLabel(tournament, locale, t, 'pool');
+  const prizeTopLabel = prizeAmountLabel(tournament, locale, t, 'top');
   const hasVenueDetails = !!(tournament.venue_name || tournament.venue_address || tournament.city);
   // Address line under the venue name; when only a city is known it's the primary
   // line instead, so it isn't repeated here.
@@ -2410,14 +2423,11 @@ export const TournamentDetail: React.FC = () => {
               {/* What the event is worth, both currencies together: cash in the
                   solid gold pill, Circuit Rallia points in the lighter one. */}
               <View style={styles.heroBannerBadges}>
-                {tournament.prize_money_cents && tournament.prize_money_cents > 0 ? (
+                {prizeTopLabel ? (
                   <View style={styles.heroPrizeBadge}>
                     <Ionicons name="trophy" size={13} color={accent[900]} />
                     <Text size="xs" weight="semibold" color={accent[900]} numberOfLines={1}>
-                      {formatPrice(tournament.prize_money_cents, tournament.currency, {
-                        locale,
-                        trimZeroCents: true,
-                      })}
+                      {prizeTopLabel}
                     </Text>
                   </View>
                 ) : null}
