@@ -15,6 +15,7 @@ import {
   InfoRow,
   LabeledBlock,
   MATCH_FORMAT_LABEL_KEY,
+  NoticeList,
   REG_MODE_LABEL_KEY,
   Section,
   StackedRow,
@@ -31,6 +32,10 @@ interface DetailsTabProps {
   ratingRangeLabel: string | null;
   hasVenueDetails: boolean;
   venueSecondaryLine: string | null;
+  /** Pool draw shape in one sentence, null on any other bracket type. */
+  poolFormatLabel: string | null;
+  /** Expectation-setting notes (courts, self-scheduling, cancellation refund). */
+  goodToKnowLines: string[];
   showFeesSection: boolean;
   entryFeeLabel: string | null;
   playerPaysServiceFee: boolean;
@@ -47,6 +52,8 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   ratingRangeLabel,
   hasVenueDetails,
   venueSecondaryLine,
+  poolFormatLabel,
+  goodToKnowLines,
   showFeesSection,
   entryFeeLabel,
   playerPaysServiceFee,
@@ -92,6 +99,13 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         value={t(BRACKET_TYPE_LABEL_KEY[tournament.bracket_type] as TranslationKey)}
         colors={colors}
       />
+      {poolFormatLabel ? (
+        <StackedRow
+          label={t('tournamentDetail.labels.poolFormat')}
+          value={poolFormatLabel}
+          colors={colors}
+        />
+      ) : null}
       <InfoRow
         label={t('tournamentDetail.labels.entryFormat')}
         value={t(ENTRY_FORMAT_LABEL_KEY[tournament.entry_format] as TranslationKey)}
@@ -162,6 +176,12 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
             colors={colors}
           />
         ) : null}
+      </Section>
+    ) : null}
+
+    {goodToKnowLines.length > 0 ? (
+      <Section title={t('tournamentDetail.goodToKnow.title')} colors={colors}>
+        <NoticeList lines={goodToKnowLines} colors={colors} />
       </Section>
     ) : null}
   </View>

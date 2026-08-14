@@ -113,6 +113,24 @@ export const PAID_REGISTER_ERROR_KEYS: Record<string, TranslationKey> = {
   terms_acceptance_required: 'tournamentDetail.payments.errors.termsAcceptanceRequired',
 };
 
+/** Bulleted lines inside a Section card, sharing the rules-list treatment.
+ *  Used for the expectation-setting notes a registrant needs before paying. */
+export const NoticeList: React.FC<{ lines: string[]; colors: ScreenColors }> = ({
+  lines,
+  colors,
+}) => (
+  <View style={styles.rulesCard}>
+    {lines.map(line => (
+      <View key={line} style={styles.ruleRow}>
+        <View style={[styles.ruleDot, { backgroundColor: colors.primary }]} />
+        <Text size="sm" color={colors.text} style={styles.ruleText}>
+          {line}
+        </Text>
+      </View>
+    ))}
+  </View>
+);
+
 export interface ScreenColors {
   background: string;
   cardBackground: string;

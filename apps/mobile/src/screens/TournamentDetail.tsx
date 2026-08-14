@@ -154,6 +154,7 @@ import type {
   ScreenColors,
   TabKey,
 } from '../features/tournaments/detail/components';
+import { poolPreviewText } from '../features/tournaments/poolPreview';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import { TournamentBanner } from '../features/tournaments/components/TournamentBanner';
@@ -377,9 +378,8 @@ export const TournamentDetail: React.FC = () => {
     [toast, t, userId, queryClient]
   );
 
-  // Confirm, then kick off Stripe onboarding. Everyone onboards as an individual
-  // for now — the club/business path is hidden here but still supported
-  // server-side. Shared by the registration-guard error path and the payout card.
+  // Ask individual vs company, then kick off onboarding. Shared by the
+  // registration-guard error path and the payout card.
   const promptOnboardPayouts = useCallback(() => {
     Alert.alert(
       t('tournamentDetail.payments.payoutsSetupTitle'),
@@ -387,8 +387,12 @@ export const TournamentDetail: React.FC = () => {
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('common.continue'),
+          text: t('tournamentDetail.payments.onboardTypeIndividual'),
           onPress: () => void handleStripeOnboard('individual'),
+        },
+        {
+          text: t('tournamentDetail.payments.onboardTypeBusiness'),
+          onPress: () => void handleStripeOnboard('company'),
         },
       ]
     );
@@ -618,10 +622,12 @@ export const TournamentDetail: React.FC = () => {
                 '{amount}',
                 money(feeQuote.entryCents)
               ),
-              t('tournamentDetail.payments.breakdownServiceFee').replace(
-                '{amount}',
-                money(feeQuote.serviceFeeCents)
-              ),
+              chargesServiceFee
+                ? t('tournamentDetail.payments.breakdownServiceFee').replace(
+                    '{amount}',
+                    money(feeQuote.serviceFeeCents)
+                  )
+                : null,
               feeQuote.feeTaxCents > 0
                 ? t('tournamentDetail.payments.breakdownFeeTax').replace(
                     '{amount}',
@@ -650,8 +656,12 @@ export const TournamentDetail: React.FC = () => {
       const disclosureLines = [
         breakdown,
         refundPolicyLine(feeQuote, t, locale),
-        playerPaysFee ? t('tournamentDetail.payments.confirmFeeNonRefundable') : null,
+        chargesServiceFee ? t('tournamentDetail.payments.confirmFeeNonRefundable') : null,
         t('tournamentDetail.payments.liabilityNotice'),
+        // What the entry does NOT buy. Court time is the one cost players
+        // reliably assume is included, and the venue row on the detail screen
+        // reinforces that assumption, so it is spelled out at the till.
+        t('tournamentDetail.goodToKnow.courts'),
       ].filter((l): l is string => !!l);
 
       // A sheet, not an Alert: the participation-terms tick needs a checkbox
@@ -2278,6 +2288,30 @@ export const TournamentDetail: React.FC = () => {
   // (player-absorbs mode); organizer-absorbs makes the two amounts equal.
   const playerPaysServiceFee = !!feeQuote && feeQuote.totalCents > feeQuote.entryCents;
 
+  // The draw shape a pool entrant is actually buying: how many pools, who
+  // advances, and the games everyone is guaranteed. Computed off the full
+  // bracket size, which is what the copy claims ("{field} players: ...") — the
+  // real field is only known once registration closes.
+  const poolFormatLabel =
+    tournament.bracket_type === 'pool_knockout'
+      ? poolPreviewText(
+          tournament.max_participants,
+          tournament.pool_size ?? 4,
+          tournament.qualifiers_per_pool ?? 2,
+          isDoubles,
+          t
+        )
+      : null;
+
+  // Expectations the spec sheet leaves implicit and a registrant pays to find
+  // out otherwise: courts aren't included, games are self-scheduled, and a
+  // cancelled event refunds every paid entry (lt-settle-event-payments).
+  const goodToKnowLines = [
+    t('tournamentDetail.goodToKnow.courts'),
+    t('tournamentDetail.goodToKnow.scheduling'),
+    isPaidTournament ? t('tournamentDetail.goodToKnow.cancelRefund') : null,
+  ].filter((l): l is string => !!l);
+
   // Circuit Rallia eligibility. The ranking ceiling is stamped on EVERY
   // tournament, certified organizer or not, so the ceiling alone would promise
   // points the award will never pay — the certification is the real gate.
@@ -2615,6 +2649,8 @@ export const TournamentDetail: React.FC = () => {
             ratingRangeLabel={ratingRangeLabel}
             hasVenueDetails={hasVenueDetails}
             venueSecondaryLine={venueSecondaryLine}
+            poolFormatLabel={poolFormatLabel}
+            goodToKnowLines={goodToKnowLines}
             showFeesSection={showFeesSection}
             entryFeeLabel={entryFeeLabel}
             playerPaysServiceFee={playerPaysServiceFee}

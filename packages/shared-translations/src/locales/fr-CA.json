@@ -5250,6 +5250,8 @@
       "payoutsSetupCta": "Configurer les paiements",
       "onboardTypeIndividual": "Je suis un particulier",
       "onboardTypeBusiness": "Je suis une entreprise ou un club",
+      "onboardTypeIndividual": "Je suis un particulier",
+      "onboardTypeBusiness": "Je suis une entreprise ou un club",
       "onboardingError": "Impossible de démarrer la configuration. Réessaie.",
       "manageError": "Impossible d'ouvrir ton compte de versement. Réessaie.",
       "payoutsConnectedToast": "Compte de versement connecté !",
@@ -5446,6 +5448,7 @@
     "labels": {
       "bracketSize": "Taille du tableau",
       "bracketType": "Type de tableau",
+      "poolFormat": "Format des poules",
       "matchFormat": "Format des parties",
       "entryFormat": "Type d'inscription",
       "startDate": "Date de début",
@@ -5785,6 +5788,12 @@
       "playBy": "à jouer avant le {date}",
       "hoursLeft": "{hours} h pour jouer",
       "phaseDeadline": "Phase en cours : {when}"
+    },
+    "goodToKnow": {
+      "title": "Bon à savoir",
+      "courts": "Le temps de terrain n'est pas inclus. Tu réserves ton terrain et tu partages le coût avec ton adversaire.",
+      "scheduling": "Une fois le tableau sorti, ton adversaire et toi vous entendez sur quand et où jouer, avant la date limite de la ronde.",
+      "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement."
     }
   },
   "tournamentCreation": {

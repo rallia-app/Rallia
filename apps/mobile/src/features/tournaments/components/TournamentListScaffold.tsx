@@ -118,6 +118,15 @@ export const TournamentCard: React.FC<{
           trimZeroCents: true,
         })
       : null;
+  // Cost, not payout. Only paid events carry it, so a card without the chip
+  // reads as free — and the prize badge stops being the only money on the card.
+  const entryFeeLabel =
+    tournament.entry_fee_cents > 0
+      ? formatPrice(tournament.entry_fee_cents, tournament.currency, {
+          locale,
+          trimZeroCents: true,
+        })
+      : null;
   const venue = tournament.venue_name || tournament.city;
 
   // Quiet decision facts, dot-separated; special facts (points, role) keep a chip.
@@ -175,14 +184,24 @@ export const TournamentCard: React.FC<{
           colors={colors}
           leadingIcon={ratingRange ? 'analytics' : undefined}
           trailing={
-            isOrganizer ? (
-              <EventMetaChip
-                label={t('tournamentList.roleOrganizer')}
-                icon="person-outline"
-                colors={colors}
-                tone="accent"
-              />
-            ) : null
+            <>
+              {entryFeeLabel && (
+                <EventMetaChip
+                  label={entryFeeLabel}
+                  icon="pricetag-outline"
+                  colors={colors}
+                  tone="primary"
+                />
+              )}
+              {isOrganizer && (
+                <EventMetaChip
+                  label={t('tournamentList.roleOrganizer')}
+                  icon="person-outline"
+                  colors={colors}
+                  tone="accent"
+                />
+              )}
+            </>
           }
         />
       }
