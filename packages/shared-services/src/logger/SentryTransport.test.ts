@@ -68,6 +68,17 @@ describe('SentryTransport error normalization', () => {
     expect(fp1).not.toEqual(fp2);
   });
 
+  it('retitles a stringified-object Error with the call-site message', () => {
+    const err = new Error({} as unknown as string); // message becomes "[object Object]"
+    new SentryTransport().log(makeEntry(err));
+
+    const [captured, ctx] = sentry.captureException.mock.calls[0];
+    expect(captured).toBeInstanceOf(Error);
+    expect(captured.message).toBe('Failed to update player: [object Object]');
+    expect(captured.stack).toBe(err.stack);
+    expect(ctx.fingerprint).toEqual(['stringified-object-error', 'Failed to update player']);
+  });
+
   it('wraps a primitive throw into a real Error', () => {
     new SentryTransport().log(makeEntry('plain string failure'));
 

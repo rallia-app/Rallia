@@ -50,6 +50,14 @@ function normalizeForCapture(entry: LogEntry): NormalizedCapture {
   const extra: Record<string, unknown> = { ...entry.context };
 
   if (raw instanceof Error) {
+    // new Error(obj) upstream stringifies to "[object Object]" — retitle with
+    // the call-site message so occurrences stay diagnosable and split per site.
+    if (raw.message === '[object Object]') {
+      const retitled = new Error(`${entry.message}: [object Object]`);
+      retitled.name = raw.name;
+      retitled.stack = raw.stack;
+      return { error: retitled, extra, fingerprint: ['stringified-object-error', entry.message] };
+    }
     return { error: raw, extra };
   }
 
