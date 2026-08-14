@@ -17,6 +17,7 @@ import { locales, defaultLocale } from '@rallia/shared-translations';
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatDateRange } from '@/lib/format-date-range';
+import { loadOgFonts } from '@/lib/og-fonts';
 
 /** The web Database type deliberately omits the mobile-only tournament tables —
  *  read them through an untyped client and type the rows locally. */
@@ -30,20 +31,6 @@ const SIZE = { width: 1200, height: 630 };
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
 };
-
-const poppinsBold = fetch(
-  new URL('https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLCz7V1s.ttf')
-).then(res => res.arrayBuffer());
-
-const poppinsSemiBold = fetch(
-  new URL('https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLEj6V1s.ttf')
-).then(res => res.arrayBuffer());
-
-const interMedium = fetch(
-  new URL(
-    'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf'
-  )
-).then(res => res.arrayBuffer());
 
 // Inline base64-encoded logo SVG to avoid filesystem/network issues on Vercel serverless
 const LOGO_BASE64 =
@@ -158,11 +145,11 @@ export async function GET(request: Request) {
   const type = searchParams.get('type');
   const id = searchParams.get('id');
 
-  const [poppinsBoldData, poppinsSemiBoldData, interMediumData] = await Promise.all([
-    poppinsBold,
-    poppinsSemiBold,
-    interMedium,
-  ]);
+  const {
+    poppinsBold: poppinsBoldData,
+    poppinsSemiBold: poppinsSemiBoldData,
+    interMedium: interMediumData,
+  } = await loadOgFonts();
   const fonts: Fonts = [
     { name: 'Poppins', data: poppinsBoldData, style: 'normal', weight: 700 },
     { name: 'Poppins', data: poppinsSemiBoldData, style: 'normal', weight: 600 },

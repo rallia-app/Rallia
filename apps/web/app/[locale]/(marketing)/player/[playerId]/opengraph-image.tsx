@@ -8,24 +8,12 @@ import type { PublicPlayer } from './_lib/get-player';
 
 import { logoSrc } from '@/lib/og-logo';
 
+import { loadOgFonts } from '@/lib/og-fonts';
+
 export const alt = 'Rallia Player';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const revalidate = 3600;
-
-const poppinsBold = fetch(
-  new URL('https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLCz7V1s.ttf')
-).then(res => res.arrayBuffer());
-
-const poppinsSemiBold = fetch(
-  new URL('https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLEj6V1s.ttf')
-).then(res => res.arrayBuffer());
-
-const interMedium = fetch(
-  new URL(
-    'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf'
-  )
-).then(res => res.arrayBuffer());
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -565,11 +553,11 @@ export default async function Image({
   const { playerId, locale } = await params;
   const player = await getPlayer(playerId);
   const t = await getTranslations({ locale, namespace: 'playerPage' });
-  const [poppinsBoldData, poppinsSemiBoldData, interMediumData] = await Promise.all([
-    poppinsBold,
-    poppinsSemiBold,
-    interMedium,
-  ]);
+  const {
+    poppinsBold: poppinsBoldData,
+    poppinsSemiBold: poppinsSemiBoldData,
+    interMedium: interMediumData,
+  } = await loadOgFonts();
 
   const fonts = [
     { name: 'Poppins', data: poppinsBoldData, style: 'normal' as const, weight: 700 as const },

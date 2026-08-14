@@ -1,22 +1,14 @@
 import { ImageResponse } from 'next/og';
 import { primary } from '@rallia/design-system';
 
+import { loadOgFonts } from '@/lib/og-fonts';
+
 export const alt = 'Rallia - Where Rallies Live On';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-const poppinsBold = fetch(
-  new URL('https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLCz7V1s.ttf')
-).then(res => res.arrayBuffer());
-
-const interMedium = fetch(
-  new URL(
-    'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf'
-  )
-).then(res => res.arrayBuffer());
-
 export default async function Image() {
-  const [poppinsBoldData, interMediumData] = await Promise.all([poppinsBold, interMedium]);
+  const { poppinsBold: poppinsBoldData, interMedium: interMediumData } = await loadOgFonts();
 
   return new ImageResponse(
     <div
